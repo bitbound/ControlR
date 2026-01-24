@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Web.Client.Models;
 using ControlR.Web.Client.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -137,7 +137,7 @@ internal class UserSettingsProviderServer(
     try
     {
       _preferences[preferenceName] = newValue;
-      var stringValue = Convert.ToString(newValue);
+      var stringValue = Convert.ToString(newValue)?.Trim();
       
       if (string.IsNullOrEmpty(stringValue))
       {

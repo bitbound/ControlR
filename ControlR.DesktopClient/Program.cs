@@ -1,6 +1,5 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.LinuxFramebuffer;
 using ControlR.Libraries.Shared.Constants;
 
 namespace ControlR.DesktopClient;

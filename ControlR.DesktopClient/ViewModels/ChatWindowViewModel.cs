@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
-using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Models;
 using Microsoft.Extensions.Logging;
@@ -26,7 +25,7 @@ public interface IChatWindowViewModel
 public class ChatWindowViewModel(
   IChatSessionManager chatSessionManager,
   IToaster toaster,
-  ILogger<ChatWindowViewModel> logger) : ViewModelBase, IChatWindowViewModel
+  ILogger<ChatWindowViewModel> logger) : ViewModelBase<ChatWindow>, IChatWindowViewModel
 {
 
   private readonly IChatSessionManager _chatSessionManager = chatSessionManager;

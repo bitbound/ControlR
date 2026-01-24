@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:common="using:ControlR.DesktopClient.Common"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+						 xmlns:vm="using:ControlR.DesktopClient.ViewModels.CommonInterfaces"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="ControlR.DesktopClient.Views.PermissionsView"
+             x:DataType="vm:IPermissionsViewModel">
+
+  <StackPanel Spacing="16">
+    
+    <TextBlock Text="{x:Static common:Localization.Permissions}" Classes="h1 Primary" />
+
+    <TextBlock Text="{x:Static common:Localization.NoPermissionsRequired}" />
+
+  </StackPanel>
+</UserControl>

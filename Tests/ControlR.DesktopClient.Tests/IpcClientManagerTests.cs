@@ -1,4 +1,5 @@
 using Avalonia.Controls.ApplicationLifetimes;
+using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Services;
 using ControlR.Libraries.Ipc;
@@ -62,6 +63,7 @@ public class IpcClientManagerTests : IAsyncLifetime
       _fakeTimeProvider,
       _ipcConnectionFactory,
       mockAppLifetime.Object,
+      new WeakReferenceMessenger(),
       desktopClientOptions,
       loggerFactory.CreateLogger<IpcClientManager>());
 
@@ -85,6 +87,7 @@ public class IpcClientManagerTests : IAsyncLifetime
 
     // Send a chat response to verify the connection
     Assert.True(_clientManager.TryGetClient(out var client));
+    await client.WaitForConnected(_cts.Token);
     var chatResult = await client.Server.SendChatResponse(CreateChatResponseDto());
     Assert.True(chatResult);
 
@@ -111,6 +114,7 @@ public class IpcClientManagerTests : IAsyncLifetime
 
     // Send a chat response to verify the re-connection
     Assert.True(_clientManager.TryGetClient(out client));
+    await client.WaitForConnected(_cts.Token);
     chatResult = await client.Server.SendChatResponse(CreateChatResponseDto());
     Assert.True(chatResult);
   }

@@ -13,6 +13,7 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" />
 		<PackageReference Include="Tmds.DBus" />
 		<PackageReference Include="Tmds.DBus.Protocol" />
 	</ItemGroup>

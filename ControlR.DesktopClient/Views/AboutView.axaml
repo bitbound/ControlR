@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+						 xmlns:controls="using:ControlR.DesktopClient.Controls"
+						 xmlns:theme="using:ControlR.DesktopClient.Theme"
+						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+						 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+						 x:Class="ControlR.DesktopClient.Views.AboutView"
+						 x:DataType="vm:IAboutViewModel">
+
+	<ScrollViewer>
+		<StackPanel Spacing="16">
+
+			<TextBlock Text="About" Classes="h1 Primary" />
+
+			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12">
+
+				<TextBlock Grid.Row="0" Grid.Column="0" Text="Version:" FontWeight="SemiBold" />
+				<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" />
+
+				<TextBlock Grid.Row="1" Grid.Column="0" Text="License:" FontWeight="SemiBold" />
+
+				<HyperlinkButton Grid.Row="1" Grid.Column="1" Margin="0" Padding="0"
+												 Content="MIT License"
+												 NavigateUri="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt"
+												 Classes="link" />
+
+				<TextBlock Grid.Row="2" Grid.Column="0" Text="Project:" FontWeight="SemiBold" />
+				<HyperlinkButton Grid.Row="2" Grid.Column="1" Margin="0" Padding="0"
+												 Content="https://github.com/bitbound/controlr"
+												 NavigateUri="https://github.com/bitbound/controlr"
+												 Classes="link" />
+
+				<TextBlock Grid.Row="3" Grid.Column="0" Text="Website:" FontWeight="SemiBold" />
+				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0"
+												 Content="https://controlr.app"
+												 NavigateUri="https://controlr.app"
+												 Classes="link" />
+
+				<TextBlock Grid.Row="4" Grid.Column="0" Text="Sponsor:" FontWeight="SemiBold" VerticalAlignment="Top" />
+				<StackPanel Grid.Row="4" Grid.Column="1" Spacing="8">
+					<TextBlock Text="ControlR is free, open-source, self-hostable, and powered by donations." TextWrapping="Wrap" />
+					<controls:ThemeButton Content="❤️ Sponsor Project"
+																Color="Error"
+																Variant="Outlined"
+																Command="{Binding OpenUrlCommand}"
+																CommandParameter="https://github.com/sponsors/bitbound" />
+				</StackPanel>
+			</Grid>
+
+			<Rectangle Height="1" Fill="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" />
+
+			<TextBlock Text="Third-Party Licenses:" FontWeight="SemiBold" />
+			<TextBlock Text="ControlR uses the following open-source software and libraries." TextWrapping="Wrap" />
+
+			<Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="8">
+
+				<TextBlock Grid.Row="0" Grid.Column="0" Text="Avalonia UI" />
+				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+					<HyperlinkButton Content="source"
+													 NavigateUri="https://github.com/AvaloniaUI/Avalonia"
+													 Classes="link" />
+					<HyperlinkButton Content="license"
+													 NavigateUri="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md"
+													 Classes="link" />
+				</StackPanel>
+
+				<TextBlock Grid.Row="1" Grid.Column="0" Text="Serilog" />
+				<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+					<HyperlinkButton Content="source"
+													 NavigateUri="https://github.com/serilog/serilog"
+													 Classes="link" />
+					<HyperlinkButton Content="license"
+													 NavigateUri="https://github.com/serilog/serilog/blob/dev/LICENSE"
+													 Classes="link" />
+				</StackPanel>
+
+				<TextBlock Grid.Row="2" Grid.Column="0" Text="Tmds.DBus" />
+				<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+					<HyperlinkButton Content="source"
+													 NavigateUri="https://github.com/tmds/Tmds.DBus"
+													 Classes="link" />
+					<HyperlinkButton Content="license"
+													 NavigateUri="https://github.com/tmds/Tmds.DBus/blob/main/COPYING"
+													 Classes="link" />
+				</StackPanel>
+
+				<TextBlock Grid.Row="3" Grid.Column="0" Text="Microsoft Libraries" />
+				<HyperlinkButton Grid.Row="3" Grid.Column="1"
+												 Content="source"
+												 NavigateUri="https://github.com/microsoft"
+												 Classes="link" />
+
+			</Grid>
+
+		</StackPanel>
+	</ScrollViewer>
+
+</UserControl>

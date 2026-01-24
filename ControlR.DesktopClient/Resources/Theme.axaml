@@ -2,94 +2,240 @@
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <ResourceDictionary.ThemeDictionaries>
-	<!-- Dark Theme Colors -->
-	<ResourceDictionary x:Key="Dark">
-	  <SolidColorBrush x:Key="PrimaryColor" Color="#2196F3"/>
-	  <SolidColorBrush x:Key="SecondaryColor" Color="#21f3e9"/>
-	  <SolidColorBrush x:Key="TertiaryColor" Color="#7b21f3"/>
-	  <SolidColorBrush x:Key="InfoColor" Color="#89b4f8"/>
-	  <SolidColorBrush x:Key="SuccessColor" Color="#2cb67d"/>
-	  <SolidColorBrush x:Key="WarningColor" Color="#facc15"/>
-	  <SolidColorBrush x:Key="ErrorColor" Color="#f87171"/>
-	  <SolidColorBrush x:Key="DarkColor" Color="#212121"/>
+    <!-- Dark Theme Colors -->
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="PrimaryColor" Color="#2196F3"/>
 
-	  <!-- Contrast Text Colors for readability on semantic color backgrounds -->
-	  <SolidColorBrush x:Key="PrimaryContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="SecondaryContrastText" Color="#000000"/>
-	  <SolidColorBrush x:Key="TertiaryContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="InfoContrastText" Color="#000000"/>
-	  <SolidColorBrush x:Key="SuccessContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="WarningContrastText" Color="#000000"/>
-	  <SolidColorBrush x:Key="ErrorContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="DarkContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="SecondaryColor" Color="#21f3e9"/>
 
-	  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#DEffffff"/>
-	  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#99ffffff"/>
-	  <SolidColorBrush x:Key="TextDisabledBrush" Color="#61ffffff"/>
+      <SolidColorBrush x:Key="TertiaryColor" Color="#7b21f3"/>
 
-	  <SolidColorBrush x:Key="BackgroundBrush" Color="#121212"/>
-	  <SolidColorBrush x:Key="BackgroundGrayBrush" Color="#1E1E1E"/>
-	  <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
+      <SolidColorBrush x:Key="InfoColor" Color="#89b4f8"/>
 
-	  <SolidColorBrush x:Key="AppbarBackgroundBrush" Color="#1E1E1E"/>
-	  <SolidColorBrush x:Key="AppbarTextBrush" Color="#DEffffff"/>
+      <SolidColorBrush x:Key="SuccessColor" Color="#2cb67d"/>
 
-	  <SolidColorBrush x:Key="DividerBrush" Color="#1Fffffff"/>
-	  <SolidColorBrush x:Key="DividerLightBrush" Color="#0Fffffff"/>
+      <SolidColorBrush x:Key="WarningColor" Color="#facc15"/>
 
-	  <SolidColorBrush x:Key="OverlayDarkBrush" Color="#80000000"/>
-	  <SolidColorBrush x:Key="OverlayLightBrush" Color="#40000000"/>
+      <SolidColorBrush x:Key="ErrorColor" Color="#f87171"/>
 
-	  <!-- Chat-specific colors -->
-	  <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#1e3a5f"/>
-	  <SolidColorBrush x:Key="ChatViewerMessageBrush" Color="#2d2d2d"/>
-	  <SolidColorBrush x:Key="ChatInputBackgroundBrush" Color="#333333"/>
-	  <SolidColorBrush x:Key="ChatInputBorderBrush" Color="#555555"/>
-	</ResourceDictionary>
+      <SolidColorBrush x:Key="DarkColor" Color="#212121"/>
 
-	<!-- Light Theme Colors -->
-	<ResourceDictionary x:Key="Light">
-	  <SolidColorBrush x:Key="PrimaryColor" Color="#2196F3"/>
-	  <SolidColorBrush x:Key="SecondaryColor" Color="#008c7a"/>
-	  <SolidColorBrush x:Key="TertiaryColor" Color="#7b21f3"/>
-	  <SolidColorBrush x:Key="InfoColor" Color="#0d6efd"/>
-	  <SolidColorBrush x:Key="SuccessColor" Color="#28a745"/>
-	  <SolidColorBrush x:Key="WarningColor" Color="#ffc107"/>
-	  <SolidColorBrush x:Key="ErrorColor" Color="#dc3545"/>
-	  <SolidColorBrush x:Key="DarkColor" Color="#424242"/>
+      <!-- Contrast Text Colors for readability on semantic color backgrounds -->
+      <SolidColorBrush x:Key="PrimaryContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="SecondaryContrastText" Color="#000000"/>
+      <SolidColorBrush x:Key="TertiaryContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="InfoContrastText" Color="#000000"/>
+      <SolidColorBrush x:Key="SuccessContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="WarningContrastText" Color="#000000"/>
+      <SolidColorBrush x:Key="ErrorContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="DarkContrastText" Color="#FFFFFF"/>
 
-	  <!-- Contrast Text Colors for readability on semantic color backgrounds -->
-	  <SolidColorBrush x:Key="PrimaryContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="SecondaryContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="TertiaryContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="InfoContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="SuccessContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="WarningContrastText" Color="#000000"/>
-	  <SolidColorBrush x:Key="ErrorContrastText" Color="#FFFFFF"/>
-	  <SolidColorBrush x:Key="DarkContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#DEffffff"/>
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#99ffffff"/>
+      <SolidColorBrush x:Key="TextDisabledBrush" Color="#61ffffff"/>
 
-	  <SolidColorBrush x:Key="TextPrimaryBrush" Color="#DE000000"/>
-	  <SolidColorBrush x:Key="TextSecondaryBrush" Color="#99000000"/>
-	  <SolidColorBrush x:Key="TextDisabledBrush" Color="#61000000"/>
+      <SolidColorBrush x:Key="BackgroundBrush" Color="#121212"/>
 
-	  <SolidColorBrush x:Key="BackgroundBrush" Color="#FAFAFA"/>
-	  <SolidColorBrush x:Key="BackgroundGrayBrush" Color="#F5F5F5"/>
-	  <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="BackgroundGrayBrush" Color="#1E1E1E"/>
 
-	  <SolidColorBrush x:Key="AppbarBackgroundBrush" Color="#F0F0F0"/>
-	  <SolidColorBrush x:Key="AppbarTextBrush" Color="#DE000000"/>
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
 
-	  <SolidColorBrush x:Key="DividerBrush" Color="#1F000000"/>
-	  <SolidColorBrush x:Key="DividerLightBrush" Color="#0F000000"/>
+      <SolidColorBrush x:Key="AppbarBackgroundBrush" Color="#1E1E1E"/>
+      <SolidColorBrush x:Key="AppbarTextBrush" Color="#DEffffff"/>
 
-	  <SolidColorBrush x:Key="OverlayDarkBrush" Color="#52000000"/>
-	  <SolidColorBrush x:Key="OverlayLightBrush" Color="#1F000000"/>
+      <SolidColorBrush x:Key="DividerBrush" Color="#1Fffffff"/>
 
-	  <!-- Chat-specific colors -->
-	  <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#bbdefb"/>
-	  <SolidColorBrush x:Key="ChatViewerMessageBrush" Color="#E0E0E0"/>
-	  <SolidColorBrush x:Key="ChatInputBackgroundBrush" Color="#F0F0F0"/>
-	  <SolidColorBrush x:Key="ChatInputBorderBrush" Color="#CCCCCC"/>
-	</ResourceDictionary>
+      <SolidColorBrush x:Key="DividerLightBrush" Color="#0Fffffff"/>
+
+      <SolidColorBrush x:Key="OverlayDarkBrush" Color="#80000000"/>
+      <SolidColorBrush x:Key="OverlayLightBrush" Color="#40000000"/>
+
+      <!-- Chat-specific colors -->
+      <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#1e3a5f"/>
+
+      <SolidColorBrush x:Key="ChatViewerMessageBrush" Color="#2d2d2d"/>
+
+      <SolidColorBrush x:Key="ChatInputBackgroundBrush" Color="#333333"/>
+
+      <SolidColorBrush x:Key="ChatInputBorderBrush" Color="#555555"/>
+
+      <!-- Hover/Pressed Brushes -->
+      <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#332196F3"/>
+      <SolidColorBrush x:Key="PrimaryPressedBrush" Color="#552196F3"/>
+
+      <SolidColorBrush x:Key="PrimaryFilledHoverBrush" Color="#3CA3F4"/>
+      <SolidColorBrush x:Key="PrimaryFilledPressedBrush" Color="#4DABF5"/>
+
+      <!-- Disabled Brushes (used for disabled filled buttons similar to Material UI) -->
+      <SolidColorBrush x:Key="PrimaryDisabledBrush" Color="#1F2196F3"/>
+      <SolidColorBrush x:Key="SecondaryDisabledBrush" Color="#1F21F3E9"/>
+      <SolidColorBrush x:Key="TertiaryDisabledBrush" Color="#1F7B21F3"/>
+      <SolidColorBrush x:Key="InfoDisabledBrush" Color="#1F89B4F8"/>
+      <SolidColorBrush x:Key="SuccessDisabledBrush" Color="#1F2CB67D"/>
+      <SolidColorBrush x:Key="WarningDisabledBrush" Color="#1FFACC15"/>
+      <SolidColorBrush x:Key="ErrorDisabledBrush" Color="#1FF87171"/>
+      <SolidColorBrush x:Key="DarkDisabledBrush" Color="#1F212121"/>
+
+      <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#3321F3E9"/>
+      <SolidColorBrush x:Key="SecondaryPressedBrush" Color="#5521F3E9"/>
+
+      <SolidColorBrush x:Key="SecondaryFilledHoverBrush" Color="#3CF4EC"/>
+      <SolidColorBrush x:Key="SecondaryFilledPressedBrush" Color="#4DF5EE"/>
+
+      <SolidColorBrush x:Key="TertiaryHoverBrush" Color="#337B21F3"/>
+      <SolidColorBrush x:Key="TertiaryPressedBrush" Color="#557B21F3"/>
+
+      <SolidColorBrush x:Key="TertiaryFilledHoverBrush" Color="#8B3CF4"/>
+      <SolidColorBrush x:Key="TertiaryFilledPressedBrush" Color="#9550F5"/>
+
+      <SolidColorBrush x:Key="InfoHoverBrush" Color="#3389B4F8"/>
+      <SolidColorBrush x:Key="InfoPressedBrush" Color="#5589B4F8"/>
+
+      <SolidColorBrush x:Key="InfoFilledHoverBrush" Color="#9DC2F9"/>
+      <SolidColorBrush x:Key="InfoFilledPressedBrush" Color="#A8C9FA"/>
+
+      <SolidColorBrush x:Key="SuccessHoverBrush" Color="#332CB67D"/>
+      <SolidColorBrush x:Key="SuccessPressedBrush" Color="#552CB67D"/>
+
+      <SolidColorBrush x:Key="SuccessFilledHoverBrush" Color="#46BF8D"/>
+      <SolidColorBrush x:Key="SuccessFilledPressedBrush" Color="#58C697"/>
+
+      <SolidColorBrush x:Key="WarningHoverBrush" Color="#33FACC15"/>
+      <SolidColorBrush x:Key="WarningPressedBrush" Color="#55FACC15"/>
+
+      <SolidColorBrush x:Key="WarningFilledHoverBrush" Color="#FBD53C"/>
+      <SolidColorBrush x:Key="WarningFilledPressedBrush" Color="#FCDA50"/>
+
+      <SolidColorBrush x:Key="ErrorHoverBrush" Color="#33F87171"/>
+      <SolidColorBrush x:Key="ErrorPressedBrush" Color="#55F87171"/>
+
+      <SolidColorBrush x:Key="ErrorFilledHoverBrush" Color="#F98585"/>
+      <SolidColorBrush x:Key="ErrorFilledPressedBrush" Color="#FA9393"/>
+
+      <SolidColorBrush x:Key="DarkHoverBrush" Color="#33212121"/>
+      <SolidColorBrush x:Key="DarkPressedBrush" Color="#55212121"/>
+
+      <SolidColorBrush x:Key="DarkFilledHoverBrush" Color="#3D3D3D"/>
+      <SolidColorBrush x:Key="DarkFilledPressedBrush" Color="#515151"/>
+
+    </ResourceDictionary>
+
+    <!-- Light Theme Colors -->
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="PrimaryColor" Color="#2196F3"/>
+
+      <SolidColorBrush x:Key="SecondaryColor" Color="#008c7a"/>
+
+      <SolidColorBrush x:Key="TertiaryColor" Color="#7b21f3"/>
+
+      <SolidColorBrush x:Key="InfoColor" Color="#0d6efd"/>
+
+      <SolidColorBrush x:Key="SuccessColor" Color="#28a745"/>
+
+      <SolidColorBrush x:Key="WarningColor" Color="#ffc107"/>
+
+      <SolidColorBrush x:Key="ErrorColor" Color="#dc3545"/>
+
+      <SolidColorBrush x:Key="DarkColor" Color="#424242"/>
+
+      <!-- Contrast Text Colors for readability on semantic color backgrounds -->
+      <SolidColorBrush x:Key="PrimaryContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="SecondaryContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="TertiaryContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="InfoContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="SuccessContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="WarningContrastText" Color="#000000"/>
+      <SolidColorBrush x:Key="ErrorContrastText" Color="#FFFFFF"/>
+      <SolidColorBrush x:Key="DarkContrastText" Color="#FFFFFF"/>
+
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#DE000000"/>
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#99000000"/>
+      <SolidColorBrush x:Key="TextDisabledBrush" Color="#61000000"/>
+
+      <SolidColorBrush x:Key="BackgroundBrush" Color="#FAFAFA"/>
+
+      <SolidColorBrush x:Key="BackgroundGrayBrush" Color="#F5F5F5"/>
+
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF"/>
+
+      <SolidColorBrush x:Key="AppbarBackgroundBrush" Color="#F0F0F0"/>
+      <SolidColorBrush x:Key="AppbarTextBrush" Color="#DE000000"/>
+
+      <SolidColorBrush x:Key="DividerBrush" Color="#1F000000"/>
+
+      <SolidColorBrush x:Key="DividerLightBrush" Color="#0F000000"/>
+
+      <SolidColorBrush x:Key="OverlayDarkBrush" Color="#52000000"/>
+      <SolidColorBrush x:Key="OverlayLightBrush" Color="#1F000000"/>
+
+      <!-- Chat-specific colors -->
+      <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#bbdefb"/>
+
+      <SolidColorBrush x:Key="ChatViewerMessageBrush" Color="#E0E0E0"/>
+
+      <SolidColorBrush x:Key="ChatInputBackgroundBrush" Color="#F0F0F0"/>
+
+      <SolidColorBrush x:Key="ChatInputBorderBrush" Color="#CCCCCC"/>
+
+      <!-- Hover/Pressed Brushes -->
+      <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#332196F3"/>
+      <SolidColorBrush x:Key="PrimaryPressedBrush" Color="#552196F3"/>
+
+      <SolidColorBrush x:Key="PrimaryFilledHoverBrush" Color="#1E8AE0"/>
+      <SolidColorBrush x:Key="PrimaryFilledPressedBrush" Color="#1C7ECC"/>
+
+      <!-- Disabled Brushes (used for disabled filled buttons similar to Material UI) -->
+      <SolidColorBrush x:Key="PrimaryDisabledBrush" Color="#1F2196F3"/>
+      <SolidColorBrush x:Key="SecondaryDisabledBrush" Color="#1F008C7A"/>
+      <SolidColorBrush x:Key="TertiaryDisabledBrush" Color="#1F7B21F3"/>
+      <SolidColorBrush x:Key="InfoDisabledBrush" Color="#1F0D6EFD"/>
+      <SolidColorBrush x:Key="SuccessDisabledBrush" Color="#1F28A745"/>
+      <SolidColorBrush x:Key="WarningDisabledBrush" Color="#1FFFC107"/>
+      <SolidColorBrush x:Key="ErrorDisabledBrush" Color="#1FDC3545"/>
+      <SolidColorBrush x:Key="DarkDisabledBrush" Color="#1F424242"/>
+
+      <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#33008C7A"/>
+      <SolidColorBrush x:Key="SecondaryPressedBrush" Color="#55008C7A"/>
+
+      <SolidColorBrush x:Key="SecondaryFilledHoverBrush" Color="#008169"/>
+      <SolidColorBrush x:Key="SecondaryFilledPressedBrush" Color="#00755F"/>
+
+      <SolidColorBrush x:Key="TertiaryHoverBrush" Color="#337B21F3"/>
+      <SolidColorBrush x:Key="TertiaryPressedBrush" Color="#557B21F3"/>
+
+      <SolidColorBrush x:Key="TertiaryFilledHoverBrush" Color="#711EE0"/>
+      <SolidColorBrush x:Key="TertiaryFilledPressedBrush" Color="#661CCC"/>
+
+      <SolidColorBrush x:Key="InfoHoverBrush" Color="#330D6EFD"/>
+      <SolidColorBrush x:Key="InfoPressedBrush" Color="#550D6EFD"/>
+
+      <SolidColorBrush x:Key="InfoFilledHoverBrush" Color="#0C65E9"/>
+      <SolidColorBrush x:Key="InfoFilledPressedBrush" Color="#0B5BD5"/>
+
+      <SolidColorBrush x:Key="SuccessHoverBrush" Color="#3328A745"/>
+      <SolidColorBrush x:Key="SuccessPressedBrush" Color="#5528A745"/>
+
+      <SolidColorBrush x:Key="SuccessFilledHoverBrush" Color="#24963E"/>
+      <SolidColorBrush x:Key="SuccessFilledPressedBrush" Color="#208639"/>
+
+      <SolidColorBrush x:Key="WarningHoverBrush" Color="#33FFC107"/>
+      <SolidColorBrush x:Key="WarningPressedBrush" Color="#55FFC107"/>
+
+      <SolidColorBrush x:Key="WarningFilledHoverBrush" Color="#EBB106"/>
+      <SolidColorBrush x:Key="WarningFilledPressedBrush" Color="#D7A106"/>
+
+      <SolidColorBrush x:Key="ErrorHoverBrush" Color="#33DC3545"/>
+      <SolidColorBrush x:Key="ErrorPressedBrush" Color="#55DC3545"/>
+
+      <SolidColorBrush x:Key="ErrorFilledHoverBrush" Color="#CA313F"/>
+      <SolidColorBrush x:Key="ErrorFilledPressedBrush" Color="#B52C38"/>
+
+      <SolidColorBrush x:Key="DarkHoverBrush" Color="#33424242"/>
+      <SolidColorBrush x:Key="DarkPressedBrush" Color="#55424242"/>
+
+      <SolidColorBrush x:Key="DarkFilledHoverBrush" Color="#3C3C3C"/>
+      <SolidColorBrush x:Key="DarkFilledPressedBrush" Color="#383838"/>
+
+    </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

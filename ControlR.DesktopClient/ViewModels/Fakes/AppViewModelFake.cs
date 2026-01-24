@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.Mvvm.Input;
-using System.Windows.Input;
+﻿using System.Windows.Input;
 
 namespace ControlR.DesktopClient.ViewModels.Fakes;
 public class AppViewModelFake : IAppViewModel

@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+             xmlns:common="using:ControlR.DesktopClient.Common"
+             xmlns:theme="using:ControlR.DesktopClient.Theming"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="ControlR.DesktopClient.Views.SettingsView"
+             x:DataType="vm:ISettingsViewModel">
+
+  <StackPanel Spacing="16">
+    
+    <TextBlock Text="{x:Static common:Localization.Settings}" Classes="h1 Primary" />
+
+    <StackPanel Spacing="8">
+      <TextBlock Text="{x:Static common:Localization.Theme}" FontWeight="SemiBold" />
+      
+      <RadioButton GroupName="Theme"
+                   Content="{x:Static common:Localization.Dark}"
+                   IsChecked="{Binding CurrentThemeMode, Converter={StaticResource EnumComparisonConverter}, ConverterParameter={x:Static theme:ThemeMode.Dark}}" />
+
+      <RadioButton GroupName="Theme"
+                   Content="{x:Static common:Localization.Light}"
+                   IsChecked="{Binding CurrentThemeMode, Converter={StaticResource EnumComparisonConverter}, ConverterParameter={x:Static theme:ThemeMode.Light}}" />
+      
+
+    </StackPanel>
+
+  </StackPanel>
+
+</UserControl>

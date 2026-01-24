@@ -1,24 +1,51 @@
 <Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:ControlR.DesktopClient.ViewModels"
-        xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="ControlR.DesktopClient.Views.MainWindow"
-        x:DataType="vm:IMainWindowViewModel"
-        Icon="/Assets/appicon.ico"
-        Width="400"
-        MinHeight="300"
-        WindowStartupLocation="CenterScreen"
-        SizeToContent="Height"
-        Title="ControlR">
+				xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+				xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+				xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+				xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+				xmlns:controls="using:ControlR.DesktopClient.Controls"
+				xmlns:brand="using:ControlR.Libraries.Branding"
+				xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
+				mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+				x:Class="ControlR.DesktopClient.Views.MainWindow"
+				x:DataType="vm:IMainWindowViewModel"
+				Icon="/Assets/appicon.ico"
+				Title="{x:Static brand:BrandingConstants.ProductName}"
+				Width="600"
+				Height="500">
 
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <fakes:MainWindowViewModelFake />
-    </Design.DataContext>
+<Design.DataContext>
+	<fakes:MainWindowViewModelFake />
+</Design.DataContext>
 
-    <ContentControl Margin="5" Content="{Binding CurrentViewModel}" />
+	<Grid ColumnDefinitions="Auto,*">
+
+		<!-- Navigation Sidebar -->
+		<Border Grid.Column="0"
+						Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+						BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+						BorderThickness="0,0,1,0">
+
+			<ScrollViewer>
+				<ItemsControl Margin="8" ItemsSource="{Binding NavigationItems}">
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<StackPanel Spacing="4" />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<controls:NavItem DataContext="{Binding}" />
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</ScrollViewer>
+		</Border>
+
+		<!-- Content Area -->
+		<ContentControl Grid.Column="1"
+										Padding="16"
+										Content="{Binding CurrentViewModel}" />
+
+	</Grid>
 </Window>

@@ -5,7 +5,6 @@ using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
-using ControlR.DesktopClient.Views;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.DevicesCommon.Services;
@@ -14,7 +13,10 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-// ReSharper disable UnusedMethodReturnValue.Local
+using ControlR.DesktopClient.ViewModels.Mac;
+using ControlR.DesktopClient.Views.Mac;
+using ControlR.DesktopClient.Views.Linux;
+using ControlR.DesktopClient.ViewModels.Linux;
 
 namespace ControlR.DesktopClient;
 
@@ -32,7 +34,6 @@ internal static class StaticServiceProvider
     {
       return;
     }
-
     var services = new ServiceCollection();
     services.AddSingleton(lifetime);
     services.AddControlrDesktop(instanceId);
@@ -80,6 +81,9 @@ internal static class StaticServiceProvider
       .AddSingleton<IThemeProvider, ThemeProvider>()
       .AddSingleton<IAppViewModel, AppViewModel>()
       .AddSingleton<IMainWindowViewModel, MainWindowViewModel>()
+      .AddSingleton<IConnectionsViewModel, ConnectionsViewModel>()
+      .AddSingleton<ISettingsViewModel, SettingsViewModel>()
+      .AddSingleton<IAboutViewModel, AboutViewModel>()
       .AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>()
       .AddSingleton<IDialogProvider, DialogProvider>()
       .AddSingleton<IUserInteractionService, UserInteractionService>()
@@ -87,18 +91,21 @@ internal static class StaticServiceProvider
       .AddSingleton<IChatSessionManager, ChatSessionManager>()
       .AddSingleton<IpcClientManager>()
       .AddSingleton<IIpcClientAccessor>(sp => sp.GetRequiredService<IpcClientManager>())
-      .AddSingleton<IManagedDeviceViewModel, ManagedDeviceViewModel>()
       .AddSingleton<IToaster, Toaster>()
       .AddSingleton<IImageUtility, ImageUtility>()
-      .AddSingleton<IToaster, Toaster>()
+      .AddSingleton<IAppLifetimeNotifier, AppLifetimeNotifier>()
+      .AddSingleton<IViewModelFactory, ViewModelFactory>()
       .AddTransient<MainWindow>()
+      .AddTransient<ConnectionsView>()
+      .AddTransient<SettingsView>()
+      .AddTransient<AboutView>()
       .AddTransient<IMessageBoxViewModel, MessageBoxViewModel>()
-      .AddTransient<ManagedDeviceView>()
       .AddTransient<ChatWindow>()
       .AddTransient<IChatWindowViewModel, ChatWindowViewModel>()
       .AddTransient<ToastWindow>()
       .AddTransient<IToastWindowViewModel, ToastWindowViewModel>()
-      .AddHostedService(sp => sp.GetRequiredService<IpcClientManager>());
+      .AddHostedService(sp => sp.GetRequiredService<IpcClientManager>())
+      .AddHostedService(sp => sp.GetRequiredService<IAppLifetimeNotifier>());
 
 
     if (OperatingSystem.IsWindowsVersionAtLeast(8))
@@ -109,7 +116,9 @@ internal static class StaticServiceProvider
         .AddSingleton<IWin32Interop, Win32Interop>()
         .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
         .AddSingleton<IDisplayManager, DisplayManagerWindows>()
-        .AddSingleton<IWindowsMessagePump, WindowsMessagePump>();
+        .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
+        .AddSingleton<IPermissionsViewModel, PermissionsViewModel>()
+        .AddTransient<PermissionsView>();
 
     }
     else if (OperatingSystem.IsMacOS())
@@ -120,7 +129,9 @@ internal static class StaticServiceProvider
         .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberMac>>()
         .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
         .AddSingleton<IMacInterop, MacInterop>()
-        .AddSingleton<IDisplayManager, DisplayManagerMac>();
+        .AddSingleton<IDisplayManager, DisplayManagerMac>()
+        .AddSingleton<IPermissionsViewModelMac, PermissionsViewModelMac>()
+        .AddTransient<PermissionsViewMac>();
     }
     else if (OperatingSystem.IsLinux())
     {
@@ -140,13 +151,17 @@ internal static class StaticServiceProvider
             .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
             .AddSingleton<IDisplayManager, DisplayManagerWayland>()
             .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>()
+            .AddSingleton<IPermissionsViewModelWayland, PermissionsViewModelWayland>()
+            .AddTransient<PermissionsViewWayland>()
             .AddHostedService<RemoteControlPermissionMonitor>();
           break;
         case DesktopEnvironmentType.X11:
           services
             .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberX11>>()
             .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
-            .AddSingleton<IDisplayManager, DisplayManagerX11>();
+            .AddSingleton<IDisplayManager, DisplayManagerX11>()
+            .AddSingleton<IPermissionsViewModel, PermissionsViewModel>()
+            .AddTransient<PermissionsView>();
           break;
         default:
           throw new NotSupportedException("Unsupported desktop environment detected.");

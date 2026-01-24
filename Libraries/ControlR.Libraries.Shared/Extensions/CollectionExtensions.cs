@@ -13,6 +13,14 @@ public static class CollectionExtensions
     }
   }
 
+  public static void AddRange<T>(this ObservableCollection<T> self, params T[] items)
+  {
+    foreach (var item in items)
+    {
+      self.Add(item);
+    }
+  }
+
   public static void DisposeAll(this IEnumerable<IDisposable> disposables, Action<Exception>? exceptionHandler = null)
   {
     foreach (var disposable in disposables)

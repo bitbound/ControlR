@@ -1,7 +1,6 @@
-using Avalonia.Threading;
 using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.ViewModels;
-using ControlR.Libraries.Shared.Extensions;
+using ControlR.DesktopClient.ViewModels.Linux;
+using ControlR.DesktopClient.ViewModels.Mac;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -36,6 +35,16 @@ public class RemoteControlPermissionMonitor(
       return;
     }
 
+    if (_systemEnvironment.IsLinux())
+    {
+      var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+      if (!detector.IsWayland())
+      {
+        _logger.LogInformation("Permission monitoring is not required on this platform");
+        return;
+      }
+    }
+
     _logger.LogInformation("Starting permission monitoring service");
     await CheckPermissions();
 
@@ -59,17 +68,24 @@ public class RemoteControlPermissionMonitor(
     {
       _logger.LogInformationDeduped("Checking OS remote control permissions");
 
-      var arePermissionsGranted = false;
       if (_systemEnvironment.IsMacOS())
       {
         var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
         var isAccessibilityGranted = macInterop.IsMacAccessibilityPermissionGranted();
         var isScreenCaptureGranted = macInterop.IsMacScreenCapturePermissionGranted();
-        arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
+        var arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
         _logger.LogInformationDeduped(
           "macOS permissions: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
           args: (isAccessibilityGranted, isScreenCaptureGranted));
+
+        if (arePermissionsGranted)
+        {
+          _logger.LogInformationDeduped("All required permissions are granted");
+          return;
+        }
+        _logger.LogWarningDeduped("Required permissions are missing");
+        await ShowPermissionsMissingToast<IPermissionsViewModelMac>();
       }
       else if (_systemEnvironment.IsLinux())
       {
@@ -77,9 +93,17 @@ public class RemoteControlPermissionMonitor(
         if (detector.IsWayland())
         {
           var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-          arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
+          var arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
 
           _logger.LogInformationDeduped("Wayland permissions: RemoteControl={RemoteControl}", args: arePermissionsGranted);
+          
+          if (arePermissionsGranted)
+          {
+            _logger.LogInformationDeduped("All required permissions are granted");
+            return;
+          }
+          _logger.LogWarningDeduped("Required permissions are missing");
+          await ShowPermissionsMissingToast<IPermissionsViewModelWayland>();
         }
         else
         {
@@ -88,16 +112,6 @@ public class RemoteControlPermissionMonitor(
           return;
         }
       }
-
-      if (!arePermissionsGranted)
-      {
-        _logger.LogWarningDeduped("Required permissions are missing");
-        await ShowPermissionsMissingToast();
-      }
-      else
-      {
-        _logger.LogInformationDeduped("All required permissions are granted");
-      }
     }
     catch (Exception ex)
     {
@@ -105,7 +119,8 @@ public class RemoteControlPermissionMonitor(
     }
   }
 
-  private async Task ShowPermissionsMissingToast()
+  private async Task ShowPermissionsMissingToast<TViewModel>()
+    where TViewModel : IViewModelBase
   {
     try
     {
@@ -117,8 +132,8 @@ public class RemoteControlPermissionMonitor(
           ToastIcon.Warning,
           async () =>
           {
-            // When clicked, show the main window and navigate to ManagedDeviceView
-            await _navigationProvider.ShowMainWindowAndNavigateTo<IManagedDeviceViewModel>();
+            // When clicked, show the main window and navigate to Permissions.
+            await _navigationProvider.ShowMainWindowAndNavigateTo<TViewModel>();
           });
       });
     }

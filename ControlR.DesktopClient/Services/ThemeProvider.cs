@@ -4,13 +4,6 @@ using Avalonia.Styling;
 
 namespace ControlR.DesktopClient.Services;
 
-public enum ThemeMode
-{
-  Auto,
-  Light,
-  Dark
-}
-
 public interface IThemeProvider
 {
   event EventHandler? ThemeChanged;
@@ -22,7 +15,7 @@ public interface IThemeProvider
 
 public class ThemeProvider : IThemeProvider
 {
-  private ThemeMode _currentThemeMode = ThemeMode.Auto;
+  private ThemeMode _currentThemeMode = ThemeMode.Dark;
 
   public event EventHandler? ThemeChanged;
 
@@ -31,7 +24,6 @@ public class ThemeProvider : IThemeProvider
     {
       ThemeMode.Light => ThemeVariant.Light,
       ThemeMode.Dark => ThemeVariant.Dark,
-      ThemeMode.Auto => GetSystemTheme(),
       _ => ThemeVariant.Default
     };
 
@@ -48,7 +40,6 @@ public class ThemeProvider : IThemeProvider
       }
     }
   }
-
   public void SetThemeMode(ThemeMode mode)
   {
     CurrentThemeMode = mode;
@@ -58,45 +49,44 @@ public class ThemeProvider : IThemeProvider
   {
     CurrentThemeMode = _currentThemeMode switch
     {
-      ThemeMode.Auto => ThemeMode.Light,
       ThemeMode.Light => ThemeMode.Dark,
-      _ => ThemeMode.Auto
+      ThemeMode.Dark => ThemeMode.Light,
+      _ => ThemeMode.Dark
     };
   }
 
-  private static ThemeVariant GetSystemTheme()
-  {
-    // On Windows and Linux, theme detection isn't working yet. Default to Dark.
-    if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
-    {
-      return ThemeVariant.Dark;
-    }
+  // I ran into issues with system theme detection on Windows and Wayland, so this is disabled for now.
+  // On Windows, it's due to how we're launching via cloning winlogon token.
+  //private static ThemeVariant GetSystemTheme()
+  //{
+  //  // On Windows and Linux, theme detection isn't working yet. Default to Dark.
+  //  if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+  //  {
+  //    return ThemeVariant.Dark;
+  //  }
 
-    try
-    {
-      var platformSettings = Application.Current?.PlatformSettings;
-      if (platformSettings is not null)
-      {
-        var colorScheme = platformSettings.GetColorValues();
-        // Convert PlatformThemeVariant enum to ThemeVariant class
-        return colorScheme.ThemeVariant == PlatformThemeVariant.Dark
-          ? ThemeVariant.Dark
-          : ThemeVariant.Light;
-      }
-    }
-    catch
-    {
-      // If detection fails, default to dark
-    }
+  //  try
+  //  {
+  //    var platformSettings = Application.Current?.PlatformSettings;
+  //    if (platformSettings is not null)
+  //    {
+  //      var colorScheme = platformSettings.GetColorValues();
+  //      // Convert PlatformThemeVariant enum to ThemeVariant class
+  //      return colorScheme.ThemeVariant == PlatformThemeVariant.Dark
+  //        ? ThemeVariant.Dark
+  //        : ThemeVariant.Light;
+  //    }
+  //  }
+  //  catch
+  //  {
+  //    // If detection fails, default to dark
+  //  }
 
-    return ThemeVariant.Dark;
-  }
+  //  return ThemeVariant.Dark;
+  //}
 
   private void ApplyTheme()
   {
-    if (Application.Current is not null)
-    {
-      Application.Current.RequestedThemeVariant = CurrentTheme;
-    }
+    Application.Current?.RequestedThemeVariant = CurrentTheme;
   }
 }

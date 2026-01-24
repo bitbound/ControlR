@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+				xmlns:controls="using:ControlR.DesktopClient.Controls"
+				xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 	<Design.PreviewWith>
 		<Border Padding="20">
 			<!-- Add Controls for Previewer Here -->
@@ -32,20 +33,525 @@
 		<Setter Property="Foreground" Value="{DynamicResource ErrorColor}" />
 	</Style>
 
-	<Style Selector="Button.Info">
-		<Setter Property="Background" Value="{DynamicResource InfoColor}" />
-	</Style>
-
-	<Style Selector="Button.Primary">
-		<Setter Property="Background" Value="{DynamicResource PrimaryColor}" />
-	</Style>
-
 	<Style Selector="Border.Card">
 		<Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
 		<Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
 		<Setter Property="BorderThickness" Value="1" />
 		<Setter Property="CornerRadius" Value="8" />
 		<Setter Property="Padding" Value="16" />
+	</Style>
+
+	<!-- Color Styles -->
+	<Style Selector=":is(ContentControl).Info">
+		<Setter Property="Background" Value="{DynamicResource InfoColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Primary">
+		<Setter Property="Background" Value="{DynamicResource PrimaryColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Secondary">
+		<Setter Property="Background" Value="{DynamicResource SecondaryColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Tertiary">
+		<Setter Property="Background" Value="{DynamicResource TertiaryColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Success">
+		<Setter Property="Background" Value="{DynamicResource SuccessColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Warning">
+		<Setter Property="Background" Value="{DynamicResource WarningColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Error">
+		<Setter Property="Background" Value="{DynamicResource ErrorColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Dark">
+		<Setter Property="Background" Value="{DynamicResource DarkColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource DarkContrastText}" />
+	</Style>
+
+	<!-- Variant base classes -->
+	<Style Selector=":is(ContentControl).VariantFilled">
+		<Setter Property="BorderThickness" Value="0" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="BorderThickness" Value="1" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="BorderThickness" Value="0" />
+	</Style>
+
+	<!-- Combined color + variant styles with hover/pressed states -->
+
+	<!-- Primary -->
+	<Style Selector=":is(ContentControl).Primary.VariantFilled">
+		<Setter Property="Background" Value="{DynamicResource PrimaryColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource PrimaryContrastText}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Primary.VariantFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource PrimaryFilledHoverBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Primary.VariantFilled:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource PrimaryFilledPressedBrush}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Primary.VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource PrimaryColor}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Primary.VariantOutlined:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource PrimaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Primary.VariantOutlined:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource PrimaryPressedBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource PrimaryColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource PrimaryColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Primary.VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource PrimaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Primary.VariantText:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource PrimaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Primary.VariantText:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource PrimaryPressedBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource PrimaryColor}" />
+	</Style>
+
+	<!-- Same pattern for other colors: Secondary, Tertiary, Info, Success, Warning, Error, Dark -->
+
+	<!-- Secondary -->
+	<Style Selector=":is(ContentControl).Secondary.VariantFilled">
+		<Setter Property="Background" Value="{DynamicResource SecondaryColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource SecondaryContrastText}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Secondary.VariantFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SecondaryFilledHoverBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Secondary.VariantFilled:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SecondaryFilledPressedBrush}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Secondary.VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource SecondaryColor}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource SecondaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Secondary.VariantOutlined:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SecondaryHoverBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource SecondaryColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Secondary.VariantOutlined:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SecondaryPressedBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource SecondaryColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Secondary.VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource SecondaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Secondary.VariantText:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SecondaryHoverBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Secondary.VariantText:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SecondaryPressedBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryColor}" />
+	</Style>
+
+	<!-- Tertiary -->
+	<Style Selector=":is(ContentControl).Tertiary.VariantFilled">
+		<Setter Property="Background" Value="{DynamicResource TertiaryColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource TertiaryContrastText}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Tertiary.VariantFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource TertiaryFilledHoverBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Tertiary.VariantFilled:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource TertiaryFilledPressedBrush}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Tertiary.VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource TertiaryColor}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TertiaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Tertiary.VariantOutlined:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource TertiaryHoverBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TertiaryColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TertiaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Tertiary.VariantOutlined:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource TertiaryPressedBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TertiaryColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TertiaryColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Tertiary.VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource TertiaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Tertiary.VariantText:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource TertiaryHoverBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TertiaryColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Tertiary.VariantText:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource TertiaryPressedBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TertiaryColor}" />
+	</Style>
+
+	<!-- Info -->
+	<Style Selector=":is(ContentControl).Info.VariantFilled">
+		<Setter Property="Background" Value="{DynamicResource InfoColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource InfoContrastText}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Info.VariantFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource InfoFilledHoverBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Info.VariantFilled:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource InfoFilledPressedBrush}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Info.VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource InfoColor}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource InfoColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Info.VariantOutlined:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource InfoHoverBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource InfoColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource InfoColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Info.VariantOutlined:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource InfoPressedBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource InfoColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource InfoColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Info.VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource InfoColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Info.VariantText:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource InfoHoverBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource InfoColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Info.VariantText:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource InfoPressedBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource InfoColor}" />
+	</Style>
+
+	<!-- Success -->
+	<Style Selector=":is(ContentControl).Success.VariantFilled">
+		<Setter Property="Background" Value="{DynamicResource SuccessColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource SuccessContrastText}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Success.VariantFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SuccessFilledHoverBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Success.VariantFilled:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SuccessFilledPressedBrush}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Success.VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource SuccessColor}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource SuccessColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Success.VariantOutlined:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SuccessHoverBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource SuccessColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Success.VariantOutlined:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SuccessPressedBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource SuccessColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Success.VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource SuccessColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Success.VariantText:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SuccessHoverBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Success.VariantText:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SuccessPressedBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessColor}" />
+	</Style>
+
+	<!-- Warning -->
+	<Style Selector=":is(ContentControl).Warning.VariantFilled">
+		<Setter Property="Background" Value="{DynamicResource WarningColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource WarningContrastText}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Warning.VariantFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource WarningFilledHoverBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Warning.VariantFilled:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource WarningFilledPressedBrush}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Warning.VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource WarningColor}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource WarningColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Warning.VariantOutlined:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource WarningHoverBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource WarningColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource WarningColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Warning.VariantOutlined:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource WarningPressedBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource WarningColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource WarningColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Warning.VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource WarningColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Warning.VariantText:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource WarningHoverBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource WarningColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Warning.VariantText:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource WarningPressedBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource WarningColor}" />
+	</Style>
+
+	<!-- Error -->
+	<Style Selector=":is(ContentControl).Error.VariantFilled">
+		<Setter Property="Background" Value="{DynamicResource ErrorColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource ErrorContrastText}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Error.VariantFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ErrorFilledHoverBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Error.VariantFilled:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ErrorFilledPressedBrush}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Error.VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource ErrorColor}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource ErrorColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Error.VariantOutlined:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ErrorHoverBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource ErrorColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource ErrorColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Error.VariantOutlined:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ErrorPressedBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource ErrorColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource ErrorColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Error.VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource ErrorColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Error.VariantText:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ErrorHoverBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource ErrorColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Error.VariantText:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ErrorPressedBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource ErrorColor}" />
+	</Style>
+
+	<!-- Dark -->
+	<Style Selector=":is(ContentControl).Dark.VariantFilled">
+		<Setter Property="Background" Value="{DynamicResource DarkColor}" />
+		<Setter Property="Foreground" Value="{DynamicResource DarkContrastText}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Dark.VariantFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource DarkFilledHoverBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Dark.VariantFilled:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource DarkFilledPressedBrush}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Dark.VariantOutlined">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource DarkColor}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource DarkColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Dark.VariantOutlined:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource DarkHoverBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource DarkColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource DarkColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Dark.VariantOutlined:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource DarkPressedBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource DarkColor}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource DarkColor}" />
+	</Style>
+
+	<Style Selector=":is(ContentControl).Dark.VariantText">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="Foreground" Value="{DynamicResource DarkColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Dark.VariantText:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource DarkHoverBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource DarkColor}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Dark.VariantText:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource DarkPressedBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource DarkColor}" />
+	</Style>
+
+	<!-- Disabled states modeled after Material UI using theme swatches -->
+
+	<!-- Primary -->
+	<Style Selector=":is(ContentControl).Primary.VariantFilled:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource PrimaryDisabledBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Primary.VariantOutlined:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Primary.VariantText:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+
+	<!-- Secondary -->
+	<Style Selector=":is(ContentControl).Secondary.VariantFilled:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SecondaryDisabledBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Secondary.VariantOutlined:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Secondary.VariantText:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+
+	<!-- Tertiary -->
+	<Style Selector=":is(ContentControl).Tertiary.VariantFilled:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource TertiaryDisabledBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Tertiary.VariantOutlined:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Tertiary.VariantText:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+
+	<!-- Info -->
+	<Style Selector=":is(ContentControl).Info.VariantFilled:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource InfoDisabledBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Info.VariantOutlined:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Info.VariantText:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+
+	<!-- Success -->
+	<Style Selector=":is(ContentControl).Success.VariantFilled:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource SuccessDisabledBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Success.VariantOutlined:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Success.VariantText:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+
+	<!-- Warning -->
+	<Style Selector=":is(ContentControl).Warning.VariantFilled:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource WarningDisabledBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Warning.VariantOutlined:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Warning.VariantText:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+
+	<!-- Error -->
+	<Style Selector=":is(ContentControl).Error.VariantFilled:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource ErrorDisabledBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Error.VariantOutlined:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Error.VariantText:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+
+	<!-- Dark -->
+	<Style Selector=":is(ContentControl).Dark.VariantFilled:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="{DynamicResource DarkDisabledBrush}" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+	</Style>
+	<Style Selector=":is(ContentControl).Dark.VariantOutlined:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
+		<Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+	</Style>
+	<Style Selector=":is(ContentControl).Dark.VariantText:disabled /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
 	</Style>
 
 </Styles>

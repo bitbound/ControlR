@@ -2,7 +2,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Services;
 
 namespace ControlR.DesktopClient.ViewModels;
@@ -15,7 +14,7 @@ public interface IAppViewModel
   ICommand ToggleThemeCommand { get; }
 }
 
-public partial class AppViewModel : ViewModelBase, IAppViewModel
+public partial class AppViewModel : ViewModelBase<App>, IAppViewModel
 {
   private readonly IControlledApplicationLifetime _appLifetime;
   private readonly INavigationProvider _navigationProvider;
@@ -46,6 +45,7 @@ public partial class AppViewModel : ViewModelBase, IAppViewModel
   public ICommand ShowWindowCommand { get; }
 
   public ICommand ToggleThemeCommand { get; }
+
 
   private void OnThemeChanged(object? sender, EventArgs e)
   {

@@ -1,11 +1,9 @@
 using System.Collections.Concurrent;
 using Avalonia.Controls;
-using Avalonia.Threading;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Models;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
-using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 

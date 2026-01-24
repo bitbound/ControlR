@@ -1,54 +1,56 @@
 <Application xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 x:Class="ControlR.DesktopClient.App"
-			 xmlns:local="using:ControlR.DesktopClient"
-			 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
-			 xmlns:vmf="using:ControlR.DesktopClient.ViewModels.Fakes"
-			 x:DataType="vm:AppViewModel"
-			 Name="ControlR">
+						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+						 x:Class="ControlR.DesktopClient.App"
+						 xmlns:local="using:ControlR.DesktopClient"
+						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+						 xmlns:vmf="using:ControlR.DesktopClient.ViewModels.Fakes"
+			       xmlns:brand="using:ControlR.Libraries.Branding"
+						 x:DataType="vm:AppViewModel"
+						 Name="{x:Static brand:BrandingConstants.ProductName}">
+	
+	<Application.DataTemplates>
+		<local:ViewLocator/>
+	</Application.DataTemplates>
 
-  <Application.DataTemplates>
-	<local:ViewLocator/>
-  </Application.DataTemplates>
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="/Resources/Theme.axaml" />
+				<ResourceInclude Source="/Resources/Converters.axaml" />
+				<ResourceInclude Source="/Resources/Icons.axaml" />
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
+	</Application.Resources>
 
-  <Application.Resources>
-	<ResourceDictionary>
-	  <ResourceDictionary.MergedDictionaries>
-		<ResourceInclude Source="/Resources/Theme.axaml" />
-		<ResourceInclude Source="/Resources/Converters.axaml" />
-		<ResourceInclude Source="/Resources/Icons.axaml" />
-	  </ResourceDictionary.MergedDictionaries>
-	</ResourceDictionary>
-  </Application.Resources>
+	<Application.Styles>
+		<FluentTheme>
+			<FluentTheme.Palettes>
+				<ColorPaletteResources x:Key="Dark"
+															 Accent="#2196F3"
+															 RegionColor="#121212"/>
+				<ColorPaletteResources x:Key="Light"
+															 Accent="#2196F3"
+															 RegionColor="#FAFAFA"/>
+			</FluentTheme.Palettes>
+		</FluentTheme>
 
-  <Application.Styles>
-	<FluentTheme>
-	  <FluentTheme.Palettes>
-		<ColorPaletteResources x:Key="Dark"
-							   Accent="#2196F3"
-							   RegionColor="#121212"/>
-		<ColorPaletteResources x:Key="Light"
-							   Accent="#2196F3"
-							   RegionColor="#FAFAFA"/>
-	  </FluentTheme.Palettes>
-	</FluentTheme>
-
-	<StyleInclude Source="/Resources/Styles.axaml" />
-  </Application.Styles>
+		<StyleInclude Source="/Resources/Styles.axaml" />
+		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+	</Application.Styles>
 
 
-  <TrayIcon.Icons>
-	<TrayIcons>
-	  <TrayIcon Icon="/Assets/appicon.ico" ToolTipText="ControlR" Command="{Binding ShowWindowCommand}">
-		<TrayIcon.Menu>
-		  <NativeMenu>
-			<NativeMenuItem Header="Show" Command="{Binding ShowWindowCommand}" />
-			<NativeMenuItemSeparator />
-			<NativeMenuItem Header="Exit" Command="{Binding ExitApplicationCommand}" />
-		  </NativeMenu>
-		</TrayIcon.Menu>
-	  </TrayIcon>
-	</TrayIcons>
-  </TrayIcon.Icons>
+	<TrayIcon.Icons>
+		<TrayIcons>
+			<TrayIcon Icon="/Assets/appicon.ico" ToolTipText="ControlR" Command="{Binding ShowWindowCommand}">
+				<TrayIcon.Menu>
+					<NativeMenu>
+						<NativeMenuItem Header="Show" Command="{Binding ShowWindowCommand}" />
+						<NativeMenuItemSeparator />
+						<NativeMenuItem Header="Exit" Command="{Binding ExitApplicationCommand}" />
+					</NativeMenu>
+				</TrayIcon.Menu>
+			</TrayIcon>
+		</TrayIcons>
+	</TrayIcon.Icons>
 
 </Application>

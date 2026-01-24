@@ -1,7 +1,4 @@
 using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.Controls;
-using ControlR.DesktopClient.Controls.Dialogs;
-using Avalonia.Threading;
 
 namespace ControlR.DesktopClient.Services;
 

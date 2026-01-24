@@ -1,5 +1,3 @@
-using Avalonia.Threading;
-using ControlR.DesktopClient.Views;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;

@@ -5,9 +5,11 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using ControlR.DesktopClient.Common.Startup;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
+using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -33,6 +35,24 @@ public partial class App : Application
 
     if (ApplicationLifetime is IControlledApplicationLifetime controlledLifetime)
     {
+      // Listen for signals on POSIX systems to trigger a graceful shutdown.
+      if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
+      {
+        _ = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+        {
+          context.Cancel = true;
+          Dispatcher.UIThread.Invoke(() => controlledLifetime.Shutdown());
+        });
+
+        _ = PosixSignalRegistration.Create(PosixSignal.SIGINT, context =>
+        {
+          context.Cancel = true;
+          Dispatcher.UIThread.Invoke(() => controlledLifetime.Shutdown());
+        });
+      }
+
+      StaticServiceProvider.Build(controlledLifetime, instanceId);
+
       // Set explicit shutdown for classic desktop style.
       if (controlledLifetime is ClassicDesktopStyleApplicationLifetime desktop)
       {
@@ -41,25 +61,11 @@ public partial class App : Application
         {
           _appShutdownTokenSource.Cancel();
         };
-      }
-
-      // Listen for signals on POSIX systems to trigger a graceful shutdown.
-      if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
-      {
-        _ = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+        if (SystemEnvironment.Instance.IsDebug)
         {
-          context.Cancel = true;
-          Avalonia.Threading.Dispatcher.UIThread.Invoke(() => controlledLifetime.Shutdown());
-        });
-
-        _ = PosixSignalRegistration.Create(PosixSignal.SIGINT, context =>
-        {
-          context.Cancel = true;
-          Avalonia.Threading.Dispatcher.UIThread.Invoke(() => controlledLifetime.Shutdown());
-        });
+          desktop.MainWindow = StaticServiceProvider.Instance.GetRequiredService<MainWindow>();
+        }
       }
-
-      StaticServiceProvider.Build(controlledLifetime, instanceId);
 
       ReportAssemblyVersion();
 
@@ -85,6 +91,11 @@ public partial class App : Application
     {
       throw new InvalidOperationException(
         "This application requires a classic desktop style lifetime.");
+    }
+    else
+    {
+      // Design-time services can be set up here if needed.
+      RequestedThemeVariant = ThemeVariant.Dark;
     }
 
     base.OnFrameworkInitializationCompleted();

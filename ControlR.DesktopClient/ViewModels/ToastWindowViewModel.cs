@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -31,21 +30,19 @@ public partial class ToastWindowViewModel : ObservableObject, IToastWindowViewMo
   {
     get
     {
-      var resourceKey = ToastIcon switch
+      var themeColor = ToastIcon switch
       {
-        ToastIcon.Info => "InfoColor",
-        ToastIcon.Success => "SuccessColor",
-        ToastIcon.Warning => "WarningColor",
-        ToastIcon.Error => "ErrorColor",
-        ToastIcon.Question => "InfoColor",
-        _ => "InfoColor"
+        ToastIcon.Info => ThemeColor.Info,
+        ToastIcon.Success => ThemeColor.Success,
+        ToastIcon.Warning => ThemeColor.Warning,
+        ToastIcon.Error => ThemeColor.Error,
+        ToastIcon.Question => ThemeColor.Info,
+        _ => ThemeColor.Info
       };
 
-      // Try to get the brush from application resources
-      if (Application.Current?.Resources.TryGetResource(resourceKey, null, out var resource) == true
-          && resource is IBrush brush)
+      if (ResourceLocator.TryGetThemeColorBrush(themeColor, out var themeBrush))
       {
-        return brush;
+        return themeBrush;
       }
 
       // Fallback to theme colors if custom colors aren't found
@@ -59,10 +56,9 @@ public partial class ToastWindowViewModel : ObservableObject, IToastWindowViewMo
         _ => "SystemAccentColorDark1"
       };
 
-      if (Application.Current?.Resources.TryGetResource(fallbackKey, null, out var fallbackResource) == true
-          && fallbackResource is IBrush fallbackBrush)
+      if (ResourceLocator.TryGetThemedResource<IBrush>(fallbackKey, out var themeFallbackBrush))
       {
-        return fallbackBrush;
+        return themeFallbackBrush;
       }
 
       // Final fallback to a solid color
@@ -74,8 +70,7 @@ public partial class ToastWindowViewModel : ObservableObject, IToastWindowViewMo
   {
     get
     {
-      if (Application.Current?.Resources.TryGetResource(IconResourceKey, null, out var resource) == true
-          && resource is StreamGeometry geometry)
+      if (ResourceLocator.TryGetResource<StreamGeometry>(IconResourceKey, out var geometry))
       {
         return geometry;
       }

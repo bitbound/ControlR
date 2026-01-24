@@ -18,8 +18,14 @@ public static class Localization
   private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings();
 
   public static string ADeviceAdministrator => GetString();
+  public static string About => GetString();
   public static string Accessibility => GetString();
   public static string AccessibilityPermissionDescription => GetString();
+  public static string ActiveConnections => GetString();
+  public static string AgentConnectedTooltip => GetString();
+  public static string AgentDisconnectedTooltip => GetString();
+  public static string AgentStatus => GetString();
+  public static string Auto => GetString();
   public static string CancelText => GetString();
   public static string ChatMessageSendFailureMessage => GetString();
   public static string ChatMessageSendFailureTitle => GetString();
@@ -29,6 +35,13 @@ public static class Localization
   public static string ChatWindowDefaultTitle => GetString();
   public static string ChatWindowTitle => GetString();
   public static string CloseText => GetString();
+  public static string ConfirmDisconnect => GetString();
+  public static string ConfirmDisconnectTitle => GetString();
+  public static string Connected => GetString();
+  public static string Connections => GetString();
+  public static string Dark => GetString();
+  public static string Disconnect => GetString();
+  public static string Disconnected => GetString();
   public static string EnterCodePlaceholder => GetString();
   public static string EnterMessagePlaceholder => GetString();
   public static string GetSupportDescription => GetString();
@@ -36,19 +49,24 @@ public static class Localization
   public static string GrantPermission => GetString();
   public static string Granted => GetString();
   public static string LearnMore => GetString();
-  public static string MacOsPermissions => GetString();
+  public static string Light => GetString();
+  public static string MacAccessibilityPermissionRestartRequired => GetString();
   public static string MacPermissionStaleHint => GetString();
+  public static string MacScreenCapturePermissionRestartRequired => GetString();
   public static string ManagedDeviceMessage => GetString();
   public static string ManagedDeviceTitle => GetString();
   public static string NewChatMessageToastMessage => GetString();
   public static string NewChatMessageToastTitle => GetString();
+  public static string NoActiveConnections => GetString();
   public static string NoMessagesText => GetString();
+  public static string NoPermissionsRequired => GetString();
   public static string NoText => GetString();
   public static string NotGranted => GetString();
   public static string NotificationPermissionDescription => GetString();
   public static string Notifications => GetString();
   public static string OkText => GetString();
   public static string OpenSettings => GetString();
+  public static string Permissions => GetString();
   public static string PermissionsMissingToastMessage => GetString();
   public static string PermissionsMissingToastTitle => GetString();
   public static string RemoteControlPermission => GetString();
@@ -64,14 +82,14 @@ public static class Localization
   public static string ScreenRecording => GetString();
   public static string SendMessageText => GetString();
   public static string SendText => GetString();
+  public static string Settings => GetString();
   public static string ShareScreenSecurityWarning => GetString();
   public static string Status => GetString();
   public static string SubmitText => GetString();
-  public static string ThemeAuto => GetString();
-  public static string ThemeDark => GetString();
-  public static string ThemeLight => GetString();
+  public static string Theme => GetString();
+  public static string UnhandledExceptionMessage => GetString();
+  public static string UnhandledExceptionTitle => GetString();
   public static string Version => GetString();
-  public static string WaylandPermissions => GetString();
   public static string YesText => GetString();
   public static string You => GetString();
 
@@ -99,6 +117,7 @@ public static class Localization
     return JsonSerializer.Deserialize<Dictionary<string, string>>(content, _jsonOptions)
            ?? throw new InvalidOperationException("Unable to deserialize localization file.");
   }
+
   private static string GetString([CallerMemberName] string key = "")
   {
     if (_localizationStrings.TryGetValue(key, out var value))

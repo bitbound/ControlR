@@ -10,6 +10,6 @@ public class TenantSetting : TenantEntityBase
   public required string Name { get; set; }
 
   [StringLength(100)]
-  [RegularExpression("^[a-zA-Z0-9-_.]+$", ErrorMessage = "Setting values can only contain letters, numbers, hyphens, periods, and underscores.")]
+  [RegularExpression("^[a-zA-Z0-9-_. ]+$", ErrorMessage = "Setting values can only contain letters, numbers, hyphens, periods, underscores, and spaces.")]
   public required string Value { get; set; }
 }

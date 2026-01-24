@@ -3,4 +3,6 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 	<converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
 	<converters:StringEqualsConverter x:Key="StringEqualsConverter" />
+	<converters:EnumComparisonConverter x:Key="EnumComparisonConverter" />
+	<converters:ResourceKeyToGeometryConverter x:Key="ResourceKeyToGeometryConverter" />
 </ResourceDictionary>

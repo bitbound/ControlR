@@ -1,6 +1,6 @@
-﻿namespace ControlR.DesktopClient.Controls.Dialogs;
+﻿namespace ControlR.DesktopClient.Controls;
 public enum MessageBoxButtons
 {
-  OK,
+  Ok,
   YesNo
 }

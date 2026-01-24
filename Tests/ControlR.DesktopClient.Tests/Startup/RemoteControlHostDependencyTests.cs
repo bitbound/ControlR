@@ -5,6 +5,7 @@ using ControlR.Libraries.Shared.Dtos.IpcDtos;
 using ControlR.Tests.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace ControlR.DesktopClient.Tests.Startup;
@@ -51,19 +52,23 @@ public class RemoteControlHostDependencyTests
   private void CreateRemoteControlHostBuilder_ValidatesDependencyGraph(string environment)
   {
     // Arrange
-    var mockIpcAccessor = new Mock<IIpcClientAccessor>();
-    var mockUserInteractionService = new Mock<IUserInteractionService>();
-    var mockDesktopClientOptions = new Mock<IOptionsMonitor<DesktopClientOptions>>();
+    var ipcClientAccessor = new Mock<IIpcClientAccessor>();
+    var userInteractionService = new Mock<IUserInteractionService>();
+    var desktopClientOptions = new Mock<IOptionsMonitor<DesktopClientOptions>>();
+    var appLifetimeNotifier = new Mock<IAppLifetimeNotifier>();
     var mockLogger = new Mock<ILogger<RemoteControlHostManager>>();
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
 
-    mockDesktopClientOptions
+    desktopClientOptions
       .Setup(x => x.CurrentValue)
       .Returns(new DesktopClientOptions { InstanceId = $"test-{Guid.NewGuid()}" });
 
     var hostManager = new RemoteControlHostManager(
-      mockUserInteractionService.Object,
-      mockDesktopClientOptions.Object,
-      mockIpcAccessor.Object,
+      timeProvider,
+      userInteractionService.Object,
+      ipcClientAccessor.Object,
+      appLifetimeNotifier.Object,
+      desktopClientOptions.Object,
       mockLogger.Object);
 
     var requestDto = new RemoteControlRequestIpcDto(

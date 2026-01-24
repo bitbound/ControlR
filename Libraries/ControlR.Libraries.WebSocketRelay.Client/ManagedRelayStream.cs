@@ -46,7 +46,7 @@ public abstract class ManagedRelayStream(
   private readonly ConcurrentQueue<TransferRecord> _bytesOut = new();
   private readonly ILogger<ManagedRelayStream> _logger = logger;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
-  private readonly ConditionalWeakTable<object, Func<DtoWrapper, Task>> _messageHandlers = [];
+  private readonly HandlerCollection<DtoWrapper> _messageHandlers = new(ex => { logger.LogError(ex, "Error while invoking message handler."); return Task.CompletedTask; });
   private readonly ConcurrentList<Func<Task>> _onCloseHandlers = [];
   private readonly SemaphoreSlim _sendLock = new(1);
   private readonly IWaiter _waiter = waiter;
@@ -116,18 +116,7 @@ public abstract class ManagedRelayStream(
 
   public IDisposable RegisterMessageHandler(object subscriber, Func<DtoWrapper, Task> handler)
   {
-    lock (_messageHandlers)
-    {
-      _messageHandlers.AddOrUpdate(subscriber, handler);
-    }
-
-    return new CallbackDisposable(() =>
-    {
-      lock (_messageHandlers)
-      {
-        _messageHandlers.Remove(subscriber);
-      }
-    });
+    return _messageHandlers.AddHandler(subscriber, handler);
   }
 
   public async Task Send(DtoWrapper dto, CancellationToken cancellationToken)
@@ -224,36 +213,6 @@ public abstract class ManagedRelayStream(
     }
   }
 
-  private List<Func<DtoWrapper, Task>> GetMessageHandlers()
-  {
-    lock (_messageHandlers)
-    {
-      return [.. _messageHandlers.Select(x => x.Value)];
-    }
-  }
-
-  private async Task InvokeMessageHandlers(DtoWrapper dto, CancellationToken cancellationToken)
-  {
-    var handlers = GetMessageHandlers();
-
-    foreach (var handler in handlers)
-    {
-      try
-      {
-        if (cancellationToken.IsCancellationRequested)
-        {
-          break;
-        }
-
-        await handler(dto);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error while invoking message handler.");
-      }
-    }
-  }
-
   private async Task InvokeOnClosedHandlers()
   {
     foreach (var callback in _onCloseHandlers)
@@ -300,18 +259,18 @@ public abstract class ManagedRelayStream(
         switch (receivedWrapper.DtoType)
         {
           case DtoType.Ack:
-          {
-            var ackDto = receivedWrapper.GetPayload<AckDto>();
-            _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
-            CurrentLatency = TimeProvider.GetElapsedTime(ackDto.SendTimestamp);
-            break;
-          }
+            {
+              var ackDto = receivedWrapper.GetPayload<AckDto>();
+              _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
+              CurrentLatency = TimeProvider.GetElapsedTime(ackDto.SendTimestamp);
+              break;
+            }
           default:
-          {
-            await SendAck(totalBytesRead, receivedWrapper.SendTimestamp, cancellationToken);
-            await InvokeMessageHandlers(receivedWrapper, cancellationToken);
-            break;
-          }
+            {
+              await SendAck(totalBytesRead, receivedWrapper.SendTimestamp, cancellationToken);
+              await _messageHandlers.InvokeHandlers(receivedWrapper, cancellationToken);
+              break;
+            }
         }
       }
       catch (OperationCanceledException)

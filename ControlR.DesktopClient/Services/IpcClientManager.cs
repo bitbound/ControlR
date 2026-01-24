@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Avalonia.Controls.ApplicationLifetimes;
+using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Messages;
 using ControlR.Libraries.Ipc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,6 +14,7 @@ public class IpcClientManager(
   TimeProvider timeProvider,
   IIpcConnectionFactory ipcConnectionFactory,
   IControlledApplicationLifetime appLifetime,
+  IMessenger messenger,
   IOptions<DesktopClientOptions> desktopClientOptions,
   ILogger<IpcClientManager> logger) : BackgroundService, IIpcClientAccessor
 {
@@ -20,6 +23,7 @@ public class IpcClientManager(
   private readonly IOptions<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
   private readonly ILogger<IpcClientManager> _logger = logger;
+  private readonly IMessenger _messenger = messenger;
   private readonly TimeSpan _reconnectDelay = TimeSpan.FromSeconds(5);
   private readonly TimeProvider _timeProvider = timeProvider;
 
@@ -42,8 +46,6 @@ public class IpcClientManager(
     if (!_firstFailedAttempt.HasValue)
       return false;
 
-    _logger.LogWarning("Failed to connect to IPC server.");
-
     // Check if we've exceeded the connection timeout
     var elapsed = _timeProvider.GetUtcNow() - _firstFailedAttempt.Value;
     if (elapsed > _connectionTimeout)
@@ -51,7 +53,6 @@ public class IpcClientManager(
       _logger.LogError(
       "Unable to connect to IPC server after {Elapsed:N0} seconds. Shutting down.",
       elapsed.TotalSeconds);
-
       _appLifetime.Shutdown(1);
       return true;
     }
@@ -72,6 +73,7 @@ public class IpcClientManager(
         await _client.Connect(stoppingToken);
 
         _logger.LogInformation("Connected to IPC server.");
+        await _messenger.Send(new IpcConnectionChangedMessage(IsConnected: true));
 
         // Reset the connection attempt tracker on successful connection
         _firstFailedAttempt = null;
@@ -92,6 +94,8 @@ public class IpcClientManager(
         _firstFailedAttempt ??= _timeProvider.GetUtcNow();
         _logger.LogError(ex, "Error while connecting to IPC server.");
       }
+
+      await _messenger.Send(new IpcConnectionChangedMessage(IsConnected: false));
 
       try
       {

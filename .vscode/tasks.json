@@ -10,7 +10,7 @@
         "isDefault": true
       },
       "presentation": {
-        "showReuseMessage": false
+        "clear": true
       },
       "problemMatcher": [],
       "options": {

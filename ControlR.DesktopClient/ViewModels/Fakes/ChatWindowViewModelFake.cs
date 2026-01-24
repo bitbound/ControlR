@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Models;
 
 namespace ControlR.DesktopClient.ViewModels.Fakes;

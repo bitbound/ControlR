@@ -4,6 +4,7 @@
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.1.0" />
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
     <PackageVersion Include="Avalonia" Version="11.3.11" />
+    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Desktop" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.11" />

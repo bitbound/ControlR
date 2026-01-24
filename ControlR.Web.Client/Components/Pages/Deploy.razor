@@ -59,7 +59,7 @@
             </div>
           }
           <div class="mt-4">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@GenerateKey">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@GenerateKey">
               Generate Key
             </MudButton>
           </div>
@@ -83,7 +83,7 @@
           <MudTextField Label="Key Secret" @bind-Value="_existingKeySecretInput" InputType="InputType.Password"
             Class="mt-4" />
           <div class="mt-4">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@UseExistingKey">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@UseExistingKey">
               Use Key
             </MudButton>
           </div>

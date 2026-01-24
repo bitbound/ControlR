@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+						 xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
+						 xmlns:internals="using:ControlR.DesktopClient.ViewModels.Internals"
+						 xmlns:common="using:ControlR.DesktopClient.Common"
+						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+						 xmlns:controls="using:ControlR.DesktopClient.Controls"
+						 mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+						 x:Class="ControlR.DesktopClient.Views.ConnectionsView"
+						 x:DataType="vm:IConnectionsViewModel">
+
+	<Design.DataContext>
+		<fakes:ConnectionsViewModelFake />
+	</Design.DataContext>
+
+	<Grid RowDefinitions="Auto,*,Auto">
+
+		<!-- Header with Actions -->
+		<StackPanel Grid.Row="0" Spacing="12" Margin="0,0,0,16">
+			<TextBlock Text="{x:Static common:Localization.ActiveConnections}" Classes="h1 Primary" />
+
+			<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+				<controls:ThemeButton Content="{x:Static common:Localization.Disconnect}"
+													    Variant="Outlined"
+															Color="Error"
+															Command="{Binding DisconnectCommand}"
+															IsEnabled="{Binding SelectedConnection, Converter={x:Static ObjectConverters.IsNotNull}}" />
+			</StackPanel>
+		</StackPanel>
+
+		<!-- Sessions List -->
+		<Border Grid.Row="1"
+						BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+						BorderThickness="1"
+						CornerRadius="4">
+
+			<Panel>
+				<!-- Empty State -->
+				<TextBlock Text="{x:Static common:Localization.NoActiveConnections}"
+									 HorizontalAlignment="Center"
+									 VerticalAlignment="Center"
+									 IsVisible="{Binding !ActiveSessions.Count}" />
+
+				<!-- Sessions List -->
+				<ListBox ItemsSource="{Binding ActiveSessions}"
+								 SelectedItem="{Binding SelectedConnection}"
+								 IsVisible="{Binding ActiveSessions.Count}"
+								 SelectionMode="Single"
+								 BorderThickness="0">
+					<ListBox.ItemTemplate>
+						<DataTemplate DataType="internals:RemoteControlConnection">
+							<Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" Padding="8">
+                <StackPanel Orientation="Vertical" Spacing="6">
+								  <TextBlock Text="{Binding ViewerName}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
+                  <TextBlock Classes="Small" VerticalAlignment="Center" Text="{Binding ConnectedAt, StringFormat='Connected At: {0:g}'}" />
+                </StackPanel>
+							</Border>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+			</Panel>
+
+		</Border>
+		<!-- IPC Status Row -->
+		<StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,16,0,0">
+			<TextBlock VerticalAlignment="Bottom" Classes="Small">
+				<Run Text="{x:Static common:Localization.AgentStatus}" />
+				<Run Text=":" />
+			</TextBlock>
+
+			<!-- Connected Status Circle -->
+			<Ellipse Width="12" Height="12"
+							 Fill="{DynamicResource SuccessColor}"
+							 VerticalAlignment="Center"
+							 IsVisible="{Binding IsAgentConnected}"
+							 ToolTip.Tip="{x:Static common:Localization.AgentConnectedTooltip}" />
+
+			<!-- Disconnected Status Circle -->
+			<Ellipse Width="12" Height="12"
+							 Fill="{DynamicResource ErrorColor}"
+							 VerticalAlignment="Center"
+							 IsVisible="{Binding !IsAgentConnected}"
+							 ToolTip.Tip="{x:Static common:Localization.AgentDisconnectedTooltip}" />
+		</StackPanel>
+
+	</Grid>
+</UserControl>

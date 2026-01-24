@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
+						 xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
+						 xmlns:controls="using:ControlR.DesktopClient.Controls"
+						 mc:Ignorable="d" d:DesignWidth="200" d:DesignHeight="50"
+						 x:Class="ControlR.DesktopClient.Controls.NavItem"
+						 x:DataType="vm:INavItemViewModel"
+						 x:Name="navItem">
+
+	<Design.DataContext>
+		<fakes:NavItemViewModelFake />
+	</Design.DataContext>
+
+	<controls:ThemeButton Command="{Binding NavigateCommand}"
+											  Variant="{Binding Variant}"
+												Color="{Binding Color}"
+												HorizontalAlignment="Stretch"
+												HorizontalContentAlignment="Left"
+												Padding="12,10">
+		<StackPanel Orientation="Horizontal" Spacing="12">
+			<Path Data="{Binding IconKey, Converter={StaticResource ResourceKeyToGeometryConverter}}"
+						Fill="{Binding $parent[Button].Foreground}"
+						Width="20"
+						Height="20"
+						Stretch="Uniform" />
+			<TextBlock Text="{Binding Label}"
+								 VerticalAlignment="Center" />
+		</StackPanel>
+	</controls:ThemeButton>
+</UserControl>

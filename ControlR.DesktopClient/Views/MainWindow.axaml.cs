@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels;
 
 namespace ControlR.DesktopClient.Views;
@@ -12,13 +11,11 @@ public partial class MainWindow : Window
     InitializeComponent();
   }
 
-  public MainWindow(
-    IMainWindowViewModel viewModel,
-    INavigationProvider navigationProvider)
+  public MainWindow(IMainWindowViewModel viewModel)
   {
     DataContext = viewModel;
     InitializeComponent();
-    navigationProvider.NavigateTo<IManagedDeviceViewModel>();
+    viewModel.Initialize();
   }
 
   private IMainWindowViewModel ViewModel => DataContext as IMainWindowViewModel

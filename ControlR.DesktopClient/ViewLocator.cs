@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using ControlR.DesktopClient.ViewModels;
 
 namespace ControlR.DesktopClient;
 public class ViewLocator : IDataTemplate
@@ -11,26 +10,29 @@ public class ViewLocator : IDataTemplate
     if (param is null)
       return null;
 
-    var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
-    if (name.EndsWith("Fake"))
+    if (param is not IViewModelBase viewModel)
     {
-      name = name
-        .Replace(".Fakes.", ".")
-        .TrimEnd("Fake".ToCharArray());
-
-    }
-    var type = Type.GetType(name);
-
-    if (type != null)
-    {
-      return (Control)StaticServiceProvider.Instance.GetRequiredService(type);
+      return new TextBlock { Text = "Invalid view model type" };
     }
 
-    return new TextBlock { Text = "Not Found: " + name };
+    var viewType = viewModel.ViewType;
+
+    if (viewType is null)
+    {
+      return new TextBlock { Text = $"View not found: {viewType}" };
+    }
+    var found = ActivatorUtilities.GetServiceOrCreateInstance(StaticServiceProvider.Instance, viewType);
+    if (found is not Control control)
+    {
+      return new TextBlock { Text = $"Could not create view: {viewType}" };
+    }
+
+    control.DataContext = param;
+    return control;
   }
 
   public bool Match(object? data)
   {
-    return data is ViewModelBase;
+    return data is IViewModelBase;
   }
 }

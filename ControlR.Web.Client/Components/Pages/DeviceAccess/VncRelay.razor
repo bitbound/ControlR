@@ -20,7 +20,7 @@
   {
   <div class="d-flex flex-column h-100">
     <div class="d-flex gap-4 pa-2 flex-row-reverse">
-      <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="Disconnect">
+        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="Disconnect">
         Disconnect
       </MudButton>
     </div>
@@ -39,7 +39,7 @@
     <MudPaper Class="pa-8 d-flex flex-column gap-4" Elevation="4" Width="400px">
       <MudNumericField @bind-Value="_port" Label="VNC Port" Variant="Variant.Outlined" Min="1" Max="65535" />
       <div class="d-flex gap-4">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="RequestStreamingSessionFromAgent">
+          <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" OnClick="RequestStreamingSessionFromAgent">
           Connect
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth="true" OnClick="TestConnection">

@@ -4,6 +4,7 @@
     <Project Path="Examples/ControlR.AvaloniaViewerExample/ControlR.AvaloniaViewerExample.csproj" Id="d28213d2-1049-4fe0-9668-82c7da87c436" />
   </Folder>
   <Folder Name="/Libraries/">
+    <Project Path="Libraries/ControlR.Libraries.Branding/ControlR.Libraries.Branding.csproj" Id="966e6dfa-48bb-425a-b5ca-07132ad12e59" />
     <Project Path="Libraries/ControlR.Libraries.Configuration.InMemory/ControlR.Libraries.Configuration.InMemory.csproj" />
     <Project Path="Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj" Id="90e1359d-8bae-44a8-99aa-1398e95e9a7c" />
     <Project Path="Libraries/ControlR.Libraries.DevicesCommon/ControlR.Libraries.DevicesCommon.csproj" />

@@ -1,12 +1,20 @@
-﻿using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using ControlR.DesktopClient.ViewModels;
-using ControlR.DesktopClient.Views;
+﻿using ControlR.DesktopClient.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;
 
 public interface INavigationProvider
 {
+  /// <summary>
+  ///   Raised when navigation to a new view model occurs.
+  /// </summary>
+  event Action<Type?>? NavigationOccurred;
+
+  /// <summary>
+  /// The currently active view model type, if any.
+  /// </summary>
+  Type? ActiveViewModel { get; }
+
   Task NavigateTo<TViewModel>() where TViewModel : IViewModelBase;
   Task NavigateTo<TViewModel>(TViewModel viewModel) where TViewModel : IViewModelBase;
   void ShowMainWindow();
@@ -16,24 +24,38 @@ public interface INavigationProvider
 
 internal class NavigationProvider(
   IMainWindowProvider mainWindowProvider,
-  IMainWindowViewModel mainWindowViewModel,
+  ILogger<NavigationProvider> logger,
   IServiceProvider serviceProvider) : INavigationProvider
 {
+  private readonly ILogger<NavigationProvider> _logger = logger;
   private readonly IMainWindowProvider _mainWindowProvider = mainWindowProvider;
-  private readonly IMainWindowViewModel _mainWindowViewModel = mainWindowViewModel;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
+
+  private Type? _activeViewModelType;
+
+  public event Action<Type?>? NavigationOccurred;
+
+  public Type? ActiveViewModel => _activeViewModelType;
 
   public async Task NavigateTo<TViewModel>() where TViewModel : IViewModelBase
   {
-    _mainWindowViewModel.CurrentViewModel = _serviceProvider.GetRequiredService<TViewModel>();
-    await _mainWindowViewModel.CurrentViewModel.Initialize();
+    var mainWindowVm = _serviceProvider.GetRequiredService<IMainWindowViewModel>();
+    mainWindowVm.CurrentViewModel = _serviceProvider.GetRequiredService<TViewModel>();
+    await mainWindowVm.CurrentViewModel.Initialize();
+
+    SetActiveViewModelType(typeof(TViewModel));
   }
+
   public async Task NavigateTo<TViewModel>(TViewModel viewModel)
     where TViewModel : IViewModelBase
   {
-    _mainWindowViewModel.CurrentViewModel = viewModel;
-    await _mainWindowViewModel.CurrentViewModel.Initialize();
+    var mainWindowVm = _serviceProvider.GetRequiredService<IMainWindowViewModel>();
+    mainWindowVm.CurrentViewModel = viewModel;
+    await mainWindowVm.CurrentViewModel.Initialize();
+
+    SetActiveViewModelType(viewModel?.GetType() ?? typeof(TViewModel));
   }
+
   public void ShowMainWindow()
   {
     if (_mainWindowProvider.MainWindow.IsVisible)
@@ -44,14 +66,29 @@ internal class NavigationProvider(
     }
     _mainWindowProvider.MainWindow.Show();
   }
+
   public async Task ShowMainWindowAndNavigateTo<TViewModel>() where TViewModel : IViewModelBase
   {
     ShowMainWindow();
     await NavigateTo<TViewModel>();
   }
+
   public async Task ShowMainWindowAndNavigateTo<TViewModel>(TViewModel viewModel) where TViewModel : IViewModelBase
   {
     ShowMainWindow();
     await NavigateTo(viewModel);
+  }
+
+  private void SetActiveViewModelType(Type? type)
+  {
+    _activeViewModelType = type;
+    try
+    {
+      NavigationOccurred?.Invoke(type);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while invoking NavigationOccurred handlers.");
+    }
   }
 }

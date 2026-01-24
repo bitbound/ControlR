@@ -1,4 +1,5 @@
 ﻿@using ControlR.Libraries.Shared.Enums
+@using ControlR.Web.Client.Models
 @attribute [Route(ClientRoutes.Settings)]
 @attribute [Authorize]
 
@@ -53,7 +54,7 @@
                 @bind-Value:get="_userDisplayName"
                 @bind-Value:set="SetUserDisplayName"
                 MaxLength="25"
-                Validation="(string e) => ValidateUsername(e)"
+                Validation="(string e) => ValidateDisplayName(e)"
                 Label="Shown to partners when connecting">
 
   </MudTextField>
@@ -205,7 +206,7 @@
     Snackbar.Add("Display name updated", Severity.Success);
   }
 
-  private static string? ValidateUsername(string input)
+  private static string? ValidateDisplayName(string input)
   {
     if (string.IsNullOrEmpty(input))
     {
@@ -217,8 +218,8 @@
       return "Username must be 25 characters or less.";
     }
 
-    return Validators.UsernameValidator().IsMatch(input)
-      ? "Username can only contain letters, numbers, underscores, and hyphens."
+    return Validators.DisplayNameValidator().IsMatch(input)
+      ? "Username can only contain letters, numbers, underscores, hyphens, and spaces."
       : null;
   }
 }

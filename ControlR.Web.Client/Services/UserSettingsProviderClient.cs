@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Web.Client.Models;
 
 namespace ControlR.Web.Client.Services;
 
@@ -144,7 +144,7 @@ internal class UserSettingsProviderClient(
     try
     {
       _preferences[preferenceName] = newValue;
-      var stringValue = Convert.ToString(newValue);
+      var stringValue = Convert.ToString(newValue)?.Trim();
       Guard.IsNotNull(stringValue);
       var setResult = await _controlrApi.SetUserPreference(preferenceName, stringValue);
 

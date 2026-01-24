@@ -1,3 +1,4 @@
+using ControlR.Web.Client.Models;
 using ControlR.Web.Client.StateManagement;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;

@@ -1,9 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using ControlR.DesktopClient.ViewModels;
-using ControlR.Libraries.Shared.Extensions;
 
 namespace ControlR.DesktopClient.Views;
 

@@ -3,6 +3,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+    <ProjectReference Include="..\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
     <PackageReference Update="Bitbound.Analyzers.MemberOrder">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

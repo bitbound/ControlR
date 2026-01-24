@@ -473,6 +473,12 @@ public partial class RemoteDisplay : JsInteropableComponent
             }
             break;
           }
+        case DtoType.SessionDisconnectRequested:
+          {
+            Snackbar.Add("Remote user requested disconnection", Severity.Info);
+            await OnDisconnectRequested.InvokeAsync();
+            break;
+          }
         default:
           Logger.LogWarning("Received unsupported DTO type: {DtoType}", wrapper.DtoType);
           Snackbar.Add($"Unsupported DTO type: {wrapper.DtoType}", Severity.Warning);

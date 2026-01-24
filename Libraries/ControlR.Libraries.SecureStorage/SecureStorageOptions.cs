@@ -1,3 +1,4 @@
+using ControlR.Libraries.Branding;
 using System.Text.RegularExpressions;
 
 namespace ControlR.Libraries.SecureStorage;
@@ -7,7 +8,7 @@ namespace ControlR.Libraries.SecureStorage;
 /// </summary>
 public partial class SecureStorageOptions
 {
-  private string _serviceName = "ControlR";
+  private string _serviceName = BrandingConstants.ProductName;
 
   /// <summary>
   /// Gets or sets the service name used for secure storage.

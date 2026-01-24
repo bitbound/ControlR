@@ -25,7 +25,7 @@ public partial class MessageBox : Window
 
       switch (type)
       {
-        case MessageBoxButtons.OK:
+        case MessageBoxButtons.Ok:
           viewModel.IsOkButtonVisible = true;
           break;
         case MessageBoxButtons.YesNo:
@@ -37,6 +37,8 @@ public partial class MessageBox : Window
 
       if (App.MainWindow.IsVisible)
       {
+        messageBox.Owner = App.MainWindow;
+        messageBox.WindowStartupLocation = WindowStartupLocation.CenterOwner;
         return await messageBox.ShowDialog<MessageBoxResult>(App.MainWindow);
       }
  

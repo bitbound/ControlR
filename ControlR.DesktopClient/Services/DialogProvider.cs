@@ -1,4 +1,3 @@
-using ControlR.DesktopClient.Controls;
 using ControlR.DesktopClient.Controls.Dialogs;
 
 namespace ControlR.DesktopClient.Services;

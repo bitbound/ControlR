@@ -30,9 +30,12 @@ jobs:
             With Remotely, I found out that there are legal impliciations to accepting external contributions.  Since I'm now depending on ControlR to be my primary source of income, it's less complicated and risky if I avoid external contributions for now.
 
             **Personal Working Style**
-            During these early stages of the project, working solo will bring me the most amount of happiness and sense of accomplishment.  It will allow me to move quickly and maintain a clear vision.  I hope you understand!
+            During these early stages of the project, working solo will bring me the most amount of happiness and sense of accomplishment.  It will allow me to move quickly and maintain a clear vision.
 
-            I will begin accepting external contributions once ControlR reaches a more mature state and is financially self-sustaining.
+            **Reviewing AI Code**
+            In my opinion, reviewing code consumes about 4 times as many "mental calories" compared to writing it. With the rise of AI, I'm worried that I'd spend the vast majority of my time reviewing AI-generated PRs, which would detract from my ability to keep the project moving forward.
+
+            I will begin accepting external contributions once ControlR reaches a more mature state and is financially self-sustaining.  Thank you for understanding!
 
             If you have ideas, suggestions, or found a bug, please feel free to open an issue instead. I'd love to hear your feedback!
 

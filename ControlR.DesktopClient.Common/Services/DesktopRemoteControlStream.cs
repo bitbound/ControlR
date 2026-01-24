@@ -9,6 +9,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.Libraries.Shared.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.WebSocketRelay.Client;
@@ -20,6 +21,7 @@ namespace ControlR.DesktopClient.Common.Services;
 
 public interface IDesktopRemoteControlStream : IAsyncDisposable
 {
+  Task RequestDisconnect();
   Task SendCurrentClipboardText();
   Task StreamScreen(CancellationToken cancellationToken);
 }
@@ -63,6 +65,20 @@ internal sealed class DesktopRemoteControlStream(
     await Close();
     _messageHandlerRegistration?.Dispose();
     await _desktopCapturer.DisposeAsync();
+  }
+
+  public async Task RequestDisconnect()
+  {
+    try
+    {
+      var dto = new SessionDisconnectRequestedDto();
+      var wrapper = DtoWrapper.Create(dto, DtoType.SessionDisconnectRequested);
+      await Send(wrapper, _appLifetime.ApplicationStopping).ConfigureAwait(false);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while requesting disconnect.");
+    }
   }
 
   public async Task SendCurrentClipboardText()
@@ -304,7 +320,7 @@ internal sealed class DesktopRemoteControlStream(
             var payload = wrapper.GetPayload<TogglePrivacyScreenDto>();
             _logger.LogInformation("Toggling privacy screen to {isEnabled}.", payload.IsEnabled);
             var result = await _displayManager.SetPrivacyScreen(payload.IsEnabled);
-            
+
             var resultDto = new PrivacyScreenResultDto(result.IsSuccess, _displayManager.IsPrivacyScreenEnabled);
             var resultWrapper = DtoWrapper.Create(resultDto, DtoType.PrivacyScreenResult);
             await Send(resultWrapper, _appLifetime.ApplicationStopping);

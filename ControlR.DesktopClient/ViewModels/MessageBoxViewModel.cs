@@ -1,7 +1,6 @@
 ﻿using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using ControlR.DesktopClient.Controls;
+using ControlR.DesktopClient.Controls.Dialogs;
 using System.Windows.Input;
 
 namespace ControlR.DesktopClient.ViewModels;
@@ -18,7 +17,7 @@ public interface IMessageBoxViewModel : IViewModelBase
   ICommand YesCommand { get; }
 }
 
-public partial class MessageBoxViewModel : ViewModelBase, IMessageBoxViewModel
+public partial class MessageBoxViewModel : ViewModelBase<MessageBox>, IMessageBoxViewModel
 {
   [ObservableProperty]
   private bool _areYesNoButtonsVisible;

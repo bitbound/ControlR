@@ -1,19 +1,24 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
-using ControlR.DesktopClient.Common;
+﻿using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Models;
+using ControlR.Libraries.Shared.Collections;
 using ControlR.Libraries.Shared.Dtos.IpcDtos;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ControlR.DesktopClient.Services;
 
+/// <summary>
+///  Manages the <see cref="IHost"/> instances of active remote control sessions.
+/// </summary>
 public interface IRemoteControlHostManager
 {
+  ICollection<RemoteControlSession> GetAllSessions();
+  IDisposable OnSessionsChanged(object subscriber, Func<ICollection<RemoteControlSession>, Task> handler);
   Task<Result> StartHost(RemoteControlRequestIpcDto requestDto);
   Task StopAllHosts(string reason);
   Task StopHost(Guid sessionId);
@@ -21,16 +26,31 @@ public interface IRemoteControlHostManager
 }
 
 public class RemoteControlHostManager(
+  TimeProvider timeProvider,
   IUserInteractionService userInteractionService,
-  IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
   IIpcClientAccessor ipcClientAccessor,
+  IAppLifetimeNotifier appLifetimeNotifier,
+  IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
   ILogger<RemoteControlHostManager> logger) : IRemoteControlHostManager
 {
+  private readonly IAppLifetimeNotifier _appLifetimeNotifier = appLifetimeNotifier;
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<RemoteControlHostManager> _logger = logger;
+  private readonly HandlerCollection<ICollection<RemoteControlSession>> _sessionChangedHandlers = new(exceptionHandler: ex =>
+  {
+    logger.LogError(ex, "Error while invoking session changed handlers.");
+    return Task.CompletedTask;
+  });
   private readonly ConcurrentDictionary<Guid, RemoteControlSession> _sessions = new();
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IUserInteractionService _userInteractionService = userInteractionService;
+  public ICollection<RemoteControlSession> GetAllSessions() => _sessions.Values;
+
+  public IDisposable OnSessionsChanged(object subscriber, Func<ICollection<RemoteControlSession>, Task> handler)
+  {
+    return _sessionChangedHandlers.AddHandler(subscriber, handler);
+  }
 
   public async Task<Result> StartHost(RemoteControlRequestIpcDto requestDto)
   {
@@ -49,7 +69,7 @@ public class RemoteControlHostManager(
       var app = builder.Build();
       var session = CreateRemoteControlSession(requestDto, app);
       RegisterHostLifetimeHandlers(app, requestDto, session);
-      await app.StartAsync(session.CancellationTokenSource.Token);
+      await app.StartAsync();
       return Result.Ok();
     }
     catch (Exception ex)
@@ -65,7 +85,7 @@ public class RemoteControlHostManager(
     {
       try
       {
-        await session.CancellationTokenSource.CancelAsync();
+        await session.Host.StopAsync();
       }
       catch (Exception ex)
       {
@@ -73,6 +93,7 @@ public class RemoteControlHostManager(
       }
     }
     _sessions.Clear();
+    await _sessionChangedHandlers.InvokeHandlers(_sessions.Values, _appLifetimeNotifier.ApplicationStopping);
   }
 
   public async Task StopHost(Guid sessionId)
@@ -83,7 +104,7 @@ public class RemoteControlHostManager(
       return;
     }
     _logger.LogInformation("Stopping remote control session for Session ID: {SessionId}", sessionId);
-    await session.CancellationTokenSource.CancelAsync();
+    await session.Host.StopAsync();
   }
 
   public bool TryGetSession(Guid sessionId, [NotNullWhen(true)] out RemoteControlSession? session)
@@ -142,39 +163,19 @@ public class RemoteControlHostManager(
     RemoteControlRequestIpcDto requestDto,
     IHost host)
   {
-    var session = new RemoteControlSession(requestDto, host);
-    return _sessions.AddOrUpdate(requestDto.SessionId, session, (_, value) =>
+    var connectedAt = _timeProvider.GetLocalNow();
+    var session = new RemoteControlSession(requestDto, host, connectedAt);
+    var sessionResult = _sessions.AddOrUpdate(requestDto.SessionId, session, (_, value) =>
     {
       value.DisposeAsync().Forget();
       return session;
     });
-  }
 
-  private async Task HandleApplicationStopped(RemoteControlRequestIpcDto requestDto)
-  {
-    try
-    {
-      if (_sessions.TryRemove(requestDto.SessionId, out var session))
-      {
-        await session.DisposeAsync();
-      }
+    _sessionChangedHandlers
+      .InvokeHandlers(_sessions.Values, _appLifetimeNotifier.ApplicationStopping)
+      .Forget();
 
-      _logger.LogInformation(
-        "Remote control session finished. Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
-        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}, Viewer Name: {ViewerName}",
-        requestDto.SessionId,
-        requestDto.ViewerConnectionId,
-        requestDto.TargetSystemSession,
-        requestDto.TargetProcessId,
-        requestDto.ViewerName);
-
-      GC.Collect();
-      GC.WaitForPendingFinalizers();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error during remote control session shutdown.");
-    }
+    return sessionResult;
   }
 
   private void RegisterHostLifetimeHandlers(IHost app, RemoteControlRequestIpcDto requestDto, RemoteControlSession session)
@@ -182,13 +183,35 @@ public class RemoteControlHostManager(
     var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
     appLifetime.ApplicationStopping.Register(async () =>
     {
-      await session.CancellationTokenSource.CancelAsync();
       await app.StopAsync();
     });
 
     appLifetime.ApplicationStopped.Register(async () =>
     {
-      await HandleApplicationStopped(requestDto);
+      try
+      {
+        if (_sessions.TryRemove(requestDto.SessionId, out var session))
+        {
+          await session.DisposeAsync();
+          await _sessionChangedHandlers.InvokeHandlers(_sessions.Values, _appLifetimeNotifier.ApplicationStopping);
+        }
+
+        _logger.LogInformation(
+          "Remote control session finished. Session ID: {SessionId}, Viewer Connection ID: {ViewerConnectionId}, " +
+          "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}, Viewer Name: {ViewerName}",
+          requestDto.SessionId,
+          requestDto.ViewerConnectionId,
+          requestDto.TargetSystemSession,
+          requestDto.TargetProcessId,
+          requestDto.ViewerName);
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error during remote control session shutdown.");
+      }
     });
   }
 }

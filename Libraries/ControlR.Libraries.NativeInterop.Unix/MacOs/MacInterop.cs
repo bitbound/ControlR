@@ -16,8 +16,8 @@ public interface IMacInterop
   void MovePointer(int x, int y, MovePointerType moveType);
   void OpenAccessibilityPreferences();
   void OpenScreenRecordingPreferences();
-  void RequestAccessibilityPermission();
-  void RequestScreenCapturePermission();
+  bool RequestAccessibilityPermission();
+  bool RequestScreenCapturePermission();
   void ResetKeyboardState();
   void TypeText(string text);
   Result WakeScreen();
@@ -354,16 +354,26 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     Process.Start("open", prefPage);
   }
 
-  public void RequestAccessibilityPermission()
+  public bool RequestAccessibilityPermission()
   {
     var optionsDict = Foundation.CreateAccessibilityPromptDictionary();
-    _ = ApplicationServices.AXIsProcessTrustedWithOptions(optionsDict);
+    var result = ApplicationServices.AXIsProcessTrustedWithOptions(optionsDict);
     Foundation.CFRelease(optionsDict);
+    if (!result)
+    {
+      _logger.LogInformation("Accessibility permission prompt requested.");
+    }
+    return result;
   }
 
-  public void RequestScreenCapturePermission()
+  public bool RequestScreenCapturePermission()
   {
-    _ = CoreGraphics.CGRequestScreenCaptureAccess();
+    var result = CoreGraphics.CGRequestScreenCaptureAccess();
+    if (!result)
+    {
+      _logger.LogInformation("Screen capture permission prompt requested.");
+    }
+    return result;
   }
 
   public void ResetKeyboardState()
@@ -402,6 +412,14 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       {
         _logger.LogDebug("No stuck keys found during keyboard state reset");
       }
+
+      // Ensure internal modifier state matches system state after releasing keys
+      _shiftDown = false;
+      _controlDown = false;
+      _commandDown = false;
+      _optionDown = false;
+
+      _logger.LogDebug("Internal modifier flags reset after keyboard state reset");
     }
     catch (Exception ex)
     {

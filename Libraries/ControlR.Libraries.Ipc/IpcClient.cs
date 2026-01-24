@@ -12,9 +12,8 @@ public interface IIpcClient : IDisposable
   IAgentRpcService Server { get; }
 
   Task Connect(CancellationToken cancellationToken);
-
   void Start();
-
+  Task WaitForConnected(CancellationToken cancellationToken);
   Task WaitForDisconnect(CancellationToken cancellationToken);
 }
 
@@ -25,6 +24,7 @@ internal class IpcClient(
 {
   private readonly ILogger<IpcClient> _logger = logger;
   private readonly IDesktopClientRpcService _rpcService = rpcService;
+  private readonly TaskCompletionSource _serverConnectedTcs = new();
   private readonly NamedPipeClientStream _stream = stream;
 
   private JsonRpc? _jsonRpc;
@@ -52,6 +52,12 @@ internal class IpcClient(
     _jsonRpc.StartListening();
     _server = _jsonRpc.Attach<IAgentRpcService>();
     _logger.LogInformation("JsonRpc IPC client started.");
+    _serverConnectedTcs.SetResult();
+  }
+
+  public Task WaitForConnected(CancellationToken cancellationToken)
+  {
+    return _serverConnectedTcs.Task.WaitAsync(cancellationToken);
   }
 
   public async Task WaitForDisconnect(CancellationToken cancellationToken)

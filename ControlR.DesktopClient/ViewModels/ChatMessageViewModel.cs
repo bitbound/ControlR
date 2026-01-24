@@ -2,7 +2,7 @@ using ControlR.Libraries.Shared.Dtos.IpcDtos;
 
 namespace ControlR.DesktopClient.ViewModels;
 
-public class ChatMessageViewModel : ViewModelBase
+public class ChatMessageViewModel : ViewModelBase<ChatWindow>
 {
   public ChatMessageViewModel(ChatMessageIpcDto dto, bool isFromViewer)
   {

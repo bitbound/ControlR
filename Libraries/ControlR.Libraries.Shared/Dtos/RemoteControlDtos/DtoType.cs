@@ -28,4 +28,5 @@ public enum DtoType
   BlockInputResult = 45,
   TogglePrivacyScreen = 46,
   PrivacyScreenResult = 47,
+  SessionDisconnectRequested = 48,
 }

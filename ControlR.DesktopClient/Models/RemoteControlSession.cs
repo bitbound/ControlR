@@ -6,17 +6,20 @@ namespace ControlR.DesktopClient.Models;
 
 public sealed class RemoteControlSession(
   RemoteControlRequestIpcDto requestDto,
-  IHost host) : IAsyncDisposable
+  IHost host,
+  DateTimeOffset connectedAt) : IAsyncDisposable
 {
-  public CancellationTokenSource CancellationTokenSource { get; } = new();
+  public DateTimeOffset ConnectedAt { get; } = connectedAt;
   public IHost Host { get; } = host;
   public RemoteControlRequestIpcDto RequestDto { get; } = requestDto;
+
+  public Guid SessionId => RequestDto.SessionId;
 
   public async ValueTask DisposeAsync()
   {
     try
     {
-      Disposer.DisposeAll(CancellationTokenSource, Host);
+      Disposer.DisposeAll(Host);
     }
     catch
     {

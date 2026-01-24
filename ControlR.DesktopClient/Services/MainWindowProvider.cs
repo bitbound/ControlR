@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using ControlR.DesktopClient.Views;
 
 namespace ControlR.DesktopClient.Services;
 

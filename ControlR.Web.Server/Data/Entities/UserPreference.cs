@@ -13,6 +13,6 @@ public class UserPreference : TenantEntityBase
   public Guid UserId { get; set; }
 
   [StringLength(100)]
-  [RegularExpression("^[a-zA-Z0-9-]+$", ErrorMessage = "Preference values can only contain letters, numbers, and hyphens.")]
+  [RegularExpression("^[a-zA-Z0-9 _-]+$", ErrorMessage = "Preference values can only contain letters, numbers, hyphens, underscores, and spaces.")]
   public required string Value { get; set; }
 }

@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ControlR.Libraries.Shared.Constants;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
-[Route("api/user-preferences")]
+
+[Route(HttpConstants.UserPreferencesEndpoint)]
 [ApiController]
 [Authorize]
 public class UserPreferencesController(AppDb appDb) : ControllerBase
@@ -81,7 +83,7 @@ public class UserPreferencesController(AppDb appDb) : ControllerBase
     var entity = new UserPreference()
     {
       Name = preference.Name,
-      Value = preference.Value,
+      Value = preference.Value.Trim(),
       UserId = user.Id,
       TenantId = user.TenantId
     };
