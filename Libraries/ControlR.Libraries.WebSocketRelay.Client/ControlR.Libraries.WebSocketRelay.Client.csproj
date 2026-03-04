@@ -6,10 +6,15 @@
       WebSocket relay client utilities for ControlR, an open-source remote control and remote access solution.
     </Description>
     <PackageIcon>appicon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <IsNuGetPackage>true</IsNuGetPackage>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\.assets\appicon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
