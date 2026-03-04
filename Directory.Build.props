@@ -8,7 +8,7 @@
 
     <Authors>Jared Goodwin</Authors>
     <Copyright>©️ $([System.DateTime]::Now.Year) Bitbound</Copyright>
-    <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
+    <RepositoryUrl>https://github.com/bitbound/controlr.git</RepositoryUrl>
     <PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
     <Company>Bitbound</Company>
     <Description>Open-source remote control and remote access.</Description>
@@ -26,5 +26,12 @@
 
   <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
     <PackageReference Include="Bitbound.Analyzers.MemberOrder" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsNuGetPackage)' == 'true'">
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 </Project>
