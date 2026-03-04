@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;

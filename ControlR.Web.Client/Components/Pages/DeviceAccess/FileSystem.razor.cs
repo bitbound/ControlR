@@ -74,6 +74,7 @@ public partial class FileSystem : JsInteropableComponent
   {
     return $"{path1.TrimEnd(pathSeparator.ToCharArray())}{pathSeparator}{path2.TrimStart(pathSeparator.ToCharArray())}";
   }
+
   private static TreeItemData<string> ConvertToTreeItemData(FileSystemEntryDto dto)
   {
     return new TreeItemData<string>
@@ -84,6 +85,7 @@ public partial class FileSystem : JsInteropableComponent
       Expandable = dto is { IsDirectory: true, HasSubfolders: true }
     };
   }
+
   private static FileSystemEntryViewModel ConvertToViewModel(FileSystemEntryDto dto)
   {
     return new FileSystemEntryViewModel
@@ -98,6 +100,7 @@ public partial class FileSystem : JsInteropableComponent
       CanWrite = dto.CanWrite
     };
   }
+
   private static TreeItemData<string>? FindTreeItem(IEnumerable<TreeItemData<string>>? items, string path)
   {
     return items?.FirstOrDefault(item =>
@@ -109,7 +112,8 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       // Get path segments from the agent to validate and parse the path correctly
-      var pathSegmentsResult = await ControlrApi.GetPathSegments(DeviceId, targetPath);
+      var pathSegmentsRequest = new GetPathSegmentsRequestDto(DeviceId, targetPath);
+      var pathSegmentsResult = await ControlrApi.DeviceFileSystem.GetPathSegments(pathSegmentsRequest);
 
       if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)
       {
@@ -186,6 +190,7 @@ public partial class FileSystem : JsInteropableComponent
       return false;
     }
   }
+
   private EventCallback<IReadOnlyCollection<TreeItemData<string?>>?> CreateItemsChangedCallback(
     TreeItemData<string> treeItem)
   {
@@ -197,11 +202,13 @@ public partial class FileSystem : JsInteropableComponent
         .ToList();
     });
   }
+
   private async Task DeleteSingleItem(FileSystemEntryViewModel item)
   {
     try
     {
-      var result = await ControlrApi.DeleteFile(DeviceId, item.FullPath, item.IsDirectory);
+      var request = new FileDeleteRequestDto(DeviceId, item.FullPath, item.IsDirectory);
+      var result = await ControlrApi.DeviceFileSystem.DeleteFile(request);
 
       if (!result.IsSuccess)
       {
@@ -215,6 +222,7 @@ public partial class FileSystem : JsInteropableComponent
       throw;
     }
   }
+
   private async Task DownloadSingleItem(FileSystemEntryViewModel item)
   {
     try
@@ -231,9 +239,10 @@ public partial class FileSystem : JsInteropableComponent
       throw;
     }
   }
+
   private async Task<Result<long>> GetMaxFileSize()
   {
-    var getMaxSizeResult = await ControlrApi.GetFileUploadMaxSize();
+    var getMaxSizeResult = await ControlrApi.UserServerSettings.GetFileUploadMaxSize();
     if (!getMaxSizeResult.IsSuccess)
     {
       Logger.LogError("Failed to get max upload size: {Error}", getMaxSizeResult.Reason);
@@ -246,6 +255,7 @@ public partial class FileSystem : JsInteropableComponent
       : getMaxSizeResult.Value;
     return Result.Ok(maxFileSize);
   }
+
   private async Task HandleFileSystemRowClick(DataGridRowClickEventArgs<FileSystemEntryViewModel> args)
   {
     if (args.MouseEventArgs.CtrlKey || !args.Item.IsDirectory)
@@ -265,6 +275,7 @@ public partial class FileSystem : JsInteropableComponent
       await NavigateToAddress();
     }
   }
+
   private async Task LoadDirectoryContents(string directoryPath)
   {
     try
@@ -272,7 +283,8 @@ public partial class FileSystem : JsInteropableComponent
       IsLoadingContents = true;
       await InvokeAsync(StateHasChanged);
 
-      var result = await ControlrApi.GetDirectoryContents(DeviceId, directoryPath);
+      var request = new GetDirectoryContentsRequestDto(DeviceId, directoryPath);
+      var result = await ControlrApi.DeviceFileSystem.GetDirectoryContents(request);
       if (result is { IsSuccess: true, Value: not null })
       {
         if (!result.Value.DirectoryExists)
@@ -310,6 +322,7 @@ public partial class FileSystem : JsInteropableComponent
       await InvokeAsync(StateHasChanged);
     }
   }
+
   private async Task LoadRootDrives()
   {
     try
@@ -317,7 +330,8 @@ public partial class FileSystem : JsInteropableComponent
       IsLoading = true;
       StateHasChanged();
 
-      var result = await ControlrApi.GetRootDrives(DeviceId);
+      var request = new GetRootDrivesRequestDto(DeviceId);
+      var result = await ControlrApi.DeviceFileSystem.GetRootDrives(request);
       if (result is { IsSuccess: true, Value: not null })
       {
         InitialTreeItems = result.Value.Drives
@@ -349,6 +363,7 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
+
   private async Task<IReadOnlyCollection<TreeItemData<string>>> LoadServerData(string? parentValue)
   {
     try
@@ -358,7 +373,8 @@ public partial class FileSystem : JsInteropableComponent
         return [];
       }
 
-      var result = await ControlrApi.GetSubdirectories(DeviceId, parentValue);
+      var request = new GetSubdirectoriesRequestDto(DeviceId, parentValue);
+      var result = await ControlrApi.DeviceFileSystem.GetSubdirectories(request);
       if (result is { IsSuccess: true, Value: not null })
       {
         return [.. result.Value.Subdirectories.Select(ConvertToTreeItemData)];
@@ -374,6 +390,7 @@ public partial class FileSystem : JsInteropableComponent
       return [];
     }
   }
+
   private async Task NavigateToAddress()
   {
     var targetPath = AddressBarValue.Trim();
@@ -404,6 +421,7 @@ public partial class FileSystem : JsInteropableComponent
       Snackbar.Add($"An error occurred while navigating to '{targetPath}'", Severity.Error);
     }
   }
+
   private async Task OnDeleteClick()
   {
     if (SelectedItems.Count == 0)
@@ -458,6 +476,7 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
+
   private async Task OnDownloadClick()
   {
     if (SelectedItems.Count == 0)
@@ -508,6 +527,7 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
+
   private async Task OnFilesSelected(InputFileChangeEventArgs e)
   {
     try
@@ -549,6 +569,7 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
+
   private async Task OnNewFolderClick()
   {
     if (string.IsNullOrEmpty(SelectedPath))
@@ -574,7 +595,8 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
 
       // Create the directory using the new API structure
-      var result = await ControlrApi.CreateDirectory(DeviceId, SelectedPath, folderName);
+      var request = new CreateDirectoryRequestDto(DeviceId, SelectedPath, folderName);
+      var result = await ControlrApi.DeviceFileSystem.CreateDirectory(request);
       if (result.IsSuccess)
       {
         Snackbar.Add($"Successfully created folder '{folderName}'", Severity.Success);
@@ -596,6 +618,7 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
     }
   }
+
   private async Task OnRefreshClick()
   {
     if (string.IsNullOrEmpty(SelectedPath))
@@ -607,6 +630,7 @@ public partial class FileSystem : JsInteropableComponent
       await LoadDirectoryContents(SelectedPath);
     }
   }
+
   private async Task OnSelectedPathChanged(string? newPath)
   {
     if (!string.IsNullOrEmpty(newPath))
@@ -615,6 +639,20 @@ public partial class FileSystem : JsInteropableComponent
       await LoadDirectoryContents(newPath);
     }
   }
+
+  private async Task OnUploadFileClick()
+  {
+    try
+    {
+      await JsModule.InvokeVoidAsync("triggerFileInput", _fileInputRef.Element);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error triggering file input click");
+      Snackbar.Add("Failed to open file picker", Severity.Error);
+    }
+  }
+
   private async Task OnUpOneLevel()
   {
     if (string.IsNullOrEmpty(SelectedPath))
@@ -625,7 +663,8 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       // Use the agent to get path segments, which will properly handle the parent path
-      var pathSegmentsResult = await ControlrApi.GetPathSegments(DeviceId, SelectedPath);
+      var pathSegmentsRequest = new GetPathSegmentsRequestDto(DeviceId, SelectedPath);
+      var pathSegmentsResult = await ControlrApi.DeviceFileSystem.GetPathSegments(pathSegmentsRequest);
 
       if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)
       {
@@ -673,18 +712,7 @@ public partial class FileSystem : JsInteropableComponent
       Snackbar.Add("An error occurred while navigating up one level", Severity.Error);
     }
   }
-  private async Task OnUploadFileClick()
-  {
-    try
-    {
-      await JsModule.InvokeVoidAsync("triggerFileInput", _fileInputRef.Element);
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error triggering file input click");
-      Snackbar.Add("Failed to open file picker", Severity.Error);
-    }
-  }
+
   private async Task UploadSingleFile(IBrowserFile file)
   {
     var snackbarKey = Guid.NewGuid().ToString();

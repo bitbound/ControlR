@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
 using Microsoft.AspNetCore.SignalR.Client;

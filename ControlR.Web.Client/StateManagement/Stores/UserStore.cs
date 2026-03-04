@@ -9,10 +9,15 @@ public class UserStore(
   ISnackbar snackbar,
   ILogger<UserStore> logger) : StoreBase<UserResponseDto>(controlrApi, snackbar, logger), IUserStore
 {
+  protected override Guid GetItemId(UserResponseDto dto)
+  {
+    return dto.Id;
+  }
+
   protected override async Task RefreshImpl()
   {
     Cache.Clear();
-    var getResult = await ControlrApi.GetAllUsers();
+    var getResult = await ControlrApi.Users.GetAllUsers();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

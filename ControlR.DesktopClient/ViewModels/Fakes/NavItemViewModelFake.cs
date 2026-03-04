@@ -1,4 +1,6 @@
 ﻿
+using ControlR.Libraries.Avalonia.Theming;
+
 namespace ControlR.DesktopClient.ViewModels.Fakes;
 
 internal class NavItemViewModelFake : ViewModelBase<NavItem>, INavItemViewModel

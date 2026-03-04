@@ -11,23 +11,24 @@ public class PipeWireStream : IDisposable
 {
   public const uint SPA_VIDEO_FORMAT_BGRA = 12;
 
-  private const ulong AppSinkPullTimeout = 100 * 1000000;
+  private const ulong AppSinkPullTimeout = 100 * 1_000_000;
 
-  private readonly int _expectedHeight;
-  private readonly int _expectedWidth;
+  private readonly TaskCompletionSource<bool> _firstFrameReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
   private readonly ILogger _logger;
+  private readonly int _logicalHeight;
+  private readonly int _logicalWidth;
   private readonly uint _nodeId;
   private readonly int _pipewireFd;
 
   private nint _appsink;
   private Thread? _captureThread;
   private bool _disposed;
-  private int _height;
   private PipeWireFrameData? _latestFrame;
   private int _loggedDimensionMismatch;
   private int _loggedStrideMismatch;
+  private int _physicalHeight;
+  private int _physicalWidth;
   private nint _pipeline;
-  private int _width;
 
   public PipeWireStream(
     uint nodeId,
@@ -44,18 +45,23 @@ public class PipeWireStream : IDisposable
     _logger = logger;
     _nodeId = nodeId;
     _pipewireFd = (int)pipewireFd.DangerousGetHandle();
-    _expectedWidth = expectedLogicalWidth;
-    _expectedHeight = expectedLogicalHeight;
-
-    _width = expectedLogicalWidth;
-    _height = expectedLogicalHeight;
+    _logicalWidth = expectedLogicalWidth;
+    _logicalHeight = expectedLogicalHeight;
 
     InitializeGStreamer();
   }
 
-  public int Height => Volatile.Read(ref _height);
+  /// <summary>
+  /// Gets the latest known physical frame height in pixels.
+  /// Returns 0 until the first frame has been negotiated and received.
+  /// </summary>
+  public int Height => Volatile.Read(ref _physicalHeight);
   public bool IsStreaming => !_disposed && _pipeline != nint.Zero;
-  public int Width => Volatile.Read(ref _width);
+  /// <summary>
+  /// Gets the latest known physical frame width in pixels.
+  /// Returns 0 until the first frame has been negotiated and received.
+  /// </summary>
+  public int Width => Volatile.Read(ref _physicalWidth);
 
   public void Dispose()
   {
@@ -96,6 +102,24 @@ public class PipeWireStream : IDisposable
     }
   }
 
+  /// <summary>
+  /// Waits until at least one frame has been received and physical frame dimensions are known.
+  /// </summary>
+  /// <remarks>
+  /// Logical dimensions are provided by portal metadata. Physical dimensions are negotiated from stream caps.
+  /// This method ensures callers can await negotiated physical dimensions explicitly instead of polling.
+  /// </remarks>
+  public async Task<bool> WaitForFirstFrame(CancellationToken cancellationToken)
+  {
+    if (Volatile.Read(ref _physicalWidth) > 0 && Volatile.Read(ref _physicalHeight) > 0)
+    {
+      return true;
+    }
+
+    var result = await _firstFrameReceived.Task.WaitAsync(cancellationToken);
+    return result && Volatile.Read(ref _physicalWidth) > 0 && Volatile.Read(ref _physicalHeight) > 0;
+  }
+
   private void Cleanup()
   {
     try
@@ -114,6 +138,7 @@ public class PipeWireStream : IDisposable
       }
 
       using var old = Interlocked.Exchange(ref _latestFrame, null);
+      _firstFrameReceived.TrySetResult(false);
     }
     catch (Exception ex)
     {
@@ -218,8 +243,10 @@ public class PipeWireStream : IDisposable
           GStreamer.gst_sample_unref(sample);
         });
 
-        var width = _expectedWidth;
-        var height = _expectedHeight;
+        // Start with portal-reported logical size. If caps provide concrete frame size,
+        // those values become the physical dimensions for capture.
+        var physicalWidth = _logicalWidth;
+        var physicalHeight = _logicalHeight;
 
         var caps = GStreamer.gst_sample_get_caps(sample);
         if (caps != nint.Zero)
@@ -229,11 +256,11 @@ public class PipeWireStream : IDisposable
           {
             if (GStreamer.gst_structure_get_int(structure, "width", out var capWidth) != 0 && capWidth > 0)
             {
-              width = capWidth;
+              physicalWidth = capWidth;
             }
             if (GStreamer.gst_structure_get_int(structure, "height", out var capHeight) != 0 && capHeight > 0)
             {
-              height = capHeight;
+              physicalHeight = capHeight;
             }
           }
         }
@@ -266,27 +293,28 @@ public class PipeWireStream : IDisposable
             }
           }
 
-          if ((uint)width != (uint)_expectedWidth || (uint)height != (uint)_expectedHeight)
+          if ((uint)physicalWidth != (uint)_logicalWidth || (uint)physicalHeight != (uint)_logicalHeight)
           {
             if (Interlocked.CompareExchange(ref _loggedDimensionMismatch, 1, 0) == 0)
             {
               _logger.LogInformation(
                 "PipeWire stream caps size ({Width}x{Height} physical px) differs from portal-reported logical size ({ExpectedLogicalWidth}x{ExpectedLogicalHeight}).",
-                width,
-                height,
-                _expectedWidth,
-                _expectedHeight);
+                physicalWidth,
+                physicalHeight,
+                _logicalWidth,
+                _logicalHeight);
             }
           }
 
-          Volatile.Write(ref _width, width);
-          Volatile.Write(ref _height, height);
+          Volatile.Write(ref _physicalWidth, physicalWidth);
+          Volatile.Write(ref _physicalHeight, physicalHeight);
+          _firstFrameReceived.TrySetResult(true);
 
-          var stride = width * 4;
-          if (height > 0)
+          var stride = physicalWidth * 4;
+          if (physicalHeight > 0)
           {
-            var computedStride = size / height;
-            if (computedStride >= width * 4)
+            var computedStride = size / physicalHeight;
+            if (computedStride >= physicalWidth * 4)
             {
               stride = computedStride;
             }
@@ -295,7 +323,7 @@ public class PipeWireStream : IDisposable
               _logger.LogWarning(
                 "PipeWire frame stride computed as {Stride} which is smaller than width*4 ({MinStride}). Falling back to width*4.",
                 computedStride,
-                width * 4);
+                physicalWidth * 4);
             }
           }
 
@@ -303,13 +331,13 @@ public class PipeWireStream : IDisposable
           var newFrame = new PipeWireFrameData
           {
             DataOwner = arrayOwner,
-            Width = width,
-            Height = height,
+            Width = physicalWidth,
+            Height = physicalHeight,
             Stride = stride,
             PixelFormat = SPA_VIDEO_FORMAT_BGRA
           };
 
-          using var old = Interlocked.Exchange(ref _latestFrame, newFrame);
+          Interlocked.Exchange(ref _latestFrame, newFrame)?.Dispose();
         }
         catch
         {

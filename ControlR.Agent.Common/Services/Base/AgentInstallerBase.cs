@@ -1,6 +1,7 @@
-﻿using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Interfaces;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Options;
 
@@ -38,20 +39,21 @@ internal abstract class AgentInstallerBase(
 
     tagIds ??= [];
 
-    var deviceDto = await _deviceDataGenerator.CreateDevice();
+    var deviceDto = await _deviceDataGenerator.GetDeviceInfo();
+    var createRequest = new CreateDeviceRequestDto(deviceDto, installerKeyId.Value, installerKeySecret, tagIds);
 
     Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
-    var createResult = await _controlrApi.CreateDevice(deviceDto, installerKeyId.Value, installerKeySecret, tagIds);
+    var createResult = await _controlrApi.Devices.CreateDevice(createRequest);
     if (createResult.IsSuccess)
     {
       Logger.LogInformation("Device created successfully.");
     }
     else
     {
-      Logger.LogError(createResult.Exception, "Device creation failed.  Reason: {Reason}", createResult.Reason);
+      Logger.LogError("Device creation failed.  Reason: {Reason}", createResult.Reason);
     }
 
-    return createResult;
+    return createResult.ToResult();
   }
 
   protected Result StopProcesses()

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Extensions;
 
 /// <summary>
-/// Extension methods for converting HttpResult to ActionResult.
+/// Extension methods for converting <see cref="HttpResult"/> to ActionResult.
 /// </summary>
 public static class HttpResultExtensions
 {

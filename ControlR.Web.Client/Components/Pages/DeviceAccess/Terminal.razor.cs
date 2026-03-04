@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Viewer.Common.State;
 using ControlR.Web.Client.Components.Dialogs;
 using Microsoft.AspNetCore.Components;

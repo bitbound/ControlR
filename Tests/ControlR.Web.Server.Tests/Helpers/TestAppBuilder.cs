@@ -8,7 +8,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.AspNetCore.Components;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 

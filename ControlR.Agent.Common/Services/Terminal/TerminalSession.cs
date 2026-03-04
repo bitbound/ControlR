@@ -1,7 +1,7 @@
-﻿using System.Management.Automation;
+using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Text;
-using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 
 namespace ControlR.Agent.Common.Services.Terminal;
 

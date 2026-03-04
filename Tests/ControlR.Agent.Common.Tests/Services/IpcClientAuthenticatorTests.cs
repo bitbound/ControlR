@@ -1,6 +1,7 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services;
 using ControlR.Libraries.Ipc;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;

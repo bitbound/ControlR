@@ -1,30 +1,30 @@
 <Project>
-	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
-		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <NuGetAudit Condition=" '$(Configuration)' == 'Debug' ">
       false
     </NuGetAudit>
 
-		<Authors>Jared Goodwin</Authors>
-		<Copyright>©️ $([System.DateTime]::Now.Year) Bitbound</Copyright>
-		<RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
-		<PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
-		<Company>Bitbound</Company>
-		<Description>Open-source remote control and remote access.</Description>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-	</PropertyGroup>
+    <Authors>Jared Goodwin</Authors>
+    <Copyright>©️ $([System.DateTime]::Now.Year) Bitbound</Copyright>
+    <RepositoryUrl>https://github.com/bitbound/controlr</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/bitbound/controlr</PackageProjectUrl>
+    <Company>Bitbound</Company>
+    <Description>Open-source remote control and remote access.</Description>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
 
-	<PropertyGroup>
-		<!-- Commented code. It can be helpful for examples/docs. -->
-		<NoWarn>S125</NoWarn>
-		<NoWarn>NU1608</NoWarn>
-		<WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001</WarningsNotAsErrors>
-	</PropertyGroup>
+  <PropertyGroup>
+    <!-- Commented code. It can be helpful for examples/docs. -->
+    <NoWarn>S125</NoWarn>
+    <NoWarn>NU1608</NoWarn>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001</WarningsNotAsErrors>
+  </PropertyGroup>
 
-	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
-		<PackageReference Include="Bitbound.Analyzers.MemberOrder" />
-	</ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <PackageReference Include="Bitbound.Analyzers.MemberOrder" />
+  </ItemGroup>
 </Project>

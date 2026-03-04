@@ -2,5 +2,5 @@
 
 public interface IDeviceInfoProvider
 {
-  Task<DeviceUpdateRequestDto> CreateDevice();
+  Task<DeviceUpdateRequestDto> GetDeviceInfo();
 }

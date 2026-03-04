@@ -17,11 +17,24 @@ public static class Localization
   private static string _currentCulture = CultureInfo.CurrentCulture.Name;
   private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings();
 
-  public static string ADeviceAdministrator => GetString();
   public static string About => GetString();
+  public static string AboutLibraryAvaloniaUi => GetString();
+  public static string AboutLibraryMicrosoftLibraries => GetString();
+  public static string AboutLibrarySerilog => GetString();
+  public static string AboutLibraryTmdsDbus => GetString();
+  public static string AboutLicenseLabel => GetString();
+  public static string AboutProjectLabel => GetString();
+  public static string AboutSourceText => GetString();
+  public static string AboutSponsorButton => GetString();
+  public static string AboutSponsorDescription => GetString();
+  public static string AboutSponsorLabel => GetString();
+  public static string AboutThirdPartyLicensesDescription => GetString();
+  public static string AboutThirdPartyLicensesLabel => GetString();
+  public static string AboutWebsiteLabel => GetString();
   public static string Accessibility => GetString();
   public static string AccessibilityPermissionDescription => GetString();
   public static string ActiveConnections => GetString();
+  public static string ADeviceAdministrator => GetString();
   public static string AgentConnectedTooltip => GetString();
   public static string AgentDisconnectedTooltip => GetString();
   public static string AgentStatus => GetString();
@@ -38,7 +51,9 @@ public static class Localization
   public static string ConfirmDisconnect => GetString();
   public static string ConfirmDisconnectTitle => GetString();
   public static string Connected => GetString();
+  public static string ConnectedAtLabel => GetString();
   public static string Connections => GetString();
+  public static string CouldNotCreateViewMessage => GetString();
   public static string Dark => GetString();
   public static string Disconnect => GetString();
   public static string Disconnected => GetString();
@@ -46,10 +61,12 @@ public static class Localization
   public static string EnterMessagePlaceholder => GetString();
   public static string GetSupportDescription => GetString();
   public static string GetTechSupportTitle => GetString();
-  public static string GrantPermission => GetString();
   public static string Granted => GetString();
+  public static string GrantPermission => GetString();
+  public static string InvalidViewModelTypeMessage => GetString();
   public static string LearnMore => GetString();
   public static string Light => GetString();
+  public static string LinkLicenseText => GetString();
   public static string MacAccessibilityPermissionRestartRequired => GetString();
   public static string MacPermissionStaleHint => GetString();
   public static string MacScreenCapturePermissionRestartRequired => GetString();
@@ -87,9 +104,12 @@ public static class Localization
   public static string Status => GetString();
   public static string SubmitText => GetString();
   public static string Theme => GetString();
+  public static string TrayExit => GetString();
+  public static string TrayShow => GetString();
   public static string UnhandledExceptionMessage => GetString();
   public static string UnhandledExceptionTitle => GetString();
   public static string Version => GetString();
+  public static string ViewNotFoundMessage => GetString();
   public static string YesText => GetString();
   public static string You => GetString();
 

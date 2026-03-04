@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using ControlR.Web.Client.Constants;
 
 namespace ControlR.Web.Client.Services;
 
@@ -40,11 +41,11 @@ internal class TenantSettingsProvider(
         return typedValue;
       }
 
-      var getResult = await _controlrApi.GetTenantSetting(settingName);
+      var getResult = await _controlrApi.TenantSettings.GetTenantSetting(settingName);
 
       if (!getResult.IsSuccess)
       {
-        if (getResult.Exception is HttpRequestException { StatusCode: HttpStatusCode.NotFound })
+        if (getResult.StatusCode == HttpStatusCode.NotFound)
         {
           return defaultValue;
         }
@@ -54,6 +55,11 @@ internal class TenantSettingsProvider(
       }
 
       if (getResult.Value is null)
+      {
+        return defaultValue;
+      }
+
+      if (!getResult.Value.HasValueSet)
       {
         return defaultValue;
       }
@@ -91,10 +97,13 @@ internal class TenantSettingsProvider(
       
       if (newValue is null)
       {
-        var deleteResult = await _controlrApi.DeleteTenantSetting(settingName);
+        var deleteResult = await _controlrApi.TenantSettings.DeleteTenantSetting(settingName);
         if (!deleteResult.IsSuccess)
         {
-          deleteResult.Log(_logger);
+          _logger.LogError("Failed to delete setting.  Reason: {Reason}, StatusCode: {StatusCode}",
+            deleteResult.Reason,
+            deleteResult.StatusCode);
+
           _snackbar.Add(deleteResult.Reason, Severity.Error);
         }
         return;
@@ -102,11 +111,15 @@ internal class TenantSettingsProvider(
       
       var stringValue = Convert.ToString(newValue);
       Guard.IsNotNull(stringValue);
-      var setResult = await _controlrApi.SetTenantSetting(settingName, stringValue);
+      var request = new TenantSettingRequestDto(settingName, stringValue);
+      var setResult = await _controlrApi.TenantSettings.SetTenantSetting(request);
 
       if (!setResult.IsSuccess)
       {
-        setResult.Log(_logger);
+        _logger.LogError("Failed to set setting.  Reason: {Reason}, StatusCode: {StatusCode}",
+          setResult.Reason,
+          setResult.StatusCode);
+          
         _snackbar.Add(setResult.Reason, Severity.Error);
       }
     }

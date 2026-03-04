@@ -17,9 +17,14 @@ internal class DeviceStore : StoreBase<DeviceResponseDto>, IDeviceStore
     messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
   }
 
+  protected override Guid GetItemId(DeviceResponseDto dto)
+  {
+    return dto.Id;
+  }
+
   protected override async Task RefreshImpl()
   {
-    await foreach (var device in ControlrApi.GetAllDevices())
+    await foreach (var device in ControlrApi.Devices.GetAllDevices())
     {
       Cache.AddOrUpdate(device.Id, device, (_, _) => device);
     }

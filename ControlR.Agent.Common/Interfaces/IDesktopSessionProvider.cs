@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 
 namespace ControlR.Agent.Common.Interfaces;
 public interface IDesktopSessionProvider

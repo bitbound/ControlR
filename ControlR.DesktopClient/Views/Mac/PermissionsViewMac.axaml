@@ -1,10 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:common="using:ControlR.DesktopClient.Common"
-             xmlns:controls="using:ControlR.DesktopClient.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-						 xmlns:vm="using:ControlR.DesktopClient.ViewModels.Mac"
+             xmlns:vm="using:ControlR.DesktopClient.ViewModels.Mac"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="ControlR.DesktopClient.Views.Mac.PermissionsViewMac"
              x:DataType="vm:IPermissionsViewModelMac">
@@ -21,23 +20,24 @@
         
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
-          
-          <controls:If Condition="{Binding IsMacAccessibilityPermissionGranted}">
-            <controls:If.True>
-              <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}">
-                <TextBlock Text="{x:Static common:Localization.Granted}" 
-                           Foreground="{DynamicResource SuccessContrastText}"
-                           FontWeight="Bold" />
-              </Border>
-            </controls:If.True>
-            <controls:If.False>
-              <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}">
-                <TextBlock Text="{x:Static common:Localization.NotGranted}" 
-                           Foreground="{DynamicResource ErrorContrastText}"
-                           FontWeight="Bold" />
-              </Border>
-            </controls:If.False>
-          </controls:If>
+
+          <Border CornerRadius="6"
+                  Padding="8,2"
+                  Background="{DynamicResource SuccessColor}"
+                  IsVisible="{Binding IsMacAccessibilityPermissionGranted}">
+            <TextBlock Text="{x:Static common:Localization.Granted}"
+                       Foreground="{DynamicResource SuccessContrastText}"
+                       FontWeight="Bold" />
+          </Border>
+
+          <Border CornerRadius="6"
+                  Padding="8,2"
+                  Background="{DynamicResource ErrorColor}"
+                  IsVisible="{Binding !IsMacAccessibilityPermissionGranted}">
+            <TextBlock Text="{x:Static common:Localization.NotGranted}"
+                       Foreground="{DynamicResource ErrorContrastText}"
+                       FontWeight="Bold" />
+          </Border>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -57,23 +57,24 @@
         
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBlock Text="{x:Static common:Localization.Status}" VerticalAlignment="Center" />
-          
-          <controls:If Condition="{Binding IsMacScreenCapturePermissionGranted}">
-            <controls:If.True>
-              <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource SuccessColor}">
-                <TextBlock Text="{x:Static common:Localization.Granted}" 
-                           Foreground="{DynamicResource SuccessContrastText}"
-                           FontWeight="Bold" />
-              </Border>
-            </controls:If.True>
-            <controls:If.False>
-              <Border CornerRadius="6" Padding="8,2" Background="{DynamicResource ErrorColor}">
-                <TextBlock Text="{x:Static common:Localization.NotGranted}" 
-                           Foreground="{DynamicResource ErrorContrastText}"
-                           FontWeight="Bold" />
-              </Border>
-            </controls:If.False>
-          </controls:If>
+
+          <Border CornerRadius="6"
+                  Padding="8,2"
+                  Background="{DynamicResource SuccessColor}"
+                  IsVisible="{Binding IsMacScreenCapturePermissionGranted}">
+            <TextBlock Text="{x:Static common:Localization.Granted}"
+                       Foreground="{DynamicResource SuccessContrastText}"
+                       FontWeight="Bold" />
+          </Border>
+
+          <Border CornerRadius="6"
+                  Padding="8,2"
+                  Background="{DynamicResource ErrorColor}"
+                  IsVisible="{Binding !IsMacScreenCapturePermissionGranted}">
+            <TextBlock Text="{x:Static common:Localization.NotGranted}"
+                       Foreground="{DynamicResource ErrorContrastText}"
+                       FontWeight="Bold" />
+          </Border>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Spacing="8">

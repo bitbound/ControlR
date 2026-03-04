@@ -1,4 +1,4 @@
-﻿using Bitbound.SimpleMessenger;
+using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.Models;
@@ -6,7 +6,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.DesktopClient.Common.State;
 using ControlR.Libraries.Shared.Collections;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;

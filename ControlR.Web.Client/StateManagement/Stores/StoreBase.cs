@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 namespace ControlR.Web.Client.StateManagement.Stores;
 
 public interface IStoreBase<TDto>
-  where TDto : IHasPrimaryKey
+  where TDto : class
 {
   ICollection<TDto> Items { get; }
   Task AddOrUpdate(TDto dto);
@@ -24,12 +24,13 @@ public abstract class StoreBase<TDto>(
   IControlrApi controlrApi,
   ISnackbar snackbar,
   ILogger<StoreBase<TDto>> logger) : IStoreBase<TDto>
-  where TDto : IHasPrimaryKey
+  where TDto : class
 {
   private readonly ConditionalWeakTable<object, Func<Task>> _changeHandlers = [];
   private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
   public ICollection<TDto> Items => Cache.Values;
+
   protected ConcurrentDictionary<Guid, TDto> Cache { get; } = new();
   protected IControlrApi ControlrApi { get; } = controlrApi;
   protected ILogger<StoreBase<TDto>> Logger { get; } = logger;
@@ -37,7 +38,14 @@ public abstract class StoreBase<TDto>(
 
   public async Task AddOrUpdate(TDto dto)
   {
-    Cache.AddOrUpdate(dto.Id, dto, (_, _) => dto);
+    var id = GetItemId(dto);
+    if (id == Guid.Empty)
+    {
+      Logger.LogWarning("Cannot add or update {ResourceName} because the item has no valid primary key.", typeof(TDto).Name);
+      return;
+    }
+
+    Cache.AddOrUpdate(id, dto, (_, _) => dto);
     await InvokeChangeHandlers();
   }
 
@@ -120,7 +128,14 @@ public abstract class StoreBase<TDto>(
 
   public async Task<bool> Remove(TDto dto)
   {
-    var removed = Cache.Remove(dto.Id, out _);
+    var id = GetItemId(dto);
+    if (id == Guid.Empty)
+    {
+      Logger.LogWarning("Cannot remove {ResourceName} because the item has no valid primary key.", typeof(TDto).Name);
+      return false;
+    }
+
+    var removed = Cache.Remove(id, out _);
     await InvokeChangeHandlers();
     return removed;
   }
@@ -136,6 +151,8 @@ public abstract class StoreBase<TDto>(
   {
     return Cache.TryGetValue(id, out dto);
   }
+
+  protected abstract Guid GetItemId(TDto dto);
 
   protected abstract Task RefreshImpl();
 

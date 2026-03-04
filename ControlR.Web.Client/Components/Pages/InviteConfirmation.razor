@@ -140,10 +140,11 @@ else
       return;
     }
 
-    var acceptResult = await ControlrApi.AcceptInvitation(
+    var request = new AcceptInvitationRequestDto(
       ActivationCode,
       _inputModel.Email,
       _inputModel.Password);
+    var acceptResult = await ControlrApi.Invites.AcceptInvitation(request);
 
     if (!acceptResult.IsSuccess)
     {

@@ -6,8 +6,8 @@ using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace ControlR.Agent.Startup;
 
@@ -110,11 +110,24 @@ internal static class CommandProvider
         .ToArray();
 
       using var host = CreateHost(StartupMode.Install, args, instanceId, serverUri);
-      var installer = host.Services.GetRequiredService<IAgentInstaller>();
+      var logger = host.Services.GetRequiredService<ILogger<Program>>();
 
-      await installer.Install(serverUri, tenantId, installerKeySecret, installerKeyId, deviceId, tags);
+      try
+      {
+        var installer = host.Services.GetRequiredService<IAgentInstaller>();
 
-      await WaitForShutdown();
+        await installer.Install(serverUri, tenantId, installerKeySecret, installerKeyId, deviceId, tags);
+
+        await WaitForShutdown();
+      }
+      catch (Exception ex)
+      {
+        logger.LogError(ex, "An error occurred during installation.");
+      }
+      finally
+      {
+        Log.CloseAndFlush();
+      }
     });
 
     return installCommand;

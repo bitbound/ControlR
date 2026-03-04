@@ -2,8 +2,6 @@
 applyTo: '**'
 ---
 
-## ⚠️ CRITICAL: ⚠️  ADHERE TO EVERY CODING GUIDELINE LISTED BELOW, WITHOUT EXCEPTION.
-
 # Project Overview
 
 ControlR is a cross-platform solution for remote access and remote control of devices. It primarily uses the latest .NET version for backend web, frontend web (via Blazor), and the desktop applications.
@@ -67,6 +65,8 @@ graph TD
 - **ControlR.Web.WebSocketRelay** - WebSocket relay service for real-time communication
 - **ControlR.Agent** - Background service/daemon that runs on controlled devices
 - **ControlR.DesktopClient** - Cross-platform Avalonia UI desktop application
+- **ControlR.Viewer.Avalonia** - Avalonia UI library for desktop viewer client
+- **ControlR.ApiClient** - API client for communicating with the ControlR server
 
 ### Platform-Specific Components
 
@@ -78,6 +78,7 @@ graph TD
 
 ### Shared Libraries
 
+- **ControlR.Libraries.Api.Contracts** - API contract definitions and DTOs
 - **ControlR.Libraries.Shared** - Core shared models, DTOs, and utilities
 - **ControlR.Libraries.DevicesCommon** - Device-related common functionality
 - **ControlR.Libraries.DevicesNative** - Native device interaction libraries
@@ -95,7 +96,6 @@ graph TD
 
 - **AgentHub** - Receives device heartbeats and forwards data to ViewerHub groups
 - **ViewerHub** - Handles web client connections and remote control requests
-- Agents send `DeviceDto` heartbeats via `UpdateDevice()` which triggers real-time UI updates
 - Hub groups organize connections by tenant, device tags, and user roles for targeted messaging
 
 ### Agent-DesktopClient IPC
@@ -216,7 +216,7 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - Do not use null-forgiving operator ('!') outside of tests. Handle null checks appropriately.  Used `required` where applicable.
 - Use the latest C# language features and default recommendations.
 - Use StyleCop conventions when ordering class members.
-- Prefer var of explicit types for variables.
+- Prefer var over explicit types for variables.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 - Always prefer collection expressions to initialize collections (e.g. '[]').
 - If an interface only has one implementation, keep the interface and implementation in the same file.
@@ -245,7 +245,7 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - Follow the established folder structure and naming conventions.
 - Keep platform-specific code in appropriate platform projects.
 - Use shared libraries for common functionality across projects.
-- DTOs go under `/Libraries/ControlR.Libraries.Shared/Dtos/`, under their respective namespace.
+- DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos`, under their respective namespace.
   - `HubDtos` contain DTOs used in SignalR hubs.
   - `IpcDtos` contain DTOs used in the IPC connection between `Agent` and `DesktopClient`.
   - `ServerApi` contains DTOs used in the REST API.
@@ -284,7 +284,7 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 
 ### Error Handling
 
-- Use structured logging with Serilog.
+- Use structured logging with Serilog via Microsoft's logging abstractions (e.g., `ILogger<T>`).
 - Implement proper exception handling and recovery.
 - Provide meaningful error messages to users.
 - Log errors with appropriate context for debugging.

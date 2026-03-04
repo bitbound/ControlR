@@ -11,9 +11,6 @@ public static class LibGtk
   public static nint GDK_SELECTION_CLIPBOARD => gdk_atom_intern("CLIPBOARD", false);
   public static nint GDK_SELECTION_PRIMARY => gdk_atom_intern("PRIMARY", false);
 
-  [DllImport("libglib-2.0.so.0")]
-  public static extern void g_free(nint mem);
-
   [DllImport(GdkLibraryName)]
   public static extern nint gdk_atom_intern(string atom_name, bool only_if_exists);
 
@@ -31,4 +28,7 @@ public static class LibGtk
 
   [DllImport(GtkLibraryName)]
   public static extern bool gtk_init_check(ref int argc, nint argv);
+
+  [DllImport("libglib-2.0.so.0")]
+  public static extern void g_free(nint mem);
 }

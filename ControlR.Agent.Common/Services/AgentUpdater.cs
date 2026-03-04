@@ -1,5 +1,5 @@
-﻿using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -45,7 +45,7 @@ internal class AgentUpdater(
   private readonly ISettingsProvider _settings = settings;
   private readonly ISystemEnvironment _systemEnvironment = environmentHelper;
   private readonly TimeProvider _timeProvider = timeProvider;
-  
+
   public async Task CheckForUpdate(bool force = false, CancellationToken cancellationToken = default)
   {
     if (!force && _settings.DisableAutoUpdate)
@@ -63,7 +63,7 @@ internal class AgentUpdater(
         updateCts.Token);
 
     // Try to acquire the global mutation lock with a short timeout to avoid long waits during periodic checks.
-    var lockHandle = await _mutationLock.TryAcquireAsync(TimeSpan.FromSeconds(5), linkedCts.Token);
+    using var lockHandle = await _mutationLock.TryAcquireAsync(TimeSpan.FromSeconds(5), linkedCts.Token);
     if (lockHandle is null)
     {
       _logger.LogWarning("Skipped check: mutation lock not acquired within 5 seconds (another mutation may be in progress).");
@@ -72,15 +72,15 @@ internal class AgentUpdater(
 
     try
     {
-      using (lockHandle)
-      {
-        _logger.LogInformation("Beginning version check.");
+      _logger.LogInformation("Beginning version check.");
 
       // Get remote hash
-      var hashResult = await _controlrApi.GetCurrentAgentHashSha256(_systemEnvironment.Runtime, linkedCts.Token);
+      var hashResult = await _controlrApi.AgentUpdate.GetCurrentAgentHashSha256(_systemEnvironment.Runtime, linkedCts.Token);
       if (!hashResult.IsSuccess)
       {
-        _logger.LogResult(hashResult);
+        _logger.LogError("Failed to retrieve remote hash.  Reason: {Reason}, StatusCode: {StatusCode}",
+          hashResult.Reason,
+          hashResult.StatusCode);
         return;
       }
 
@@ -140,47 +140,46 @@ internal class AgentUpdater(
         installCommand += $" -i {instanceId}";
       }
 
-        switch (_systemEnvironment.Platform)
-        {
-          case SystemPlatform.Windows:
-            {
-              await _processInvoker
-                .Start(tempPath, installCommand)
-                .WaitForExitAsync(linkedCts.Token);
-            }
-            break;
+      switch (_systemEnvironment.Platform)
+      {
+        case SystemPlatform.Windows:
+          {
+            await _processInvoker
+              .Start(tempPath, installCommand)
+              .WaitForExitAsync(linkedCts.Token);
+          }
+          break;
 
-          case SystemPlatform.Linux:
-            {
-              await _processInvoker
-                .Start("sudo", $"chmod +x {tempPath}")
-                .WaitForExitAsync(linkedCts.Token);
+        case SystemPlatform.Linux:
+          {
+            await _processInvoker
+              .Start("sudo", $"chmod +x {tempPath}")
+              .WaitForExitAsync(linkedCts.Token);
 
-              await _processInvoker.StartAndWaitForExit(
-                "/bin/bash",
-                $"-c \"{tempPath} {installCommand} &\"",
-                true,
-                linkedCts.Token);
-            }
-            break;
+            await _processInvoker.StartAndWaitForExit(
+              "/bin/bash",
+              $"-c \"{tempPath} {installCommand} &\"",
+              true,
+              linkedCts.Token);
+          }
+          break;
 
-          case SystemPlatform.MacOs:
-            {
-              await _processInvoker
-               .Start("sudo", $"chmod +x {tempPath}")
-               .WaitForExitAsync(linkedCts.Token);
+        case SystemPlatform.MacOs:
+          {
+            await _processInvoker
+              .Start("sudo", $"chmod +x {tempPath}")
+              .WaitForExitAsync(linkedCts.Token);
 
-              await _processInvoker.StartAndWaitForExit(
-                "/bin/zsh",
-                $"-c \"{tempPath} {installCommand} &\"",
-                true,
-                linkedCts.Token);
-            }
-            break;
+            await _processInvoker.StartAndWaitForExit(
+              "/bin/zsh",
+              $"-c \"{tempPath} {installCommand} &\"",
+              true,
+              linkedCts.Token);
+          }
+          break;
 
-          default:
-            throw new PlatformNotSupportedException();
-        }
+        default:
+          throw new PlatformNotSupportedException();
       }
     }
     catch (OperationCanceledException ex)

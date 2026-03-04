@@ -1,20 +1,47 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ControlR.AvaloniaViewerExample.ViewModels"
+        xmlns:fakes="using:ControlR.AvaloniaViewerExample.ViewModels.Fakes"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        xmlns:ctrlr="using:ControlR.Viewer.Avalonia"
+        xmlns:cavac="using:ControlR.Libraries.Avalonia.Controls"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
         x:Class="ControlR.AvaloniaViewerExample.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="ControlR.AvaloniaViewerExample">
+        x:DataType="vm:IMainWindowViewModel"
+        Height="600"
+        Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/appicon.ico"
+        Title="ControlR Viewer Example">
 
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
+  <Design.DataContext>
+    <fakes:MainWindowViewModelFake/>
+  </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+  <Grid>
+    <StackPanel x:Name="ConnectPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+      <cavac:IconButton Icon="{DynamicResource play_circle_regular}"
+                      Color="Primary"
+                      IconSize="64"
+                      Padding="14"
+                      FontSize="20"
+                      Text="Connect"
+                      Cursor="Hand"
+                      CornerRadius="14"
+                      ToolTip.Tip="Connect"
+                      HorizontalAlignment="Center"
+                      Variant="Outlined"
+                      Click="IconButton_Click" />
 
+      <TextBlock MaxWidth="450"
+                 TextWrapping="Wrap"
+                 HorizontalAlignment="Center"
+                 TextAlignment="Center">
+        This view is not part of the `Controlr.Viewer.Avalonia` library.  It's only an example that demonstrates changing the `ControlrViewer` visibility to start the connection.
+      </TextBlock>
+    </StackPanel>
+
+    <ctrlr:ControlrViewer x:Name="Viewer" Options="{Binding ViewerOptions}" IsVisible="false" />
+  </Grid>
 </Window>

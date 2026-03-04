@@ -47,7 +47,7 @@ else
     try
     {
       await base.OnInitializedAsync();
-      var result = await ControlrApi.GetAspireUrl();
+      var result = await ControlrApi.ServerLogs.GetAspireUrl();
       if (!result.IsSuccess)
       {
         _alertMessage = "Failed to retrieve Aspire Dashboard URL.";

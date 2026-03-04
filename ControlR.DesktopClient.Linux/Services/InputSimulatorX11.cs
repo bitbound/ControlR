@@ -1,7 +1,8 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -16,20 +17,43 @@ public class InputSimulatorX11 : IInputSimulator
     _logger = logger;
   }
 
-  public Task InvokeKeyEvent(string key, string? code, bool isPressed)
+  public Task InvokeKeyEvent(
+    string key,
+    string code,
+    bool isPressed,
+    KeyboardInputMode inputMode,
+    KeyEventModifiersDto modifiers)
   {
-    // Hybrid approach: route printable characters to Unicode injection, commands to virtual key simulation
-    // When code is null/empty, it indicates a printable character that should be typed (not simulated as key)
-    var isPrintableCharacter = string.IsNullOrWhiteSpace(code) && key.Length == 1;
+    var mode = inputMode;
+    var isPrintableCharacter = key.Length == 1;
+    var isModifierPressed = modifiers.AreAnyPressed;
+    var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta";
 
-    if (isPrintableCharacter)
+    if (mode == KeyboardInputMode.Virtual)
     {
-      // For printable characters, use Unicode injection on key down only
-      // Key up events are ignored since TypeText handles both down and up internally
+      if (isPrintableCharacter && !isModifierPressed && !isModifierKey)
+      {
+        if (isPressed)
+        {
+          return TypeText(key);
+        }
+
+        return Task.CompletedTask;
+      }
+
+      if (!isModifierPressed || isModifierKey)
+      {
+        code = string.Empty;
+      }
+    }
+
+    if (mode == KeyboardInputMode.Auto && isPrintableCharacter && !isModifierPressed)
+    {
       if (isPressed)
       {
         return TypeText(key);
       }
+
       return Task.CompletedTask;
     }
 

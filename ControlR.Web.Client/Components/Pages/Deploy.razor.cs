@@ -8,8 +8,8 @@ public partial class Deploy
 {
   private bool _addTags;
   private string? _deviceId;
-  private string? _existingKeySecretInput;
   private IEnumerable<AgentInstallerKeyDto> _existingKeys = [];
+  private string? _existingKeySecretInput;
   private string? _friendlyName;
   private DateTime? _inputExpirationDate;
   private TimeSpan? _inputExpirationTime;
@@ -118,7 +118,7 @@ public partial class Deploy
       _tenantId = tenantId;
     }
 
-    var result = await ControlrApi.GetAllowedTags();
+    var result = await ControlrApi.UserTags.GetAllowedTags();
     if (result.IsSuccess)
     {
       _tags = result.Value;
@@ -213,7 +213,7 @@ public partial class Deploy
       KeyType: InstallerKeyType.Persistent,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add("Failed to create installer key", Severity.Error);
@@ -247,7 +247,7 @@ public partial class Deploy
       Expiration: expirationDate,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add("Failed to create installer key", Severity.Error);
@@ -272,7 +272,7 @@ public partial class Deploy
       AllowedUses: _totalUsesAllowed,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add("Failed to create installer key", Severity.Error);
@@ -335,7 +335,7 @@ public partial class Deploy
     _useExistingKey = useExisting;
     if (_useExistingKey && !_existingKeys.Any())
     {
-      var result = await ControlrApi.GetAllInstallerKeys();
+      var result = await ControlrApi.InstallerKeys.GetAllInstallerKeys();
       if (result.IsSuccess)
       {
         _existingKeys = result.Value.OrderByDescending(x => x.CreatedAt);

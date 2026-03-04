@@ -1,4 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<Title>ControlR Libraries Shared</Title>
+		<Description>
+		  Shared utilities for ControlR, an open-source remote control and remote access solution.
+		</Description>
+		<PackageIcon>appicon.png</PackageIcon>
+		<IsNuGetPackage>true</IsNuGetPackage>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="..\..\.assets\appicon.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="MessagePack" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" />
@@ -14,6 +29,6 @@
 		<EditorConfigFiles Remove="C:\Repos\ControlR\ControlR.Shared\.editorconfig" />
 	</ItemGroup>
 	<ItemGroup>
-	  <ProjectReference Include="..\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
+	  <ProjectReference Include="..\ControlR.Libraries.Api.Contracts\ControlR.Libraries.Api.Contracts.csproj" />
 	</ItemGroup>
 </Project>

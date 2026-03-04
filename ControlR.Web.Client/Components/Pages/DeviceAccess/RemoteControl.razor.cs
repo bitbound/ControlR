@@ -1,5 +1,5 @@
-﻿using System.Net.WebSockets;
-using ControlR.Libraries.Shared.Dtos.Devices;
+using System.Net.WebSockets;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
@@ -28,11 +28,11 @@ public partial class RemoteControl : ViewportAwareComponent
   [Inject]
   public required IRemoteControlState RemoteControlState { get; init; }
   [Inject]
+  public required IViewerRemoteControlStream RemoteControlStream { get; init; }
+  [Inject]
   public required IScreenWake ScreenWake { get; init; }
   [Inject]
   public required ISnackbar Snackbar { get; init; }
-  [Inject]
-  public required IViewerRemoteControlStream StreamingClient { get; init; }
   [Inject]
   public required IUserSettingsProvider UserSettings { get; init; }
   [Inject]
@@ -58,7 +58,7 @@ public partial class RemoteControl : ViewportAwareComponent
         return SignalingState.Reconnecting;
       }
 
-      if (StreamingClient.State == WebSocketState.Open)
+      if (RemoteControlStream.State == WebSocketState.Open)
       {
         return SignalingState.ConnectionActive;
       }
@@ -138,10 +138,10 @@ public partial class RemoteControl : ViewportAwareComponent
     if (sendCloseStreamingSession)
     {
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-      await StreamingClient.SendCloseStreamingSession(cts.Token);
+      await RemoteControlStream.SendCloseStreamingSession(cts.Token);
     }
 
-    await StreamingClient.Close();
+    await RemoteControlStream.Close();
     await ScreenWake.SetScreenWakeLock(false);
     await GetDeviceDesktopSessions(refreshSessionsQuiet);
   }
@@ -364,8 +364,6 @@ public partial class RemoteControl : ViewportAwareComponent
 
       var remoteControlSessionResult = await ViewerHub.Server.RequestRemoteControlSession(session.Device.Id, requestDto);
 
-      _loadingMessage = null;
-
       if (!remoteControlSessionResult.IsSuccess)
       {
         _alertMessage = remoteControlSessionResult.Reason;
@@ -383,17 +381,12 @@ public partial class RemoteControl : ViewportAwareComponent
         _commandTimeoutSeconds);
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_commandTimeoutSeconds));
-      await StreamingClient.Connect(viewerRelayUri, cts.Token);
+      await RemoteControlStream.Connect(viewerRelayUri, cts.Token);
 
       RemoteControlState.ConnectionClosedRegistration?.Dispose();
-      RemoteControlState.ConnectionClosedRegistration = StreamingClient.OnClosed(HandleStreamingConnectionLost);
+      RemoteControlState.ConnectionClosedRegistration = RemoteControlStream.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
-      if (RemoteControlState.IsBlockUserInputEnabled)
-      {
-        await StreamingClient.SendToggleBlockInput(true, CancellationToken.None);
-      }
       
-      _loadingMessage = null;
       await ScreenWake.SetScreenWakeLock(true);
       return true;
     }
@@ -409,16 +402,10 @@ public partial class RemoteControl : ViewportAwareComponent
       RemoteControlState.CurrentSession = null;
       return false;
     }
-  }
-
-  private enum SignalingState
-  {
-    Unknown,
-    Loading,
-    Alert,
-    SessionSelect,
-    ConnectionActive,
-    Reconnecting,
-    UnsupportedOperatingSystem
+    finally
+    {
+      _loadingMessage = null;
+      await InvokeAsync(StateHasChanged);
+    }
   }
 }

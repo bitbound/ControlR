@@ -29,14 +29,16 @@ public class EmailSender(
       if (currentOptions.DisableEmailSending)
       {
         _logger.LogInformation(
-          "Email sending is disabled.  Email to \"{ToEmail}\" with subject \"{Subject}\" will not be sent.", 
-          email, 
+          "Email sending is disabled.  Email to \"{ToEmail}\" with subject \"{Subject}\" will not be sent.",
+          email,
           subject);
 
         return;
       }
 
-      if (!ValidateOptions())
+      if (string.IsNullOrWhiteSpace(currentOptions.SmtpDisplayName) ||
+          string.IsNullOrWhiteSpace(currentOptions.SmtpEmail) ||
+          string.IsNullOrWhiteSpace(currentOptions.SmtpHost))
       {
         _logger.LogCritical("SMTP options are not properly configured.  Unable to send email.");
         return;
@@ -57,10 +59,10 @@ public class EmailSender(
       }
       else
       {
-        var builder = new BodyBuilder 
-        { 
-          HtmlBody = 
-            $"<img src='cid:logo' alt='Company Logo' width='256' /> <br /> {htmlMessage}" 
+        var builder = new BodyBuilder
+        {
+          HtmlBody =
+            $"<img src='cid:logo' alt='Company Logo' width='256' /> <br /> {htmlMessage}"
         };
         var logoFile = _webHostEnvironment.WebRootFileProvider.GetFileInfo("images/company-logo.png");
         if (logoFile.Exists)
@@ -101,7 +103,7 @@ public class EmailSender(
 
 
 
-  private bool TryGetLogoHtml([NotNullWhen(true)]out string? logoHtml)
+  private bool TryGetLogoHtml([NotNullWhen(true)] out string? logoHtml)
   {
     if (_httpContextAccessor.HttpContext?.Request is not { } request)
     {
@@ -123,17 +125,6 @@ public class EmailSender(
         alt="Company Logo"
         width="256" />
     """;
-    return true;
-  }
-
-  private bool ValidateOptions()
-  {
-    if (string.IsNullOrWhiteSpace(_appOptions.CurrentValue.SmtpDisplayName) ||
-        string.IsNullOrWhiteSpace(_appOptions.CurrentValue.SmtpEmail) ||
-        string.IsNullOrWhiteSpace(_appOptions.CurrentValue.SmtpHost))
-    {
-      return false;
-    }
     return true;
   }
 }

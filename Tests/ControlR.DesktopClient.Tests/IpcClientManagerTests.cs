@@ -4,7 +4,7 @@ using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Services;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Ipc.Interfaces;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.TestingUtilities.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,12 +30,12 @@ public class IpcClientManagerTests : IAsyncLifetime
   private Mock<IAgentRpcService> _rpcAgent = null!;
   private Mock<IDesktopClientRpcService> _rpcClient = null!;
 
-  public Task DisposeAsync()
+  public ValueTask DisposeAsync()
   {
     _cts.Dispose();
-    return Task.CompletedTask;
+    return ValueTask.CompletedTask;
   }
-  public async Task InitializeAsync()
+  public async ValueTask InitializeAsync()
   {
     var instanceId = Guid.NewGuid().ToString();
     _pipeName = IpcPipeNames.GetPipeName(instanceId);
@@ -95,7 +95,7 @@ public class IpcClientManagerTests : IAsyncLifetime
     _ipcServer.Dispose();
 
     // Wait Task.Delay inside IpcClientManager
-    var waitResult = await _fakeTimeProvider.WaitForWaiters(x => x > 0);
+    var waitResult = await _fakeTimeProvider.WaitForWaiters(x => x > 0, cancellationToken: TestContext.Current.CancellationToken);
     Assert.True(waitResult, "Expected there to be waiters on the FakeTimeProvider.");
 
     // Advance time to trigger the reconnect attempt

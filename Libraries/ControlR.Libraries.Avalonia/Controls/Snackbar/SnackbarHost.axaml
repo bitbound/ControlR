@@ -1,0 +1,141 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:snackbar="using:ControlR.Libraries.Avalonia.Controls.Snackbar"
+             x:Class="ControlR.Libraries.Avalonia.Controls.Snackbar.SnackbarHost"
+             HorizontalAlignment="Right"
+             VerticalAlignment="Bottom"
+             Margin="16"
+             IsHitTestVisible="True">
+
+  <ItemsControl ItemsSource="{Binding Snackbar.Messages}">
+    <ItemsControl.ItemsPanel>
+      <ItemsPanelTemplate>
+        <StackPanel Spacing="8" />
+      </ItemsPanelTemplate>
+    </ItemsControl.ItemsPanel>
+
+    <ItemsControl.ItemTemplate>
+      <DataTemplate x:DataType="snackbar:SnackbarMessage">
+        <Border x:Name="MessageBorder"
+                Classes.SnackbarItem="True"
+                Loaded="OnMessageBorderLoaded"
+                DataContextChanged="OnMessageDataContextChanged"
+                Opacity="{Binding Opacity}"
+                MinWidth="260"
+                MaxWidth="420"
+                CornerRadius="8"
+                Padding="12,8"
+                IsHitTestVisible="True">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <PathIcon x:Name="SeverityIcon"
+                      Width="18"
+                      Height="18"
+                      VerticalAlignment="Center" />
+
+            <TextBlock Text="{Binding Message}"
+                       Grid.Column="1"
+                       FontSize="16"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap" />
+
+            <Button Grid.Column="2"
+                  Theme="{StaticResource SnackbarDismissButtonTheme}"
+                    Width="24"
+                    Height="24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontWeight="Bold"
+                    Cursor="Hand"
+                  IsHitTestVisible="True"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    Content="✕"
+                    Tag="{Binding Id}"
+                    Click="OnDismissClicked" />
+          </Grid>
+
+          <Border.Resources>
+            <ControlTheme x:Key="SnackbarDismissButtonTheme" TargetType="Button">
+              <Setter Property="Background" Value="Transparent" />
+              <Setter Property="BorderBrush" Value="Transparent" />
+              <Setter Property="BorderThickness" Value="0" />
+              <Setter Property="Padding" Value="0" />
+              <Setter Property="Template">
+                <ControlTemplate>
+                  <Border Background="Transparent"
+                          BorderBrush="Transparent"
+                          BorderThickness="0">
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      HorizontalContentAlignment="Center"
+                                      VerticalContentAlignment="Center" />
+                  </Border>
+                </ControlTemplate>
+              </Setter>
+            </ControlTheme>
+          </Border.Resources>
+
+          <Border.Styles>
+            <Style Selector="Border.SnackbarItem">
+              <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+              <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+              <Setter Property="BorderThickness" Value="1" />
+            </Style>
+
+            <Style Selector="Border.SnackbarItem.SeverityInformation">
+              <Setter Property="Background" Value="{DynamicResource InfoColor}" />
+              <Setter Property="TextElement.Foreground" Value="{DynamicResource InfoContrastText}" />
+            </Style>
+            <Style Selector="Border.SnackbarItem.SeverityInformation PathIcon#SeverityIcon">
+              <Setter Property="Data" Value="{DynamicResource info_regular}" />
+              <Setter Property="Foreground" Value="{DynamicResource InfoContrastText}" />
+            </Style>
+            <Style Selector="Border.SnackbarItem.SeverityInformation Button">
+              <Setter Property="Foreground" Value="{DynamicResource InfoContrastText}" />
+            </Style>
+
+            <Style Selector="Border.SnackbarItem.SeverityWarning">
+              <Setter Property="Background" Value="{DynamicResource WarningColor}" />
+              <Setter Property="TextElement.Foreground" Value="{DynamicResource WarningContrastText}" />
+            </Style>
+            <Style Selector="Border.SnackbarItem.SeverityWarning PathIcon#SeverityIcon">
+              <Setter Property="Data" Value="{DynamicResource warning_regular}" />
+              <Setter Property="Foreground" Value="{DynamicResource WarningContrastText}" />
+            </Style>
+            <Style Selector="Border.SnackbarItem.SeverityWarning Button">
+              <Setter Property="Foreground" Value="{DynamicResource WarningContrastText}" />
+            </Style>
+
+            <Style Selector="Border.SnackbarItem.SeverityError">
+              <Setter Property="Background" Value="{DynamicResource ErrorColor}" />
+              <Setter Property="TextElement.Foreground" Value="{DynamicResource ErrorContrastText}" />
+            </Style>
+            <Style Selector="Border.SnackbarItem.SeverityError PathIcon#SeverityIcon">
+              <Setter Property="Data" Value="{DynamicResource error_circle_regular}" />
+              <Setter Property="Foreground" Value="{DynamicResource ErrorContrastText}" />
+            </Style>
+            <Style Selector="Border.SnackbarItem.SeverityError Button">
+              <Setter Property="Foreground" Value="{DynamicResource ErrorContrastText}" />
+            </Style>
+
+            <Style Selector="Border.SnackbarItem.SeveritySuccess">
+              <Setter Property="Background" Value="{DynamicResource SuccessColor}" />
+              <Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessContrastText}" />
+            </Style>
+            <Style Selector="Border.SnackbarItem.SeveritySuccess PathIcon#SeverityIcon">
+              <Setter Property="Data" Value="{DynamicResource checkmark_circle_regular}" />
+              <Setter Property="Foreground" Value="{DynamicResource SuccessContrastText}" />
+            </Style>
+            <Style Selector="Border.SnackbarItem.SeveritySuccess Button">
+              <Setter Property="Foreground" Value="{DynamicResource SuccessContrastText}" />
+            </Style>
+          </Border.Styles>
+        </Border>
+      </DataTemplate>
+    </ItemsControl.ItemTemplate>
+  </ItemsControl>
+</UserControl>

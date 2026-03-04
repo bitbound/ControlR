@@ -268,6 +268,11 @@ internal sealed class HubConnection<THub, TClient>(
 
     if (_connection is not null)
     {
+      try
+      {
+        await _connection.StopAsync();
+      }
+      catch {}
       await _connection.DisposeAsync();
     }
   }

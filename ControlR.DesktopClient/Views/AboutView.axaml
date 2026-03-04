@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
 						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
-						 xmlns:controls="using:ControlR.DesktopClient.Controls"
+						 xmlns:common="using:ControlR.DesktopClient.Common"
+						 xmlns:controls="using:ControlR.Libraries.Avalonia.Controls"
 						 xmlns:theme="using:ControlR.DesktopClient.Theme"
 						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -12,36 +13,48 @@
 	<ScrollViewer>
 		<StackPanel Spacing="16">
 
-			<TextBlock Text="About" Classes="h1 Primary" />
+			<TextBlock Text="{x:Static common:Localization.About}" Classes="h1 Primary" />
 
 			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12">
 
-				<TextBlock Grid.Row="0" Grid.Column="0" Text="Version:" FontWeight="SemiBold" />
+				<TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold">
+					<Run Text="{x:Static common:Localization.Version}" />
+					<Run Text=":" />
+				</TextBlock>
 				<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" />
 
-				<TextBlock Grid.Row="1" Grid.Column="0" Text="License:" FontWeight="SemiBold" />
+				<TextBlock Grid.Row="1" Grid.Column="0" FontWeight="SemiBold">
+					<Run Text="{x:Static common:Localization.AboutLicenseLabel}" />
+					<Run Text=":" />
+				</TextBlock>
 
 				<HyperlinkButton Grid.Row="1" Grid.Column="1" Margin="0" Padding="0"
-												 Content="MIT License"
-												 NavigateUri="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt"
-												 Classes="link" />
+												 Content="{x:Static common:Localization.AboutLicenseLabel}"
+												 NavigateUri="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
 
-				<TextBlock Grid.Row="2" Grid.Column="0" Text="Project:" FontWeight="SemiBold" />
+				<TextBlock Grid.Row="2" Grid.Column="0" FontWeight="SemiBold">
+					<Run Text="{x:Static common:Localization.AboutProjectLabel}" />
+					<Run Text=":" />
+				</TextBlock>
 				<HyperlinkButton Grid.Row="2" Grid.Column="1" Margin="0" Padding="0"
 												 Content="https://github.com/bitbound/controlr"
-												 NavigateUri="https://github.com/bitbound/controlr"
-												 Classes="link" />
+												 NavigateUri="https://github.com/bitbound/controlr" />
 
-				<TextBlock Grid.Row="3" Grid.Column="0" Text="Website:" FontWeight="SemiBold" />
+				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold">
+					<Run Text="{x:Static common:Localization.AboutWebsiteLabel}" />
+					<Run Text=":" />
+				</TextBlock>
 				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0"
 												 Content="https://controlr.app"
-												 NavigateUri="https://controlr.app"
-												 Classes="link" />
+												 NavigateUri="https://controlr.app" />
 
-				<TextBlock Grid.Row="4" Grid.Column="0" Text="Sponsor:" FontWeight="SemiBold" VerticalAlignment="Top" />
+				<TextBlock Grid.Row="4" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top">
+					<Run Text="{x:Static common:Localization.AboutSponsorLabel}" />
+					<Run Text=":" />
+				</TextBlock>
 				<StackPanel Grid.Row="4" Grid.Column="1" Spacing="8">
-					<TextBlock Text="ControlR is free, open-source, self-hostable, and powered by donations." TextWrapping="Wrap" />
-					<controls:ThemeButton Content="❤️ Sponsor Project"
+					<TextBlock Text="{x:Static common:Localization.AboutSponsorDescription}" TextWrapping="Wrap" />
+					<controls:ThemeButton Content="{x:Static common:Localization.AboutSponsorButton}"
 																Color="Error"
 																Variant="Outlined"
 																Command="{Binding OpenUrlCommand}"
@@ -51,46 +64,43 @@
 
 			<Rectangle Height="1" Fill="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" />
 
-			<TextBlock Text="Third-Party Licenses:" FontWeight="SemiBold" />
-			<TextBlock Text="ControlR uses the following open-source software and libraries." TextWrapping="Wrap" />
+			<TextBlock FontWeight="SemiBold">
+				<Run Text="{x:Static common:Localization.AboutThirdPartyLicensesLabel}" />
+				<Run Text=":" />
+			</TextBlock>
+			<TextBlock Text="{x:Static common:Localization.AboutThirdPartyLicensesDescription}" TextWrapping="Wrap" />
 
 			<Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="8">
 
-				<TextBlock Grid.Row="0" Grid.Column="0" Text="Avalonia UI" VerticalAlignment="Center" />
+				<TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static common:Localization.AboutLibraryAvaloniaUi}" VerticalAlignment="Center" />
 				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-					<HyperlinkButton Content="source"
-													 NavigateUri="https://github.com/AvaloniaUI/Avalonia"
-													 Classes="link" />
-					<HyperlinkButton Content="license"
-													 NavigateUri="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md"
-													 Classes="link" />
+					<HyperlinkButton Content="{x:Static common:Localization.AboutSourceText}"
+													 NavigateUri="https://github.com/AvaloniaUI/Avalonia" />
+					<HyperlinkButton Content="{x:Static common:Localization.LinkLicenseText}"
+													 NavigateUri="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md" />
 				</StackPanel>
 
-				<TextBlock Grid.Row="1" Grid.Column="0" Text="Serilog" VerticalAlignment="Center" />
+				<TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static common:Localization.AboutLibrarySerilog}" VerticalAlignment="Center" />
 				<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-					<HyperlinkButton Content="source"
-													 NavigateUri="https://github.com/serilog/serilog"
-													 Classes="link" />
-					<HyperlinkButton Content="license"
-													 NavigateUri="https://github.com/serilog/serilog/blob/dev/LICENSE"
-													 Classes="link" />
+					<HyperlinkButton Content="{x:Static common:Localization.AboutSourceText}"
+													 NavigateUri="https://github.com/serilog/serilog" />
+					<HyperlinkButton Content="{x:Static common:Localization.LinkLicenseText}"
+													 NavigateUri="https://github.com/serilog/serilog/blob/dev/LICENSE" />
 				</StackPanel>
 
-				<TextBlock Grid.Row="2" Grid.Column="0" Text="Tmds.DBus" VerticalAlignment="Center" />
+				<TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static common:Localization.AboutLibraryTmdsDbus}" VerticalAlignment="Center" />
 				<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-					<HyperlinkButton Content="source"
-													 NavigateUri="https://github.com/tmds/Tmds.DBus"
-													 Classes="link" />
-					<HyperlinkButton Content="license"
-													 NavigateUri="https://github.com/tmds/Tmds.DBus/blob/main/COPYING"
-													 Classes="link" />
+					<HyperlinkButton Content="{x:Static common:Localization.AboutSourceText}"
+													 NavigateUri="https://github.com/tmds/Tmds.DBus" />
+					<HyperlinkButton Content="{x:Static common:Localization.LinkLicenseText}"
+													 NavigateUri="https://github.com/tmds/Tmds.DBus/blob/main/COPYING" />
 				</StackPanel>
 
-				<TextBlock Grid.Row="3" Grid.Column="0" Text="Microsoft Libraries" VerticalAlignment="Center" />
+				<TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static common:Localization.AboutLibraryMicrosoftLibraries}" VerticalAlignment="Center" />
 				<HyperlinkButton Grid.Row="3" Grid.Column="1"
-												 Content="source"
+												 Content="{x:Static common:Localization.AboutSourceText}"
 												 NavigateUri="https://github.com/microsoft"
-												 Classes="link" VerticalAlignment="Center" />
+												 VerticalAlignment="Center" />
 
 			</Grid>
 		</StackPanel>

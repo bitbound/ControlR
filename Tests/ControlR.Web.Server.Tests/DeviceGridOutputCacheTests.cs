@@ -1,5 +1,5 @@
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Middleware;
@@ -15,7 +15,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Security.Claims;
-using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -51,7 +50,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         Id: deviceId,
         Is64Bit: true,
         OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
-        Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
+        Platform: Libraries.Api.Contracts.Enums.SystemPlatform.Windows,
         ProcessorCount: 8,
         OsDescription: "Windows 11",
         TenantId: user.TenantId,
@@ -72,13 +71,13 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         IsOnline: true);
 
     await deviceManager.AddOrUpdate(deviceDto, connectionContext);
-    await db.SaveChangesAsync(); // Ensure the device is saved to the database
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken); // Ensure the device is saved to the database
 
     // Force a database refresh to ensure entity is tracked
     var device = db.Devices.Find(deviceId);
     if (device != null)
     {
-      await db.Entry(device).ReloadAsync();
+      await db.Entry(device).ReloadAsync(TestContext.Current.CancellationToken);
     }
 
     // Configure controller user context for authorization
@@ -108,7 +107,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         Id: newDeviceId,
         Is64Bit: true,
         OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
-        Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
+        Platform: Libraries.Api.Contracts.Enums.SystemPlatform.Windows,
         ProcessorCount: 8,
         OsDescription: "Windows 11",
         TenantId: user.TenantId,
@@ -164,7 +163,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     };
 
     // Act - Unauthenticated user
-    await policy.CacheRequestAsync(context, default);
+    await policy.CacheRequestAsync(context, TestContext.Current.CancellationToken);
     var unauthenticatedResult = context.EnableOutputCaching;
 
     // Set authenticated user
@@ -178,7 +177,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     context.EnableOutputCaching = false;
 
     // Act - Authenticated user
-    await policy.CacheRequestAsync(context, default);
+    await policy.CacheRequestAsync(context, TestContext.Current.CancellationToken);
     var authenticatedResult = context.EnableOutputCaching;
 
     // Assert

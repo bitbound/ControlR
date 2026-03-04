@@ -14,13 +14,17 @@ public class MainWindowProvider(
   IServiceProvider serviceProvider) : IMainWindowProvider
 {
   private readonly IControlledApplicationLifetime _appLifetime = appLifetime;
+  private readonly Lock _mainWindowLock = new();
   private readonly IServiceProvider _serviceProvider = serviceProvider;
+
   private MainWindow? _controlledMainWindow;
 
   public Window MainWindow
   {
     get
     {
+      using var _ = _mainWindowLock.EnterScope();
+      
       if (_appLifetime is ClassicDesktopStyleApplicationLifetime desktop)
       {
         desktop.MainWindow ??= _serviceProvider.GetRequiredService<MainWindow>();
@@ -34,6 +38,8 @@ public class MainWindowProvider(
 
   public void HandleMainWindowClosed()
   {
+    using var _ = _mainWindowLock.EnterScope();
+    
     if (_appLifetime is ClassicDesktopStyleApplicationLifetime desktop)
     {
       desktop.MainWindow = null;

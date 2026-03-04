@@ -1,4 +1,4 @@
-﻿using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Services.Linux;
@@ -20,8 +20,9 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Agent.Common.Services.FileManager;
-using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.ApiClient;
 
 namespace ControlR.Agent.Common.Startup;
 
@@ -78,8 +79,19 @@ internal static class HostApplicationBuilderExtensions
       builder.Configuration.AddJsonFile(pathProvider.GetAgentAppSettingsPath(), true, true);
     }
 
+    var appOptions = builder.Configuration
+      .GetSection(AgentAppOptions.SectionKey)
+      .Get<AgentAppOptions>() ?? new AgentAppOptions();
+
     services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
-    services.AddHttpClient<IControlrApi, ControlrApi>(ConfigureHttpClient);
+    services.AddControlrApiClient(options =>
+    {
+      if (appOptions.ServerUri is null)
+      {
+        throw new ArgumentException("ServerUri must be provided in configuration or app settings.");
+      }
+      options.BaseUrl = appOptions.ServerUri;
+    });
 
     services.AddSingleton<ISettingsProvider, SettingsProvider>();
     services.AddSingleton<IProcessManager, ProcessManager>();

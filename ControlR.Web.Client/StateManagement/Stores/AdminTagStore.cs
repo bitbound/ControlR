@@ -6,10 +6,15 @@ public interface IAdminTagStore : IStoreBase<TagViewModel>
 public class AdminTagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<AdminTagStore> logger)
   : StoreBase<TagViewModel>(controlrApi, snackbar, logger), IAdminTagStore
 {
+  protected override Guid GetItemId(TagViewModel dto)
+  {
+    return dto.Id;
+  }
+
   protected override async Task RefreshImpl()
   {
     Cache.Clear();
-    var getResult = await ControlrApi.GetAllTags(includeLinkedIds: true);
+    var getResult = await ControlrApi.Tags.GetAllTags(includeLinkedIds: true);
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

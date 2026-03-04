@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Agent.Common.Services;

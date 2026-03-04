@@ -2,19 +2,17 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.InteropServices;
-using ControlR.Libraries.Shared.Dtos.Devices;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -43,7 +41,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     {
       db.Tags.Add(new Tag { Id = tagId, Name = $"Tag {tagId}", TenantId = tenantId });
     }
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     var deviceDto = new DeviceUpdateRequestDto(
       Name: "Test Device",
@@ -196,7 +194,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     var differentTenantUserResult = await userManager.CreateAsync(differentTenantUser);
     Assert.True(differentTenantUserResult.Succeeded);
 
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     await userManager.AddToRoleAsync(installerUser, RoleNames.AgentInstaller);
     await userManager.AddToRoleAsync(differentTenantUser, RoleNames.AgentInstaller);
@@ -246,7 +244,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       Alias = "Original Alias"
     };
     db.Devices.Add(device);
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     var deviceDto = new DeviceUpdateRequestDto(
       Name: "Updated Device",

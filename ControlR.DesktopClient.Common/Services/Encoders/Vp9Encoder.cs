@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Threading.Channels;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 using SkiaSharp;
 
 namespace ControlR.DesktopClient.Common.Services.Encoders;

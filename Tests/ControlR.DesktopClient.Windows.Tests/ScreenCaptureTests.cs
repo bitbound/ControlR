@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using Xunit.Abstractions;
+using Xunit;
 #if IsWindows
 using Devolutions.Cadeau;
 #endif

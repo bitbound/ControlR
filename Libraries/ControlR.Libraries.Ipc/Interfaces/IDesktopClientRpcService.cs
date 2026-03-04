@@ -1,5 +1,5 @@
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Primitives;
 using StreamJsonRpc;
 using PolyType;

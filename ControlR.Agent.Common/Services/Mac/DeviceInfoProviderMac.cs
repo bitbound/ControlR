@@ -15,7 +15,7 @@ internal class DeviceInfoProviderMac(
   private readonly ILogger<DeviceInfoProviderMac> _logger = logger;
   private readonly IProcessManager _processService = processInvoker;
 
-  public async Task<DeviceUpdateRequestDto> CreateDevice()
+  public async Task<DeviceUpdateRequestDto> GetDeviceInfo()
   {
     try
     {

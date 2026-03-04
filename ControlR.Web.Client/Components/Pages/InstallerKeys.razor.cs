@@ -65,7 +65,7 @@ public partial class InstallerKeys
     {
       return;
     }
-    var apiResult = await ControlrApi.DeleteInstallerKey(key.Id);
+    var apiResult = await ControlrApi.InstallerKeys.DeleteInstallerKey(key.Id);
     if (apiResult.IsSuccess)
     {
       Snackbar.Add("Key deleted.", Severity.Success);
@@ -89,7 +89,7 @@ public partial class InstallerKeys
       _loading = true;
       await InvokeAsync(StateHasChanged);
 
-      var result = await ControlrApi.GetAllInstallerKeys();
+      var result = await ControlrApi.InstallerKeys.GetAllInstallerKeys();
       if (result.IsSuccess)
       {
         _keys = result.Value;
@@ -148,7 +148,7 @@ public partial class InstallerKeys
     }
 
     var dto = new RenameInstallerKeyRequestDto(key.Id, newName);
-    var result = await ControlrApi.RenameInstallerKey(dto);
+    var result = await ControlrApi.InstallerKeys.RenameInstallerKey(dto);
 
     if (result.IsSuccess)
     {

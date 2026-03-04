@@ -115,6 +115,11 @@ public partial class InputPopover : DisposableComponent
     }
   }
 
+  private async Task HandleKeyboardInputModeChanged(KeyboardInputMode mode)
+  {
+    RemoteControlState.KeyboardInputMode = mode;
+  }
+
   private async Task HandleReceiveClipboardClicked()
   {
     try

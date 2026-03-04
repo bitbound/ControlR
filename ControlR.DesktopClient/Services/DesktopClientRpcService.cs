@@ -1,8 +1,8 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.Ipc.Interfaces;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
@@ -153,9 +153,9 @@ public class DesktopClientRpcService(
             _logger.LogError(ex, "Error while handling chat message.");
         }
     }
-    public Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
+    public async Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
     {
-        return _remoteControlHostManager.StartHost(dto);
+        return (await _remoteControlHostManager.StartHost(dto)).ToResult();
     }
     public async Task ShutdownDesktopClient(ShutdownCommandDto dto)
     {

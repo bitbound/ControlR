@@ -2,17 +2,16 @@ using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Users;
-using ControlR.Web.Server.Services;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Web.Server.Services.DeviceManagement;
 using System.Net;
-using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
@@ -129,7 +128,7 @@ internal static class ServiceExtensions
       Id: id,
       Is64Bit: true,
       OsArchitecture: System.Runtime.InteropServices.Architecture.X64,
-      Platform: Libraries.Shared.Enums.SystemPlatform.Windows,
+      Platform: Libraries.Api.Contracts.Enums.SystemPlatform.Windows,
       ProcessorCount: 4,
       OsDescription: "Windows 10",
       TenantId: tenantId,

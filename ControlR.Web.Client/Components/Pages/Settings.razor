@@ -1,4 +1,4 @@
-﻿@using ControlR.Libraries.Shared.Enums
+@using ControlR.Libraries.Api.Contracts.Enums
 @using ControlR.Web.Client.Models
 @attribute [Route(ClientRoutes.Settings)]
 @attribute [Authorize]
@@ -129,6 +129,18 @@
   </MudRadioGroup>
 </div>
 
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Default Keyboard Input Mode
+  </MudText>
+
+  <MudRadioGroup @bind-Value:get="_keyboardInputMode" @bind-Value:set="SetKeyboardInputMode" T="KeyboardInputMode">
+    <MudRadio Value="@KeyboardInputMode.Auto" Color="Color.Primary">Auto</MudRadio>
+    <MudRadio Value="@KeyboardInputMode.Physical" Color="Color.Primary">Physical</MudRadio>
+    <MudRadio Value="@KeyboardInputMode.Virtual" Color="Color.Primary">Virtual</MudRadio>
+  </MudRadioGroup>
+</div>
+
 @code {
 
   private bool _notifyUser;
@@ -137,6 +149,7 @@
   private Guid? _userId;
   private bool? _tenantNotifySetting;
   private ThemeMode _themeMode = ThemeMode.Auto;
+  private KeyboardInputMode _keyboardInputMode = KeyboardInputMode.Auto;
 
   protected override async Task OnInitializedAsync()
   {
@@ -157,6 +170,7 @@
     _notifyUser = await UserSettings.GetNotifyUserOnSessionStart();
     _userDisplayName = await UserSettings.GetUserDisplayName();
     _themeMode = await UserSettings.GetThemeMode();
+    _keyboardInputMode = await UserSettings.GetKeyboardInputMode();
 
     // If tenant setting is enforced, override the user setting display
     if (_tenantNotifySetting.HasValue)
@@ -197,6 +211,13 @@
     await UserSettings.SetThemeMode(value);
     await Messenger.Send(new ThemeChangedMessage(value));
     Snackbar.Add("Theme updated", Severity.Success);
+  }
+
+  private async Task SetKeyboardInputMode(KeyboardInputMode value)
+  {
+    _keyboardInputMode = value;
+    await UserSettings.SetKeyboardInputMode(value);
+    Snackbar.Add("Keyboard input mode updated", Severity.Success);
   }
 
   private async Task SetUserDisplayName(string value)

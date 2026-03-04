@@ -1,0 +1,384 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="using:ControlR.Viewer.Avalonia.Controls"
+             xmlns:vm="using:ControlR.Viewer.Avalonia.ViewModels"
+             xmlns:fakes="using:ControlR.Viewer.Avalonia.ViewModels.Fakes"
+             xmlns:assets="using:ControlR.Viewer.Avalonia.Assets"
+             xmlns:cavac="using:ControlR.Libraries.Avalonia.Controls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ControlR.Viewer.Avalonia.Controls.RemoteDisplayView"
+             x:DataType="vm:IRemoteDisplayViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="Border.display-layout-container">
+      <Setter Property="Width" Value="280" />
+      <Setter Property="Height" Value="140" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="CornerRadius" Value="4" />
+    </Style>
+
+    <Style Selector="Border.display-layout-item">
+      <Setter Property="Background" Value="{DynamicResource InfoColor}" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="{DynamicResource InfoColor}" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Opacity" Value="0.7" />
+    </Style>
+
+    <Style Selector="Border.display-layout-item:pointerover">
+      <Setter Property="Opacity" Value="0.9" />
+    </Style>
+
+    <Style Selector="Border.display-layout-item.selected">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="BorderThickness" Value="3" />
+      <Setter Property="BorderBrush" Value="{DynamicResource SuccessColor}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Design.DataContext>
+    <fakes:RemoteDisplayViewModelFake />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0"
+            Padding="8"
+            BorderThickness="0, 1, 0, 1"
+            BorderBrush="{DynamicResource DividerBrush}">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto"
+            ColumnSpacing="8">
+        <cavac:IconButton x:Name="ViewButton"
+                          Grid.Column="0"
+                          Variant="Outlined"
+                          Color="Info"
+                          Focusable="False"
+                          IsTabStop="False"
+                          Icon="{DynamicResource desktop_regular}"
+                          Text="{x:Static assets:Resources.View}"
+                          ToolTip.Tip="{x:Static assets:Resources.View}">
+          <cavac:IconButton.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <Border MinWidth="320"
+                      Padding="8">
+                <StackPanel Spacing="20">
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="{x:Static assets:Resources.View}" FontSize="10" />
+
+                    <WrapPanel Orientation="Horizontal">
+                      <RadioButton GroupName="ViewMode"
+                                   Margin="0,0,16,0"
+                                   Content="{x:Static assets:Resources.ViewMode_Fit}"
+                                   IsChecked="{Binding IsFitViewMode}" />
+
+                      <RadioButton GroupName="ViewMode"
+                                   Margin="0,0,16,0"
+                                   Content="{x:Static assets:Resources.ViewMode_Stretch}"
+                                   IsChecked="{Binding IsStretchViewMode}" />
+
+                      <RadioButton GroupName="ViewMode"
+                                   Content="{x:Static assets:Resources.ViewMode_Scale}"
+                                   IsChecked="{Binding IsScaleViewMode}" />
+                    </WrapPanel>
+
+                    <TextBlock IsVisible="{Binding IsScaleControlsVisible}"
+                               Text="{x:Static assets:Resources.ScaleLevel}"
+                               FontSize="10"
+                               Margin="0,4,0,0" />
+
+                    <Grid IsVisible="{Binding IsScaleControlsVisible}"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="10"
+                          Margin="0,4,0,0">
+                      <Slider Grid.Column="0"
+                              Minimum="{Binding MinRendererScale}"
+                              Maximum="{Binding MaxRendererScale}"
+                              Value="{Binding RendererScale}" />
+
+                      <NumericUpDown Grid.Column="1"
+                                     Width="84"
+                                     Minimum="{Binding MinRendererScale}"
+                                     Maximum="{Binding MaxRendererScale}"
+                                     Increment="0.1"
+                                     FormatString="F2"
+                                     Value="{Binding RendererScale}" />
+                    </Grid>
+
+                    <StackPanel IsVisible="{Binding IsScaleControlsVisible}"
+                                Spacing="8"
+                                Margin="0,4,0,0">
+                      <TextBlock Text="{x:Static assets:Resources.AutoPan}" FontSize="10" />
+
+                      <ToggleSwitch IsChecked="{Binding IsAutoPanEnabled}"
+                                    HorizontalAlignment="Left" />
+                    </StackPanel>
+                  </StackPanel>
+
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="{x:Static assets:Resources.Displays}" FontSize="10" />
+
+                    <ItemsControl ItemsSource="{Binding DisplayItems}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <RadioButton GroupName="DisplaySelection"
+                                       Margin="0,0,20,6"
+                                       IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                       Command="{Binding SelectCommand}">
+                            <StackPanel Spacing="2">
+                              <TextBlock Text="{Binding Name}" />
+                              <TextBlock Classes="Info"
+                                         FontSize="12"
+                                         Text="{Binding DisplayId}" />
+                            </StackPanel>
+                          </RadioButton>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border Classes="display-layout-container"
+                            IsVisible="{Binding HasMultipleDisplays}">
+                      <ItemsControl x:Name="DisplayLayoutItemsControl"
+                                    ItemsSource="{Binding DisplayItems}">
+                        <ItemsControl.Styles>
+                          <Style Selector="ContentPresenter" x:DataType="vm:DisplayLayoutItem">
+                            <Setter Property="Canvas.Left" Value="{Binding LayoutLeft}" />
+                            <Setter Property="Canvas.Top" Value="{Binding LayoutTop}" />
+                          </Style>
+                        </ItemsControl.Styles>
+
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <Canvas Width="280"
+                                    Height="140" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button MinWidth="0"
+                                    MinHeight="0"
+                                    Padding="0"
+                                    Classes="TransparentButton"
+                                    Cursor="Hand"
+                                    Command="{Binding SelectCommand}">
+                              <Border Width="{Binding LayoutWidth}"
+                                      Height="{Binding LayoutHeight}"
+                                      Classes="display-layout-item"
+                                      Classes.selected="{Binding IsSelected}">
+                                <TextBlock HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Text="{Binding Index}" />
+                              </Border>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                  </StackPanel>
+
+                  <StackPanel Spacing="8"
+                              IsVisible="{Binding ShowPrivacyScreenToggle}">
+                    <TextBlock Text="{x:Static assets:Resources.PrivacyScreen}" FontSize="10" />
+
+                    <ToggleSwitch IsChecked="{Binding IsPrivacyScreenEnabled}"
+                                  HorizontalAlignment="Left" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </Flyout>
+          </cavac:IconButton.Flyout>
+        </cavac:IconButton>
+
+        <cavac:IconButton Grid.Column="1"
+                          Focusable="False"
+                          IsTabStop="False"
+                          Variant="Outlined"
+                          Color="Info"
+                          Icon="{DynamicResource keyboard_regular}"
+                          Text="{x:Static assets:Resources.Input}"
+                          ToolTip.Tip="{x:Static assets:Resources.Input}">
+          <cavac:IconButton.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <Border MinWidth="320"
+                      Padding="8">
+                <StackPanel Spacing="10">
+
+                  <ToggleSwitch IsChecked="{Binding IsViewOnlyEnabled}"
+                                OffContent="{x:Static assets:Resources.ViewOnly}"
+                                OnContent="{x:Static assets:Resources.ViewOnly}" />
+
+                  <ToggleSwitch IsVisible="{Binding ShowWindowsInputControls}"
+                                IsChecked="{Binding IsBlockUserInputEnabled}"
+                                IsEnabled="{Binding IsBlockInputToggleEnabled}"
+                                OffContent="{x:Static assets:Resources.BlockUserInput}"
+                                OnContent="{x:Static assets:Resources.BlockUserInput}" />
+
+                  <TextBlock Margin="0,6,0,0"
+                             Text="{x:Static assets:Resources.Clipboard}"
+                             FontSize="10" />
+
+                  <Button Content="{x:Static assets:Resources.SendClipboard}"
+                          Click="HandleSendClipboardClicked" />
+
+                  <Button Content="{x:Static assets:Resources.ReceiveClipboard}"
+                          Click="HandleReceiveClipboardClicked" />
+
+                  <Button Content="{x:Static assets:Resources.TypeClipboard}"
+                          Click="HandleTypeClipboardClicked" />
+
+                  <StackPanel Spacing="6"
+                              Margin="0,6,0,0"
+                              IsVisible="{Binding ShowWindowsInputControls}">
+                    <TextBlock Text="{x:Static assets:Resources.Security}"
+                               FontSize="10" />
+
+                    <Button Content="{x:Static assets:Resources.CtrlAltDel}"
+                            Click="HandleCtrlAltDelClicked" />
+                  </StackPanel>
+
+                  <TextBlock Margin="0,8,0,0"
+                             Text="{x:Static assets:Resources.KeyboardInputMode}"
+                             FontSize="10" />
+
+                  <WrapPanel Orientation="Horizontal">
+                    <RadioButton GroupName="KeyboardInputMode"
+                                 Margin="0,0,16,0"
+                                 Content="{x:Static assets:Resources.KeyboardMode_Auto}"
+                                 IsChecked="{Binding IsKeyboardInputAuto}" />
+
+                    <RadioButton GroupName="KeyboardInputMode"
+                                 Margin="0,0,16,0"
+                                 Content="{x:Static assets:Resources.KeyboardMode_Physical}"
+                                 IsChecked="{Binding IsKeyboardInputPhysical}" />
+
+                    <RadioButton GroupName="KeyboardInputMode"
+                                 Content="{x:Static assets:Resources.KeyboardMode_Virtual}"
+                                 IsChecked="{Binding IsKeyboardInputVirtual}" />
+                  </WrapPanel>
+                </StackPanel>
+              </Border>
+            </Flyout>
+          </cavac:IconButton.Flyout>
+        </cavac:IconButton>
+
+        <cavac:IconButton Grid.Column="2"
+                          Variant="Outlined"
+                          Color="Info"
+                          Focusable="False"
+                          IsTabStop="False"
+                          Icon="{DynamicResource more_vertical_regular}"
+                          Text="{x:Static assets:Resources.Extras}"
+                          ToolTip.Tip="{x:Static assets:Resources.Extras}">
+          <cavac:IconButton.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <Border MinWidth="240"
+                      Padding="8">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="{x:Static assets:Resources.Metrics}"
+                             FontSize="10" />
+
+                  <ToggleSwitch IsChecked="{Binding IsMetricsEnabled}"
+                                OnContent="{x:Static assets:Resources.ToggleOnText}"
+                                OffContent="{x:Static assets:Resources.ToggleOffText}"
+                                HorizontalAlignment="Left" />
+                </StackPanel>
+              </Border>
+            </Flyout>
+          </cavac:IconButton.Flyout>
+        </cavac:IconButton>
+
+        <Button Grid.Column="4"
+                Cursor="Hand"
+                Focusable="False"
+                IsTabStop="False"
+                Classes="TransparentButton"
+                ToolTip.Tip="{x:Static assets:Resources.CloseConnection}"
+                Command="{Binding DisconnectCommand}">
+          <PathIcon Width="18"
+                    Height="18"
+                    Classes="Error"
+                    Data="{DynamicResource dismiss_regular}" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1">
+      <ScrollViewer x:Name="RendererScrollViewer"
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Auto">
+        <controls:ScreenRenderer x:Name="ScreenRenderer"
+                                 Focusable="True"
+                                 IsTabStop="True"
+                                 VerticalAlignment="{Binding RendererVerticalAlignment}"
+                                 HorizontalAlignment="{Binding RendererHorizontalAlignment}"
+                                 Width="{Binding RendererWidth}"
+                                 Height="{Binding RendererHeight}" />
+      </ScrollViewer>
+
+      <Border HorizontalAlignment="Right"
+              VerticalAlignment="Bottom"
+              Margin="8"
+              Padding="8"
+              MaxWidth="420"
+              MaxHeight="300"
+              Classes="Card"
+              Opacity="0.85"
+              IsHitTestVisible="False"
+              IsVisible="{Binding IsMetricsEnabled}">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto"
+                      IsHitTestVisible="False">
+          <StackPanel Spacing="4" IsHitTestVisible="False">
+            <TextBlock IsVisible="{Binding !HasMetricsData}"
+                       Text="{x:Static assets:Resources.Loading}" />
+
+            <Grid IsVisible="{Binding HasMetricsData}"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="10"
+                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                  IsHitTestVisible="False">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_MbpsInLabel}" />
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding MetricsMbpsIn, StringFormat={}{0:N2}}" />
+
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_MbpsOutLabel}" />
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding MetricsMbpsOut, StringFormat={}{0:N2}}" />
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_FpsLabel}" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MetricsFps, StringFormat={}{0:N2}}" />
+
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_ModeLabel}" />
+              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MetricsMode}" />
+
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_LatencyLabel}" />
+              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MetricsLatency.TotalMilliseconds, StringFormat={}{0:N2} ms}" />
+            </Grid>
+
+            <ItemsControl IsVisible="{Binding HasMetricsData}"
+                          ItemsSource="{Binding MetricsExtraData}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="Auto,*"
+                        ColumnSpacing="10"
+                        IsHitTestVisible="False">
+                    <TextBlock Grid.Column="0" Text="{Binding Key, StringFormat={}{0}:}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

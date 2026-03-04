@@ -1,5 +1,5 @@
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -55,7 +55,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDb>>();
-      await using var db = await dbFactory.CreateDbContextAsync();
+      await using var db = await dbFactory.CreateDbContextAsync(TestContext.Current.CancellationToken);
 
       db.Tags.Add(new Tag
       {
@@ -73,7 +73,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
         TenantId = tenantAId
       });
 
-      await db.SaveChangesAsync();
+      await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     // Step 4: Create tags for Tenant B
@@ -82,7 +82,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDb>>();
-      await using var db = await dbFactory.CreateDbContextAsync();
+      await using var db = await dbFactory.CreateDbContextAsync(TestContext.Current.CancellationToken);
 
       tenantBTag1Id = Guid.NewGuid();
       tenantBTag2Id = Guid.NewGuid();
@@ -103,7 +103,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
         TenantId = tenantBId
       });
 
-      await db.SaveChangesAsync();
+      await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     // Step 5: AdminUser invites User2 to Tenant A (this creates user2 in Tenant A)
@@ -128,8 +128,8 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDb>>();
-      await using var db = await dbFactory.CreateDbContextAsync();
-      var user2 = await db.Users.IgnoreQueryFilters().FirstAsync(u => u.Email == "user2@example.com");
+      await using var db = await dbFactory.CreateDbContextAsync(TestContext.Current.CancellationToken);
+      var user2 = await db.Users.IgnoreQueryFilters().FirstAsync(u => u.Email == "user2@example.com", cancellationToken: TestContext.Current.CancellationToken);
       user2Id = user2.Id;
     }
 
@@ -137,18 +137,18 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDb>>();
-      await using var db = await dbFactory.CreateDbContextAsync();
+      await using var db = await dbFactory.CreateDbContextAsync(TestContext.Current.CancellationToken);
 
       // Move user2 to Tenant B
       var user2 = await db.Users
         .IgnoreQueryFilters()
         .Include(u => u.Tags)
-        .FirstAsync(u => u.Id == user2Id);
+        .FirstAsync(u => u.Id == user2Id, cancellationToken: TestContext.Current.CancellationToken);
       user2.TenantId = tenantBId;
 
       // Assign tags from Tenant B
-      var tag1 = await db.Tags.IgnoreQueryFilters().FirstAsync(t => t.Id == tenantBTag1Id);
-      var tag2 = await db.Tags.IgnoreQueryFilters().FirstAsync(t => t.Id == tenantBTag2Id);
+      var tag1 = await db.Tags.IgnoreQueryFilters().FirstAsync(t => t.Id == tenantBTag1Id, cancellationToken: TestContext.Current.CancellationToken);
+      var tag2 = await db.Tags.IgnoreQueryFilters().FirstAsync(t => t.Id == tenantBTag2Id, cancellationToken: TestContext.Current.CancellationToken);
       user2.Tags =
       [
         tag1,
@@ -189,7 +189,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
         UserId = user2Id,
       });
 
-      await db.SaveChangesAsync();
+      await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     // Step 7: User2 accepts invite (moves back to Tenant A)
@@ -211,7 +211,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDb>>();
-      await using var db = await dbFactory.CreateDbContextAsync();
+      await using var db = await dbFactory.CreateDbContextAsync(TestContext.Current.CancellationToken);
 
       // User2 should be in Tenant A
       var user2Final = await db.Users
@@ -220,7 +220,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
         .Include(u => u.UserPreferences)
         .Include(u => u.PersonalAccessTokens)
         .Include(u => u.UserRoles)
-        .FirstAsync(u => u.Id == user2Id);
+        .FirstAsync(u => u.Id == user2Id, cancellationToken: TestContext.Current.CancellationToken);
 
       Assert.Equal(tenantAId, user2Final.TenantId);
       

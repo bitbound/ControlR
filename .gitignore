@@ -375,5 +375,4 @@ FodyWeavers.xsd
 .idea/.idea.ControlR/.idea/copilot.data.migration.edit.xml
 /.build/staging-desktop
 ControlR.Agent.Common/Resources/ControlR.DesktopClient.zip
-ControlR.ApiClient/Output/.kiota.log
 ControlR.Agent.Common/Resources/ControlR.app.zip

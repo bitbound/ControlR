@@ -1,4 +1,4 @@
-﻿// ReSharper disable IdentifierTypo
+// ReSharper disable IdentifierTypo
 using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -16,15 +16,15 @@ using Windows.Win32.System.Threading;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.Shell;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32.SafeHandles;
 using WTS_CONNECTSTATE_CLASS = Windows.Win32.System.RemoteDesktop.WTS_CONNECTSTATE_CLASS;
 using WTS_INFO_CLASS = Windows.Win32.System.RemoteDesktop.WTS_INFO_CLASS;
 using WTS_SESSION_INFOW = Windows.Win32.System.RemoteDesktop.WTS_SESSION_INFOW;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 
 namespace ControlR.Libraries.NativeInterop.Windows;
 
@@ -52,7 +52,7 @@ public interface IWin32Interop
   bool GetWindowRect(nint windowHandle, out Rectangle windowRect);
   bool GlobalMemoryStatus(ref MemoryStatusEx lpBuffer);
   void InvokeCtrlAltDel();
-  void InvokeKeyEvent(string key, string? code, bool isPressed);
+  void InvokeKeyEvent(string key, string code, bool isPressed, KeyboardInputMode inputMode);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
   bool IsCurrentProcessUiAccess();
@@ -718,23 +718,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     try
     {
       var currentSessionId = Process.GetCurrentProcess().SessionId;
-
-      if (currentSessionId == 0)
-      {
-        PInvoke.SendSAS(false);
-      }
-      else
-      {
-        var ptrParam = Marshal.AllocHGlobal(1);
-        Marshal.WriteByte(ptrParam, 0);
-        var result = Wmsgapi.WmsgSendMessage(currentSessionId, WM_SAS_INTERNAL, 0, ptrParam);
-        if (result != 0)
-        {
-          _logger.LogWarning("Failed to send Ctrl+Alt+Del message to session {SessionId}. Result: {Result}",
-            currentSessionId,
-            result);
-        }
-      }
+      var identity = WindowsIdentity.GetCurrent();
+      var systemSid = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+      var isSystem = identity?.User?.Equals(systemSid) ?? false;
+      PInvoke.SendSAS(AsUser: !isSystem);
     }
     catch (Exception ex)
     {
@@ -742,11 +729,31 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
-  public void InvokeKeyEvent(string key, string? code, bool isPressed)
+  public void InvokeKeyEvent(string key, string code, bool isPressed, KeyboardInputMode inputMode)
   {
-    if (!ConvertBrowserKeyArgToVirtualKey(key, code, out var convertResult))
+    if (inputMode == KeyboardInputMode.Physical && !string.IsNullOrWhiteSpace(code))
     {
-      _logger.LogWarning("Failed to convert key '{Key}' (code: '{Code}') to virtual key.", key, code);
+      if (ConvertBrowserKeyArgToVirtualKey(key, code, KeyboardInputMode.Physical, out var physicalVk))
+      {
+        var scanCode = GetScanCode(physicalVk.Value);
+        if (scanCode > 0)
+        {
+          var isExtended = IsExtendedKey(physicalVk.Value, code);
+          var scanInput = CreateScancodeInput(scanCode, isPressed, isExtended);
+          var scanResult = PInvoke.SendInput([scanInput], sizeof(INPUT));
+          if (scanResult == 0)
+          {
+            _logger.LogWarning("Failed to send scancode input. Key: {Key}, Code: {Code}, IsPressed: {IsPressed}.", key, code, isPressed);
+          }
+
+          return;
+        }
+      }
+    }
+
+    if (!ConvertBrowserKeyArgToVirtualKey(key, code, inputMode, out var convertResult))
+    {
+      _logger.LogWarning("Failed to convert key '{Key}' (code: '{Code}', mode: '{InputMode}') to virtual key.", key, code, inputMode);
       return;
     }
 
@@ -756,7 +763,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     if (result == 0)
     {
-      _logger.LogWarning("Failed to send key input. Key: {Key}, Code: {Code}, IsPressed: {IsPressed}.", key, code, isPressed);
+      _logger.LogWarning("Failed to send key input. Key: {Key}, Code: {Code}, IsPressed: {IsPressed}, InputMode: {InputMode}.", key, code, isPressed, inputMode);
     }
   }
 
@@ -1299,7 +1306,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
-  private static INPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed, string? code = null)
+  private static INPUT CreateKeyboardInput(VIRTUAL_KEY key, bool isPressed, string code)
   {
     var extraInfo = PInvoke.GetMessageExtraInfo();
     KEYBD_EVENT_FLAGS kbdFlags = 0;
@@ -1333,7 +1340,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   /// <summary>
   /// Creates a scancode-based keyboard input for physical key simulation.
-  /// TODO: This will be used when physical input mode is enabled on the viewer side.
   /// </summary>
   /// <param name="scancode">The hardware scancode for the physical key</param>
   /// <param name="isPressed">True for key down, false for key up</param>
@@ -1399,7 +1405,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   private static HKL GetKeyboardLayout()
   {
-    return PInvoke.GetKeyboardLayout((uint)Environment.CurrentManagedThreadId);
+    return PInvoke.GetKeyboardLayout(PInvoke.GetCurrentThreadId());
   }
 
   private static Point GetNormalizedPoint(int x, int y)
@@ -1443,6 +1449,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     };
   }
 
+  private static ushort GetScanCode(VIRTUAL_KEY key)
+  {
+    var scanCode = PInvoke.MapVirtualKeyEx((uint)key, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC_EX, GetKeyboardLayout());
+    return (ushort)(scanCode & 0xFFFF);
+  }
+
   private static string GetWindowClassName(HWND hwnd)
   {
     var buffer = stackalloc char[256];
@@ -1452,7 +1464,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       : string.Empty;
   }
 
-  private static bool IsExtendedKey(VIRTUAL_KEY vk, string? code = null)
+  private static bool IsExtendedKey(VIRTUAL_KEY vk, string code)
   {
     // Special handling for VK_RETURN: only NumpadEnter should be extended
     if (vk == VIRTUAL_KEY.VK_RETURN)
@@ -1510,12 +1522,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return "Default";
   }
 
-  private bool ConvertBrowserKeyArgToVirtualKey(string key, string? code, [NotNullWhen(true)] out VIRTUAL_KEY? result)
+  private bool ConvertBrowserKeyArgToVirtualKey(string key, string code, KeyboardInputMode inputMode, [NotNullWhen(true)] out VIRTUAL_KEY? result)
   {
-    // Code-first approach (physical mode): Try to map browser KeyboardEvent.code to Windows Virtual Key
-    // This provides layout-independent physical key simulation
-    // When code is null, we skip this and use logical mode (key-based) instead
-    if (!string.IsNullOrWhiteSpace(code))
+    var shouldTryCode = inputMode is KeyboardInputMode.Physical or KeyboardInputMode.Auto;
+    var shouldTryKey = inputMode is KeyboardInputMode.Virtual or KeyboardInputMode.Auto;
+
+    if (shouldTryCode && !string.IsNullOrWhiteSpace(code))
     {
       result = code switch
       {
@@ -1691,8 +1703,12 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       }
     }
 
-    // Fallback to key-based mapping for compatibility with older code or edge cases
-    // This handles cases where code is not provided (shouldn't happen in modern browsers)
+    if (!shouldTryKey)
+    {
+      result = null;
+      return false;
+    }
+
     result = key switch
     {
       " " => VIRTUAL_KEY.VK_SPACE,
@@ -1756,7 +1772,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       // VkKeyScanEx returns -1 if the key is not found in the current keyboard layout
       if (scanResult == -1)
       {
-        _logger.LogWarning("Key '{Key}' (code: '{Code}') not found in current keyboard layout.", key, code);
+        _logger.LogWarning("Key '{Key}' (code: '{Code}', mode: '{InputMode}') not found in current keyboard layout.", key, code, inputMode);
         return false;
       }
 
@@ -1765,7 +1781,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       return true;
     }
 
-    _logger.LogWarning("Unable to parse key input: {Key} (code: {Code}).", key, code);
+    _logger.LogWarning("Unable to parse key input: {Key} (code: {Code}, mode: {InputMode}).", key, code, inputMode);
     return false;
   }
 

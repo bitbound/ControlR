@@ -3,7 +3,7 @@
              xmlns:common="using:ControlR.DesktopClient.Common"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-						 xmlns:vm="using:ControlR.DesktopClient.ViewModels.CommonInterfaces"
+						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="ControlR.DesktopClient.Views.PermissionsView"
              x:DataType="vm:IPermissionsViewModel">

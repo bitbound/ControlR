@@ -1,6 +1,6 @@
 @attribute [Route(ClientRoutes.DeviceAccessVncRelay)]
 @layout DeviceAccessLayout
-@using ControlR.Libraries.Shared.Dtos.RemoteControlDtos
+@using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos
 @using ControlR.Libraries.WebSocketRelay.Client
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
 @attribute [Authorize]
@@ -31,7 +31,7 @@
   }
   else
   {
-  <div class="d-flex flex-column align-center justify-center h-100 gap-4">
+  <div class="d-flex flex-column align-center justify-center mt-16 gap-4">
     <MudText Typo="Typo.h4">VNC Relay</MudText>
     <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Info">
       A VNC server must be running on the remote device and accept connections from loopback/localhost.

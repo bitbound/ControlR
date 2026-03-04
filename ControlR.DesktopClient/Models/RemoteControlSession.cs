@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 
@@ -19,11 +19,15 @@ public sealed class RemoteControlSession(
   {
     try
     {
-      Disposer.DisposeAll(Host);
+      await Host.StopAsync();
     }
     catch
     {
       // Ignore.
+    }
+    finally
+    {
+      Disposer.DisposeAll(Host);
     }
   }
 }

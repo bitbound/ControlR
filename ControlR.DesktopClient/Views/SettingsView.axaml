@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ControlR.DesktopClient.ViewModels"
              xmlns:common="using:ControlR.DesktopClient.Common"
-             xmlns:theme="using:ControlR.DesktopClient.Theming"
+             xmlns:theme="using:ControlR.Libraries.Avalonia.Theming"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
@@ -18,12 +18,11 @@
       
       <RadioButton GroupName="Theme"
                    Content="{x:Static common:Localization.Dark}"
-                   IsChecked="{Binding CurrentThemeMode, Converter={StaticResource EnumComparisonConverter}, ConverterParameter={x:Static theme:ThemeMode.Dark}}" />
+                   IsChecked="{Binding IsDarkModeChecked}" />
 
       <RadioButton GroupName="Theme"
                    Content="{x:Static common:Localization.Light}"
-                   IsChecked="{Binding CurrentThemeMode, Converter={StaticResource EnumComparisonConverter}, ConverterParameter={x:Static theme:ThemeMode.Light}}" />
-      
+                   IsChecked="{Binding IsLightModeChecked}" />
 
     </StackPanel>
 

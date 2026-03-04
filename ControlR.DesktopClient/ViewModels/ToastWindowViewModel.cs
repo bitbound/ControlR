@@ -1,5 +1,6 @@
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using ControlR.Libraries.Avalonia.Theming;
 
 namespace ControlR.DesktopClient.ViewModels;
 

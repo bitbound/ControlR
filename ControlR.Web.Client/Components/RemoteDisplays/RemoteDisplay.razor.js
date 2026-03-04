@@ -1,7 +1,5 @@
 ﻿// noinspection JSUnusedGlobalSymbols
 
-const MAX_KEYPRESS_AGE_MS = 5000;
-
 /** @typedef {"scale" | "fit" | "stretch" | "unknown"} ViewMode */
 
 class State {
@@ -45,10 +43,6 @@ class State {
   windowEventHandlers;
   /** @type {MutationObserver|null} */
   mutationObserver;
-  /** @type {Map<string, {code: string|null, timestamp: number}>} */
-  pressedKeysWithCode;
-  /** @type {number} */
-  cleanupIntervalId;
 
   constructor() {
     this.windowEventHandlers = [];
@@ -58,8 +52,6 @@ class State {
     this.touchClickTimeout = -1;
     this.lastMouseMove = Date.now();
     this.mutationObserver = null;
-    this.pressedKeysWithCode = new Map();
-    this.cleanupIntervalId = -1;
 
     // Single-finger panning state
     this.isPanning = false;
@@ -525,20 +517,7 @@ export async function initialize(componentRef, canvasId) {
       ev.preventDefault();
     }
 
-    // Hybrid approach: intelligently choose between physical key mode and character mode
-    // - For shortcuts (modifier keys held) or non-printable keys -> send code for physical key simulation
-    // - For normal typing (printable characters) -> send null to use Unicode injection
-    const hasModifiers = ev.ctrlKey || ev.altKey || ev.metaKey;
-    const isNonPrintable = ev.key.length > 1;
-    const codeToSend = (hasModifiers || isNonPrintable) ? ev.code : null;
-
-    // Track which code was sent for this key with timestamp, so keyup can match
-    state.pressedKeysWithCode.set(ev.code, {
-      code: codeToSend,
-      timestamp: Date.now()
-    });
-
-    await state.invokeDotNet("SendKeyEvent", ev.key, codeToSend, true);
+    await state.invokeDotNet("SendKeyEvent", ev.key, ev.code, true, ev.ctrlKey, ev.shiftKey, ev.altKey, ev.metaKey);
   };
   window.addEventListener("keydown", onKeyDown, { passive: false });
   state.windowEventHandlers.push(new WindowEventHandler("keydown", onKeyDown));
@@ -555,44 +534,16 @@ export async function initialize(componentRef, canvasId) {
 
     ev.preventDefault();
 
-    // Use the same code that was sent during keydown for this key
-    // This ensures keydown/keyup are paired correctly even if modifiers change between events
-    const trackedKey = state.pressedKeysWithCode.get(ev.code);
-    const codeToSend = trackedKey ? trackedKey.code : null;
-
-    // Remove from tracking map since the key is now released
-    state.pressedKeysWithCode.delete(ev.code);
-
-    state.invokeDotNet("SendKeyEvent", ev.key, codeToSend, false);
+    state.invokeDotNet("SendKeyEvent", ev.key, ev.code, false, ev.ctrlKey, ev.shiftKey, ev.altKey, ev.metaKey);
   }
   window.addEventListener("keyup", onKeyUp, { passive: false });
   state.windowEventHandlers.push(new WindowEventHandler("keyup", onKeyUp));
 
   const onBlur = async () => {
-    // Clear tracking map since we can't track keys released outside the window
-    state.pressedKeysWithCode.clear();
     await state.invokeDotNet("SendKeyboardStateReset");
   }
   window.addEventListener("blur", onBlur, { passive: false });
   state.windowEventHandlers.push(new WindowEventHandler("blur", onBlur));
-
-  // Start periodic cleanup of orphaned tracking entries
-  // Keys held longer than 5 seconds are considered stuck-orphaned
-  state.cleanupIntervalId = window.setInterval(() => {
-    const now = Date.now();
-    let cleanedCount = 0;
-
-    for (const [code, data] of state.pressedKeysWithCode.entries()) {
-      if (now - data.timestamp > MAX_KEYPRESS_AGE_MS) {
-        state.pressedKeysWithCode.delete(code);
-        cleanedCount++;
-      }
-    }
-
-    if (cleanedCount > 0) {
-      console.log(`Cleaned up ${cleanedCount} orphaned key tracking entries`);
-    }
-  }, 1000);
 
   console.log("Initialized with state: ", state);
 }
@@ -669,16 +620,6 @@ async function dispose(canvasId) {
     if (state.mutationObserver) {
       try { state.mutationObserver.disconnect(); } catch (e) { }
       state.mutationObserver = null;
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  // Stop cleanup interval
-  try {
-    if (state.cleanupIntervalId !== -1) {
-      window.clearInterval(state.cleanupIntervalId);
-      state.cleanupIntervalId = -1;
     }
   } catch (e) {
     // ignore

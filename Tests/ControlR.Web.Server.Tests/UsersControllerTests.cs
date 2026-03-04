@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -41,7 +41,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
     // create a tag to assign
     var tagId = Guid.NewGuid();
     db.Tags.Add(new Tag { Id = tagId, Name = "Tag1", TenantId = tenant.Id });
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     var request = new CreateUserRequestDto(
       "newuser",
@@ -65,7 +65,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
       .Include(appUser => appUser.Tags)
       .Include(u => u.UserRoles)
       .Include(u => u.Tags)
-      .FirstOrDefaultAsync(u => u.Email == "newuser@t.local");
+      .FirstOrDefaultAsync(u => u.Email == "newuser@t.local", TestContext.Current.CancellationToken);
     
     Assert.NotNull(createdUser);
     Assert.NotNull(createdUser.Tags);

@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -30,7 +30,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
 
     await using var db = services.GetRequiredService<AppDb>();
 
-    var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator);
+    var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator, TestContext.Current.CancellationToken);
 
     var request = new CreateUserRequestDto(
       UserName: "evil",
@@ -63,7 +63,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     await using var db = services.GetRequiredService<AppDb>();
 
     // Ensure the ServerAdministrator role exists using RoleManager
-    var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator);
+    var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator, TestContext.Current.CancellationToken);
 
     var request = new CreateUserRequestDto(
       UserName: "super",
@@ -80,7 +80,9 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
 
     Assert.IsType<CreatedAtActionResult>(result.Result);
 
-    var createdUser = await db.Users.Include(u => u.UserRoles).FirstOrDefaultAsync(u => u.Email == "super@t.local");
+    var createdUser = await db.Users
+      .Include(u => u.UserRoles)
+      .FirstOrDefaultAsync(u => u.Email == "super@t.local", TestContext.Current.CancellationToken);
     Assert.NotNull(createdUser);
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();

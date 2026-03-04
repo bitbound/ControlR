@@ -1,8 +1,9 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Windows;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,12 @@ internal class InputSimulatorWindows(
   private bool _isInputBlocked;
   private Thread? _processorThread;
 
-  public Task InvokeKeyEvent(string key, string? code, bool isPressed)
+  public Task InvokeKeyEvent(
+    string key,
+    string code,
+    bool isPressed,
+    KeyboardInputMode inputMode,
+    KeyEventModifiersDto modifiers)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -28,21 +34,42 @@ internal class InputSimulatorWindows(
       return Task.CompletedTask;
     }
 
-    var isPrintableCharacter = string.IsNullOrWhiteSpace(code) && key.Length == 1;
+    var mode = inputMode;
+    var isPrintableCharacter = key.Length == 1;
+    var isModifierPressed = modifiers.AreAnyPressed;
+    var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta";
 
-    if (isPrintableCharacter)
+    if (mode == KeyboardInputMode.Virtual)
+    {
+      if (isPrintableCharacter && !isModifierPressed && !isModifierKey)
+      {
+        if (isPressed)
+        {
+          return InvokeOnInputThread(() => _win32Interop.TypeText(key));
+        }
+
+        return Task.CompletedTask;
+      }
+
+      if (isModifierPressed && !isModifierKey)
+      {
+        return InvokeOnInputThread(() => _win32Interop.InvokeKeyEvent(key, code, isPressed, mode));
+      }
+
+      return InvokeOnInputThread(() => _win32Interop.InvokeKeyEvent(key, string.Empty, isPressed, mode));
+    }
+
+    if (mode == KeyboardInputMode.Auto && isPrintableCharacter && !isModifierPressed)
     {
       if (isPressed)
       {
         return InvokeOnInputThread(() => _win32Interop.TypeText(key));
       }
-    }
-    else
-    {
-      return InvokeOnInputThread(() => _win32Interop.InvokeKeyEvent(key, code, isPressed));
+
+      return Task.CompletedTask;
     }
 
-    return Task.CompletedTask;
+    return InvokeOnInputThread(() => _win32Interop.InvokeKeyEvent(key, code, isPressed, mode));
   }
 
   public Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)

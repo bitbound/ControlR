@@ -1,6 +1,6 @@
-﻿using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Agent.Common.Interfaces;
 using Microsoft.Extensions.Hosting;

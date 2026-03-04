@@ -2,7 +2,8 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 
 namespace ControlR.DesktopClient.Mac.Services;
@@ -14,7 +15,12 @@ public class InputSimulatorMac(
   private readonly ILogger<InputSimulatorMac> _logger = logger;
   private readonly IMacInterop _macInterop = macInterop;
   
-  public Task InvokeKeyEvent(string key, string? code, bool isPressed)
+  public Task InvokeKeyEvent(
+    string key,
+    string code,
+    bool isPressed,
+    KeyboardInputMode inputMode,
+    KeyEventModifiersDto modifiers)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -22,37 +28,42 @@ public class InputSimulatorMac(
       return Task.CompletedTask;
     }
 
-    // Hybrid approach: route printable characters to Unicode injection, commands to virtual key simulation
-    // When code is null/empty, it indicates a printable character that should be typed (not simulated as key)
-    var isPrintableCharacter = string.IsNullOrWhiteSpace(code) && key.Length == 1;
+    var mode = inputMode;
+    var isPrintableCharacter = key.Length == 1;
+    var isModifierPressed = modifiers.AreAnyPressed;
+    var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta" or "Command" or "Option";
 
-    if (isPrintableCharacter)
+    if (mode == KeyboardInputMode.Virtual)
     {
-      // For printable characters, use Unicode injection on key down only
-      // Key up events are ignored since TypeText handles both down and up internally
+      if (isPrintableCharacter && !isModifierPressed && !isModifierKey)
+      {
+        if (isPressed)
+        {
+          return TypeText(key);
+        }
+
+        return Task.CompletedTask;
+      }
+
+      if (isModifierPressed && !isModifierKey)
+      {
+        return InvokeMacKeyEvent(key, code, isPressed, mode);
+      }
+
+      return InvokeMacKeyEvent(key, string.Empty, isPressed, mode);
+    }
+
+    if (mode == KeyboardInputMode.Auto && isPrintableCharacter && !isModifierPressed)
+    {
       if (isPressed)
       {
         return TypeText(key);
       }
+
       return Task.CompletedTask;
     }
 
-    // For commands, shortcuts, and non-printable keys, use virtual key simulation
-    try
-    {
-      var result = _macInterop.InvokeKeyEvent(key, code, isPressed);
-      if (!result.IsSuccess)
-      {
-        _logger.LogWarning("Failed to invoke key event. Key: {Key}, Code: {Code}, IsPressed: {IsPressed}, Reason: {Reason}",
-          key, code, isPressed, result.Reason);
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error processing key event for key: {Key} (code: {Code})", key, code);
-    }
-
-    return Task.CompletedTask;
+    return InvokeMacKeyEvent(key, code, isPressed, mode);
   }
 
   public Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
@@ -137,6 +148,30 @@ public class InputSimulatorMac(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error processing text input: {Text}", text);
+    }
+
+    return Task.CompletedTask;
+  }
+
+  private Task InvokeMacKeyEvent(string key, string code, bool isPressed, KeyboardInputMode inputMode)
+  {
+    try
+    {
+      var result = _macInterop.InvokeKeyEvent(key, code, isPressed, inputMode);
+      if (!result.IsSuccess)
+      {
+        _logger.LogWarning(
+          "Failed to invoke key event. Key: {Key}, Code: {Code}, IsPressed: {IsPressed}, InputMode: {InputMode}, Reason: {Reason}",
+          key,
+          code,
+          isPressed,
+          inputMode,
+          result.Reason);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error processing key event for key: {Key} (code: {Code})", key, code);
     }
 
     return Task.CompletedTask;

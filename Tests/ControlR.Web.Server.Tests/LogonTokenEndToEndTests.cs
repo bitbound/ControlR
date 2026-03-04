@@ -1,10 +1,10 @@
 using System.Net.Http.Json;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -50,11 +50,11 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName,
       pat);
 
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest);
+    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest, TestContext.Current.CancellationToken);
 
     // Assert logon token creation succeeded
     logonTokenResponse.EnsureSuccessStatusCode();
-    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>();
+    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>(TestContext.Current.CancellationToken);
 
     Assert.NotNull(logonTokenResult);
     Assert.NotNull(logonTokenResult.Token);
@@ -64,7 +64,8 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
     using var newClient = testServer.TestServer.CreateClient();
 
     var device2DetailsResponse = await newClient.GetAsync(
-      $"/device-access?deviceId={deviceId2}&logonToken={logonToken}");
+      $"/device-access?deviceId={deviceId2}&logonToken={logonToken}",
+      TestContext.Current.CancellationToken);
   
     // This should fail - the logon token should only grant access to device1
     Assert.True(
@@ -110,11 +111,11 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName,
       pat);
 
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest);
+    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest, TestContext.Current.CancellationToken);
 
     // Assert logon token creation succeeded
     logonTokenResponse.EnsureSuccessStatusCode();
-    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>();
+    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>(TestContext.Current.CancellationToken);
 
     Assert.NotNull(logonTokenResult);
     Assert.NotNull(logonTokenResult.Token);
@@ -125,7 +126,7 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
 
     using var newClient = testServer.TestServer.CreateClient();
 
-    var firstAccessResponse = await newClient.GetAsync(deviceAccessUri);
+    var firstAccessResponse = await newClient.GetAsync(deviceAccessUri, TestContext.Current.CancellationToken);
 
     // Assert first access succeeds (200 OK or redirect to authenticated page)
     Assert.True(
@@ -135,7 +136,7 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
       $"Expected success or redirect on first access, but got {firstAccessResponse.StatusCode}");
 
     // Phase 4: Try to use the same logon token URL again (should fail - token consumed)
-    var secondAccessResponse = await newClient.GetAsync(deviceAccessUri);
+    var secondAccessResponse = await newClient.GetAsync(deviceAccessUri, TestContext.Current.CancellationToken);
 
     // The token should be consumed, so this should either:
     // - Return Unauthorized (401)

@@ -7,7 +7,7 @@ using ControlR.Web.ServiceDefaults;
 using Microsoft.Extensions.FileProviders;
 using Scalar.AspNetCore;
 using System.Reflection;
-using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Api.Contracts.Constants;
 
 var isOpenApiBuild = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 var builder = WebApplication.CreateBuilder(args);

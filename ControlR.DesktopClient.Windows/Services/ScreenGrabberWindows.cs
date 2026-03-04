@@ -53,12 +53,10 @@ internal sealed class ScreenGrabberWindows(
       SwitchToInputDesktop();
 
       var dxResult = GetDirectXCapture(targetDisplay, captureCursor);
-
       if (dxResult.IsSuccess || (dxResult.HadNoChanges && !forceKeyFrame))
       {
         return dxResult;
       }
-      
       return GetBitBltCapture(targetDisplay.MonitorArea, captureCursor);
     }
     catch (Exception ex)
@@ -150,7 +148,7 @@ internal sealed class ScreenGrabberWindows(
       unsafe
       {
         var textureDescription = DxTextureHelper.Create2dTextureDescription(bounds.Width, bounds.Height);
-        
+
         device.CreateTexture2D(textureDescription, null, out var texture2d);
 
         // ReSharper disable once SuspiciousTypeConversion.Global
@@ -226,7 +224,7 @@ internal sealed class ScreenGrabberWindows(
     {
       _dxOutputGenerator.SetCurrentOutputFaulted();
       _logger.LogWarningDeduped(
-        "Failed to capture with DirectX, falling back to BitBlt. Display: {DisplayId}", 
+        "Failed to capture with DirectX, falling back to BitBlt. Display: {DisplayId}",
         exception: ex,
         args: display.DeviceName);
       return CaptureResult.Fail(ex);
@@ -235,7 +233,7 @@ internal sealed class ScreenGrabberWindows(
     {
       _dxOutputGenerator.SetCurrentOutputFaulted();
       _logger.LogErrorDeduped(
-        "Failed to capture with DirectX, falling back to BitBlt. Display: {DisplayId}", 
+        "Failed to capture with DirectX, falling back to BitBlt. Display: {DisplayId}",
         exception: ex,
         args: display.DeviceName);
       return CaptureResult.Fail(ex);

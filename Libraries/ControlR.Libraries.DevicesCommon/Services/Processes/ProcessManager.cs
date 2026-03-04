@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using ControlR.Libraries.Shared.Exceptions;
 using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Libraries.DevicesCommon.Services.Processes;
@@ -9,25 +8,15 @@ public interface IProcessManager
   IProcess GetCurrentProcess();
   int GetCurrentSessionId();
   IProcess GetProcessById(int processId);
-
-  Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000);
-
   IProcess[] GetProcesses();
-
   IProcess[] GetProcessesByName(string processName);
-
+  Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000);
   IProcess? LaunchUri(Uri uri);
-
   IProcess Start(string fileName);
-
   IProcess Start(string fileName, string arguments);
-
   IProcess? Start(string fileName, string arguments, bool useShellExec);
-
   IProcess? Start(ProcessStartInfo startInfo);
-
   Task<int> StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout);
-
   Task<int> StartAndWaitForExit(string fileName, string arguments, bool useShellExec, TimeSpan timeout);
   Task<int> StartAndWaitForExit(string fileName, string arguments, bool useShellExec, CancellationToken cancellationToken);
 }
@@ -50,6 +39,17 @@ public class ProcessManager : IProcessManager
   {
     return new ProcessWrapper(Process.GetProcessById(processId));
   }
+
+  public IProcess[] GetProcesses()
+  {
+    return [.. Process.GetProcesses().Select(p => new ProcessWrapper(p))];
+  }
+
+  public IProcess[] GetProcessesByName(string processName)
+  {
+    return [.. Process.GetProcessesByName(processName).Select(p => new ProcessWrapper(p))];
+  }
+
   public async Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000)
   {
     try
@@ -83,16 +83,6 @@ public class ProcessManager : IProcessManager
     {
       return Result.Fail<string>(ex);
     }
-  }
-
-  public IProcess[] GetProcesses()
-  {
-    return [.. Process.GetProcesses().Select(p => new ProcessWrapper(p))];
-  }
-
-  public IProcess[] GetProcessesByName(string processName)
-  {
-    return [.. Process.GetProcessesByName(processName).Select(p => new ProcessWrapper(p))];
   }
 
   public IProcess? LaunchUri(Uri uri)
@@ -138,6 +128,7 @@ public class ProcessManager : IProcessManager
     var process = Process.Start(psi);
     return process != null ? new ProcessWrapper(process) : null;
   }
+
   public async Task<int> StartAndWaitForExit(ProcessStartInfo startInfo, TimeSpan timeout)
   {
     using var process = Process.Start(startInfo);

@@ -1,0 +1,7 @@
+# User-specific files
+appsettings.json
+appsettings.*.json
+
+# Build results
+bin/
+obj/

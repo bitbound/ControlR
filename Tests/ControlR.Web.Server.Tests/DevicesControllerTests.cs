@@ -1,10 +1,10 @@
 using System.Collections.Immutable;
 using System.Net;
 using System.Runtime.InteropServices;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Enums;
-using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
@@ -18,7 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -44,7 +44,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     // Create test tag
     var tagId = Guid.NewGuid();
     db.Tags.Add(new Tag { Id = tagId, Name = "TestTag", TenantId = tenant.Id });
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     // Create test devices with varying properties
     for (int i = 0; i < 10; i++)
@@ -634,12 +634,12 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     }
 
     // Manually set the Alias values since DeviceManager ignores DeviceDto.Alias
-    var devices = await db.Devices.Where(d => d.TenantId == tenant.Id).ToListAsync();
+    var devices = await db.Devices.Where(d => d.TenantId == tenant.Id).ToListAsync(TestContext.Current.CancellationToken);
     for (int i = 0; i < devices.Count; i++)
     {
       devices[i].Alias = testDevices[i].Alias;
     }
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     await controller.SetControllerUser(user, userManager);
     var startsWithRequest = new DeviceSearchRequestDto
@@ -1064,7 +1064,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     {
       db.Tags.Add(new Tag { Id = tagId, Name = $"Tag {tagId}", TenantId = tenant.Id });
     }
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     // Create test devices
     for (int i = 0; i < 10; i++)

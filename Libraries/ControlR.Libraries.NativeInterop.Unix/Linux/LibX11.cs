@@ -33,13 +33,13 @@ public static unsafe class LibX11
     public const int AnyPropertyType = 0;
     public const nint CurrentTime = 0;
     public const long NoEventMask = 0;
-    public const int PropModeReplace = 0;
     public const long PropertyChangeMask = 1L << 22;
+    public const int PropModeReplace = 0;
     public const int SelectionClear = 29;
-
     // X11 Constants
     public const int SelectionNotify = 31;
     public const int SelectionRequest = 30;
+
     private const string LibraryName = "libX11.so.6";
 
     public static string? GetStringFromAtom(nint display, nint atom)
@@ -60,6 +60,7 @@ public static unsafe class LibX11
 
     [DllImport(LibraryName)]
     public static extern void XChangeProperty(nint display, nint window, nint property, nint type, int format, int mode, nint data, int nelements);
+
     [DllImport(LibraryName)]
     public static extern void XCloseDisplay(nint display);
 
@@ -71,27 +72,34 @@ public static unsafe class LibX11
 
     [DllImport(LibraryName)]
     public static extern nint XCreateSimpleWindow(nint display, nint parent, int x, int y, uint width, uint height, uint border_width, ulong border, ulong background);
+
     [DllImport(LibraryName)]
     public static extern nint XDefaultGC(nint display, int screen_number);
+
     [DllImport(LibraryName)]
     public static extern nint XDefaultRootWindow(nint display);
+
     [DllImport(LibraryName)]
     public static extern int XDefaultScreen(nint display);
 
     [DllImport(LibraryName)]
     public static extern nint XDefaultVisual(nint display, int screen_number);
+
     [DllImport(LibraryName)]
     public static extern void XDestroyImage(nint ximage);
 
     [DllImport(LibraryName)]
     public static extern void XDestroyWindow(nint display, nint window);
+
     [DllImport(LibraryName)]
     public static extern int XDisplayHeight(nint display, int screen_number);
+
     [DllImport(LibraryName)]
     public static extern int XDisplayWidth(nint display, int screen_number);
 
     [DllImport(LibraryName)]
     public static extern void XFlush(nint display);
+
     [DllImport(LibraryName)]
     public static extern void XForceScreenSaver(nint display, int mode);
 
@@ -103,6 +111,7 @@ public static unsafe class LibX11
 
     [DllImport(LibraryName)]
     public static extern nint XGetImage(nint display, nint drawable, int x, int y, int width, int height, long plane_mask, int format);
+
     [DllImport(LibraryName)]
     public static extern void XGetInputFocus(nint display, out nint focus_return, out int revert_to_return);
 
@@ -117,35 +126,43 @@ public static unsafe class LibX11
 
     [DllImport(LibraryName)]
     public static extern int XGetWindowProperty(nint display, nint window, nint property, long long_offset, long long_length, bool delete, nint req_type, out nint actual_type_return, out int actual_format_return, out ulong nitems_return, out ulong bytes_after_return, out nint prop_return);
+
     [DllImport(LibraryName)]
     public static extern int XHeightOfScreen(nint screen);
 
     [DllImport(LibraryName)]
     public static extern nint XInternAtom(nint display, string atom_name, bool only_if_exists);
+
     [DllImport(LibraryName)]
     public static extern uint XKeysymToKeycode(nint display, nint keysym);
 
     [DllImport(LibraryName)]
     public static extern int XNextEvent(nint display, out XEvent event_return);
+
     [DllImport(LibraryName)]
     public static extern ulong XNextRequest(nint display);
 
     [DllImport(LibraryName)]
     public static extern void XNoOp(nint display);
+
     [DllImport(LibraryName)]
     public static extern nint XOpenDisplay(string? display_name);
 
     [DllImport(LibraryName)]
     public static extern int XPending(nint display);
+
     [DllImport(LibraryName)]
     public static extern int XQueryKeymap(nint display, byte* keys);
+
     [DllImport(LibraryName)]
     public static extern nint XRootWindow(nint display, int screen_number);
 
     [DllImport(LibraryName)]
     public static extern nint XRootWindowOfScreen(nint screen);
+
     [DllImport(LibraryName)]
     public static extern int XScreenCount(nint display);
+
     [DllImport(LibraryName)]
     public static extern nint XScreenOfDisplay(nint display, int screen_number);
 
@@ -157,10 +174,13 @@ public static unsafe class LibX11
 
     [DllImport(LibraryName)]
     public static extern void XSetSelectionOwner(nint display, nint selection, nint owner, nint time);
+
     [DllImport(LibraryName)]
     public static extern nint XStringToKeysym(string key);
+
     [DllImport(LibraryName)]
     public static extern void XSync(nint display, bool discard);
+
     [DllImport(LibraryName)]
     public static extern int XWidthOfScreen(nint screen);
 
@@ -181,7 +201,6 @@ public static unsafe class LibX11
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 24)]
         public long[] pad;
     }
-
     [StructLayout(LayoutKind.Sequential)]
     public struct XImage
     {
@@ -202,7 +221,6 @@ public static unsafe class LibX11
         public ulong blue_mask;
         public nint obdata;               /* hook for the object routines to hang on */
     }
-
     [StructLayout(LayoutKind.Sequential)]
     public struct XSelectionEvent
     {
@@ -216,7 +234,6 @@ public static unsafe class LibX11
         public nint property;
         public nint time;
     }
-
     [StructLayout(LayoutKind.Sequential)]
     public struct XSelectionRequestEvent
     {
@@ -231,7 +248,6 @@ public static unsafe class LibX11
         public nint property;
         public nint time;
     }
-
     [StructLayout(LayoutKind.Sequential)]
     public struct XWindowAttributes
     {

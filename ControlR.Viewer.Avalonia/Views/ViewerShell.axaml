@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Viewer.Avalonia.ViewModels"
+             xmlns:fakes="using:ControlR.Viewer.Avalonia.ViewModels.Fakes"
+             xmlns:assets="using:ControlR.Viewer.Avalonia.Assets"
+             xmlns:signalr="using:Microsoft.AspNetCore.SignalR.Client"
+             xmlns:dialogs="using:ControlR.Libraries.Avalonia.Controls.Dialogs"
+             xmlns:snackbar="using:ControlR.Libraries.Avalonia.Controls.Snackbar"
+             xmlns:converters="using:ControlR.Viewer.Avalonia.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ControlR.Viewer.Avalonia.Views.ViewerShell"
+             x:DataType="vm:IViewerShellViewModel">
+
+  <UserControl.Resources>
+    <converters:SnackbarSeverityToBrushConverter x:Key="SeverityBrushConverter" />
+  </UserControl.Resources>
+
+  <Design.DataContext>
+    <fakes:ViewerShellViewModelFake />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="Auto,*">
+    <!-- Connection Status Bar -->
+    <Border Grid.Row="0" Padding="10">
+      <Grid ColumnDefinitions="*,Auto">
+        <Button Grid.Column="0"
+                Classes="TransparentButton"
+                Cursor="Hand"
+                Margin="0,0,20,0"
+                Command="{Binding ReconnectCommand}"
+                ToolTip.Tip="{x:Static assets:Resources.Refresh}"
+                HorizontalAlignment="Right">
+
+          <PathIcon Classes="Info" Data="{DynamicResource arrow_sync_regular}" />
+        </Button>
+
+        <PathIcon Grid.Column="1"
+                  Data="{StaticResource flash_off_regular}"
+                  Foreground="{DynamicResource ErrorColor}"
+                  HorizontalAlignment="Right"
+                  ToolTip.Tip="{Binding ConnectionStatus}"
+                  IsVisible="{Binding ConnectionState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static signalr:HubConnectionState.Disconnected}}" />
+
+        <PathIcon Grid.Column="1"
+                  Data="{StaticResource flash_on_regular}"
+                  Foreground="{DynamicResource SuccessColor}"
+                  HorizontalAlignment="Right"
+                  ToolTip.Tip="{Binding ConnectionStatus}"
+                  IsVisible="{Binding ConnectionState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static signalr:HubConnectionState.Connected}}" />
+
+        <PathIcon Grid.Column="1"
+                  Data="{StaticResource flash_off_regular}"
+                  Foreground="{DynamicResource WarningColor}"
+                  HorizontalAlignment="Right"
+                  ToolTip.Tip="{Binding ConnectionStatus}"
+                  IsVisible="{Binding ConnectionState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static signalr:HubConnectionState.Connecting}}" />
+
+        <PathIcon Grid.Column="1"
+                  Data="{StaticResource flash_off_regular}"
+                  Foreground="{DynamicResource WarningColor}"
+                  HorizontalAlignment="Right"
+                  ToolTip.Tip="{Binding ConnectionStatus}"
+                  IsVisible="{Binding ConnectionState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static signalr:HubConnectionState.Reconnecting}}" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" IsVisible="{Binding IsDeviceOffline}">
+      <TextBlock Margin="40,12,40,0"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Top"
+                 FontSize="24"
+                 Classes="Error"
+                 TextWrapping="Wrap"
+                 Text="{x:Static assets:Resources.ViewerShell_DeviceOffline}"
+                 TextAlignment="Center" />
+    </Grid>
+
+    <Grid Grid.Row="1" IsVisible="{Binding !IsDeviceOffline}">
+      <ContentControl Grid.Row="1"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Content="{Binding CurrentViewModel}"
+                      IsVisible="{Binding IsConnected}" />
+
+      <StackPanel Grid.Row="1" IsVisible="{Binding !IsConnected}">
+        <TextBlock FontSize="28"
+                   Classes="Info"
+                   FontWeight="Bold"
+                   VerticalAlignment="Top"
+                   HorizontalAlignment="Center"
+                   Text="{Binding ConnectionStatus}" />
+
+        <TextBlock Margin="40,12,40,0"
+                   HorizontalAlignment="Center"
+                   FontSize="16"
+                   TextWrapping="Wrap"
+                   Foreground="{Binding AlertSeverity,
+                   Converter={StaticResource SeverityBrushConverter},
+                   ConverterParameter={Binding}}"
+                   Text="{Binding AlertMessage}"
+                   TextAlignment="Center"
+                   IsVisible="{Binding HasAlertMessage}" />
+
+        <Button Margin="0,16,0,0"
+                HorizontalAlignment="Center"
+                Classes="accent"
+                Command="{Binding ReconnectCommand}"
+                Content="{x:Static assets:Resources.Reconnect}"
+                IsVisible="{Binding ShowReconnectButton}" />
+      </StackPanel>
+    </Grid>
+
+    <dialogs:DialogHost x:Name="DialogHost"
+                        Grid.RowSpan="2" />
+
+    <snackbar:SnackbarHost x:Name="SnackbarHost"
+                           Grid.RowSpan="2" />
+  </Grid>
+
+</UserControl>

@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Shared.Services.StateManagement;
 
 namespace ControlR.Libraries.Viewer.Common.State;

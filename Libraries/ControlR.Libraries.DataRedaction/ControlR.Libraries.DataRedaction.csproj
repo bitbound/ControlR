@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Title>ControlR Data Redaction</Title>
     <Description>
-      A library for data redaction in ControlR, providing tools to redact sensitive information from logs and outputs.
+      A library for data redaction in ControlR, providing tools to redact sensitive information from
+      logs and outputs.
     </Description>
     <PackageIcon>appicon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IsNuGetPackage>true</IsNuGetPackage>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\.assets\appicon.png">
@@ -29,6 +29,10 @@
     <PackageReference Update="Bitbound.Analyzers.MemberOrder">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
 </Project>

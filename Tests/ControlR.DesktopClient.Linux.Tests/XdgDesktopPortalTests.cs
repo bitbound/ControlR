@@ -1,7 +1,6 @@
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
 using Tmds.DBus.Protocol;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using Moq;

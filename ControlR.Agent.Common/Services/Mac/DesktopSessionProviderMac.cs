@@ -1,7 +1,7 @@
-﻿using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.Shared.Dtos.Devices;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
 namespace ControlR.Agent.Common.Services.Mac;
 

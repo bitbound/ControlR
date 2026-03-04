@@ -1,6 +1,6 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Libraries.Shared.Services;
 

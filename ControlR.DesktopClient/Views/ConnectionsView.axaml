@@ -6,7 +6,7 @@
 						 xmlns:common="using:ControlR.DesktopClient.Common"
 						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-						 xmlns:controls="using:ControlR.DesktopClient.Controls"
+						 xmlns:controls="using:ControlR.Libraries.Avalonia.Controls"
 						 mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
 						 x:Class="ControlR.DesktopClient.Views.ConnectionsView"
 						 x:DataType="vm:IConnectionsViewModel">
@@ -54,7 +54,11 @@
 							<Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" Padding="8">
                 <StackPanel Orientation="Vertical" Spacing="6">
 								  <TextBlock Text="{Binding ViewerName}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
-                  <TextBlock Classes="Small" VerticalAlignment="Center" Text="{Binding ConnectedAt, StringFormat='Connected At: {0:g}'}" />
+									<TextBlock Classes="Small" VerticalAlignment="Center">
+										<Run Text="{x:Static common:Localization.ConnectedAtLabel}" />
+										<Run Text=": " />
+										<Run Text="{Binding ConnectedAt, StringFormat='{}{0:g}'}" />
+									</TextBlock>
                 </StackPanel>
 							</Border>
 						</DataTemplate>

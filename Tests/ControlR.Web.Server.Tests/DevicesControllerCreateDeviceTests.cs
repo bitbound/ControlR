@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
-using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.Devices;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
@@ -14,7 +14,6 @@ using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -48,7 +47,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       using var client = testServer.TestServer.CreateClient();
       var deviceDto = CreateDeviceDto(tenant.Id);
       var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
-      return await client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+      return await client.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
     });
 
     var responses = await Task.WhenAll(tasks);
@@ -86,13 +85,13 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var updatedDeviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
     var requestDto = new CreateDeviceRequestDto(updatedDeviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     using var scope = services.CreateScope();
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-    var dbDevice = await db.Devices.FirstOrDefaultAsync(d => d.Id == existingDevice.Id);
+    var dbDevice = await db.Devices.FirstOrDefaultAsync(d => d.Id == existingDevice.Id, cancellationToken: TestContext.Current.CancellationToken);
     Assert.NotNull(dbDevice);
     Assert.NotEqual(originalName, dbDevice.Name);
     Assert.Equal(updatedDeviceDto.Name, dbDevice.Name);
@@ -127,7 +126,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id, platform: platform);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
   }
@@ -158,15 +157,15 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     using (var scope = services.CreateScope())
     {
       await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-      var userEntity = await db.Users.FirstAsync(u => u.Id == user.Id);
+      var userEntity = await db.Users.FirstAsync(u => u.Id == user.Id, cancellationToken: TestContext.Current.CancellationToken);
       db.Users.Remove(userEntity);
-      await db.SaveChangesAsync();
+      await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
@@ -198,7 +197,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
   }
@@ -229,13 +228,13 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       deviceIds.Add(deviceDto.Id);
       var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-      var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+      var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     var deviceDto6 = CreateDeviceDto(tenant.Id);
     var requestDto6 = new CreateDeviceRequestDto(deviceDto6, installerKey.Id, installerKey.KeySecret, TagIds: null);
-    var response6 = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto6);
+    var response6 = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto6, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response6.StatusCode);
   }
@@ -261,17 +260,17 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    var resultDevice = await response.Content.ReadFromJsonAsync<DeviceResponseDto>();
+    var resultDevice = await response.Content.ReadFromJsonAsync<DeviceResponseDto>(cancellationToken: TestContext.Current.CancellationToken);
     Assert.NotNull(resultDevice);
     Assert.False(resultDevice.IsOnline);
 
     using var scope = services.CreateScope();
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-    var dbDevice = await db.Devices.FirstOrDefaultAsync(d => d.Id == deviceDto.Id);
+    var dbDevice = await db.Devices.FirstOrDefaultAsync(d => d.Id == deviceDto.Id, cancellationToken: TestContext.Current.CancellationToken);
     Assert.NotNull(dbDevice);
     Assert.False(dbDevice.IsOnline);
   }
@@ -297,7 +296,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: Guid.Empty);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
@@ -322,12 +321,12 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
 
     var deviceDto1 = CreateDeviceDto(tenant.Id);
     var requestDto1 = new CreateDeviceRequestDto(deviceDto1, installerKey.Id, installerKey.KeySecret, TagIds: null);
-    var response1 = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto1);
+    var response1 = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto1, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
 
     var deviceDto2 = CreateDeviceDto(tenant.Id);
     var requestDto2 = new CreateDeviceRequestDto(deviceDto2, installerKey.Id, installerKey.KeySecret, TagIds: null);
-    var response2 = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto2);
+    var response2 = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto2, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response2.StatusCode);
   }
@@ -355,7 +354,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
@@ -381,7 +380,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, "wrong-secret", TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
@@ -397,7 +396,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id);
     var requestDto = new CreateDeviceRequestDto(deviceDto, Guid.NewGuid(), "some-secret", TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
@@ -426,11 +425,11 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    var resultDevice = await response.Content.ReadFromJsonAsync<DeviceResponseDto>();
+    var resultDevice = await response.Content.ReadFromJsonAsync<DeviceResponseDto>(cancellationToken: TestContext.Current.CancellationToken);
     Assert.NotNull(resultDevice);
     Assert.Equal(deviceDto.Id, resultDevice.Id);
     Assert.Equal(deviceDto.Name, resultDevice.Name);
@@ -462,13 +461,13 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     using var scope = services.CreateScope();
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-    var key = await db.AgentInstallerKeys.FirstOrDefaultAsync(k => k.Id == installerKey.Id);
+    var key = await db.AgentInstallerKeys.FirstOrDefaultAsync(k => k.Id == installerKey.Id, cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Null(key);
   }
@@ -490,7 +489,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var tag1 = new Tag { Id = Guid.NewGuid(), Name = "Tag1", TenantId = tenant.Id };
     var tag2 = new Tag { Id = Guid.NewGuid(), Name = "Tag2", TenantId = tenant.Id };
     db.Tags.AddRange(tag1, tag2);
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     var keyManager = services.GetRequiredService<IAgentInstallerKeyManager>();
     var installerKey = await keyManager.CreateKey(
@@ -505,13 +504,13 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var tags = new[] { tag1.Id, tag2.Id };
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: tags);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     var createdDevice = await db.Devices
       .Include(d => d.Tags)
-      .FirstOrDefaultAsync(d => d.Id == deviceDto.Id);
+      .FirstOrDefaultAsync(d => d.Id == deviceDto.Id, cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.NotNull(createdDevice);
     Assert.NotNull(createdDevice.Tags);
@@ -544,7 +543,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
   }
@@ -573,7 +572,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
     var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+    var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -581,7 +580,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
     var key = await db.AgentInstallerKeys
       .Include(k => k.Usages)
-      .FirstOrDefaultAsync(k => k.Id == installerKey.Id);
+      .FirstOrDefaultAsync(k => k.Id == installerKey.Id, cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.NotNull(key);
     Assert.Single(key.Usages);
@@ -611,7 +610,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       var deviceDto = CreateDeviceDto(tenant.Id);
       var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
-      var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto);
+      var response = await httpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -619,7 +618,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
     var key = await db.AgentInstallerKeys
       .Include(k => k.Usages)
-      .FirstOrDefaultAsync(k => k.Id == installerKey.Id);
+      .FirstOrDefaultAsync(k => k.Id == installerKey.Id, cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.NotNull(key);
     Assert.Equal(10, key.Usages.Count);

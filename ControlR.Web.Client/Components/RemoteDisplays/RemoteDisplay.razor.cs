@@ -47,6 +47,8 @@ public partial class RemoteDisplay : JsInteropableComponent
   [Inject]
   public required TimeProvider TimeProvider { get; init; }
   [Inject]
+  public required IUserSettingsProvider UserPreferences { get; init; }
+  [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
 
   private string CanvasClasses
@@ -74,8 +76,8 @@ public partial class RemoteDisplay : JsInteropableComponent
       return
         $"{display} " +
         $"cursor: {_canvasCssCursor}; " +
-        $"width: {RemoteControlState.CanvasPixelWidth}px; " +
-        $"height: {RemoteControlState.CanvasPixelHeight}px;";
+        $"width: {RemoteControlState.RendererPixelWidth}px; " +
+        $"height: {RemoteControlState.RendererPixelHeight}px;";
     }
   }
   private double CanvasWidth => RemoteControlState.SelectedDisplay?.Width ?? 0;
@@ -114,7 +116,25 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
   [JSInvokable]
-  public async Task SendKeyEvent(string key, string? code, bool isPressed)
+  public async Task SendKeyboardStateReset()
+  {
+    if (RemoteControlStream.State != WebSocketState.Open)
+    {
+      return;
+    }
+
+    await RemoteControlStream.SendKeyboardStateReset(ComponentClosing);
+  }
+
+  [JSInvokable]
+  public async Task SendKeyEvent(
+    string key,
+    string? code,
+    bool isPressed,
+    bool ctrl,
+    bool shift,
+    bool alt,
+    bool meta)
   {
     if (RemoteControlState.IsViewOnlyEnabled && RemoteControlStream.IsConnected)
     {
@@ -126,18 +146,14 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-    await RemoteControlStream.SendKeyEvent(key, code, isPressed, ComponentClosing);
-  }
-
-  [JSInvokable]
-  public async Task SendKeyboardStateReset()
-  {
-    if (RemoteControlStream.State != WebSocketState.Open)
-    {
-      return;
-    }
-
-    await RemoteControlStream.SendKeyboardStateReset(ComponentClosing);
+    var modifiers = new KeyEventModifiersDto(ctrl, shift, alt, meta);
+    await RemoteControlStream.SendKeyEvent(
+      key,
+      code,
+      isPressed,
+      RemoteControlState.KeyboardInputMode,
+      modifiers,
+      ComponentClosing);
   }
 
   [JSInvokable]
@@ -248,6 +264,8 @@ public partial class RemoteDisplay : JsInteropableComponent
     {
       await _virtualKeyboard.FocusAsync();
     }
+
+    RemoteControlState.KeyboardInputMode = await UserPreferences.GetKeyboardInputMode();
   }
 
   private async Task DrawRegion(ScreenRegionDto dto)
@@ -525,23 +543,23 @@ public partial class RemoteDisplay : JsInteropableComponent
         const double zoomStep = 0.1; // 10% zoom per scroll
         var zoomIn = e.DeltaY < 0;
 
-        var oldWidth = RemoteControlState.CanvasPixelWidth;
-        var oldHeight = RemoteControlState.CanvasPixelHeight;
+        var oldWidth = RemoteControlState.RendererPixelWidth;
+        var oldHeight = RemoteControlState.RendererPixelHeight;
 
         var newScale = Math.Clamp(
-          RemoteControlState.CanvasScale + (zoomIn ? zoomStep : -zoomStep),
-          RemoteControlState.MinCanvasScale,
-          RemoteControlState.MaxCanvasScale);
+          RemoteControlState.RendererScale + (zoomIn ? zoomStep : -zoomStep),
+          RemoteControlState.MinRendererScale,
+          RemoteControlState.MaxRendererScale);
 
-        RemoteControlState.CanvasScale = newScale;
+        RemoteControlState.RendererScale = newScale;
 
         if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
         {
           RemoteControlState.ViewMode = ViewMode.Scale;
         }
 
-        var newWidth = RemoteControlState.CanvasPixelWidth;
-        var newHeight = RemoteControlState.CanvasPixelHeight;
+        var newWidth = RemoteControlState.RendererPixelWidth;
+        var newHeight = RemoteControlState.RendererPixelHeight;
 
         await JsModule.InvokeVoidAsync("applyMouseWheelZoom",
           _screenArea,
@@ -558,10 +576,10 @@ public partial class RemoteDisplay : JsInteropableComponent
       }
 
       // Normal scroll - send to remote
-      if (RemoteControlState.CanvasPixelWidth > 0 && RemoteControlState.CanvasPixelHeight > 0)
+      if (RemoteControlState.RendererPixelWidth > 0 && RemoteControlState.RendererPixelHeight > 0)
       {
-        var percentX = e.OffsetX / RemoteControlState.CanvasPixelWidth;
-        var percentY = e.OffsetY / RemoteControlState.CanvasPixelHeight;
+        var percentX = e.OffsetX / RemoteControlState.RendererPixelWidth;
+        var percentY = e.OffsetY / RemoteControlState.RendererPixelHeight;
         await RemoteControlStream.SendWheelScroll(percentX, percentY, -e.DeltaY, 0, ComponentClosing);
       }
     }
@@ -621,25 +639,25 @@ public partial class RemoteDisplay : JsInteropableComponent
         return;
       }
 
-      var oldWidth = RemoteControlState.CanvasPixelWidth;
-      var oldHeight = RemoteControlState.CanvasPixelHeight;
+      var oldWidth = RemoteControlState.RendererPixelWidth;
+      var oldHeight = RemoteControlState.RendererPixelHeight;
 
       if (RemoteControlState.ViewMode is ViewMode.Fit or ViewMode.Stretch)
       {
         RemoteControlState.ViewMode = ViewMode.Scale;
-        RemoteControlState.CanvasScale = RemoteControlState.MinCanvasScale;
+        RemoteControlState.RendererScale = RemoteControlState.MinRendererScale;
       }
       else
       {
         var pinchChange = (pinchDistance - _lastPinchDistance) * .5;
-        var newScale = RemoteControlState.CanvasScale + pinchChange / 100;
-        RemoteControlState.CanvasScale = Math.Clamp(newScale, RemoteControlState.MinCanvasScale, RemoteControlState.MaxCanvasScale);
+        var newScale = RemoteControlState.RendererScale + pinchChange / 100;
+        RemoteControlState.RendererScale = Math.Clamp(newScale, RemoteControlState.MinRendererScale, RemoteControlState.MaxRendererScale);
       }
 
-      var newWidth = RemoteControlState.CanvasPixelWidth;
+      var newWidth = RemoteControlState.RendererPixelWidth;
       var widthChange = newWidth - oldWidth;
 
-      var newHeight = RemoteControlState.CanvasPixelHeight;
+      var newHeight = RemoteControlState.RendererPixelHeight;
       var heightChange = newHeight - oldHeight;
 
       var touch0DeltaX = ev.Touches[0].ClientX - _lastTouch0X;
@@ -709,8 +727,8 @@ public partial class RemoteDisplay : JsInteropableComponent
     if (args.Key is "Enter" or "Backspace" or "Tab" or "Escape" or
         "ArrowUp" or "ArrowDown" or "ArrowLeft" or "ArrowRight")
     {
-      await SendKeyEvent(args.Key, args.Code, true);
-      await SendKeyEvent(args.Key, args.Code, false);
+      await SendKeyEvent(args.Key, args.Code, true, false, false, false, false);
+      await SendKeyEvent(args.Key, args.Code, false, false, false, false, false);
     }
   }
 

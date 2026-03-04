@@ -9,10 +9,15 @@ internal class RoleStore(
   ILogger<RoleStore> logger)
   : StoreBase<RoleViewModel>(controlrApi, snackbar, logger), IRoleStore
 {
+  protected override Guid GetItemId(RoleViewModel dto)
+  {
+    return dto.Id;
+  }
+
   protected override async Task RefreshImpl()
   {
     Cache.Clear();
-    var getResult = await ControlrApi.GetAllRoles();
+    var getResult = await ControlrApi.Roles.GetAllRoles();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

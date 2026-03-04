@@ -8,4 +8,10 @@ public partial class MainWindow : Window
   {
     InitializeComponent();
   }
+
+  private void IconButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+  {
+    ConnectPanel.IsVisible  = false;
+    Viewer.IsVisible = true;
+  }
 }

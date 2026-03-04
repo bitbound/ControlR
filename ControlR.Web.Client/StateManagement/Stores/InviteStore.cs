@@ -10,10 +10,16 @@ public class InviteStore(
   : StoreBase<TenantInviteResponseDto>(controlrApi, snackbar, logger), IInviteStore
 {
   private readonly IControlrApi _controlrApi = controlrApi;
+
+  protected override Guid GetItemId(TenantInviteResponseDto dto)
+  {
+    return dto.Id;
+  }
+
   protected override async Task RefreshImpl()
   {
     Cache.Clear();
-    var getResult = await _controlrApi.GetPendingTenantInvites();
+    var getResult = await _controlrApi.Invites.GetPendingTenantInvites();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

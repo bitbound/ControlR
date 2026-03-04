@@ -149,7 +149,7 @@ public partial class Dashboard
           })]
     };
 
-    var result = await ControlrApi.SearchDevices(request);
+    var result = await ControlrApi.Devices.SearchDevices(request);
     if (!result.IsSuccess)
     {
       Snackbar.Add("Failed to load devices", Severity.Error);
@@ -248,7 +248,7 @@ public partial class Dashboard
         return;
       }
 
-      var deleteResult = await ControlrApi.DeleteDevice(device.Id);
+      var deleteResult = await ControlrApi.Devices.DeleteDevice(device.Id);
       if (!deleteResult.IsSuccess)
       {
         Snackbar.Add(deleteResult.Reason, Severity.Error);

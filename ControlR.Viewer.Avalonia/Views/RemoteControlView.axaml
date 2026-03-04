@@ -1,0 +1,156 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Viewer.Avalonia.ViewModels"
+             xmlns:fakes="using:ControlR.Viewer.Avalonia.ViewModels.Fakes"
+             xmlns:vmc="using:ControlR.Viewer.Avalonia.ViewModels.Controls"
+             xmlns:controls="using:ControlR.Viewer.Avalonia.Controls"
+             xmlns:enums="using:ControlR.Libraries.Viewer.Common.Enums"
+             xmlns:cava="using:ControlR.Libraries.Avalonia.Controls"
+             xmlns:converters="using:ControlR.Viewer.Avalonia.Converters"
+             xmlns:assets="using:ControlR.Viewer.Avalonia.Assets"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ControlR.Viewer.Avalonia.Views.RemoteControlView"
+             x:DataType="vm:IRemoteControlViewModel">
+
+  <UserControl.Resources>
+    <converters:SnackbarSeverityToBrushConverter x:Key="SeverityBrushConverter" />
+  </UserControl.Resources>
+
+  <Design.DataContext>
+    <fakes:RemoteControlViewModelFake />
+  </Design.DataContext>
+
+  <Grid>
+    <!-- Loading State -->
+    <StackPanel VerticalAlignment="Top"
+                HorizontalAlignment="Center"
+                Margin="0, 40, 0, 0"
+                IsVisible="{Binding CurrentState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static enums:SignalingState.Loading}}">
+
+      <TextBlock Text="{Binding LoadingMessage}"
+                 Classes="Info"
+                 FontSize="24"
+                 TextAlignment="Center"/>
+
+      <ProgressBar IsIndeterminate="True" Margin="0, 20, 0, 0" Width="200" />
+    </StackPanel>
+
+    <!-- Reconnecting State -->
+    <StackPanel VerticalAlignment="Top"
+                HorizontalAlignment="Center"
+                Margin="0, 40, 0, 0"
+                IsVisible="{Binding CurrentState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static enums:SignalingState.Reconnecting}}">
+
+      <TextBlock Text="{x:Static assets:Resources.ConnectionStatus_Reconnecting}"
+                 Classes="Info"
+                 FontSize="24"
+                 TextAlignment="Center"
+                 IsVisible="{Binding CurrentState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static enums:SignalingState.Reconnecting}}"/>
+
+      <ProgressBar IsIndeterminate="True" Margin="0, 20, 0, 0" Width="200" />
+    </StackPanel>
+
+    <!-- Alert State -->
+    <StackPanel HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0, 40, 0, 0"
+                IsVisible="{Binding CurrentState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static enums:SignalingState.Alert}}">
+      <TextBlock Text="{Binding AlertMessage}"
+                 Foreground="{Binding AlertSeverity,
+                 Converter={StaticResource SeverityBrushConverter},
+                 ConverterParameter={Binding}}"
+                 FontSize="24"
+                 TextAlignment="Center"/>
+
+      <Button Margin="0,16,0,0"
+              HorizontalAlignment="Center"
+              Classes="accent"
+              Command="{Binding RefreshSessionsCommand}"
+              Content="{x:Static assets:Resources.Refresh}" />
+    </StackPanel>
+
+    <!-- Session Select State -->
+    <ScrollViewer IsVisible="{Binding CurrentState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static enums:SignalingState.SessionSelect}}">
+      <StackPanel Margin="20, 0, 20, 20" Spacing="20">
+        <TextBlock Text="{Binding DesktopSessionTitle}"
+                   Classes="Info"
+                   FontSize="24"
+                   FontWeight="Bold"/>
+
+        <cava:IconButton Text="{x:Static assets:Resources.RefreshSessions}"
+                         Icon="{StaticResource arrow_sync_regular}"
+                         Command="{Binding RefreshSessionsCommand}"
+                         HorizontalAlignment="Left" />
+
+        <StackPanel Spacing="20" IsVisible="{Binding HasDesktopSessions}">
+          <ToggleSwitch IsChecked="{Binding IsViewOnlyEnabled}"
+                        Content="{x:Static assets:Resources.StartViewOnly}"
+                        HorizontalAlignment="Left" />
+
+          <ItemsControl ItemsSource="{Binding DesktopSessions}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" ItemWidth="300" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vmc:DesktopSessionViewModel">
+                <Border Classes="Card" Margin="0, 0, 12, 12">
+                  <StackPanel Spacing="18">
+                    <Grid ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto"
+                          ColumnSpacing="18"
+                          RowSpacing="6">
+                      <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static assets:Resources.Session}" Classes="Info" />
+                      <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SystemSessionId}" />
+
+                      <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static assets:Resources.ProcessID}" Classes="Info" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ProcessId}" />
+
+                      <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static assets:Resources.Type}" Classes="Info" />
+                      <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Type}" />
+
+                      <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static assets:Resources.Username}" Classes="Info" />
+                      <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Username}" />
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <Button Content="{x:Static assets:Resources.Connect}"
+                              Classes="accent"
+                              Command="{Binding ConnectCommand}" />
+
+                      <Button Content="{x:Static assets:Resources.Preview}"
+                              Command="{Binding PreviewCommand}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <TextBlock FontSize="16"
+                   TextAlignment="Center"
+                   Text="{x:Static assets:Resources.RemoteControl_NoDesktopSessions}"
+                   IsVisible="{Binding !HasDesktopSessions}" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Unexpected State -->
+    <TextBlock Text="{x:Static assets:Resources.RemoteControl_UnexpectedSignalingState}"
+               Classes="Info"
+               FontSize="24"
+               VerticalAlignment="Top"
+               HorizontalAlignment="Center"
+               TextAlignment="Center"
+               Margin="0, 40, 0, 0"
+               IsVisible="{Binding CurrentState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static enums:SignalingState.Unknown}}"/>
+
+    <Grid IsVisible="{Binding IsRemoteDisplayVisible}">
+      <ContentPresenter Content="{Binding RemoteDisplayViewModel}"></ContentPresenter>
+    </Grid>
+  </Grid>
+</UserControl>

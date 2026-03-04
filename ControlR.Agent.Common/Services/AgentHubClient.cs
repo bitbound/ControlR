@@ -1,18 +1,19 @@
 using System.Diagnostics;
 using System.Threading.Channels;
+using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models.Messages;
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.Devices;
-using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Signalr.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
@@ -61,7 +62,7 @@ internal class AgentHubClient(
   private readonly ITerminalStore _terminalStore = terminalStore;
   private readonly IWakeOnLanService _wakeOnLan = wakeOnLan;
 
-  public async Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
+  public async Task<HubResult> CloseChatSession(Guid sessionId, int targetProcessId)
   {
     try
     {
@@ -75,22 +76,18 @@ internal class AgentHubClient(
         _logger.LogWarning(
           "No IPC server found for process ID {ProcessId}. Cannot close chat session.",
           targetProcessId);
-        return Result.Fail("IPC server not found for target process.");
+        return HubResult.Fail("IPC server not found for target process.");
       }
 
       var ipcDto = new CloseChatSessionIpcDto(sessionId, targetProcessId);
       await ipcServer.Server.Client.CloseChatSession(ipcDto);
 
-      _logger.LogInformation(
-        "Chat session close request sent to IPC server for process ID {ProcessId}.",
-        targetProcessId);
-
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while closing chat session {SessionId}.", sessionId);
-      return Result.Fail("An error occurred while closing chat session.");
+      return HubResult.Fail("An error occurred while closing chat session.");
     }
   }
 
@@ -111,7 +108,7 @@ internal class AgentHubClient(
     return Task.CompletedTask;
   }
 
-  public async Task<Result> CreateDirectory(CreateDirectoryHubDto dto)
+  public async Task<HubResult> CreateDirectory(CreateDirectoryHubDto dto)
   {
     try
     {
@@ -123,22 +120,22 @@ internal class AgentHubClient(
       {
         _logger.LogInformation("Successfully created directory: {DirectoryName} in {ParentPath}", dto.DirectoryName,
           dto.ParentPath);
-        return Result.Ok();
+        return HubResult.Ok();
       }
 
       _logger.LogWarning("Failed to create directory: {DirectoryName} in {ParentPath}, Error: {Error}",
         dto.DirectoryName, dto.ParentPath, result.ErrorMessage);
-      return Result.Fail(result.ErrorMessage ?? "Failed to create directory");
+      return HubResult.Fail(result.ErrorMessage ?? "Failed to create directory");
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating directory: {DirectoryName} in {ParentPath}", dto.DirectoryName,
         dto.ParentPath);
-      return Result.Fail("An error occurred while creating directory.");
+      return HubResult.Fail("An error occurred while creating directory.");
     }
   }
 
-  public async Task<Result> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
+  public async Task<HubResult> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
   {
     try
     {
@@ -150,7 +147,7 @@ internal class AgentHubClient(
 
         if (!versionResult)
         {
-          return Result.Fail("Failed to ensure latest desktop client version is installed.");
+          return HubResult.Fail("Failed to ensure latest desktop client version is installed.");
         }
       }
 
@@ -167,7 +164,7 @@ internal class AgentHubClient(
         _logger.LogWarning(
           "No IPC server found for process ID {ProcessId}.  Cannot create remote control session.",
           dto.TargetProcessId);
-        return Result.Fail($"Process with ID {dto.TargetProcessId} is no longer running.");
+        return HubResult.Fail($"Process with ID {dto.TargetProcessId} is no longer running.");
       }
 
       var dataFolder = string.IsNullOrWhiteSpace(_settings.InstanceId)
@@ -205,32 +202,32 @@ internal class AgentHubClient(
           result.Reason ?? "Unknown error");
       }
 
-      return result;
+      return result.ToHubResult();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating remote control session.");
-      return Result.Fail("An error occurred on the agent while creating remote control session.");
+      return HubResult.Fail("An error occurred on the agent while creating remote control session.");
     }
   }
 
-  public async Task<Result> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId)
+  public async Task<HubResult> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId)
   {
     try
     {
       _logger.LogInformation("Terminal session started.  Viewer Connection ID: {ConnectionId}",
         viewerConnectionId);
 
-      return await _terminalStore.CreateSession(terminalSessionId, viewerConnectionId);
+      return (await _terminalStore.CreateSession(terminalSessionId, viewerConnectionId)).ToHubResult();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating terminal session.");
-      return Result.Fail("An error occurred.");
+      return HubResult.Fail("An error occurred.");
     }
   }
 
-  public async Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto)
+  public async Task<HubResult> CreateVncSession(VncSessionRequestDto sessionRequestDto)
   {
     try
     {
@@ -238,16 +235,16 @@ internal class AgentHubClient(
         "VNC session requested.  Viewer Connection ID: {ConnectionId}.",
         sessionRequestDto.ViewerConnectionId);
 
-      return await _localProxy.HandleVncSession(sessionRequestDto).ConfigureAwait(false);
+      return (await _localProxy.HandleVncSession(sessionRequestDto).ConfigureAwait(false)).ToHubResult();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating VNC session.");
-      return Result.Fail("An error occurred while creating VNC session.");
+      return HubResult.Fail("An error occurred while creating VNC session.");
     }
   }
 
-  public async Task<Result> DeleteFile(FileDeleteHubDto dto)
+  public async Task<HubResult> DeleteFile(FileDeleteHubDto dto)
   {
     try
     {
@@ -258,21 +255,21 @@ internal class AgentHubClient(
       if (result.IsSuccess)
       {
         _logger.LogInformation("Successfully deleted file system entry: {FilePath}", dto.TargetPath);
-        return Result.Ok();
+        return HubResult.Ok();
       }
 
       _logger.LogWarning("Failed to delete file system entry: {FilePath}, Error: {Error}",
         dto.TargetPath, result.ErrorMessage);
-      return Result.Fail(result.ErrorMessage ?? "Failed to delete file system entry");
+      return HubResult.Fail(result.ErrorMessage ?? "Failed to delete file system entry");
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while deleting file system entry: {FilePath}", dto.TargetPath);
-      return Result.Fail("An error occurred while deleting file system entry.");
+      return HubResult.Fail("An error occurred while deleting file system entry.");
     }
   }
 
-  public async Task<Result> DownloadFileFromViewer(FileUploadHubDto dto)
+  public async Task<HubResult> DownloadFileFromViewer(FileUploadHubDto dto)
   {
     try
     {
@@ -285,7 +282,7 @@ internal class AgentHubClient(
       if (_fileSystem.FileExists(targetPath) && !dto.Overwrite)
       {
         _logger.LogWarning("File already exists and overwrite is not allowed: {FilePath}", targetPath);
-        return Result.Fail("File already exists.");
+        return HubResult.Fail("File already exists.");
       }
 
       await using var fs = _fileSystem.OpenFileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
@@ -300,31 +297,31 @@ internal class AgentHubClient(
         "Successfully downloaded file from viewer: {FileName} to {Directory}",
         dto.FileName,
         dto.TargetDirectoryPath);
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (UnauthorizedAccessException ex)
     {
       _logger.LogError(ex, "Permission denied when downloading file from viewer: {FileName} to {Directory}",
         dto.FileName, dto.TargetDirectoryPath);
-      return Result.Fail("Permission denied. Unable to write to the target directory.");
+      return HubResult.Fail("Permission denied. Unable to write to the target directory.");
     }
     catch (IOException ex) when (ex.Message.EndsWith("used by another process."))
     {
       _logger.LogError(ex, "Unable to overwrite file downloaded from viewer: {FileName} to {Directory}",
         dto.FileName, dto.TargetDirectoryPath);
-      return Result.Fail("File is in use. Unable to overwrite.");
+      return HubResult.Fail("File is in use. Unable to overwrite.");
     }
     catch (HubException ex) when (ex.Message.Contains("canceled by client"))
     {
       _logger.LogWarning("File upload from viewer was canceled by client: {FileName} to {Directory}",
         dto.FileName, dto.TargetDirectoryPath);
-      return Result.Fail("File upload was canceled by client.");
+      return HubResult.Fail("File upload was canceled by client.");
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while downloading file from viewer: {FileName} to {Directory}",
         dto.FileName, dto.TargetDirectoryPath);
-      return Result.Fail("An error occurred while downloading file from viewer.");
+      return HubResult.Fail("An error occurred while downloading file from viewer.");
     }
   }
 
@@ -333,22 +330,22 @@ internal class AgentHubClient(
     return await _desktopSessionProvider.GetActiveDesktopClients();
   }
 
-  public async Task<Result<GetLogFilesResponseDto>> GetLogFiles()
+  public async Task<HubResult<GetLogFilesResponseDto>> GetLogFiles()
   {
     try
     {
-      _logger.LogInformation("Getting log files");
+      _logger.LogDebug("Getting log files");
 
       var logFileGroups = await _fileManager.GetLogFiles();
 
       var responseDto = new GetLogFilesResponseDto(logFileGroups);
 
-      return Result.Ok(responseDto);
+      return HubResult.Ok(responseDto);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting log files");
-      return Result.Fail<GetLogFilesResponseDto>("An error occurred while getting log files.");
+      return HubResult.Fail<GetLogFilesResponseDto>("An error occurred while getting log files.");
     }
   }
 
@@ -356,11 +353,11 @@ internal class AgentHubClient(
   {
     try
     {
-      _logger.LogInformation("Getting path segments for: {TargetPath}", dto.TargetPath);
+      _logger.LogDebug("Getting path segments for: {TargetPath}", dto.TargetPath);
 
       var result = await _fileManager.GetPathSegments(dto.TargetPath);
 
-      _logger.LogInformation(
+      _logger.LogDebug(
         "Path segments result - Success: {Success}, PathExists: {PathExists}, Segments: {SegmentCount}",
         result.Success, result.PathExists, result.PathSegments.Length);
 
@@ -379,37 +376,37 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
+  public async Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
   {
     try
     {
-      return await _terminalStore.GetPwshCompletions(request);
+      return (await _terminalStore.GetPwshCompletions(request)).ToHubResult();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting PowerShell completions.");
-      return Result.Fail<PwshCompletionsResponseDto>("An error occurred while getting PowerShell completions.");
+      return HubResult.Fail<PwshCompletionsResponseDto>("An error occurred while getting PowerShell completions.");
     }
   }
 
-  public async Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto)
+  public async Task<HubResult<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto)
   {
     try
     {
-      _logger.LogInformation("Getting root drives for device {DeviceId}", requestDto.DeviceId);
+      _logger.LogDebug("Getting root drives");
 
       var drives = await _fileManager.GetRootDrives();
 
-      return Result.Ok(new GetRootDrivesResponseDto(drives));
+      return HubResult.Ok(new GetRootDrivesResponseDto(drives));
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting root drives");
-      return Result.Fail<GetRootDrivesResponseDto>("An error occurred while getting root drives.");
+      return HubResult.Fail<GetRootDrivesResponseDto>("An error occurred while getting root drives.");
     }
   }
 
-  public async Task<Result> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
+  public async Task<HubResult> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
   {
     try
     {
@@ -421,7 +418,7 @@ internal class AgentHubClient(
       if (!OperatingSystem.IsWindows())
       {
         _logger.LogWarning("Ctrl+Alt+Del invocation is only supported on Windows.");
-        return Result.Fail("Ctrl+Alt+Del invocation is only supported on Windows.");
+        return HubResult.Fail("Ctrl+Alt+Del invocation is only supported on Windows.");
       }
 
       if (dto.DesktopSessionType == DesktopSessionType.Rdp)
@@ -433,7 +430,7 @@ internal class AgentHubClient(
         if (_ipcServerStore.TryGetServer(dto.TargetDesktopProcessId, out var ipcServer))
         {
           await ipcServer.Server.Client.InvokeCtrlAltDel(dto);
-          return Result.Ok();
+          return HubResult.Ok();
         }
         else
         {
@@ -441,7 +438,7 @@ internal class AgentHubClient(
             "No IPC server found for process ID {ProcessId}. Cannot send Ctrl+Alt+Del invocation to desktop.",
             dto.TargetDesktopProcessId);
 
-          return Result.Fail("IPC server not found for target desktop process.");
+          return HubResult.Fail("IPC server not found for target desktop process.");
         }
       }
 
@@ -449,12 +446,12 @@ internal class AgentHubClient(
         .SendEvent(EventKinds.CtrlAltDelInvoked)
         .ConfigureAwait(false);
 
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while invoking Ctrl+Alt+Del.");
-      return Result.Fail("An error occurred while invoking Ctrl+Alt+Del.");
+      return HubResult.Fail("An error occurred while invoking Ctrl+Alt+Del.");
     }
   }
 
@@ -493,22 +490,22 @@ internal class AgentHubClient(
     await _powerControl.ChangeState(changeType);
   }
 
-  public async Task<Result> ReceiveTerminalInput(TerminalInputDto dto)
+  public async Task<HubResult> ReceiveTerminalInput(TerminalInputDto dto)
   {
     try
     {
       Guard.IsNotNullOrWhiteSpace(dto.ViewerConnectionId);
 
-      return await _terminalStore.WriteInput(
+      return (await _terminalStore.WriteInput(
         dto.TerminalId,
         dto.Input,
         dto.ViewerConnectionId,
-        _appLifetime.ApplicationStopping);
+        _appLifetime.ApplicationStopping)).ToHubResult();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating terminal session.");
-      return Result.Fail("An error occurred.");
+      return HubResult.Fail("An error occurred.");
     }
   }
 
@@ -517,7 +514,7 @@ internal class AgentHubClient(
     await _heartbeatTimer.SendDeviceHeartbeat();
   }
 
-  public async Task<Result> RequestDesktopPreview(DesktopPreviewRequestDto dto)
+  public async Task<HubResult> RequestDesktopPreview(DesktopPreviewRequestDto dto)
   {
     try
     {
@@ -532,7 +529,7 @@ internal class AgentHubClient(
         _logger.LogWarning(
           "No IPC server found for process ID {ProcessId}. Cannot request desktop preview.",
           dto.TargetProcessId);
-        return Result.Fail("IPC server not found for target process.");
+        return HubResult.Fail("IPC server not found for target process.");
       }
 
       var ipcDto = new DesktopPreviewRequestIpcDto(dto.RequesterId, dto.StreamId, dto.TargetProcessId);
@@ -544,10 +541,10 @@ internal class AgentHubClient(
           "Desktop preview failed on target process {ProcessId}. Error: {Error}",
           dto.TargetProcessId,
           response.ErrorMessage ?? "Unknown error");
-        return Result.Fail(response.ErrorMessage ?? "Desktop preview failed on target process.");
+        return HubResult.Fail(response.ErrorMessage ?? "Desktop preview failed on target process.");
       }
 
-      _logger.LogInformation(
+      _logger.LogDebug(
         "Streaming desktop preview data. JPEG size: {Size} bytes, Stream ID: {StreamId}",
         response.JpegData.Length,
         dto.StreamId);
@@ -564,23 +561,23 @@ internal class AgentHubClient(
         "Desktop preview stream sent successfully. Stream ID: {StreamId}",
         dto.StreamId);
 
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while requesting desktop preview.");
-      return Result.Fail("An error occurred while requesting desktop preview.");
+      return HubResult.Fail("An error occurred while requesting desktop preview.");
     }
   }
 
-  public async Task<Result> SendChatMessage(ChatMessageHubDto dto)
+  public async Task<HubResult> SendChatMessage(ChatMessageHubDto dto)
   {
     try
     {
-      _logger.LogInformation(
-        "Chat message received for device {DeviceId}. Session ID: {SessionId}, " +
-        "Target System Session: {TargetSystemSession}, Process ID: {TargetProcessId}",
-        dto.DeviceId,
+      _logger.LogDebug(
+        "Chat message received. Session ID: {SessionId}, " +
+        "Target System Session: {TargetSystemSession}, " +
+        "Process ID: {TargetProcessId}",
         dto.SessionId,
         dto.TargetSystemSession,
         dto.TargetProcessId);
@@ -590,7 +587,7 @@ internal class AgentHubClient(
         _logger.LogWarning(
           "No IPC server found for process ID {ProcessId}. Cannot send chat message.",
           dto.TargetProcessId);
-        return Result.Fail("IPC server not found for target process.");
+        return HubResult.Fail("IPC server not found for target process.");
       }
 
       var ipcDto = new ChatMessageIpcDto(
@@ -608,20 +605,21 @@ internal class AgentHubClient(
         "Chat message sent to IPC server for process ID {ProcessId}.",
         dto.TargetProcessId);
 
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending chat message to IPC server.");
-      return Result.Fail("An error occurred while sending chat message.");
+      return HubResult.Fail("An error occurred while sending chat message.");
     }
   }
 
-  public async Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)
+  public async Task<HubResult> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)
   {
     try
     {
-      _logger.LogInformation("Streaming directory contents for {DeviceId}: {DirectoryPath}", dto.DeviceId,
+      _logger.LogDebug(
+        "Streaming directory contents: {DirectoryPath}", 
         dto.DirectoryPath);
 
       var result = await _fileManager.GetDirectoryContents(dto.DirectoryPath);
@@ -635,48 +633,50 @@ internal class AgentHubClient(
         100,
         cts.Token);
 
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error streaming directory contents for {DirectoryPath}", dto.DirectoryPath);
-      return Result.Fail("An error occurred while streaming directory contents.");
+      return HubResult.Fail("An error occurred while streaming directory contents.");
     }
   }
 
-  public async Task<Result> StreamFileContents(StreamFileContentsRequestHubDto dto)
+  public async Task<HubResult> StreamFileContents(StreamFileContentsRequestHubDto dto)
   {
     try
     {
-      _logger.LogInformation("Streaming file contents: {FilePath}, Stream ID: {StreamId}",
-        dto.FilePath, dto.StreamId);
+      _logger.LogDebug(
+        "Streaming file contents: {FilePath}, Stream ID: {StreamId}",
+        dto.FilePath, 
+        dto.StreamId);
 
       if (!_fileSystem.FileExists(dto.FilePath))
       {
         _logger.LogWarning("File not found: {FilePath}", dto.FilePath);
-        return Result.Fail("File not found.");
+        return HubResult.Fail("File not found.");
       }
 
       Task
         .Run(() => SendFileStream(dto.StreamId, dto.FilePath, isTempFile: false))
         .Forget();
 
-      _logger.LogInformation("Successfully started file stream: {FilePath}", dto.FilePath);
-      return Result.Ok();
+      _logger.LogDebug("Successfully started file stream: {FilePath}", dto.FilePath);
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while streaming file: {FilePath}", dto.FilePath);
-      return Result.Fail("An error occurred while streaming file.");
+      return HubResult.Fail("An error occurred while streaming file.");
     }
   }
 
-  public async Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto)
+  public async Task<HubResult> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto)
   {
     try
     {
-      _logger.LogInformation("Streaming subdirectories for {DeviceId}: {DirectoryPath}", dto.DeviceId,
-        dto.DirectoryPath);
+      _logger.LogDebug("Streaming subdirectories: {DirectoryPath}", dto.DirectoryPath);
+
       var subdirs = await _fileManager.GetSubdirectories(dto.DirectoryPath);
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -688,26 +688,27 @@ internal class AgentHubClient(
         100,
         cts.Token);
 
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error streaming subdirectories for {DirectoryPath}", dto.DirectoryPath);
-      return Result.Fail("An error occurred while streaming subdirectories.");
+      return HubResult.Fail("An error occurred while streaming subdirectories.");
     }
   }
 
-  public async Task<Result> TestVncConnection(int port)
+  public async Task<HubResult> TestVncConnection(int port)
   {
     try
     {
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-      return await _localProxy.TestConnection(port, cts.Token);
+      var result = await _localProxy.TestConnection(port, cts.Token);
+      return result.ToHubResult();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while testing VNC connection on port {Port}", port);
-      return Result.Fail("An error occurred while testing VNC connection.");
+      return HubResult.Fail("An error occurred while testing VNC connection.");
     }
   }
 
@@ -732,7 +733,7 @@ internal class AgentHubClient(
     return Task.CompletedTask;
   }
 
-  public async Task<Result<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto)
+  public async Task<HubResult<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto)
   {
     try
     {
@@ -744,7 +745,7 @@ internal class AgentHubClient(
       {
         _logger.LogWarning("Failed to prepare file for download: {FilePath}, Error: {Error}", dto.FilePath,
           resolveResult.ErrorMessage);
-        return Result.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ?? "Failed to prepare file for download");
+        return HubResult.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ?? "Failed to prepare file for download");
       }
 
       var fileInfo = _fileSystem.GetFileInfo(resolveResult.FileSystemPath);
@@ -754,12 +755,12 @@ internal class AgentHubClient(
         .Forget();
 
       _logger.LogInformation("Successfully sent file download stream: {FilePath}", dto.FilePath);
-      return Result.Ok(new FileDownloadResponseHubDto(fileInfo.Length, resolveResult.FileDisplayName));
+      return HubResult.Ok(new FileDownloadResponseHubDto(fileInfo.Length, resolveResult.FileDisplayName));
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending file download: {FilePath}", dto.FilePath);
-      return Result.Fail<FileDownloadResponseHubDto>("An error occurred while sending file download.");
+      return HubResult.Fail<FileDownloadResponseHubDto>("An error occurred while sending file download.");
     }
   }
 

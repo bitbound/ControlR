@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Viewer.Common.State;
 using ControlR.Libraries.WebSocketRelay.Client;
 using Microsoft.AspNetCore.Components;

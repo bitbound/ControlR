@@ -1,10 +1,10 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Startup;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Hubs;
+using ControlR.Libraries.Api.Contracts.Hubs;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Configuration;

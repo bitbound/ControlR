@@ -17,7 +17,7 @@ internal class PublicRegistrationSettingsProviderClient(
 
     try
     {
-      var result = await _controlrApi.GetPublicRegistrationSettings();
+      var result = await _controlrApi.PublicRegistrationSettings.GetPublicRegistrationSettings();
       if (result.IsSuccess)
       {
         _cachedValue = result.Value.IsPublicRegistrationEnabled;

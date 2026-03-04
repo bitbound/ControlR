@@ -1,10 +1,10 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Services;
 using ControlR.DesktopClient.ViewModels.Linux;
 using ControlR.DesktopClient.ViewModels.Mac;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.DesktopClient.ViewModels;
@@ -20,10 +20,12 @@ public partial class MainWindowViewModel(
   IMainWindowProvider mainWindowProvider,
   IViewModelFactory viewModelFactory,
   ISystemEnvironment systemEnvironment,
+  IServiceProvider serviceProvider,
   INavigationProvider navigationProvider) : ViewModelBase<MainWindow>, IMainWindowViewModel
 {
   private readonly IMainWindowProvider _mainWindowProvider = mainWindowProvider;
   private readonly INavigationProvider _navigationProvider = navigationProvider;
+  private readonly IServiceProvider _serviceProvider = serviceProvider;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IViewModelFactory _viewModelFactory = viewModelFactory;
 
@@ -67,7 +69,11 @@ public partial class MainWindowViewModel(
         }
       case SystemPlatform.Linux:
         {
-          items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModelWayland>("shield_keyhole_regular", Localization.Permissions));
+          var desktopEnv = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+          if (desktopEnv.IsWayland())
+          {
+            items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModelWayland>("shield_keyhole_regular", Localization.Permissions));
+          }
           break;
         }
       default:

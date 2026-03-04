@@ -3,9 +3,9 @@ using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Windows;
-using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.Devices;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 

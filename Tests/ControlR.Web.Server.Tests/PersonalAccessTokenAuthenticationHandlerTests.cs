@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using Xunit.Abstractions;
+using Xunit;
 using Microsoft.AspNetCore.Identity;
 using ControlR.Web.Server.Data.Entities;
 
@@ -33,7 +33,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
 
     var patManager = services.GetRequiredService<IPersonalAccessTokenManager>();
 
-    var createRequest = new Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new Libraries.Api.Contracts.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, serverAdmin.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
@@ -73,7 +73,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var personalAccessTokenManager = services.GetRequiredService<IPersonalAccessTokenManager>();
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var createRequest = new Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new Libraries.Api.Contracts.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await personalAccessTokenManager.CreateToken(createRequest, user.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
@@ -185,7 +185,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var timeProvider = testApp.TimeProvider;
     await using var db = services.GetRequiredService<AppDb>();
 
-    var createRequest = new Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new Libraries.Api.Contracts.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, user.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
@@ -202,7 +202,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     // Assert - LastUsed should be updated
     var storedToken = await db.PersonalAccessTokens
       .IgnoreQueryFilters()
-      .FirstOrDefaultAsync(x => x.Id == createResult.Value!.PersonalAccessToken.Id);
+      .FirstOrDefaultAsync(x => x.Id == createResult.Value!.PersonalAccessToken.Id, TestContext.Current.CancellationToken);
 
     Assert.NotNull(storedToken);
     Assert.NotNull(storedToken.LastUsed);
@@ -229,7 +229,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
 
     var patManager = services.GetRequiredService<IPersonalAccessTokenManager>();
 
-    var createRequest = new Libraries.Shared.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new Libraries.Api.Contracts.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, normalUser.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 

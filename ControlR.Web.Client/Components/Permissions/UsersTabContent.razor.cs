@@ -22,6 +22,9 @@ public partial class UsersTabContent : ComponentBase, IDisposable
   public required IControlrApi ControlrApi { get; init; }
 
   [Inject]
+  public required IDialogService DialogService { get; init; }
+
+  [Inject]
   public required ILogger<UsersTabContent> Logger { get; init; }
 
   [Inject]
@@ -91,13 +94,21 @@ public partial class UsersTabContent : ComponentBase, IDisposable
 
     try
     {
-      var result = await ControlrApi.DeleteUser(_selectedUser.Id);
-      if (!result.IsSuccess)
+      var messageResult = await DialogService.ShowMessageBox(
+        "Confirm Deletion",
+        "Are you sure you want to delete this user?", "Yes", "No");
+
+      if (!messageResult.HasValue || !messageResult.Value)
       {
-        Snackbar.Add(result.Reason, Severity.Error);
         return;
       }
-      
+      var deleteResult = await ControlrApi.Users.DeleteUser(_selectedUser.Id);
+      if (!deleteResult.IsSuccess)
+      {
+        Snackbar.Add(deleteResult.Reason, Severity.Error);
+        return;
+      }
+
       await UserStore.Refresh();
       _selectedUser = null;
       Snackbar.Add("User deleted", Severity.Success);
@@ -116,7 +127,8 @@ public partial class UsersTabContent : ComponentBase, IDisposable
     {
       if (isToggled)
       {
-        var addResult = await ControlrApi.AddUserRole(user.Id, role.Id);
+        var addRequest = new UserRoleAddRequestDto(user.Id, role.Id);
+        var addResult = await ControlrApi.UserRoles.AddUserRole(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -126,7 +138,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.RemoveUserRole(user.Id, role.Id);
+        var removeResult = await ControlrApi.UserRoles.RemoveUserRole(user.Id, role.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);
@@ -154,7 +166,8 @@ public partial class UsersTabContent : ComponentBase, IDisposable
     {
       if (isToggled)
       {
-        var addResult = await ControlrApi.AddUserTag(user.Id, tag.Id);
+        var addRequest = new UserTagAddRequestDto(user.Id, tag.Id);
+        var addResult = await ControlrApi.UserTags.AddUserTag(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -164,7 +177,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.RemoveUserTag(user.Id, tag.Id);
+        var removeResult = await ControlrApi.UserTags.RemoveUserTag(user.Id, tag.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);

@@ -59,7 +59,7 @@
 
   protected override async Task OnInitializedAsync()
   {
-    var settingsResults = await ServerSettingsApi.GetPublicRegistrationSettings();
+    var settingsResults = await ServerSettingsApi.PublicRegistrationSettings.GetPublicRegistrationSettings();
     if (settingsResults.IsSuccess)
     {
       _isPublicRegistrationEnabled = settingsResults.Value.IsPublicRegistrationEnabled;

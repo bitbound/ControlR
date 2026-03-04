@@ -37,8 +37,8 @@
         return;
       }
 
-      var result = await ControlrApi.GetServerAlert();
-      if (!result.IsSuccess || result.Value is null)
+      var result = await ControlrApi.ServerAlert.GetServerAlert();
+      if (!result.IsSuccess || result.Value is null || !result.Value.HasAlertSet)
       {
         return;
       }

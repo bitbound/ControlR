@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
+using ControlR.Libraries.Avalonia.Theming;
 
 namespace ControlR.DesktopClient;
 

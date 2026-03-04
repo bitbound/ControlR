@@ -2,7 +2,6 @@ using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Tmds.DBus.Protocol;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace ControlR.DesktopClient.Linux.Tests;
 

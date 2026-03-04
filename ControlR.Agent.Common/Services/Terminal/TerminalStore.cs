@@ -1,5 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using System.Diagnostics.CodeAnalysis;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 

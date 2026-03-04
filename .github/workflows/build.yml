@@ -28,7 +28,7 @@ on:
         default: true
         type: boolean
 
-      notarize_mac_undle:
+      notarize_mac_bundle:
         description: "Notarize macOS bundle"
         required: false
         default: false
@@ -41,7 +41,7 @@ env:
 jobs:
   set-version:
     name: Increment Version
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     permissions:
       contents: read
       actions: write
@@ -61,8 +61,20 @@ jobs:
         shell: pwsh
         run: |
           # Use supplied version if provided, otherwise fall back to the repo variable
+          if (-not $env:VERSION) {
+            Write-Error "VERSION is empty. Provide workflow input version or set CURRENT_VERSION repository variable."
+            exit 1
+          }
+
           Write-Host "Using source version: $env:VERSION"
-          $CurrentVersion = [System.Version]::Parse("$env:VERSION")
+          try {
+            $CurrentVersion = [System.Version]::Parse("$env:VERSION")
+          }
+          catch {
+            Write-Error "VERSION '$env:VERSION' is invalid. Expected numeric format like 1.2.3 or 1.2.3.0."
+            exit 1
+          }
+
           Write-Host "Resolved current version: $CurrentVersion"
           $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1).0"
           Write-Host "Next version will be: $NextVersion"
@@ -76,12 +88,12 @@ jobs:
           else {
             gh variable set CURRENT_VERSION --body $NextVersion
           }
-          # Expose the next version as a step output for the job
-          echo "version=$NextVersion" >> $GITHUB_OUTPUT
+          # Expose the current version as a step output for this run
+          echo "version=$CurrentVersion" >> $env:GITHUB_OUTPUT
 
   run-tests:
     name: Run Tests
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     needs: set-version
 
     steps:
@@ -98,42 +110,23 @@ jobs:
         run: |
           dotnet test -c Release
 
-  build-nuget-packages:
+  build-nugets:
     name: Build NuGet Packages
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     needs: set-version
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          clean: true
-          fetch-depth: 0
-
-      - name: Setup .NET
-        uses: ./.github/actions/setup-dotnet
-
-      - name: Build and Upload ControlR.ApiClient
-        uses: ./.github/actions/build-upload-nuget
-        with:
-          project-path: ControlR.ApiClient/ControlR.ApiClient.csproj
-          version: ${{ env.VERSION }}
-          artifact-name: ApiClientNuGet
-          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-          prerelease: ${{ inputs.prerelease }}
-
-      - name: Build and Upload ControlR.Libraries.DataRedaction
-        uses: ./.github/actions/build-upload-nuget
-        with:
-          project-path: Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj
-          version: ${{ env.VERSION }}
-          artifact-name: DataRedactionNuGet
-          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-          prerelease: ${{ inputs.prerelease }}
+    uses: ./.github/workflows/build-sign-pack-nugets.yml
+    with:
+      version: ${{ needs.set-version.outputs.version }}
+      retention-days: ${{ fromJson(inputs.retention_days_artifacts) }}
+      prerelease: ${{ inputs.prerelease }}
+      use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
 
   build-mac-binaries:
     name: Apple Build (${{ matrix.arch }})
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","macOS"]') || fromJson('["macos-latest"]') }}
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-latest"]') }}
     needs: set-version
     strategy:
       matrix:
@@ -147,6 +140,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup .NET
+        if: inputs.use_self_hosted_runners == false
         uses: ./.github/actions/setup-dotnet
 
       - name: Setup Code Signing Keychain
@@ -276,7 +270,7 @@ jobs:
             "./ControlR.Agent/bin/publish/${{ matrix.arch }}/ControlR.Agent"
 
       - name: Upload Agent (${{ matrix.arch }})
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Agent-macOS-${{ matrix.arch == 'osx-arm64' && 'ARM64' || 'x64' }}
           path: ControlR.Agent/bin/publish/${{ matrix.arch }}/ControlR.Agent
@@ -298,7 +292,7 @@ jobs:
   build-windows-binaries:
     name: Windows Build (${{ matrix.arch }})
     # When using self-hosted Windows runners, require both the self-hosted label and OS label.
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
     environment: secure-signing
     needs: set-version
     permissions:
@@ -319,20 +313,6 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      # ===== Azure Login with OIDC =====
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # ===== Install AzureSignTool =====
-      - name: Install AzureSignTool
-        shell: pwsh
-        run: |
-          dotnet tool install --global AzureSignTool
-
       # ===== Build Windows =====
       - name: Build DesktopClient (${{ matrix.arch }})
         shell: pwsh
@@ -344,19 +324,17 @@ jobs:
           dotnet publish ControlR.DesktopClient\ -c Release -r ${{ matrix.arch }} --self-contained -o ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
 
       - name: Sign DesktopClient (${{ matrix.arch }})
-        shell: pwsh
-        run: |
-          dnx azuresigntool --yes sign `
-            --du="${{ vars.SIGNING_DESCRIPTION_URL }}" `
-            --fd=sha256 `
-            --kvu="${{ secrets.AZURE_KEY_VAULT_URI }}" `
-            --kvc="${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
-            --kvm `
-            --tr=http://timestamp.digicert.com `
-            --td=sha256 `
-            --skip-signed `
-            "${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.exe " `
-            "${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.dll"
+        uses: ./.github/actions/windows-code-sign
+        with:
+          file-patterns: |
+            ${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.exe
+            ${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.dll
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure-key-vault-uri: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          azure-key-vault-certificate-name: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
+          signing-description-url: ${{ vars.SIGNING_DESCRIPTION_URL }}
 
       - name: Package and Prepare DesktopClient (${{ matrix.arch }})
         shell: pwsh
@@ -378,22 +356,18 @@ jobs:
           dotnet publish ControlR.Agent\ -c Release -r ${{ matrix.arch }} -o ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       - name: Sign Agent (${{ matrix.arch }})
-        shell: pwsh
-        run: |
-          dnx azuresigntool --yes sign `
-            --du="${{ vars.SIGNING_DESCRIPTION_URL }}" `
-            --fd=sha256 `
-            --kvu="${{ secrets.AZURE_KEY_VAULT_URI }}" `
-            --kvc="${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}" `
-            --kvm `
-            --tr=http://timestamp.digicert.com `
-            --td=sha256 `
-            --skip-signed `
-            "${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\*.exe " `
-            "${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\*.dll"
+        uses: ./.github/actions/windows-code-sign
+        with:
+          file-patterns: ${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\*.exe
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure-key-vault-uri: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          azure-key-vault-certificate-name: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
+          signing-description-url: ${{ vars.SIGNING_DESCRIPTION_URL }}
 
       - name: Upload Agent (${{ matrix.arch }})
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Agent-${{ matrix.arch }}
           path: ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.exe
@@ -401,7 +375,7 @@ jobs:
 
   build-linux-binaries:
     name: Linux Build
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     needs: [set-version]
 
     steps:
@@ -427,9 +401,7 @@ jobs:
           mkdir -p ".build/staging-desktop/linux-x64"
 
           # Create ZIP
-          cd ./ControlR.DesktopClient/bin/publish/linux-x64/
-          zip -r ../../../../.build/staging-desktop/linux-x64/ControlR.DesktopClient.zip .
-          cd ../../../..
+          zip -r "./.build/staging-desktop/linux-x64/ControlR.DesktopClient.zip" "./ControlR.DesktopClient/bin/publish/linux-x64/"*
 
           # Copy to Agent Resources
           mkdir -p "./ControlR.Agent.Common/Resources"
@@ -441,7 +413,7 @@ jobs:
           dotnet publish ./ControlR.Agent/ -c Release -r linux-x64 -o ./ControlR.Web.Server/wwwroot/downloads/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true
 
       - name: Upload Agent (linux-x64)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Agent-linux-x64
           path: ControlR.Web.Server/wwwroot/downloads/linux-x64/ControlR.Agent
@@ -449,13 +421,14 @@ jobs:
 
   build-web-server:
     name: Build Web Server
-    runs-on: ${{ fromJson(inputs.use_self_hosted_runners) && fromJson('["self-hosted","fast"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","fast"]') || fromJson('["ubuntu-latest"]') }}
     needs:
       [
         build-windows-binaries,
         build-linux-binaries,
         build-mac-binaries,
         run-tests,
+        build-nugets
       ]
 
     steps:
@@ -470,31 +443,31 @@ jobs:
         uses: ./.github/actions/setup-dotnet
 
       - name: Download Agent (win-x86)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: Agent-win-x86
           path: ControlR.Web.Server/wwwroot/downloads/win-x86/
 
       - name: Download Agent (win-x64)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: Agent-win-x64
           path: ControlR.Web.Server/wwwroot/downloads/win-x64/
 
       - name: Download Agent (linux-x64)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: Agent-linux-x64
           path: ControlR.Web.Server/wwwroot/downloads/linux-x64/
 
       - name: Download Agent (macOS ARM64)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: Agent-macOS-ARM64
           path: ControlR.Web.Server/wwwroot/downloads/osx-arm64/
 
       - name: Download Agent (macOS x64)
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: Agent-macOS-x64
           path: ControlR.Web.Server/wwwroot/downloads/osx-x64/
@@ -530,14 +503,14 @@ jobs:
           }
 
       - name: Upload Server
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Server
           path: ControlR.Web.Server/bin/publish
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
 
       - name: Upload docker-compose
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: DockerCompose
           path: docker-compose/docker-compose.yml

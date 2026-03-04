@@ -1,9 +1,9 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
-using ControlR.Libraries.Shared.Dtos.Devices;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
@@ -31,7 +31,7 @@ internal class FakeDeviceDataGenerator(
   private double? _usedMemory;
   private double? _usedStorage;
 
-  public Task<DeviceUpdateRequestDto> CreateDevice()
+  public Task<DeviceUpdateRequestDto> GetDeviceInfo()
   {
     _totalMemory ??= Random.Shared.Next(4, 128);
     _usedMemory ??= Math.Clamp(_totalMemory.Value * Random.Shared.NextDouble(), 2, _totalMemory.Value - .25);

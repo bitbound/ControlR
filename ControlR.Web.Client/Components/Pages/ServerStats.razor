@@ -136,14 +136,16 @@
   {
     try
     {
-      var result = await ControlrApi.GetServerStats();
+      var result = await ControlrApi.ServerStats.GetServerStats();
       if (result.IsSuccess)
       {
         _serverStats = result.Value;
         return true;
       }
 
-      Logger.LogResult(result);
+      Logger.LogError("Failed to retrieve server stats.  Reason: {Reason}, StatusCode: {StatusCode}",
+        result.Reason,
+        result.StatusCode);
     }
     catch (Exception ex)
     {

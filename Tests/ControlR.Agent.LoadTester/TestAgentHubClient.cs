@@ -1,21 +1,22 @@
-using ControlR.Libraries.Shared.Dtos.Devices;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Shared.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.LoadTester;
 
 public class TestAgentHubClient : IAgentHubClient
 {
-  public Task<Result> CloseChatSession(Guid sessionId, int targetProcessId)
+  public Task<HubResult> CloseChatSession(Guid sessionId, int targetProcessId)
   {
     Console.WriteLine($"Closing chat session {sessionId} for process {targetProcessId}");
-    return Task.FromResult(Result.Ok());
+    return Task.FromResult(HubResult.Ok());
   }
 
   public Task CloseTerminalSession(Guid terminalSessionId)
@@ -24,39 +25,39 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.CompletedTask;
   }
 
-  public Task<Result> CreateDirectory(CreateDirectoryHubDto dto)
+  public Task<HubResult> CreateDirectory(CreateDirectoryHubDto dto)
   {
     Console.WriteLine($"Received create directory request for {dto.DirectoryName} in {dto.ParentPath}");
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<Result> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
+  public Task<HubResult> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
   {
     Console.WriteLine($"Creating streaming session with ID: {dto.SessionId}, Viewer: {dto.ViewerName}");
-    return Task.FromResult(Result.Ok());
+    return Task.FromResult(HubResult.Ok());
   }
 
-  public Task<Result> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId)
+  public Task<HubResult> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId)
   {
     Console.WriteLine("Received terminal session request.");
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<Result> CreateVncSession(VncSessionRequestDto sessionRequestDto)
+  public Task<HubResult> CreateVncSession(VncSessionRequestDto sessionRequestDto)
   {
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<Result> DeleteFile(FileDeleteHubDto dto)
+  public Task<HubResult> DeleteFile(FileDeleteHubDto dto)
   {
     Console.WriteLine($"Received file delete request for {dto.TargetPath}");
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<Result> DownloadFileFromViewer(FileUploadHubDto dto)
+  public Task<HubResult> DownloadFileFromViewer(FileUploadHubDto dto)
   {
     Console.WriteLine($"Received file upload request for {dto.FileName} to {dto.TargetDirectoryPath}");
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
   public Task<DesktopSession[]> GetActiveDesktopSessions()
@@ -71,11 +72,11 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(new[] { session });
   }
 
-  public Task<Result<GetLogFilesResponseDto>> GetLogFiles()
+  public Task<HubResult<GetLogFilesResponseDto>> GetLogFiles()
   {
     Console.WriteLine("Getting log files");
     var responseDto = new GetLogFilesResponseDto(LogFileGroups: []);
-    return Result.Ok(responseDto).AsTaskResult();
+    return HubResult.Ok(responseDto).AsTaskResult();
   }
 
   public Task<PathSegmentsResponseDto> GetPathSegments(GetPathSegmentsHubDto dto)
@@ -89,9 +90,9 @@ public class TestAgentHubClient : IAgentHubClient
     });
   }
 
-  public Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
+  public Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
   {
-    return Task.FromResult(Result.Ok(new PwshCompletionsResponseDto(
+    return Task.FromResult(HubResult.Ok(new PwshCompletionsResponseDto(
       ReplacementIndex: 0,
       ReplacementLength: 0,
       CompletionMatches: [],
@@ -101,20 +102,20 @@ public class TestAgentHubClient : IAgentHubClient
     )));
   }
 
-  public Task<Result<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto)
+  public Task<HubResult<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto)
   {
     Console.WriteLine($"Getting root drives for device {requestDto.DeviceId}");
     var drives = new FileSystemEntryDto[]
     {
       new("C:", "C:\\", true, 0, DateTimeOffset.Now, false, true, true, true)
     };
-    return Task.FromResult(Result.Ok(new GetRootDrivesResponseDto(drives)));
+    return Task.FromResult(HubResult.Ok(new GetRootDrivesResponseDto(drives)));
   }
 
-  public Task<Result> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto requestDto)
+  public Task<HubResult> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto requestDto)
   {
     Console.WriteLine("Received Ctrl+Alt+Del request.");
-    return Task.FromResult(Result.Ok());
+    return Task.FromResult(HubResult.Ok());
   }
 
   public Task InvokeWakeDevice(WakeDeviceDto dto)
@@ -141,10 +142,10 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.CompletedTask;
   }
 
-  public Task<Result> ReceiveTerminalInput(TerminalInputDto dto)
+  public Task<HubResult> ReceiveTerminalInput(TerminalInputDto dto)
   {
     Console.WriteLine($"Received terminal input: {dto.Input}");
-    return Task.FromResult(Result.Ok());
+    return Task.FromResult(HubResult.Ok());
   }
 
   public Task RefreshDeviceInfo()
@@ -153,39 +154,39 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.CompletedTask;
   }
 
-  public Task<Result> RequestDesktopPreview(DesktopPreviewRequestDto dto)
+  public Task<HubResult> RequestDesktopPreview(DesktopPreviewRequestDto dto)
   {
     Console.WriteLine($"Desktop preview requested. Requester: {dto.RequesterId}, Stream: {dto.StreamId}, Process: {dto.TargetProcessId}");
-    return Task.FromResult(Result.Ok());
+    return Task.FromResult(HubResult.Ok());
   }
 
-  public Task<Result> SendChatMessage(ChatMessageHubDto dto)
+  public Task<HubResult> SendChatMessage(ChatMessageHubDto dto)
   {
     Console.WriteLine($"Sending chat message from {dto.SenderName} ({dto.SenderEmail}): {dto.Message}");
-    return Task.FromResult(Result.Ok());
+    return Task.FromResult(HubResult.Ok());
   }
 
-  public Task<Result> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)
+  public Task<HubResult> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)
   {
     Console.WriteLine($"Streaming directory contents for {dto.DirectoryPath} (stream {dto.StreamId})");
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<Result> StreamFileContents(StreamFileContentsRequestHubDto dto)
+  public Task<HubResult> StreamFileContents(StreamFileContentsRequestHubDto dto)
   {
     Console.WriteLine($"Streaming log file contents for {dto.FilePath} (stream {dto.StreamId})");
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<Result> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto)
+  public Task<HubResult> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto)
   {
     Console.WriteLine($"Streaming subdirectories for {dto.DirectoryPath} (stream {dto.StreamId})");
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<Result> TestVncConnection(int port)
+  public Task<HubResult> TestVncConnection(int port)
   {
-    return Result.Ok().AsTaskResult();
+    return HubResult.Ok().AsTaskResult();
   }
 
   public Task UninstallAgent(string reason)
@@ -194,10 +195,10 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.CompletedTask;
   }
 
-  public Task<Result<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto)
+  public Task<HubResult<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto)
   {
     Console.WriteLine($"Received file download request for {dto.FilePath}");
-    return Result.Ok(new FileDownloadResponseHubDto(FileSize: 0, FileDisplayName: "Test.zip")).AsTaskResult();
+    return HubResult.Ok(new FileDownloadResponseHubDto(FileSize: 0, FileDisplayName: "Test.zip")).AsTaskResult();
   }
 
   public Task<ValidateFilePathResponseDto> ValidateFilePath(ValidateFilePathHubDto dto)
@@ -206,3 +207,4 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(new ValidateFilePathResponseDto(true));
   }
 }
+

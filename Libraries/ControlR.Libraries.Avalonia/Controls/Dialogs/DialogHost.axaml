@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:dialogs="using:ControlR.Libraries.Avalonia.Controls.Dialogs"
+             x:Class="ControlR.Libraries.Avalonia.Controls.Dialogs.DialogHost"
+             x:CompileBindings="False"
+             IsVisible="{Binding DialogProvider.IsVisible}">
+
+  <Grid Classes="DialogOverlay"
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Stretch">
+    <Border HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            Margin="24"
+            Padding="16"
+            Classes="Card">
+      <Grid RowDefinitions="Auto,*"
+            RowSpacing="12">
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*,Auto"
+              ColumnSpacing="8">
+          <TextBlock Grid.Column="0"
+                     Classes="Info"
+                     FontSize="20"
+                     FontWeight="Bold"
+                     Text="{Binding DialogProvider.Title}" />
+
+          <Button x:Name="CloseDialogButton"
+                  Grid.Column="1"
+                  Cursor="Hand"
+                  Classes="TransparentButton">
+            <PathIcon Width="18"
+                      Height="18"
+                      Classes="Error"
+                      Data="{DynamicResource dismiss_regular}" />
+          </Button>
+        </Grid>
+
+        <ContentControl Grid.Row="1" Content="{Binding DialogProvider.Content}" />
+
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

@@ -15,7 +15,7 @@ internal class DeviceInfoProviderLinux(
   private readonly ILogger<DeviceInfoProviderLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task<DeviceUpdateRequestDto> CreateDevice()
+  public async Task<DeviceUpdateRequestDto> GetDeviceInfo()
   {
     try
     {

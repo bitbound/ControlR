@@ -10,7 +10,8 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -77,7 +78,7 @@ public class InputSimulatorWaylandTests
 
     var sim = new InputSimulatorWayland(portal, factory, logger);
 
-    await sim.InvokeKeyEvent("Enter", null, true);
+    await sim.InvokeKeyEvent("Enter", string.Empty, true, KeyboardInputMode.Auto, KeyEventModifiersDto.None);
 
     Assert.Single(portal.KeyboardCalls);
     Assert.Equal(28, portal.KeyboardCalls[0].keycode);

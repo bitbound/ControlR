@@ -23,6 +23,7 @@ jobs:
   publish:
     name: Publish to NuGet.org
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout code
@@ -35,18 +36,10 @@ jobs:
           run_id: ${{ inputs.run_id }}
           github_token: ${{ github.token }}
 
-      - name: Download ApiClient NuGet Package
-        uses: actions/download-artifact@v7
+      - name: Download NuGet Packages
+        uses: actions/download-artifact@v8
         with:
-          name: ApiClientNuGet
-          path: ./nuget-packages
-          github-token: ${{ github.token }}
-          run-id: ${{ steps.get-run-id.outputs.run_id }}
-
-      - name: Download DataRedaction NuGet Package
-        uses: actions/download-artifact@v7
-        with:
-          name: DataRedactionNuGet
+          name: NuGetPackages
           path: ./nuget-packages
           github-token: ${{ github.token }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
@@ -57,22 +50,33 @@ jobs:
           dotnet-version: "10.x"
 
       - name: Publish to NuGet.org
-        shell: bash
+        shell: pwsh
         run: |
-          for package in ./nuget-packages/*.nupkg; do
-            echo "Publishing $package..."
-            dotnet nuget push "$package" \
-              --api-key ${{ secrets.NUGET_KEY }} \
-              --source https://api.nuget.org/v3/index.json \
+          # Push .nupkg files to the main NuGet feed
+          foreach ($package in Get-ChildItem -Path ./nuget-packages/*.nupkg) {
+            Write-Host "Publishing $($package.Name) to main feed..."
+            dotnet nuget push "$($package.FullName)" `
+              --api-key ${{ secrets.NUGET_KEY }} `
+              --source https://api.nuget.org/v3/index.json `
               --skip-duplicate
-          done
+          }
+          
+          # Push .snupkg files to the symbol package feed
+          foreach ($package in Get-ChildItem -Path ./nuget-packages/*.snupkg) {
+            Write-Host "Publishing $($package.Name) to symbol feed..."
+            dotnet nuget push "$($package.FullName)" `
+              --api-key ${{ secrets.NUGET_KEY }} `
+              --source https://api.nuget.org/v3/index.json?packageType=symbols `
+              --skip-duplicate
+          }
 
       - name: Publish Complete
         shell: pwsh
         run: |
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## NuGet Publish Summary"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Files Published:**"
-          foreach ($Item in Get-ChildItem -Path ./nuget-packages/*.nupkg) {
+          $packages = Get-ChildItem -Path ./nuget-packages/*.nupkg
+          foreach ($Item in $packages) {
             Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "  - $($Item.Name)"
           }
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""

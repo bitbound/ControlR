@@ -4,7 +4,6 @@ public class DeviceViewModel(DeviceResponseDto deviceDto) : IEquatable<DeviceVie
 {
   public DeviceResponseDto Dto => deviceDto;
   public Guid Id => deviceDto.Id;
-  public bool IsVisible { get; set; }
 
   public bool Equals(DeviceViewModel? other)
   {

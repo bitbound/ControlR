@@ -1,5 +1,5 @@
-﻿using ControlR.DesktopClient.Common.Models;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.DesktopClient.Common.Models;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Primitives;
 using System.Diagnostics.CodeAnalysis;
 

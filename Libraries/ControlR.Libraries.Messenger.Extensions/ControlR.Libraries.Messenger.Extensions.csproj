@@ -1,6 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<Title>ControlR Libraries Messenger Extensions</Title>
+		<Description>
+		  Messenger extensions for ControlR, an open-source remote control and remote access solution.
+		</Description>
+		<PackageIcon>appicon.png</PackageIcon>
+		<IsNuGetPackage>true</IsNuGetPackage>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="..\..\.assets\appicon.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Bitbound.SimpleMessenger" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 	  <PackageReference Update="Bitbound.Analyzers.MemberOrder">

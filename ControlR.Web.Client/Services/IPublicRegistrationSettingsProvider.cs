@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 
 namespace ControlR.Web.Client.Services;
 

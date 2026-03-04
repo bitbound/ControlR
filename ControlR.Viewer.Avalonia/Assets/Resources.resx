@@ -1,0 +1,504 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--  
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="HelloWorld" xml:space="preserve">
+    <value>Hello, World</value>
+  </data>
+  <data name="Connecting" xml:space="preserve">
+    <value>Connecting</value>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="SelectDesktopSessionTitle" xml:space="preserve">
+    <value>Select Desktop Session</value>
+  </data>
+  <data name="Preview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <data name="RefreshSessions" xml:space="preserve">
+    <value>Refresh Sessions</value>
+  </data>
+  <data name="StartViewOnly" xml:space="preserve">
+    <value>Start View Only</value>
+  </data>
+  <data name="Session" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="ProcessID" xml:space="preserve">
+    <value>Process ID</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Disconnect</value>
+  </data>
+  <data name="CtrlAltDel" xml:space="preserve">
+    <value>Ctrl+Alt+Del</value>
+  </data>
+  <data name="PrivacyScreen" xml:space="preserve">
+    <value>Privacy Screen</value>
+  </data>
+  <data name="Clipboard" xml:space="preserve">
+    <value>Clipboard</value>
+  </data>
+  <data name="Displays" xml:space="preserve">
+    <value>Displays</value>
+  </data>
+  <data name="VirtualKeyboard" xml:space="preserve">
+    <value>Virtual Keyboard</value>
+  </data>
+  <data name="Metrics" xml:space="preserve">
+    <value>Metrics</value>
+  </data>
+  <data name="On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="MbpsIn" xml:space="preserve">
+    <value>Mbps In:</value>
+  </data>
+  <data name="MbpsOut" xml:space="preserve">
+    <value>Mbps Out:</value>
+  </data>
+  <data name="FPS" xml:space="preserve">
+    <value>FPS:</value>
+  </data>
+  <data name="Mode" xml:space="preserve">
+    <value>Mode:</value>
+  </data>
+  <data name="Latency" xml:space="preserve">
+    <value>Latency:</value>
+  </data>
+  <data name="ViewLocator_InvalidViewModelType" xml:space="preserve">
+    <value>Invalid view model type</value>
+  </data>
+  <data name="ViewLocator_ViewNotFound" xml:space="preserve">
+    <value>View not found: {0}</value>
+  </data>
+  <data name="ViewLocator_ViewerInstanceIdEmpty" xml:space="preserve">
+    <value>The viewer instance ID should not be empty here. Did you forget to implement {0} on a design-time view model?</value>
+  </data>
+  <data name="ViewLocator_CouldNotCreateView" xml:space="preserve">
+    <value>Could not create view: {0}</value>
+  </data>
+  <data name="ViewLocator_ErrorLoadingView" xml:space="preserve">
+    <value>Error loading view. Param: {0}. Exception: {1}</value>
+  </data>
+  <data name="ToggleOnText" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="ToggleOffText" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Metrics_MbpsInLabel" xml:space="preserve">
+    <value>Mbps In:</value>
+  </data>
+  <data name="Metrics_MbpsOutLabel" xml:space="preserve">
+    <value>Mbps Out:</value>
+  </data>
+  <data name="Metrics_FpsLabel" xml:space="preserve">
+    <value>FPS:</value>
+  </data>
+  <data name="Metrics_ModeLabel" xml:space="preserve">
+    <value>Mode:</value>
+  </data>
+  <data name="Metrics_LatencyLabel" xml:space="preserve">
+    <value>Latency:</value>
+  </data>
+  <data name="ScaleLevel" xml:space="preserve">
+    <value>Scale Level</value>
+  </data>
+  <data name="AutoPan" xml:space="preserve">
+    <value>Auto Pan</value>
+  </data>
+  <data name="ViewMode_Fit" xml:space="preserve">
+    <value>Fit</value>
+  </data>
+  <data name="ViewMode_Scale" xml:space="preserve">
+    <value>Scale</value>
+  </data>
+  <data name="ViewMode_Stretch" xml:space="preserve">
+    <value>Stretch</value>
+  </data>
+  <data name="ConnectionStatus_Connecting" xml:space="preserve">
+    <value>Connecting</value>
+  </data>
+  <data name="ConnectionStatus_Reconnecting" xml:space="preserve">
+    <value>Reconnecting</value>
+  </data>
+  <data name="ConnectionStatus_Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="ConnectionStatus_Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="RemoteControl_FailedToGetSessions" xml:space="preserve">
+    <value>Failed to get active sessions.</value>
+  </data>
+  <data name="RemoteControl_RefreshingSessions" xml:space="preserve">
+    <value>Refreshing sessions</value>
+  </data>
+  <data name="RemoteControl_ErrorDisconnecting" xml:space="preserve">
+    <value>An error occurred while disconnecting from the remote control session.</value>
+  </data>
+  <data name="RemoteControl_FailedToRetrieveSessions" xml:space="preserve">
+    <value>Failed to retrieve desktop sessions on remote device.</value>
+  </data>
+  <data name="RemoteControl_FailedToReconnect" xml:space="preserve">
+    <value>Failed to reconnect.</value>
+  </data>
+  <data name="RemoteControl_SessionsRefreshed" xml:space="preserve">
+    <value>Sessions refreshed</value>
+  </data>
+  <data name="RemoteControl_StartingSession" xml:space="preserve">
+    <value>Starting remote control session</value>
+  </data>
+  <data name="RemoteControl_DesktopSessionOnDevice" xml:space="preserve">
+    <value>Desktop Session on {0}</value>
+  </data>
+  <data name="RemoteControl_DeviceInfoUnavailable" xml:space="preserve">
+    <value>Device information is not available.</value>
+  </data>
+  <data name="RemoteControl_ErrorRequestingSession" xml:space="preserve">
+    <value>An error occurred while requesting the remote control session.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Loading</value>
+    <comment>e.g. "Loading.  Please wait."</comment>
+  </data>
+  <data name="RemoteControl_UnexpectedSignalingState" xml:space="preserve">
+    <value>Unexpected signaling state.</value>
+  </data>
+  <data name="ViewerHub_ConnectionFailed" xml:space="preserve">
+    <value>Failed to connect to Viewer Hub.</value>
+  </data>
+  <data name="UnauthorizedAccess" xml:space="preserve">
+    <value>Unauthorized access.</value>
+  </data>
+  <data name="UnauthorizedAccessPat" xml:space="preserve">
+    <value>Unauthorized access. Check the provided Personal Access Token.</value>
+  </data>
+  <data name="DeviceInfo_RetrievalFailed" xml:space="preserve">
+    <value>Failed to retrieve device info.</value>
+  </data>
+  <data name="ViewerShell_AgentWentOffline" xml:space="preserve">
+    <value>Agent went offline.</value>
+  </data>
+  <data name="ViewerShell_DeviceOffline" xml:space="preserve">
+    <value>Device is offline.</value>
+  </data>
+  <data name="Reconnect" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="ViewerHub_ReconnectFailed" xml:space="preserve">
+    <value>Viewer reconnect failed.</value>
+  </data>
+  <data name="DeviceInfo_RetrievalFailedDetails" xml:space="preserve">
+    <value>Failed to retrieve device info.
+
+Details: {0}</value>
+  </data>
+  <data name="RemoteControl_NoDesktopSessions" xml:space="preserve">
+    <value>No desktop sessions available.</value>
+  </data>
+  <data name="View" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="Input" xml:space="preserve">
+    <value>Input</value>
+  </data>
+  <data name="ViewOnly" xml:space="preserve">
+    <value>View Only</value>
+  </data>
+  <data name="BlockUserInput" xml:space="preserve">
+    <value>Block User Input</value>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>Security</value>
+  </data>
+  <data name="SendClipboard" xml:space="preserve">
+    <value>Send Clipboard</value>
+  </data>
+  <data name="ReceiveClipboard" xml:space="preserve">
+    <value>Receive Clipboard</value>
+  </data>
+  <data name="TypeClipboard" xml:space="preserve">
+    <value>Type Clipboard</value>
+  </data>
+  <data name="KeyboardInputMode" xml:space="preserve">
+    <value>Keyboard Input Mode</value>
+  </data>
+  <data name="KeyboardMode_Auto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="KeyboardMode_Physical" xml:space="preserve">
+    <value>Physical</value>
+  </data>
+  <data name="KeyboardMode_Virtual" xml:space="preserve">
+    <value>Virtual</value>
+  </data>
+  <data name="Extras" xml:space="preserve">
+    <value>Extras</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="CloseConnection" xml:space="preserve">
+    <value>Close Connection</value>
+  </data>
+  <data name="RemoteControl_DesktopPreview" xml:space="preserve">
+    <value>Desktop Preview</value>
+  </data>
+  <data name="RemoteControl_LoadingPreview" xml:space="preserve">
+    <value>Loading preview...</value>
+  </data>
+  <data name="RemoteControl_PreviewRefreshed" xml:space="preserve">
+    <value>Preview refreshed</value>
+  </data>
+  <data name="RemoteControl_NoPreviewImage" xml:space="preserve">
+    <value>No preview image received.</value>
+  </data>
+  <data name="RemoteControl_PreviewLoadFailed" xml:space="preserve">
+    <value>An error occurred while loading the preview.</value>
+  </data>
+  <data name="RemoteControl_UnableToAttachHandlers" xml:space="preserve">
+    <value>Unable to attach remote control input handlers.</value>
+  </data>
+  <data name="RemoteControl_ClipboardTextReceived" xml:space="preserve">
+    <value>Clipboard text received from remote device</value>
+  </data>
+  <data name="RemoteControl_NoActiveSession" xml:space="preserve">
+    <value>No active remote session</value>
+  </data>
+  <data name="RemoteControl_BlockInputEnabled" xml:space="preserve">
+    <value>Input blocking enabled</value>
+  </data>
+  <data name="RemoteControl_BlockInputDisabled" xml:space="preserve">
+    <value>Input blocking disabled</value>
+  </data>
+  <data name="RemoteControl_FailedToEnableBlockInput" xml:space="preserve">
+    <value>Failed to enable input blocking</value>
+  </data>
+  <data name="RemoteControl_FailedToDisableBlockInput" xml:space="preserve">
+    <value>Failed to disable input blocking</value>
+  </data>
+  <data name="RemoteControl_ErrorTogglingBlockInput" xml:space="preserve">
+    <value>An error occurred while toggling block input</value>
+  </data>
+  <data name="RemoteControl_ClipboardEmpty" xml:space="preserve">
+    <value>Clipboard is empty</value>
+  </data>
+  <data name="RemoteControl_SendingClipboard" xml:space="preserve">
+    <value>Sending clipboard</value>
+  </data>
+  <data name="RemoteControl_ErrorSendingClipboard" xml:space="preserve">
+    <value>An error occurred while sending clipboard</value>
+  </data>
+  <data name="RemoteControl_ErrorReceivingClipboard" xml:space="preserve">
+    <value>An error occurred while receiving clipboard</value>
+  </data>
+  <data name="RemoteControl_SendingClipboardToType" xml:space="preserve">
+    <value>Sending clipboard to type</value>
+  </data>
+  <data name="RemoteControl_ErrorTypingClipboard" xml:space="preserve">
+    <value>An error occurred while typing clipboard</value>
+  </data>
+  <data name="RemoteControl_CtrlAltDelSent" xml:space="preserve">
+    <value>Ctrl+Alt+Del sent successfully</value>
+  </data>
+  <data name="RemoteControl_FailedToSendCtrlAltDel" xml:space="preserve">
+    <value>Failed to send Ctrl+Alt+Del: {0}</value>
+  </data>
+  <data name="RemoteControl_ErrorSendingCtrlAltDel" xml:space="preserve">
+    <value>An error occurred while sending Ctrl+Alt+Del</value>
+  </data>
+  <data name="RemoteControl_NoDisplaysReceived" xml:space="preserve">
+    <value>No displays received</value>
+  </data>
+  <data name="RemoteControl_WindowsSessionEnding" xml:space="preserve">
+    <value>Remote Windows session ending</value>
+  </data>
+  <data name="RemoteControl_WindowsSessionSwitched" xml:space="preserve">
+    <value>Remote Windows session switched</value>
+  </data>
+  <data name="RemoteControl_PrivacyScreenEnabled" xml:space="preserve">
+    <value>Privacy screen enabled</value>
+  </data>
+  <data name="RemoteControl_PrivacyScreenDisabled" xml:space="preserve">
+    <value>Privacy screen disabled</value>
+  </data>
+  <data name="RemoteControl_FailedToEnablePrivacyScreen" xml:space="preserve">
+    <value>Failed to enable privacy screen</value>
+  </data>
+  <data name="RemoteControl_FailedToDisablePrivacyScreen" xml:space="preserve">
+    <value>Failed to disable privacy screen</value>
+  </data>
+  <data name="RemoteControl_RemoteUserRequestedDisconnection" xml:space="preserve">
+    <value>Remote user requested disconnection</value>
+  </data>
+  <data name="RemoteControl_UnsupportedDtoType" xml:space="preserve">
+    <value>Unsupported DTO type: {0}</value>
+  </data>
+  <data name="ControlrViewer_ServiceProviderNotInitialized" xml:space="preserve">
+    <value>Service provider has not been initialized.</value>
+  </data>
+  <data name="ControlrViewer_OptionsRequired" xml:space="preserve">
+    <value>ControlrViewer requires an Options instance. Set the Options property in XAML or code.</value>
+  </data>
+  <data name="ControlrViewer_BaseUrlRequired" xml:space="preserve">
+    <value>BaseUrl is required. Set the BaseUrl property in the Options.</value>
+  </data>
+  <data name="ControlrViewer_DeviceIdRequired" xml:space="preserve">
+    <value>DeviceId is required. Set the DeviceId property in the Options.</value>
+  </data>
+  <data name="ControlrViewer_PatRequired" xml:space="preserve">
+    <value>PersonalAccessToken is required. Set the PersonalAccessToken property in the Options.</value>
+  </data>
+  <data name="ControlrViewer_OptionsNotSet" xml:space="preserve">
+    <value>Options have not been set.</value>
+  </data>
+  <data name="ControlrViewer_TopLevelMissing" xml:space="preserve">
+    <value>Unable to get TopLevel from ControlrViewer. Ensure it is part of the visual tree.</value>
+  </data>
+  <data name="ControlrViewer_ClipboardMissing" xml:space="preserve">
+    <value>Unable to get Clipboard from TopLevel. Ensure the application supports clipboard operations.</value>
+  </data>
+  <data name="ControlrViewer_InitializationError" xml:space="preserve">
+    <value>An error occurred during initialization: {0}</value>
+  </data>
+  <data name="RemoteControl_InputSuppressedViewOnlyMode" xml:space="preserve">
+    <value>Input is disabled due to view-only mode.</value>
+  </data>
+</root>

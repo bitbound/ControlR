@@ -3,9 +3,9 @@
 namespace ControlR.DesktopClient.ViewModels.Fakes;
 public class AppViewModelFake : IAppViewModel
 {
-  public ICommand ExitApplicationCommand { get; } = new RelayCommand(() => { });
+  public IRelayCommand ExitApplicationCommand { get; } = new RelayCommand(() => { });
   public bool IsDarkMode { get; } = true;
 
-  public ICommand ShowWindowCommand { get; } = new RelayCommand(() => { });
-  public ICommand ToggleThemeCommand { get; } = new RelayCommand(() => { });
+  public IRelayCommand ShowMainWindowCommand { get; } = new RelayCommand(() => { });
+  public IRelayCommand ToggleThemeCommand { get; } = new RelayCommand(() => { });
 }

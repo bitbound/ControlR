@@ -1,6 +1,6 @@
 # ControlR API Client
 
-A .NET client library for interacting with the ControlR API. Built with [Kiota](https://learn.microsoft.com/en-us/openapi/kiota/overview), this library provides a strongly-typed interface for making API calls to the backend of a ControlR server.
+A .NET client library for interacting with the ControlR API. This library provides a strongly-typed interface for making API calls to the backend of a ControlR server.
 
 ## Features
 
@@ -63,31 +63,28 @@ With the following configuration in `appsettings.json`:
 
 #### Using the Client
 
-Inject either `IControlrApiClientFactory` or `ControlrApiClient` directly into your services:
+Inject `IControlrApi` directly into your services:
 
 ```csharp
 using ControlR.ApiClient;
 
 public class MyService
 {
-    private readonly IControlrApiClientFactory _clientFactory;
+    private readonly IControlrApi _client;
     private readonly ILogger<MyService> _logger;
 
-    public MyService(IControlrApiClientFactory clientFactory, ILogger<MyService> logger)
+    public MyService(IControlrApi client, ILogger<MyService> logger)
     {
-        _clientFactory = clientFactory;
+        _client = client;
         _logger = logger;
     }
 
     public async Task GetDevicesAsync(CancellationToken cancellationToken)
     {
-        var client = _clientFactory.GetClient();
-        var devices = await client.Api.Devices.GetAsync(cancellationToken: cancellationToken);
-
-        if (devices is null)
+        var devices = new List<DeviceResponseDto>();
+        await foreach (var device in _client.Devices.GetAllDevices(cancellationToken).WithCancellation(cancellationToken))
         {
-            _logger.LogError("Response was empty.");
-            return;
+            devices.Add(device);
         }
 
         _logger.LogInformation("Retrieved {DeviceCount} devices.", devices.Count);
@@ -123,12 +120,10 @@ Get a client instance whenever needed:
 
 ```csharp
 var client = ControlrApiClientBuilder.GetClient();
-var devices = await client.Api.Devices.GetAsync(cancellationToken: cancellationToken);
-
-if (devices is null)
+var devices = new List<DeviceResponseDto>();
+await foreach (var device in client.Devices.GetAllDevices(cancellationToken).WithCancellation(cancellationToken))
 {
-    Console.WriteLine("Response was empty.");
-    return;
+    devices.Add(device);
 }
 
 Console.WriteLine($"Retrieved {devices.Count} devices.");
@@ -166,23 +161,6 @@ The ControlR API Client uses `IHttpClientFactory` under the hood to manage `Http
 - **Handler pipeline**: Supports middleware-style message handlers for cross-cutting concerns
 
 This means you can safely create multiple client instances without worrying about common pitfalls associated with direct `HttpClient` usage.
-
-### Kiota Client Generation
-
-The client is generated using Microsoft's Kiota tool, which provides:
-
-- Type-safe request builders
-- Automatic serialization/deserialization
-- Fluent API design
-- Built-in error handling
-- Support for various authentication schemes
-
-## Additional Resources
-
-- [Kiota Documentation](https://learn.microsoft.com/en-us/openapi/kiota/overview)
-- [Kiota .NET Dependency Injection Guide](https://learn.microsoft.com/en-us/openapi/kiota/tutorials/dotnet-dependency-injection)
-- [IHttpClientFactory Best Practices](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests)
-- [ControlR Documentation](https://github.com/bitbound/ControlR)
 
 ## Example Project
 

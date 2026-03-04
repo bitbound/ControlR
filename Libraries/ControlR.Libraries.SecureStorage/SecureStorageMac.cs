@@ -18,15 +18,12 @@ internal class SecureStorageMac : ISecureStorage
   private const uint KSecServiceItemAttr = 0x73766365; // 'svce'
   private const string SystemKeychainPath = "/Library/Keychains/System.keychain";
 
-
   private readonly IntPtr _keychain;
   private readonly ILogger<SecureStorageMac> _logger;
   private readonly SemaphoreSlim _operationLock = new(1, 1);
   private readonly SecureStorageOptions _options;
 
-
   private bool _disposed;
-
 
   public SecureStorageMac(ILogger<SecureStorageMac> logger, IOptions<SecureStorageOptions> options)
   {
@@ -57,13 +54,11 @@ internal class SecureStorageMac : ISecureStorage
     }
   }
 
-
   public void Dispose()
   {
     Dispose(true);
     GC.SuppressFinalize(this);
   }
-
 
   public async Task<string?> GetAsync(string key)
   {
@@ -122,7 +117,6 @@ internal class SecureStorageMac : ISecureStorage
       _operationLock.Release();
     }
   }
-
 
   public async Task RemoveAllAsync()
   {
@@ -226,7 +220,6 @@ internal class SecureStorageMac : ISecureStorage
     }
   }
 
-
   public async Task<bool> RemoveAsync(string key)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(key);
@@ -291,7 +284,6 @@ internal class SecureStorageMac : ISecureStorage
       _operationLock.Release();
     }
   }
-
 
   public async Task SetAsync(string key, string value)
   {
@@ -380,7 +372,6 @@ internal class SecureStorageMac : ISecureStorage
     }
   }
 
-
   protected virtual void Dispose(bool disposing)
   {
     if (_disposed)
@@ -396,10 +387,11 @@ internal class SecureStorageMac : ISecureStorage
     _disposed = true;
   }
 
-
   [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
   private static extern void CFRelease(IntPtr cf);
 
+  [DllImport("libc")]
+  private static extern uint geteuid();
 
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainAddGenericPassword(
@@ -412,7 +404,6 @@ internal class SecureStorageMac : ISecureStorage
       byte[] passwordData,
       out IntPtr itemRef);
 
-
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainFindGenericPassword(
       IntPtr keychain,
@@ -424,16 +415,13 @@ internal class SecureStorageMac : ISecureStorage
       out IntPtr passwordData,
       out IntPtr itemRef);
 
-
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainItemDelete(IntPtr itemRef);
-
 
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainItemFreeContent(
       IntPtr attrList,
       IntPtr data);
-
 
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainItemModifyAttributesAndData(
@@ -442,18 +430,15 @@ internal class SecureStorageMac : ISecureStorage
       uint length,
       byte[] data);
 
-
   [DllImport("/System/Library/Frameworks/Security.framework/Security", CharSet = CharSet.Unicode)]
   private static extern int SecKeychainOpen(
       string pathName,
       out IntPtr keychain);
 
-
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainSearchCopyNext(
     IntPtr searchRef,
     out IntPtr itemRef);
-
 
   [DllImport("/System/Library/Frameworks/Security.framework/Security")]
   private static extern int SecKeychainSearchCreateFromAttributes(
@@ -461,11 +446,6 @@ internal class SecureStorageMac : ISecureStorage
     uint itemClass,
     ref SecKeychainAttributeList attrList,
     out IntPtr searchRef);
-
-
-  [DllImport("libc")]
-  private static extern uint geteuid();
-
 
   [StructLayout(LayoutKind.Sequential)]
   private struct SecKeychainAttribute

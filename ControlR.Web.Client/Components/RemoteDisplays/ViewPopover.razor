@@ -26,11 +26,11 @@
       <div class="mt-4">
         <MudText Typo="Typo.caption" Class="mb-2">Scale Level</MudText>
         <div class="d-flex align-center gap-2">
-          <MudSlider Value="RemoteControlState.CanvasScale" ValueChanged="@((double v) => HandleScaleChanged(v))"
-            Min="RemoteControlState.MinCanvasScale" Max="RemoteControlState.MaxCanvasScale" Step="0.05"
+          <MudSlider Value="RemoteControlState.RendererScale" ValueChanged="@((double v) => HandleScaleChanged(v))"
+            Min="RemoteControlState.MinRendererScale" Max="RemoteControlState.MaxRendererScale" Step="0.05"
             Color="Color.Primary" Class="flex-grow-1" />
-          <MudNumericField Value="RemoteControlState.CanvasScale" ValueChanged="@((double v) => HandleScaleChanged(v))"
-            Min="RemoteControlState.MinCanvasScale" Max="RemoteControlState.MaxCanvasScale" Step="0.1"
+          <MudNumericField Value="RemoteControlState.RendererScale" ValueChanged="@((double v) => HandleScaleChanged(v))"
+            Min="RemoteControlState.MinRendererScale" Max="RemoteControlState.MaxRendererScale" Step="0.1"
             Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 80px;" HideSpinButtons="false" />
         </div>
       </div>
@@ -78,7 +78,7 @@
           var style = GetDisplayLayoutStyle(display);
           <div class="display-layout-item @(isSelected ? "selected" : "")" style="@style"
             @onclick="@(async () => await HandleDisplayChanged(display))">
-            <span class="display-index">@display.Index</span>
+            <span class="display-index">@(display.Index + 1)</span>
           </div>
         }
       </div>
@@ -151,7 +151,7 @@
 
   private void HandleScaleChanged(double scale)
   {
-    RemoteControlState.CanvasScale = scale;
+    RemoteControlState.RendererScale = scale;
   }
 
   private async Task HandlePrivacyScreenToggled(bool value)

@@ -117,7 +117,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
 
     if (RendererInfo.IsInteractive)
     {
-      Messenger.Value.Register<ToastMessage>(this, HandleToastMessage);
+      Messenger.Value.Register<MudToastMessage>(this, HandleToastMessage);
       Messenger.Value.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
     }
   }
@@ -145,7 +145,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   {
     await HandleThemeChanged(message.ThemeMode);
   }
-  private Task HandleToastMessage(object subscriber, ToastMessage toast)
+  private Task HandleToastMessage(object subscriber, MudToastMessage toast)
   {
     Snackbar.Value.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;

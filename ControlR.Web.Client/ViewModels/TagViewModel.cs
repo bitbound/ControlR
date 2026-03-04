@@ -1,6 +1,6 @@
 ﻿namespace ControlR.Web.Client.ViewModels;
 
-public class TagViewModel(TagResponseDto dto) : IHasPrimaryKey
+public class TagViewModel(TagResponseDto dto)
 {
   public ConcurrentHashSet<Guid> DeviceIds { get; } = [.. dto.DeviceIds];
 

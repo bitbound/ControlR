@@ -1,7 +1,7 @@
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services.Encoders;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 

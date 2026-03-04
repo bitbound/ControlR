@@ -266,8 +266,33 @@ internal class ScreenGrabberWayland(
       // Copy the frame data into the bitmap to avoid holding onto the pooled buffer
       using (frameData)
       {
-        var pixelSpan = bitmap.GetPixelSpan();
-        frameData.Data.Span.CopyTo(pixelSpan);
+        var sourceSpan = frameData.Data.Span;
+        var destinationSpan = bitmap.GetPixelSpan();
+
+        var rowBytes = frameData.Width * 4;
+        var destinationRowBytes = rowBytes;
+
+        if (frameData.Stride == rowBytes && sourceSpan.Length == destinationSpan.Length)
+        {
+          sourceSpan.CopyTo(destinationSpan);
+        }
+        else
+        {
+          for (var row = 0; row < frameData.Height; row++)
+          {
+            var sourceOffset = row * frameData.Stride;
+            var destinationOffset = row * destinationRowBytes;
+
+            if (sourceOffset + rowBytes > sourceSpan.Length || destinationOffset + rowBytes > destinationSpan.Length)
+            {
+              throw new InvalidOperationException("PipeWire frame buffer size is invalid for expected dimensions.");
+            }
+
+            sourceSpan
+              .Slice(sourceOffset, rowBytes)
+              .CopyTo(destinationSpan.Slice(destinationOffset, rowBytes));
+          }
+        }
       }
 
       return CaptureResult.Ok(bitmap, captureMode: CaptureModePipeWire);

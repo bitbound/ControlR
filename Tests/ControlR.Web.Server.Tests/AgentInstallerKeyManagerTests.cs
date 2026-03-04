@@ -1,10 +1,10 @@
-﻿using ControlR.Libraries.Shared.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.TestingUtilities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -18,7 +18,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
   private TestApp _testApp = null!;
   private FakeTimeProvider _timeProvider = null!;
 
-  public async Task DisposeAsync()
+  public async ValueTask DisposeAsync()
   {
     await _testApp.DisposeAsync();
   }
@@ -46,7 +46,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     Assert.False(validateResult);
   }
 
-  public async Task InitializeAsync()
+  public async ValueTask InitializeAsync()
   {
     _testApp = await TestAppBuilder.CreateTestApp(_testOutput, testDatabaseName: $"{Guid.NewGuid()}");
     _timeProvider = _testApp.TimeProvider;

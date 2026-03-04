@@ -1,5 +1,5 @@
-﻿using ControlR.Libraries.Shared.Dtos.Ui;
-using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Dtos.Ui;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Client.Extensions;
 
 namespace ControlR.Web.Client.Services;
@@ -11,7 +11,7 @@ public class ViewerHubClient(IMessenger messenger)
 
   public async Task InvokeToast(ToastInfo toastInfo)
   {
-    var toastMessage = new ToastMessage(
+    var toastMessage = new MudToastMessage(
       toastInfo.Message,
       toastInfo.MessageSeverity.ToMudSeverity());
 

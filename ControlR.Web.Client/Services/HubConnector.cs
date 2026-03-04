@@ -70,7 +70,7 @@ internal class HubConnector(
       };
       hub.ConnectThrew += async (ex) =>
       {
-        await _messenger.Send(new ToastMessage(ex.Message, Severity.Error));
+        await _messenger.Send(new MudToastMessage(ex.Message, Severity.Error));
       };
       _configuredHubs.Add(hub);
     }

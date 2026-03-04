@@ -4,6 +4,8 @@ namespace ControlR.Web.Server.Primitives;
 
 /// <summary>
 /// Describes the success or failure of an HTTP operation with error codes.
+/// This is designed to be used by services invoked by HTTP endpoints, so the result can
+/// be converted to an appropriate HTTP response based on the error code and reason.
 /// </summary>
 public class HttpResult
 {

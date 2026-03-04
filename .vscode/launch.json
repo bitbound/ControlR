@@ -55,6 +55,17 @@
       }
     },
     {
+      "name": "ViewerExample (Debug)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/Examples/ControlR.AvaloniaViewerExample/bin/Debug/net10.0/ControlR.AvaloniaViewerExample.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/Examples/ControlR.AvaloniaViewerExample",
+      "launchSettingsProfile": "Run",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
       "name": "DesktopClient (Hot Reload)",
       "type": "coreclr",
       "request": "launch",
@@ -192,6 +203,22 @@
       }
     },
     {
+      "name": "Viewer Full Stack (Debug)",
+      "preLaunchTask": "build + compose",
+      "configurations": [
+        "Server (Debug)",
+        "Agent (Debug)",
+        "DesktopClient (Debug)",
+        "ViewerExample (Debug)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "Compounds",
+        "order": 2
+      }
+    },
+    {
       "name": "Load Test",
       "preLaunchTask": "build + compose",
       "configurations": [
@@ -202,7 +229,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 2
+        "order": 3
       }
     },
     {

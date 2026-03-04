@@ -1,8 +1,8 @@
-﻿@layout DeviceAccessLayout
+@layout DeviceAccessLayout
 @attribute [Route(ClientRoutes.DeviceAccessTerminal)]
 @attribute [Authorize]
 @using ControlR.Web.Client.Components.Layout.DeviceAccess
-@using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions
+@using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions
 
 <div class="h-100">
   @if (_loading)

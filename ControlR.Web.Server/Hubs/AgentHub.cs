@@ -1,7 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Dtos;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.DeviceManagement;
@@ -176,7 +177,7 @@ public class AgentHub(
     }
   }
 
-  public async Task<Result> SendFileContentStream(Guid streamId, ChannelReader<byte[]> stream)
+  public async Task<HubResult> SendFileContentStream(Guid streamId, ChannelReader<byte[]> stream)
   {
     try
     {
@@ -189,12 +190,12 @@ public class AgentHub(
         "file download");
 
       _logger.LogInformation("File download stream completed for stream ID: {StreamId}", streamId);
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error handling file download stream {StreamId}", streamId);
-      return Result.Fail("An error occurred while handling the file download stream.");
+      return HubResult.Fail("An error occurred while handling the file download stream.");
     }
   }
 
@@ -229,7 +230,7 @@ public class AgentHub(
     }
   }
 
-  public async Task<Result<DeviceResponseDto>> UpdateDevice(DeviceUpdateRequestDto agentDto)
+  public async Task<HubResult<DeviceResponseDto>> UpdateDevice(DeviceUpdateRequestDto agentDto)
   {
     try
     {
@@ -242,7 +243,7 @@ public class AgentHub(
 
         if (lastTenant is null)
         {
-          return Result.Fail<DeviceResponseDto>("No tenants found.");
+          return HubResult.Fail<DeviceResponseDto>("No tenants found.");
         }
 
         // Update the DTO with the assigned TenantId
@@ -251,12 +252,12 @@ public class AgentHub(
 
       if (agentDto.TenantId == Guid.Empty)
       {
-        return Result.Fail<DeviceResponseDto>("Invalid tenant ID.");
+        return HubResult.Fail<DeviceResponseDto>("Invalid tenant ID.");
       }
 
       if (!await _appDb.Tenants.AnyAsync(x => x.Id == agentDto.TenantId))
       {
-        return Result.Fail<DeviceResponseDto>("Invalid tenant ID.");
+        return HubResult.Fail<DeviceResponseDto>("Invalid tenant ID.");
       }
 
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
@@ -271,7 +272,7 @@ public class AgentHub(
 
       if (!updateResult.IsSuccess)
       {
-        return Result.Fail<DeviceResponseDto>(updateResult.Reason);
+        return HubResult.Fail<DeviceResponseDto>(updateResult.Reason);
       }
 
       var deviceEntity = updateResult.Value;
@@ -282,12 +283,12 @@ public class AgentHub(
 
       await SendDeviceUpdate(deviceEntity, Device);
 
-      return Result.Ok(Device);
+      return HubResult.Ok(Device);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while updating device.");
-      return Result.Fail<DeviceResponseDto>("An error occurred while updating the device.");
+      return HubResult.Fail<DeviceResponseDto>("An error occurred while updating the device.");
     }
   }
 
@@ -399,7 +400,7 @@ public class AgentHub(
     await _viewerHub.Clients.Groups(groupNames).ReceiveDeviceUpdate(dto);
   }
 
-  private async Task<Result<Device>> UpdateDeviceEntity(
+  private async Task<HubResult<Device>> UpdateDeviceEntity(
     DeviceUpdateRequestDto agentDto,
     DeviceConnectionContext context)
   {
@@ -407,9 +408,15 @@ public class AgentHub(
     if (_appOptions.Value.AllowAgentsToSelfBootstrap)
     {
       var device = await _deviceManager.AddOrUpdate(agentDto, context);
-      return Result.Ok(device);
+      return HubResult.Ok(device);
     }
 
-    return await _deviceManager.UpdateDevice(agentDto, context);
+    var updateResult = await _deviceManager.UpdateDevice(agentDto, context);
+    if (updateResult.IsSuccess)
+    {
+      return HubResult.Ok(updateResult.Value);
+    }
+
+    return HubResult.Fail<Device>(updateResult.Reason);
   }
 }

@@ -1,4 +1,3 @@
-﻿using System.Drawing;
 using System.Net.WebSockets;
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Messages;
@@ -6,10 +5,9 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.WebSocketRelay.Client;
@@ -19,7 +17,7 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.Common.Services;
 
-public interface IDesktopRemoteControlStream : IAsyncDisposable
+public interface IDesktopRemoteControlStream : IManagedRelayStream
 {
   Task RequestDisconnect();
   Task SendCurrentClipboardText();
@@ -60,17 +58,15 @@ internal sealed class DesktopRemoteControlStream(
   private bool _isInputBlocked;
   private IDisposable? _messageHandlerRegistration;
 
-  public async ValueTask DisposeAsync()
-  {
-    await Close();
-    _messageHandlerRegistration?.Dispose();
-    await _desktopCapturer.DisposeAsync();
-  }
-
   public async Task RequestDisconnect()
   {
     try
     {
+      if (!IsConnected)
+      {
+        await Close();
+        return;
+      }
       var dto = new SessionDisconnectRequestedDto();
       var wrapper = DtoWrapper.Create(dto, DtoType.SessionDisconnectRequested);
       await Send(wrapper, _appLifetime.ApplicationStopping).ConfigureAwait(false);
@@ -123,8 +119,8 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
       Messenger.Register<SendToastToViewerMessage>(this, HandleSendToastToViewerMessage);
       _messageHandlerRegistration = RegisterMessageHandler(this, HandleMessageReceived);
+      OnClosed(HandleConnectionClosed);
 
-      await _desktopCapturer.StartCapturingChanges(_appLifetime.ApplicationStopping);
       await _displayManager.ReloadDisplays();
 
       await SendDisplayData();
@@ -158,6 +154,21 @@ internal sealed class DesktopRemoteControlStream(
     }
   }
 
+  protected override async ValueTask DisposeAsync(bool disposing)
+  {
+    await base.DisposeAsync(disposing);
+    if (disposing)
+    {
+      _messageHandlerRegistration?.Dispose();
+      await _desktopCapturer.DisposeAsync();
+    }
+  }
+
+  private Task HandleConnectionClosed()
+  {
+    _appLifetime.StopApplication();
+    return Task.CompletedTask;
+  }
   private async Task HandleCursorChangedMessage(object subscriber, CursorChangedMessage message)
   {
     try
@@ -222,7 +233,12 @@ internal sealed class DesktopRemoteControlStream(
         case DtoType.KeyEvent:
           {
             var payload = wrapper.GetPayload<KeyEventDto>();
-            await _inputSimulator.InvokeKeyEvent(payload.Key, payload.Code, payload.IsPressed);
+            await _inputSimulator.InvokeKeyEvent(
+              payload.Key,
+              payload.Code,
+              payload.IsPressed,
+              payload.InputMode,
+              payload.Modifiers);
             break;
           }
         case DtoType.ResetKeyboardState:
@@ -453,7 +469,6 @@ internal sealed class DesktopRemoteControlStream(
   private async Task StreamScreenToViewer(CancellationToken cancellationToken)
   {
     await _desktopCapturer.StartCapturingChanges(cancellationToken);
-
     while (State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
     {
       try
@@ -492,16 +507,17 @@ internal sealed class DesktopRemoteControlStream(
     }
 
     var selectedDisplay = selectResult.Value;
+    var findResult = await _displayManager.TryFindDisplay(selectedDisplay.DeviceName);
+    if (!findResult.IsSuccess)
+    {
+      _logger.LogWarning("Selected display {DisplayName} could not be resolved.", selectedDisplay.DeviceName);
+      return null;
+    }
+
     var point = await _displayManager.ConvertPercentageLocationToAbsolute(
         selectedDisplay.DeviceName,
         percentX,
         percentY);
-
-    if (point.IsEmpty)
-    {
-      _logger.LogWarning("Unable to convert percentage location to absolute coordinates.");
-      return null;
-    }
 
     return new PointerCoordinates(percentX, percentY, point, selectedDisplay);
   }

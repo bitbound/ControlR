@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Views.Mac;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.ViewModels.Mac;
 

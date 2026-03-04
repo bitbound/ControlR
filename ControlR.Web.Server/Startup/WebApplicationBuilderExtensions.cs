@@ -22,6 +22,7 @@ using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.OpenApi;
+using ControlR.Web.Server.Services.DeviceManagement;
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions

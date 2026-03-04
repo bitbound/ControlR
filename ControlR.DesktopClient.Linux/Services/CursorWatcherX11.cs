@@ -3,7 +3,7 @@ using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.Hosting;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using System.Runtime.InteropServices;

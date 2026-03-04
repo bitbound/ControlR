@@ -1,6 +1,6 @@
-﻿using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
-using ControlR.Libraries.Shared.Dtos.HubDtos; // Added for AgentDeviceUpdateDto
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos; // Added for AgentDeviceUpdateDto
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 
@@ -38,7 +38,7 @@ internal class AgentHeartbeatTimer(
         return;
       }
 
-      var device = await _deviceDataGenerator.CreateDevice();
+      var device = await _deviceDataGenerator.GetDeviceInfo();
 
       var dto = device.CloneAs<DeviceUpdateRequestDto>(); // Changed from DeviceDto to AgentDeviceUpdateDto
 

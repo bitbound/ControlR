@@ -1,12 +1,14 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.Devices;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Api.Contracts.Dtos;
+using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
+using ControlR.Web.Client.Constants;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -29,13 +31,13 @@ public class ViewerHub(
   private readonly ILogger<ViewerHub> _logger = logger;
   private readonly UserManager<AppUser> _userManager = userManager;
 
-  public async Task<Result> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
+  public async Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
   {
     try
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Unauthorized.");
+        return HubResult.Fail("Unauthorized.");
       }
 
       _logger.LogInformation(
@@ -51,7 +53,7 @@ public class ViewerHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while closing chat session {SessionId} on device {DeviceId}.", sessionId, deviceId);
-      return Result.Fail("Agent could not be reached.");
+      return HubResult.Fail("Agent could not be reached.");
     }
   }
 
@@ -74,7 +76,7 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result> CreateTerminalSession(
+  public async Task<HubResult> CreateTerminalSession(
     Guid deviceId,
     Guid terminalSessionId)
   {
@@ -82,7 +84,7 @@ public class ViewerHub(
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Forbidden.");
+        return HubResult.Fail("Forbidden.");
       }
 
       return await _agentHub.Clients
@@ -92,7 +94,7 @@ public class ViewerHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating terminal session.");
-      return Result.Fail("An error occurred.");
+      return HubResult.Fail("An error occurred.");
     }
   }
 
@@ -115,13 +117,13 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
+  public async Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request)
   {
     try
     {
       if (await TryAuthorizeAgainstDevice(request.DeviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail<PwshCompletionsResponseDto>("Forbidden.");
+        return HubResult.Fail<PwshCompletionsResponseDto>("Forbidden.");
       }
 
       // Create a new request with ViewerConnectionId
@@ -134,11 +136,11 @@ public class ViewerHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting PowerShell command completions.");
-      return Result.Fail<PwshCompletionsResponseDto>("An error occurred.");
+      return HubResult.Fail<PwshCompletionsResponseDto>("An error occurred.");
     }
   }
 
-  public async Task<Result> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType)
+  public async Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType)
   {
     try
     {
@@ -150,19 +152,19 @@ public class ViewerHub(
 
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Unauthorized.");
+        return HubResult.Fail("Unauthorized.");
       }
 
       if (!TryGetUserId(out var userId))
       {
         _logger.LogError("Failed to get user ID for CtrlAltDel invocation.");
-        return Result.Fail("Failed to get user ID.");
+        return HubResult.Fail("Failed to get user ID.");
       }
 
       var displayNameResult = await GetDisplayName(userId);
       if (!displayNameResult.IsSuccess)
       {
-        return displayNameResult.ToResult();
+        return HubResult.Fail(displayNameResult.Reason ?? "Failed to resolve display name.");
       }
 
       var dto = new InvokeCtrlAltDelRequestDto(
@@ -176,9 +178,8 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      return Result
-        .Fail(ex, "An error occurred while invoking CtrlAltDel.")
-        .Log(_logger);
+      _logger.LogError(ex, "An error occurred while invoking CtrlAltDel.");
+      return HubResult.Fail("An error occurred while invoking CtrlAltDel.");
     }
   }
 
@@ -292,7 +293,7 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result> RequestRemoteControlSession(
+  public async Task<HubResult> RequestRemoteControlSession(
     Guid deviceId,
     RemoteControlSessionRequestDto sessionRequestDto)
   {
@@ -300,12 +301,12 @@ public class ViewerHub(
     {
       if (Context.User is null)
       {
-        return Result.Fail("User is null.");
+        return HubResult.Fail("User is null.");
       }
 
       if (!TryGetUserId(out var userId))
       {
-        return Result.Fail("Failed to get user ID.");
+        return HubResult.Fail("Failed to get user ID.");
       }
 
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
@@ -313,7 +314,7 @@ public class ViewerHub(
       var displayNameResult = await GetDisplayName(userId);
       if (!displayNameResult.IsSuccess)
       {
-        return displayNameResult.ToResult();
+        return HubResult.Fail(displayNameResult.Reason ?? "Failed to resolve display name.");
       }
 
       var displayName = displayNameResult.Value;
@@ -327,7 +328,7 @@ public class ViewerHub(
 
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Unauthorized.");
+        return HubResult.Fail("Unauthorized.");
       }
 
       var device = authResult.Value;
@@ -352,27 +353,29 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      return Result.Fail(ex);
+      const string reason = "An error occurred while requesting the remote control session.";
+      _logger.LogError(ex, reason);
+      return HubResult.Fail(reason);
     }
   }
 
-  public async Task<Result> RequestVncSession(Guid deviceId, VncSessionRequestDto sessionRequestDto)
+  public async Task<HubResult> RequestVncSession(Guid deviceId, VncSessionRequestDto sessionRequestDto)
   {
     try
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Unauthorized.");
+        return HubResult.Fail("Unauthorized.");
       }
 
       if (Context.User is null)
       {
-        return Result.Fail("User is null.");
+        return HubResult.Fail("User is null.");
       }
 
       if (!TryGetUserId(out var userId))
       {
-        return Result.Fail("Failed to get user ID.");
+        return HubResult.Fail("Failed to get user ID.");
       }
 
       var user = await _userManager.Users
@@ -382,7 +385,7 @@ public class ViewerHub(
 
       if (user is null)
       {
-        return Result.Fail("User not found.");
+        return HubResult.Fail("User not found.");
       }
 
       var displayName = user.UserPreferences
@@ -416,7 +419,9 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      return Result.Fail(ex);
+      const string reason = "An error occurred while requesting the VNC session.";
+      _logger.LogError(ex, reason);
+      return HubResult.Fail(reason);
     }
   }
 
@@ -439,13 +444,13 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
+  public async Task<HubResult> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
   {
     try
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Unauthorized.");
+        return HubResult.Fail("Unauthorized.");
       }
 
       var user = await GetRequiredUser(q => q.Include(u => u.UserPreferences));
@@ -473,7 +478,7 @@ public class ViewerHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending chat message to agent.");
-      return Result.Fail("Agent could not be reached.");
+      return HubResult.Fail("Agent could not be reached.");
     }
   }
 
@@ -550,13 +555,13 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
+  public async Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
   {
     try
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Unauthorized.");
+        return HubResult.Fail("Unauthorized.");
       }
 
       // Create a new DTO with ViewerConnectionId
@@ -569,7 +574,7 @@ public class ViewerHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending terminal input.");
-      return Result.Fail("Agent could not be reached.");
+      return HubResult.Fail("Agent could not be reached.");
     }
   }
 
@@ -603,13 +608,13 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result> TestVncConnection(Guid guid, int port)
+  public async Task<HubResult> TestVncConnection(Guid guid, int port)
   {
     try
     {
       if (await TryAuthorizeAgainstDevice(guid) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Unauthorized.");
+        return HubResult.Fail("Unauthorized.");
       }
 
       return await _agentHub.Clients
@@ -619,7 +624,7 @@ public class ViewerHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while testing VNC connection.");
-      return Result.Fail("An error occurred while testing the VNC connection.");
+      return HubResult.Fail("An error occurred while testing the VNC connection.");
     }
   }
 
@@ -647,7 +652,7 @@ public class ViewerHub(
     }
   }
 
-  public async Task<Result> UploadFile(
+  public async Task<HubResult> UploadFile(
     FileUploadMetadata fileUploadMetadata,
     ChannelReader<byte[]> fileStream)
   {
@@ -657,20 +662,20 @@ public class ViewerHub(
 
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
       {
-        return Result.Fail("Unauthorized.");
+        return HubResult.Fail("Unauthorized.");
       }
 
       var maxUploadSize = _appOptions.CurrentValue.MaxFileTransferSize;
       if (maxUploadSize > 0 && fileUploadMetadata.FileSize > maxUploadSize)
       {
-        return Result.Fail($"File size exceeds the maximum allowed size of {maxUploadSize} bytes.");
+        return HubResult.Fail($"File size exceeds the maximum allowed size of {maxUploadSize} bytes.");
       }
 
       var device = authResult.Value;
       if (string.IsNullOrWhiteSpace(device.ConnectionId))
       {
         _logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-        return Result.Fail("Device is not currently connected.");
+        return HubResult.Fail("Device is not currently connected.");
       }
 
       var streamId = Guid.NewGuid();
@@ -699,7 +704,7 @@ public class ViewerHub(
           deviceId,
           fileUploadMetadata.FileName,
           reason);
-        return Result.Fail($"Agent failed to download file: {reason}");
+        return HubResult.Fail($"Agent failed to download file: {reason}");
       }
 
       // Await the write task to ensure all data is sent or an error occurs.
@@ -711,23 +716,23 @@ public class ViewerHub(
       {
         _logger.LogError(ex, "Error writing file stream for {FileName} to device {DeviceId}",
           fileUploadMetadata.FileName, fileUploadMetadata.DeviceId);
-        return Result.Fail("An error occurred while writing the file stream.");
+        return HubResult.Fail("An error occurred while writing the file stream.");
       }
 
-      return Result.Ok();
+      return HubResult.Ok();
     }
     catch (OperationCanceledException)
     {
       _logger.LogInformation("File upload was canceled by the user for file {FileName} to device {DeviceId}",
         fileUploadMetadata.FileName,
         fileUploadMetadata.DeviceId);
-      return Result.Fail("File upload was canceled.");
+      return HubResult.Fail("File upload was canceled.");
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error uploading file {FileName} to device {DeviceId}",
         fileUploadMetadata.FileName, fileUploadMetadata.DeviceId);
-      return Result.Fail("An error occurred during file upload.");
+      return HubResult.Fail("An error occurred during file upload.");
     }
   }
 
@@ -745,7 +750,7 @@ public class ViewerHub(
     return displayName.AsTaskResult();
   }
 
-  private async Task<Result<string>> GetDisplayName(Guid userId)
+  private async Task<HubResult<string>> GetDisplayName(Guid userId)
   {
     var user = await _userManager.Users
       .AsNoTracking()
@@ -754,9 +759,8 @@ public class ViewerHub(
 
     if (user is null)
     {
-      return Result
-        .Fail<string>("User not found.")
-        .Log(_logger);
+      _logger.LogError("User not found.");
+      return HubResult.Fail<string>("User not found.");
     }
 
     var displayName = user.UserPreferences
@@ -767,7 +771,7 @@ public class ViewerHub(
     {
       displayName = user.UserName ?? "";
     }
-    return Result.Ok(displayName);
+    return HubResult.Ok(displayName);
   }
 
   private async Task<AppUser> GetRequiredUser(Func<IQueryable<AppUser>, IQueryable<AppUser>>? includeBuilder = null)
@@ -790,19 +794,14 @@ public class ViewerHub(
     return user;
   }
 
-  private bool IsServerAdmin()
-  {
-    return Context.User?.IsInRole(RoleNames.ServerAdministrator) ?? false;
-  }
-
-  private async Task<Result<Device>> TryAuthorizeAgainstDevice(
+  private async Task<HubResult<Device>> TryAuthorizeAgainstDevice(
     Guid deviceId,
     [CallerMemberName] string? callerName = null)
   {
     if (Context.User is null)
     {
       _logger.LogCritical("User is null.  Authorize tag should have prevented this.");
-      return Result.Fail<Device>("User is null.  Authorize tag should have prevented this.");
+      return HubResult.Fail<Device>("User is null.  Authorize tag should have prevented this.");
     }
 
     var device = await _appDb.Devices
@@ -812,7 +811,7 @@ public class ViewerHub(
     if (device is null)
     {
       _logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return Result.Fail<Device>("Device not found.");
+      return HubResult.Fail<Device>("Device not found.");
     }
 
     var authResult = await _authorizationService.AuthorizeAsync(
@@ -822,7 +821,7 @@ public class ViewerHub(
 
     if (authResult.Succeeded)
     {
-      return Result.Ok(device);
+      return HubResult.Ok(device);
     }
 
     _logger.LogCritical(
@@ -831,7 +830,7 @@ public class ViewerHub(
       deviceId,
       callerName);
 
-    return Result.Fail<Device>("Unauthorized.");
+    return HubResult.Fail<Device>("Unauthorized.");
   }
 
   private bool TryGetTenantId(

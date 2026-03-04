@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Viewer.Common.State;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -141,7 +141,7 @@ public partial class Chat : ComponentBase, IDisposable
 
             if (!result.IsSuccess)
             {
-                Logger.LogError("Failed to close chat session: {Error}", result.Exception?.Message);
+              Logger.LogError("Failed to close chat session: {Error}", result.Reason);
                 Snackbar.Add("Failed to close chat session", Severity.Warning);
             }
         }
@@ -239,7 +239,7 @@ public partial class Chat : ComponentBase, IDisposable
       var result = await ViewerHub.Server.SendChatMessage(DeviceAccessState.CurrentDevice.Id, chatDto);
       if (!result.IsSuccess)
       {
-        Logger.LogError("Failed to send chat message: {Error}", result.Exception?.Message);
+        Logger.LogError("Failed to send chat message: {Error}", result.Reason);
         Snackbar.Add("Failed to send message", Severity.Error);
       }
 

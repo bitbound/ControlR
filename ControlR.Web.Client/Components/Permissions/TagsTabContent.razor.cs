@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using ControlR.Web.Client.DataValidation;
 using ControlR.Web.Client.Extensions;
 using ControlR.Web.Client.StateManagement.Stores;
 using Microsoft.AspNetCore.Components;
@@ -82,7 +83,8 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    var createResult = await ControlrApi.CreateTag(_newTagName, TagType.Permission);
+    var createRequest = new TagCreateRequestDto(_newTagName, TagType.Permission);
+    var createResult = await ControlrApi.Tags.CreateTag(createRequest);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add(createResult.Reason, Severity.Error);
@@ -102,14 +104,16 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    var result =
-      await DialogService.ShowMessageBox("Confirm Deletion", "Are you sure you want to delete this tag?", "Yes", "No");
+    var result = await DialogService.ShowMessageBox(
+        "Confirm Deletion",
+        "Are you sure you want to delete this tag?", "Yes", "No");
+
     if (!result.HasValue || !result.Value)
     {
       return;
     }
 
-    var deleteResult = await ControlrApi.DeleteTag(_selectedTag.Id);
+    var deleteResult = await ControlrApi.Tags.DeleteTag(_selectedTag.Id);
     if (!deleteResult.IsSuccess)
     {
       Snackbar.Add(deleteResult.Reason, Severity.Error);
@@ -117,6 +121,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     }
 
     await TagStore.Remove(_selectedTag.Id);
+    _selectedTag = null;
     Snackbar.Add("Tag deleted", Severity.Success);
   }
 
@@ -127,7 +132,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       Snackbar.Add("No tag selected", Severity.Error);
       return;
     }
-    
+
     await SetDeviceTag(args.isToggled, _selectedTag, args.device.Id);
   }
   private async Task HandleNewTagKeyDown(KeyboardEventArgs args)
@@ -167,7 +172,8 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    var renameResult = await ControlrApi.RenameTag(_selectedTag.Id, response);
+    var renameRequest = new TagRenameRequestDto(_selectedTag.Id, response);
+    var renameResult = await ControlrApi.Tags.RenameTag(renameRequest);
     if (!renameResult.IsSuccess)
     {
       Snackbar.Add(renameResult.Reason, Severity.Error);
@@ -184,7 +190,8 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     {
       if (isToggled)
       {
-        var addResult = await ControlrApi.AddDeviceTag(deviceId, tag.Id);
+        var addRequest = new DeviceTagAddRequestDto(deviceId, tag.Id);
+        var addResult = await ControlrApi.DeviceTags.AddDeviceTag(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -194,7 +201,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.RemoveDeviceTag(deviceId, tag.Id);
+        var removeResult = await ControlrApi.DeviceTags.RemoveDeviceTag(deviceId, tag.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);
@@ -222,7 +229,8 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     {
       if (isToggled)
       {
-        var addResult = await ControlrApi.AddUserTag(userId, tag.Id);
+        var addRequest = new UserTagAddRequestDto(userId, tag.Id);
+        var addResult = await ControlrApi.UserTags.AddUserTag(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -232,7 +240,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.RemoveUserTag(userId, tag.Id);
+        var removeResult = await ControlrApi.UserTags.RemoveUserTag(userId, tag.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);

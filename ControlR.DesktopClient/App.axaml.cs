@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Avalonia;
@@ -18,12 +19,15 @@ namespace ControlR.DesktopClient;
 public partial class App : Application
 {
   private readonly CancellationTokenSource _appShutdownTokenSource = new();
+  private readonly Lock _shutdownLock = new();
+
   public static Window MainWindow
   {
     get =>
       ServiceProvider.GetRequiredService<IMainWindowProvider>().MainWindow;
   }
   public static IServiceProvider ServiceProvider => StaticServiceProvider.Instance;
+
   public override void Initialize()
   {
     AvaloniaXamlLoader.Load(this);
@@ -53,13 +57,18 @@ public partial class App : Application
 
       StaticServiceProvider.Build(controlledLifetime, instanceId);
 
+      controlledLifetime.Exit += (_, _) =>
+      {
+        HandleShutdownStarted().Forget();
+      };
+
       // Set explicit shutdown for classic desktop style.
       if (controlledLifetime is ClassicDesktopStyleApplicationLifetime desktop)
       {
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
         desktop.ShutdownRequested += (_, _) =>
         {
-          _appShutdownTokenSource.Cancel();
+          HandleShutdownStarted().Forget();
         };
         if (SystemEnvironment.Instance.IsDebug)
         {
@@ -124,7 +133,41 @@ public partial class App : Application
     }
     catch (Exception ex)
     {
-      System.Diagnostics.Debug.WriteLine($"Error reporting assembly version: {ex.Message}");
+      Debug.WriteLine($"Error reporting assembly version: {ex.Message}");
+    }
+  }
+
+  private async Task HandleShutdownStarted()
+  {
+    if (!_shutdownLock.TryEnter())
+    {
+      return;
+    }
+
+    try
+    {
+      _appShutdownTokenSource.Cancel();
+    }
+    catch (Exception ex)
+    {
+      Debug.WriteLine($"Error cancelling app lifetime token: {ex.Message}");
+    }
+
+    try
+    {
+      var hostedServices = StaticServiceProvider.Instance.GetServices<IHostedService>();
+      using var cts  = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      var stopTasks = hostedServices.Select(x => x.StopAsync(cts.Token));
+      await Task.WhenAll(stopTasks).WaitAsync(cts.Token);
+    }
+    catch (Exception ex)
+    {
+      Debug.WriteLine($"Error during shutdown: {ex.Message}");
+      Environment.Exit(1);
+    }
+    finally
+    {
+      _shutdownLock.Exit();
     }
   }
 
@@ -139,7 +182,7 @@ public partial class App : Application
       }
       catch (Exception ex)
       {
-        System.Diagnostics.Debug.WriteLine($"Error starting hosted service {hostedService.GetType().Name}: {ex.Message}");
+        Debug.WriteLine($"Error starting hosted service {hostedService.GetType().Name}: {ex.Message}");
       }
     }
   }

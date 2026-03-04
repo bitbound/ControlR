@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsTestProject>false</IsTestProject>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <OutputType>Exe</OutputType>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
@@ -9,7 +11,8 @@
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
 		<PackageReference Include="Moq" />
-		<PackageReference Include="xunit" />
+		<PackageReference Include="xunit.v3.core" />
+		<PackageReference Include="xunit.v3.extensibility.core" />
 		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

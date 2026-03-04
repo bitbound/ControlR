@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Models;
 using ControlR.DesktopClient.ViewModels;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 

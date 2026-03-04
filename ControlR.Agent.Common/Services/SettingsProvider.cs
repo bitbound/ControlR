@@ -1,7 +1,7 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using ControlR.Agent.Common.Startup;
-using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services;

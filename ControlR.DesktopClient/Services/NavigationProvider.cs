@@ -53,7 +53,7 @@ internal class NavigationProvider(
     mainWindowVm.CurrentViewModel = viewModel;
     await mainWindowVm.CurrentViewModel.Initialize();
 
-    SetActiveViewModelType(viewModel?.GetType() ?? typeof(TViewModel));
+    SetActiveViewModelType(viewModel.GetType());
   }
 
   public void ShowMainWindow()

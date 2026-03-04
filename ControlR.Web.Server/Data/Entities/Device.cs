@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.InteropServices;
-using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Web.Server.Data.Entities.Bases;
 
 namespace ControlR.Web.Server.Data.Entities;

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Libraries.TestingUtilities;
 

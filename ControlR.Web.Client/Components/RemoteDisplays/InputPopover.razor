@@ -1,37 +1,35 @@
 @inherits DisposableComponent
+@using ControlR.Libraries.Api.Contracts.Enums
 
 <div class="d-flex flex-column gap-2">
+
   <MudTooltip Text="Enable view-only mode">
     <MudSwitch @bind-Value="RemoteControlState.IsViewOnlyEnabled" Color="Color.Success" Label="View Only"
-      ThumbIcon="@(Icons.Material.Filled.RemoveRedEye)" />
+               ThumbIcon="@(Icons.Material.Filled.RemoveRedEye)" />
   </MudTooltip>
 
   @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows)
   {
     <MudTooltip Text="Block user input on the remote device">
-      <MudSwitch
-        @bind-Value:get="RemoteControlState.IsBlockUserInputEnabled"
-        @bind-Value:set="HandleBlockInputToggled"
-        Disabled="_isBlockInputDisabled"
-        Color="Color.Warning" 
-        Label="Block User Input"
-        ThumbIcon="@(Icons.Material.Filled.Block)" />
+      <MudSwitch @bind-Value:get="RemoteControlState.IsBlockUserInputEnabled" @bind-Value:set="HandleBlockInputToggled"
+                 Disabled="_isBlockInputDisabled" Color="Color.Warning" Label="Block User Input"
+                 ThumbIcon="@(Icons.Material.Filled.Block)" />
     </MudTooltip>
   }
 
   <MudText Typo="Typo.caption" Class="mt-2">Clipboard</MudText>
   <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Send)" Size="Size.Small"
-    OnClick="HandleSendClipboardClicked" FullWidth>
+             OnClick="HandleSendClipboardClicked" FullWidth>
     Send Clipboard
   </MudButton>
 
   <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.CallReceived)" Size="Size.Small"
-    OnClick="HandleReceiveClipboardClicked" FullWidth>
+             OnClick="HandleReceiveClipboardClicked" FullWidth>
     Receive Clipboard
   </MudButton>
 
   <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Keyboard)" Size="Size.Small"
-    OnClick="HandleTypeClipboardClicked" FullWidth>
+             OnClick="HandleTypeClipboardClicked" FullWidth>
     Type Clipboard
   </MudButton>
 
@@ -39,9 +37,25 @@
   {
     <MudText Typo="Typo.caption" Class="mt-2">Security</MudText>
     <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Shield)" Size="Size.Small"
-      OnClick="HandleInvokeCtrlAltDelClicked" FullWidth>
+               OnClick="HandleInvokeCtrlAltDelClicked" FullWidth>
       Ctrl+Alt+Del
     </MudButton>
   }
+
+  <div class="mt-4">
+    <MudText Typo="Typo.caption">Keyboard Input Mode</MudText>
+    <MudRadioGroup Value="RemoteControlState.KeyboardInputMode"
+                   ValueChanged="@((KeyboardInputMode v) => HandleKeyboardInputModeChanged(v))">
+      <MudRadio Value="@(KeyboardInputMode.Auto)" Color="Color.Primary" Size="Size.Small">
+        Auto
+      </MudRadio>
+      <MudRadio Value="@(KeyboardInputMode.Physical)" Color="Color.Primary" Size="Size.Small">
+        Physical
+      </MudRadio>
+      <MudRadio Value="@(KeyboardInputMode.Virtual)" Color="Color.Primary" Size="Size.Small">
+        Virtual
+      </MudRadio>
+    </MudRadioGroup>
+  </div>
 
 </div>

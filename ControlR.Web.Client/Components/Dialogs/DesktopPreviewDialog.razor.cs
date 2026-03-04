@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using Microsoft.AspNetCore.Components;
 
 namespace ControlR.Web.Client.Components.Dialogs;
@@ -52,7 +52,7 @@ public partial class DesktopPreviewDialog : ComponentBase
       _previewImageDataUri = null;
       await InvokeAsync(StateHasChanged);
 
-      var result = await ControlrApi.GetDesktopPreview(Device.Id, Session.ProcessId);
+      var result = await ControlrApi.DesktopPreview.GetDesktopPreview(Device.Id, Session.ProcessId);
 
       if (result.IsSuccess && result.Value.Length > 0)
       {

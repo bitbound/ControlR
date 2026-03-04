@@ -2,6 +2,7 @@
 						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 						 x:Class="ControlR.DesktopClient.App"
 						 xmlns:local="using:ControlR.DesktopClient"
+						 xmlns:common="using:ControlR.DesktopClient.Common"
 						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
 						 xmlns:vmf="using:ControlR.DesktopClient.ViewModels.Fakes"
 			       xmlns:brand="using:ControlR.Libraries.Branding"
@@ -15,7 +16,7 @@
 	<Application.Resources>
 		<ResourceDictionary>
 			<ResourceDictionary.MergedDictionaries>
-				<ResourceInclude Source="/Resources/Theme.axaml" />
+				<ResourceInclude Source="avares://ControlR.Libraries.Avalonia/Resources/Theme.axaml" />
 				<ResourceInclude Source="/Resources/Converters.axaml" />
 				<ResourceInclude Source="/Resources/Icons.axaml" />
 			</ResourceDictionary.MergedDictionaries>
@@ -34,19 +35,19 @@
 			</FluentTheme.Palettes>
 		</FluentTheme>
 
-		<StyleInclude Source="/Resources/Styles.axaml" />
+		<StyleInclude Source="avares://ControlR.Libraries.Avalonia/Resources/Styles.axaml" />
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
 	</Application.Styles>
 
 
 	<TrayIcon.Icons>
 		<TrayIcons>
-			<TrayIcon Icon="/Assets/appicon.ico" ToolTipText="ControlR" Command="{Binding ShowWindowCommand}">
+			<TrayIcon Icon="/Assets/appicon.ico" ToolTipText="ControlR" Command="{Binding ShowMainWindowCommand}">
 				<TrayIcon.Menu>
 					<NativeMenu>
-						<NativeMenuItem Header="Show" Command="{Binding ShowWindowCommand}" />
+						<NativeMenuItem Header="{x:Static common:Localization.TrayShow}" Command="{Binding ShowMainWindowCommand}" />
 						<NativeMenuItemSeparator />
-						<NativeMenuItem Header="Exit" Command="{Binding ExitApplicationCommand}" />
+						<NativeMenuItem Header="{x:Static common:Localization.TrayExit}" Command="{Binding ExitApplicationCommand}" />
 					</NativeMenu>
 				</TrayIcon.Menu>
 			</TrayIcon>

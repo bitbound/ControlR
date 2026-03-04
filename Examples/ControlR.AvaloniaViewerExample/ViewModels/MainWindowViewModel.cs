@@ -1,6 +1,14 @@
-﻿namespace ControlR.AvaloniaViewerExample.ViewModels;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using ControlR.Libraries.Viewer.Common.Options;
 
-public partial class MainWindowViewModel : ViewModelBase
+namespace ControlR.AvaloniaViewerExample.ViewModels;
+
+public interface IMainWindowViewModel
 {
-  public string Greeting { get; } = "Welcome to Avalonia!";
+  ControlrViewerOptions ViewerOptions { get; }
+}
+
+public partial class MainWindowViewModel(ControlrViewerOptions viewerOptions) : ObservableObject, IMainWindowViewModel
+{
+  public ControlrViewerOptions ViewerOptions { get; } = viewerOptions;
 }

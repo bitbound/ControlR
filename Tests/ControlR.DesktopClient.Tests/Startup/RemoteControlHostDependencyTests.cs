@@ -1,7 +1,7 @@
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Services;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

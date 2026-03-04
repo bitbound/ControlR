@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using PolyType;
 using StreamJsonRpc;
 

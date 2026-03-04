@@ -3,7 +3,6 @@ using ControlR.DesktopClient.ViewModels.Linux;
 using ControlR.DesktopClient.ViewModels.Mac;
 using ControlR.Libraries.Hosting;
 using ControlR.Libraries.Shared.Services;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;

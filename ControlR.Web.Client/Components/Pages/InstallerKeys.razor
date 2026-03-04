@@ -1,7 +1,7 @@
 @attribute [Route(ClientRoutes.InstallerKeys)]
 @attribute [Authorize(Roles = $"{RoleNames.TenantAdministrator}, {RoleNames.InstallerKeyManager}")]
 
-@using ControlR.Libraries.Shared.Dtos.ServerApi
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi
 @using ControlR.Web.Client.Authz
 @using MudBlazor
 

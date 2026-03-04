@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 
 namespace ControlR.Libraries.Viewer.Common.Models;
 

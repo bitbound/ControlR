@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup Condition="'$(IsNuGetPackage)' == 'true' ">
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IncludeReferencedProjects>true</IncludeReferencedProjects>
+    <Deterministic>true</Deterministic>
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+</Project>

@@ -142,7 +142,7 @@ public partial class DeviceAccessLayout
 
     try
     {
-      var result = await ControlrApi.Value.GetDevice(_deviceId);
+      var result = await ControlrApi.Value.Devices.GetDevice(_deviceId);
       if (!result.IsSuccess || result.Value is null)
       {
         _errorText = "Device not found.";

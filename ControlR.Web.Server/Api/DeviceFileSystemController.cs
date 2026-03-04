@@ -1,6 +1,6 @@
-using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -77,8 +77,8 @@ public class DeviceFileSystemController : ControllerBase
     }
   }
 
-  [HttpDelete("delete/{deviceId:guid}")]
-  public async Task<IActionResult> DeleteFile(
+  [HttpDelete("delete-path/{deviceId:guid}")]
+  public async Task<IActionResult> DeletePath(
     [FromRoute] Guid deviceId,
     [FromBody] FileDeleteRequestDto request,
     [FromServices] AppDb appDb,
@@ -390,7 +390,7 @@ public class DeviceFileSystemController : ControllerBase
       {
         FileName = fileName
       };
-      
+
       Response.Headers.ContentDisposition = contentDisposition.ToString();
       Response.ContentType = "text/plain";
 

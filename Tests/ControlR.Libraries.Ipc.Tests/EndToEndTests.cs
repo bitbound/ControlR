@@ -1,11 +1,10 @@
 using ControlR.Libraries.Ipc.Interfaces;
-using ControlR.Libraries.Shared.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace ControlR.Libraries.Ipc.Tests;
 
@@ -70,7 +69,7 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
 
     // Assert
     Assert.True(result);
-    Assert.True(await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+    Assert.True(await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
     Assert.True(receivedResponse);
 
     mockAgentService.Verify(m => m.SendChatResponse(It.IsAny<ChatResponseIpcDto>()), Times.Once);
@@ -83,14 +82,14 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     services?.Dispose();
   }
 
-  public async Task DisposeAsync()
+  public async ValueTask DisposeAsync()
   {
     _cts?.Cancel();
     _cts?.Dispose();
     await Task.CompletedTask;
   }
 
-  public async Task InitializeAsync()
+  public async ValueTask InitializeAsync()
   {
     _cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
     await Task.CompletedTask;
@@ -153,7 +152,7 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
         DateTimeOffset.Now));
 
     // Assert
-    Assert.True(await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+    Assert.True(await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
     Assert.Equal(testMessage, receivedMessage);
 
     mockClientService.Verify(m => m.ReceiveChatMessage(It.IsAny<ChatMessageIpcDto>()), Times.Once);

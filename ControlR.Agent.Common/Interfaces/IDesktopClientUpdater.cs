@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Interfaces;

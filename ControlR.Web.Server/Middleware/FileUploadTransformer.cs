@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 

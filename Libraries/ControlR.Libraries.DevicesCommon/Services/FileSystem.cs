@@ -8,61 +8,35 @@ namespace ControlR.Libraries.DevicesCommon.Services;
 public interface IFileSystem
 {
   Task AppendAllLinesAsync(string path, IEnumerable<string> lines);
-
   void CopyFile(string sourceFile, string destinationFile, bool overwrite);
-
   DirectoryInfo CreateDirectory(string directoryPath);
-
   Stream CreateFile(string filePath);
-
   FileStream CreateFileStream(string filePath, FileMode mode);
-
   void DeleteDirectory(string directoryPath, bool recursive);
-
   void DeleteFile(string filePath);
-
   bool DirectoryExists(string directoryPath);
-
   void ExtractZipArchive(string sourceArchiveFileName, string destinationDirectoryName, bool overwriteFiles);
-
   bool FileExists(string path);
-
   string[] GetDirectories(string path);
-
   DirectoryInfo GetDirectoryInfo(string directoryPath);
-
   DriveInfo[] GetDrives();
-
   FileInfo GetFileInfo(string filePath);
-
-  FileVersionInfo GetFileVersionInfo(string filePath);
-
   string[] GetFiles(string path);
 
   public string[] GetFiles(string path, string searchPattern);
-
   public string[] GetFiles(string path, string searchPattern, SearchOption searchOption);
-
   public string[] GetFiles(string path, string searchPattern, EnumerationOptions enumerationOptions);
 
+  FileVersionInfo GetFileVersionInfo(string filePath);
   string JoinPaths(char separator, params string[] paths);
-
   void MoveFile(string sourceFile, string destinationFile, bool overwrite);
-
   FileStream OpenFileStream(string path, FileMode mode, FileAccess access);
-
   FileStream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare);
-
   Task<byte[]> ReadAllBytesAsync(string path);
-
   Task<string[]> ReadAllLinesAsync(string path);
-
   string ReadAllText(string filePath);
-
   Task<string> ReadAllTextAsync(string path);
-
   Task ReplaceLineInFile(string filePath, string matchPattern, string replaceLineWith, int maxMatches = -1);
-
   /// <summary>
   /// Resolves the absolute file path for the specified file name using `which` on Unix-based systems or `where.exe` on Windows.
   /// </summary>
@@ -70,17 +44,12 @@ public interface IFileSystem
   /// <returns>A task that represents the asynchronous operation. The result contains the absolute file path if the file is
   /// found; otherwise, an error result.</returns>
   Task<Result<string>> ResolveFilePath(string fileName);
-
   [SupportedOSPlatform("linux")]
   [SupportedOSPlatform("macos")]
   void SetUnixFileMode(string filePath, UnixFileMode fileMode);
-
   Task WriteAllBytesAsync(string path, byte[] buffer, CancellationToken cancellationToken = default);
-
   Task WriteAllLines(string path, List<string> lines);
-
   void WriteAllText(string filePath, string contents);
-
   Task WriteAllTextAsync(string path, string content);
 }
 
@@ -158,11 +127,6 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
     return new FileInfo(filePath);
   }
 
-  public FileVersionInfo GetFileVersionInfo(string filePath)
-  {
-    return FileVersionInfo.GetVersionInfo(filePath);
-  }
-
   public string[] GetFiles(string path)
   {
     return Directory.GetFiles(path);
@@ -181,6 +145,11 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
   public string[] GetFiles(string path, string searchPattern, EnumerationOptions enumerationOptions)
   {
     return Directory.GetFiles(path, searchPattern, enumerationOptions);
+  }
+
+  public FileVersionInfo GetFileVersionInfo(string filePath)
+  {
+    return FileVersionInfo.GetVersionInfo(filePath);
   }
 
   public string JoinPaths(char separator, params string[] paths)

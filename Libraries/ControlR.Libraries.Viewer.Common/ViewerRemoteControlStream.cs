@@ -1,6 +1,6 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
-using Bitbound.SimpleMessenger;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.WebSocketRelay.Client;
 
@@ -13,8 +13,14 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
   Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
   Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
   Task SendCloseStreamingSession(CancellationToken cancellationToken);
-  Task SendKeyEvent(string key, string? code, bool isPressed, CancellationToken cancellationToken);
   Task SendKeyboardStateReset(CancellationToken cancellationToken);
+  Task SendKeyEvent(
+    string key,
+    string? code,
+    bool isPressed,
+    KeyboardInputMode inputMode,
+    KeyEventModifiersDto modifiers,
+    CancellationToken cancellationToken);
   Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY,
     CancellationToken cancellationToken);
   Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY,
@@ -93,17 +99,6 @@ public class ViewerRemoteControlStream(
       });
   }
 
-  public async Task SendKeyEvent(string key, string? code, bool isPressed, CancellationToken cancellationToken)
-  {
-    await TrySend(
-      async () =>
-      {
-        var dto = new KeyEventDto(key, code ?? string.Empty, isPressed);
-        var wrapper = DtoWrapper.Create(dto, DtoType.KeyEvent);
-        await Send(wrapper, cancellationToken);
-      });
-  }
-
   public async Task SendKeyboardStateReset(CancellationToken cancellationToken)
   {
     await TrySend(
@@ -111,6 +106,23 @@ public class ViewerRemoteControlStream(
       {
         var dto = new ResetKeyboardStateDto();
         var wrapper = DtoWrapper.Create(dto, DtoType.ResetKeyboardState);
+        await Send(wrapper, cancellationToken);
+      });
+  }
+
+  public async Task SendKeyEvent(
+    string key,
+    string? code,
+    bool isPressed,
+    KeyboardInputMode inputMode,
+    KeyEventModifiersDto modifiers,
+    CancellationToken cancellationToken)
+  {
+    await TrySend(
+      async () =>
+      {
+        var dto = new KeyEventDto(key, code ?? string.Empty, isPressed, inputMode, modifiers);
+        var wrapper = DtoWrapper.Create(dto, DtoType.KeyEvent);
         await Send(wrapper, cancellationToken);
       });
   }

@@ -1,4 +1,5 @@
-﻿using Avalonia;
+using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.Libraries.Shared.Constants;
 
@@ -54,12 +55,12 @@ internal sealed class Program
         }
         else
         {
-          Console.Error.Write("Unexpected initialization state.");
+          Debug.WriteLine("Unexpected initialization state.");
         }
       }
       catch (InvalidOperationException ex) when (ex.Message.Contains("RenderTimer"))
       {
-        Console.Error.WriteLine(
+        Debug.WriteLine(
           "An error occurred internally within Avalonia while activating the RenderTimer. " +
           "This can occur sometimes when the device is in a low-power mode. " +
           $"Error: {ex.Message}");
@@ -69,8 +70,8 @@ internal sealed class Program
       }
       catch (Exception ex)
       {
-        Console.Error.WriteLine($"A fatal error occurred: {ex}");
-        Thread.Sleep(5_000);
+        Debug.WriteLine($"A fatal error occurred: {ex}");
+        throw;
       }
       break;
     }

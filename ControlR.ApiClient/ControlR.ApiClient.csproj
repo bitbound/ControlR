@@ -1,34 +1,43 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Title>ControlR API Client</Title>
-    <Description>The API client for ControlR, an open-source remote control and remote access
-      solution.</Description>
+    <Description>
+      The API client for ControlR, an open-source remote control and remote access solution.
+    </Description>
     <PackageIcon>appicon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IsNuGetPackage>true</IsNuGetPackage>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\.assets\appicon.png">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Kiota.Bundle" />
-    <PackageReference Include="Microsoft.Extensions.Compliance.Redaction" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Http" />
-    <ProjectReference
-      Include="..\Libraries\ControlR.Libraries.DataRedaction\ControlR.Libraries.DataRedaction.csproj" />
     <None Update="README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Compliance.Redaction" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Update="Bitbound.Analyzers.MemberOrder">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Api.Contracts\ControlR.Libraries.Api.Contracts.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.DataRedaction\ControlR.Libraries.DataRedaction.csproj" />
   </ItemGroup>
 </Project>

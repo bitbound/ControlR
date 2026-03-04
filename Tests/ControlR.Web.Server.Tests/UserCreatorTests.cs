@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -86,7 +86,7 @@ public class UserCreatorTests(ITestOutputHelper output)
 
         var tenant = new Tenant { Name = "Existing Tenant" };
         appDb.Tenants.Add(tenant);
-        await appDb.SaveChangesAsync();
+        await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await userCreator.CreateUser("user@example.com", "Password123!", tenant.Id);
 
@@ -120,7 +120,7 @@ public class UserCreatorTests(ITestOutputHelper output)
 
         var tenant = new Tenant { Name = "Test Tenant" };
         appDb.Tenants.Add(tenant);
-        await appDb.SaveChangesAsync();
+        await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var missingRoleId = Guid.NewGuid();
 
@@ -134,7 +134,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         Assert.Contains(result.IdentityResult.Errors, e => e.Description.Contains("Roles not found"));
 
         // Verify user was deleted
-        var user = await appDb.Users.FirstOrDefaultAsync(u => u.Email == "fail@example.com");
+        var user = await appDb.Users.FirstOrDefaultAsync(u => u.Email == "fail@example.com", TestContext.Current.CancellationToken);
         Assert.Null(user);
     }
 
@@ -148,7 +148,7 @@ public class UserCreatorTests(ITestOutputHelper output)
 
         var tenant = new Tenant { Name = "Test Tenant" };
         appDb.Tenants.Add(tenant);
-        await appDb.SaveChangesAsync();
+        await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var missingTagId = Guid.NewGuid();
 
@@ -162,7 +162,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         Assert.Contains(result.IdentityResult.Errors, e => e.Description.Contains("Tags not found"));
 
         // Verify user was deleted
-        var user = await appDb.Users.FirstOrDefaultAsync(u => u.Email == "failtags@example.com");
+        var user = await appDb.Users.FirstOrDefaultAsync(u => u.Email == "failtags@example.com", TestContext.Current.CancellationToken);
         Assert.Null(user);
     }
 
@@ -253,7 +253,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         var tag1 = new Tag { Name = "Tag1", Tenant = tenant };
         var tag2 = new Tag { Name = "Tag2", Tenant = tenant };
         appDb.Tags.AddRange(tag1, tag2);
-        await appDb.SaveChangesAsync();
+        await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Create custom role
         var role = new AppRole { Name = "CustomRole" };
@@ -278,7 +278,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         // Verify tags
         // Need to reload user with tags
         var userWithTags = await appDb.Users.Include(u => u.Tags)
-            .FirstOrDefaultAsync(u => u.Id == result.User.Id);
+            .FirstOrDefaultAsync(u => u.Id == result.User.Id, TestContext.Current.CancellationToken);
         Assert.NotNull(userWithTags);
         Assert.NotNull(userWithTags.Tags);
         Assert.Equal(2, userWithTags.Tags.Count);
@@ -297,7 +297,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         // Create a tenant first
         var tenant = new Tenant { Name = "Test Tenant" };
         appDb.Tenants.Add(tenant);
-        await appDb.SaveChangesAsync();
+        await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var email = "tenantuser@example.com";
         var result = await userCreator.CreateUser(email, "Password123!", tenant.Id);

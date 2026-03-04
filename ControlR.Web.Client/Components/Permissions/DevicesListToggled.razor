@@ -71,7 +71,7 @@
       SortDefinitions = [_defaultSort]
     };
 
-    var response = await ControlrApi.SearchDevices(request);
+    var response = await ControlrApi.Devices.SearchDevices(request);
     if (!response.IsSuccess)
     {
       Snackbar.Add("Failed to load devices", Severity.Error);

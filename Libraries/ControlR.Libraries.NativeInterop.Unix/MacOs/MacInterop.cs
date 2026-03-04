@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Diagnostics;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
@@ -8,7 +9,7 @@ namespace ControlR.Libraries.NativeInterop.Unix.MacOs;
 
 public interface IMacInterop
 {
-  Result InvokeKeyEvent(string key, string? code, bool isPressed);
+  Result InvokeKeyEvent(string key, string code, bool isPressed, KeyboardInputMode inputMode);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
   bool IsMacAccessibilityPermissionGranted();
@@ -53,7 +54,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
   // Track modifier key states
   private bool _shiftDown;
 
-  public Result InvokeKeyEvent(string key, string? code, bool isPressed)
+  public Result InvokeKeyEvent(string key, string code, bool isPressed, KeyboardInputMode inputMode)
   {
     if (string.IsNullOrEmpty(key))
     {
@@ -68,17 +69,17 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       {
         case "Shift": _shiftDown = isPressed; break;
         case "Control": _controlDown = isPressed; break;
-        case "Alt":
-        case "Command": _commandDown = isPressed; break;
         case "Meta":
+        case "Command": _commandDown = isPressed; break;
+        case "Alt":
         case "Option": _optionDown = isPressed; break;
       }
 
       // Send modifier key event
-      if (!ConvertBrowserKeyArgToVirtualKey(key, code, out var modVirtualKey))
+      if (!ConvertBrowserKeyArgToVirtualKey(key, code, inputMode, out var modVirtualKey))
       {
-        _logger.LogWarning("Failed to convert modifier key to virtual key: {Key} (code: {Code})", key, code);
-        return Result.Fail($"Failed to convert modifier key to virtual key: {key} (code: {code})");
+        _logger.LogWarning("Failed to convert modifier key to virtual key: {Key} (code: {Code}, mode: {InputMode})", key, code, inputMode);
+        return Result.Fail($"Failed to convert modifier key to virtual key: {key} (code: {code}, mode: {inputMode})");
       }
       try
       {
@@ -101,16 +102,35 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       }
     }
 
-    // Non-modifier key: set modifier flags if any are down
-    if (!ConvertBrowserKeyArgToVirtualKey(key, code, out var virtualKey))
+    // In virtual/auto mode, prefer direct Unicode insertion for printable characters
+    // to preserve international layouts and IME/composition output.
+    // Keep physical mode and shortcut combinations as key events.
+    if (inputMode is not KeyboardInputMode.Physical &&
+        key.Length == 1 &&
+        !char.IsControl(key[0]) &&
+        !_controlDown &&
+        !_optionDown &&
+        !_commandDown)
     {
-      // TODO: Consider enhanced international keyboard support:
-      // 1. Add common international characters to the key map
-      // 2. Use system keyboard layout detection to adapt mappings  
-      // 3. Research macOS APIs for dynamic keyboard layout detection
+      if (isPressed)
+      {
+        TypeText(key);
+      }
+
+      return Result.Ok();
+    }
+
+    // Non-modifier key: set modifier flags if any are down
+    if (!ConvertBrowserKeyArgToVirtualKey(key, code, inputMode, out var virtualKey))
+    {
+      if (!isPressed)
+      {
+        _logger.LogDebug("Ignoring unmapped key release. Key: {Key}, Code: {Code}, Mode: {InputMode}", key, code, inputMode);
+        return Result.Ok();
+      }
 
       // Fall back to TypeText for unmapped keys (supports Unicode)
-      if (key.Length == 1 && isPressed) // Only type on key press, not release
+      if (key.Length == 1)
       {
         _logger.LogDebug("Key '{Key}' not in map, falling back to TypeText", key);
         TypeText(key);
@@ -530,12 +550,12 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     }
   }
 
-  private static bool ConvertBrowserKeyArgToVirtualKey(string key, string? code, out ushort virtualKey)
+  private static bool ConvertBrowserKeyArgToVirtualKey(string key, string code, KeyboardInputMode inputMode, out ushort virtualKey)
   {
-    // Code-first approach (physical mode): Try to map browser KeyboardEvent.code to macOS virtual key
-    // This provides layout-independent physical key simulation
-    // When code is null, we skip this and use logical mode (key-based) instead
-    if (!string.IsNullOrWhiteSpace(code))
+    var shouldTryCode = inputMode is KeyboardInputMode.Physical or KeyboardInputMode.Auto;
+    var shouldTryKey = inputMode is KeyboardInputMode.Virtual or KeyboardInputMode.Auto;
+
+    if (shouldTryCode && !string.IsNullOrWhiteSpace(code))
     {
       virtualKey = code switch
       {
@@ -638,15 +658,15 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
         "Insert" => MacInputSimulation.kVK_Help, // Mac doesn't have Insert, using Help
 
         // Modifier keys (left/right specific)
-        // Mapping: Alt → Command, Meta → Option (matches keyboards with Alt/Cmd and Win/Opt on same keys)
+        // Browser events on macOS: Meta = Command, Alt = Option
         "ShiftLeft" => MacInputSimulation.kVK_Shift,
         "ShiftRight" => MacInputSimulation.kVK_RightShift,
         "ControlLeft" => MacInputSimulation.kVK_Control,
         "ControlRight" => MacInputSimulation.kVK_RightControl,
-        "AltLeft" => MacInputSimulation.kVK_Command,
-        "AltRight" => MacInputSimulation.kVK_RightCommand,
-        "MetaLeft" => MacInputSimulation.kVK_Option,
-        "MetaRight" => MacInputSimulation.kVK_RightOption,
+        "AltLeft" => MacInputSimulation.kVK_Option,
+        "AltRight" => MacInputSimulation.kVK_RightOption,
+        "MetaLeft" => MacInputSimulation.kVK_Command,
+        "MetaRight" => MacInputSimulation.kVK_RightCommand,
 
         // Lock keys
         "CapsLock" => MacInputSimulation.kVK_CapsLock,
@@ -677,8 +697,12 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       }
     }
 
-    // Fallback to key-based mapping for compatibility with older code or edge cases
-    // This handles cases where code is not provided (shouldn't happen in modern browsers)
+    if (!shouldTryKey)
+    {
+      virtualKey = ushort.MaxValue;
+      return false;
+    }
+
     return GetLegacyKeyMap().TryGetValue(key, out virtualKey);
   }
 
@@ -712,11 +736,11 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       ["PageDown"] = MacInputSimulation.kVK_PageDown,
 
       // Modifier keys
-      // Mapping: Alt → Command, Meta → Option (matches keyboards with Alt/Cmd and Win/Opt on same keys)
+      // Browser events on macOS: Meta = Command, Alt = Option
       ["Shift"] = MacInputSimulation.kVK_Shift,
       ["Control"] = MacInputSimulation.kVK_Control,
-      ["Alt"] = MacInputSimulation.kVK_Command,
-      ["Meta"] = MacInputSimulation.kVK_Option,
+      ["Alt"] = MacInputSimulation.kVK_Option,
+      ["Meta"] = MacInputSimulation.kVK_Command,
       ["Command"] = MacInputSimulation.kVK_Command,
       ["Option"] = MacInputSimulation.kVK_Option,
       ["CapsLock"] = MacInputSimulation.kVK_CapsLock,

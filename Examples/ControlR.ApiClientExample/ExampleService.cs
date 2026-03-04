@@ -1,21 +1,21 @@
 ﻿using ControlR.ApiClient;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Threading;
 
 namespace ControlR.ApiClientExample;
 
 internal class ExampleService(
-  IControlrApiClientFactory clientFactory,
+  IServiceProvider serviceProvider,
   IHostApplicationLifetime hostLifetime,
   IOptionsMonitor<ControlrApiClientOptions> optionsMonitor,
   ILogger<ExampleService> logger): BackgroundService
 {
-  private readonly IControlrApiClientFactory _clientFactory = clientFactory;
   private readonly IHostApplicationLifetime _hostLifetime = hostLifetime;
   private readonly ILogger<ExampleService> _logger = logger;
   private readonly IOptionsMonitor<ControlrApiClientOptions> _optionsMonitor = optionsMonitor;
+  private readonly IServiceProvider _serviceProvider = serviceProvider;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -35,21 +35,20 @@ internal class ExampleService(
     }
   }
 
-  private async Task RetrieveDevices(ControlrApiClient client, CancellationToken cancellationToken)
+  private async Task RetrieveDevices(IControlrApi client, CancellationToken cancellationToken)
   {
-    var devices = await client.Api.Devices.GetAsync(cancellationToken: cancellationToken);
-
-    if (devices is null)
+    var deviceDetails = new List<string>();
+    var deviceCount = 0;
+    await foreach (var device in client.Devices.GetAllDevices(cancellationToken).WithCancellation(cancellationToken))
     {
-      _logger.LogError("Response was empty.");
-      return;
+      deviceCount++;
+      deviceDetails.Add($"\t- {device.Name} (ID: {device.Id})");
     }
 
-    _logger.LogInformation("Retrieved {DeviceCount} devices.", devices.Count);
-    if (devices.Count > 0)
+    _logger.LogInformation("Retrieved {DeviceCount} devices.", deviceCount);
+    if (deviceCount > 0)
     {
-      var details = string.Join("\n", devices.Select(d => $"\t- {d.Name} (ID: {d.Id})"));
-      _logger.LogInformation("Device details:\n{DeviceDetails}", details);
+      _logger.LogInformation("Device details:\n{DeviceDetails}", string.Join("\n", deviceDetails));
     }
   }
 
@@ -57,7 +56,7 @@ internal class ExampleService(
   {
     _logger.LogInformation("Retrieving devices using IControlrApiClientFactory.");
 
-    var client = _clientFactory.GetClient();
+    var client = _serviceProvider.GetRequiredService<IControlrApi>();
     await RetrieveDevices(client, cancellationToken);
   }
 

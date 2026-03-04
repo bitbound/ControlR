@@ -1,5 +1,5 @@
-﻿using System.Diagnostics;
-using ControlR.Libraries.Shared.Enums;
+using System.Diagnostics;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Libraries.Shared.Constants;

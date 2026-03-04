@@ -1,6 +1,6 @@
-﻿using ControlR.Agent.Common.Options;
+using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services;
-using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Agent.LoadTester;
 internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : ISettingsProvider

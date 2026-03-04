@@ -1,0 +1,80 @@
+name: Windows Code Signing
+description: Signs Windows binaries using AzureSignTool and Azure Key Vault
+
+inputs:
+  file-patterns:
+    description: 'Newline-separated file patterns to sign'
+    required: true
+  azure-client-id:
+    description: 'Azure AD application client ID for OIDC login'
+    required: true
+  azure-tenant-id:
+    description: 'Azure tenant ID for OIDC login'
+    required: true
+  azure-subscription-id:
+    description: 'Azure subscription ID for OIDC login'
+    required: true
+  azure-key-vault-uri:
+    description: 'Azure Key Vault URI containing signing certificate'
+    required: true
+  azure-key-vault-certificate-name:
+    description: 'Azure Key Vault certificate name used for signing'
+    required: true
+  signing-description-url:
+    description: 'Description URL embedded in signed binaries'
+    required: true
+  timestamp-url:
+    description: 'RFC3161 timestamp URL'
+    required: false
+    default: 'http://timestamp.digicert.com'
+
+runs:
+  using: composite
+  steps:
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.azure-client-id }}
+        tenant-id: ${{ inputs.azure-tenant-id }}
+        subscription-id: ${{ inputs.azure-subscription-id }}
+
+    - name: Install AzureSignTool
+      shell: pwsh
+      run: |
+        dotnet tool update --global AzureSignTool
+        if ($LASTEXITCODE -ne 0) {
+          dotnet tool install --global AzureSignTool
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+        }
+
+    - name: Sign Files
+      shell: pwsh
+      env:
+        FILE_PATTERNS: ${{ inputs.file-patterns }}
+        SIGNING_DESCRIPTION_URL: ${{ inputs.signing-description-url }}
+        AZURE_KEY_VAULT_URI: ${{ inputs.azure-key-vault-uri }}
+        AZURE_KEY_VAULT_CERTIFICATE_NAME: ${{ inputs.azure-key-vault-certificate-name }}
+        TIMESTAMP_URL: ${{ inputs.timestamp-url }}
+      run: |
+        $patterns = $env:FILE_PATTERNS -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+
+        if ($patterns.Count -eq 0) {
+          Write-Error "No file patterns were provided for signing."
+          exit 1
+        }
+
+        foreach ($pattern in $patterns) {
+          Write-Host "Signing pattern: $pattern"
+          dnx azuresigntool --yes sign `
+            --du="$env:SIGNING_DESCRIPTION_URL" `
+            --fd=sha256 `
+            --kvu="$env:AZURE_KEY_VAULT_URI" `
+            --kvc="$env:AZURE_KEY_VAULT_CERTIFICATE_NAME" `
+            --kvm `
+            --tr="$env:TIMESTAMP_URL" `
+            --td=sha256 `
+            --skip-signed `
+            "$pattern"
+        }

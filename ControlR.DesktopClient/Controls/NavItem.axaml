@@ -4,7 +4,7 @@
 						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 						 xmlns:vm="using:ControlR.DesktopClient.ViewModels"
 						 xmlns:fakes="using:ControlR.DesktopClient.ViewModels.Fakes"
-						 xmlns:controls="using:ControlR.DesktopClient.Controls"
+						 xmlns:controls="using:ControlR.Libraries.Avalonia.Controls"
 						 mc:Ignorable="d" d:DesignWidth="200" d:DesignHeight="50"
 						 x:Class="ControlR.DesktopClient.Controls.NavItem"
 						 x:DataType="vm:INavItemViewModel"

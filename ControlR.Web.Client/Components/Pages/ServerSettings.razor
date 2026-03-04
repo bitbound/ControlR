@@ -117,10 +117,9 @@
   {
     try
     {
-      var result = await ControlrApi.GetServerAlert();
-      if (result is { IsSuccess: true, Value: not null })
+      var result = await ControlrApi.ServerAlert.GetServerAlert();
+      if (result is { IsSuccess: true, Value: { HasAlertSet: true } alert })
       {
-        var alert = result.Value;
         _alertMessage = alert.Message;
         _alertSeverity = alert.Severity;
         _alertIsDismissable = alert.IsDismissable;
@@ -147,7 +146,7 @@
         _alertIsSticky,
         _alertIsEnabled);
 
-      var result = await ControlrApi.UpdateServerAlert(request);
+      var result = await ControlrApi.ServerAlert.UpdateServerAlert(request);
 
       if (result.IsSuccess)
       {
@@ -175,7 +174,7 @@
     StateHasChanged();
     try
     {
-      var result = await ControlrApi.SendTestEmail();
+      var result = await ControlrApi.TestEmail.SendTestEmail();
 
       if (result.IsSuccess)
       {

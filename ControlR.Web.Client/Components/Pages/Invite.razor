@@ -185,7 +185,7 @@
       return;
     }
 
-    var deleteResult = await ControlrApi.DeleteTenantInvite(dto.Id);
+    var deleteResult = await ControlrApi.Invites.DeleteTenantInvite(dto.Id);
     if (!deleteResult.IsSuccess)
     {
       Snackbar.Add(deleteResult.Reason, Severity.Error);
@@ -221,7 +221,8 @@
     {
       return;
     }
-    var createResult = await ControlrApi.CreateTenantInvite(_inputModel.Email);
+    var request = new TenantInviteRequestDto(_inputModel.Email);
+    var createResult = await ControlrApi.Invites.CreateTenantInvite(request);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add(createResult.Reason, Severity.Error);

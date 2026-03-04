@@ -1,7 +1,7 @@
 using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.OutputCaching;
 using Moq;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -21,7 +21,7 @@ public class OutputCacheExtensionsTests(ITestOutputHelper testOutput)
     var deviceId = Guid.NewGuid();
 
     // Act
-    await mockOutputCacheStore.Object.InvalidateDeviceCacheAsync(deviceId);
+    await mockOutputCacheStore.Object.InvalidateDeviceCacheAsync(deviceId, TestContext.Current.CancellationToken);
 
     // Assert
     mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"device-{deviceId}", It.IsAny<CancellationToken>()), Times.Once);
@@ -37,7 +37,7 @@ public class OutputCacheExtensionsTests(ITestOutputHelper testOutput)
       .Returns(ValueTask.CompletedTask);
 
     // Act
-    await mockOutputCacheStore.Object.InvalidateDeviceGridCacheAsync();
+    await mockOutputCacheStore.Object.InvalidateDeviceGridCacheAsync(TestContext.Current.CancellationToken);
 
     // Assert
     mockOutputCacheStore.Verify(s => s.EvictByTagAsync("device-grid", It.IsAny<CancellationToken>()), Times.Once);
@@ -55,7 +55,7 @@ public class OutputCacheExtensionsTests(ITestOutputHelper testOutput)
     var requestHash = "abc123";
 
     // Act
-    await mockOutputCacheStore.Object.InvalidateDeviceGridRequestCacheAsync(requestHash);
+    await mockOutputCacheStore.Object.InvalidateDeviceGridRequestCacheAsync(requestHash, TestContext.Current.CancellationToken);
 
     // Assert
     mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"request-{requestHash}", It.IsAny<CancellationToken>()), Times.Once);
@@ -73,7 +73,7 @@ public class OutputCacheExtensionsTests(ITestOutputHelper testOutput)
     var userId = Guid.NewGuid().ToString();
 
     // Act
-    await mockOutputCacheStore.Object.InvalidateUserDeviceGridCacheAsync(userId);
+    await mockOutputCacheStore.Object.InvalidateUserDeviceGridCacheAsync(userId, TestContext.Current.CancellationToken);
 
     // Assert
     mockOutputCacheStore.Verify(s => s.EvictByTagAsync($"user-{userId}", It.IsAny<CancellationToken>()), Times.Once);

@@ -65,6 +65,8 @@ internal sealed class WaylandDisplaySettingsWatcher(
         if (_lastSnapshot is null)
         {
           _lastSnapshot = snapshot;
+          _logger.LogInformation("Initial Wayland display snapshot captured. Sending display refresh.");
+          await _messenger.Send(new DisplaySettingsChangedMessage());
           continue;
         }
 

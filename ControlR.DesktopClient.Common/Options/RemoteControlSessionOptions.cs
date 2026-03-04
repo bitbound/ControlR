@@ -1,4 +1,4 @@
-﻿using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.Common.Options;
 

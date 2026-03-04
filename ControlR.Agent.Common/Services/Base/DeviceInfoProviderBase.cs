@@ -1,8 +1,8 @@
-﻿using System.Net.NetworkInformation;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using ControlR.Agent.Common.Services.FileManager;
-using ControlR.Libraries.Shared.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 
 namespace ControlR.Agent.Common.Services.Base;
 

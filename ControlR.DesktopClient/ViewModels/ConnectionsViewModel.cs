@@ -76,6 +76,7 @@ internal partial class ConnectionsViewModel(
         }
         var remoteControlStream = session.Host.Services.GetRequiredService<IDesktopRemoteControlStream>();
         await remoteControlStream.RequestDisconnect();
+        await session.DisposeAsync();
       }
     }
     catch (Exception ex)

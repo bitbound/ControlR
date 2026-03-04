@@ -1,14 +1,15 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using ControlR.Agent.LoadTester;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Hubs;
+using ControlR.Libraries.Api.Contracts.Hubs;
 using ControlR.Agent.LoadTester.Helpers;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.SignalR.Client;
-using ControlR.Libraries.Shared.Dtos.HubDtos;
-using ControlR.Libraries.Shared.Hubs.Clients;
-using ControlR.Libraries.Shared.Primitives;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Dtos;
 
 var agentCount = ArgsParser.GetArgValue<int>("--agent-count");
 var startCount = ArgsParser.GetArgValue("--start-count", 0);
@@ -77,11 +78,11 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         return Task.CompletedTask;
       };
 
-      connection.On<RemoteControlSessionRequestDto, Result>(
+      connection.On<RemoteControlSessionRequestDto, HubResult>(
         nameof(IAgentHubClient.CreateRemoteControlSession),
         agentHubClient.CreateRemoteControlSession);
 
-      connection.On<Guid, string, Result>(
+      connection.On<Guid, string, HubResult>(
         nameof(IAgentHubClient.CreateTerminalSession),
         agentHubClient.CreateTerminalSession);
 
@@ -89,7 +90,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         nameof(IAgentHubClient.GetActiveDesktopSessions),
          agentHubClient.GetActiveDesktopSessions);
 
-      connection.On<TerminalInputDto, Result>(
+      connection.On<TerminalInputDto, HubResult>(
         nameof(IAgentHubClient.ReceiveTerminalInput),
         agentHubClient.ReceiveTerminalInput);
 

@@ -1,0 +1,160 @@
+name: Build, Sign, and Pack NuGets
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version number for package metadata
+        required: true
+        type: string
+      retention-days:
+        description: Number of days to retain artifact
+        required: false
+        default: 1
+        type: number
+      prerelease:
+        description: Whether to append -dev prerelease suffix
+        required: false
+        default: false
+        type: boolean
+      use_self_hosted_runners:
+        description: Use self-hosted Windows runners
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  build-sign-pack:
+    name: Build, Sign and Pack NuGets
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
+    environment: secure-signing
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Restore Solution
+        shell: pwsh
+        run: |
+          dotnet restore
+
+      - name: Build Solution
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          dotnet build -c Release --no-restore -p:FileVersion="$env:VERSION" -p:AssemblyVersion="$env:VERSION"
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install AzureSignTool
+        shell: pwsh
+        run: |
+          dotnet tool update --global AzureSignTool
+          if ($LASTEXITCODE -ne 0) {
+            dotnet tool install --global AzureSignTool
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
+
+      - name: Sign and Pack NuGets
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          SIGNING_DESCRIPTION_URL: ${{ vars.SIGNING_DESCRIPTION_URL }}
+          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          AZURE_KEY_VAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
+        run: |
+          $projects = @(
+            @{ path = "ControlR.ApiClient/ControlR.ApiClient.csproj"; name = "ApiClientNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj"; name = "DataRedactionNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.Api.Contracts/ControlR.Libraries.Api.Contracts.csproj"; name = "ApiContractsNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj"; name = "LibrariesSharedNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.Signalr.Client/ControlR.Libraries.Signalr.Client.csproj"; name = "SignalrClientNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.WebSocketRelay.Client/ControlR.Libraries.WebSocketRelay.Client.csproj"; name = "WebSocketRelayClientNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.Messenger.Extensions/ControlR.Libraries.Messenger.Extensions.csproj"; name = "MessengerExtensionsNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.Viewer.Common/ControlR.Libraries.Viewer.Common.csproj"; name = "ViewerCommonNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.Avalonia/ControlR.Libraries.Avalonia.csproj"; name = "LibrariesAvaloniaNuGet" },
+            @{ path = "ControlR.Viewer.Avalonia/ControlR.Viewer.Avalonia.csproj"; name = "ViewerAvaloniaNuGet" }
+          )
+
+          # Create a single flat output directory for all packages
+          $flatOutputDir = ".\nuget-packages"
+          New-Item -Path $flatOutputDir -ItemType Directory -Force | Out-Null
+
+          foreach ($project in $projects) {
+            $projectFullPath = Resolve-Path $project.path
+            $projectDir = Split-Path -Parent $projectFullPath
+            $projectName = [System.IO.Path]::GetFileNameWithoutExtension($projectFullPath)
+            $packageOutputDir = Join-Path $projectDir "bin\Release\packages"
+
+            # Determine package version
+            $PackageVersion = $env:VERSION
+            if ($env:PRERELEASE -eq "true") {
+              $PackageVersion += "-dev"
+            }
+
+            Write-Host "Processing $projectName..."
+
+            # Sign the DLL
+            $signPattern = "$projectDir\bin\Release\**\$projectName.dll"
+            dnx azuresigntool --yes sign `
+              --du="$env:SIGNING_DESCRIPTION_URL" `
+              --fd=sha256 `
+              --kvu="$env:AZURE_KEY_VAULT_URI" `
+              --kvc="$env:AZURE_KEY_VAULT_CERTIFICATE_NAME" `
+              --kvm `
+              --tr=http://timestamp.digicert.com `
+              --td=sha256 `
+              --skip-signed `
+              $signPattern
+
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Failed to sign $projectName"
+              exit $LASTEXITCODE
+            }
+
+            # Create package output directory
+            New-Item -Path $packageOutputDir -ItemType Directory -Force | Out-Null
+
+            # Pack the NuGet package
+            dotnet pack $projectFullPath -c Release --no-build `
+              -p:FileVersion="$env:VERSION" `
+              -p:AssemblyVersion="$env:VERSION" `
+              -p:PackageVersion="$PackageVersion" `
+              -o $packageOutputDir
+
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Failed to pack $projectName"
+              exit $LASTEXITCODE
+            }
+
+            # Copy packages to flat output directory
+            Copy-Item -Path "$packageOutputDir\*.nupkg" -Destination $flatOutputDir -Force
+            Copy-Item -Path "$packageOutputDir\*.snupkg" -Destination $flatOutputDir -Force
+
+            Write-Host "Copied $project.name packages to flat output directory"
+          }
+
+      - name: Upload NuGet Packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: NuGetPackages
+          path: nuget-packages
+          retention-days: ${{ inputs.retention-days }}

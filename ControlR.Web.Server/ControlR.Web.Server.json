@@ -236,6 +236,18 @@
         }
       }
     },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Logout"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/desktop-preview/{deviceId}/{targetProcessId}": {
       "get": {
         "tags": [
@@ -312,7 +324,7 @@
         }
       }
     },
-    "/api/device-file-system/delete/{deviceId}": {
+    "/api/device-file-system/delete-path/{deviceId}": {
       "delete": {
         "tags": [
           "DeviceFileSystem"
@@ -1355,32 +1367,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/Logout": {
-      "post": {
-        "tags": [
-          "Logout"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { }
-            },
-            "text/json": {
-              "schema": { }
-            },
-            "application/*+json": {
-              "schema": { }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
           }
         }
       }
@@ -3761,17 +3747,27 @@
       },
       "ServerAlertResponseDto": {
         "required": [
+          "id",
           "message",
           "severity",
           "isDismissable",
           "isSticky",
-          "isEnabled",
-          "id"
+          "isEnabled"
         ],
         "type": "object",
         "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
           "message": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "severity": {
             "$ref": "#/components/schemas/MessageSeverity"
@@ -3784,10 +3780,6 @@
           },
           "isEnabled": {
             "type": "boolean"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
           }
         }
       },
@@ -3954,21 +3946,27 @@
       },
       "TenantSettingResponseDto": {
         "required": [
+          "id",
           "name",
-          "value",
-          "id"
+          "value"
         ],
         "type": "object",
         "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
           "name": {
             "type": "string"
           },
           "value": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4000,21 +3998,27 @@
       },
       "UserPreferenceResponseDto": {
         "required": [
+          "id",
           "name",
-          "value",
-          "id"
+          "value"
         ],
         "type": "object",
         "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
           "name": {
             "type": "string"
           },
           "value": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4108,6 +4112,9 @@
       "name": "AgentUpdate"
     },
     {
+      "name": "Logout"
+    },
+    {
       "name": "DesktopPreview"
     },
     {
@@ -4127,9 +4134,6 @@
     },
     {
       "name": "LogonToken"
-    },
-    {
-      "name": "Logout"
     },
     {
       "name": "PersonalAccessTokens"

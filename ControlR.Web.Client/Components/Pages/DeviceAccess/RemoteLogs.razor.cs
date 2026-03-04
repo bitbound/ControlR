@@ -94,7 +94,7 @@ public partial class RemoteLogs : JsInteropableComponent
   {
     try
     {
-      if (_selectedNode is null || _selectedNode.IsFolder)
+      if (_selectedNode?.Path is null || _selectedNode.IsFolder)
       {
         LogContents = string.Empty;
         return;
@@ -103,7 +103,8 @@ public partial class RemoteLogs : JsInteropableComponent
       IsLoadingContents = true;
       StateHasChanged();
 
-      var result = await ControlrApi.GetLogFileContents(DeviceId, _selectedNode.Path!);
+      var request = new GetLogFileContentsRequestDto(_selectedNode.Path);
+      var result = await ControlrApi.DeviceFileSystem.GetLogFileContents(DeviceId, request);
 
       if (!result.IsSuccess)
       {
@@ -135,7 +136,7 @@ public partial class RemoteLogs : JsInteropableComponent
       IsLoading = true;
       StateHasChanged();
 
-      var result = await ControlrApi.GetLogFiles(DeviceId);
+      var result = await ControlrApi.DeviceFileSystem.GetLogFiles(DeviceId);
 
       if (!result.IsSuccess || result.Value is null)
       {

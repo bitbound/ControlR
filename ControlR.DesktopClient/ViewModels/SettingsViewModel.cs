@@ -5,24 +5,39 @@ namespace ControlR.DesktopClient.ViewModels;
 
 public interface ISettingsViewModel : IViewModelBase
 {
-  ThemeMode CurrentThemeMode { get; set; }
+  bool IsDarkModeChecked { get; set; }
+  bool IsLightModeChecked { get; set; }
 }
 
 public partial class SettingsViewModel(IThemeProvider themeProvider) : ViewModelBase<SettingsView>, ISettingsViewModel
 {
   private readonly IThemeProvider _themeProvider = themeProvider;
 
-  [ObservableProperty]
-  private ThemeMode _currentThemeMode;
-
-  protected override async Task OnInitializeAsync()
+  public bool IsDarkModeChecked
   {
-    await base.OnInitializeAsync();
-    CurrentThemeMode = _themeProvider.CurrentThemeMode;
+    get => _themeProvider.CurrentThemeMode == ThemeMode.Dark;
+    set
+    {
+      if (value)
+      {
+        _themeProvider.SetThemeMode(ThemeMode.Dark);
+      }
+      OnPropertyChanged(nameof(IsLightModeChecked));
+      OnPropertyChanged(nameof(IsDarkModeChecked));
+    }
   }
 
-  partial void OnCurrentThemeModeChanged(ThemeMode value)
+  public bool IsLightModeChecked
   {
-    _themeProvider.SetThemeMode(value);
+    get => _themeProvider.CurrentThemeMode == ThemeMode.Light;
+    set
+    {
+      if (value)
+      {
+        _themeProvider.SetThemeMode(ThemeMode.Light);
+      }
+      OnPropertyChanged(nameof(IsLightModeChecked));
+      OnPropertyChanged(nameof(IsDarkModeChecked));
+    }
   }
 }

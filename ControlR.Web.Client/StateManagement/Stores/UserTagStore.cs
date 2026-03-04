@@ -5,10 +5,15 @@ public interface IUserTagStore : IStoreBase<TagViewModel>
 public class UserTagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<AdminTagStore> logger)
   : StoreBase<TagViewModel>(controlrApi, snackbar, logger), IUserTagStore
 {
+  protected override Guid GetItemId(TagViewModel dto)
+  {
+    return dto.Id;
+  }
+
   protected override async Task RefreshImpl()
   {
     Cache.Clear();
-    var getResult = await ControlrApi.GetAllowedTags();
+    var getResult = await ControlrApi.UserTags.GetAllowedTags();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

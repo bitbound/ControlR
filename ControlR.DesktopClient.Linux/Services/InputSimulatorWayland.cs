@@ -4,7 +4,8 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
-using ControlR.Libraries.Shared.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
@@ -53,7 +54,12 @@ public class InputSimulatorWayland(
   }
 
 
-  public async Task InvokeKeyEvent(string key, string? code, bool isPressed)
+  public async Task InvokeKeyEvent(
+    string key,
+    string code,
+    bool isPressed,
+    KeyboardInputMode inputMode,
+    KeyEventModifiersDto modifiers)
   {
     if (!await EnsureInitializedAsync())
     {
@@ -62,9 +68,28 @@ public class InputSimulatorWayland(
 
     try
     {
-      var isPrintableCharacter = string.IsNullOrWhiteSpace(code) && key.Length == 1;
+      var mode = inputMode;
+      var isPrintableCharacter = key.Length == 1;
+      var isModifierPressed = modifiers.AreAnyPressed;
+      var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta";
 
-      if (isPrintableCharacter)
+      if (mode == KeyboardInputMode.Virtual)
+      {
+        if (isPrintableCharacter && !isModifierPressed && !isModifierKey)
+        {
+          if (isPressed)
+          {
+            await TypeText(key);
+          }
+          return;
+        }
+
+        if (!isModifierPressed || isModifierKey)
+        {
+          code = string.Empty;
+        }
+      }
+      else if (mode == KeyboardInputMode.Auto && isPrintableCharacter && !isModifierPressed)
       {
         if (isPressed)
         {

@@ -2,12 +2,12 @@ using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services;
 using ControlR.Libraries.DevicesCommon.Services;
-using ControlR.Libraries.Shared.Enums;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.TestingUtilities;
 using Moq;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace ControlR.Agent.Common.Tests.Services;
 

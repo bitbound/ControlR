@@ -150,7 +150,7 @@
       return;
     }
     
-    var result = await ControlrApi.Value.LogOut();
+    var result = await ControlrApi.Value.Auth.LogOut();
     if (!result.IsSuccess) {
       Snackbar.Add("Logout failed", Severity.Error);
       return;

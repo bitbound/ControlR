@@ -16,7 +16,7 @@ internal class DeviceInfoProviderWin(
 {
   private readonly ILogger<DeviceInfoProviderWin> _logger = logger;
 
-  public async Task<DeviceUpdateRequestDto> CreateDevice()
+  public async Task<DeviceUpdateRequestDto> GetDeviceInfo()
   {
     try
     {

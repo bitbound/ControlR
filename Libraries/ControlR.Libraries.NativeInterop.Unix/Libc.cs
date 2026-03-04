@@ -8,17 +8,11 @@ namespace ControlR.Libraries.NativeInterop.Unix;
 
 public static class Libc
 {
-  [DllImport("libc", EntryPoint = "geteuid", SetLastError = true)]
-  public static extern uint Geteuid();
-
-  [DllImport("libc", EntryPoint = "setsid", SetLastError = true)]
-  public static extern int Setsid();
-
-  [DllImport("libc", EntryPoint = "umask", SetLastError = true)]
-  public static extern int Umask(int mask);
-
   [DllImport("libc", EntryPoint = "chown", SetLastError = true, CharSet = CharSet.Ansi)]
   public static extern int chown([MarshalAs(UnmanagedType.LPStr)] string path, int owner, int group);
+
+  [DllImport("libc", EntryPoint = "geteuid", SetLastError = true)]
+  public static extern uint Geteuid();
 
   [DllImport("libc", EntryPoint = "getgrgid", SetLastError = true)]
   public static extern IntPtr getgrgid(uint gid);
@@ -26,8 +20,14 @@ public static class Libc
   [DllImport("libc", EntryPoint = "getgrnam", SetLastError = true, CharSet = CharSet.Ansi)]
   public static extern IntPtr getgrnam([MarshalAs(UnmanagedType.LPStr)] string name);
 
+  [DllImport("libc", EntryPoint = "setsid", SetLastError = true)]
+  public static extern int Setsid();
+
   [DllImport("libc", EntryPoint = "stat", SetLastError = true)]
   public static extern int stat(string path, out Stat buf);
+
+  [DllImport("libc", EntryPoint = "umask", SetLastError = true)]
+  public static extern int Umask(int mask);
 
   [StructLayout(LayoutKind.Sequential)]
   public struct Group
@@ -37,7 +37,6 @@ public static class Libc
     public uint gr_gid;
     public IntPtr gr_mem;
   }
-
   [StructLayout(LayoutKind.Sequential)]
   public struct Stat
   {

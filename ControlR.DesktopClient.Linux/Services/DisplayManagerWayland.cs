@@ -17,7 +17,7 @@ internal interface IDisplayManagerWayland : IDisplayManager
 
   Task<IReadOnlyDictionary<string, PipeWireStream>> CreatePipeWireStreams(CancellationToken cancellationToken = default);
   bool TryGetCaptureSize(string deviceName, out Size size);
-  void UpdateCaptureSize(string deviceName, int width, int height);
+  void UpdateCaptureSize(string deviceName, int physicalWidth, int physicalHeight);
 }
 
 /// <summary>
@@ -28,8 +28,12 @@ internal interface IDisplayManagerWayland : IDisplayManager
 /// 
 /// Terminology used by this manager:
 /// - LogicalMonitorArea: portal/compositor-reported logical bounds (device-independent units).
-/// - MonitorArea: physical pixel bounds (native pixels), used for capture and absolute coordinates.
+/// - MonitorArea: physical pixel bounds (native pixels), used for capture and frame geometry.
 /// - ScaleFactor: physical / logical (physical = logical * ScaleFactor).
+///
+/// Note on input coordinates:
+/// Wayland RemoteDesktop absolute pointer APIs operate in compositor/logical coordinates,
+/// so pointer conversion here uses LogicalMonitorArea rather than MonitorArea.
 /// </summary>
 internal class DisplayManagerWayland(
   TimeProvider timeProvider,
@@ -37,6 +41,8 @@ internal class DisplayManagerWayland(
   IPipeWireStreamFactory streamFactory,
   ILogger<DisplayManagerWayland> logger) : IDisplayManager, IDisplayManagerWayland, IDisposable
 {
+  private static readonly TimeSpan _probeTimeout = TimeSpan.FromSeconds(3);
+
   private readonly ConcurrentDictionary<string, Size> _captureSizes = new();
   private readonly SemaphoreSlim _displayLock = new(1, 1);
   private readonly TimeSpan _displayLockTimeout = TimeSpan.FromSeconds(5);
@@ -60,9 +66,8 @@ internal class DisplayManagerWayland(
     }
 
     var display = findResult.Value;
-    // MonitorArea is always in physical pixels. Convert the percentage into an absolute
-    // physical pixel coordinate within the virtual screen.
-    // However, input simulation on Wayland typically uses logical coordinates (global compositor space).
+    // On Wayland, absolute pointer movement uses compositor/logical coordinates.
+    // Convert normalized percentages into the selected display's logical coordinate space.
     var bounds = display.LogicalMonitorArea;
 
     var absoluteX = (int)(bounds.Left + bounds.Width * percentX);
@@ -213,14 +218,14 @@ internal class DisplayManagerWayland(
     return Result.Fail<uint>("Display not found.");
   }
 
-  public void UpdateCaptureSize(string deviceName, int width, int height)
+  public void UpdateCaptureSize(string deviceName, int physicalWidth, int physicalHeight)
   {
-    if (string.IsNullOrWhiteSpace(deviceName) || width <= 0 || height <= 0)
+    if (string.IsNullOrWhiteSpace(deviceName) || physicalWidth <= 0 || physicalHeight <= 0)
     {
       return;
     }
 
-    var newSize = new Size(width, height);
+    var newSize = new Size(physicalWidth, physicalHeight);
     _captureSizes.AddOrUpdate(deviceName, newSize, (_, __) => newSize);
   }
 
@@ -253,24 +258,21 @@ internal class DisplayManagerWayland(
 
       using var stream = _streamFactory.Create(nodeId, connection.Value.Fd, logicalWidth, logicalHeight);
       
-      // Allow up to 1 second for the stream to negotiate and provide a frame
-      using var cts = new CancellationTokenSource(1_000);
-      while (!cts.Token.IsCancellationRequested)
+      // Allow time for stream negotiation and first frame delivery.
+      using var cts = new CancellationTokenSource(_probeTimeout);
+      if (!await stream.WaitForFirstFrame(cts.Token))
       {
-        if (stream.Width > 0 && stream.Height > 0)
-        {
-          return new Size(stream.Width, stream.Height);
-        }
-
-        try
-        {
-          await Task.Delay(TimeSpan.FromMilliseconds(50), _timeProvider, cts.Token);
-        }
-        catch (TaskCanceledException)
-        {
-          break;
-        }
+        return Size.Empty;
       }
+
+      if (stream.Width > 0 && stream.Height > 0)
+      {
+        return new Size(stream.Width, stream.Height);
+      }
+    }
+    catch (OperationCanceledException)
+    {
+      return Size.Empty;
     }
     catch (Exception ex)
     {

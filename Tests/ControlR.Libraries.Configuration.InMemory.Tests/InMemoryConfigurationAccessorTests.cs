@@ -54,34 +54,6 @@ public class InMemoryConfigurationAccessorTests
   }
 
   [Fact]
-  public void SetValue_SetsConfigurationValue_AndTriggersReload()
-  {
-    var (accessor, monitor, _) = SetupServicesWithOptions<TestOptions>("Test");
-
-    accessor.SetValue("Test:Value", "Initial");
-
-    var options = monitor.CurrentValue;
-    Assert.Equal("Initial", options.Value);
-
-    accessor.SetValue("Test:Value", "Updated");
-
-    options = monitor.CurrentValue;
-    Assert.Equal("Updated", options.Value);
-  }
-
-  [Fact]
-  public void SetValue_WithNull_RemovesKey()
-  {
-    var (accessor, config) = SetupServices();
-
-    accessor.SetValue("Test:Key", "Value");
-    Assert.Equal("Value", config["Test:Key"]);
-
-    accessor.SetValue("Test:Key", null);
-    Assert.Null(config["Test:Key"]);
-  }
-
-  [Fact]
   public void SetValues_SetsMultipleValues_AndTriggersReload()
   {
     var (accessor, monitor, _) = SetupServicesWithOptions<TestOptions>("Test");
@@ -129,6 +101,34 @@ public class InMemoryConfigurationAccessorTests
 
     Assert.Null(config["Test:Key1"]);
     Assert.Null(config["Test:Key2"]);
+  }
+
+  [Fact]
+  public void SetValue_SetsConfigurationValue_AndTriggersReload()
+  {
+    var (accessor, monitor, _) = SetupServicesWithOptions<TestOptions>("Test");
+
+    accessor.SetValue("Test:Value", "Initial");
+
+    var options = monitor.CurrentValue;
+    Assert.Equal("Initial", options.Value);
+
+    accessor.SetValue("Test:Value", "Updated");
+
+    options = monitor.CurrentValue;
+    Assert.Equal("Updated", options.Value);
+  }
+
+  [Fact]
+  public void SetValue_WithNull_RemovesKey()
+  {
+    var (accessor, config) = SetupServices();
+
+    accessor.SetValue("Test:Key", "Value");
+    Assert.Equal("Value", config["Test:Key"]);
+
+    accessor.SetValue("Test:Key", null);
+    Assert.Null(config["Test:Key"]);
   }
 
   private static (IInMemoryConfigurationAccessor accessor, IConfiguration config) SetupServices()

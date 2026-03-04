@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
+using ControlR.Web.Client.Constants;
 using ControlR.Web.Client.Models;
 
 namespace ControlR.Web.Client.Services;
@@ -7,10 +8,12 @@ namespace ControlR.Web.Client.Services;
 public interface IUserSettingsProvider
 {
   Task<bool> GetHideOfflineDevices();
+  Task<KeyboardInputMode> GetKeyboardInputMode();
   Task<bool> GetNotifyUserOnSessionStart();
   Task<ThemeMode> GetThemeMode();
   Task<string> GetUserDisplayName();
   Task SetHideOfflineDevices(bool value);
+  Task SetKeyboardInputMode(KeyboardInputMode value);
   Task SetNotifyUserOnSessionStart(bool value);
   Task SetThemeMode(ThemeMode value);
   Task SetUserDisplayName(string value);
@@ -27,44 +30,54 @@ internal class UserSettingsProviderClient(
   private readonly ConcurrentDictionary<string, object?> _preferences = new();
   private readonly ISnackbar _snackbar = snackbar;
 
-  public async Task<bool> GetHideOfflineDevices()
+  public Task<bool> GetHideOfflineDevices()
   {
-    return await GetPref(UserPreferenceNames.HideOfflineDevices, true);
+    return GetPref(UserPreferenceNames.HideOfflineDevices, true);
   }
 
-  public async Task<bool> GetNotifyUserOnSessionStart()
+  public Task<KeyboardInputMode> GetKeyboardInputMode()
   {
-    return await GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
+    return GetPref(UserPreferenceNames.KeyboardInputMode, KeyboardInputMode.Auto);
   }
 
-  public async Task<ThemeMode> GetThemeMode()
+  public Task<bool> GetNotifyUserOnSessionStart()
   {
-    return await GetPref(UserPreferenceNames.ThemeMode, ThemeMode.Auto);
+    return GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
   }
 
-  public async Task<string> GetUserDisplayName()
+  public Task<ThemeMode> GetThemeMode()
   {
-    return await GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
+    return GetPref(UserPreferenceNames.ThemeMode, ThemeMode.Auto);
   }
 
-  public async Task SetHideOfflineDevices(bool value)
+  public Task<string> GetUserDisplayName()
   {
-    await SetPref(UserPreferenceNames.HideOfflineDevices, value);
+    return GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
   }
 
-  public async Task SetNotifyUserOnSessionStart(bool value)
+  public Task SetHideOfflineDevices(bool value)
   {
-    await SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
+    return SetPref(UserPreferenceNames.HideOfflineDevices, value);
   }
 
-  public async Task SetThemeMode(ThemeMode value)
+  public Task SetKeyboardInputMode(KeyboardInputMode value)
   {
-    await SetPref(UserPreferenceNames.ThemeMode, value);
+    return SetPref(UserPreferenceNames.KeyboardInputMode, value);
   }
 
-  public async Task SetUserDisplayName(string value)
+  public Task SetNotifyUserOnSessionStart(bool value)
   {
-    await SetPref(UserPreferenceNames.UserDisplayName, value);
+    return SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
+  }
+
+  public Task SetThemeMode(ThemeMode value)
+  {
+    return SetPref(UserPreferenceNames.ThemeMode, value);
+  }
+
+  public Task SetUserDisplayName(string value)
+  {
+    return SetPref(UserPreferenceNames.UserDisplayName, value);
   }
 
   private async Task<T> GetPref<T>(string preferenceName, T defaultValue)
@@ -77,11 +90,11 @@ internal class UserSettingsProviderClient(
         return typedValue;
       }
 
-      var getResult = await _controlrApi.GetUserPreference(preferenceName);
+      var getResult = await _controlrApi.UserPreferences.GetUserPreference(preferenceName);
 
       if (!getResult.IsSuccess)
       {
-        if (getResult.Exception is HttpRequestException { StatusCode: HttpStatusCode.NotFound })
+        if (getResult.StatusCode == HttpStatusCode.NotFound)
         {
           return defaultValue;
         }
@@ -91,6 +104,11 @@ internal class UserSettingsProviderClient(
       }
 
       if (getResult.Value is null)
+      {
+        return defaultValue;
+      }
+
+      if (!getResult.Value.HasValueSet)
       {
         return defaultValue;
       }
@@ -146,11 +164,15 @@ internal class UserSettingsProviderClient(
       _preferences[preferenceName] = newValue;
       var stringValue = Convert.ToString(newValue)?.Trim();
       Guard.IsNotNull(stringValue);
-      var setResult = await _controlrApi.SetUserPreference(preferenceName, stringValue);
+      var request = new UserPreferenceRequestDto(preferenceName, stringValue);
+      var setResult = await _controlrApi.UserPreferences.SetUserPreference(request);
 
       if (!setResult.IsSuccess)
       {
-        setResult.Log(_logger);
+        _logger.LogError("Failed to set preference.  Reason: {Reason}, StatusCode: {StatusCode}",
+          setResult.Reason,
+          setResult.StatusCode);
+          
         _snackbar.Add(setResult.Reason, Severity.Error);
       }
     }
