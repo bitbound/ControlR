@@ -430,14 +430,13 @@ jobs:
 
   build-web-server:
     name: Build Web Server
-    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","fast"]') || fromJson('["ubuntu-latest"]') }}
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["ubuntu-latest"]') }}
     needs:
       [
+        run-tests,
         build-windows-binaries,
         build-linux-binaries,
         build-mac-binaries,
-        run-tests,
-        build-nugets
       ]
 
     steps:

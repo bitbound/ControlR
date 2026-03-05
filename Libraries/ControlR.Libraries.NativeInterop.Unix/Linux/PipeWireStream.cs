@@ -350,6 +350,7 @@ public class PipeWireStream : IDisposable
         _logger.LogError(ex, "Error in capture loop iteration");
       }
 
+      _logger.LogInformation("GStreamer reading ended.");
     }
   }
 }
