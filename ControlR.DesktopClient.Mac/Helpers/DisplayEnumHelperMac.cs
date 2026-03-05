@@ -95,20 +95,15 @@ internal class DisplayEnumHelperMac(ILogger<DisplayEnumHelperMac> logger) : IDis
       }
     }
 
-    var monitorArea = new Rectangle(
-      (int)(bounds.X * scaleFactor),
-      (int)(bounds.Y * scaleFactor),
-      pixelWidth,
-      pixelHeight);
-
     var logicalArea = new Rectangle(
       (int)bounds.X,
       (int)bounds.Y,
       logicalWidth,
       logicalHeight);
 
-    _logger.LogDebug("Display {DisplayId}: Logical bounds={LogicalW}x{LogicalH} at ({X},{Y}), Physical pixel size={PhysW}x{PhysH}, Scale={Scale:F2}, MonitorArea={MAW}x{MAH} at ({MAX},{MAY})",
-      displayId, logicalWidth, logicalHeight, bounds.X, bounds.Y, pixelWidth, pixelHeight, scaleFactor, monitorArea.Width, monitorArea.Height, monitorArea.X, monitorArea.Y);
+    _logger.LogDebug(
+      "Display {DisplayId}: Logical bounds={LogicalW}x{LogicalH} at ({X},{Y}), Physical pixel size={PhysW}x{PhysH}, Scale={Scale:F2}",
+      displayId, logicalWidth, logicalHeight, bounds.X, bounds.Y, pixelWidth, pixelHeight, scaleFactor);
 
     return new DisplayInfo
     {
@@ -116,9 +111,8 @@ internal class DisplayEnumHelperMac(ILogger<DisplayEnumHelperMac> logger) : IDis
       DisplayName = $"Display {index + 1}",
       Index = index,
       IsPrimary = isMain,
-      MonitorArea = monitorArea,
+      PhysicalSize = new Size(pixelWidth, pixelHeight),
       LogicalMonitorArea = logicalArea,
-      WorkArea = monitorArea,
       ScaleFactor = scaleFactor
     };
   }

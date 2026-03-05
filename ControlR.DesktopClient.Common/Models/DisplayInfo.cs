@@ -11,26 +11,22 @@ public class DisplayInfo
   public bool IsPrimary { get; init; }
 
   /// <summary>
-  /// Monitor bounds expressed in logical (device-independent) units used by the OS/compositor.
-  /// Use these when reasoning about layout, UI coordinates, or APIs that expect logical units.
-  /// Conversion: physical = logical * ScaleFactor
+  /// Monitor bounds in logical (device-independent) units as reported by the OS/compositor.
+  /// This is the authoritative source for display layout topology — position and size
+  /// in a consistent coordinate space shared across all monitors.
   /// </summary>
   public Rectangle LogicalMonitorArea { get; init; }
 
   /// <summary>
-  /// Monitor bounds expressed in physical/native pixels. Use this when dealing with image
-  /// buffer sizes, frame captures, or any pixel-oriented operation.
+  /// The physical pixel dimensions of the monitor's capture buffer (width and height only).
+  /// No X/Y origin is stored here because a global physical origin is not reliably knowable
+  /// on all platforms (e.g. Wayland and macOS with mixed DPI multi-monitor setups).
+  /// Use <see cref="LogicalMonitorArea"/> for layout; use this for frame/buffer sizes.
   /// </summary>
-  public Rectangle MonitorArea { get; init; }
+  public Size PhysicalSize { get; init; }
 
   /// <summary>
-  /// Scale factor to convert logical units to physical pixels.
-  /// physical = logical * ScaleFactor
+  /// Scale factor: PhysicalSize / logical size.  physical = logical * ScaleFactor.
   /// </summary>
   public double ScaleFactor { get; set; } = 1;
-
-  /// <summary>
-  /// Work area (physical pixels) available on the monitor.
-  /// </summary>
-  public Rectangle WorkArea { get; set; }
 }

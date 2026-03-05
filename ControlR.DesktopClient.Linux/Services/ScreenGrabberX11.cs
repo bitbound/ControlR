@@ -79,9 +79,9 @@ internal sealed class ScreenGrabberX11(
   {
     try
     {
-      var virtualBounds = await _displayManager.GetVirtualScreenBounds();
+      var virtualBounds = await _displayManager.GetVirtualScreenLogicalBounds();
 
-      if (virtualBounds.IsEmpty)
+      if (virtualBounds.Width <= 0 || virtualBounds.Height <= 0)
       {
         return CaptureResult.Fail("No displays found.");
       }
@@ -96,7 +96,13 @@ internal sealed class ScreenGrabberX11(
       try
       {
         var rootWindow = LibX11.XDefaultRootWindow(xDisplay);
-        var bitmap = CaptureWindow(xDisplay, rootWindow, virtualBounds.Width, virtualBounds.Height);
+        var bitmap = CaptureWindow(
+          xDisplay,
+          rootWindow,
+          (int)virtualBounds.Width,
+          (int)virtualBounds.Height,
+          (int)virtualBounds.X,
+          (int)virtualBounds.Y);
 
         if (bitmap is null)
         {
@@ -136,8 +142,8 @@ internal sealed class ScreenGrabberX11(
       try
       {
         var rootWindow = LibX11.XDefaultRootWindow(xDisplay);
-        var bitmap = CaptureWindow(xDisplay, rootWindow, display.MonitorArea.Width, display.MonitorArea.Height,
-                                  display.MonitorArea.X, display.MonitorArea.Y);
+        var bitmap = CaptureWindow(xDisplay, rootWindow, display.PhysicalSize.Width, display.PhysicalSize.Height,
+                                  display.LogicalMonitorArea.X, display.LogicalMonitorArea.Y);
 
         if (bitmap is null)
         {

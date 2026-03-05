@@ -222,7 +222,7 @@ internal sealed class DesktopRemoteControlStream(
         case DtoType.WheelScroll:
           {
             var payload = wrapper.GetPayload<WheelScrollDto>();
-            var coordinates = await TryGetPointerCoordinates(payload.PercentX, payload.PercentY);
+            var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
             if (coordinates == null)
             {
               break;
@@ -268,7 +268,7 @@ internal sealed class DesktopRemoteControlStream(
         case DtoType.MovePointer:
           {
             var payload = wrapper.GetPayload<MovePointerDto>();
-            var coordinates = await TryGetPointerCoordinates(payload.PercentX, payload.PercentY);
+            var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
             if (coordinates == null)
             {
               break;
@@ -279,7 +279,7 @@ internal sealed class DesktopRemoteControlStream(
         case DtoType.MouseButtonEvent:
           {
             var payload = wrapper.GetPayload<MouseButtonEventDto>();
-            var coordinates = await TryGetPointerCoordinates(payload.PercentX, payload.PercentY);
+            var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
             if (coordinates == null)
             {
               break;
@@ -291,7 +291,7 @@ internal sealed class DesktopRemoteControlStream(
         case DtoType.MouseClick:
           {
             var payload = wrapper.GetPayload<MouseClickDto>();
-            var coordinates = await TryGetPointerCoordinates(payload.PercentX, payload.PercentY);
+            var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
             if (coordinates == null)
             {
               break;
@@ -409,12 +409,17 @@ internal sealed class DesktopRemoteControlStream(
       var displayDtos = displays.Select(x => new DisplayDto
       {
         DisplayId = x.DeviceName,
-        Height = x.MonitorArea.Height,
         IsPrimary = x.IsPrimary,
-        Width = x.MonitorArea.Width,
         Name = x.DisplayName,
-        Top = x.MonitorArea.Top,
-        Left = x.MonitorArea.Left,
+        PhysicalWidth = x.PhysicalSize.Width,
+        PhysicalHeight = x.PhysicalSize.Height,
+        LogicalBounds = new DisplayBoundsDto
+        {
+          X = x.LogicalMonitorArea.Left,
+          Y = x.LogicalMonitorArea.Top,
+          Width = x.LogicalMonitorArea.Width,
+          Height = x.LogicalMonitorArea.Height,
+        },
         ScaleFactor = x.ScaleFactor,
         Index = x.Index
       });
@@ -497,7 +502,7 @@ internal sealed class DesktopRemoteControlStream(
     _appLifetime.StopApplication();
   }
 
-  private async Task<PointerCoordinates?> TryGetPointerCoordinates(double percentX, double percentY)
+  private async Task<PointerCoordinates?> TryGetPointerCoordinates(double normalizedX, double normalizedY)
   {
     var selectResult = await _desktopCapturer.TryGetSelectedDisplay();
     if (!selectResult.IsSuccess)
@@ -514,12 +519,12 @@ internal sealed class DesktopRemoteControlStream(
       return null;
     }
 
-    var point = await _displayManager.ConvertPercentageLocationToAbsolute(
+    var point = await _displayManager.ConvertDisplayPercentToPhysical(
         selectedDisplay.DeviceName,
-        percentX,
-        percentY);
+        normalizedX,
+        normalizedY);
 
-    return new PointerCoordinates(percentX, percentY, point, selectedDisplay);
+    return new PointerCoordinates(normalizedX, normalizedY, point, selectedDisplay);
   }
 
   private async Task TrySendSessionError(Exception ex)

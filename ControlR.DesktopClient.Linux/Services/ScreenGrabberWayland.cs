@@ -86,10 +86,16 @@ internal class ScreenGrabberWayland(
 
       // For multiple displays, we need to composite them together
       // This requires knowing the virtual screen bounds and each display's position
-      var virtualBounds = await _displayManager.GetVirtualScreenBounds();
+      var virtualBounds = await _displayManager.GetVirtualScreenLogicalBounds();
+      if (virtualBounds.Width == 0 && virtualBounds.Height == 0)
+      {
+        _logger.LogError("Virtual screen bounds are invalid: {Bounds}", virtualBounds);
+        return CaptureResult.Fail("Virtual screen bounds are invalid.");
+      }
+
       var displays = await _displayManager.GetDisplays();
 
-      var compositeBitmap = new SKBitmap(virtualBounds.Width, virtualBounds.Height);
+      var compositeBitmap = new SKBitmap((int)virtualBounds.Width, (int)virtualBounds.Height);
       using var canvas = new SKCanvas(compositeBitmap);
       canvas.Clear(SKColors.Black);
 
@@ -112,10 +118,10 @@ internal class ScreenGrabberWayland(
         _displayManager.UpdateCaptureSize(display.DeviceName, captureResult.Bitmap.Width, captureResult.Bitmap.Height);
 
         var destRect = SKRect.Create(
-          display.MonitorArea.X - virtualBounds.X,
-          display.MonitorArea.Y - virtualBounds.Y,
-          display.MonitorArea.Width,
-          display.MonitorArea.Height);
+          (float)(display.LogicalMonitorArea.X - virtualBounds.X),
+          (float)(display.LogicalMonitorArea.Y - virtualBounds.Y),
+          display.LogicalMonitorArea.Width,
+          display.LogicalMonitorArea.Height);
 
         canvas.DrawBitmap(captureResult.Bitmap, destRect);
       }

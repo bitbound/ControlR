@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using ControlR.Libraries.Shared.Primitives;
@@ -17,20 +18,28 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger, IDisplayEnum
   private readonly ConcurrentDictionary<string, DisplayInfo> _displays = new();
   private readonly ILogger<DisplayManagerMac> _logger = logger;
 
-  public async Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
+  public async Task<LogicalPoint> ConvertDisplayPercentToLogical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
   {
     var findResult = await TryFindDisplay(displayName);
     if (!findResult.IsSuccess)
     {
-      return Point.Empty;
+      return default;
     }
 
-    var display = findResult.Value;
-    var bounds = display.MonitorArea;
-    var absoluteX = (int)(bounds.Left + bounds.Width * percentX);
-    var absoluteY = (int)(bounds.Top + bounds.Height * percentY);
+    return DisplayCoordinateConverter
+        .DisplayPercentToLogical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
+  }
 
-    return new Point(absoluteX, absoluteY);
+  public async Task<PhysicalPoint> ConvertDisplayPercentToPhysical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
+  {
+    var findResult = await TryFindDisplay(displayName);
+    if (!findResult.IsSuccess)
+    {
+      return default;
+    }
+
+    return DisplayCoordinateConverter
+        .DisplayPercentToPhysical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
   }
 
   public Task<ImmutableList<DisplayInfo>> GetDisplays()
@@ -57,7 +66,7 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger, IDisplayEnum
     }
   }
 
-  public async Task<Rectangle> GetVirtualScreenBounds()
+  public async Task<LogicalRect> GetVirtualScreenLogicalBounds()
   {
     lock (_displayLock)
     {
@@ -66,23 +75,22 @@ internal class DisplayManagerMac(ILogger<DisplayManagerMac> logger, IDisplayEnum
         EnsureDisplaysLoaded();
         if (_displays.IsEmpty)
         {
-          return Rectangle.Empty;
+          return default;
         }
 
-        var minX = _displays.Values.Min(d => d.MonitorArea.Left);
-        var minY = _displays.Values.Min(d => d.MonitorArea.Top);
-        var maxX = _displays.Values.Max(d => d.MonitorArea.Right);
-        var maxY = _displays.Values.Max(d => d.MonitorArea.Bottom);
+        var minX = _displays.Values.Min(d => d.LogicalMonitorArea.Left);
+        var minY = _displays.Values.Min(d => d.LogicalMonitorArea.Top);
+        var maxX = _displays.Values.Max(d => d.LogicalMonitorArea.Right);
+        var maxY = _displays.Values.Max(d => d.LogicalMonitorArea.Bottom);
 
-        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+        return new LogicalRect(minX, minY, maxX - minX, maxY - minY);
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error getting virtual screen bounds.");
-        // Return main display bounds as fallback
+        _logger.LogError(ex, "Error getting virtual logical screen bounds.");
         var mainDisplayId = CoreGraphics.CGMainDisplayID();
         var bounds = CoreGraphics.CGDisplayBounds(mainDisplayId);
-        return new Rectangle((int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height);
+        return new LogicalRect(bounds.X, bounds.Y, bounds.Width, bounds.Height);
       }
     }
   }

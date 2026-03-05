@@ -20,14 +20,19 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
       new DisplayDto
       {
         DisplayId = "display-0",
-        Height = 1080,
         Index = 0,
         IsPrimary = true,
-        Left = 0,
+        LogicalBounds = new DisplayBoundsDto
+        {
+          X = 0,
+          Y = 0,
+          Width = 1920,
+          Height = 1080,
+        },
         Name = "Display 0",
+        PhysicalWidth = 1920,
+        PhysicalHeight = 1080,
         ScaleFactor = 1,
-        Top = 0,
-        Width = 1920
       },
       _ => Task.CompletedTask)
     {
@@ -41,14 +46,19 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
       new DisplayDto
       {
         DisplayId = "display-1",
-        Height = 1080,
         Index = 1,
         IsPrimary = false,
-        Left = 1920,
+        LogicalBounds = new DisplayBoundsDto
+        {
+          X = 1920,
+          Y = 0,
+          Width = 2560,
+          Height = 1080,
+        },
         Name = "Display 1",
+        PhysicalWidth = 2560,
+        PhysicalHeight = 1080,
         ScaleFactor = 1,
-        Top = 0,
-        Width = 2560
       },
       _ => Task.CompletedTask)
     {
@@ -136,17 +146,17 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
     return Task.CompletedTask;
   }
 
-  public Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
+  public Task SendMouseButtonEvent(int button, bool isPressed, double normalizedX, double normalizedY)
   {
     return Task.CompletedTask;
   }
 
-  public Task SendPointerMove(double percentX, double percentY)
+  public Task SendPointerMove(double normalizedX, double normalizedY)
   {
     return Task.CompletedTask;
   }
 
-  public Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
+  public Task SendWheelScroll(double normalizedX, double normalizedY, double scrollY, double scrollX)
   {
     return Task.CompletedTask;
   }

@@ -59,9 +59,9 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   Task SendClipboardText(string text);
   Task SendKeyboardStateReset();
   Task SendKeyEvent(string key, string code, bool isPressed, KeyEventModifiersDto modifiers);
-  Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY);
-  Task SendPointerMove(double percentX, double percentY);
-  Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX);
+  Task SendMouseButtonEvent(int button, bool isPressed, double normalizedX, double normalizedY);
+  Task SendPointerMove(double normalizedX, double normalizedY);
+  Task SendWheelScroll(double normalizedX, double normalizedY, double scrollY, double scrollX);
   Task TypeClipboardText(string text);
 }
 
@@ -449,7 +449,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     }
   }
 
-  public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
+  public async Task SendMouseButtonEvent(int button, bool isPressed, double normalizedX, double normalizedY)
   {
     if (_remoteControlState.IsViewOnlyEnabled)
     {
@@ -462,8 +462,8 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       await _viewerStream.SendMouseButtonEvent(
         button,
         isPressed,
-        percentX,
-        percentY,
+        normalizedX,
+        normalizedY,
         CancellationToken.None);
     }
     catch (Exception ex)
@@ -472,7 +472,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     }
   }
 
-  public async Task SendPointerMove(double percentX, double percentY)
+  public async Task SendPointerMove(double normalizedX, double normalizedY)
   {
     if (_remoteControlState.IsViewOnlyEnabled)
     {
@@ -481,7 +481,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
     try
     {
-      await _viewerStream.SendPointerMove(percentX, percentY, CancellationToken.None);
+      await _viewerStream.SendPointerMove(normalizedX, normalizedY, CancellationToken.None);
     }
     catch (Exception ex)
     {
@@ -489,7 +489,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     }
   }
 
-  public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
+  public async Task SendWheelScroll(double normalizedX, double normalizedY, double scrollY, double scrollX)
   {
     if (_remoteControlState.IsViewOnlyEnabled)
     {
@@ -498,7 +498,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
     try
     {
-      await _viewerStream.SendWheelScroll(percentX, percentY, scrollY, scrollX, CancellationToken.None);
+      await _viewerStream.SendWheelScroll(normalizedX, normalizedY, scrollY, scrollX, CancellationToken.None);
     }
     catch (Exception ex)
     {
@@ -657,8 +657,8 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
     _remoteControlState.SelectedDisplay = selectedDisplay;
 
-    SelectedDisplayWidth = selectedDisplay.Width;
-    SelectedDisplayHeight = selectedDisplay.Height;
+    SelectedDisplayWidth = selectedDisplay.PhysicalWidth;
+    SelectedDisplayHeight = selectedDisplay.PhysicalHeight;
     SyncDisplayItems();
   }
 
@@ -835,8 +835,8 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       using (var guard = _compositedFrame.Lock())
       {
         _remoteControlState.SelectedDisplay = displayItem.Display;
-        SelectedDisplayWidth = displayItem.Display.Width;
-        SelectedDisplayHeight = displayItem.Display.Height;
+      SelectedDisplayWidth = displayItem.Display.PhysicalWidth;
+      SelectedDisplayHeight = displayItem.Display.PhysicalHeight;
         UpdateSelectedDisplayState();
       }
 
@@ -938,10 +938,10 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       return;
     }
 
-    var minLeft = DisplayItems.Min(x => x.Display.Left);
-    var minTop = DisplayItems.Min(x => x.Display.Top);
-    var maxRight = DisplayItems.Max(x => x.Display.Left + x.Display.Width);
-    var maxBottom = DisplayItems.Max(x => x.Display.Top + x.Display.Height);
+    var minLeft = DisplayItems.Min(x => x.Display.LogicalBounds.X);
+    var minTop = DisplayItems.Min(x => x.Display.LogicalBounds.Y);
+    var maxRight = DisplayItems.Max(x => x.Display.LogicalBounds.X + x.Display.LogicalBounds.Width);
+    var maxBottom = DisplayItems.Max(x => x.Display.LogicalBounds.Y + x.Display.LogicalBounds.Height);
 
     var totalWidth = maxRight - minLeft;
     var totalHeight = maxBottom - minTop;
@@ -952,10 +952,10 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
     foreach (var display in DisplayItems)
     {
-      display.LayoutLeft = (display.Display.Left - minLeft) * scale;
-      display.LayoutTop = (display.Display.Top - minTop) * scale;
-      display.LayoutWidth = display.Display.Width * scale;
-      display.LayoutHeight = display.Display.Height * scale;
+      display.LayoutLeft = (display.Display.LogicalBounds.X - minLeft) * scale;
+      display.LayoutTop = (display.Display.LogicalBounds.Y - minTop) * scale;
+      display.LayoutWidth = display.Display.LogicalBounds.Width * scale;
+      display.LayoutHeight = display.Display.LogicalBounds.Height * scale;
     }
   }
 

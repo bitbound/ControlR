@@ -64,7 +64,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       return classNames.ToLower();
     }
   }
-  private double CanvasHeight => RemoteControlState.SelectedDisplay?.Height ?? 0;
+  private double CanvasHeight => RemoteControlState.SelectedDisplay?.PhysicalHeight ?? 0;
   private string CanvasStyle
   {
     get
@@ -80,7 +80,7 @@ public partial class RemoteDisplay : JsInteropableComponent
         $"height: {RemoteControlState.RendererPixelHeight}px;";
     }
   }
-  private double CanvasWidth => RemoteControlState.SelectedDisplay?.Width ?? 0;
+  private double CanvasWidth => RemoteControlState.SelectedDisplay?.PhysicalWidth ?? 0;
   private string OuterClass =>
     IsVisible
       ? string.Empty
@@ -157,7 +157,7 @@ public partial class RemoteDisplay : JsInteropableComponent
   }
 
   [JSInvokable]
-  public async Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY)
+  public async Task SendMouseButtonEvent(int button, bool isPressed, double normalizedX, double normalizedY)
   {
     if (RemoteControlState.IsViewOnlyEnabled && RemoteControlStream.IsConnected)
     {
@@ -170,11 +170,11 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-    await RemoteControlStream.SendMouseButtonEvent(button, isPressed, percentX, percentY, ComponentClosing);
+    await RemoteControlStream.SendMouseButtonEvent(button, isPressed, normalizedX, normalizedY, ComponentClosing);
   }
 
   [JSInvokable]
-  public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY)
+  public async Task SendMouseClick(int button, bool isDoubleClick, double normalizedX, double normalizedY)
   {
     if (RemoteControlState.IsViewOnlyEnabled && RemoteControlStream.IsConnected)
     {
@@ -182,29 +182,29 @@ public partial class RemoteDisplay : JsInteropableComponent
       return;
     }
 
-    await RemoteControlStream.SendMouseClick(button, isDoubleClick, percentX, percentY, ComponentClosing);
+    await RemoteControlStream.SendMouseClick(button, isDoubleClick, normalizedX, normalizedY, ComponentClosing);
   }
 
   [JSInvokable]
-  public async Task SendPointerMove(double percentX, double percentY)
+  public async Task SendPointerMove(double normalizedX, double normalizedY)
   {
     if (RemoteControlState.IsViewOnlyEnabled)
     {
       return;
     }
 
-    await RemoteControlStream.SendPointerMove(percentX, percentY, ComponentClosing);
+    await RemoteControlStream.SendPointerMove(normalizedX, normalizedY, ComponentClosing);
   }
 
   [JSInvokable]
-  public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX)
+  public async Task SendWheelScroll(double normalizedX, double normalizedY, double scrollY, double scrollX)
   {
     if (RemoteControlState.IsViewOnlyEnabled)
     {
       return;
     }
 
-    await RemoteControlStream.SendWheelScroll(percentX, percentY, scrollY, scrollX, ComponentClosing);
+    await RemoteControlStream.SendWheelScroll(normalizedX, normalizedY, scrollY, scrollX, ComponentClosing);
   }
 
   protected override async ValueTask DisposeAsync(bool disposing)
@@ -578,9 +578,9 @@ public partial class RemoteDisplay : JsInteropableComponent
       // Normal scroll - send to remote
       if (RemoteControlState.RendererPixelWidth > 0 && RemoteControlState.RendererPixelHeight > 0)
       {
-        var percentX = e.OffsetX / RemoteControlState.RendererPixelWidth;
-        var percentY = e.OffsetY / RemoteControlState.RendererPixelHeight;
-        await RemoteControlStream.SendWheelScroll(percentX, percentY, -e.DeltaY, 0, ComponentClosing);
+        var normalizedX = e.OffsetX / RemoteControlState.RendererPixelWidth;
+        var normalizedY = e.OffsetY / RemoteControlState.RendererPixelHeight;
+        await RemoteControlStream.SendWheelScroll(normalizedX, normalizedY, -e.DeltaY, 0, ComponentClosing);
       }
     }
     catch (Exception ex)

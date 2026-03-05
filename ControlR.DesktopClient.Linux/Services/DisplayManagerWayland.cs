@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using ControlR.Libraries.Shared.Extensions;
@@ -25,15 +26,6 @@ internal interface IDisplayManagerWayland : IDisplayManager
 ///
 /// Note: Wayland does not provide a standardized way to query display information
 /// without compositor-specific APIs
-/// 
-/// Terminology used by this manager:
-/// - LogicalMonitorArea: portal/compositor-reported logical bounds (device-independent units).
-/// - MonitorArea: physical pixel bounds (native pixels), used for capture and frame geometry.
-/// - ScaleFactor: physical / logical (physical = logical * ScaleFactor).
-///
-/// Note on input coordinates:
-/// Wayland RemoteDesktop absolute pointer APIs operate in compositor/logical coordinates,
-/// so pointer conversion here uses LogicalMonitorArea rather than MonitorArea.
 /// </summary>
 internal class DisplayManagerWayland(
   TimeProvider timeProvider,
@@ -57,23 +49,28 @@ internal class DisplayManagerWayland(
 
   public bool HasAnyCaptureSizes => !_captureSizes.IsEmpty;
 
-  public async Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
+  public async Task<LogicalPoint> ConvertDisplayPercentToLogical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
   {
     var findResult = await TryFindDisplay(displayName);
     if (!findResult.IsSuccess)
     {
-      return Point.Empty;
+      return default;
     }
 
-    var display = findResult.Value;
-    // On Wayland, absolute pointer movement uses compositor/logical coordinates.
-    // Convert normalized percentages into the selected display's logical coordinate space.
-    var bounds = display.LogicalMonitorArea;
+    return DisplayCoordinateConverter
+        .DisplayPercentToLogical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
+  }
 
-    var absoluteX = (int)(bounds.Left + bounds.Width * percentX);
-    var absoluteY = (int)(bounds.Top + bounds.Height * percentY);
+  public async Task<PhysicalPoint> ConvertDisplayPercentToPhysical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
+  {
+    var findResult = await TryFindDisplay(displayName);
+    if (!findResult.IsSuccess)
+    {
+      return default;
+    }
 
-    return new Point(absoluteX, absoluteY);
+    return DisplayCoordinateConverter
+        .DisplayPercentToPhysical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
   }
 
   public async Task<IReadOnlyDictionary<string, PipeWireStream>> CreatePipeWireStreams(CancellationToken cancellationToken = default)
@@ -149,7 +146,7 @@ internal class DisplayManagerWayland(
       ?? _displays.Values.FirstOrDefault();
   }
 
-  public async Task<Rectangle> GetVirtualScreenBounds()
+  public async Task<LogicalRect> GetVirtualScreenLogicalBounds()
   {
     try
     {
@@ -157,20 +154,20 @@ internal class DisplayManagerWayland(
       using var locker = await _displayLock.AcquireLockAsync(_displayLockTimeout);
       if (_displays.IsEmpty)
       {
-        return Rectangle.Empty;
+        return default;
       }
 
-      var minX = _displays.Values.Min(d => d.MonitorArea.Left);
-      var minY = _displays.Values.Min(d => d.MonitorArea.Top);
-      var maxX = _displays.Values.Max(d => d.MonitorArea.Right);
-      var maxY = _displays.Values.Max(d => d.MonitorArea.Bottom);
+      var minX = _displays.Values.Min(d => d.LogicalMonitorArea.Left);
+      var minY = _displays.Values.Min(d => d.LogicalMonitorArea.Top);
+      var maxX = _displays.Values.Max(d => d.LogicalMonitorArea.Right);
+      var maxY = _displays.Values.Max(d => d.LogicalMonitorArea.Bottom);
 
-      return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+      return new LogicalRect(minX, minY, maxX - minX, maxY - minY);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error getting virtual screen bounds on Wayland");
-      return new Rectangle(0, 0, 1920, 1080);
+      _logger.LogError(ex, "Error getting virtual logical screen bounds on Wayland");
+      return default;
     }
   }
 
@@ -257,9 +254,9 @@ internal class DisplayManagerWayland(
       }
 
       using var stream = _streamFactory.Create(nodeId, connection.Value.Fd, logicalWidth, logicalHeight);
-      
+
       // Allow time for stream negotiation and first frame delivery.
-      using var cts = new CancellationTokenSource(_probeTimeout);
+      using var cts = new CancellationTokenSource(_probeTimeout, _timeProvider);
       if (!await stream.WaitForFirstFrame(cts.Token))
       {
         return Size.Empty;
@@ -297,13 +294,6 @@ internal class DisplayManagerWayland(
           .OrderBy(x => x.StreamIndex)
           .ToList();
 
-        // If the portal doesn't provide positions, fall back to horizontal layout.
-        var fallbackOffsetX = 0;
-
-        // Prefer portal-reported position (typically compositor coordinate space).
-        var hasAnyPositions = orderedStreams.Any(s => s.Properties.TryGetValue("position", out var posObj)
-          && WaylandTupleParser.TryParseTuple2(posObj, out _, out _));
-
         foreach (var stream in orderedStreams)
         {
           int logicalWidth = 1920, logicalHeight = 1080;
@@ -312,13 +302,15 @@ internal class DisplayManagerWayland(
           int logicalTop = 0;
 
           // Get logical dimensions from portal properties
-          if (stream.Properties.TryGetValue("size", out var sizeObj) && WaylandTupleParser.TryParseTuple2(sizeObj, out var sizeX, out var sizeY))
+          if (stream.Properties.TryGetValue("size", out var sizeObj) && 
+              WaylandTupleParser.TryParseTuple2(sizeObj, out var sizeX, out var sizeY))
           {
             logicalWidth = sizeX;
             logicalHeight = sizeY;
           }
 
-          if (stream.Properties.TryGetValue("position", out var positionObj) && WaylandTupleParser.TryParseTuple2(positionObj, out var positionX, out var positionY))
+          if (stream.Properties.TryGetValue("position", out var positionObj) && 
+              WaylandTupleParser.TryParseTuple2(positionObj, out var positionX, out var positionY))
           {
             logicalLeft = positionX;
             logicalTop = positionY;
@@ -353,43 +345,22 @@ internal class DisplayManagerWayland(
             ? (double)physicalWidth / logicalWidth
             : 1.0;
 
-          var captureLeft = 0;
-          var captureTop = 0;
-          if (hasAnyPositions)
-          {
-            captureLeft = (int)Math.Round(logicalLeft * scaleFactor);
-            captureTop = (int)Math.Round(logicalTop * scaleFactor);
-          }
-          else
-          {
-            captureLeft = fallbackOffsetX;
-            captureTop = 0;
-          }
-
           var display = new DisplayInfo
           {
             DeviceName = deviceName,
             DisplayName = $"Display {stream.StreamIndex + 1}",
             Index = stream.StreamIndex,
             LogicalMonitorArea = new Rectangle(logicalLeft, logicalTop, logicalWidth, logicalHeight),
-            MonitorArea = new Rectangle(captureLeft, captureTop, physicalWidth, physicalHeight),
-            WorkArea = new Rectangle(captureLeft, captureTop, physicalWidth, physicalHeight),
+            PhysicalSize = new Size(physicalWidth, physicalHeight),
             IsPrimary = stream.StreamIndex == orderedStreams.Min(x => x.StreamIndex),
             ScaleFactor = scaleFactor
           };
 
           _displays[display.DeviceName] = display;
 
-          // _displayNodeIds already populated by EnsureStreamsInitialized or set below
           if (!_displayNodeIds.ContainsKey(deviceName) && stream.NodeId != 0)
           {
             _displayNodeIds[deviceName] = stream.NodeId;
-          }
-
-          // Fallback layout: position displays horizontally side-by-side.
-          if (!hasAnyPositions)
-          {
-            fallbackOffsetX += physicalWidth;
           }
         }
 
@@ -402,8 +373,8 @@ internal class DisplayManagerWayland(
           DeviceName = "0",
           DisplayName = "Display 1",
           Index = 0,
-          MonitorArea = new Rectangle(0, 0, 1920, 1080),
-          WorkArea = new Rectangle(0, 0, 1920, 1080),
+          PhysicalSize = new Size(1920, 1080),
+          LogicalMonitorArea = new Rectangle(0, 0, 1920, 1080),
           IsPrimary = true,
           ScaleFactor = 1.0
         };

@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.NativeInterop.Unix.Linux;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.Shared.Primitives;
@@ -22,19 +23,28 @@ internal class DisplayManagerX11 : IDisplayManager
     _logger = logger;
   }
 
-  public async Task<Point> ConvertPercentageLocationToAbsolute(string displayName, double percentX, double percentY)
+  public async Task<LogicalPoint> ConvertDisplayPercentToLogical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
   {
     var findResult = await TryFindDisplay(displayName);
     if (!findResult.IsSuccess)
     {
-      return Point.Empty;
+      return default;
     }
 
-    var bounds = findResult.Value.MonitorArea;
-    var absoluteX = (int)(bounds.Left + bounds.Width * percentX);
-    var absoluteY = (int)(bounds.Top + bounds.Height * percentY);
+    return DisplayCoordinateConverter
+        .DisplayPercentToLogical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
+  }
 
-    return new Point(absoluteX, absoluteY);
+  public async Task<PhysicalPoint> ConvertDisplayPercentToPhysical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
+  {
+    var findResult = await TryFindDisplay(displayName);
+    if (!findResult.IsSuccess)
+    {
+      return default;
+    }
+
+    return DisplayCoordinateConverter
+        .DisplayPercentToPhysical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
   }
 
   public Task<ImmutableList<DisplayInfo>> GetDisplays()
@@ -61,7 +71,7 @@ internal class DisplayManagerX11 : IDisplayManager
     }
   }
 
-  public async Task<Rectangle> GetVirtualScreenBounds()
+  public async Task<LogicalRect> GetVirtualScreenLogicalBounds()
   {
     try
     {
@@ -70,37 +80,21 @@ internal class DisplayManagerX11 : IDisplayManager
         EnsureDisplaysLoaded();
         if (_displays.Count == 0)
         {
-          return Rectangle.Empty;
+          return default;
         }
 
-        var minX = _displays.Values.Min(d => d.MonitorArea.Left);
-        var minY = _displays.Values.Min(d => d.MonitorArea.Top);
-        var maxX = _displays.Values.Max(d => d.MonitorArea.Right);
-        var maxY = _displays.Values.Max(d => d.MonitorArea.Bottom);
+        var minX = _displays.Values.Min(d => d.LogicalMonitorArea.Left);
+        var minY = _displays.Values.Min(d => d.LogicalMonitorArea.Top);
+        var maxX = _displays.Values.Max(d => d.LogicalMonitorArea.Right);
+        var maxY = _displays.Values.Max(d => d.LogicalMonitorArea.Bottom);
 
-        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+        return new LogicalRect(minX, minY, maxX - minX, maxY - minY);
       }
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error getting virtual screen bounds.");
-      // Return default screen bounds as fallback
-      var xDisplay = LibX11.XOpenDisplay("");
-      if (xDisplay != nint.Zero)
-      {
-        try
-        {
-          var screenNumber = LibX11.XDefaultScreen(xDisplay);
-          var width = LibX11.XDisplayWidth(xDisplay, screenNumber);
-          var height = LibX11.XDisplayHeight(xDisplay, screenNumber);
-          return new Rectangle(0, 0, width, height);
-        }
-        finally
-        {
-          LibX11.XCloseDisplay(xDisplay);
-        }
-      }
-      return Rectangle.Empty;
+      _logger.LogError(ex, "Error getting virtual logical screen bounds.");
+      return default;
     }
   }
 
@@ -174,11 +168,10 @@ internal class DisplayManagerX11 : IDisplayManager
               DeviceName = i.ToString(),
               DisplayName = $"Display {i + 1}",
               Index = i,
-              MonitorArea = monitorRect,
+              PhysicalSize = new Size(monitorRect.Width, monitorRect.Height),
               LogicalMonitorArea = new Rectangle(monitorRect.Left, monitorRect.Top, monitorRect.Width, monitorRect.Height),
-              WorkArea = new Rectangle(monitor.x, monitor.y, monitor.width, monitor.height),
               IsPrimary = monitor.primary,
-              ScaleFactor = 1.0 // X11 doesn't provide easy access to scale factor
+              ScaleFactor = 1.0
             };
 
             _displays[displayInfo.DeviceName] = displayInfo;
@@ -201,9 +194,8 @@ internal class DisplayManagerX11 : IDisplayManager
               DeviceName = i.ToString(),
               DisplayName = $"Display {i + 1}",
               Index = i,
-              MonitorArea = monitorRect,
+              PhysicalSize = new Size(monitorRect.Width, monitorRect.Height),
               LogicalMonitorArea = new Rectangle(monitorRect.Left, monitorRect.Top, monitorRect.Width, monitorRect.Height),
-              WorkArea = new Rectangle(0, 0, width, height),
               IsPrimary = i == 0,
               ScaleFactor = 1.0
             };

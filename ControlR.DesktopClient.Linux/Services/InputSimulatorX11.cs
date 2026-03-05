@@ -106,7 +106,7 @@ public class InputSimulatorX11 : IInputSimulator
     try
     {
       // Convert coordinates if display is specified
-      var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, coordinates.Display);
+      var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates);
 
       // Move cursor to position first
       LibXtst.XTestFakeMotionEvent(xDisplay, screenNumber, adjustedX, adjustedY, 0);
@@ -144,11 +144,11 @@ public class InputSimulatorX11 : IInputSimulator
     {
       if (moveType == MovePointerType.Relative)
       {
-        LibXtst.XTestFakeRelativeMotionEvent(xDisplay, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, 0);
+        LibXtst.XTestFakeRelativeMotionEvent(xDisplay, coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y, 0);
       }
       else
       {
-        var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, coordinates.Display);
+        var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates);
         LibXtst.XTestFakeMotionEvent(xDisplay, screenNumber, adjustedX, adjustedY, 0);
       }
 
@@ -231,7 +231,7 @@ public class InputSimulatorX11 : IInputSimulator
 
     try
     {
-      var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, coordinates.Display);
+      var (screenNumber, adjustedX, adjustedY) = GetDisplayCoordinates(xDisplay, coordinates);
 
       // Move cursor to position first
       LibXtst.XTestFakeMotionEvent(xDisplay, screenNumber, adjustedX, adjustedY, 0);
@@ -644,23 +644,24 @@ public class InputSimulatorX11 : IInputSimulator
     };
   }
 
-  private static (int screenNumber, int adjustedX, int adjustedY) GetDisplayCoordinates(nint xDisplay, int x, int y, DisplayInfo? display)
+  private static (int screenNumber, int adjustedX, int adjustedY) GetDisplayCoordinates(nint xDisplay, PointerCoordinates coordinates)
   {
-    // Default to screen 0 if no display info provided
-    if (display == null)
-    {
-      return (0, x, y);
-    }
+    // X11 screen coordinates are in logical units (scale factor is 1.0 for X11's core protocol).
+    // Compute absolute X11 screen position from the display's logical bounds and the normalized
+    // position within that display.
+    var bounds = coordinates.Display.LogicalMonitorArea;
+    var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
+    var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
+    var maxX = bounds.Left + Math.Max(0, bounds.Width - 1);
+    var maxY = bounds.Top + Math.Max(0, bounds.Height - 1);
+    var absoluteX = (int)Math.Round(bounds.Left + (Math.Max(0, bounds.Width - 1) * clampedX));
+    var absoluteY = (int)Math.Round(bounds.Top + (Math.Max(0, bounds.Height - 1) * clampedY));
 
-    // For multi-monitor setups, we need to adjust coordinates based on display position
-    // Use the MonitorArea rectangle to get the position offset
-    var adjustedX = x + display.MonitorArea.Left;
-    var adjustedY = y + display.MonitorArea.Top;
+    absoluteX = Math.Clamp(absoluteX, bounds.Left, maxX);
+    absoluteY = Math.Clamp(absoluteY, bounds.Top, maxY);
 
-    // Get the appropriate screen number (typically 0 for most setups)
     var screenNumber = LibX11.XDefaultScreen(xDisplay);
-
-    return (screenNumber, adjustedX, adjustedY);
+    return (screenNumber, absoluteX, absoluteY);
   }
 
 }

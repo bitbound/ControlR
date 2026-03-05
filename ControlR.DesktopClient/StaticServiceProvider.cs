@@ -25,6 +25,7 @@ internal static class StaticServiceProvider
 {
   private static ServiceProvider? _designTimeProvider;
   private static ServiceProvider? _provider;
+
   public static IServiceProvider Instance => _provider ?? GetDesignTimeProvider();
 
   public static void Build(
@@ -116,11 +117,11 @@ internal static class StaticServiceProvider
         .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
         .AddSingleton<IWin32Interop, Win32Interop>()
         .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
-        .AddSingleton<IDisplayManager, DisplayManagerWindows>()
         .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
         .AddSingleton<IPermissionsViewModel, PermissionsViewModel>()
         .AddTransient<PermissionsView>();
 
+      AddWindowsDisplayManager(services);
     }
     else if (OperatingSystem.IsMacOS())
     {
@@ -205,6 +206,15 @@ internal static class StaticServiceProvider
       });
 
     return services;
+  }
+
+  [System.Runtime.Versioning.SupportedOSPlatform("windows8.0")]
+  private static void AddWindowsDisplayManager(IServiceCollection services)
+  {
+    services
+      .AddSingleton<DisplayManagerWindows>()
+      .AddSingleton<IDisplayManager>(s => s.GetRequiredService<DisplayManagerWindows>())
+      .AddSingleton<IWindowsDisplayManager>(s => s.GetRequiredService<DisplayManagerWindows>());
   }
 
   private static ServiceProvider GetDesignTimeProvider()

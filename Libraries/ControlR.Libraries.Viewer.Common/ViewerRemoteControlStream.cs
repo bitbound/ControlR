@@ -21,15 +21,15 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
     KeyboardInputMode inputMode,
     KeyEventModifiersDto modifiers,
     CancellationToken cancellationToken);
-  Task SendMouseButtonEvent(int button, bool isPressed, double percentX, double percentY,
+  Task SendMouseButtonEvent(int button, bool isPressed, double normalizedX, double normalizedY,
     CancellationToken cancellationToken);
-  Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY,
+  Task SendMouseClick(int button, bool isDoubleClick, double normalizedX, double normalizedY,
     CancellationToken cancellationToken);
-  Task SendPointerMove(double percentX, double percentY, CancellationToken cancellationToken);
+  Task SendPointerMove(double normalizedX, double normalizedY, CancellationToken cancellationToken);
   Task SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken);
   Task SendTogglePrivacyScreen(bool isEnabled, CancellationToken cancellationToken);
   Task SendTypeText(string text, CancellationToken cancellationToken);
-  Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX,
+  Task SendWheelScroll(double normalizedX, double normalizedY, double scrollY, double scrollX,
     CancellationToken cancellationToken);
 }
 
@@ -130,37 +130,37 @@ public class ViewerRemoteControlStream(
   public async Task SendMouseButtonEvent(
     int button,
     bool isPressed,
-    double percentX,
-    double percentY,
+    double normalizedX,
+    double normalizedY,
     CancellationToken cancellationToken)
   {
     await TrySend(
       async () =>
       {
-        var dto = new MouseButtonEventDto(button, isPressed, percentX, percentY);
+        var dto = new MouseButtonEventDto(button, isPressed, normalizedX, normalizedY);
         var wrapper = DtoWrapper.Create(dto, DtoType.MouseButtonEvent);
         await Send(wrapper, cancellationToken);
       });
   }
 
-  public async Task SendMouseClick(int button, bool isDoubleClick, double percentX, double percentY,
+  public async Task SendMouseClick(int button, bool isDoubleClick, double normalizedX, double normalizedY,
     CancellationToken cancellationToken)
   {
     await TrySend(
       async () =>
       {
-        var dto = new MouseClickDto(button, isDoubleClick, percentX, percentY);
+        var dto = new MouseClickDto(button, isDoubleClick, normalizedX, normalizedY);
         var wrapper = DtoWrapper.Create(dto, DtoType.MouseClick);
         await Send(wrapper, cancellationToken);
       });
   }
 
-  public async Task SendPointerMove(double percentX, double percentY, CancellationToken cancellationToken)
+  public async Task SendPointerMove(double normalizedX, double normalizedY, CancellationToken cancellationToken)
   {
     await TrySend(
       async () =>
       {
-        var dto = new MovePointerDto(percentX, percentY);
+        var dto = new MovePointerDto(normalizedX, normalizedY);
         var wrapper = DtoWrapper.Create(dto, DtoType.MovePointer);
         await Send(wrapper, cancellationToken);
       });
@@ -199,13 +199,13 @@ public class ViewerRemoteControlStream(
       });
   }
 
-  public async Task SendWheelScroll(double percentX, double percentY, double scrollY, double scrollX,
+  public async Task SendWheelScroll(double normalizedX, double normalizedY, double scrollY, double scrollX,
     CancellationToken cancellationToken)
   {
     await TrySend(
       async () =>
       {
-        var dto = new WheelScrollDto(percentX, percentY, scrollY, scrollX);
+        var dto = new WheelScrollDto(normalizedX, normalizedY, scrollY, scrollX);
         var wrapper = DtoWrapper.Create(dto, DtoType.WheelScroll);
         await Send(wrapper, cancellationToken);
       });

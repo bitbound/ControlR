@@ -56,7 +56,6 @@ internal class FakeDesktopCapturerFactory : IDesktopCapturerFactory
   private class FakeDesktopCapturer : IDesktopCapturer
   {
     public Task ChangeDisplays(string displayId) => Task.CompletedTask;
-    public Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY) => Task.FromResult(new Point());
     public ValueTask DisposeAsync() => default;
     public string GetCaptureMode() => string.Empty;
     public async IAsyncEnumerable<DtoWrapper> GetCaptureStream([EnumeratorCancellation] System.Threading.CancellationToken cancellationToken) { yield break; }

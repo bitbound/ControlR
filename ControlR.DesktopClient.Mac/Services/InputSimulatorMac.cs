@@ -14,7 +14,7 @@ public class InputSimulatorMac(
 {
   private readonly ILogger<InputSimulatorMac> _logger = logger;
   private readonly IMacInterop _macInterop = macInterop;
-  
+
   public Task InvokeKeyEvent(
     string key,
     string code,
@@ -70,11 +70,8 @@ public class InputSimulatorMac(
   {
     try
     {
-      // Mac expects the logical coordinates for mouse events, not the pixel coordinates,
-      // while Windows expects pixel coordinates.  We'll adjust for Mac.
-      var logicalX = coordinates.AbsolutePoint.X / coordinates.Display.ScaleFactor;
-      var logicalY = coordinates.AbsolutePoint.Y / coordinates.Display.ScaleFactor;
-      _macInterop.InvokeMouseButtonEvent((int)logicalX, (int)logicalY, button, isPressed);
+      var (logicalX, logicalY) = GetAbsoluteLogicalCoords(coordinates);
+      _macInterop.InvokeMouseButtonEvent(logicalX, logicalY, button, isPressed);
     }
     catch (Exception ex)
     {
@@ -88,15 +85,12 @@ public class InputSimulatorMac(
   {
     try
     {
-      // Mac expects the logical coordinates for pointer moves, not the pixel coordinates,
-      // while Windows expects pixel coordinates.  We'll adjust for Mac.
-      var logicalX = coordinates.AbsolutePoint.X / coordinates.Display.ScaleFactor;
-      var logicalY = coordinates.AbsolutePoint.Y / coordinates.Display.ScaleFactor;
-      _macInterop.MovePointer((int)logicalX, (int)logicalY, moveType);
+      var (logicalX, logicalY) = GetAbsoluteLogicalCoords(coordinates);
+      _macInterop.MovePointer(logicalX, logicalY, moveType);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error processing pointer move to ({X}, {Y})", coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
+      _logger.LogError(ex, "Error processing pointer move for normalized ({X:F4}, {Y:F4})", coordinates.NormalizedX, coordinates.NormalizedY);
     }
 
     return Task.CompletedTask;
@@ -120,15 +114,12 @@ public class InputSimulatorMac(
   {
     try
     {
-      // Mac expects the logical coordinates for wheel scrolls, not the pixel coordinates,
-      // while Windows expects pixel coordinates.  We'll adjust for Mac.
-      var logicalX = coordinates.AbsolutePoint.X / coordinates.Display.ScaleFactor;
-      var logicalY = coordinates.AbsolutePoint.Y / coordinates.Display.ScaleFactor;
-      _macInterop.InvokeWheelScroll((int)logicalX, (int)logicalY, scrollY, scrollX);
+      var (logicalX, logicalY) = GetAbsoluteLogicalCoords(coordinates);
+      _macInterop.InvokeWheelScroll(logicalX, logicalY, scrollY, scrollX);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error processing wheel scroll at ({X}, {Y})", coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
+      _logger.LogError(ex, "Error processing wheel scroll for normalized ({X:F4}, {Y:F4})", coordinates.NormalizedX, coordinates.NormalizedY);
     }
 
     return Task.CompletedTask;
@@ -151,6 +142,26 @@ public class InputSimulatorMac(
     }
 
     return Task.CompletedTask;
+  }
+
+  /// <summary>
+  /// Converts normalized (0-1) display-relative coordinates to absolute logical screen coordinates
+  /// using the display's logical monitor area.  macOS input APIs (CGWarpMouseCursorPosition etc.)
+  /// expect logical/point coordinates in the global screen coordinate space.
+  /// </summary>
+  private static (int x, int y) GetAbsoluteLogicalCoords(PointerCoordinates coordinates)
+  {
+    var bounds = coordinates.Display.LogicalMonitorArea;
+    var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
+    var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
+    var maxX = bounds.Left + Math.Max(0, bounds.Width - 1);
+    var maxY = bounds.Top + Math.Max(0, bounds.Height - 1);
+    var logicalX = (int)Math.Round(bounds.Left + (Math.Max(0, bounds.Width - 1) * clampedX));
+    var logicalY = (int)Math.Round(bounds.Top + (Math.Max(0, bounds.Height - 1) * clampedY));
+
+    logicalX = Math.Clamp(logicalX, bounds.Left, maxX);
+    logicalY = Math.Clamp(logicalY, bounds.Top, maxY);
+    return (logicalX, logicalY);
   }
 
   private Task InvokeMacKeyEvent(string key, string code, bool isPressed, KeyboardInputMode inputMode)

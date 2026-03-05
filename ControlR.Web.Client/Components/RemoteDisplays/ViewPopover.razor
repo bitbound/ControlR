@@ -121,10 +121,10 @@
       return string.Empty;
     }
 
-    var minLeft = displays.Min(d => d.Left);
-    var minTop = displays.Min(d => d.Top);
-    var maxRight = displays.Max(d => d.Left + d.Width);
-    var maxBottom = displays.Max(d => d.Top + d.Height);
+    var minLeft = displays.Min(d => d.LogicalBounds.X);
+    var minTop = displays.Min(d => d.LogicalBounds.Y);
+    var maxRight = displays.Max(d => d.LogicalBounds.X + d.LogicalBounds.Width);
+    var maxBottom = displays.Max(d => d.LogicalBounds.Y + d.LogicalBounds.Height);
 
     var totalWidth = maxRight - minLeft;
     var totalHeight = maxBottom - minTop;
@@ -136,10 +136,10 @@
     var scaleY = totalHeight == 0 ? 1 : containerHeight / totalHeight;
     var scale = Math.Min(scaleX, scaleY);
 
-    var normalizedLeft = (display.Left - minLeft) * scale;
-    var normalizedTop = (display.Top - minTop) * scale;
-    var scaledWidth = display.Width * scale;
-    var scaledHeight = display.Height * scale;
+    var normalizedLeft = (display.LogicalBounds.X - minLeft) * scale;
+    var normalizedTop = (display.LogicalBounds.Y - minTop) * scale;
+    var scaledWidth = display.LogicalBounds.Width * scale;
+    var scaledHeight = display.LogicalBounds.Height * scale;
 
     return $"left: {normalizedLeft:F1}px; top: {normalizedTop:F1}px; width: {scaledWidth:F1}px; height: {scaledHeight:F1}px;";
   }

@@ -4,8 +4,8 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 
 [MessagePackObject(keyAsPropertyName: true)]
 public record MovePointerDto(
-    double PercentX,
-    double PercentY);
+  double NormalizedX,
+  double NormalizedY);
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MovePointerType

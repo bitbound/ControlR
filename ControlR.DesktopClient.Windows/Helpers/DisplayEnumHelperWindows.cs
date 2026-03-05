@@ -12,9 +12,15 @@ internal static class DisplayEnumHelperWindows
 
   private delegate bool EnumMonitorsDelegate(nint hMonitor, nint hdcMonitor, ref Rect lprcMonitor, nint dwData);
 
-  public static List<DisplayInfo> GetDisplays()
+  /// <summary>
+  /// Returns each display paired with its physical pixel bounds in the global virtual screen.
+  /// The physical bounds are not stored in <see cref="DisplayInfo"/> because a global physical
+  /// origin is not universally knowable (e.g. Wayland/macOS mixed-DPI), but on Windows Win32
+  /// reports them directly via <c>MONITORINFOEX.rcMonitor</c>.
+  /// </summary>
+  public static List<(DisplayInfo Display, Rectangle PhysicalBounds)> GetDisplays()
   {
-    var displays = new List<DisplayInfo>();
+    var displays = new List<(DisplayInfo, Rectangle)>();
 
     EnumDisplayMonitors(
       nint.Zero,
@@ -29,10 +35,9 @@ internal static class DisplayEnumHelperWindows
           return true;
         }
 
-        // Try to determine the display DPI so we can populate LogicalMonitorArea and ScaleFactor.
         var scale = 1.0;
 
-        var monitorRect = new Rectangle(
+        var physicalBounds = new Rectangle(
           mi.Monitor.Left,
           mi.Monitor.Top,
           mi.Monitor.Right - mi.Monitor.Left,
@@ -47,28 +52,23 @@ internal static class DisplayEnumHelperWindows
           }
         }
 
-        var logicalLeft = (int)Math.Round(monitorRect.Left / scale);
-        var logicalTop = (int)Math.Round(monitorRect.Top / scale);
-        var logicalWidth = (int)Math.Round(monitorRect.Width / scale);
-        var logicalHeight = (int)Math.Round(monitorRect.Height / scale);
+        var logicalLeft = (int)Math.Round(physicalBounds.Left / scale);
+        var logicalTop = (int)Math.Round(physicalBounds.Top / scale);
+        var logicalWidth = (int)Math.Round(physicalBounds.Width / scale);
+        var logicalHeight = (int)Math.Round(physicalBounds.Height / scale);
 
         var info = new DisplayInfo
         {
           DisplayName = $"Display {displays.Count + 1}",
-          MonitorArea = monitorRect,
+          PhysicalSize = new Size(physicalBounds.Width, physicalBounds.Height),
           LogicalMonitorArea = new Rectangle(logicalLeft, logicalTop, logicalWidth, logicalHeight),
-          WorkArea = new Rectangle(
-            mi.WorkArea.Left,
-            mi.WorkArea.Top,
-            mi.WorkArea.Right - mi.WorkArea.Left,
-            mi.WorkArea.Bottom - mi.WorkArea.Top),
           IsPrimary = mi.Flags > 0,
           DeviceName = mi.DeviceName,
           Index = displays.Count,
           ScaleFactor = scale
         };
-        
-        displays.Add(info);
+
+        displays.Add((info, physicalBounds));
 
         return true;
       }, nint.Zero);

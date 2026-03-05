@@ -83,8 +83,8 @@ public class RemoteControlState(ILogger<ObservableState> logger) : ObservableSta
   }
   public double MaxRendererScale => 3;
   public double MinRendererScale => 0.2;
-  public double RendererPixelHeight => (SelectedDisplay?.Height ?? 0) * RendererScale;
-  public double RendererPixelWidth => (SelectedDisplay?.Width ?? 0) * RendererScale;
+  public double RendererPixelHeight => (SelectedDisplay?.PhysicalHeight ?? 0) * RendererScale;
+  public double RendererPixelWidth => (SelectedDisplay?.PhysicalWidth ?? 0) * RendererScale;
   public double RendererScale
   {
     get => Get(defaultValue: 1.0);

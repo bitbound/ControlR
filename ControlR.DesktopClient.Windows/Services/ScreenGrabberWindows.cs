@@ -24,13 +24,13 @@ namespace ControlR.DesktopClient.Windows.Services;
 internal sealed class ScreenGrabberWindows(
   IDxOutputDuplicator dxOutputGenerator,
   IWin32Interop win32Interop,
-  IDisplayManager displayManager,
+  IWindowsDisplayManager displayManager,
   ILogger<ScreenGrabberWindows> logger) : IScreenGrabber
 {
   private const string DirectXCaptureMode = "DirectX";
   private const string GdiCaptureMode = "GDI";
 
-  private readonly IDisplayManager _displayManager = displayManager;
+  private readonly IWindowsDisplayManager _displayManager = displayManager;
   private readonly IDxOutputDuplicator _dxOutputGenerator = dxOutputGenerator;
   private readonly ILogger<ScreenGrabberWindows> _logger = logger;
   private readonly IWin32Interop _win32Interop = win32Interop;
@@ -40,8 +40,9 @@ internal sealed class ScreenGrabberWindows(
   public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
     SwitchToInputDesktop();
-    var bounds = await _displayManager.GetVirtualScreenBounds();
-    return GetBitBltCapture(bounds, captureCursor);
+    var bounds = await _displayManager.GetVirtualScreenLogicalBounds();
+    var captureArea = new Rectangle((int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height);
+    return GetBitBltCapture(captureArea, captureCursor);
   }
   public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
@@ -57,7 +58,17 @@ internal sealed class ScreenGrabberWindows(
       {
         return dxResult;
       }
-      return GetBitBltCapture(targetDisplay.MonitorArea, captureCursor);
+
+      if (!_displayManager.TryGetPhysicalBounds(targetDisplay.DeviceName, out var physicalArea))
+      {
+        physicalArea = new Rectangle(
+          targetDisplay.LogicalMonitorArea.X,
+          targetDisplay.LogicalMonitorArea.Y,
+          targetDisplay.LogicalMonitorArea.Width,
+          targetDisplay.LogicalMonitorArea.Height);
+      }
+
+      return GetBitBltCapture(physicalArea, captureCursor);
     }
     catch (Exception ex)
     {
@@ -203,7 +214,16 @@ internal sealed class ScreenGrabberWindows(
 
       using var graphics = Graphics.FromImage(bitmap);
 
-      var iconArea = TryDrawCursor(graphics, display.MonitorArea);
+      if (!_displayManager.TryGetPhysicalBounds(display.DeviceName, out var physicalArea))
+      {
+        physicalArea = new Rectangle(
+          display.LogicalMonitorArea.X,
+          display.LogicalMonitorArea.Y,
+          display.LogicalMonitorArea.Width,
+          display.LogicalMonitorArea.Height);
+      }
+
+      var iconArea = TryDrawCursor(graphics, physicalArea);
       if (!iconArea.IsEmpty)
       {
         dirtyRects = [.. dirtyRects, iconArea];

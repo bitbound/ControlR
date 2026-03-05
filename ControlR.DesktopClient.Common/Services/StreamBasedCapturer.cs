@@ -131,7 +131,7 @@ internal class StreamBasedCapturer(
       _selectedDisplay = primary;
     }
 
-    _encoder.Start(_selectedDisplay.MonitorArea.Width, _selectedDisplay.MonitorArea.Height, 75);
+    _encoder.Start(_selectedDisplay.PhysicalSize.Width, _selectedDisplay.PhysicalSize.Height, 75);
 
     // Producer: Capture and feed to encoder
     var producer = Task.Run(async () =>

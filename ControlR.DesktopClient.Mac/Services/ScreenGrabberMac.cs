@@ -59,13 +59,6 @@ public sealed class ScreenGrabberMac(
   {
     try
     {
-      var virtualBounds = await _displayManager.GetVirtualScreenBounds();
-
-      if (virtualBounds.IsEmpty)
-      {
-        return CaptureResult.Fail("No displays found.");
-      }
-
       var displays = await _displayManager.GetDisplays();
       if (displays.Count == 0)
       {
@@ -96,13 +89,7 @@ public sealed class ScreenGrabberMac(
 
           if (captureCursor)
           {
-            var bounds = CoreGraphics.CGDisplayBounds(displayId);
-            var scaleFactor = displays[0].ScaleFactor;
-            var captureArea = new Rectangle(
-              (int)(bounds.X * scaleFactor),
-              (int)(bounds.Y * scaleFactor),
-              bitmap.Width,
-              bitmap.Height);
+            var captureArea = displays[0].LogicalMonitorArea;
             DrawCursorOnBitmap(bitmap, captureArea, displays);
           }
 
@@ -114,7 +101,14 @@ public sealed class ScreenGrabberMac(
         }
       }
 
-      var compositeBitmap = new SKBitmap(virtualBounds.Width, virtualBounds.Height);
+      var virtualBounds = await _displayManager.GetVirtualScreenLogicalBounds();
+
+      if (virtualBounds.Width <= 0 || virtualBounds.Height <= 0)
+      {
+        return CaptureResult.Fail("No displays found.");
+      }
+
+      var compositeBitmap = new SKBitmap((int)virtualBounds.Width, (int)virtualBounds.Height);
       using var canvas = new SKCanvas(compositeBitmap);
       canvas.Clear(SKColors.Black);
 
@@ -143,10 +137,10 @@ public sealed class ScreenGrabberMac(
           }
 
           var destRect = SKRect.Create(
-             display.MonitorArea.X - virtualBounds.X,
-             display.MonitorArea.Y - virtualBounds.Y,
-             display.MonitorArea.Width,
-             display.MonitorArea.Height);
+             (float)(display.LogicalMonitorArea.X - virtualBounds.X),
+             (float)(display.LogicalMonitorArea.Y - virtualBounds.Y),
+             display.LogicalMonitorArea.Width,
+             display.LogicalMonitorArea.Height);
 
           canvas.DrawBitmap(displayBitmap, destRect);
         }
@@ -158,7 +152,8 @@ public sealed class ScreenGrabberMac(
 
       if (captureCursor)
       {
-        DrawCursorOnBitmap(compositeBitmap, virtualBounds, displays);
+        var boundsRect = new Rectangle((int)virtualBounds.X, (int)virtualBounds.Y, (int)virtualBounds.Width, (int)virtualBounds.Height);
+        DrawCursorOnBitmap(compositeBitmap, boundsRect, displays);
       }
 
       return CaptureResult.Ok(compositeBitmap, captureMode: CoreGraphicsCaptureMode);
@@ -312,41 +307,10 @@ public sealed class ScreenGrabberMac(
 
       var location = CoreGraphics.CGEventGetLocation(cgEventRef);
 
-      var scaleFactor = 1.0;
-      try
-      {
-        var displayIds = new uint[1];
-        var rect = new CoreGraphics.CGRect(location.X, location.Y, 1, 1);
-        var result = CoreGraphics.CGGetDisplaysWithRect(rect, 1, displayIds, out var matchingDisplayCount);
-        if (result == 0 && matchingDisplayCount > 0)
-        {
-          var displayIdString = displayIds[0].ToString();
-          var display = displays.FirstOrDefault(d => d.DeviceName == displayIdString);
-          if (display is not null)
-          {
-            scaleFactor = display.ScaleFactor;
-          }
-        }
-      }
-      catch (Exception ex)
-      {
-        _logger.LogWarningDeduped("Error getting display scale factor", exception: ex);
-        scaleFactor = 1.0;
-      }
-
-      var scaledX = (int)Math.Round(location.X * scaleFactor);
-      var scaledY = (int)Math.Round(location.Y * scaleFactor);
-
-      if (displays.Any(d => d.MonitorArea.Contains(scaledX, scaledY)))
-      {
-        x = scaledX;
-        y = scaledY;
-        return true;
-      }
-
       var unscaledX = (int)Math.Round(location.X);
       var unscaledY = (int)Math.Round(location.Y);
-      if (displays.Any(d => d.MonitorArea.Contains(unscaledX, unscaledY)))
+
+      if (displays.Any(d => d.LogicalMonitorArea.Contains(unscaledX, unscaledY)))
       {
         x = unscaledX;
         y = unscaledY;

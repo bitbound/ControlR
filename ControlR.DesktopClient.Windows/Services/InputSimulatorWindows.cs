@@ -75,13 +75,13 @@ internal class InputSimulatorWindows(
   public Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
     return InvokeOnInputThread(() =>
-      _win32Interop.InvokeMouseButtonEvent(coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, button, isPressed));
+      _win32Interop.InvokeMouseButtonEvent(coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y, button, isPressed));
   }
 
   public Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
     return InvokeOnInputThread(() =>
-      _win32Interop.MovePointer(coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, moveType));
+      _win32Interop.MovePointer(coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y, moveType));
   }
 
   public Task ResetKeyboardState()
@@ -92,7 +92,7 @@ internal class InputSimulatorWindows(
   public Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
     return InvokeOnInputThread(() =>
-      _win32Interop.InvokeWheelScroll(coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y, scrollY, scrollX));
+      _win32Interop.InvokeWheelScroll(coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y, scrollY, scrollX));
   }
 
   public Task<bool> SetBlockInput(bool isBlocked)

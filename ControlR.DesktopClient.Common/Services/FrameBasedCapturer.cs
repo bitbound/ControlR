@@ -49,7 +49,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   private volatile bool _forceKeyFrame = true;
   private int _imageQuality;
   private string? _lastDisplayId;
-  private Rectangle? _lastMonitorArea;
+  private Size? _lastPhysicalSize;
   private DisplayInfo? _selectedDisplay;
 
   public FrameBasedCapturer(
@@ -92,7 +92,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
     _forceKeyFrame = true;
   }
 
-  public async Task<Point> ConvertPercentageLocationToAbsolute(double percentX, double percentY)
+  public async Task<Point> ConvertDisplayPercentToAbsolute(double percentOfDisplayX, double percentOfDisplayY)
   {
     var selectedDisplay = GetSelectedDisplay();
     if (selectedDisplay is null)
@@ -106,7 +106,11 @@ internal class FrameBasedCapturer : IDesktopCapturer
       selectedDisplay = primary;
     }
 
-    return await _displayManager.ConvertPercentageLocationToAbsolute(selectedDisplay.DeviceName, percentX, percentY);
+    var point = await _displayManager.ConvertDisplayPercentToPhysical(
+      selectedDisplay.DeviceName,
+      percentOfDisplayX,
+      percentOfDisplayY);
+    return new Point(point.X, point.Y);
   }
 
   public async ValueTask DisposeAsync()
@@ -327,7 +331,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
       return true;
     }
 
-    return _lastMonitorArea != selectedDisplay.MonitorArea;
+    return _lastPhysicalSize != selectedDisplay.PhysicalSize;
   }
 
   private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
@@ -404,7 +408,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
 
           _forceKeyFrame = false;
           _lastDisplayId = selectedDisplay.DeviceName;
-          _lastMonitorArea = selectedDisplay.MonitorArea;
+          _lastPhysicalSize = selectedDisplay.PhysicalSize;
         }
         else
         {

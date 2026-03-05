@@ -171,16 +171,26 @@ public class InputSimulatorWayland(
               _logger.LogWarning("Cannot move pointer absolutely: no stream info for display index {DeviceIndex}", deviceIndex);
               return;
             }
+
+            // Wayland NotifyPointerMotionAbsolute takes coordinates in the stream's physical
+            // pixel space (0 to stream width/height), not global virtual screen coordinates.
+            var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
+            var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
+            var maxX = Math.Max(0, coordinates.Display.PhysicalSize.Width - 1);
+            var maxY = Math.Max(0, coordinates.Display.PhysicalSize.Height - 1);
+            var physicalX = maxX * clampedX;
+            var physicalY = maxY * clampedY;
+
             await _portalAccessor.NotifyPointerMotionAbsoluteAsync(
               _sessionHandle,
               streamInfo.NodeId,
-              coordinates.AbsolutePoint.X,
-              coordinates.AbsolutePoint.Y);
+              physicalX,
+              physicalY);
             break;
           }
 
         case MovePointerType.Relative:
-          await _portalAccessor.NotifyPointerMotionAsync(_sessionHandle, coordinates.AbsolutePoint.X, coordinates.AbsolutePoint.Y);
+          await _portalAccessor.NotifyPointerMotionAsync(_sessionHandle, coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y);
           break;
         default:
           _logger.LogWarning("Unknown move type: {MoveType}", moveType);

@@ -4,5 +4,5 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 public record MouseButtonEventDto(
     int Button,
     bool IsPressed,
-    double PercentX,
-    double PercentY);
+    double NormalizedX,
+    double NormalizedY);
