@@ -34,6 +34,12 @@ on:
         default: false
         type: boolean
 
+      build_nugets:
+        description: "Build NuGet packages"
+        required: false
+        default: false
+        type: boolean
+
 env:
   VERSION: ${{ inputs.version || vars.CURRENT_VERSION }}
   RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || 1 }}
@@ -113,6 +119,7 @@ jobs:
   build-nugets:
     name: Build NuGet Packages
     needs: set-version
+    if: inputs.build_nugets
     uses: ./.github/workflows/build-sign-pack-nugets.yml
     with:
       version: ${{ needs.set-version.outputs.version }}
