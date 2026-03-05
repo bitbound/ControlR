@@ -178,7 +178,6 @@ internal class WebSocketRelayMiddleware(
 
   private async Task StreamToPartner(SessionSignaler signaler, Guid callerPeerId)
   {
-    var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
     try
     {
       ArgumentNullException.ThrowIfNull(signaler.RequesterWebsocket);
@@ -191,36 +190,26 @@ internal class WebSocketRelayMiddleware(
 
       while (!appLifetime.ApplicationStopping.IsCancellationRequested)
       {
-        var result = await callerWebsocket.ReceiveAsync(buffer, appLifetime.ApplicationStopping);
-
-        if (result.MessageType == WebSocketMessageType.Close)
-        {
-          logger.LogInformation("Websocket close message received.");
-          break;
-        }
-
-        await partnerWebsocket.SendAsync(
-            buffer.AsMemory(0, result.Count),
-            result.MessageType,
-            result.EndOfMessage,
-            appLifetime.ApplicationStopping);
+        using var readStream = WebSocketStream.CreateReadableMessageStream(callerWebsocket);
+        using var writeStream = WebSocketStream.CreateWritableMessageStream(partnerWebsocket, WebSocketMessageType.Binary);
+        await readStream.CopyToAsync(writeStream, appLifetime.ApplicationStopping);
       }
     }
-    catch (OperationCanceledException)
+    catch (ObjectDisposedException ex)
     {
-      logger.LogInformation("Application shutting down. Streaming aborted.");
+      logger.LogInformation(ex, "Websocket was disposed. Ending stream.");
+    }
+    catch (OperationCanceledException ex)
+    {
+      logger.LogInformation(ex, "Application shutting down. Streaming aborted.");
     }
     catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.InvalidState or WebSocketError.ConnectionClosedPrematurely)
     {
-      logger.LogInformation("Streamer websocket closed. Ending stream.");
+      logger.LogInformation(ex, "Streamer websocket closed. Ending stream.");
     }
     catch (Exception ex)
     {
       logger.LogError(ex, "Error while proxying viewer websocket.");
-    }
-    finally
-    {
-      ArrayPool<byte>.Shared.Return(buffer);
     }
   }
 }

@@ -248,29 +248,6 @@ public abstract class ManagedRelayStream(
     }
   }
 
-  private async Task<bool> FillStream(MemoryStream dtoStream, byte[] dtoBuffer, CancellationToken cancellationToken)
-  {
-    while (true)
-    {
-      var result = await Client.ReceiveAsync(dtoBuffer, cancellationToken);
-
-      if (result.MessageType == WebSocketMessageType.Close)
-      {
-        return false;
-      }
-
-      if (result.Count > 0)
-      {
-        await dtoStream.WriteAsync(dtoBuffer.AsMemory(0, result.Count), cancellationToken);
-      }
-
-      if (result.EndOfMessage)
-      {
-        return true;
-      }
-    }
-  }
-
   private async Task InvokeOnClosedHandlers()
   {
     foreach (var callback in _onCloseHandlers)
@@ -288,17 +265,13 @@ public abstract class ManagedRelayStream(
 
   private async Task ReadFromStream(CancellationToken cancellationToken)
   {
-    var dtoBuffer = new byte[ushort.MaxValue];
-
     while (Client.State == WebSocketState.Open)
     {
       try
       {
         using var dtoStream = _memoryProvider.GetRecyclableStream();
-        if (!await FillStream(dtoStream, dtoBuffer, cancellationToken))
-        {
-          break;
-        }
+        using var webSocketStream = WebSocketStream.CreateReadableMessageStream(Client);
+        await webSocketStream.CopyToAsync(dtoStream, cancellationToken);
 
         var totalBytesRead = (int)dtoStream.Length;
 
@@ -309,7 +282,9 @@ public abstract class ManagedRelayStream(
         }
 
         _bytesIn.Enqueue(new TransferRecord(totalBytesRead, TimeProvider.GetTimestamp()));
+        
         dtoStream.Seek(0, SeekOrigin.Begin);
+        
         var receivedWrapper = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(
           dtoStream,
           cancellationToken: cancellationToken);
