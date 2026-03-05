@@ -156,7 +156,7 @@ public partial class App : Application
     try
     {
       var hostedServices = StaticServiceProvider.Instance.GetServices<IHostedService>();
-      using var cts  = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
       var stopTasks = hostedServices.Select(x => x.StopAsync(cts.Token));
       await Task.WhenAll(stopTasks).WaitAsync(cts.Token);
     }

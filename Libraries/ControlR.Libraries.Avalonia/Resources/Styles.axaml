@@ -118,6 +118,7 @@
   <Style Selector=":is(controls|ThemeButton)">
     <Setter Property="Padding" Value="8" />
     <Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="HorizontalAlignment" Value="Left"/>
   </Style>
 
   <!-- Color Styles -->
