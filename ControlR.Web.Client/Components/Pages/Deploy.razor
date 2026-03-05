@@ -22,14 +22,14 @@
             Key Type
           </MudText>
           <MudRadioGroup T="@InstallerKeyType" @bind-Value="@_installerKeyType">
-            <MudRadio Value="@InstallerKeyType.Persistent">
-              Persistent
-            </MudRadio>
             <MudRadio Value="@InstallerKeyType.UsageBased">
               Usage-Based
             </MudRadio>
             <MudRadio Value="@InstallerKeyType.TimeBased">
               Time-Based
+            </MudRadio>
+            <MudRadio Value="@InstallerKeyType.Persistent">
+              Persistent
             </MudRadio>
           </MudRadioGroup>
 
