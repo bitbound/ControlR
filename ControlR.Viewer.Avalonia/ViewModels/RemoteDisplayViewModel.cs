@@ -53,7 +53,7 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   bool ShowWindowsInputControls { get; }
   ViewMode ViewMode { get; }
 
-  DisposableValue<SKBitmap?> AcquireCompositedFrame();
+  ScopedGuard<SKBitmap?> AcquireCompositedFrame();
   Task InvokeCtrlAltDel();
   Task RequestClipboardText();
   Task SendClipboardText(string text);
@@ -73,7 +73,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
   private static readonly IReadOnlyDictionary<string, string> _emptyExtraData = new Dictionary<string, string>();
 
   private readonly IClipboard _clipboard;
-  private readonly Lock _compositedFrameLock = new();
+  private readonly ScopedLock<SKBitmap?> _compositedFrame = new(null);
   private readonly IDisposable _messageHandlerRegistration;
   private readonly IMessenger _messenger;
   private readonly IMetricsState _metricsState;
@@ -85,7 +85,6 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
   [ObservableProperty]
   private CursorChangedDto? _activeCursor;
-  private SKBitmap? _compositedFrame;
   [ObservableProperty]
   [NotifyPropertyChangedFor(nameof(IsBlockInputToggleEnabled))]
   private bool _isBlockInputBusy;
@@ -332,12 +331,9 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     _remoteControlState.CurrentSession?.Device.Platform == SystemPlatform.Windows;
   public ViewMode ViewMode => _remoteControlState.ViewMode;
 
-  public DisposableValue<SKBitmap?> AcquireCompositedFrame()
+  public ScopedGuard<SKBitmap?> AcquireCompositedFrame()
   {
-    _compositedFrameLock.Enter();
-    return new DisposableValue<SKBitmap?>(
-      _compositedFrame, 
-      () => _compositedFrameLock.Exit());
+    return _compositedFrame.Lock();
   }
 
   public async Task InvokeCtrlAltDel()
@@ -539,7 +535,6 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       _messageHandlerRegistration.Dispose();
       _remoteControlStateRegistration.Dispose();
       _compositedFrame?.Dispose();
-      _compositedFrame = null;
     }
   }
 
@@ -576,14 +571,15 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       await Dispatcher.UIThread.InvokeAsync(() =>
       {
         EnsureCompositedFrameSize();
-        if (_compositedFrame is null)
-        {
-          return;
-        }
 
-        using (_compositedFrameLock.EnterScope())
+        using (var guard = _compositedFrame.Lock())
         {
-          using var canvas = new SKCanvas(_compositedFrame);
+          if (guard.Value is null)
+          {
+            return;
+
+          }
+          using var canvas = new SKCanvas(guard.Value);
           canvas.DrawBitmap(decodedBitmap, dto.X, dto.Y);
         }
 
@@ -606,15 +602,14 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       return;
     }
     
-    using (_compositedFrameLock.EnterScope())
+    using (var guard = _compositedFrame.Lock())
     {
-      if (_compositedFrame?.Width == width && _compositedFrame.Height == height)
+      if (guard.Value?.Width == width && guard.Value?.Height == height)
       {
         return;
       }
 
-      _compositedFrame?.Dispose();
-      _compositedFrame = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+      guard.SetValue(new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul));
     }
   }
 
@@ -837,7 +832,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
     try
     {
-      using (_compositedFrameLock.EnterScope())
+      using (var guard = _compositedFrame.Lock())
       {
         _remoteControlState.SelectedDisplay = displayItem.Display;
         SelectedDisplayWidth = displayItem.Display.Width;

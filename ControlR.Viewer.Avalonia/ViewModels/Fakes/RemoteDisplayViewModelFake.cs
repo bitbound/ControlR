@@ -101,9 +101,9 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
   public bool ShowWindowsInputControls => true;
   public ViewMode ViewMode => ViewMode.Fit;
 
-  public DisposableValue<SKBitmap?> AcquireCompositedFrame()
+  public ScopedGuard<SKBitmap?> AcquireCompositedFrame()
   {
-    return new DisposableValue<SKBitmap?>(null, () => { });
+    return new ScopedGuard<SKBitmap?>(() => null, _ => { }, () => { });
   }
 
   public void Dispose()
