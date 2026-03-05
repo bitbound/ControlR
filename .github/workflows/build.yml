@@ -401,7 +401,9 @@ jobs:
           mkdir -p ".build/staging-desktop/linux-x64"
 
           # Create ZIP
-          zip -r "./.build/staging-desktop/linux-x64/ControlR.DesktopClient.zip" "./ControlR.DesktopClient/bin/publish/linux-x64/"*
+          cd ./ControlR.DesktopClient/bin/publish/linux-x64
+          zip -r "${{ github.workspace}}/.build/staging-desktop/linux-x64/ControlR.DesktopClient.zip" .
+          cd ${{ github.workspace}}
 
           # Copy to Agent Resources
           mkdir -p "./ControlR.Agent.Common/Resources"
