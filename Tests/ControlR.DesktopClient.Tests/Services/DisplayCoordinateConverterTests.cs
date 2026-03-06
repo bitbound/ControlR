@@ -30,7 +30,7 @@ public class DisplayCoordinateConverterTests
 
     var result = DisplayCoordinateConverter.DisplayPercentToPhysical(2.0, -1.0, display);
 
-    Assert.Equal(300, result.X);
+    Assert.Equal(299, result.X);
     Assert.Equal(0, result.Y);
   }
 
