@@ -1,10 +1,8 @@
-using ControlR.Libraries.Shared.Primitives;
-
 namespace ControlR.DesktopClient.Common.Models;
 
 /// <summary>
-/// Normalized pointer location plus a platform-specific physical coordinate.
-/// For absolute motion this is typically a physical pixel position; for relative motion
-/// it may represent deltas depending on platform/input backend.
+/// Normalized pointer location plus the selected display metadata.
+/// Each input backend is responsible for converting this into the coordinate space
+/// required by the underlying platform API.
 /// </summary>
-public record PointerCoordinates(double NormalizedX, double NormalizedY, PhysicalPoint PhysicalPoint, DisplayInfo Display);
+public record PointerCoordinates(double NormalizedX, double NormalizedY, DisplayInfo Display);

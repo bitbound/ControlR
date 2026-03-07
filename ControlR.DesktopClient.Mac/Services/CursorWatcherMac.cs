@@ -192,9 +192,9 @@ internal class CursorWatcherMac(
         {
           var displayIdString = displayIds[0].ToString();
           var display = displays.FirstOrDefault(d => d.DeviceName == displayIdString);
-          if (display is not null && display.ScaleFactor > 0)
+          if (display is not null && display.CapturePixelsPerLayoutUnit > 0)
           {
-            return display.ScaleFactor;
+            return display.CapturePixelsPerLayoutUnit;
           }
         }
       }

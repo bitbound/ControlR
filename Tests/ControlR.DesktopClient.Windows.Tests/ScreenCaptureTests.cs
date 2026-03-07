@@ -66,8 +66,8 @@ public class ScreenCaptureTests
     var display = await _displayManager.GetPrimaryDisplay();
     Guard.IsNotNull(display, "No primary display found.");
 
-    var frameWidth = (uint)display.PhysicalSize.Width;
-    var frameHeight = (uint)display.PhysicalSize.Height;
+    var frameWidth = (uint)display.CapturePixelSize.Width;
+    var frameHeight = (uint)display.CapturePixelSize.Height;
     uint frameRate = 60;
 
     // Setup output file on desktop

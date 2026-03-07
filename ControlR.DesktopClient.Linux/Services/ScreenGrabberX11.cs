@@ -79,7 +79,7 @@ internal sealed class ScreenGrabberX11(
   {
     try
     {
-      var virtualBounds = await _displayManager.GetVirtualScreenLogicalBounds();
+      var virtualBounds = await _displayManager.GetVirtualScreenLayoutBounds();
 
       if (virtualBounds.Width <= 0 || virtualBounds.Height <= 0)
       {
@@ -142,8 +142,8 @@ internal sealed class ScreenGrabberX11(
       try
       {
         var rootWindow = LibX11.XDefaultRootWindow(xDisplay);
-        var bitmap = CaptureWindow(xDisplay, rootWindow, display.PhysicalSize.Width, display.PhysicalSize.Height,
-                                  display.LogicalMonitorArea.X, display.LogicalMonitorArea.Y);
+        var bitmap = CaptureWindow(xDisplay, rootWindow, display.CapturePixelSize.Width, display.CapturePixelSize.Height,
+                display.LayoutBounds.X, display.LayoutBounds.Y);
 
         if (bitmap is null)
         {

@@ -1,8 +1,7 @@
 ﻿using System.Drawing;
 using System.Runtime.InteropServices;
-using Windows.Win32;
-using Windows.Win32.Graphics.Gdi;
 using ControlR.DesktopClient.Common.Models;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.Windows.Helpers;
 
@@ -12,15 +11,9 @@ internal static class DisplayEnumHelperWindows
 
   private delegate bool EnumMonitorsDelegate(nint hMonitor, nint hdcMonitor, ref Rect lprcMonitor, nint dwData);
 
-  /// <summary>
-  /// Returns each display paired with its physical pixel bounds in the global virtual screen.
-  /// The physical bounds are not stored in <see cref="DisplayInfo"/> because a global physical
-  /// origin is not universally knowable (e.g. Wayland/macOS mixed-DPI), but on Windows Win32
-  /// reports them directly via <c>MONITORINFOEX.rcMonitor</c>.
-  /// </summary>
-  public static List<(DisplayInfo Display, Rectangle PhysicalBounds)> GetDisplays()
+  public static List<DisplayInfo> GetDisplays()
   {
-    var displays = new List<(DisplayInfo, Rectangle)>();
+    var displays = new List<DisplayInfo>();
 
     EnumDisplayMonitors(
       nint.Zero,
@@ -35,40 +28,24 @@ internal static class DisplayEnumHelperWindows
           return true;
         }
 
-        var scale = 1.0;
-
         var physicalBounds = new Rectangle(
           mi.Monitor.Left,
           mi.Monitor.Top,
           mi.Monitor.Right - mi.Monitor.Left,
           mi.Monitor.Bottom - mi.Monitor.Top);
 
-        unsafe
-        {
-          var devMode = new DEVMODEW { dmSize = (ushort)sizeof(DEVMODEW) };
-          if (PInvoke.EnumDisplaySettings(mi.DeviceName, ENUM_DISPLAY_SETTINGS_MODE.ENUM_CURRENT_SETTINGS, ref devMode))
-          {
-            scale = devMode.dmLogPixels / 96.0;
-          }
-        }
-
-        var logicalLeft = (int)Math.Round(physicalBounds.Left / scale);
-        var logicalTop = (int)Math.Round(physicalBounds.Top / scale);
-        var logicalWidth = (int)Math.Round(physicalBounds.Width / scale);
-        var logicalHeight = (int)Math.Round(physicalBounds.Height / scale);
-
         var info = new DisplayInfo
         {
           DisplayName = $"Display {displays.Count + 1}",
-          PhysicalSize = new Size(physicalBounds.Width, physicalBounds.Height),
-          LogicalMonitorArea = new Rectangle(logicalLeft, logicalTop, logicalWidth, logicalHeight),
+          CapturePixelSize = new Size(physicalBounds.Width, physicalBounds.Height),
+          LayoutBounds = physicalBounds,
+          LayoutCoordinateSpace = DisplayLayoutCoordinateSpace.Physical,
           IsPrimary = mi.Flags > 0,
           DeviceName = mi.DeviceName,
-          Index = displays.Count,
-          ScaleFactor = scale
+          Index = displays.Count
         };
 
-        displays.Add((info, physicalBounds));
+        displays.Add(info);
 
         return true;
       }, nint.Zero);

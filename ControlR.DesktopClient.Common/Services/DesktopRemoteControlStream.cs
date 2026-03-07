@@ -409,18 +409,28 @@ internal sealed class DesktopRemoteControlStream(
       var displayDtos = displays.Select(x => new DisplayDto
       {
         DisplayId = x.DeviceName,
+        CapturePixelSize = new PixelSizeDto
+        {
+          Width = x.CapturePixelSize.Width,
+          Height = x.CapturePixelSize.Height,
+        },
         IsPrimary = x.IsPrimary,
         Name = x.DisplayName,
-        PhysicalWidth = x.PhysicalSize.Width,
-        PhysicalHeight = x.PhysicalSize.Height,
-        LogicalBounds = new DisplayBoundsDto
+        LayoutBounds = new DisplayBoundsDto
         {
-          X = x.LogicalMonitorArea.Left,
-          Y = x.LogicalMonitorArea.Top,
-          Width = x.LogicalMonitorArea.Width,
-          Height = x.LogicalMonitorArea.Height,
+          X = x.LayoutBounds.Left,
+          Y = x.LayoutBounds.Top,
+          Width = x.LayoutBounds.Width,
+          Height = x.LayoutBounds.Height,
         },
-        ScaleFactor = x.ScaleFactor,
+        LayoutCoordinateSpace = (ControlR.Libraries.Api.Contracts.Enums.DisplayLayoutCoordinateSpace)x.LayoutCoordinateSpace,
+        NativePixelSize = x.NativePixelSize is { } nativePixelSize
+          ? new PixelSizeDto
+          {
+            Width = nativePixelSize.Width,
+            Height = nativePixelSize.Height,
+          }
+          : null,
         Index = x.Index
       });
       var dto = new DisplayDataDto([.. displayDtos]);
@@ -519,12 +529,7 @@ internal sealed class DesktopRemoteControlStream(
       return null;
     }
 
-    var point = await _displayManager.ConvertDisplayPercentToPhysical(
-        selectedDisplay.DeviceName,
-        normalizedX,
-        normalizedY);
-
-    return new PointerCoordinates(normalizedX, normalizedY, point, selectedDisplay);
+    return new PointerCoordinates(normalizedX, normalizedY, findResult.Value);
   }
 
   private async Task TrySendSessionError(Exception ex)

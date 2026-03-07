@@ -1,4 +1,5 @@
 using ControlR.DesktopClient.Common.Models;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.NativeInterop.Mac;
 using Microsoft.Extensions.Logging;
 using System.Drawing;
@@ -63,8 +64,6 @@ internal class DisplayEnumHelperMac(ILogger<DisplayEnumHelperMac> logger) : IDis
     nint testImageRef = nint.Zero;
     int pixelWidth = logicalWidth;
     int pixelHeight = logicalHeight;
-    double scaleFactor = 1.0;
-
     try
     {
       // Create a test capture to get actual pixel dimensions
@@ -74,10 +73,6 @@ internal class DisplayEnumHelperMac(ILogger<DisplayEnumHelperMac> logger) : IDis
         pixelWidth = (int)CoreGraphics.CGImageGetWidth(testImageRef);
         pixelHeight = (int)CoreGraphics.CGImageGetHeight(testImageRef);
 
-        // Calculate the backing scale factor (physical / logical)
-        scaleFactor = Math.Max(
-          (double)pixelWidth / logicalWidth,
-          (double)pixelHeight / logicalHeight);
       }
     }
     catch
@@ -85,7 +80,6 @@ internal class DisplayEnumHelperMac(ILogger<DisplayEnumHelperMac> logger) : IDis
       // If we can't capture, fall back to logical dimensions
       pixelWidth = logicalWidth;
       pixelHeight = logicalHeight;
-      scaleFactor = 1.0;
     }
     finally
     {
@@ -102,8 +96,8 @@ internal class DisplayEnumHelperMac(ILogger<DisplayEnumHelperMac> logger) : IDis
       logicalHeight);
 
     _logger.LogDebug(
-      "Display {DisplayId}: Logical bounds={LogicalW}x{LogicalH} at ({X},{Y}), Physical pixel size={PhysW}x{PhysH}, Scale={Scale:F2}",
-      displayId, logicalWidth, logicalHeight, bounds.X, bounds.Y, pixelWidth, pixelHeight, scaleFactor);
+      "Display {DisplayId}: Layout bounds={LayoutW}x{LayoutH} at ({X},{Y}), Capture pixel size={CaptureW}x{CaptureH}",
+      displayId, logicalWidth, logicalHeight, bounds.X, bounds.Y, pixelWidth, pixelHeight);
 
     return new DisplayInfo
     {
@@ -111,9 +105,10 @@ internal class DisplayEnumHelperMac(ILogger<DisplayEnumHelperMac> logger) : IDis
       DisplayName = $"Display {index + 1}",
       Index = index,
       IsPrimary = isMain,
-      PhysicalSize = new Size(pixelWidth, pixelHeight),
-      LogicalMonitorArea = logicalArea,
-      ScaleFactor = scaleFactor
+      CapturePixelSize = new Size(pixelWidth, pixelHeight),
+      NativePixelSize = new Size(pixelWidth, pixelHeight),
+      LayoutBounds = logicalArea,
+      LayoutCoordinateSpace = DisplayLayoutCoordinateSpace.Logical,
     };
   }
 }

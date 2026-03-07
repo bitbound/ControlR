@@ -144,7 +144,7 @@ public class InputSimulatorX11 : IInputSimulator
     {
       if (moveType == MovePointerType.Relative)
       {
-        LibXtst.XTestFakeRelativeMotionEvent(xDisplay, coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y, 0);
+        _logger.LogWarning("Relative pointer movement is not supported by the remote control input path on X11.");
       }
       else
       {
@@ -646,10 +646,10 @@ public class InputSimulatorX11 : IInputSimulator
 
   private static (int screenNumber, int adjustedX, int adjustedY) GetDisplayCoordinates(nint xDisplay, PointerCoordinates coordinates)
   {
-    // X11 screen coordinates are in logical units (scale factor is 1.0 for X11's core protocol).
-    // Compute absolute X11 screen position from the display's logical bounds and the normalized
+    // X11 screen coordinates are derived from the display layout bounds exposed by the X11 backend.
+    // Compute absolute X11 screen position from the display layout bounds and the normalized
     // position within that display.
-    var bounds = coordinates.Display.LogicalMonitorArea;
+    var bounds = coordinates.Display.LayoutBounds;
     var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
     var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
     var maxX = bounds.Left + Math.Max(0, bounds.Width - 1);

@@ -3,8 +3,8 @@ using System.Collections.Immutable;
 using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.NativeInterop.Linux;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
@@ -48,30 +48,6 @@ internal class DisplayManagerWayland(
   private bool _disposed;
 
   public bool HasAnyCaptureSizes => !_captureSizes.IsEmpty;
-
-  public async Task<LogicalPoint> ConvertDisplayPercentToLogical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
-  {
-    var findResult = await TryFindDisplay(displayName);
-    if (!findResult.IsSuccess)
-    {
-      return default;
-    }
-
-    return DisplayCoordinateConverter
-        .DisplayPercentToLogical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
-  }
-
-  public async Task<PhysicalPoint> ConvertDisplayPercentToPhysical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
-  {
-    var findResult = await TryFindDisplay(displayName);
-    if (!findResult.IsSuccess)
-    {
-      return default;
-    }
-
-    return DisplayCoordinateConverter
-        .DisplayPercentToPhysical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
-  }
 
   public async Task<IReadOnlyDictionary<string, PipeWireStream>> CreatePipeWireStreams(CancellationToken cancellationToken = default)
   {
@@ -146,7 +122,7 @@ internal class DisplayManagerWayland(
       ?? _displays.Values.FirstOrDefault();
   }
 
-  public async Task<LogicalRect> GetVirtualScreenLogicalBounds()
+  public async Task<Rectangle> GetVirtualScreenLayoutBounds()
   {
     try
     {
@@ -157,16 +133,16 @@ internal class DisplayManagerWayland(
         return default;
       }
 
-      var minX = _displays.Values.Min(d => d.LogicalMonitorArea.Left);
-      var minY = _displays.Values.Min(d => d.LogicalMonitorArea.Top);
-      var maxX = _displays.Values.Max(d => d.LogicalMonitorArea.Right);
-      var maxY = _displays.Values.Max(d => d.LogicalMonitorArea.Bottom);
+      var minX = _displays.Values.Min(d => d.LayoutBounds.Left);
+      var minY = _displays.Values.Min(d => d.LayoutBounds.Top);
+      var maxX = _displays.Values.Max(d => d.LayoutBounds.Right);
+      var maxY = _displays.Values.Max(d => d.LayoutBounds.Bottom);
 
-      return new LogicalRect(minX, minY, maxX - minX, maxY - minY);
+      return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error getting virtual logical screen bounds on Wayland");
+      _logger.LogError(ex, "Error getting virtual layout screen bounds on Wayland");
       return default;
     }
   }
@@ -318,7 +294,7 @@ internal class DisplayManagerWayland(
 
           var deviceName = stream.StreamIndex.ToString();
 
-          // physicalWidth/Height are the dimensions of the capture in physical pixels (if known)
+          // Capture pixel dimensions are the dimensions of the capture frame when known.
           var physicalWidth = logicalWidth;
           var physicalHeight = logicalHeight;
 
@@ -330,8 +306,6 @@ internal class DisplayManagerWayland(
           else
           {
             // If we don't have the capture size yet, try to probe it briefly.
-            // This ensures we get the correct physical resolution relative to the logical resolution
-            // so that coordinate mapping (ScaleFactor) is correct.
             var probedSize = await ProbePhysicalSize(stream.NodeId, logicalWidth, logicalHeight);
             if (probedSize.Width > 0 && probedSize.Height > 0)
             {
@@ -341,19 +315,15 @@ internal class DisplayManagerWayland(
             }
           }
 
-          var scaleFactor = logicalWidth > 0
-            ? (double)physicalWidth / logicalWidth
-            : 1.0;
-
           var display = new DisplayInfo
           {
             DeviceName = deviceName,
             DisplayName = $"Display {stream.StreamIndex + 1}",
             Index = stream.StreamIndex,
-            LogicalMonitorArea = new Rectangle(logicalLeft, logicalTop, logicalWidth, logicalHeight),
-            PhysicalSize = new Size(physicalWidth, physicalHeight),
+            LayoutBounds = new Rectangle(logicalLeft, logicalTop, logicalWidth, logicalHeight),
+            LayoutCoordinateSpace = DisplayLayoutCoordinateSpace.Logical,
+            CapturePixelSize = new Size(physicalWidth, physicalHeight),
             IsPrimary = stream.StreamIndex == orderedStreams.Min(x => x.StreamIndex),
-            ScaleFactor = scaleFactor
           };
 
           _displays[display.DeviceName] = display;
@@ -373,10 +343,10 @@ internal class DisplayManagerWayland(
           DeviceName = "0",
           DisplayName = "Display 1",
           Index = 0,
-          PhysicalSize = new Size(1920, 1080),
-          LogicalMonitorArea = new Rectangle(0, 0, 1920, 1080),
+          CapturePixelSize = new Size(1920, 1080),
+          LayoutBounds = new Rectangle(0, 0, 1920, 1080),
+          LayoutCoordinateSpace = DisplayLayoutCoordinateSpace.Logical,
           IsPrimary = true,
-          ScaleFactor = 1.0
         };
         _displays[defaultDisplay.DeviceName] = defaultDisplay;
         _logger.LogWarning("Using fallback display info - portal returned no streams");

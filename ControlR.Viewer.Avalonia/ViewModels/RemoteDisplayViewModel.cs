@@ -657,8 +657,8 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
     _remoteControlState.SelectedDisplay = selectedDisplay;
 
-    SelectedDisplayWidth = selectedDisplay.PhysicalWidth;
-    SelectedDisplayHeight = selectedDisplay.PhysicalHeight;
+    SelectedDisplayWidth = selectedDisplay.CapturePixelSize.Width;
+    SelectedDisplayHeight = selectedDisplay.CapturePixelSize.Height;
     SyncDisplayItems();
   }
 
@@ -835,8 +835,8 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       using (var guard = _compositedFrame.Lock())
       {
         _remoteControlState.SelectedDisplay = displayItem.Display;
-      SelectedDisplayWidth = displayItem.Display.PhysicalWidth;
-      SelectedDisplayHeight = displayItem.Display.PhysicalHeight;
+      SelectedDisplayWidth = displayItem.Display.CapturePixelSize.Width;
+      SelectedDisplayHeight = displayItem.Display.CapturePixelSize.Height;
         UpdateSelectedDisplayState();
       }
 
@@ -938,10 +938,10 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       return;
     }
 
-    var minLeft = DisplayItems.Min(x => x.Display.LogicalBounds.X);
-    var minTop = DisplayItems.Min(x => x.Display.LogicalBounds.Y);
-    var maxRight = DisplayItems.Max(x => x.Display.LogicalBounds.X + x.Display.LogicalBounds.Width);
-    var maxBottom = DisplayItems.Max(x => x.Display.LogicalBounds.Y + x.Display.LogicalBounds.Height);
+    var minLeft = DisplayItems.Min(x => x.Display.LayoutBounds.X);
+    var minTop = DisplayItems.Min(x => x.Display.LayoutBounds.Y);
+    var maxRight = DisplayItems.Max(x => x.Display.LayoutBounds.X + x.Display.LayoutBounds.Width);
+    var maxBottom = DisplayItems.Max(x => x.Display.LayoutBounds.Y + x.Display.LayoutBounds.Height);
 
     var totalWidth = maxRight - minLeft;
     var totalHeight = maxBottom - minTop;
@@ -952,10 +952,10 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
     foreach (var display in DisplayItems)
     {
-      display.LayoutLeft = (display.Display.LogicalBounds.X - minLeft) * scale;
-      display.LayoutTop = (display.Display.LogicalBounds.Y - minTop) * scale;
-      display.LayoutWidth = display.Display.LogicalBounds.Width * scale;
-      display.LayoutHeight = display.Display.LogicalBounds.Height * scale;
+      display.LayoutLeft = (display.Display.LayoutBounds.X - minLeft) * scale;
+      display.LayoutTop = (display.Display.LayoutBounds.Y - minTop) * scale;
+      display.LayoutWidth = display.Display.LayoutBounds.Width * scale;
+      display.LayoutHeight = display.Display.LayoutBounds.Height * scale;
     }
   }
 

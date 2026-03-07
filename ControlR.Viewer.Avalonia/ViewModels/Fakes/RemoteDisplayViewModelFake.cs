@@ -1,8 +1,8 @@
 ﻿#pragma warning disable CS0067 
 using System.ComponentModel;
 using Avalonia.Layout;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using System.Collections.Generic;
 using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Viewer.Avalonia.ViewModels.Fakes;
@@ -20,19 +20,22 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
       new DisplayDto
       {
         DisplayId = "display-0",
+        CapturePixelSize = new PixelSizeDto
+        {
+          Width = 1920,
+          Height = 1080,
+        },
         Index = 0,
         IsPrimary = true,
-        LogicalBounds = new DisplayBoundsDto
+        LayoutBounds = new DisplayBoundsDto
         {
           X = 0,
           Y = 0,
           Width = 1920,
           Height = 1080,
         },
+        LayoutCoordinateSpace = DisplayLayoutCoordinateSpace.Logical,
         Name = "Display 0",
-        PhysicalWidth = 1920,
-        PhysicalHeight = 1080,
-        ScaleFactor = 1,
       },
       _ => Task.CompletedTask)
     {
@@ -46,19 +49,22 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
       new DisplayDto
       {
         DisplayId = "display-1",
+        CapturePixelSize = new PixelSizeDto
+        {
+          Width = 2560,
+          Height = 1080,
+        },
         Index = 1,
         IsPrimary = false,
-        LogicalBounds = new DisplayBoundsDto
+        LayoutBounds = new DisplayBoundsDto
         {
           X = 1920,
           Y = 0,
           Width = 2560,
           Height = 1080,
         },
+        LayoutCoordinateSpace = DisplayLayoutCoordinateSpace.Logical,
         Name = "Display 1",
-        PhysicalWidth = 2560,
-        PhysicalHeight = 1080,
-        ScaleFactor = 1,
       },
       _ => Task.CompletedTask)
     {

@@ -1,54 +1,55 @@
 using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.Tests.Services;
 
 public class DisplayCoordinateConverterTests
 {
   [Fact]
-  public void DisplayPercentToLogical_UsesLogicalBounds()
-  {
-    var display = CreateDisplay(
-      logicalBounds: new Rectangle(-100, 50, 1000, 500),
-      physicalSize: new Size(2000, 1000),
-      scaleFactor: 2.0);
-
-    var result = DisplayCoordinateConverter.DisplayPercentToLogical(0.1, 0.8, display);
-
-    Assert.Equal(0, result.X);
-    Assert.Equal(450, result.Y);
-  }
-
-  [Fact]
-  public void DisplayPercentToPhysical_ClampsOutOfRangeInput()
+  public void DisplayPercentToCapturePoint_ClampsOutOfRangeInput()
   {
     var display = CreateDisplay(
       logicalBounds: new Rectangle(0, 0, 100, 100),
-      physicalSize: new Size(300, 200),
-      scaleFactor: 3.0);
+      capturePixelSize: new Size(300, 200),
+      layoutCoordinateSpace: DisplayLayoutCoordinateSpace.Logical);
 
-    var result = DisplayCoordinateConverter.DisplayPercentToPhysical(2.0, -1.0, display);
+    var result = DisplayCoordinateConverter.DisplayPercentToCapturePoint(2.0, -1.0, display);
 
     Assert.Equal(299, result.X);
     Assert.Equal(0, result.Y);
   }
 
   [Fact]
-  public void DisplayPercentToPhysical_UsesPhysicalSize()
+  public void DisplayPercentToCapturePoint_UsesCapturePixelSize()
   {
     var display = CreateDisplay(
       logicalBounds: new Rectangle(50, 100, 400, 300),
-      physicalSize: new Size(800, 600),
-      scaleFactor: 2.0);
+      capturePixelSize: new Size(800, 600),
+      layoutCoordinateSpace: DisplayLayoutCoordinateSpace.Logical);
 
-    var result = DisplayCoordinateConverter.DisplayPercentToPhysical(0.5, 0.25, display);
+    var result = DisplayCoordinateConverter.DisplayPercentToCapturePoint(0.5, 0.25, display);
 
     Assert.Equal(400, result.X);
     Assert.Equal(150, result.Y);
   }
 
-  private static DisplayInfo CreateDisplay(Rectangle logicalBounds, Size physicalSize, double scaleFactor)
+  [Fact]
+  public void DisplayPercentToLayoutPoint_UsesLayoutBounds()
+  {
+    var display = CreateDisplay(
+      logicalBounds: new Rectangle(-100, 50, 1000, 500),
+      capturePixelSize: new Size(2000, 1000),
+      layoutCoordinateSpace: DisplayLayoutCoordinateSpace.Logical);
+
+    var result = DisplayCoordinateConverter.DisplayPercentToLayoutPoint(0.1, 0.8, display);
+
+    Assert.Equal(0, result.X);
+    Assert.Equal(450, result.Y);
+  }
+
+  private static DisplayInfo CreateDisplay(Rectangle logicalBounds, Size capturePixelSize, DisplayLayoutCoordinateSpace layoutCoordinateSpace)
   {
     return new DisplayInfo
     {
@@ -56,9 +57,9 @@ public class DisplayCoordinateConverterTests
       DisplayName = "Display 0",
       Index = 0,
       IsPrimary = true,
-      LogicalMonitorArea = logicalBounds,
-      PhysicalSize = physicalSize,
-      ScaleFactor = scaleFactor,
+      LayoutBounds = logicalBounds,
+      LayoutCoordinateSpace = layoutCoordinateSpace,
+      CapturePixelSize = capturePixelSize,
     };
   }
 }

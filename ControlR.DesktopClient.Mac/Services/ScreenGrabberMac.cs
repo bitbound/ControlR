@@ -89,7 +89,7 @@ public sealed class ScreenGrabberMac(
 
           if (captureCursor)
           {
-            var captureArea = displays[0].LogicalMonitorArea;
+            var captureArea = displays[0].LayoutBounds;
             DrawCursorOnBitmap(bitmap, captureArea, displays);
           }
 
@@ -101,7 +101,7 @@ public sealed class ScreenGrabberMac(
         }
       }
 
-      var virtualBounds = await _displayManager.GetVirtualScreenLogicalBounds();
+      var virtualBounds = await _displayManager.GetVirtualScreenLayoutBounds();
 
       if (virtualBounds.Width <= 0 || virtualBounds.Height <= 0)
       {
@@ -137,10 +137,10 @@ public sealed class ScreenGrabberMac(
           }
 
           var destRect = SKRect.Create(
-             (float)(display.LogicalMonitorArea.X - virtualBounds.X),
-             (float)(display.LogicalMonitorArea.Y - virtualBounds.Y),
-             display.LogicalMonitorArea.Width,
-             display.LogicalMonitorArea.Height);
+             (float)(display.LayoutBounds.X - virtualBounds.X),
+             (float)(display.LayoutBounds.Y - virtualBounds.Y),
+             display.LayoutBounds.Width,
+             display.LayoutBounds.Height);
 
           canvas.DrawBitmap(displayBitmap, destRect);
         }
@@ -194,8 +194,8 @@ public sealed class ScreenGrabberMac(
       {
         var bounds = CoreGraphics.CGDisplayBounds(displayId);
         var boundsRect = new Rectangle(
-          (int)(bounds.X * display.ScaleFactor),
-          (int)(bounds.Y * display.ScaleFactor),
+          (int)(bounds.X * display.CapturePixelsPerLayoutUnit),
+          (int)(bounds.Y * display.CapturePixelsPerLayoutUnit),
           bitmap.Width,
           bitmap.Height);
         DrawCursorOnBitmap(bitmap, boundsRect, new[] { display });
@@ -310,7 +310,7 @@ public sealed class ScreenGrabberMac(
       var unscaledX = (int)Math.Round(location.X);
       var unscaledY = (int)Math.Round(location.Y);
 
-      if (displays.Any(d => d.LogicalMonitorArea.Contains(unscaledX, unscaledY)))
+      if (displays.Any(d => d.LayoutBounds.Contains(unscaledX, unscaledY)))
       {
         x = unscaledX;
         y = unscaledY;

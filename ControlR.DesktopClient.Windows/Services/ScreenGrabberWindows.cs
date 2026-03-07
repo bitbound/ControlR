@@ -24,13 +24,13 @@ namespace ControlR.DesktopClient.Windows.Services;
 internal sealed class ScreenGrabberWindows(
   IDxOutputDuplicator dxOutputGenerator,
   IWin32Interop win32Interop,
-  IDisplayManagerWindows displayManager,
+  IDisplayManager displayManager,
   ILogger<ScreenGrabberWindows> logger) : IScreenGrabber
 {
   private const string DirectXCaptureMode = "DirectX";
   private const string GdiCaptureMode = "GDI";
 
-  private readonly IDisplayManagerWindows _displayManager = displayManager;
+  private readonly IDisplayManager _displayManager = displayManager;
   private readonly IDxOutputDuplicator _dxOutputGenerator = dxOutputGenerator;
   private readonly ILogger<ScreenGrabberWindows> _logger = logger;
   private readonly IWin32Interop _win32Interop = win32Interop;
@@ -40,7 +40,7 @@ internal sealed class ScreenGrabberWindows(
   public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
     SwitchToInputDesktop();
-    var bounds = await _displayManager.GetVirtualScreenLogicalBounds();
+    var bounds = await _displayManager.GetVirtualScreenLayoutBounds();
     var captureArea = new Rectangle((int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height);
     return GetBitBltCapture(captureArea, captureCursor);
   }
@@ -59,16 +59,7 @@ internal sealed class ScreenGrabberWindows(
         return dxResult;
       }
 
-      if (!_displayManager.TryGetPhysicalBounds(targetDisplay.DeviceName, out var physicalArea))
-      {
-        physicalArea = new Rectangle(
-          targetDisplay.LogicalMonitorArea.X,
-          targetDisplay.LogicalMonitorArea.Y,
-          targetDisplay.LogicalMonitorArea.Width,
-          targetDisplay.LogicalMonitorArea.Height);
-      }
-
-      return GetBitBltCapture(physicalArea, captureCursor);
+      return GetBitBltCapture(targetDisplay.LayoutBounds, captureCursor);
     }
     catch (Exception ex)
     {
@@ -214,16 +205,7 @@ internal sealed class ScreenGrabberWindows(
 
       using var graphics = Graphics.FromImage(bitmap);
 
-      if (!_displayManager.TryGetPhysicalBounds(display.DeviceName, out var physicalArea))
-      {
-        physicalArea = new Rectangle(
-          display.LogicalMonitorArea.X,
-          display.LogicalMonitorArea.Y,
-          display.LogicalMonitorArea.Width,
-          display.LogicalMonitorArea.Height);
-      }
-
-      var iconArea = TryDrawCursor(graphics, physicalArea);
+      var iconArea = TryDrawCursor(graphics, display.LayoutBounds);
       if (!iconArea.IsEmpty)
       {
         dirtyRects = [.. dirtyRects, iconArea];

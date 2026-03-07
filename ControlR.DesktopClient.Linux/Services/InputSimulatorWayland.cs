@@ -176,8 +176,8 @@ public class InputSimulatorWayland(
             // pixel space (0 to stream width/height), not global virtual screen coordinates.
             var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
             var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
-            var maxX = Math.Max(0, coordinates.Display.PhysicalSize.Width - 1);
-            var maxY = Math.Max(0, coordinates.Display.PhysicalSize.Height - 1);
+            var maxX = Math.Max(0, coordinates.Display.CapturePixelSize.Width - 1);
+            var maxY = Math.Max(0, coordinates.Display.CapturePixelSize.Height - 1);
             var physicalX = maxX * clampedX;
             var physicalY = maxY * clampedY;
 
@@ -190,7 +190,7 @@ public class InputSimulatorWayland(
           }
 
         case MovePointerType.Relative:
-          await _portalAccessor.NotifyPointerMotionAsync(_sessionHandle, coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y);
+          _logger.LogWarning("Relative pointer movement is not supported by the remote control input path on Wayland.");
           break;
         default:
           _logger.LogWarning("Unknown move type: {MoveType}", moveType);

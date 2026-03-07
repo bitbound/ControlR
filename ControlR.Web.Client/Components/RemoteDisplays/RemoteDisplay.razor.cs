@@ -64,7 +64,7 @@ public partial class RemoteDisplay : JsInteropableComponent
       return classNames.ToLower();
     }
   }
-  private double CanvasHeight => RemoteControlState.SelectedDisplay?.PhysicalHeight ?? 0;
+  private double CanvasHeight => RemoteControlState.SelectedDisplay?.CapturePixelSize.Height ?? 0;
   private string CanvasStyle
   {
     get
@@ -80,7 +80,7 @@ public partial class RemoteDisplay : JsInteropableComponent
         $"height: {RemoteControlState.RendererPixelHeight}px;";
     }
   }
-  private double CanvasWidth => RemoteControlState.SelectedDisplay?.PhysicalWidth ?? 0;
+  private double CanvasWidth => RemoteControlState.SelectedDisplay?.CapturePixelSize.Width ?? 0;
   private string OuterClass =>
     IsVisible
       ? string.Empty

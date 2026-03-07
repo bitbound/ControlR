@@ -1,7 +1,5 @@
-namespace ControlR.Viewer.Avalonia.ViewModels.Fakes;
-
 #pragma warning disable CS0067
-
+namespace ControlR.Viewer.Avalonia.ViewModels.Fakes;
 internal class DesktopSessionViewModelFake : IDesktopSessionViewModel
 {
   public DesktopSessionViewModelFake()

@@ -150,7 +150,7 @@ public class InputSimulatorMac(
   /// </summary>
   private static (int x, int y) GetAbsoluteLogicalCoords(PointerCoordinates coordinates)
   {
-    var bounds = coordinates.Display.LogicalMonitorArea;
+    var bounds = coordinates.Display.LayoutBounds;
     var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
     var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
     var maxX = bounds.Left + Math.Max(0, bounds.Width - 1);

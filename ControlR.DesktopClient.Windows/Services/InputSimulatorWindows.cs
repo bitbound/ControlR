@@ -74,14 +74,22 @@ internal class InputSimulatorWindows(
 
   public Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
+    var (x, y) = GetAbsolutePhysicalCoords(coordinates);
     return InvokeOnInputThread(() =>
-      _win32Interop.InvokeMouseButtonEvent(coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y, button, isPressed));
+      _win32Interop.InvokeMouseButtonEvent(x, y, button, isPressed));
   }
 
   public Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
+    if (moveType == MovePointerType.Relative)
+    {
+      _logger.LogWarning("Relative pointer movement is not supported by the remote control input path on Windows.");
+      return Task.CompletedTask;
+    }
+
+    var (x, y) = GetAbsolutePhysicalCoords(coordinates);
     return InvokeOnInputThread(() =>
-      _win32Interop.MovePointer(coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y, moveType));
+      _win32Interop.MovePointer(x, y, moveType));
   }
 
   public Task ResetKeyboardState()
@@ -91,8 +99,9 @@ internal class InputSimulatorWindows(
 
   public Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
+    var (x, y) = GetAbsolutePhysicalCoords(coordinates);
     return InvokeOnInputThread(() =>
-      _win32Interop.InvokeWheelScroll(coordinates.PhysicalPoint.X, coordinates.PhysicalPoint.Y, scrollY, scrollX));
+      _win32Interop.InvokeWheelScroll(x, y, scrollY, scrollX));
   }
 
   public Task<bool> SetBlockInput(bool isBlocked)
@@ -132,6 +141,22 @@ internal class InputSimulatorWindows(
   public Task TypeText(string text)
   {
     return InvokeOnInputThread(() => _win32Interop.TypeText(text));
+  }
+
+  private static (int x, int y) GetAbsolutePhysicalCoords(PointerCoordinates coordinates)
+  {
+    var bounds = coordinates.Display.LayoutBounds;
+    var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
+    var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
+    var maxX = bounds.Left + Math.Max(0, bounds.Width - 1);
+    var maxY = bounds.Top + Math.Max(0, bounds.Height - 1);
+    var absoluteX = (int)Math.Round(bounds.Left + (Math.Max(0, bounds.Width - 1) * clampedX));
+    var absoluteY = (int)Math.Round(bounds.Top + (Math.Max(0, bounds.Height - 1) * clampedY));
+
+    absoluteX = Math.Clamp(absoluteX, bounds.Left, maxX);
+    absoluteY = Math.Clamp(absoluteY, bounds.Top, maxY);
+
+    return (absoluteX, absoluteY);
   }
 
   private Task<T> InvokeOnInputThread<T>(Func<T> action)

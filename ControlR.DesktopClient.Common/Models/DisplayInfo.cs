@@ -1,32 +1,43 @@
 ﻿using System.Drawing;
-using System.Numerics;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.Common.Models;
 
 public class DisplayInfo
 {
+  /// <summary>
+  /// The pixel dimensions of the actual capture frame for this display.
+  /// </summary>
+  public Size CapturePixelSize { get; init; }
+  public double CapturePixelsPerLayoutUnit => GetPixelsPerLayoutUnit(CapturePixelSize);
   public required string DeviceName { get; init; }
   public string DisplayName { get; set; } = string.Empty;
   public int Index { get; set; }
   public bool IsPrimary { get; init; }
-
   /// <summary>
-  /// Monitor bounds in logical (device-independent) units as reported by the OS/compositor.
-  /// This is the authoritative source for display layout topology — position and size
-  /// in a consistent coordinate space shared across all monitors.
+  /// Monitor bounds used for display layout topology. The coordinate space is described
+  /// by <see cref="LayoutCoordinateSpace"/> because platforms do not all expose layout
+  /// bounds in the same units.
   /// </summary>
-  public Rectangle LogicalMonitorArea { get; init; }
-
+  public Rectangle LayoutBounds { get; init; }
+  public DisplayLayoutCoordinateSpace LayoutCoordinateSpace { get; init; }
   /// <summary>
-  /// The physical pixel dimensions of the monitor's capture buffer (width and height only).
-  /// No X/Y origin is stored here because a global physical origin is not reliably knowable
-  /// on all platforms (e.g. Wayland and macOS with mixed DPI multi-monitor setups).
-  /// Use <see cref="LogicalMonitorArea"/> for layout; use this for frame/buffer sizes.
+  /// Optional backing-store or hardware-native pixel dimensions when they differ from the
+  /// capture frame size and the platform can report them honestly.
   /// </summary>
-  public Size PhysicalSize { get; init; }
+  public Size? NativePixelSize { get; init; }
+  public double NativePixelsPerLayoutUnit => GetPixelsPerLayoutUnit(NativePixelSize ?? CapturePixelSize);
 
-  /// <summary>
-  /// Scale factor: PhysicalSize / logical size.  physical = logical * ScaleFactor.
-  /// </summary>
-  public double ScaleFactor { get; set; } = 1;
+  private double GetPixelsPerLayoutUnit(Size pixelSize)
+  {
+    if (LayoutBounds.Width <= 0 || LayoutBounds.Height <= 0)
+    {
+      return 1.0;
+    }
+
+    var widthRatio = (double)pixelSize.Width / LayoutBounds.Width;
+    var heightRatio = (double)pixelSize.Height / LayoutBounds.Height;
+
+    return Math.Max(widthRatio, heightRatio);
+  }
 }

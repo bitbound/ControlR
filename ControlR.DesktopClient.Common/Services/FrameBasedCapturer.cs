@@ -48,8 +48,8 @@ internal class FrameBasedCapturer : IDesktopCapturer
   private bool _disposedValue;
   private volatile bool _forceKeyFrame = true;
   private int _imageQuality;
+  private Size? _lastCapturePixelSize;
   private string? _lastDisplayId;
-  private Size? _lastPhysicalSize;
   private DisplayInfo? _selectedDisplay;
 
   public FrameBasedCapturer(
@@ -90,27 +90,6 @@ internal class FrameBasedCapturer : IDesktopCapturer
 
     SetSelectedDisplay(findResult.Value);
     _forceKeyFrame = true;
-  }
-
-  public async Task<Point> ConvertDisplayPercentToAbsolute(double percentOfDisplayX, double percentOfDisplayY)
-  {
-    var selectedDisplay = GetSelectedDisplay();
-    if (selectedDisplay is null)
-    {
-      var primary = await _displayManager.GetPrimaryDisplay();
-      if (primary is null)
-      {
-        return Point.Empty;
-      }
-      SetSelectedDisplay(primary);
-      selectedDisplay = primary;
-    }
-
-    var point = await _displayManager.ConvertDisplayPercentToPhysical(
-      selectedDisplay.DeviceName,
-      percentOfDisplayX,
-      percentOfDisplayY);
-    return new Point(point.X, point.Y);
   }
 
   public async ValueTask DisposeAsync()
@@ -331,7 +310,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
       return true;
     }
 
-    return _lastPhysicalSize != selectedDisplay.PhysicalSize;
+    return _lastCapturePixelSize != selectedDisplay.CapturePixelSize;
   }
 
   private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
@@ -408,7 +387,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
 
           _forceKeyFrame = false;
           _lastDisplayId = selectedDisplay.DeviceName;
-          _lastPhysicalSize = selectedDisplay.PhysicalSize;
+          _lastCapturePixelSize = selectedDisplay.CapturePixelSize;
         }
         else
         {

@@ -1,14 +1,13 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.NativeInterop.Linux;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.Linux.Services;
 
@@ -21,30 +20,6 @@ internal class DisplayManagerX11 : IDisplayManager
   public DisplayManagerX11(ILogger<DisplayManagerX11> logger)
   {
     _logger = logger;
-  }
-
-  public async Task<LogicalPoint> ConvertDisplayPercentToLogical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
-  {
-    var findResult = await TryFindDisplay(displayName);
-    if (!findResult.IsSuccess)
-    {
-      return default;
-    }
-
-    return DisplayCoordinateConverter
-        .DisplayPercentToLogical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
-  }
-
-  public async Task<PhysicalPoint> ConvertDisplayPercentToPhysical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
-  {
-    var findResult = await TryFindDisplay(displayName);
-    if (!findResult.IsSuccess)
-    {
-      return default;
-    }
-
-    return DisplayCoordinateConverter
-        .DisplayPercentToPhysical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
   }
 
   public Task<ImmutableList<DisplayInfo>> GetDisplays()
@@ -71,7 +46,7 @@ internal class DisplayManagerX11 : IDisplayManager
     }
   }
 
-  public async Task<LogicalRect> GetVirtualScreenLogicalBounds()
+  public async Task<Rectangle> GetVirtualScreenLayoutBounds()
   {
     try
     {
@@ -83,17 +58,17 @@ internal class DisplayManagerX11 : IDisplayManager
           return default;
         }
 
-        var minX = _displays.Values.Min(d => d.LogicalMonitorArea.Left);
-        var minY = _displays.Values.Min(d => d.LogicalMonitorArea.Top);
-        var maxX = _displays.Values.Max(d => d.LogicalMonitorArea.Right);
-        var maxY = _displays.Values.Max(d => d.LogicalMonitorArea.Bottom);
+        var minX = _displays.Values.Min(d => d.LayoutBounds.Left);
+        var minY = _displays.Values.Min(d => d.LayoutBounds.Top);
+        var maxX = _displays.Values.Max(d => d.LayoutBounds.Right);
+        var maxY = _displays.Values.Max(d => d.LayoutBounds.Bottom);
 
-        return new LogicalRect(minX, minY, maxX - minX, maxY - minY);
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
       }
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error getting virtual logical screen bounds.");
+      _logger.LogError(ex, "Error getting virtual layout screen bounds.");
       return default;
     }
   }
@@ -168,10 +143,10 @@ internal class DisplayManagerX11 : IDisplayManager
               DeviceName = i.ToString(),
               DisplayName = $"Display {i + 1}",
               Index = i,
-              PhysicalSize = new Size(monitorRect.Width, monitorRect.Height),
-              LogicalMonitorArea = new Rectangle(monitorRect.Left, monitorRect.Top, monitorRect.Width, monitorRect.Height),
+              CapturePixelSize = new Size(monitorRect.Width, monitorRect.Height),
+              LayoutBounds = new Rectangle(monitorRect.Left, monitorRect.Top, monitorRect.Width, monitorRect.Height),
+              LayoutCoordinateSpace = DisplayLayoutCoordinateSpace.Physical,
               IsPrimary = monitor.primary,
-              ScaleFactor = 1.0
             };
 
             _displays[displayInfo.DeviceName] = displayInfo;
@@ -194,10 +169,10 @@ internal class DisplayManagerX11 : IDisplayManager
               DeviceName = i.ToString(),
               DisplayName = $"Display {i + 1}",
               Index = i,
-              PhysicalSize = new Size(monitorRect.Width, monitorRect.Height),
-              LogicalMonitorArea = new Rectangle(monitorRect.Left, monitorRect.Top, monitorRect.Width, monitorRect.Height),
+              CapturePixelSize = new Size(monitorRect.Width, monitorRect.Height),
+              LayoutBounds = new Rectangle(monitorRect.Left, monitorRect.Top, monitorRect.Width, monitorRect.Height),
+              LayoutCoordinateSpace = DisplayLayoutCoordinateSpace.Physical,
               IsPrimary = i == 0,
-              ScaleFactor = 1.0
             };
 
             _displays[displayInfo.DeviceName] = displayInfo;

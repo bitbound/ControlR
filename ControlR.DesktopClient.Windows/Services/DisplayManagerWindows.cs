@@ -1,21 +1,19 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Drawing;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Windows.Helpers;
 using ControlR.Libraries.NativeInterop.Windows;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.Shared.Primitives;
 using Windows.Win32;
 using Windows.Win32.UI.WindowsAndMessaging;
+using System.Drawing;
 
 namespace ControlR.DesktopClient.Windows.Services;
 
 internal interface IDisplayManagerWindows : IDisplayManager
 {
-  bool TryGetPhysicalBounds(string deviceName, out Rectangle bounds);
 }
 
 internal class DisplayManagerWindows(
@@ -27,49 +25,11 @@ internal class DisplayManagerWindows(
   private readonly ConcurrentDictionary<string, DisplayInfo> _displays = new();
   private readonly ILogger<DisplayManagerWindows> _logger = logger;
   private readonly IWindowsMessagePump _messagePump = messagePump;
-  private readonly ConcurrentDictionary<string, Rectangle> _physicalBounds = new();
   private readonly IWin32Interop _win32Interop = win32Interop;
 
   private nint _privacyWindow = nint.Zero;
 
   public bool IsPrivacyScreenEnabled => _privacyWindow != nint.Zero;
-
-  public async Task<LogicalPoint> ConvertDisplayPercentToLogical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
-  {
-    var findResult = await TryFindDisplay(displayName);
-    if (!findResult.IsSuccess)
-    {
-      return default;
-    }
-
-    return DisplayCoordinateConverter
-        .DisplayPercentToLogical(percentOfDisplayX, percentOfDisplayY, findResult.Value);
-  }
-
-  public Task<PhysicalPoint> ConvertDisplayPercentToPhysical(string displayName, double percentOfDisplayX, double percentOfDisplayY)
-  {
-    lock (_displayLock)
-    {
-      EnsureDisplaysLoaded();
-      if (!_physicalBounds.TryGetValue(displayName, out var bounds))
-      {
-        return Task.FromResult<PhysicalPoint>(default);
-      }
-
-      var clampedX = Math.Clamp(percentOfDisplayX, 0, 1);
-      var clampedY = Math.Clamp(percentOfDisplayY, 0, 1);
-      var maxX = bounds.Left + Math.Max(0, bounds.Width - 1);
-      var maxY = bounds.Top + Math.Max(0, bounds.Height - 1);
-
-      var x = (int)Math.Round(bounds.Left + (Math.Max(0, bounds.Width - 1) * clampedX));
-      var y = (int)Math.Round(bounds.Top + (Math.Max(0, bounds.Height - 1) * clampedY));
-
-      x = Math.Clamp(x, bounds.Left, maxX);
-      y = Math.Clamp(y, bounds.Top, maxY);
-
-      return Task.FromResult(new PhysicalPoint(x, y));
-    }
-  }
 
   public Task<ImmutableList<DisplayInfo>> GetDisplays()
   {
@@ -95,14 +55,14 @@ internal class DisplayManagerWindows(
     }
   }
 
-  public Task<LogicalRect> GetVirtualScreenLogicalBounds()
+  public Task<Rectangle> GetVirtualScreenLayoutBounds()
   {
     var width = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXVIRTUALSCREEN);
     var height = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYVIRTUALSCREEN);
     var left = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_XVIRTUALSCREEN);
     var top = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_YVIRTUALSCREEN);
 
-    return Task.FromResult(new LogicalRect(left, top, width, height));
+    return Task.FromResult(new Rectangle(left, top, width, height));
   }
 
   public Task ReloadDisplays()
@@ -126,7 +86,7 @@ internal class DisplayManagerWindows(
           return Result.Ok();
         }
 
-        var bounds = await GetVirtualScreenLogicalBounds();
+        var bounds = await GetVirtualScreenLayoutBounds();
         _privacyWindow = await _messagePump.InvokeOnWindowThread(() =>
           _win32Interop.CreatePrivacyScreenWindow(
             (int)bounds.X,
@@ -182,15 +142,6 @@ internal class DisplayManagerWindows(
     }
   }
 
-  public bool TryGetPhysicalBounds(string deviceName, out Rectangle bounds)
-  {
-    lock (_displayLock)
-    {
-      EnsureDisplaysLoaded();
-      return _physicalBounds.TryGetValue(deviceName, out bounds);
-    }
-  }
-
   private void EnsureDisplaysLoaded()
   {
     // Must be called within lock
@@ -206,11 +157,9 @@ internal class DisplayManagerWindows(
     try
     {
       _displays.Clear();
-      _physicalBounds.Clear();
-      foreach (var (display, physicalBounds) in DisplayEnumHelperWindows.GetDisplays())
+      foreach (var display in DisplayEnumHelperWindows.GetDisplays())
       {
         _displays[display.DeviceName] = display;
-        _physicalBounds[display.DeviceName] = physicalBounds;
       }
     }
     catch (Exception ex)

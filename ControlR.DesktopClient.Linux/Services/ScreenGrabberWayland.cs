@@ -86,7 +86,7 @@ internal class ScreenGrabberWayland(
 
       // For multiple displays, we need to composite them together
       // This requires knowing the virtual screen bounds and each display's position
-      var virtualBounds = await _displayManager.GetVirtualScreenLogicalBounds();
+      var virtualBounds = await _displayManager.GetVirtualScreenLayoutBounds();
       if (virtualBounds.Width == 0 && virtualBounds.Height == 0)
       {
         _logger.LogError("Virtual screen bounds are invalid: {Bounds}", virtualBounds);
@@ -118,10 +118,10 @@ internal class ScreenGrabberWayland(
         _displayManager.UpdateCaptureSize(display.DeviceName, captureResult.Bitmap.Width, captureResult.Bitmap.Height);
 
         var destRect = SKRect.Create(
-          (float)(display.LogicalMonitorArea.X - virtualBounds.X),
-          (float)(display.LogicalMonitorArea.Y - virtualBounds.Y),
-          display.LogicalMonitorArea.Width,
-          display.LogicalMonitorArea.Height);
+          (float)(display.LayoutBounds.X - virtualBounds.X),
+          (float)(display.LayoutBounds.Y - virtualBounds.Y),
+          display.LayoutBounds.Width,
+          display.LayoutBounds.Height);
 
         canvas.DrawBitmap(captureResult.Bitmap, destRect);
       }

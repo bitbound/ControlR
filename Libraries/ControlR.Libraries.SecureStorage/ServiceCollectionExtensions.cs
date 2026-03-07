@@ -21,7 +21,6 @@ public static class ServiceCollectionExtensions
       services.Configure(configure);
     }
 
-#pragma warning disable CA1416
     if (OperatingSystem.IsWindows())
     {
       services.AddSingleton<ISecureStorage, SecureStorageWindows>();
@@ -38,7 +37,6 @@ public static class ServiceCollectionExtensions
     {
       throw new PlatformNotSupportedException("Secure storage is not supported on this platform.");
     }
-#pragma warning restore CA1416
     return services;
   }
 }
