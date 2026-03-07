@@ -21,7 +21,7 @@ namespace ControlR.DesktopClient.Windows.Tests;
 [SupportedOSPlatform("windows8.0")]
 public class ScreenCaptureTests
 {
-  private readonly TimeSpan _captureDuration = TimeSpan.FromSeconds(1);
+  private readonly TimeSpan _captureDuration = TimeSpan.FromSeconds(10);
   private readonly IDisplayManagerWindows _displayManager;
   private readonly IHost _host;
   private readonly IScreenGrabber _screenGrabber;
@@ -93,7 +93,7 @@ public class ScreenCaptureTests
 
         // Capture the current frame
         using var captureResult = await _screenGrabber.CaptureDisplay(display, forceKeyFrame: true);
-        
+
         if (!captureResult.IsSuccess || captureResult.Bitmap is null)
         {
           continue;
@@ -106,13 +106,13 @@ public class ScreenCaptureTests
 
           // Update the recorder with the frame
           recorder.UpdateFrame(
-            pixelPtr, 
-            0, 
-            0, 
-            frameWidth, 
-            frameHeight, 
+            pixelPtr,
+            0,
+            0,
+            frameWidth,
+            frameHeight,
             frameWidth * 4); // stride = width * 4 bytes per pixel (BGRA)
-          
+
           // Signal timeout to encode the frame
           recorder.Timeout();
         }
@@ -125,7 +125,7 @@ public class ScreenCaptureTests
 
       // Verify the output file was created
       Assert.True(File.Exists(outputFile), $"Output file was not created at {outputFile}");
-      
+
       // Verify the file has content
       var fileInfo = new FileInfo(outputFile);
       Assert.True(fileInfo.Length > 0, "Output file is empty.");
@@ -137,13 +137,15 @@ public class ScreenCaptureTests
     }
   }
 
-  #endif
+#endif
 
   [InteractiveWindowsFact]
   public async Task ScreenGrabber_EncodeViaFfmpeg()
   {
     // Get initial capture to determine frame dimensions
-    using var initialCapture = await _screenGrabber.CaptureAllDisplays();
+    var display = await _displayManager.GetPrimaryDisplay();
+    Guard.IsNotNull(display, "No primary display found.");
+    using var initialCapture = await _screenGrabber.CaptureDisplay(display, forceKeyFrame: true);
     Assert.True(initialCapture.IsSuccess, "Initial capture failed.");
     Assert.NotNull(initialCapture.Bitmap);
 
@@ -152,7 +154,7 @@ public class ScreenCaptureTests
     var frameRate = 20;
 
     // Calculate frame interval
-    var frameIntervalMs = 1000 / frameRate;
+    var frameInterval = TimeSpan.FromMilliseconds(1000.0 / frameRate);
 
     // Setup output file on desktop
     var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -165,13 +167,10 @@ public class ScreenCaptureTests
     }
 
     // Configure ffmpeg process
-    // Input: raw BGRA video from stdin
-    // Output: WebM VP9 encoded video to stdout (pipe:1), which this test will capture and write to a file
-    // -y flag: overwrite output file without asking
-    var ffmpegArgs = $"-y -f rawvideo -pixel_format bgra -video_size {frameWidth}x{frameHeight} " +
-             $"-framerate {frameRate} -i pipe:0 -g {frameRate * 2} " +
-             $"-vf \"format=yuv420p\" -c:v libvpx-vp9 -deadline realtime -row-mt 1 " +
-             $"-f webm pipe:1";
+    var ffmpegArgs = $"-y -use_wallclock_as_timestamps 1 -f rawvideo -pixel_format bgra " +
+                    $"-video_size {frameWidth}x{frameHeight} -i pipe:0 " +
+                    $"-c:v libvpx-vp9 -deadline realtime -cpu-used 8 -row-mt 1 " +
+                    $"-vf \"format=yuv420p\" -g 60 -vsync vfr -f webm pipe:1";
 
     var processStartInfo = new ProcessStartInfo
     {
@@ -192,7 +191,11 @@ public class ScreenCaptureTests
     var stderrTask = ffmpegProcess.StandardError.ReadToEndAsync();
 
     // Open file for writing the streamed stdout from ffmpeg
-    await using var outputFs = new FileStream(outputFile, FileMode.Create, FileAccess.Write, FileShare.None);
+    await using var outputFs = new FileStream(
+      outputFile, 
+      FileMode.Create, 
+      FileAccess.Write, 
+      FileShare.None);
 
     // Copy stdout bytes to file in the background while we feed FFmpeg with frames
     var stdoutCopyTask = Task.Run(async () =>
@@ -210,23 +213,14 @@ public class ScreenCaptureTests
 
     try
     {
-      var nextFrame = DateTimeOffset.UtcNow;
-      var startTime = DateTimeOffset.UtcNow;
-      var endTime = startTime.Add(_captureDuration);
-
       var frameSize = frameWidth * frameHeight * 4; // BGRA = 4 bytes per pixel
       var frameBuffer = new byte[frameSize];
       var framesWritten = 0;
 
-      while (DateTimeOffset.UtcNow < endTime)
+      using var cts = new CancellationTokenSource(_captureDuration);
+      
+      while (!cts.IsCancellationRequested)
       {
-        while (DateTimeOffset.UtcNow < nextFrame)
-        {
-          // Wait until it's time for the next frame
-          await Task.Delay(1);
-        }
-        nextFrame = nextFrame.AddMilliseconds(frameIntervalMs);
-
         // Check if ffmpeg process has exited
         if (ffmpegProcess.HasExited)
         {
@@ -235,7 +229,7 @@ public class ScreenCaptureTests
         }
 
         // Capture the current frame
-        using var captureResult = await _screenGrabber.CaptureAllDisplays();
+        using var captureResult = await _screenGrabber.CaptureDisplay(display, forceKeyFrame: true);
 
         if (!captureResult.IsSuccess || captureResult.Bitmap is null)
         {
@@ -262,31 +256,23 @@ public class ScreenCaptureTests
           var stderr = await stderrTask;
           Assert.Fail($"FFmpeg closed pipe after {framesWritten} frames. This may indicate an error.\n\nStderr output:\n{stderr}\n\nException: {ex.Message}");
         }
+        await Task.Delay(frameInterval);
       }
 
       // Close stdin to signal end of input
+      await ffmpegProcess.StandardInput.BaseStream.FlushAsync();
       ffmpegProcess.StandardInput.Close();
 
-      // Wait for stderr reading to complete and ffmpeg to finish encoding (with timeout)
-      var finishTimeout = TimeSpan.FromSeconds(10);
-      var finished = await Task.Run(() => ffmpegProcess.WaitForExit((int)finishTimeout.TotalMilliseconds));
-      
-      if (!finished)
-      {
-        var stderr = stderrTask.IsCompleted ? await stderrTask : "stderr not available";
-        Assert.Fail($"FFmpeg did not finish within the timeout period.\n\nStderr output:\n{stderr}");
-      }
-
+      // Wait for stderr reading to complete and ffmpeg to finish encoding
+      // The stdoutCopyTask completes when ffmpeg finishes writing to stdout (after encoding)
       var stderrOutput = await stderrTask;
+      await stdoutCopyTask;
 
       // Check exit code
       if (ffmpegProcess.ExitCode != 0)
       {
         Assert.Fail($"FFmpeg exited with error code {ffmpegProcess.ExitCode}.\n\nStderr output:\n{stderrOutput}");
       }
-
-      // Wait for the stdout copy to complete to ensure file has all bytes
-      await stdoutCopyTask;
 
       // Verify the output file was created
       Assert.True(File.Exists(outputFile), $"Output file was not created at {outputFile}");
@@ -298,13 +284,13 @@ public class ScreenCaptureTests
     finally
     {
       initialCapture.Dispose();
-      
+
       // Ensure ffmpeg process is terminated
       if (!ffmpegProcess.HasExited)
       {
         ffmpegProcess.Kill(entireProcessTree: true);
       }
-      
+
       // Ensure stdout copy task is observed; if it failed it will propagate here
       try
       {

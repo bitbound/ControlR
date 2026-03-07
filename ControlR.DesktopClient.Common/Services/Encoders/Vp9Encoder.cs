@@ -75,10 +75,10 @@ public class Vp9Encoder : IStreamEncoder
 
         _cts = new CancellationTokenSource();
 
-        var ffmpegArgs = $"-y -f rawvideo -pixel_format bgra -video_size {width}x{height} " +
-             $"-framerate {DefaultFrameRate} -i pipe:0 -g {DefaultFrameRate * 2} " +
-             $"-vf \"format=yuv420p\" -c:v libvpx-vp9 -deadline realtime -row-mt 1 " +
-             $"-f webm pipe:1";
+        var ffmpegArgs = $"-y -use_wallclock_as_timestamps 1 -f rawvideo -pixel_format bgra " +
+                    $"-video_size {width}x{height} -i pipe:0 " +
+                    $"-c:v libvpx-vp9 -deadline realtime -cpu-used 8 -row-mt 1 " +
+                    $"-vf \"format=yuv420p\" -g 60 -vsync vfr -f webm pipe:1";
 
         var startInfo = new ProcessStartInfo
         {
@@ -122,7 +122,7 @@ public class Vp9Encoder : IStreamEncoder
                 var buffer = new byte[4096 * 4]; // 16KB buffer
                 while (!_cts.Token.IsCancellationRequested)
                 {
-                    var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, _cts.Token);
+                    var bytesRead = await stream.ReadAsync(buffer, _cts.Token);
                     if (bytesRead == 0) break;
 
                     var packetData = new byte[bytesRead];
