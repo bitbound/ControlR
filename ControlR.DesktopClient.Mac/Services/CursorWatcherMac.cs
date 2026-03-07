@@ -8,6 +8,7 @@ using ControlR.Libraries.NativeInterop.Mac;
 using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.DesktopClient.Mac.Services;
 
@@ -16,7 +17,7 @@ internal class CursorWatcherMac(
   IDisplayManager displayManager,
   IMessenger messenger,
   IImageUtility imageUtility,
-  ILogger<CursorWatcherMac> logger) 
+  ILogger<CursorWatcherMac> logger)
   : PeriodicBackgroundService(TimeSpan.FromMilliseconds(10), timeProvider, logger)
 {
   private readonly IDisplayManager _displayManager = displayManager;
@@ -65,6 +66,9 @@ internal class CursorWatcherMac(
       Logger.LogDebug("Failed to convert NSImage to CGImage");
       return;
     }
+
+    using var cgImageDisposer = new CallbackDisposable(
+      () => CoreGraphicsHelper.ReleaseCGImage(cgImageRef));
 
     var (hotspotX, hotspotY) = AppKit.GetCursorHotspot(cursor);
 

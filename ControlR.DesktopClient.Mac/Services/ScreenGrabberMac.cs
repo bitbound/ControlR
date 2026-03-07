@@ -2,7 +2,7 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.Libraries.NativeInterop.Mac;
-using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using System.Drawing;
@@ -266,7 +266,9 @@ public sealed class ScreenGrabberMac(
         return;
       }
 
-      // Don't release cgImageRef - it's owned by NSImage
+      using var cgImageDisposer = new CallbackDisposable(
+        () => CoreGraphicsHelper.ReleaseCGImage(cgImageRef));
+
       using var cursorBitmap = CoreGraphicsHelper.CGImageToSKBitmap(cgImageRef);
       if (cursorBitmap is null)
       {
