@@ -1,5 +1,3 @@
-using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.Extensions.Hosting;
 

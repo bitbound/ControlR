@@ -18,8 +18,6 @@ public static class HostAppBuilderExtensions
 {
   public static IHostApplicationBuilder AddCommonDesktopServices(
     this IHostApplicationBuilder builder,
-    IIpcClientAccessor ipcClientAccessor,
-    IUserInteractionService userInteractionService,
     Action<IHostApplicationBuilder> configureDependencies,
     Action<RemoteControlSessionOptions> configureSessionOptions,
     Action<DesktopClientOptions> configureDesktopClientOptions)
@@ -46,8 +44,6 @@ public static class HostAppBuilderExtensions
       .AddSingleton<ISessionConsentService, SessionConsentService>()
       .AddSingleton<IRemoteControlSessionState, RemoteControlSessionState>()
       .AddSingleton<IWaiter, Waiter>()
-      .AddSingleton(ipcClientAccessor)
-      .AddSingleton(userInteractionService)
       .AddTransient<FrameBasedCapturer>()
       .AddTransient<StreamBasedCapturer>()
       .AddHostedService<HostLifetimeEventResponder>()

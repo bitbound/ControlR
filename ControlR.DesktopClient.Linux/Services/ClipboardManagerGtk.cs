@@ -1,5 +1,5 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.NativeInterop.Linux;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 

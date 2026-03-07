@@ -5,7 +5,7 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
-using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.NativeInterop.Linux;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;

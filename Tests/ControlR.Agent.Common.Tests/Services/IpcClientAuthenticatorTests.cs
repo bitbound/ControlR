@@ -8,6 +8,7 @@ using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
 namespace ControlR.Agent.Common.Tests.Services;
 
@@ -63,7 +64,7 @@ public class IpcClientAuthenticatorTests
     // Advance time by 61 seconds to expire the rate limit window
     _timeProvider.Advance(TimeSpan.FromSeconds(61));
 
-    var credentials = new ClientCredentials(12345, attackPath);
+    var credentials = new IpcClientCredentials(12345, attackPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -85,7 +86,7 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.IsDebug).Returns(true);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/debug/path");
 
-    var credentials = new ClientCredentials(12345, $"/usr/bin/{dotnetName}");
+    var credentials = new IpcClientCredentials(12345, $"/usr/bin/{dotnetName}");
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -104,7 +105,7 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.IsDebug).Returns(true);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/debug/path");
 
-    var credentials = new ClientCredentials(12345, "/usr/bin/dotnet");
+    var credentials = new IpcClientCredentials(12345, "/usr/bin/dotnet");
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -138,7 +139,7 @@ public class IpcClientAuthenticatorTests
     // Arrange
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
-      .Returns(Result.Fail<ClientCredentials>("Failed to get credentials"));
+      .Returns(Result.Fail<IpcClientCredentials>("Failed to get credentials"));
 
     // Act
     var result = await _authenticator.AuthenticateConnection(_server.Object);
@@ -158,7 +159,7 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
     _pathProvider.Setup(x => x.GetDesktopExecutablePath()).Returns(expectedPath);
 
-    var credentials = new ClientCredentials(12345, expectedPath);
+    var credentials = new IpcClientCredentials(12345, expectedPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -186,7 +187,7 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
-    var credentials = new ClientCredentials(12345, "/wrong/path/malicious.exe");
+    var credentials = new IpcClientCredentials(12345, "/wrong/path/malicious.exe");
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -214,7 +215,7 @@ public class IpcClientAuthenticatorTests
     // For testing purposes, let's test the non-macOS path since we can't easily mock the static Instance
     var expectedPath = GetExpectedPath(startupDir);
     _pathProvider.Setup(x => x.GetDesktopExecutablePath()).Returns(expectedPath);
-    var credentials = new ClientCredentials(12345, expectedPath);
+    var credentials = new IpcClientCredentials(12345, expectedPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -236,7 +237,7 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 
-    var credentials = new ClientCredentials(12345, expectedPath);
+    var credentials = new IpcClientCredentials(12345, expectedPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -257,7 +258,7 @@ public class IpcClientAuthenticatorTests
   public async Task AuthenticateConnection_WithNullExecutablePath_ReturnsFailure()
   {
     // Arrange
-    var credentials = new ClientCredentials(12345, null!);
+    var credentials = new IpcClientCredentials(12345, null!);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -278,7 +279,7 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
-    var credentials = new ClientCredentials(12345, attackPath);
+    var credentials = new IpcClientCredentials(12345, attackPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -307,7 +308,7 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns(startupDir);
 
-    var credentials = new ClientCredentials(12345, expectedPath);
+    var credentials = new IpcClientCredentials(12345, expectedPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
@@ -403,12 +404,12 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
-    var credentials = new ClientCredentials(12345, attackPath);
+    var credentials = new IpcClientCredentials(12345, attackPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));
 
-    var tasks = new List<Task<Result<ClientCredentials>>>();
+    var tasks = new List<Task<Result<IpcClientCredentials>>>();
 
     // Act - simulate concurrent authentication attempts from multiple threads
     for (var i = 0; i < 10; i++)
@@ -438,7 +439,7 @@ public class IpcClientAuthenticatorTests
     _systemEnvironment.Setup(x => x.IsDebug).Returns(false);
     _systemEnvironment.Setup(x => x.StartupDirectory).Returns("/expected/path");
 
-    var credentials = new ClientCredentials(12345, attackPath);
+    var credentials = new IpcClientCredentials(12345, attackPath);
     _credentialProvider
       .Setup(x => x.GetClientCredentials(_server.Object))
       .Returns(Result.Ok(credentials));

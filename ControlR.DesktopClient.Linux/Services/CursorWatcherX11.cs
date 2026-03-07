@@ -1,7 +1,7 @@
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.Services;
-using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.NativeInterop.Linux;
 using ControlR.Libraries.Hosting;
 using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.Logging;

@@ -1,8 +1,6 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Shared.Services.Http;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Base;

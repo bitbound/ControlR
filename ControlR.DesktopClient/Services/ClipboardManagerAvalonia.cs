@@ -9,7 +9,7 @@ public class ClipboardManagerAvalonia(
   private readonly ILogger<ClipboardManagerAvalonia> _logger = logger;
   public async Task<string?> GetText()
   {
-    return await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+    return await Dispatcher.UIThread.InvokeAsync(async () =>
     { 
       if (App.MainWindow.Clipboard is null)
       {
@@ -23,7 +23,7 @@ public class ClipboardManagerAvalonia(
 
   public async Task SetText(string? text)
   {
-    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+    await Dispatcher.UIThread.InvokeAsync(async () =>
     {
       if (App.MainWindow.Clipboard is null)
       {

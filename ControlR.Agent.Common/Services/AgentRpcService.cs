@@ -1,5 +1,4 @@
 using ControlR.Libraries.Ipc.Interfaces;
-using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
 namespace ControlR.Agent.Common.Services;
 

@@ -1,6 +1,4 @@
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Agent.Common.Models;
-using ControlR.Libraries.Api.Contracts.Dtos.HubDtos; // Added for AgentDeviceUpdateDto
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 

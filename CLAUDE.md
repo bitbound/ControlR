@@ -1,1 +1,0 @@
-See [copilot-instructions.md](.github/instructions/copilot-instructions.md) for instructions.

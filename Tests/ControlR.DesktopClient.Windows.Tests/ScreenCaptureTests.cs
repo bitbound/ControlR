@@ -9,7 +9,10 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Xunit;
-#if IsWindows
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Helpers;
+
+#if IS_WINDOWS
 using Devolutions.Cadeau;
 #endif
 
@@ -18,6 +21,8 @@ namespace ControlR.DesktopClient.Windows.Tests;
 [SupportedOSPlatform("windows8.0")]
 public class ScreenCaptureTests
 {
+  private readonly TimeSpan _captureDuration = TimeSpan.FromSeconds(1);
+  private readonly IDisplayManagerWindows _displayManager;
   private readonly IHost _host;
   private readonly IScreenGrabber _screenGrabber;
 
@@ -33,15 +38,17 @@ public class ScreenCaptureTests
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()
       .AddSingleton<IDisplayManager, DisplayManagerWindows>()
       .AddSingleton<IScreenGrabber, ScreenGrabberWindows>()
+      .AddSingleton<IDisplayManagerWindows, DisplayManagerWindows>()
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>();
 
     builder.Logging.AddProvider(new XunitLoggerProvider(testOutput));
 
     _host = builder.Build();
     _screenGrabber = _host.Services.GetRequiredService<IScreenGrabber>();
+    _displayManager = _host.Services.GetRequiredService<IDisplayManagerWindows>();
   }
 
-  [InteractiveWindowsFactAttribute]
+  [InteractiveWindowsFact]
   public async Task ScreenGrabber_CaptureAllDisplays_Ok()
   {
     using var captureResult = await _screenGrabber.CaptureAllDisplays();
@@ -51,27 +58,27 @@ public class ScreenCaptureTests
     Assert.True(captureResult.Bitmap.Height > 0, "Bitmap height is 0.");
   }
 
-#if IsWindows
+#if IS_WINDOWS
   [InteractiveWindowsFact]
   public async Task ScreenGrabber_EncodeViaCadeau()
   {
     // Get initial capture to determine frame dimensions
-    using var initialCapture = await _screenGrabber.CaptureAllDisplays();
-    Assert.True(initialCapture.IsSuccess, "Initial capture failed.");
-    Assert.NotNull(initialCapture.Bitmap);
+    var display = await _displayManager.GetPrimaryDisplay();
+    Guard.IsNotNull(display, "No primary display found.");
 
-    var frameWidth = (uint)initialCapture.Bitmap.Width;
-    var frameHeight = (uint)initialCapture.Bitmap.Height;
+    var frameWidth = (uint)display.PhysicalSize.Width;
+    var frameHeight = (uint)display.PhysicalSize.Height;
     uint frameRate = 60;
-    var captureDuration = TimeSpan.FromSeconds(1);
-    
+
     // Setup output file on desktop
-    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-    string outputFile = Path.Combine(desktopPath, "CadeauTest.webm");
+    var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+    var outputFile = Path.Combine(desktopPath, "CadeauTest.webm");
 
     // Initialize XmfRecorder
-    var recorder = new XmfRecorder();
-    recorder.SetFileName(outputFile);
+    using var recorder = new XmfRecorder();
+    using var mkvStream = new XmfMkvStream();
+    recorder.SetBipBuffer(mkvStream.BipBuffer);
+    //recorder.SetFileName(outputFile);
     recorder.SetVideoQuality(10);
     recorder.SetFrameSize(frameWidth, frameHeight);
     recorder.SetFrameRate(frameRate);
@@ -79,13 +86,13 @@ public class ScreenCaptureTests
 
     try
     {
-      var startTime = DateTimeOffset.UtcNow;
-      var endTime = startTime.Add(captureDuration);
 
-      while (DateTimeOffset.UtcNow < endTime)
+      using var cts = new CancellationTokenSource(_captureDuration);
+      while (!cts.IsCancellationRequested)
       {
+
         // Capture the current frame
-        using var captureResult = await _screenGrabber.CaptureAllDisplays();
+        using var captureResult = await _screenGrabber.CaptureDisplay(display, forceKeyFrame: true);
         
         if (!captureResult.IsSuccess || captureResult.Bitmap is null)
         {
@@ -95,8 +102,8 @@ public class ScreenCaptureTests
         unsafe
         {
           // Get the pixel data from SKBitmap
-          IntPtr pixelPtr = captureResult.Bitmap.GetPixels();
-          
+          var pixelPtr = captureResult.Bitmap.GetPixels();
+
           // Update the recorder with the frame
           recorder.UpdateFrame(
             pixelPtr, 
@@ -111,6 +118,11 @@ public class ScreenCaptureTests
         }
       }
 
+      recorder.Timeout();
+
+      using var fs = File.Open(outputFile, FileMode.Create, FileAccess.ReadWrite);
+      await mkvStream.CopyToAsync(fs);
+
       // Verify the output file was created
       Assert.True(File.Exists(outputFile), $"Output file was not created at {outputFile}");
       
@@ -122,12 +134,12 @@ public class ScreenCaptureTests
     {
       // Cleanup recorder
       recorder.Uninit();
-      initialCapture.Dispose();
     }
   }
+
   #endif
 
-  [InteractiveWindowsFactAttribute]
+  [InteractiveWindowsFact]
   public async Task ScreenGrabber_EncodeViaFfmpeg()
   {
     // Get initial capture to determine frame dimensions
@@ -138,7 +150,6 @@ public class ScreenCaptureTests
     var frameWidth = initialCapture.Bitmap.Width;
     var frameHeight = initialCapture.Bitmap.Height;
     var frameRate = 20;
-    var captureDuration = TimeSpan.FromSeconds(1);
 
     // Calculate frame interval
     var frameIntervalMs = 1000 / frameRate;
@@ -201,7 +212,7 @@ public class ScreenCaptureTests
     {
       var nextFrame = DateTimeOffset.UtcNow;
       var startTime = DateTimeOffset.UtcNow;
-      var endTime = startTime.Add(captureDuration);
+      var endTime = startTime.Add(_captureDuration);
 
       var frameSize = frameWidth * frameHeight * 4; // BGRA = 4 bytes per pixel
       var frameBuffer = new byte[frameSize];

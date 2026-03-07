@@ -1,56 +1,69 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
-		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-		<ApplicationManifest>app.manifest</ApplicationManifest>
-		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-		<PackageIcon>appicon.png</PackageIcon>
-		<ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
-		<EnableWindowsTargeting>true</EnableWindowsTargeting>
-	</PropertyGroup>
-	<ItemGroup>
-		<Folder Include="Models\" />
-		<AvaloniaResource Include="Assets\**" />
-	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="Avalonia" />
-		<PackageReference Include="Avalonia.Controls.DataGrid" />
-		<PackageReference Include="Avalonia.Desktop" />
-		<PackageReference Include="Avalonia.LinuxFramebuffer" />
-		<PackageReference Include="Avalonia.Themes.Fluent" />
-		<PackageReference Include="Avalonia.Fonts.Inter" />
-		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-		<PackageReference Include="Avalonia.Diagnostics">
-			<IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
-			<PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
-		</PackageReference>
-		<PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
-		<PackageReference Include="CommunityToolkit.Mvvm" />
-		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <PackageIcon>appicon.png</PackageIcon>
+    <ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="Models\" />
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.LinuxFramebuffer" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <!--Condition
+    below is needed to remove Avalonia.Diagnostics package from build output in Release
+    configuration.-->
+    <PackageReference Include="Avalonia.Diagnostics">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Update="Bitbound.Analyzers.MemberOrder">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(DefineConstants.Contains('IS_WINDOWS'))">
+    <ProjectReference
+      Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="$(DefineConstants.Contains('IS_MACOS'))">
     <ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="$(DefineConstants.Contains('IS_LINUX'))">
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
     <ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Compile Update="Views\Linux\PermissionsViewWayland.axaml.cs">
-	    <DependentUpon>PermissionsViewWayland.axaml</DependentUpon>
-	  </Compile>
-	  <Compile Update="Views\Mac\PermissionsViewMac.axaml.cs">
-	    <DependentUpon>PermissionsViewMac.axaml</DependentUpon>
-	  </Compile>
-	</ItemGroup>
-	<ItemGroup>
-		<None Update="Assets\appicon.png">
-			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
-		</None>
-	</ItemGroup>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\Linux\PermissionsViewWayland.axaml.cs">
+      <DependentUpon>PermissionsViewWayland.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Mac\PermissionsViewMac.axaml.cs">
+      <DependentUpon>PermissionsViewMac.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Assets\appicon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 </Project>

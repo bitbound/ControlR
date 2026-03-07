@@ -31,20 +31,17 @@ public class DesktopClientRpcService(
 
             var arePermissionsGranted = false;
 
-            if (OperatingSystem.IsMacOS())
-            {
-                var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-                var isAccessibilityGranted = macInterop.IsMacAccessibilityPermissionGranted();
-                var isScreenCaptureGranted = macInterop.IsMacScreenCapturePermissionGranted();
-                arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
+            #if IS_MACOS
+              var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
+              var isAccessibilityGranted = macInterop.IsMacAccessibilityPermissionGranted();
+              var isScreenCaptureGranted = macInterop.IsMacScreenCapturePermissionGranted();
+              arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
-                _logger.LogInformation(
-                  "macOS permissions check: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
-                  isAccessibilityGranted,
-                  isScreenCaptureGranted);
-            }
-            else if (OperatingSystem.IsLinux())
-            {
+              _logger.LogInformation(
+                "macOS permissions check: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
+                isAccessibilityGranted,
+                isScreenCaptureGranted);
+            #elif IS_LINUX
                 var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
                 if (detector.IsWayland())
                 {
@@ -59,13 +56,10 @@ public class DesktopClientRpcService(
                     arePermissionsGranted = true;
                     _logger.LogInformation("X11 detected, no special permissions required");
                 }
-            }
-            else
-            {
-                // Windows doesn't require special OS-level permissions for remote control
+            #else
                 arePermissionsGranted = true;
                 _logger.LogInformation("Windows detected, no special permissions required");
-            }
+            #endif
 
             return new CheckOsPermissionsResponseIpcDto(arePermissionsGranted);
         }
@@ -122,18 +116,18 @@ public class DesktopClientRpcService(
             return new DesktopPreviewResponseIpcDto([], false, "An error occurred while capturing desktop preview.");
         }
     }
+    
     public Task InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            _logger.LogWarning("Ctrl+Alt+Del invocation requested on non-Windows OS. Ignoring.");
-            return Task.CompletedTask;
-        }
-
+      #if IS_WINDOWS
         _logger.LogInformation("Handling Ctrl+Alt+Del request. Requester ID: {RequesterId}", dto.InvokerUserName);
         var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
         win32Interop.InvokeCtrlAltDel();
-        return Task.CompletedTask;
+      #else
+        _logger.LogWarning("Ctrl+Alt+Del invocation requested on non-Windows OS. Ignoring.");
+      #endif
+      return Task.CompletedTask;
+
     }
     public async Task ReceiveChatMessage(ChatMessageIpcDto dto)
     {

@@ -24,13 +24,13 @@ namespace ControlR.DesktopClient.Windows.Services;
 internal sealed class ScreenGrabberWindows(
   IDxOutputDuplicator dxOutputGenerator,
   IWin32Interop win32Interop,
-  IWindowsDisplayManager displayManager,
+  IDisplayManagerWindows displayManager,
   ILogger<ScreenGrabberWindows> logger) : IScreenGrabber
 {
   private const string DirectXCaptureMode = "DirectX";
   private const string GdiCaptureMode = "GDI";
 
-  private readonly IWindowsDisplayManager _displayManager = displayManager;
+  private readonly IDisplayManagerWindows _displayManager = displayManager;
   private readonly IDxOutputDuplicator _dxOutputGenerator = dxOutputGenerator;
   private readonly ILogger<ScreenGrabberWindows> _logger = logger;
   private readonly IWin32Interop _win32Interop = win32Interop;

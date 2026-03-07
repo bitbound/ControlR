@@ -1,5 +1,5 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.NativeInterop.Unix.MacOs;
+using ControlR.Libraries.NativeInterop.Mac;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Mac.Services;

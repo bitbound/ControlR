@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.NativeInterop.Unix.MacOs;
-using ControlR.Libraries.Shared.Extensions;
+﻿using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

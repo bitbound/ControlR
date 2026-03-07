@@ -1,12 +1,8 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
-using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 
 namespace ControlR.Agent.Common.Services.Linux;
 

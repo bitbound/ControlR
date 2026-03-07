@@ -1,7 +1,7 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Mac.Helpers;
-using ControlR.Libraries.NativeInterop.Unix.MacOs;
+using ControlR.Libraries.NativeInterop.Mac;
 using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;

@@ -1,5 +1,4 @@
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Agent.Common.Services;
 

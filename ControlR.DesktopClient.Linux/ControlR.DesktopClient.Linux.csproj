@@ -4,8 +4,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.DesktopClient.Common\ControlR.DesktopClient.Common.csproj" />
-		<ProjectReference Include="..\Libraries\ControlR.Libraries.Hosting\ControlR.Libraries.Hosting.csproj" />
-		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Unix\ControlR.Libraries.NativeInterop.Unix.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Linux\ControlR.Libraries.NativeInterop.Linux.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Update="Bitbound.Analyzers.MemberOrder">

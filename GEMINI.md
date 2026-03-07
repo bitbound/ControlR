@@ -1,1 +1,0 @@
-Read [copilot-instructions.md](.github/instructions/copilot-instructions.md) and use those instructions.

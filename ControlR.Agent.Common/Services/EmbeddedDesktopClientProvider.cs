@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Security.Cryptography;
-using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Agent.Common.Services;
 

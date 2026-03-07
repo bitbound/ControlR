@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using ControlR.DesktopClient.ViewModels.Linux;
 
 namespace ControlR.DesktopClient.Views.Linux;
 
@@ -11,6 +10,7 @@ public partial class PermissionsViewWayland : UserControl
     InitializeComponent();
   }
 
+#if IS_LINUX
   public PermissionsViewWayland(IPermissionsViewModelWayland viewModel)
   {
     DataContext = viewModel;
@@ -31,4 +31,5 @@ public partial class PermissionsViewWayland : UserControl
   {
     App.MainWindow.Activated -= MainWindow_Activated;
   }
+#endif
 }

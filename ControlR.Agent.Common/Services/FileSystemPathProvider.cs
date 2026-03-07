@@ -1,5 +1,4 @@
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services;

@@ -1,8 +1,6 @@
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Agent.Common.Interfaces;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.Common.Services.Base;
@@ -92,7 +90,7 @@ internal abstract class IpcServerInitializerBase(
     }
   }
   protected abstract string GetPipeName();
-  protected Task HandleConnection(IIpcServer server, ClientCredentials credentials, CancellationToken cancellationToken)
+  protected Task HandleConnection(IIpcServer server, IpcClientCredentials credentials, CancellationToken cancellationToken)
   {
     try
     {

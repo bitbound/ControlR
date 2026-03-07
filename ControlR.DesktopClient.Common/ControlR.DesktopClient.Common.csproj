@@ -16,6 +16,7 @@
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Hosting\ControlR.Libraries.Hosting.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\Strings\en-US.json" />

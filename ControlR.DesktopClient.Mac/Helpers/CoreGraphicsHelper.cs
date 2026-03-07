@@ -1,4 +1,4 @@
-using ControlR.Libraries.NativeInterop.Unix.MacOs;
+using ControlR.Libraries.NativeInterop.Mac;
 using SkiaSharp;
 using System.Drawing;
 

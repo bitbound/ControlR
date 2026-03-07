@@ -22,7 +22,6 @@ using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.ApiClient;
 
 namespace ControlR.Agent.Common.Startup;
 

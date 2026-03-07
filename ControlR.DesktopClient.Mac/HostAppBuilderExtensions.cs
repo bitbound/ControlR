@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.Shared.Services;
-using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.DesktopClient.Common.Services;
 

@@ -21,7 +21,7 @@ public static class HostAppBuilderExtensions
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()
       .AddSingleton<DisplayManagerWindows>()
       .AddSingleton<IDisplayManager>(s => s.GetRequiredService<DisplayManagerWindows>())
-      .AddSingleton<IWindowsDisplayManager>(s => s.GetRequiredService<DisplayManagerWindows>())
+      .AddSingleton<IDisplayManagerWindows>(s => s.GetRequiredService<DisplayManagerWindows>())
       .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWindows>>()
       .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()

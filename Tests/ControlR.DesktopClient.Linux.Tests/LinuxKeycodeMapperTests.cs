@@ -1,4 +1,4 @@
-using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.NativeInterop.Linux;
 using Xunit;
 
 namespace ControlR.DesktopClient.Linux.Tests;

@@ -4,7 +4,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.Libraries.Hosting;
-using ControlR.Libraries.NativeInterop.Unix.MacOs;
+using ControlR.Libraries.NativeInterop.Mac;
 using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;

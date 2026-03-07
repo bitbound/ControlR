@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using ControlR.DesktopClient.Views.Linux;
 
 namespace ControlR.DesktopClient.ViewModels.Linux;
 
@@ -10,6 +9,7 @@ public interface IPermissionsViewModelWayland : IPermissionsViewModel
   Task SetPermissionValues();
 }
 
+#if IS_LINUX
 public partial class PermissionsViewModelWayland(IServiceProvider serviceProvider) : ViewModelBase<PermissionsViewWayland>, IPermissionsViewModelWayland
 {
   private readonly IServiceProvider _serviceProvider = serviceProvider;
@@ -38,3 +38,4 @@ public partial class PermissionsViewModelWayland(IServiceProvider serviceProvide
     await SetPermissionValues();
   }
 }
+#endif

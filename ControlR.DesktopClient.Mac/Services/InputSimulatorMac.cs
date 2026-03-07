@@ -1,7 +1,6 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using Microsoft.Extensions.Logging;
-using ControlR.Libraries.NativeInterop.Unix.MacOs;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;

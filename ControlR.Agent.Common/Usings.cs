@@ -1,7 +1,6 @@
 global using Bitbound.SimpleMessenger;
 global using ControlR.Libraries.DevicesCommon.Services;
 global using ControlR.Libraries.Shared.Services;
-global using ControlR.Libraries.Shared;
 global using ControlR.Libraries.Api.Contracts.Dtos;
 global using ControlR.Libraries.Messenger.Extensions;
 global using ControlR.Libraries.Messenger.Extensions.Messages;
@@ -15,3 +14,4 @@ global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Signalr.Client;
 global using ControlR.Agent.Common.Options;
 global using ControlR.ApiClient;
+global using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;

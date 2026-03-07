@@ -1,7 +1,6 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
-using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
 namespace ControlR.Agent.Common.Services.Linux;
 

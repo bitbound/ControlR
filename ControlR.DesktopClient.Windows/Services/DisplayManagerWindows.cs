@@ -13,7 +13,7 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace ControlR.DesktopClient.Windows.Services;
 
-internal interface IWindowsDisplayManager : IDisplayManager
+internal interface IDisplayManagerWindows : IDisplayManager
 {
   bool TryGetPhysicalBounds(string deviceName, out Rectangle bounds);
 }
@@ -21,7 +21,7 @@ internal interface IWindowsDisplayManager : IDisplayManager
 internal class DisplayManagerWindows(
   IWin32Interop win32Interop,
   IWindowsMessagePump messagePump,
-  ILogger<DisplayManagerWindows> logger) : IDisplayManager, IWindowsDisplayManager
+  ILogger<DisplayManagerWindows> logger) : IDisplayManager, IDisplayManagerWindows
 {
   private readonly Lock _displayLock = new();
   private readonly ConcurrentDictionary<string, DisplayInfo> _displays = new();

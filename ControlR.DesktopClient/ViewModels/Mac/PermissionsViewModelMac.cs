@@ -1,7 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
-using CommunityToolkit.Mvvm.ComponentModel;
-using ControlR.DesktopClient.Common;
-using ControlR.DesktopClient.Views.Mac;
+using CommunityToolkit.Mvvm.Input;
 using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.ViewModels.Mac;
@@ -19,6 +16,7 @@ public interface IPermissionsViewModelMac : IPermissionsViewModel
   Task SetPermissionValues();
 }
 
+#if IS_MACOS
 [SuppressMessage("Performance", "CA1822:Mark members as static")]
 public partial class PermissionsViewModelMac(IServiceProvider serviceProvider) : ViewModelBase<PermissionsViewMac>, IPermissionsViewModelMac
 {
@@ -99,3 +97,4 @@ public partial class PermissionsViewModelMac(IServiceProvider serviceProvider) :
     macInterop.OpenScreenRecordingPreferences();
   }
 }
+#endif

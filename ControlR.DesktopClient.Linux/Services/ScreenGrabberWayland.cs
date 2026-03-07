@@ -1,7 +1,7 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Linux.XdgPortal;
-using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.NativeInterop.Linux;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;

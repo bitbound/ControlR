@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using ControlR.DesktopClient.ViewModels.Mac;
 
 namespace ControlR.DesktopClient.Views.Mac;
 
@@ -11,6 +10,7 @@ public partial class PermissionsViewMac : UserControl
     InitializeComponent();
   }
 
+#if IS_MACOS
   public PermissionsViewMac(IPermissionsViewModelMac viewModel)
   {
     DataContext = viewModel;
@@ -31,4 +31,5 @@ public partial class PermissionsViewMac : UserControl
   {
     App.MainWindow.Activated -= MainWindow_Activated;
   }
+#endif
 }

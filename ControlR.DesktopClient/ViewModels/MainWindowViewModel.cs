@@ -2,8 +2,6 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Services;
-using ControlR.DesktopClient.ViewModels.Linux;
-using ControlR.DesktopClient.ViewModels.Mac;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Services;
 
@@ -60,28 +58,21 @@ public partial class MainWindowViewModel(
       _viewModelFactory.CreateNavItem<IAboutViewModel>("question_circle_regular", Localization.About)
     };
 
-    switch (_systemEnvironment.Platform)
-    {
-      case SystemPlatform.MacOs:
-        {
-          items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModelMac>("shield_keyhole_regular", Localization.Permissions));
-          break;
-        }
-      case SystemPlatform.Linux:
-        {
-          var desktopEnv = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
-          if (desktopEnv.IsWayland())
-          {
-            items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModelWayland>("shield_keyhole_regular", Localization.Permissions));
-          }
-          break;
-        }
-      default:
-        {
-          items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModel>("shield_keyhole_regular", Localization.Permissions));
-          break;
-        }
-    }
+    #if IS_MACOS
+      items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModelMac>("shield_keyhole_regular", Localization.Permissions));
+    #elif IS_LINUX
+      var desktopEnv = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+      if (desktopEnv.IsWayland())
+      {
+        items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModelWayland>("shield_keyhole_regular", Localization.Permissions));
+      }
+      else
+      {
+        items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModel>("shield_keyhole_regular", Localization.Permissions));
+      }
+    #else
+      items.Insert(1, _viewModelFactory.CreateNavItem<IPermissionsViewModel>("shield_keyhole_regular", Localization.Permissions));
+    #endif
 
     NavigationItems.AddRange(items);
 

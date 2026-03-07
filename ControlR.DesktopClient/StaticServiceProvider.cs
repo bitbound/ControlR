@@ -4,8 +4,6 @@ using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Services;
-using ControlR.DesktopClient.ViewModels;
-using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.DevicesCommon.Services.Processes;
@@ -13,11 +11,7 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using ControlR.DesktopClient.ViewModels.Mac;
-using ControlR.DesktopClient.Views.Mac;
-using ControlR.DesktopClient.Views.Linux;
-using ControlR.DesktopClient.ViewModels.Linux;
-using ControlR.DesktopClient.Mac.Helpers;
+
 
 namespace ControlR.DesktopClient;
 
@@ -94,6 +88,7 @@ internal static class StaticServiceProvider
       .AddSingleton<IpcClientManager>()
       .AddSingleton<IIpcClientAccessor>(sp => sp.GetRequiredService<IpcClientManager>())
       .AddSingleton<IToaster, Toaster>()
+      .AddSingleton<IUiThread, UiThread>()
       .AddSingleton<IImageUtility, ImageUtility>()
       .AddSingleton<IAppLifetimeNotifier, AppLifetimeNotifier>()
       .AddSingleton<IViewModelFactory, ViewModelFactory>()
@@ -110,8 +105,7 @@ internal static class StaticServiceProvider
       .AddHostedService(sp => sp.GetRequiredService<IAppLifetimeNotifier>());
 
 
-    if (OperatingSystem.IsWindowsVersionAtLeast(8))
-    {
+#if IS_WINDOWS
       services
         .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWindows>>()
         .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
@@ -119,15 +113,16 @@ internal static class StaticServiceProvider
         .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
         .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
         .AddSingleton<IPermissionsViewModel, PermissionsViewModel>()
+        .AddSingleton<DisplayManagerWindows>()
+        .AddSingleton<IDisplayManager>(s => s.GetRequiredService<DisplayManagerWindows>())
+        .AddSingleton<IDisplayManagerWindows>(s => s.GetRequiredService<DisplayManagerWindows>())
         .AddTransient<PermissionsView>();
+#endif
 
-      AddWindowsDisplayManager(services);
-    }
-    else if (OperatingSystem.IsMacOS())
-    {
+#if IS_MACOS
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
       services
-        .AddHostedService<RemoteControlPermissionMonitor>()
+        .AddHostedService<RemoteControlPermissionMonitorMac>()
         .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberMac>>()
         .AddSingleton(services => services.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
         .AddSingleton<IMacInterop, MacInterop>()
@@ -135,11 +130,12 @@ internal static class StaticServiceProvider
         .AddSingleton<IDisplayManager, DisplayManagerMac>()
         .AddSingleton<IPermissionsViewModelMac, PermissionsViewModelMac>()
         .AddTransient<PermissionsViewMac>();
-    }
-    else if (OperatingSystem.IsLinux())
-    {
-      services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
-      services.AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>();
+#endif
+
+#if IS_LINUX
+      services
+        .AddSingleton<IFileSystemUnix, FileSystemUnix>()
+        .AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>();
 
       var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
 
@@ -147,6 +143,7 @@ internal static class StaticServiceProvider
       {
         case DesktopEnvironmentType.Wayland:
           services
+            .AddHostedService<RemoteControlPermissionMonitorWayland>()
             .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
             .AddSingleton<IXdgDesktopPortalFactory, XdgDesktopPortalFactory>()
             .AddSingleton(services => services.GetRequiredService<IXdgDesktopPortalFactory>().GetOrCreateDefault())
@@ -157,8 +154,7 @@ internal static class StaticServiceProvider
             .AddSingleton<IDisplayManagerWayland>(services => services.GetRequiredService<DisplayManagerWayland>())
             .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>()
             .AddSingleton<IPermissionsViewModelWayland, PermissionsViewModelWayland>()
-            .AddTransient<PermissionsViewWayland>()
-            .AddHostedService<RemoteControlPermissionMonitor>();
+            .AddTransient<PermissionsViewWayland>();
           break;
         case DesktopEnvironmentType.X11:
           services
@@ -171,7 +167,8 @@ internal static class StaticServiceProvider
         default:
           throw new NotSupportedException("Unsupported desktop environment detected.");
       }
-    }
+#endif
+
     return services;
   }
 
@@ -185,13 +182,15 @@ internal static class StaticServiceProvider
       return services;
     }
 
-    var logsPath = OperatingSystem.IsWindowsVersionAtLeast(8)
-      ? Windows.PathConstants.GetLogsPath(instanceId)
-      : OperatingSystem.IsMacOS()
-        ? Mac.PathConstants.GetLogsPath(instanceId)
-        : OperatingSystem.IsLinux()
-          ? Linux.PathConstants.GetLogsPath(instanceId)
-          : throw new PlatformNotSupportedException("Unsupported operating system.");
+#if IS_WINDOWS
+    var logsPath = PathConstants.GetLogsPath(instanceId);
+#elif IS_MACOS
+    var logsPath = Mac.PathConstants.GetLogsPath(instanceId);
+#elif IS_LINUX
+    var logsPath = Linux.PathConstants.GetLogsPath(instanceId);
+#else
+    throw new PlatformNotSupportedException("Unsupported operating system.");
+#endif
 
     services.BootstrapSerilog(
       configuration,
@@ -206,15 +205,6 @@ internal static class StaticServiceProvider
       });
 
     return services;
-  }
-
-  [System.Runtime.Versioning.SupportedOSPlatform("windows8.0")]
-  private static void AddWindowsDisplayManager(IServiceCollection services)
-  {
-    services
-      .AddSingleton<DisplayManagerWindows>()
-      .AddSingleton<IDisplayManager>(s => s.GetRequiredService<DisplayManagerWindows>())
-      .AddSingleton<IWindowsDisplayManager>(s => s.GetRequiredService<DisplayManagerWindows>());
   }
 
   private static ServiceProvider GetDesignTimeProvider()

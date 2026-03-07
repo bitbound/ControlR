@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.NativeInterop.Unix.Linux;
+using ControlR.Libraries.NativeInterop.Linux;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;

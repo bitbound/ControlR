@@ -142,12 +142,11 @@ public class RemoteControlHostManager : IRemoteControlHostManager
     var builder = Host.CreateApplicationBuilder();
 
     builder.AddCommonDesktopServices(
-      _ipcClientAccessor,
-      _userInteractionService,
-      appBuilder =>
+       appBuilder =>
       {
         appBuilder.Services
           .AddSingleton<IToaster, Toaster>()
+          .AddSingleton<IUiThread, UiThread>()
           .AddSingleton(_userInteractionService)
           .AddSingleton(_ipcClientAccessor);
       },
@@ -165,23 +164,17 @@ public class RemoteControlHostManager : IRemoteControlHostManager
         options.InstanceId = _desktopClientOptions.CurrentValue.InstanceId;
       });
 
-    if (OperatingSystem.IsWindowsVersionAtLeast(8))
-    {
+#if IS_WINDOWS
       builder.AddWindowsDesktopServices(requestDto.DataFolder);
-    }
-    else if (OperatingSystem.IsMacOS())
-    {
+#elif IS_MACOS
       builder.AddMacDesktopServices(requestDto.DataFolder);
-    }
-    else if (OperatingSystem.IsLinux())
-    {
+#elif IS_LINUX
       builder.AddLinuxDesktopServices(requestDto.DataFolder);
       builder.Services.AddSingleton<IClipboardManager, ClipboardManagerAvalonia>();
-    }
-    else
-    {
+#else
       throw new PlatformNotSupportedException("This platform is not supported. Supported platforms are Windows, MacOS, and Linux.");
-    }
+#endif
+
     return builder;
   }
 
