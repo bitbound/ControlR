@@ -17,12 +17,14 @@ internal class CursorWatcherMac(
   IDisplayManager displayManager,
   IMessenger messenger,
   IImageUtility imageUtility,
+  IUiThread uiThread,
   ILogger<CursorWatcherMac> logger)
   : PeriodicBackgroundService(TimeSpan.FromMilliseconds(10), timeProvider, logger)
 {
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IImageUtility _imageUtility = imageUtility;
   private readonly IMessenger _messenger = messenger;
+  private readonly IUiThread _uiThread = uiThread;
 
   private string? _lastCursorBase64;
   private nint _lastCursorPointer = nint.Zero;
@@ -38,60 +40,79 @@ internal class CursorWatcherMac(
     await CheckCursorChange();
   }
 
-  private async Task CheckCursorChange()
+  private CursorSnapshot? CaptureCursorSnapshot(double scaleFactor)
   {
+    using var autoreleasePool = AppKit.CreateAutoreleasePool();
+
     var cursor = AppKit.GetCurrentCursor();
     if (cursor == nint.Zero)
     {
-      return;
+      return null;
     }
-
-    if (cursor == _lastCursorPointer)
-    {
-      return;
-    }
-
-    _lastCursorPointer = cursor;
 
     var nsImage = AppKit.GetCursorImage(cursor);
     if (nsImage == nint.Zero)
     {
       Logger.LogDebug("Failed to get cursor image");
-      return;
+      return null;
     }
 
     var cgImageRef = AppKit.GetNSImageCGImage(nsImage);
     if (cgImageRef == nint.Zero)
     {
       Logger.LogDebug("Failed to convert NSImage to CGImage");
-      return;
+      return null;
     }
 
-    using var cgImageDisposer = new CallbackDisposable(
-      () => CoreGraphicsHelper.ReleaseCGImage(cgImageRef));
-
     var (hotspotX, hotspotY) = AppKit.GetCursorHotspot(cursor);
-
-    var scaleFactor = await TryGetCurrentCursorDisplayScaleFactor();
-
     var cursorBase64 = ConvertCursorToPngBase64(cgImageRef, scaleFactor);
     if (cursorBase64 is null)
     {
-      return;
+      return null;
     }
 
-    if (cursorBase64 == _lastCursorBase64)
+    return new CursorSnapshot(cursor, cursorBase64, hotspotX, hotspotY);
+  }
+
+  private async Task CheckCursorChange()
+  {
+    var cursorPointer = _uiThread.Invoke(GetCurrentCursorPointer);
+    if (cursorPointer == nint.Zero)
     {
       return;
     }
 
-    _lastCursorBase64 = cursorBase64;
+    if (cursorPointer == _lastCursorPointer)
+    {
+      return;
+    }
+
+    var scaleFactor = await TryGetCurrentCursorDisplayScaleFactor();
+    var snapshot = _uiThread.Invoke(() => CaptureCursorSnapshot(scaleFactor));
+    if (snapshot is null)
+    {
+      return;
+    }
+
+    if (snapshot.CursorPointer == _lastCursorPointer)
+    {
+      return;
+    }
+
+    if (snapshot.CursorBase64 == _lastCursorBase64)
+    {
+      _lastCursorPointer = snapshot.CursorPointer;
+      return;
+    }
+
+    _lastCursorPointer = snapshot.CursorPointer;
+    _lastCursorBase64 = snapshot.CursorBase64;
 
     var changeMessage = new CursorChangedMessage(
       PointerCursor.Custom,
-      cursorBase64,
-      (ushort)Math.Clamp((int)Math.Round(hotspotX), 0, ushort.MaxValue),
-      (ushort)Math.Clamp((int)Math.Round(hotspotY), 0, ushort.MaxValue));
+      snapshot.CursorBase64,
+      (ushort)Math.Clamp((int)Math.Round(snapshot.HotspotX), 0, ushort.MaxValue),
+      (ushort)Math.Clamp((int)Math.Round(snapshot.HotspotY), 0, ushort.MaxValue));
 
     await _messenger.Send(changeMessage);
 
@@ -136,6 +157,12 @@ internal class CursorWatcherMac(
     }
   }
 
+  private nint GetCurrentCursorPointer()
+  {
+    using var autoreleasePool = AppKit.CreateAutoreleasePool();
+    return AppKit.GetCurrentCursor();
+  }
+
   private SKBitmap? NormalizeCursorBitmap(SKBitmap source, double scaleFactor)
   {
     if (scaleFactor <= 1.01)
@@ -178,35 +205,27 @@ internal class CursorWatcherMac(
         return 1.0;
       }
 
-      nint cgEventRef = nint.Zero;
-      try
+      var cgEventRef = CoreGraphics.CGEventCreate(nint.Zero);
+      if (cgEventRef == nint.Zero)
       {
-        cgEventRef = CoreGraphics.CGEventCreate(nint.Zero);
-        if (cgEventRef == nint.Zero)
-        {
-          return 1.0;
-        }
-
-        var location = CoreGraphics.CGEventGetLocation(cgEventRef);
-
-        var displayIds = new uint[1];
-        var rect = new CoreGraphics.CGRect(location.X, location.Y, 1, 1);
-        var result = CoreGraphics.CGGetDisplaysWithRect(rect, 1, displayIds, out var matchingDisplayCount);
-        if (result == 0 && matchingDisplayCount > 0)
-        {
-          var displayIdString = displayIds[0].ToString();
-          var display = displays.FirstOrDefault(d => d.DeviceName == displayIdString);
-          if (display is not null && display.CapturePixelsPerLayoutUnit > 0)
-          {
-            return display.CapturePixelsPerLayoutUnit;
-          }
-        }
+        return 1.0;
       }
-      finally
+
+      using var cgEventDisposer = new CallbackDisposable(
+        () => CoreGraphics.CFRelease(cgEventRef));
+
+      var location = CoreGraphics.CGEventGetLocation(cgEventRef);
+
+      var displayIds = new uint[1];
+      var rect = new CoreGraphics.CGRect(location.X, location.Y, 1, 1);
+      var result = CoreGraphics.CGGetDisplaysWithRect(rect, 1, displayIds, out var matchingDisplayCount);
+      if (result == 0 && matchingDisplayCount > 0)
       {
-        if (cgEventRef != nint.Zero)
+        var displayIdString = displayIds[0].ToString();
+        var display = displays.FirstOrDefault(d => d.DeviceName == displayIdString);
+        if (display is not null && display.CapturePixelsPerLayoutUnit > 0)
         {
-          CoreGraphics.CFRelease(cgEventRef);
+          return display.CapturePixelsPerLayoutUnit;
         }
       }
     }
@@ -217,4 +236,10 @@ internal class CursorWatcherMac(
 
     return 1.0;
   }
+
+  private sealed record CursorSnapshot(
+    nint CursorPointer,
+    string CursorBase64,
+    double HotspotX,
+    double HotspotY);
 }

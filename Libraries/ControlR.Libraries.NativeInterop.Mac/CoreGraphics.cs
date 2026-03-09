@@ -5,15 +5,16 @@ namespace ControlR.Libraries.NativeInterop.Mac;
 public static class CoreGraphics
 {
   private const string CoreGraphicsFramework = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
+  private const string CoreFoundationFramework = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
 
 
-  [DllImport(CoreGraphicsFramework, EntryPoint = "CFDataGetBytePtr")]
+  [DllImport(CoreFoundationFramework, EntryPoint = "CFDataGetBytePtr")]
   public static extern nint CFDataGetBytePtr(nint theData);
 
-  [DllImport(CoreGraphicsFramework, EntryPoint = "CFDataGetLength")]
+  [DllImport(CoreFoundationFramework, EntryPoint = "CFDataGetLength")]
   public static extern nint CFDataGetLength(nint theData);
 
-  [DllImport(CoreGraphicsFramework, EntryPoint = "CFRelease")]
+  [DllImport(CoreFoundationFramework, EntryPoint = "CFRelease")]
   public static extern void CFRelease(nint cf);
 
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGCursorIsDrawnInFramebuffer")]

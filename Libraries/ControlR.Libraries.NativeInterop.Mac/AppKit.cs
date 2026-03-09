@@ -4,25 +4,28 @@ namespace ControlR.Libraries.NativeInterop.Mac;
 
 public static class AppKit
 {
-    private const string AppKitFramework = "/System/Library/Frameworks/AppKit.framework/AppKit";
+    private const string ObjectiveCRuntime = "/usr/lib/libobjc.A.dylib";
 
-    // Helper methods for NSString conversion
+    public static AutoreleasePool CreateAutoreleasePool()
+    {
+        return new AutoreleasePool(objc_autoreleasePoolPush());
+    }
+
     public static nint CreateNSString(string str)
     {
         var nsStringClass = objc_getClass("NSString");
-        var stringWithUTF8StringSelector = sel_registerName("stringWithUTF8String:");
-        var cString = Marshal.StringToHGlobalAnsi(str);
+        var stringWithUtf8StringSelector = sel_registerName("stringWithUTF8String:");
+        var cString = Marshal.StringToCoTaskMemUTF8(str);
         try
         {
-            return objc_msgSend_IntPtr(nsStringClass, stringWithUTF8StringSelector, cString);
+            return objc_msgSend_IntPtr(nsStringClass, stringWithUtf8StringSelector, cString);
         }
         finally
         {
-            Marshal.FreeHGlobal(cString);
+            Marshal.FreeCoTaskMem(cString);
         }
     }
 
-    // NSCursor helper methods
     public static nint GetCurrentCursor()
     {
         var nsCursorClass = objc_getClass("NSCursor");
@@ -33,7 +36,6 @@ public static class AppKit
     public static (double x, double y) GetCursorHotspot(nint cursor)
     {
         var hotSpotSelector = sel_registerName("hotSpot");
-        // hotSpot returns an NSPoint (two doubles) by value.
         var point = objc_msgSend_CGPoint(cursor, hotSpotSelector);
         return (point.X, point.Y);
     }
@@ -48,14 +50,12 @@ public static class AppKit
     {
         var nsEventClass = objc_getClass("NSEvent");
         var mouseLocationSelector = sel_registerName("mouseLocation");
-        // mouseLocation returns an NSPoint (two doubles) by value.
         var point = objc_msgSend_CGPoint(nsEventClass, mouseLocationSelector);
         return (point.X, point.Y);
     }
 
     public static nint GetNSImageCGImage(nint nsImage)
     {
-        // Get CGImageForProposedRect:context:hints:
         var cgImageSelector = sel_registerName("CGImageForProposedRect:context:hints:");
         return objc_msgSend_IntPtr_IntPtr_IntPtr(nsImage, cgImageSelector, nint.Zero, nint.Zero, nint.Zero);
     }
@@ -63,32 +63,55 @@ public static class AppKit
     public static string? NSStringToString(nint nsString)
     {
         if (nsString == nint.Zero)
+        {
             return null;
+        }
 
         var utf8StringSelector = sel_registerName("UTF8String");
         var cStringPtr = objc_msgSend(nsString, utf8StringSelector);
-        return cStringPtr != nint.Zero ? Marshal.PtrToStringAnsi(cStringPtr) : null;
+        return cStringPtr != nint.Zero ? Marshal.PtrToStringUTF8(cStringPtr) : null;
     }
 
-    // NSPasteboard methods
-    [DllImport(AppKitFramework, EntryPoint = "objc_getClass")]
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_autoreleasePoolPop")]
+    public static extern void objc_autoreleasePoolPop(nint pool);
+
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_autoreleasePoolPush")]
+    public static extern nint objc_autoreleasePoolPush();
+
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_getClass")]
     public static extern nint objc_getClass(string className);
 
-    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_msgSend")]
     public static extern nint objc_msgSend(nint receiver, nint selector);
 
-    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_msgSend")]
     public static extern CoreGraphics.CGPoint objc_msgSend_CGPoint(nint receiver, nint selector);
 
-    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_msgSend")]
     public static extern nint objc_msgSend_IntPtr(nint receiver, nint selector, nint arg1);
 
-    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_msgSend")]
     public static extern nint objc_msgSend_IntPtr_IntPtr(nint receiver, nint selector, nint arg1, nint arg2);
 
-    [DllImport(AppKitFramework, EntryPoint = "objc_msgSend")]
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_msgSend")]
     public static extern nint objc_msgSend_IntPtr_IntPtr_IntPtr(nint receiver, nint selector, nint arg1, nint arg2, nint arg3);
 
-    [DllImport(AppKitFramework, EntryPoint = "sel_registerName")]
+    [DllImport(ObjectiveCRuntime, EntryPoint = "sel_registerName")]
     public static extern nint sel_registerName(string selectorName);
+
+    public sealed class AutoreleasePool(nint handle) : IDisposable
+    {
+        private nint _handle = handle;
+
+        public void Dispose()
+        {
+            if (_handle == nint.Zero)
+            {
+                return;
+            }
+
+            objc_autoreleasePoolPop(_handle);
+            _handle = nint.Zero;
+        }
+    }
 }
