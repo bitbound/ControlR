@@ -1,16 +1,18 @@
 ﻿using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Services.Processes;
 
 namespace ControlR.Agent.Common.Services.Mac;
 
 internal class DeviceInfoProviderMac(
   IProcessManager processInvoker,
+  IFileSystem fileSystem,
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuUtilizationSampler,
   ISettingsProvider settingsProvider,
   ILogger<DeviceInfoProviderMac> logger)
-  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, settingsProvider, logger), IDeviceInfoProvider
+  : DeviceInfoProviderBase(fileSystem, environmentHelper, cpuUtilizationSampler, settingsProvider, logger), IDeviceInfoProvider
 {
   private readonly ILogger<DeviceInfoProviderMac> _logger = logger;
   private readonly IProcessManager _processService = processInvoker;

@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Serilog.Events;
 
-namespace ControlR.Libraries.DevicesCommon.Services;
+namespace ControlR.Libraries.Serilog;
 
 public class SerilogLogger<T> : ILogger<T>
 {

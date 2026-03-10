@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services;

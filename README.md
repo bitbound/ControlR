@@ -17,16 +17,19 @@ Project Board: https://github.com/users/bitbound/projects/1
 
 ```
 wget https://raw.githubusercontent.com/bitbound/ControlR/main/docker-compose/docker-compose.yml
+# Follow the instructions at the top of the file to configure secrets.
 sudo docker compose up -d
 ```
 
-**IMPORTANT:** Read the below section regarding [reverse proxy configuration](#reverse-proxy-configuration).
+You will need to supply sensitive values either via environment variables, Docker Secrets, or hard-coded in the docker-compose file. Choose the method that works best for your setup and security requirements.
 
-At minimum, you will need to supply environment variables (e.g. `ControlR_POSTGRES_USER`) for the anchors (e.g. `$pgUser`) at the top of the docker-compose file. Alternatively, you could also use Docker secrets, an environment file, or hard-code them in the docker-compose file.  Whatever works for your setup and security requirements.
+See [Docker Secrets](#docker-secrets) section below for more information on supplying sensitive values via Docker Secrets.
 
 See the comments in the docker-compose file for additional configuration info.
 
 Afterward, ControlR should be available on port 5120 (by default). Running `curl http://127.0.0.1:5120/health` should return "Healthy."
+
+**IMPORTANT:** Read the below section regarding [reverse proxy configuration](#reverse-proxy-configuration).
 
 ## Deploy on Railway:
 
@@ -54,7 +57,47 @@ If the public IP for your connected devices is not showing correctly, the proble
 
 ## Server Configuration:
 
-The environment variables for the server can be found in the [docker-compose.yml](./docker-compose/docker-compose.yml) file.  See the comments there for more information.
+The environment variables for the server can be found in the [docker-compose.yml](./docker-compose/docker-compose.yml) file.  Follow the instructions at the top to supply sensitive values using environment variables and/or Docker Secrets.
+
+## Docker Secrets
+
+ControlR supports using Docker Secrets to supply sensitive configuration values. This is recommended for production deployments where you want to avoid storing sensitive data in environment variables.
+
+### Using Secrets
+
+When Docker Secrets are enabled via `ControlR_AppOptions__EnableDockerSecrets` environment variable, sensitive values are read from secret files mounted into the container rather than from environment variables.  Each secret file name is used as the configuration key, and the value is the file's contents.  These values are merged into the configuration builder, overriding any corresponding environment variables.
+
+The docker-compose file demonstrates both methods. You can choose to use Secrets, environment variables, or mix-and-match based on your needs.
+
+**To use Secrets:**
+1. Ensure the secrets folder exists and contains files for which you want to supply secrets (e.g., `postgres_user`, `postgres_password`, etc.).
+2. Set the folder and file permissions to restrict access (e.g., `chmod 700 secrets` and `chmod 600 secrets/*`).
+3. Remove all lines in the docker-compose file with the comment "Remove if using secrets".
+4. Uncomment the `_FILE` environment variables for the Postgres service if needed.
+
+**To use environment variables instead:**
+1. Remove all lines in the docker-compose file with the comment "Remove if using env".
+2. Make sure the top-level variables (e.g., `ControlR_POSTGRES_USER`) are supplied by the host via environment variables or `.env` file.
+
+### ControlR-Specific Secrets
+
+For ControlR, any environment variable beginning with `ControlR_` can be replaced with a similarly-named secret file, minus the "ControlR_" prefix.  
+
+For example, if you create a secret file named `AppOptions__GitHubClientSecret`, it will override the `ControlR_AppOptions__GitHubClientSecret` environment variable.
+
+> Note: The `ControlR_` prefix only applies to environment variables. ASP.NET Core strips the prefix when adding the key to its configuration builder.  It's not needed when supplying configuration keys via other methods, like JSON files or Docker Secrets.
+
+This means you can supply values like:
+- `AppOptions__MicrosoftClientSecret`
+- `AppOptions__GitHubClientSecret`
+- `AppOptions__SmtpPassword`
+- `KeyProtectionOptions__CertificatePassword`
+
+by creating corresponding secret files in the `secrets/` directory.
+
+The file name on the host can be anything, but the file name inside the container must match the configuration key it is meant to override.
+
+For more information, see the [Docker documentation on secrets](https://docs.docker.com/compose/how-tos/use-secrets/).
 
 ## Multi-tenancy
 

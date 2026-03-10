@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.DevicesCommon.Services.Processes;
+﻿namespace ControlR.Libraries.Shared.Services.Processes;
 
 public static class ProcessExtensions
 {

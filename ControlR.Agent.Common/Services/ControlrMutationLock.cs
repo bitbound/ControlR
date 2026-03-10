@@ -1,4 +1,5 @@
 using System.Runtime.Versioning;
+using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services;
@@ -151,9 +152,9 @@ internal sealed class ControlrMutationLock(
 
 
 
-  private sealed class FileLockHolder(FileStream stream) : IDisposable
+  private sealed class FileLockHolder(Stream stream) : IDisposable
   {
-    private readonly FileStream _stream = stream;
+    private readonly Stream _stream = stream;
     private bool _disposed;
 
     public void Dispose()

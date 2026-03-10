@@ -26,9 +26,6 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-		<EditorConfigFiles Remove="C:\Repos\ControlR\ControlR.Shared\.editorconfig" />
-	</ItemGroup>
-	<ItemGroup>
 	  <ProjectReference Include="..\ControlR.Libraries.Api.Contracts\ControlR.Libraries.Api.Contracts.csproj" />
 	</ItemGroup>
 </Project>

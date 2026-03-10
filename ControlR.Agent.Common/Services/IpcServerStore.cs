@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Services.Processes;
 
 namespace ControlR.Agent.Common.Services;
 

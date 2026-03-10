@@ -4,9 +4,8 @@ namespace ControlR.Libraries.NativeInterop.Mac;
 
 public static class CoreGraphics
 {
-  private const string CoreGraphicsFramework = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
   private const string CoreFoundationFramework = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
-
+  private const string CoreGraphicsFramework = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
 
   [DllImport(CoreFoundationFramework, EntryPoint = "CFDataGetBytePtr")]
   public static extern nint CFDataGetBytePtr(nint theData);
@@ -105,13 +104,11 @@ public static class CoreGraphics
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGRequestScreenCaptureAccess")]
   public static extern bool CGRequestScreenCaptureAccess();
 
-
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGWarpMouseCursorPosition")]
   public static extern int CGWarpMouseCursorPosition(CGPoint newCursorPosition);
 
   [DllImport(CoreGraphicsFramework, EntryPoint = "CGWindowListCreateImage")]
   public static extern nint CGWindowListCreateImage(CGRect screenBounds, uint listOption, uint windowID, uint imageOption);
-
 
   [StructLayout(LayoutKind.Sequential)]
   public struct CGPoint

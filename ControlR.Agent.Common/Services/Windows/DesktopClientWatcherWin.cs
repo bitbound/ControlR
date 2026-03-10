@@ -1,11 +1,12 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
+using ControlR.Libraries.Shared.Services.Processes;
+using ControlR.Libraries.Shared.Services.FileSystem;
 
 namespace ControlR.Agent.Common.Services.Windows;
 
@@ -104,28 +105,6 @@ internal class DesktopClientWatcherWin(
         _logger.LogError(ex, "Error while checking for desktop client processes.");
       }
     }
-  }
-
-  // For debugging.
-  private static Result<string> GetSolutionDir(string currentDir)
-  {
-    var dirInfo = new DirectoryInfo(currentDir);
-    if (!dirInfo.Exists)
-    {
-      return Result.Fail<string>("Not found.");
-    }
-
-    if (dirInfo.GetFiles().Any(x => x.Name == "ControlR.slnx"))
-    {
-      return Result.Ok(currentDir);
-    }
-
-    if (dirInfo.Parent is not null)
-    {
-      return GetSolutionDir(dirInfo.Parent.FullName);
-    }
-
-    return Result.Fail<string>("Not found.");
   }
 
   // Kills all desktop client processes, deletes the archive, and deletes the folder.
@@ -303,7 +282,7 @@ internal class DesktopClientWatcherWin(
   }
   private async Task<bool> StartDebugSession()
   {
-    var solutionDirResult = GetSolutionDir(Environment.CurrentDirectory);
+    var solutionDirResult = IoHelper.GetSolutionDir(Environment.CurrentDirectory);
 
     if (!solutionDirResult.IsSuccess)
     {

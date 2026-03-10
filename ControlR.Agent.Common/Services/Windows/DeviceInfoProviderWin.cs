@@ -1,6 +1,7 @@
 ﻿using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
+using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.NativeInterop.Windows;
 
 namespace ControlR.Agent.Common.Services.Windows;
@@ -8,11 +9,12 @@ namespace ControlR.Agent.Common.Services.Windows;
 [SupportedOSPlatform("windows6.0.6000")]
 internal class DeviceInfoProviderWin(
   IWin32Interop win32Interop,
+  IFileSystem fileSystem,
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuUtilizationSampler,
   ISettingsProvider settingsProvider,
   ILogger<DeviceInfoProviderWin> logger)
-  : DeviceInfoProviderBase(environmentHelper, cpuUtilizationSampler, settingsProvider, logger), IDeviceInfoProvider
+  : DeviceInfoProviderBase(fileSystem, environmentHelper, cpuUtilizationSampler, settingsProvider, logger), IDeviceInfoProvider
 {
   private readonly ILogger<DeviceInfoProviderWin> _logger = logger;
 

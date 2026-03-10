@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.NativeInterop.Unix;
+using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 

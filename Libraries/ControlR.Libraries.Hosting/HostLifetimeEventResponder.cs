@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace ControlR.Libraries.DevicesCommon.Services;
+namespace ControlR.Libraries.Hosting;
 
 public class HostLifetimeEventResponder(
   IHostApplicationLifetime appLifetime,

@@ -2,7 +2,7 @@
 
 namespace ControlR.Libraries.Shared.Tests;
 
-public class HandleCollectionTests
+public class HandlerCollectionTests
 {
   [Fact]
   public async Task AddHandler_ShouldAllowSameSubscriberOnce_WhenAddedMultipleTimes()

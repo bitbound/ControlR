@@ -1,5 +1,5 @@
 using ControlR.Agent.Common.Interfaces;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Linux;

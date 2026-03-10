@@ -1,10 +1,9 @@
 using ControlR.Libraries.TestingUtilities;
+using ControlR.Libraries.TestingUtilities.FileSystem;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Tmds.DBus.Protocol;
 using ControlR.DesktopClient.Linux.XdgPortal;
-using Moq;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.Libraries.Shared.Helpers;
 
@@ -13,7 +12,7 @@ namespace ControlR.DesktopClient.Linux.Tests;
 public class XdgDesktopPortalTests
 {
   private readonly XdgDesktopPortal _desktopPortal;
-  private readonly Mock<IFileSystem> _fileSystem;
+  private readonly FakeFileSystem _fileSystem;
   private readonly ILogger<XdgDesktopPortal> _logger;
   private readonly OptionsMonitorWrapper<DesktopClientOptions> _options;
 
@@ -25,9 +24,9 @@ public class XdgDesktopPortalTests
       builder.SetMinimumLevel(LogLevel.Debug);
     });
     _logger = loggerFactory.CreateLogger<XdgDesktopPortal>();
-    _fileSystem = new Mock<IFileSystem>();
+    _fileSystem = new FakeFileSystem();
     _options = new OptionsMonitorWrapper<DesktopClientOptions>(new DesktopClientOptions());
-    _desktopPortal = new XdgDesktopPortal(_fileSystem.Object, _options, _logger);
+    _desktopPortal = new XdgDesktopPortal(_fileSystem, _options, _logger);
   }
 
   [WaylandOnlyFact]

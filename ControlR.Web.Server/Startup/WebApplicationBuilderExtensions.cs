@@ -21,8 +21,8 @@ using ControlR.Web.Client.Services;
 using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.OpenApi;
 using ControlR.Web.Server.Services.DeviceManagement;
+
 namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
@@ -41,8 +41,28 @@ public static class WebApplicationBuilderExtensions
       builder.Configuration.AddInMemoryCollection(inMemoryData);
     }
 
-    // Configure IOptions.
+    // Add environment variables ton configuration.
     builder.Configuration.AddEnvironmentVariables("ControlR_");
+
+    // If enabled, add configuration provider for Docker secrets.
+    var enableDockerSecrets = builder.Configuration
+      .GetSection(AppOptions.SectionKey)
+      .GetValue<bool>(nameof(AppOptions.EnableDockerSecrets));
+
+    if (enableDockerSecrets)
+    {
+
+      if (OperatingSystem.IsWindows())
+      {
+        throw new PlatformNotSupportedException("Docker secrets configuration provider is not supported on Windows.");
+      }
+
+      //builder.Configuration.AddDockerSecrets();
+      builder.Configuration.AddKeyPerFile(
+        directoryPath: "/run/secrets",
+        optional: false,
+        reloadOnChange: true);
+    }
 
     builder.Services.Configure<AppOptions>(
       builder.Configuration.GetSection(AppOptions.SectionKey));
@@ -311,10 +331,8 @@ public static class WebApplicationBuilderExtensions
     return builder;
   }
 
-
   private static void AddPostgresDb(this IHostApplicationBuilder builder)
   {
-
     // Add DB services.
     var pgUser = builder.Configuration.GetValue<string>("POSTGRES_USER");
     var pgPass = builder.Configuration.GetValue<string>("POSTGRES_PASSWORD");
@@ -322,7 +340,6 @@ public static class WebApplicationBuilderExtensions
     var pgDb = builder.Configuration.GetValue<string>("POSTGRES_DB");
     var pgPortRaw = builder.Configuration.GetValue<string>("POSTGRES_PORT");
     var pgPort = 5432;
-
     ArgumentException.ThrowIfNullOrWhiteSpace(pgUser);
     ArgumentException.ThrowIfNullOrWhiteSpace(pgPass);
     ArgumentException.ThrowIfNullOrWhiteSpace(pgHost);
@@ -388,26 +405,36 @@ public static class WebApplicationBuilderExtensions
       return;
     }
 
-    if (string.IsNullOrWhiteSpace(keyProtectionOptions.CertificatePath))
+    if (!string.IsNullOrWhiteSpace(keyProtectionOptions.CertificateContentsBase64))
     {
-      throw new InvalidOperationException(
-        "KeyProtectionOptions:EncryptKeys is true, but KeyProtectionOptions:CertificatePath is not configured. " +
-        "Provide a valid path to a PFX certificate file.");
+      var certBytes = Convert.FromBase64String(keyProtectionOptions.CertificateContentsBase64);
+      var certificate = X509CertificateLoader.LoadPkcs12(certBytes, keyProtectionOptions.CertificatePassword);
+      dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+      Console.WriteLine($"Data Protection keys will be encrypted using certificate from {nameof(KeyProtectionOptions.CertificateContentsBase64)}.");
     }
-
-    if (!File.Exists(keyProtectionOptions.CertificatePath))
+    else
     {
-      throw new InvalidOperationException(
-        $"KeyProtectionOptions:EncryptKeys is true, but the certificate file does not exist: " +
-        $"{keyProtectionOptions.CertificatePath}");
+      if (string.IsNullOrWhiteSpace(keyProtectionOptions.CertificatePath))
+      {
+        throw new InvalidOperationException(
+          "KeyProtectionOptions:EncryptKeys is true, but KeyProtectionOptions:CertificatePath is not configured. " +
+          "Provide a valid path to a PFX certificate file.");
+      }
+
+      if (!File.Exists(keyProtectionOptions.CertificatePath))
+      {
+        throw new InvalidOperationException(
+          $"KeyProtectionOptions:EncryptKeys is true, but the certificate file does not exist: " +
+          $"{keyProtectionOptions.CertificatePath}");
+      }
+
+      var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+        keyProtectionOptions.CertificatePath,
+        keyProtectionOptions.CertificatePassword);
+
+      dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+      Console.WriteLine("Data Protection keys will be encrypted using certificate from file.");
     }
-
-    var certificate = X509CertificateLoader.LoadPkcs12FromFile(
-      keyProtectionOptions.CertificatePath,
-      keyProtectionOptions.CertificatePassword);
-
-    dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
-    Console.WriteLine("Data Protection keys will be encrypted using certificate from file.");
   }
 
   private static async Task ConfigureForwardedHeaders(
@@ -483,7 +510,7 @@ public static class WebApplicationBuilderExtensions
       {
         foreach (var network in knownNetworks)
         {
-          if (System.Net.IPNetwork.TryParse(network, out var ipNetwork))
+          if (IPNetwork.TryParse(network, out var ipNetwork))
           {
             Console.WriteLine($"Adding KnownNetwork: {network}");
             options.KnownIPNetworks.Add(ipNetwork);

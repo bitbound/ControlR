@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace ControlR.Libraries.DevicesCommon.Services;
+﻿namespace ControlR.Libraries.Shared.Services.Logging;
 
 public class FileLoggerProvider(
   string componentVersion,

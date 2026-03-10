@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
-namespace ControlR.Libraries.DevicesCommon.Extensions;
+namespace ControlR.Libraries.Serilog;
 
 public static class SerilogHostExtensions
 {

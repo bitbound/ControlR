@@ -1,7 +1,7 @@
 using ControlR.DesktopClient.Common.Options;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32.SafeHandles;

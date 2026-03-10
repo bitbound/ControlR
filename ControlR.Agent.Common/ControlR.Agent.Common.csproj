@@ -33,12 +33,13 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
 		<ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
-		<ProjectReference Include="..\Libraries\ControlR.Libraries.DevicesCommon\ControlR.Libraries.DevicesCommon.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Ipc\ControlR.Libraries.Ipc.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Messenger.Extensions\ControlR.Libraries.Messenger.Extensions.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Linux\ControlR.Libraries.NativeInterop.Linux.csproj" />
     <ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Mac\ControlR.Libraries.NativeInterop.Mac.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Serilog\ControlR.Libraries.Serilog.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Hosting\ControlR.Libraries.Hosting.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
 	</ItemGroup>
 </Project>

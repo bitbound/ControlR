@@ -1,10 +1,34 @@
 name: controlr
 
-# These values need to be set.  You can either define these environment variables
-# on the host or supply them here directly as string literals.
-x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error}
-x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
-x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
+### Docker Secrets ###
+# This config demonstrates using both Docker Secrets and environment variables for supplying
+# secrets to services.  You need to choose which method to use for the values that are being
+# supplied both ways (e.g. POSTGRES_USER).  You can "mix-and-match" if you want.  For example,
+# you could choose to supply the Aspire Token via env vars and Postgres password via Secrets.
+#
+# If you decide to use Secrets:
+#   - Remove all lines with the comment "Remove if using secrets".
+#   - Uncomment the "_FILE" environment variables for the Postgres service.
+#   - Ensure all the files in the top-level `secrets` section are created on the host system
+#     and have the appropriate permissions set (e.g. 600).
+#
+# If you decide to use env vars:
+#   - Remove all lines with the comment "Remove if using env".
+#   - Make sure the top-level variables (e.g. ControlR_POSTGRES_USER) are supplied by the
+#     host via environment variables or .env file.
+#
+# If using Secrets, any ControlR environment variable beginning with "ControlR_" can be replaced
+# with a similarly-named secret file, minus the "ControlR_" prefix.  For example, if you create
+# a secret file named "AppOptions__GitHubClientSecret", it will override the
+# "ControlR_AppOptions__GitHubClientSecret" environment variable.
+#
+# See here for more info: https://docs.docker.com/compose/how-tos/use-secrets/
+
+
+# These values are expected to be passed in by the host's environment or .env file.
+x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error} # Remove if using secrets
+x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error} # Remove if using secrets
+x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error} # Remove if using secrets
 
 # The public URL where the Aspire Dashboard will be accessible via browser.
 # For example, if your reverse proxy is set up to route https://metrics.example.com
@@ -24,19 +48,32 @@ services:
       - "5120:8080"
     networks:
       - controlr-network
+    secrets: # Remove if using env
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - KeyProtectionOptions__EncryptKeys
+      - KeyProtectionOptions__CertificateContentsBase64
+      - KeyProtectionOptions__CertificatePassword
+      - AspireDashboard__Token
     environment:
       # ASPNETCORE variables should not be changed.
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: 8080
 
-      ControlR_POSTGRES_USER: *pgUser
-      ControlR_POSTGRES_PASSWORD: *pgPassword
-      ControlR_POSTGRES_HOST: "postgres"
+
+      # Postgres connection details.
       ControlR_POSTGRES_PORT: 5432
-      ControlR_POSTGRES_DB: "controlr"
+      ControlR_POSTGRES_HOST: "postgres"
+      ControlR_POSTGRES_USER: *pgUser # Remove if using secrets
+      ControlR_POSTGRES_PASSWORD: *pgPassword # Remove if using secrets
+      ControlR_POSTGRES_DB: "controlr" # Remove if using secrets
+
+      # Whether to enable the configuration provider for Docker Secrets.
+      ControlR_AppOptions__EnableDockerSecrets: false
 
       # The access token for the Aspire Dashboard, where server logs and telemetry can be viewed.
-      ControlR_AspireDashboard__Token: *aspireToken
+      #ControlR_AspireDashboard__Token: *aspireToken
 
       # The public URL for the Aspire Dashboard's web interface.
       ControlR_AspireDashboard__PublicWebUrl: *aspirePublicUrl
@@ -91,6 +128,11 @@ services:
       # The file path to a PFX (.pfx) certificate file for key encryption.
       # Mount the certificate file into the container and provide the container path here.
       #ControlR_KeyProtectionOptions__CertificatePath:
+
+      # An alternative means of supplying the certificate.  It should be the
+      # base64-encoded contents of the PFX file If this is set, it will 
+      # override CertificatePath.
+      #ControlR_KeyProtectionOptions__CertificateContentsBase64:
 
       # The password for the PFX certificate file (if password-protected).
       # Leave empty if the PFX file has no password.
@@ -154,9 +196,17 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql
     environment:
-      POSTGRES_USER: *pgUser
-      POSTGRES_PASSWORD: *pgPassword
-      POSTGRES_DB: controlr
+      POSTGRES_USER: *pgUser # Remove if using secrets
+      POSTGRES_PASSWORD: *pgPassword # Remove if using secrets
+      POSTGRES_DB: controlr # Remove if using secrets
+      # Uncomment below if using secrets
+      #POSTGRES_USER_FILE: /run/secrets/POSTGRES_USER # Remove if using env
+      #POSTGRES_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD # Remove if using env
+      #POSTGRES_DB_FILE: /run/secrets/POSTGRES_DB # Remove if using env
+    secrets: # Remove if using env
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_USER
 
   aspire:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:13.1
@@ -169,8 +219,11 @@ services:
     networks:
       - controlr-network
     environment:
-      Dashboard__Frontend__BrowserToken: *aspireToken
+      ASPIRE_DASHBOARD_FILE_CONFIG_DIRECTORY: /run/secrets # Remove if using env
+      Dashboard__Frontend__BrowserToken: *aspireToken # Remove if using secrets
       Dashboard__Frontend__PublicUrl: *aspirePublicUrl
+    secrets: # Remove if using env
+      - Dashboard__Frontend__BrowserToken
 
 volumes:
   postgres-data:
@@ -183,3 +236,21 @@ networks:
       config:
         - subnet: 172.29.0.0/16
           gateway: 172.29.0.1
+
+secrets: # Remove if using env
+  POSTGRES_USER:
+    file: ./example-secrets/postgres_user
+  POSTGRES_PASSWORD:
+    file: ./example-secrets/postgres_password
+  POSTGRES_DB:
+    file: ./example-secrets/postgres_db
+  KeyProtectionOptions__EncryptKeys:
+    file: ./example-secrets/data-protection-encrypt-keys
+  KeyProtectionOptions__CertificateContentsBase64:
+    file: ./example-secrets/data-protection-cert-base64
+  KeyProtectionOptions__CertificatePassword:
+    file: ./example-secrets/data-protection-cert-password
+  AspireDashboard__Token:
+    file: ./example-secrets/aspire-dashboard-browser-token
+  Dashboard__Frontend__BrowserToken:
+    file: ./example-secrets/aspire-dashboard-browser-token

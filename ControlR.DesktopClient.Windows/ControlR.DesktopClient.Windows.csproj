@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ControlR.DesktopClient.Common\ControlR.DesktopClient.Common.csproj" />
     <ProjectReference Include="..\Libraries\ControlR.Libraries.NativeInterop.Windows\ControlR.Libraries.NativeInterop.Windows.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Serilog\ControlR.Libraries.Serilog.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Drawing.Common" />

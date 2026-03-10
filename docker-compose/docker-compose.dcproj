@@ -18,6 +18,13 @@
     </None>
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
+    <None Include="example-secrets\aspire-dashboard-browser-token" />
+    <None Include="example-secrets\data-protection-cert-base64" />
+    <None Include="example-secrets\data-protection-cert-password" />
+    <None Include="example-secrets\data-protection-encrypt-keys" />
+    <None Include="example-secrets\postgres_db" />
+    <None Include="example-secrets\postgres_password" />
+    <None Include="example-secrets\postgres_user" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="launchSettings.json" />

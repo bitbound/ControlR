@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 
-namespace ControlR.Libraries.DevicesCommon.Services.Processes;
+namespace ControlR.Libraries.Shared.Services.Processes;
 
 /// <summary>
 /// <para>

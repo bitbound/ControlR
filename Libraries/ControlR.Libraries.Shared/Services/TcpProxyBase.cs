@@ -1,12 +1,10 @@
 ﻿using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.Buffers;
-using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 
-namespace ControlR.Libraries.DevicesCommon.Services;
+namespace ControlR.Libraries.Shared.Services;
 
 public abstract class TcpWebsocketProxyBase(
     IMemoryProvider memoryProvider,

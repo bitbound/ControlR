@@ -1,4 +1,4 @@
-﻿namespace ControlR.Libraries.DevicesCommon.Services.Processes;
+﻿namespace ControlR.Libraries.Shared.Services.Processes;
 
 /// <summary>
 ///   Thrown when a process exit with a non-zero status code.

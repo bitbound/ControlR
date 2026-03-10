@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using ControlR.Agent.Common.Interfaces;
+using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Security.Extensions;
 
 namespace ControlR.Agent.Common.Services;
@@ -73,8 +74,13 @@ public class DesktopClientFileVerifierWin(
       if (X509Certificate2.GetCertContentType(executablePath) == X509ContentType.Authenticode)
       {
         _logger.LogInformation("Code signing certificate found.");
-        using var fs = _fileSystem.OpenFileStream(executablePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var signatureInfo = FileSignatureInfo.GetFromFileStream(fs);
+        using var fs = _fileSystem.CreateFileStream(executablePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (fs is not FileStream fileStream)
+        {
+          throw new InvalidOperationException(
+            $"Expected a FileStream for path '{executablePath}', but got {fs.GetType().FullName}.");
+        }
+        var signatureInfo = FileSignatureInfo.GetFromFileStream(fileStream);
         return signatureInfo.SigningCertificate;
       }
       _logger.LogInformation("No code signing certificate found.");

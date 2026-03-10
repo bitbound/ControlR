@@ -1,7 +1,8 @@
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
 using ControlR.Libraries.Ipc;
+using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services.Linux;

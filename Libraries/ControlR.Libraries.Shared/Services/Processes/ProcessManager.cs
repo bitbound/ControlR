@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using ControlR.Libraries.Shared.Helpers;
 
-namespace ControlR.Libraries.DevicesCommon.Services.Processes;
+namespace ControlR.Libraries.Shared.Services.Processes;
 
 public interface IProcessManager
 {

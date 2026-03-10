@@ -1,11 +1,11 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Options;
 using ControlR.Agent.Common.Services;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.TestingUtilities;
+using ControlR.Libraries.TestingUtilities.FileSystem;
 using Moq;
 using Xunit;
 
@@ -16,7 +16,7 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
 
   private Mock<IElevationChecker> _elevationChecker = null!;
-  private Mock<IFileSystem> _fileSystem = null!;
+  private FakeFileSystem _fileSystem = null!;
   private FileSystemPathProvider _pathProvider = null!;
   private Mock<ISystemEnvironment> _systemEnvironment = null!;
 
@@ -217,19 +217,13 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
     _elevationChecker = new Mock<IElevationChecker>();
     _elevationChecker.Setup(x => x.IsElevated()).Returns(isElevated);
     
-    var fileSystemImpl = new FileSystem(new XunitLogger<FileSystem>(_testOutputHelper));
-    _fileSystem = new Mock<IFileSystem>();
-    _fileSystem
-      .Setup(x => x.CreateDirectory(It.IsAny<string>()))
-      .Returns((string path) => new DirectoryInfo(path));
-    _fileSystem
-      .Setup(x => x.JoinPaths(It.IsAny<char>(), It.IsAny<string[]>()))
-      .Returns((char separator, string[] paths) => fileSystemImpl.JoinPaths(separator, paths));
+    var directorySeparator = platform == SystemPlatform.Windows ? '\\' : '/';
+    _fileSystem = new FakeFileSystem(directorySeparator);
     
     _pathProvider = new FileSystemPathProvider(
       _systemEnvironment.Object,
       _elevationChecker.Object,
-      _fileSystem.Object,
+      _fileSystem,
       optionsWrapper);
   }
 }

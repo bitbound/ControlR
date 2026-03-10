@@ -19,4 +19,6 @@ services:
     ports:
       - "18889:18889"
     environment:
-      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: true
+      POSTGRES_USER: null
+      POSTGRES_PASSWORD: null
+      POSTGRES_DB: null

@@ -1,8 +1,12 @@
 using System.IO.Compression;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Shared.Services.FileSystem;
 
 namespace ControlR.Agent.Common.Services.FileManager;
 
+/// <summary>
+/// A service specifically intended to support the remote file system feature.
+/// </summary>
 public interface IFileManager
 {
   Task<FileReferenceResult> CreateDirectory(string parentPath, string directoryName);

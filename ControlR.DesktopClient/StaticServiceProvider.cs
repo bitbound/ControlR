@@ -4,13 +4,13 @@ using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Services;
-using ControlR.Libraries.DevicesCommon.Extensions;
-using ControlR.Libraries.DevicesCommon.Services;
-using ControlR.Libraries.DevicesCommon.Services.Processes;
+using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using ControlR.Libraries.Shared.Services.FileSystem;
 
 
 namespace ControlR.DesktopClient;

@@ -79,12 +79,14 @@ graph TD
 ### Shared Libraries
 
 - **ControlR.Libraries.Api.Contracts** - API contract definitions and DTOs
+- **ControlR.Libraries.Avalonia** - Reusable controls, styles, and other items related to Avalonia UI
 - **ControlR.Libraries.Shared** - Core shared models, DTOs, and utilities
-- **ControlR.Libraries.DevicesCommon** - Device-related common functionality
 - **ControlR.Libraries.DevicesNative** - Native device interaction libraries
 - **ControlR.Libraries.Clients** - Client-side shared functionality
 - **ControlR.Libraries.ApiClient** - Generated API client for server communication
 - **ControlR.Libraries.Ipc** - Inter-process communication utilities
+- **ControlR.Libraries.Serilog** - Serilog classes and extensions
+- **ControlR.Libraries.Shared** - Common primitives, utilities, and shared code across all projects
 - **ControlR.Libraries.Signalr.Client** - SignalR client abstractions
 - **ControlR.Libraries.WebSocketRelay.Common** - WebSocket relay shared components
 - **ControlR.Libraries.NativeInterop.Windows** - Windows native interop

@@ -1,12 +1,11 @@
 using Microsoft.Extensions.Hosting;
-using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.NativeInterop.Linux;
 using Microsoft.Extensions.DependencyInjection;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Linux.Services;
+using ControlR.Libraries.Serilog;
 using Microsoft.Extensions.Logging;
-using ControlR.Libraries.DevicesCommon.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.DesktopClient.Common.Services;
 

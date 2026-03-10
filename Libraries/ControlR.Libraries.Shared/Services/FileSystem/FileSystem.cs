@@ -1,26 +1,26 @@
 ﻿using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text;
-using Microsoft.Extensions.Logging;
 
-namespace ControlR.Libraries.DevicesCommon.Services;
+namespace ControlR.Libraries.Shared.Services.FileSystem;
 
 public interface IFileSystem
 {
   Task AppendAllLinesAsync(string path, IEnumerable<string> lines);
   void CopyFile(string sourceFile, string destinationFile, bool overwrite);
-  DirectoryInfo CreateDirectory(string directoryPath);
+  IFileSystemDirectory CreateDirectory(string directoryPath);
   Stream CreateFile(string filePath);
-  FileStream CreateFileStream(string filePath, FileMode mode);
+  Stream CreateFileStream(string filePath, FileMode mode);
+  Stream CreateFileStream(string filePath, FileMode mode, FileAccess access, FileShare fileShare);
   void DeleteDirectory(string directoryPath, bool recursive);
   void DeleteFile(string filePath);
   bool DirectoryExists(string directoryPath);
   void ExtractZipArchive(string sourceArchiveFileName, string destinationDirectoryName, bool overwriteFiles);
   bool FileExists(string path);
   string[] GetDirectories(string path);
-  DirectoryInfo GetDirectoryInfo(string directoryPath);
-  DriveInfo[] GetDrives();
-  FileInfo GetFileInfo(string filePath);
+  IFileSystemDirectory GetDirectoryInfo(string directoryPath);
+  IFileSystemDrive[] GetDrives();
+  IFileSystemFile GetFileInfo(string filePath);
   string[] GetFiles(string path);
 
   public string[] GetFiles(string path, string searchPattern);
@@ -30,8 +30,8 @@ public interface IFileSystem
   FileVersionInfo GetFileVersionInfo(string filePath);
   string JoinPaths(char separator, params string[] paths);
   void MoveFile(string sourceFile, string destinationFile, bool overwrite);
-  FileStream OpenFileStream(string path, FileMode mode, FileAccess access);
-  FileStream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare);
+  Stream OpenFileStream(string path, FileMode mode, FileAccess access);
+  Stream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare);
   Task<byte[]> ReadAllBytesAsync(string path);
   Task<string[]> ReadAllLinesAsync(string path);
   string ReadAllText(string filePath);
@@ -41,8 +41,6 @@ public interface IFileSystem
   /// Resolves the absolute file path for the specified file name using `which` on Unix-based systems or `where.exe` on Windows.
   /// </summary>
   /// <param name="fileName">The name of the file to resolve. Cannot be null or empty.</param>
-  /// <returns>A task that represents the asynchronous operation. The result contains the absolute file path if the file is
-  /// found; otherwise, an error result.</returns>
   Task<Result<string>> ResolveFilePath(string fileName);
   [SupportedOSPlatform("linux")]
   [SupportedOSPlatform("macos")]
@@ -67,9 +65,9 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
     File.Copy(sourceFile, destinationFile, overwrite);
   }
 
-  public DirectoryInfo CreateDirectory(string directoryPath)
+  public IFileSystemDirectory CreateDirectory(string directoryPath)
   {
-    return Directory.CreateDirectory(directoryPath);
+    return new FileSystemDirectoryInfo(Directory.CreateDirectory(directoryPath));
   }
 
   public Stream CreateFile(string filePath)
@@ -77,9 +75,14 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
     return File.Create(filePath);
   }
 
-  public FileStream CreateFileStream(string filePath, FileMode mode)
+  public Stream CreateFileStream(string filePath, FileMode mode)
   {
     return new FileStream(filePath, mode);
+  }
+
+  public Stream CreateFileStream(string filePath, FileMode mode, FileAccess access, FileShare fileShare)
+  {
+    return new FileStream(filePath, mode, access, fileShare);
   }
 
   public void DeleteDirectory(string directoryPath, bool recursive)
@@ -112,19 +115,19 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
     return Directory.GetDirectories(path);
   }
 
-  public DirectoryInfo GetDirectoryInfo(string directoryPath)
+  public IFileSystemDirectory GetDirectoryInfo(string directoryPath)
   {
-    return new DirectoryInfo(directoryPath);
+    return new FileSystemDirectoryInfo(new DirectoryInfo(directoryPath));
   }
 
-  public DriveInfo[] GetDrives()
+  public IFileSystemDrive[] GetDrives()
   {
-    return DriveInfo.GetDrives();
+    return [.. DriveInfo.GetDrives().Select(x => new FileSystemDriveInfo(x))];
   }
 
-  public FileInfo GetFileInfo(string filePath)
+  public IFileSystemFile GetFileInfo(string filePath)
   {
-    return new FileInfo(filePath);
+    return new FileSystemFileInfo(new FileInfo(filePath));
   }
 
   public string[] GetFiles(string path)
@@ -186,12 +189,12 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
     File.Move(sourceFile, destinationFile, overwrite);
   }
 
-  public FileStream OpenFileStream(string path, FileMode mode, FileAccess access)
+  public Stream OpenFileStream(string path, FileMode mode, FileAccess access)
   {
     return File.Open(path, mode, access);
   }
 
-  public FileStream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare)
+  public Stream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare)
   {
     return File.Open(path, mode, access, fileShare);
   }

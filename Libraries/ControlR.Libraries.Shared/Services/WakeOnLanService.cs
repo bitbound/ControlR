@@ -1,8 +1,7 @@
 ﻿using System.Net.Sockets;
 using System.Net;
-using Microsoft.Extensions.Logging;
 
-namespace ControlR.Libraries.DevicesCommon.Services;
+namespace ControlR.Libraries.Shared.Services;
 
 public interface IWakeOnLanService
 {

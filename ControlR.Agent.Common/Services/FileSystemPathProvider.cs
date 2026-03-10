@@ -1,4 +1,5 @@
 using ControlR.Agent.Common.Interfaces;
+using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Common.Services;

@@ -3,10 +3,12 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Shared.Services.FileSystem;
 
 namespace ControlR.Agent.Common.Services.Base;
 
 internal class DeviceInfoProviderBase(
+  IFileSystem fileSystem,
   ISystemEnvironment systemEnvironment,
   ICpuUtilizationSampler cpuSampler,
   ISettingsProvider settingsProvider,
@@ -14,6 +16,7 @@ internal class DeviceInfoProviderBase(
 {
  
   private readonly ICpuUtilizationSampler _cpuSampler = cpuSampler;
+  private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<DeviceInfoProviderBase> _logger = logger;
   private readonly ISettingsProvider _settingsProvider = settingsProvider;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
@@ -68,7 +71,7 @@ internal class DeviceInfoProviderBase(
     {
       return
       [
-        .. DriveInfo.GetDrives()
+        .. _fileSystem.GetDrives()
           .Where(x => x.IsReady)
           .Where(x => x.DriveType == DriveType.Fixed)
           .Where(x => x.DriveFormat is not "squashfs" and not "overlay")
@@ -103,9 +106,9 @@ internal class DeviceInfoProviderBase(
   {
     try
     {
-      DriveInfo? systemDrive;
+      IFileSystemDrive? systemDrive;
 
-      var allDrives = DriveInfo.GetDrives();
+      var allDrives = _fileSystem.GetDrives();
 
       if (_systemEnvironment.IsWindows())
       {

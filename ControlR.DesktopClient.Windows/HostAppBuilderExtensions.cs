@@ -2,9 +2,9 @@
 using ControlR.DesktopClient.Windows.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ControlR.Libraries.DevicesCommon.Extensions;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.Libraries.Serilog;
 
 namespace ControlR.DesktopClient.Windows;
 public static class HostAppBuilderExtensions
