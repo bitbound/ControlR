@@ -75,7 +75,7 @@ internal class DesktopClientWatcherLinux(
     {
       // Check for the login screen first
       await CheckLoginScreenDesktopClient(cancellationToken);
-      
+
       // Then check for logged-in users
       var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
       if (loggedInUsers.Count == 0)
@@ -125,6 +125,17 @@ internal class DesktopClientWatcherLinux(
   private async Task CheckLoginScreenDesktopClient(CancellationToken cancellationToken)
   {
     var displayInfo = await _desktopEnvironmentDetector.DetectDisplayEnvironment();
+
+    if (displayInfo.IsWayland)
+    {
+      _logger.LogDeduped(
+        LogLevel.Information,
+        "Wayland login screen detected. Desktop client launch is not supported in the greeter session. Display: {WaylandDisplay}, DM: {DisplayManager}",
+        args: (displayInfo.WaylandDisplay ?? "wayland-0", displayInfo.DisplayManager ?? "unknown"));
+
+      return;
+    }
+
     if (!displayInfo.IsLoginScreen)
     {
       // If not at the login screen, ensure the login screen client is stopped
@@ -132,21 +143,11 @@ internal class DesktopClientWatcherLinux(
       return;
     }
 
-    if (displayInfo.IsWayland)
-    {
-      _logger.LogDeduped(
-        LogLevel.Information,
-        "Login screen detected. Type: Wayland, Display: {WaylandDisplay}, DM: {DisplayManager}",
-        args: (displayInfo.WaylandDisplay ?? "wayland-0", displayInfo.DisplayManager ?? "unknown"));
-    }
-    else
-    {
-      _logger.LogDeduped(
+     _logger.LogDeduped(
         LogLevel.Information,
         "Login screen detected. Type: X11, Display: {Display}, XAuth: {XAuth}, DM: {DisplayManager}",
         args: (displayInfo.Display, displayInfo.XAuthPath ?? "none", displayInfo.DisplayManager ?? "unknown"));
-    }
-
+        
     // Launch the desktop client for the login screen if needed
     if (!await IsLoginScreenDesktopClientRunning())
     {
@@ -235,42 +236,27 @@ internal class DesktopClientWatcherLinux(
         ? ""
         : $" --instance-id {_instanceOptions.Value.InstanceId}";
 
-      // Set up the environment variables based on session type
-      var envVars = new Dictionary<string, string>
-      {
-        ["DOTNET_ENVIRONMENT"] = "Production"
-      };
-
       if (displayInfo.IsWayland)
       {
-        // Configure for Wayland session
-        envVars[AppConstants.WaylandLoginScreenVariable] = "true";
-        envVars["XDG_SESSION_TYPE"] = "wayland";
-        envVars["WAYLAND_DISPLAY"] = displayInfo.WaylandDisplay ?? "wayland-0";
-
-        // Set XDG_RUNTIME_DIR to the greeter's runtime directory
-        if (!string.IsNullOrEmpty(displayInfo.WaylandRuntimeDir))
-        {
-          envVars["XDG_RUNTIME_DIR"] = displayInfo.WaylandRuntimeDir;
-        }
-
-        _logger.LogInformation("Starting login screen desktop client. Type: Wayland, Display: {WaylandDisplay}, RuntimeDir: {RuntimeDir}",
-          displayInfo.WaylandDisplay ?? "wayland-0", displayInfo.WaylandRuntimeDir ?? "unknown");
+        _logger.LogInformation("Skipping login screen desktop client launch for Wayland greeter session.");
+        return;
       }
-      else
+
+      // Set up the environment variables for the X11 login screen session
+      var envVars = new Dictionary<string, string>
       {
-        // Configure for X11 session
-        envVars["DISPLAY"] = displayInfo.Display;
-        envVars["XDG_SESSION_TYPE"] = "x11";
+        ["DOTNET_ENVIRONMENT"] = "Production",
+        ["DISPLAY"] = displayInfo.Display,
+        ["XDG_SESSION_TYPE"] = "x11"
+      };
 
-        if (!string.IsNullOrEmpty(displayInfo.XAuthPath))
-        {
-          envVars["XAUTHORITY"] = displayInfo.XAuthPath;
-        }
-
-        _logger.LogInformation("Starting login screen desktop client. Type: X11, Display: {Display}, XAUTH: {XAuth}",
-          displayInfo.Display, displayInfo.XAuthPath ?? "none");
+      if (!string.IsNullOrEmpty(displayInfo.XAuthPath))
+      {
+        envVars["XAUTHORITY"] = displayInfo.XAuthPath;
       }
+
+      _logger.LogInformation("Starting login screen desktop client. Type: X11, Display: {Display}, XAUTH: {XAuth}",
+        displayInfo.Display, displayInfo.XAuthPath ?? "none");
 
       // Start the process with the proper environment
       var startInfo = new ProcessStartInfo

@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using ControlR.Libraries.Shared.Constants;
 
 namespace ControlR.DesktopClient;
 
@@ -37,17 +36,7 @@ internal sealed class Program
         if (_appBuilder is null)
         {
           _appBuilder = BuildAvaloniaApp();
-
-          if (Environment.GetEnvironmentVariable(AppConstants.WaylandLoginScreenVariable) is { } waylandLoginScreen &&
-              bool.TryParse(waylandLoginScreen, out var isLoginScreen) &&
-              isLoginScreen)
-          {
-            _appBuilder.StartLinuxFbDev(args);
-          }
-          else
-          {
-            _appBuilder.StartWithClassicDesktopLifetime(args, lifetime => { _lifetime = lifetime; });
-          }
+          _appBuilder.StartWithClassicDesktopLifetime(args, lifetime => { _lifetime = lifetime; });
         }
         else if (_lifetime is ClassicDesktopStyleApplicationLifetime desktop)
         {

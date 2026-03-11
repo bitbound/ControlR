@@ -10,10 +10,6 @@ public static class AppConstants
   public const int DefaultHubDtoChunkSize = 100;
   public const int DefaultVncPort = 5900;
   public const string ViewerHubPath = "/hubs/viewer";
-  /// <summary>
-  /// The environment variable indicating that the desktop client is running in a Wayland login screen.
-  /// </summary>
-  public const string WaylandLoginScreenVariable = "WAYLAND_LOGIN_SCREEN";
   public const string WebSocketRelayPath = "/relay";
 
   public static string DesktopClientFileName =>

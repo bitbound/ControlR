@@ -8,8 +8,6 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using Xunit;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 
 #if IS_WINDOWS

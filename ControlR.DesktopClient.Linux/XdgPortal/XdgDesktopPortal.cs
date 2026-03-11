@@ -1,5 +1,4 @@
 using ControlR.DesktopClient.Common.Options;
-using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Logging;
@@ -23,6 +22,7 @@ public interface IXdgDesktopPortal : IDisposable
   Task NotifyPointerMotionAsync(string sessionHandle, double dx, double dy);
 }
 
+// TODO: Inject IAppLifetimeNotifier and cancel ongoing waits/operations when application is stopping.
 public sealed class XdgDesktopPortal(
   IFileSystem fileSystem,
   IOptionsMonitor<DesktopClientOptions> options,
@@ -181,16 +181,6 @@ public sealed class XdgDesktopPortal(
   {
     try
     {
-      if (Environment.GetEnvironmentVariable(AppConstants.WaylandLoginScreenVariable) is { } waylandLoginScreen &&
-          bool.TryParse(waylandLoginScreen, out var isLoginScreen) &&
-          isLoginScreen)
-      {
-        _connection = new Connection(Address.System);
-        await _connection.ConnectAsync().ConfigureAwait(false);
-        _logger.LogDebug("Connected to DBus system bus (Wayland login screen)");
-        return;
-      }
-
       _connection = new Connection(Address.Session);
       await _connection.ConnectAsync().ConfigureAwait(false);
       _logger.LogDebug("Connected to DBus session bus");
