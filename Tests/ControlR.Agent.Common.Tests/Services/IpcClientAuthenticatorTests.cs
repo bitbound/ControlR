@@ -15,7 +15,7 @@ namespace ControlR.Agent.Common.Tests.Services;
 public class IpcClientAuthenticatorTests
 {
   private readonly IIpcClientAuthenticator _authenticator;
-  private readonly Mock<IClientCredentialsProvider> _credentialProvider;
+  private readonly Mock<IIpcClientCredentialsProvider> _credentialProvider;
   private readonly Mock<IDesktopClientFileVerifier> _fileVerifier;
   private readonly Mock<ILogger<IpcClientAuthenticator>> _logger;
   private readonly Mock<IFileSystemPathProvider> _pathProvider;
@@ -25,7 +25,7 @@ public class IpcClientAuthenticatorTests
 
   public IpcClientAuthenticatorTests()
   {
-    _credentialProvider = new Mock<IClientCredentialsProvider>();
+    _credentialProvider = new Mock<IIpcClientCredentialsProvider>();
     _systemEnvironment = new Mock<ISystemEnvironment>();
     _pathProvider = new Mock<IFileSystemPathProvider>();
     _fileVerifier = new Mock<IDesktopClientFileVerifier>();

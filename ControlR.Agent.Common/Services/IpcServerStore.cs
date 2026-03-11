@@ -17,7 +17,7 @@ public interface IIpcServerStore
   void AddServer(IProcess process, IIpcServer server);
   bool ContainsServer(int processId);
   Task KillAllServers(string reason);
-  bool TryGetServer(int processId, [NotNullWhen(true)]out IpcServerRecord? serverRecord);
+  bool TryGetServer(int processId, [NotNullWhen(true)] out IpcServerRecord? serverRecord);
   bool TryRemove(int processId, [NotNullWhen(true)] out IpcServerRecord? serverRecord);
 }
 
@@ -30,22 +30,31 @@ internal class IpcServerStore(ILogger<IpcServerStore> logger) : IIpcServerStore
 
   public void AddServer(IProcess process, IIpcServer server)
   {
-    // If the attested process is already gone, don't add a stale server record.
-    if (process.HasExited)
+    void HandleProcessExited(object? sender, IProcess process)
     {
+      if (_ipcServers.TryRemove(process.Id, out var removedRecord))
+      {
+        Disposer.DisposeAll(removedRecord.Process, removedRecord.Server);
+        return;
+      }
+
       Disposer.DisposeAll(process, server);
-      return;
     }
 
     // Ensure we receive exit notifications to promptly clean up.
     process.EnableRaisingEvents = true;
-    process.Exited += (s, e) =>
-    {
-      _ipcServers.TryRemove(process.Id, out _);
-      Disposer.DisposeAll(process);
-    };
+    process.Exited += HandleProcessExited;
 
     var serverRecord = new IpcServerRecord(process, server);
+
+    // If the attested process is already gone, don't add a stale server record.
+    if (process.HasExited)
+    {
+      process.Exited -= HandleProcessExited;
+      Disposer.DisposeAll(process, server);
+      return;
+    }
+
     _ipcServers.AddOrUpdate(
       process.Id,
       serverRecord,
@@ -73,10 +82,10 @@ internal class IpcServerStore(ILogger<IpcServerStore> logger) : IIpcServerStore
       }
       catch (Exception ex)
       {
-         _logger.LogWarning(
-          ex,
-          "Failed to send shutdown command to IPC server for process {ProcessId}.",
-          server.Process.Id);
+        _logger.LogWarning(
+         ex,
+         "Failed to send shutdown command to IPC server for process {ProcessId}.",
+         server.Process.Id);
       }
       Disposer.DisposeAll(server.Process, server.Server);
     }

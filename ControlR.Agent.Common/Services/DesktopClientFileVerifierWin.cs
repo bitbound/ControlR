@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using ControlR.Agent.Common.Interfaces;
@@ -17,6 +18,8 @@ public class DesktopClientFileVerifierWin(
 
   public Result VerifyFile(string executablePath)
   {
+    var verificationStopwatch = Stopwatch.StartNew();
+
     try
     {
       var agentExePath = _systemEnvironment.StartupExePath;
@@ -28,7 +31,8 @@ public class DesktopClientFileVerifierWin(
       if (agentCertificate is null)
       {
         _logger.LogInformation(
-          "Agent executable is not code signed. Skipping certificate validation for IPC client.");
+          "Agent executable is not code signed. Skipping certificate validation for IPC client. Total verification time: {ElapsedMs} ms.",
+          verificationStopwatch.ElapsedMilliseconds);
         return Result.Ok();
       }
 
@@ -54,26 +58,29 @@ public class DesktopClientFileVerifierWin(
       }
 
       _logger.LogInformation(
-        "Code signing certificate validation passed. Certificate thumbprint: {Thumbprint}",
+        "Code signing certificate validation passed in {ElapsedMs} ms. Certificate thumbprint: {Thumbprint}",
+        verificationStopwatch.ElapsedMilliseconds,
         agentCertificate.Thumbprint);
 
       return Result.Ok();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error validating Windows code signing certificate.");
+      _logger.LogError(ex, "Error validating Windows code signing certificate after {ElapsedMs} ms.", verificationStopwatch.ElapsedMilliseconds);
       return Result.Fail($"Error validating code signing certificate: {ex.Message}");
     }
   }
 
   private X509Certificate2? GetCodeSigningCertificate(string executablePath)
   {
+    var inspectionStopwatch = Stopwatch.StartNew();
+
     try
     {
       _logger.LogInformation("Inspecting digital signature for file: {FilePath}", executablePath);
       if (X509Certificate2.GetCertContentType(executablePath) == X509ContentType.Authenticode)
       {
-        _logger.LogInformation("Code signing certificate found.");
+        _logger.LogInformation("Code signing certificate found. File: {FilePath}", executablePath);
         using var fs = _fileSystem.CreateFileStream(executablePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         if (fs is not FileStream fileStream)
         {
@@ -81,14 +88,21 @@ public class DesktopClientFileVerifierWin(
             $"Expected a FileStream for path '{executablePath}', but got {fs.GetType().FullName}.");
         }
         var signatureInfo = FileSignatureInfo.GetFromFileStream(fileStream);
+        _logger.LogInformation(
+          "Digital signature inspection completed in {ElapsedMs} ms for file: {FilePath}",
+          inspectionStopwatch.ElapsedMilliseconds,
+          executablePath);
         return signatureInfo.SigningCertificate;
       }
-      _logger.LogInformation("No code signing certificate found.");
+      _logger.LogInformation(
+        "No code signing certificate found after {ElapsedMs} ms. File: {FilePath}",
+        inspectionStopwatch.ElapsedMilliseconds,
+        executablePath);
       return null;
     }
     catch (CryptographicException ex)
     {
-      _logger.LogInformation(ex, "No certificate found.");
+      _logger.LogInformation(ex, "No certificate found after {ElapsedMs} ms. File: {FilePath}", inspectionStopwatch.ElapsedMilliseconds, executablePath);
       return null;
     }
   }

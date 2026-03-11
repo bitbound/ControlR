@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Collections.Concurrent;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Ipc;
@@ -14,7 +15,7 @@ public interface IIpcClientAuthenticator
 
 public class IpcClientAuthenticator(
   TimeProvider timeProvider,
-  IClientCredentialsProvider credentialsProvider,
+  IIpcClientCredentialsProvider credentialsProvider,
   ISystemEnvironment systemEnvironment,
   IDesktopClientFileVerifier fileVerifier,
   IFileSystemPathProvider pathProvider,
@@ -22,7 +23,7 @@ public class IpcClientAuthenticator(
 {
   private const int MaxFailuresPerMinute = 5;
 
-  private readonly IClientCredentialsProvider _credentialsProvider = credentialsProvider;
+  private readonly IIpcClientCredentialsProvider _credentialsProvider = credentialsProvider;
   private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _failedAttempts = new();
   private readonly IDesktopClientFileVerifier _fileVerifier = fileVerifier;
   private readonly ILogger<IpcClientAuthenticator> _logger = logger;
@@ -33,14 +34,22 @@ public class IpcClientAuthenticator(
 
   public async Task<Result<IpcClientCredentials>> AuthenticateConnection(IIpcServer server)
   {
+    var authenticationStopwatch = Stopwatch.StartNew();
+
     try
     {
       // 1. Get client credentials from pipe/socket handle
+      var credentialsStopwatch = Stopwatch.StartNew();
       var credsResult = _credentialsProvider.GetClientCredentials(server);
+      _logger.LogInformation(
+        "IPC credential lookup completed in {ElapsedMs} ms.",
+        credentialsStopwatch.ElapsedMilliseconds);
+
       if (!credsResult.IsSuccess)
       {
         _logger.LogCritical(
-          "Failed to get IPC client credentials: {Reason}",
+          "Failed to get IPC client credentials after {ElapsedMs} ms: {Reason}",
+          authenticationStopwatch.ElapsedMilliseconds,
           credsResult.Reason);
         return Result.Fail<IpcClientCredentials>(credsResult.Reason);
       }
@@ -53,45 +62,67 @@ public class IpcClientAuthenticator(
         credentials.ExecutablePath);
 
       // 2. Check rate limiting
+      var rateLimitStopwatch = Stopwatch.StartNew();
       var rateLimitResult = await CheckRateLimit(credentials.ExecutablePath);
+      _logger.LogInformation(
+        "IPC rate-limit check completed in {ElapsedMs} ms for PID {ProcessId}.",
+        rateLimitStopwatch.ElapsedMilliseconds,
+        credentials.ProcessId);
+
       if (!rateLimitResult.IsSuccess)
       {
         _logger.LogCritical(
-          "IPC authentication rate limit exceeded for {ExecutablePath}. PID: {ProcessId}",
+          "IPC authentication rate limit exceeded after {ElapsedMs} ms for {ExecutablePath}. PID: {ProcessId}",
+          authenticationStopwatch.ElapsedMilliseconds,
           credentials.ExecutablePath,
           credentials.ProcessId);
         return Result.Fail<IpcClientCredentials>(rateLimitResult.Reason);
       }
 
       // 3. Validate executable path matches expected location
+      var pathValidationStopwatch = Stopwatch.StartNew();
       var validationResult = ValidateExecutablePath(credentials.ExecutablePath);
+      _logger.LogInformation(
+        "IPC executable path validation completed in {ElapsedMs} ms for PID {ProcessId}.",
+        pathValidationStopwatch.ElapsedMilliseconds,
+        credentials.ProcessId);
+
       if (!validationResult.IsSuccess)
       {
         await RecordFailedAttempt(credentials.ExecutablePath);
         _logger.LogCritical(
-          "IPC authentication FAILED for PID {ProcessId}, Path: {ExecutablePath}. Reason: {Reason}",
+          "IPC authentication FAILED for PID {ProcessId}, Path: {ExecutablePath} after {ElapsedMs} ms. Reason: {Reason}",
           credentials.ProcessId,
           credentials.ExecutablePath,
+          authenticationStopwatch.ElapsedMilliseconds,
           validationResult.Reason);
         return Result.Fail<IpcClientCredentials>(validationResult.Reason);
       }
 
       // 4. Validate code signing certificate.
+      var fileVerificationStopwatch = Stopwatch.StartNew();
       var certificateValidationResult = _fileVerifier.VerifyFile(credentials.ExecutablePath);
+      _logger.LogInformation(
+        "IPC file verification completed in {ElapsedMs} ms for PID {ProcessId}.",
+        fileVerificationStopwatch.ElapsedMilliseconds,
+        credentials.ProcessId);
+
       if (!certificateValidationResult.IsSuccess)
       {
         await RecordFailedAttempt(credentials.ExecutablePath);
         _logger.LogCritical(
-          "IPC authentication FAILED for PID {ProcessId}, Path: {ExecutablePath}. Reason: {Reason}",
+          "IPC authentication FAILED for PID {ProcessId}, Path: {ExecutablePath} after {ElapsedMs} ms. Reason: {Reason}",
           credentials.ProcessId,
           credentials.ExecutablePath,
+          authenticationStopwatch.ElapsedMilliseconds,
           certificateValidationResult.Reason);
         return Result.Fail<IpcClientCredentials>(certificateValidationResult.Reason);
       }
 
       // 5. Log successful authentication
       _logger.LogInformation(
-        "IPC connection authenticated successfully. PID: {ProcessId}, Path: {ExecutablePath}",
+        "IPC connection authenticated successfully in {ElapsedMs} ms. PID: {ProcessId}, Path: {ExecutablePath}",
+        authenticationStopwatch.ElapsedMilliseconds,
         credentials.ProcessId,
         credentials.ExecutablePath);
 
@@ -99,7 +130,7 @@ public class IpcClientAuthenticator(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Unexpected error during IPC authentication.");
+      _logger.LogError(ex, "Unexpected error during IPC authentication after {ElapsedMs} ms.", authenticationStopwatch.ElapsedMilliseconds);
       return Result.Fail<IpcClientCredentials>($"Unexpected error during authentication: {ex.Message}");
     }
   }

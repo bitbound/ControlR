@@ -3,3 +3,4 @@
 [assembly: InternalsVisibleTo("ControlR.Agent")]
 [assembly: InternalsVisibleTo("ControlR.Agent.LoadTester")]
 [assembly: InternalsVisibleTo("ControlR.Agent.Common.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

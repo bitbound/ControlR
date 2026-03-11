@@ -6,7 +6,7 @@ using ControlR.Libraries.NativeInterop.Mac;
 namespace ControlR.Agent.Common.Services.Mac;
 
 [SupportedOSPlatform("macos")]
-internal class ClientCredentialsProviderMac : IClientCredentialsProvider
+internal class IpcClientCredentialsProviderMac : IIpcClientCredentialsProvider
 {
   public Result<IpcClientCredentials> GetClientCredentials(IIpcServer server)
   {

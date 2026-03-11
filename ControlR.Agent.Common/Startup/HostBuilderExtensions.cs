@@ -132,7 +132,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IServiceControl, ServiceControlWindows>();
       services.AddSingleton<IPowerControl, PowerControlWindows>();
       services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
-      services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderWindows>();
+      services.AddSingleton<IIpcClientCredentialsProvider, IpcClientCredentialsProviderWindows>();
       services.AddSingleton<IDesktopClientFileVerifier, DesktopClientFileVerifierWin>();
     }
     else if (OperatingSystem.IsLinux())
@@ -147,7 +147,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerLinux>();
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
-      services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderLinux>();
+      services.AddSingleton<IIpcClientCredentialsProvider, IpcClientCredentialsProviderLinux>();
       services.AddSingleton<IDesktopClientFileVerifier, DesktopClientFileVerifierLinux>();
       services.AddSingleton<IDesktopEnvironmentDetectorAgent, DesktopEnvironmentDetectorAgent>();
     }
@@ -161,7 +161,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddSingleton<IPowerControl, PowerControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
       services.AddSingleton<IFileSystemUnix, FileSystemUnix>();
-      services.AddSingleton<IClientCredentialsProvider, ClientCredentialsProviderMac>();
+      services.AddSingleton<IIpcClientCredentialsProvider, IpcClientCredentialsProviderMac>();
       services.AddSingleton<IDesktopClientFileVerifier, DesktopClientFileVerifierMac>();
     }
     else
@@ -183,6 +183,7 @@ internal static class HostApplicationBuilderExtensions
 
       if (OperatingSystem.IsWindowsVersionAtLeast(6, 0, 6000))
       {
+        services.AddSingleton<IDesktopClientLaunchTracker, DesktopClientLaunchTracker>();
         services.AddHostedService<DesktopClientWatcherWin>();
         services.AddHostedService<IpcServerInitializerWindows>();
       }

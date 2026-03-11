@@ -22,6 +22,7 @@ internal class DesktopClientWatcherWin(
   IControlrMutationLock mutationLock,
   IDesktopSessionProvider desktopSessionProvider,
   IDesktopClientUpdater desktopClientUpdater,
+  IDesktopClientLaunchTracker launchTracker,
   IWaiter waiter,
   ILogger<DesktopClientWatcherWin> logger) : BackgroundService
 {
@@ -30,6 +31,7 @@ internal class DesktopClientWatcherWin(
   private readonly ISystemEnvironment _environment = environment;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IIpcServerStore _ipcServerStore = ipcServerStore;
+  private readonly IDesktopClientLaunchTracker _launchTracker = launchTracker;
   private readonly ILogger<DesktopClientWatcherWin> _logger = logger;
   private readonly IControlrMutationLock _mutationLock = mutationLock;
   private readonly IProcessManager _processManager = processManager;
@@ -40,6 +42,70 @@ internal class DesktopClientWatcherWin(
 
   private int _launchFailCount;
 
+  internal int LaunchFailCount => _launchFailCount;
+
+  internal async Task RunIteration(
+    IReadOnlyCollection<DesktopSession> activeSessions,
+    DesktopSession[] desktopClients,
+    CancellationToken stoppingToken)
+  {
+    var activeSessionIds = activeSessions
+      .Select(x => x.SystemSessionId)
+      .ToHashSet();
+
+    _launchTracker.Reconcile(activeSessionIds, desktopClients);
+
+    // Dispose of duplicate clients, those connected to the same session but not the "active" one.
+    await DisposeDuplicateClients(desktopClients, stoppingToken);
+
+    foreach (var session in activeSessions)
+    {
+      if (_launchTracker.IsSessionCovered(session.SystemSessionId, desktopClients))
+      {
+        continue;
+      }
+
+      _logger.LogInformation(
+        "No desktop client found in session {SessionId}. Launching a new one.",
+        session.SystemSessionId);
+
+      using var mutationLock = await _mutationLock.AcquireAsync(stoppingToken);
+
+      var refreshedDesktopClients = await _desktopSessionProvider.GetActiveDesktopClients();
+      _launchTracker.Reconcile(activeSessionIds, refreshedDesktopClients);
+
+      if (_launchTracker.IsSessionCovered(session.SystemSessionId, refreshedDesktopClients))
+      {
+        continue;
+      }
+
+      if (!await _desktopClientUpdater.EnsureLatestVersion(acquireGlobalLock: false, stoppingToken))
+      {
+        _logger.LogWarning("Failed to ensure latest version of desktop client.  Continuing optimistically.");
+      }
+
+      if (!await LaunchDesktopClient(session.SystemSessionId, stoppingToken))
+      {
+        _launchFailCount++;
+      }
+    }
+
+    if (_launchFailCount < 10)
+    {
+      return;
+    }
+
+    _launchFailCount = 0;
+
+    _logger.LogWarning(
+      "Failed to launch desktop client in one or more sessions.  " +
+      "Deleting existing desktop client installation to force a reinstall.");
+
+    using var deleteLock = await _mutationLock.AcquireAsync(stoppingToken);
+    _launchTracker.Clear();
+    await DeleteDesktopClient();
+  }
+
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     if (_environment.IsDebug) 
@@ -49,61 +115,30 @@ internal class DesktopClientWatcherWin(
     }
 
     using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
-    
-    while (await timer.WaitForNextTick(false, stoppingToken))
+
+    try
     {
-      try
+      while (await timer.WaitForNextTick(false, stoppingToken))
       {
-        using var mutationLock = await _mutationLock.AcquireAsync(stoppingToken);
-        var activeSessions = _win32Interop.GetActiveSessions();
-        var desktopClients = await _desktopSessionProvider.GetActiveDesktopClients();
-
-        // Dispose of duplicate clients - those connected to the same session but not the "active" one
-        await DisposeDuplicateClients(desktopClients, stoppingToken);
-
-        foreach (var session in activeSessions)
+        try
         {
-          if (desktopClients.Any(x => x.SystemSessionId == session.SystemSessionId))
-          {
-            continue;
-          }
-
-          _logger.LogInformation(
-            "No desktop client found in session {SessionId}. Launching a new one.",
-            session.SystemSessionId);
-
-          if (!await _desktopClientUpdater.EnsureLatestVersion(acquireGlobalLock: false, stoppingToken))
-          {
-            _logger.LogWarning("Failed to ensure latest version of desktop client.  Continuing optimistically.");
-          }
-          
-          if (!await LaunchDesktopClient(session.SystemSessionId, stoppingToken))
-          {
-            _launchFailCount++;
-          }
+          var activeSessions = _win32Interop.GetActiveSessions();
+          var desktopClients = await _desktopSessionProvider.GetActiveDesktopClients();
+          await RunIteration(activeSessions, desktopClients, stoppingToken);
         }
-
-        if (_launchFailCount < 10)
+        catch (OperationCanceledException)
         {
-          continue;
+          _logger.LogInformation("Stopping DesktopClientWatcher.  Application is shutting down.");
         }
-
-        _launchFailCount = 0;
-
-        _logger.LogWarning(
-          "Failed to launch desktop client in one or more sessions.  " +
-          "Deleting existing desktop client installation to force a reinstall.");
-
-        await DeleteDesktopClient();
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error while checking for desktop client processes.");
+        }
       }
-      catch (OperationCanceledException)
-      {
-        _logger.LogInformation("Stopping DesktopClientWatcher.  Application is shutting down.");
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error while checking for desktop client processes.");
-      }
+    }
+    finally
+    {
+      _launchTracker.Clear();
     }
   }
 
@@ -169,6 +204,7 @@ internal class DesktopClientWatcherWin(
 
     await Task.CompletedTask;
   }
+
   private async Task DisposeDuplicateClients(DesktopSession[] activeClients, CancellationToken cancellationToken)
   {
     try
@@ -240,8 +276,11 @@ internal class DesktopClientWatcherWin(
       _logger.LogError(ex, "Error while disposing duplicate clients.");
     }
   }
+
   private async Task<bool> LaunchDesktopClient(int sessionId, CancellationToken cancellationToken)
   {
+    IProcess? trackedProcess = null;
+
     try
     {
       if (_environment.IsDebug)
@@ -265,21 +304,62 @@ internal class DesktopClientWatcherWin(
         return false;
       }
 
-      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      trackedProcess = process;
+      _launchTracker.TrackLaunch(sessionId, trackedProcess);
+
+      _logger.LogInformation(
+        "Launched desktop client process for session {SessionId}. PID: {ProcessId}",
+        sessionId,
+        trackedProcess.Id);
+
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
       using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
 
-      return await _waiter.WaitFor(
-        () => !process.HasExited && _ipcServerStore.ContainsServer(process.Id),
-        TimeSpan.FromSeconds(1),
+      var registeredQuickly = await _waiter.WaitFor(
+        () => trackedProcess.HasExited || _ipcServerStore.ContainsServer(trackedProcess.Id),
+        TimeSpan.FromMilliseconds(250),
         throwOnCancellation: false,
         cancellationToken: linkedCts.Token);
+
+      if (registeredQuickly && _ipcServerStore.ContainsServer(trackedProcess.Id))
+      {
+        _logger.LogInformation(
+          "Desktop client for session {SessionId} registered with IPC shortly after launch. PID: {ProcessId}",
+          sessionId,
+          trackedProcess.Id);
+        return true;
+      }
+
+      if (trackedProcess.HasExited)
+      {
+        _logger.LogWarning(
+          "Desktop client process for session {SessionId} exited before IPC registration completed. PID: {ProcessId}",
+          sessionId,
+          trackedProcess.Id);
+        return true;
+      }
+
+      _logger.LogInformation(
+        "Desktop client process for session {SessionId} is still starting. PID: {ProcessId}. Waiting for IPC registration in the background.",
+        sessionId,
+        trackedProcess.Id);
+
+      return true;
     }
     catch (Exception ex)
     {
+      if (trackedProcess is not null &&
+          _launchTracker.TryRemove(sessionId, trackedProcess.Id, out var removedState) &&
+          removedState is not null)
+      {
+        removedState.Dispose();
+      }
+
       _logger.LogError(ex, "Error while launching desktop client in session {SessionId}.", sessionId);
       return false;
     }
   }
+
   private async Task<bool> StartDebugSession()
   {
     var solutionDirResult = IoHelper.GetSolutionDir(Environment.CurrentDirectory);

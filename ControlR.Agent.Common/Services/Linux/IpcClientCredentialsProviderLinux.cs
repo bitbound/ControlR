@@ -1,12 +1,12 @@
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Ipc;
-using ControlR.Libraries.NativeInterop.Windows;
+using ControlR.Libraries.NativeInterop.Linux;
 
-namespace ControlR.Agent.Common.Services.Windows;
+namespace ControlR.Agent.Common.Services.Linux;
 
-[SupportedOSPlatform("windows")]
-internal class ClientCredentialsProviderWindows : IClientCredentialsProvider
+[SupportedOSPlatform("linux")]
+internal class IpcClientCredentialsProviderLinux : IIpcClientCredentialsProvider
 {
   public Result<IpcClientCredentials> GetClientCredentials(IIpcServer server)
   {
@@ -15,7 +15,7 @@ internal class ClientCredentialsProviderWindows : IClientCredentialsProvider
       return Result.Fail<IpcClientCredentials>("Failed to get server handle from IPC connection.");
     }
 
-    var nativeResult = PipeClientInfo.GetClientCredentials(handle);
+    var nativeResult = UnixSocketClientInfoLinux.GetClientCredentials(handle);
     if (!nativeResult.IsSuccess)
     {
       return Result.Fail<IpcClientCredentials>(nativeResult.Reason);

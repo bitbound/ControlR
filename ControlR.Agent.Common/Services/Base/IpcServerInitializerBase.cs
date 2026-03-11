@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.Processes;
@@ -24,6 +25,8 @@ internal abstract class IpcServerInitializerBase(
 
   protected virtual async Task AcceptConnection(CancellationToken cancellationToken)
   {
+    var acceptStopwatch = Stopwatch.StartNew();
+
     try
     {
       var pipeName = GetPipeName();
@@ -33,16 +36,25 @@ internal abstract class IpcServerInitializerBase(
 
       if (!await server.WaitForConnection(cancellationToken))
       {
-        Logger.LogWarning("Failed to accept incoming IPC connection.");
+        Logger.LogWarning(
+          "Failed to accept incoming IPC connection after {ElapsedMs} ms.",
+          acceptStopwatch.ElapsedMilliseconds);
         return;
       }
 
+      Logger.LogInformation(
+        "Incoming IPC connection accepted after {ElapsedMs} ms.",
+        acceptStopwatch.ElapsedMilliseconds);
+
       // Authenticate the connection
+      var authenticationStopwatch = Stopwatch.StartNew();
       var authResult = await IpcAuthenticator.AuthenticateConnection(server);
       if (!authResult.IsSuccess)
       {
         Logger.LogCritical(
-          "IPC connection authentication FAILED: {Reason}. Connection rejected and disconnected.",
+          "IPC connection authentication FAILED after {AuthenticationElapsedMs} ms. Total accept time: {TotalElapsedMs} ms. Reason: {Reason}. Connection rejected and disconnected.",
+          authenticationStopwatch.ElapsedMilliseconds,
+          acceptStopwatch.ElapsedMilliseconds,
           authResult.Reason);
 
         // TODO: Send authentication failure event to server's event notification system
@@ -53,7 +65,10 @@ internal abstract class IpcServerInitializerBase(
         return;
       }
 
-      Logger.LogInformation("IPC connection authenticated successfully.");
+      Logger.LogInformation(
+        "IPC connection authenticated successfully in {AuthenticationElapsedMs} ms. Total accept time: {TotalElapsedMs} ms.",
+        authenticationStopwatch.ElapsedMilliseconds,
+        acceptStopwatch.ElapsedMilliseconds);
       HandleConnection(server, authResult.Value, cancellationToken).Forget();
     }
     catch (OperationCanceledException ex)

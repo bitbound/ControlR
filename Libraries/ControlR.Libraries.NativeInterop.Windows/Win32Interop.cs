@@ -25,6 +25,7 @@ using WTS_INFO_CLASS = Windows.Win32.System.RemoteDesktop.WTS_INFO_CLASS;
 using WTS_SESSION_INFOW = Windows.Win32.System.RemoteDesktop.WTS_SESSION_INFOW;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Shared.Services.Processes;
 
 namespace ControlR.Libraries.NativeInterop.Windows;
 
@@ -34,7 +35,7 @@ public interface IWin32Interop
     string commandLine,
     int targetSessionId,
     bool hiddenWindow,
-    [NotNullWhen(true)] out Process? startedProcess);
+    [NotNullWhen(true)] out IProcess? startedProcess);
   nint CreatePrivacyScreenWindow(int left, int top, int width, int height);
   void DestroyPrivacyScreenWindow(nint windowHandle);
   bool EnumWindows(Func<nint, bool> windowFunc);
@@ -110,7 +111,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     string commandLine,
     int targetSessionId,
     bool hiddenWindow,
-    [NotNullWhen(true)] out Process? startedProcess)
+    [NotNullWhen(true)] out IProcess? startedProcess)
   {
     startedProcess = null;
 
@@ -259,7 +260,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         return false;
       }
 
-      startedProcess = Process.GetProcessById((int)procInfo.dwProcessId);
+      var process = Process.GetProcessById((int)procInfo.dwProcessId);
+      startedProcess = new ProcessWrapper(process);
       return true;
     }
     catch (Exception ex)

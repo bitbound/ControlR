@@ -2,7 +2,6 @@
 using ControlR.Libraries.Shared.Logging;
 using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics.CodeAnalysis;
-using ControlR.Libraries.Api.Contracts.Dtos;
 using System.Runtime.CompilerServices;
 
 namespace ControlR.Libraries.Shared.Extensions;

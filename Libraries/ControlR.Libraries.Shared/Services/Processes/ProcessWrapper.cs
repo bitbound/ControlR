@@ -17,7 +17,7 @@ namespace ControlR.Libraries.Shared.Services.Processes;
 /// </summary>
 public interface IProcess : IDisposable
 {
-  event EventHandler? Exited;
+  event EventHandler<IProcess>? Exited;
 
   int BasePriority { get; }
   bool EnableRaisingEvents { get; set; }
@@ -45,21 +45,57 @@ public interface IProcess : IDisposable
 
 public class ProcessWrapper(Process process) : IProcess
 {
+  private readonly Lock _exitedLock = new();
   private readonly Process _process = process;
 
   private bool _disposedValue;
+  private bool _isSubscribedToProcessExited;
 
-  public event EventHandler? Exited
+  public event EventHandler<IProcess>? Exited
   {
     add
     {
-      _process.Exited += value;
+      if (value is null)
+      {
+        return;
+      }
+
+      lock (_exitedLock)
+      {
+        ExitedPrivate += value;
+
+        if (_isSubscribedToProcessExited)
+        {
+          return;
+        }
+
+        _process.Exited += HandleProcessExited;
+        _isSubscribedToProcessExited = true;
+      }
     }
     remove
     {
-      _process.Exited -= value;
+      if (value is null)
+      {
+        return;
+      }
+
+      lock (_exitedLock)
+      {
+        ExitedPrivate -= value;
+
+        if (ExitedPrivate is not null || !_isSubscribedToProcessExited)
+        {
+          return;
+        }
+
+        _process.Exited -= HandleProcessExited;
+        _isSubscribedToProcessExited = false;
+      }
     }
   }
+
+  private event EventHandler<IProcess>? ExitedPrivate;
 
   public int BasePriority => _process.BasePriority;
   public bool EnableRaisingEvents { get => _process.EnableRaisingEvents; set => _process.EnableRaisingEvents = value; }
@@ -74,7 +110,6 @@ public class ProcessWrapper(Process process) : IProcess
   [SupportedOSPlatform("windows")]
   [SupportedOSPlatform("linux")]
   public nint ProcessorAffinity { get => _process.ProcessorAffinity; set => _process.ProcessorAffinity = value; }
-
   public bool Responding => _process.Responding;
   public int SessionId => _process.SessionId;
   public StreamWriter StandardInput => _process.StandardInput;
@@ -87,6 +122,7 @@ public class ProcessWrapper(Process process) : IProcess
     Dispose(disposing: true);
     GC.SuppressFinalize(this);
   }
+
   public void Kill()
   {
     _process.Kill();
@@ -111,8 +147,31 @@ public class ProcessWrapper(Process process) : IProcess
 
     if (disposing)
     {
+      lock (_exitedLock)
+      {
+        if (_isSubscribedToProcessExited)
+        {
+          _process.Exited -= HandleProcessExited;
+          _isSubscribedToProcessExited = false;
+        }
+
+        ExitedPrivate = null;
+      }
+
       _process.Dispose();
     }
     _disposedValue = true;
+  }
+
+  private void HandleProcessExited(object? sender, EventArgs args)
+  {
+    EventHandler<IProcess>? exitedHandlers;
+
+    lock (_exitedLock)
+    {
+      exitedHandlers = ExitedPrivate;
+    }
+
+    exitedHandlers?.Invoke(this, this);
   }
 }
