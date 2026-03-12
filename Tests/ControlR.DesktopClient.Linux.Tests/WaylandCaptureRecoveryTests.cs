@@ -1,9 +1,5 @@
-using System.Drawing;
 using ControlR.DesktopClient.Linux.Services;
-using ControlR.DesktopClient.Linux.XdgPortal;
-using ControlR.Libraries.NativeInterop.Linux;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Win32.SafeHandles;
 using Xunit;
 
 namespace ControlR.DesktopClient.Linux.Tests;
@@ -13,7 +9,7 @@ public class WaylandCaptureRecoveryTests
   [Fact]
   public async Task CreatePipeWireStreams_ForwardsForcePortalReinitializeFlag()
   {
-    var portal = new TrackingPortal();
+    var portal = new FakeXdgDesktopPortal();
     using var displayManager = new DisplayManagerWayland(
       TimeProvider.System,
       portal,
@@ -80,65 +76,5 @@ public class WaylandCaptureRecoveryTests
       recoveryCooldown: TimeSpan.FromSeconds(2));
 
     Assert.True(shouldRecover);
-  }
-
-  private sealed class TrackingPortal : IXdgDesktopPortal
-  {
-    public List<bool> InitializeCalls { get; } = [];
-
-    public void Dispose()
-    {
-    }
-
-    public Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection()
-    {
-      return Task.FromResult<(SafeFileHandle, string)?>(null);
-    }
-
-    public Task<string?> GetRemoteDesktopSessionHandle()
-    {
-      return Task.FromResult<string?>(null);
-    }
-
-    public Task<List<PipeWireStreamInfo>> GetScreenCastStreams()
-    {
-      return Task.FromResult<List<PipeWireStreamInfo>>([]);
-    }
-
-    public Task Initialize(bool forceReinitialization = false, bool bypassRestoreToken = false)
-    {
-       InitializeCalls.Add(forceReinitialization);
-       return Task.CompletedTask;
-    }
-
-    public Task NotifyKeyboardKeycodeAsync(string sessionHandle, int keycode, bool pressed)
-    {
-      return Task.CompletedTask;
-    }
-
-    public Task NotifyPointerAxisAsync(string sessionHandle, double dx, double dy, bool finish = true)
-    {
-      return Task.CompletedTask;
-    }
-
-    public Task NotifyPointerAxisDiscreteAsync(string sessionHandle, uint axis, int steps)
-    {
-      return Task.CompletedTask;
-    }
-
-    public Task NotifyPointerButtonAsync(string sessionHandle, int button, bool pressed)
-    {
-      return Task.CompletedTask;
-    }
-
-    public Task NotifyPointerMotionAbsoluteAsync(string sessionHandle, uint stream, double x, double y)
-    {
-      return Task.CompletedTask;
-    }
-
-    public Task NotifyPointerMotionAsync(string sessionHandle, double dx, double dy)
-    {
-      return Task.CompletedTask;
-    }
   }
 }
