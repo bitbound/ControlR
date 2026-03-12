@@ -34,7 +34,7 @@ public partial class PermissionsViewModelWayland(IServiceProvider serviceProvide
   private async Task GrantRemoteControlPermission()
   {
     var accessor = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-    await accessor.RequestRemoteControlPermission(force: true);
+    await accessor.RequestRemoteControlPermission(bypassRestoreToken: true);
     await SetPermissionValues();
   }
 }

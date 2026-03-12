@@ -13,7 +13,7 @@ public interface IXdgDesktopPortal : IDisposable
   Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection();
   Task<string?> GetRemoteDesktopSessionHandle();
   Task<List<PipeWireStreamInfo>> GetScreenCastStreams();
-  Task Initialize(bool force = false);
+  Task Initialize(bool forceReinitialization = false, bool bypassRestoreToken = false);
   Task NotifyKeyboardKeycodeAsync(string sessionHandle, int keycode, bool pressed);
   Task NotifyPointerAxisAsync(string sessionHandle, double dx, double dy, bool finish = true);
   Task NotifyPointerAxisDiscreteAsync(string sessionHandle, uint axis, int steps);
@@ -78,9 +78,9 @@ public sealed class XdgDesktopPortal(
     return _streams ?? throw new InvalidOperationException("ScreenCast streams are not initialized.");
   }
 
-  public async Task Initialize(bool force = false)
+  public async Task Initialize(bool forceReinitialization = false, bool bypassRestoreToken = false)
   {
-    await EnsureInitializedAsync(force);
+    await EnsureInitializedAsync(forceReinitialization, bypassRestoreToken);
   }
 
   public async Task NotifyKeyboardKeycodeAsync(string sessionHandle, int keycode, bool pressed)
@@ -235,14 +235,25 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task EnsureInitializedAsync(bool force = false)
+  private async Task EnsureInitializedAsync(bool forceReinitialization = false, bool bypassRestoreToken = false)
   {
-    if (_initialized) return;
+    if (_initialized && !forceReinitialization)
+    {
+      return;
+    }
 
     await _initLock.WaitAsync();
     try
     {
-      if (_initialized) return;
+      if (_initialized && !forceReinitialization)
+      {
+        return;
+      }
+
+      if (forceReinitialization)
+      {
+        ResetState();
+      }
 
       await ConnectAsync();
 
@@ -257,7 +268,8 @@ public sealed class XdgDesktopPortal(
       _logger.LogInformation("Created RemoteDesktop session: {Session}", _sessionHandle);
 
       var remoteDesktopOptions = new Dictionary<string, object> { ["persist_mode"] = 2u };
-      if (!force)
+
+      if (!bypassRestoreToken)
       {
         var restoreToken = LoadRestoreToken();
         if (!string.IsNullOrEmpty(restoreToken))
@@ -353,6 +365,17 @@ public sealed class XdgDesktopPortal(
       _logger.LogError(ex, "Error opening PipeWire remote");
       return Result.Fail<SafeFileHandle>($"Exception opening PipeWire remote: {ex.Message}");
     }
+  }
+
+  private void ResetState()
+  {
+    _pipewireFd?.Dispose();
+    _connection?.Dispose();
+    _pipewireFd = null;
+    _connection = null;
+    _sessionHandle = null;
+    _streams = null;
+    _initialized = false;
   }
 
   private void SaveRestoreToken(string token)

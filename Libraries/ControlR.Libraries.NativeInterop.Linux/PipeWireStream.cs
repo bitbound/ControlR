@@ -13,6 +13,7 @@ public class PipeWireStream : IDisposable
 
   private const ulong AppSinkPullTimeout = 100 * 1_000_000;
 
+  private readonly DateTime _createdUtc = DateTime.UtcNow;
   private readonly TaskCompletionSource<bool> _firstFrameReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
   private readonly ILogger _logger;
   private readonly int _logicalHeight;
@@ -23,6 +24,7 @@ public class PipeWireStream : IDisposable
   private nint _appsink;
   private Thread? _captureThread;
   private bool _disposed;
+  private long _lastFrameReceivedUtcTicks;
   private PipeWireFrameData? _latestFrame;
   private int _loggedDimensionMismatch;
   private int _loggedStrideMismatch;
@@ -55,8 +57,20 @@ public class PipeWireStream : IDisposable
   /// Gets the latest known physical frame height in pixels.
   /// Returns 0 until the first frame has been negotiated and received.
   /// </summary>
+  public DateTime CreatedUtc => _createdUtc;
   public int Height => Volatile.Read(ref _physicalHeight);
   public bool IsStreaming => !_disposed && _pipeline != nint.Zero;
+  public DateTime? LastFrameReceivedUtc
+  {
+    get
+    {
+      var ticks = Interlocked.Read(ref _lastFrameReceivedUtcTicks);
+      return ticks > 0
+        ? new DateTime(ticks, DateTimeKind.Utc)
+        : null;
+    }
+  }
+
   /// <summary>
   /// Gets the latest known physical frame width in pixels.
   /// Returns 0 until the first frame has been negotiated and received.
@@ -308,6 +322,7 @@ public class PipeWireStream : IDisposable
 
           Volatile.Write(ref _physicalWidth, physicalWidth);
           Volatile.Write(ref _physicalHeight, physicalHeight);
+          Interlocked.Exchange(ref _lastFrameReceivedUtcTicks, DateTime.UtcNow.Ticks);
           _firstFrameReceived.TrySetResult(true);
 
           var stride = physicalWidth * 4;
@@ -349,8 +364,8 @@ public class PipeWireStream : IDisposable
       {
         _logger.LogError(ex, "Error in capture loop iteration");
       }
-
-      _logger.LogInformation("GStreamer reading ended.");
     }
+
+    _logger.LogInformation("GStreamer reading ended.");
   }
 }

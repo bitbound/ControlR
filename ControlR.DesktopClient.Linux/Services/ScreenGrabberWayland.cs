@@ -1,13 +1,9 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.NativeInterop.Linux;
-using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using System.Collections.Concurrent;
-using System.Buffers;
-using System.Runtime.InteropServices;
 
 namespace ControlR.DesktopClient.Linux.Services;
 
@@ -33,25 +29,26 @@ namespace ControlR.DesktopClient.Linux.Services;
 /// </para>
 /// </summary>
 internal class ScreenGrabberWayland(
+  TimeProvider timeProvider,
   IDisplayManagerWayland displayManager,
   ILogger<ScreenGrabberWayland> logger) : IScreenGrabber
 {
   private const string CaptureModePipeWire = "WaylandPipeWire";
   private const int StreamStartPollingIntervalMs = 100;
   private const int StreamStartTimeoutMs = 3_000;
+  private static readonly TimeSpan _recoveryCooldown = TimeSpan.FromSeconds(2);
+  private static readonly TimeSpan _streamStaleThreshold = TimeSpan.FromSeconds(2);
 
   private readonly IDisplayManagerWayland _displayManager = displayManager;
   private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<ScreenGrabberWayland> _logger = logger;
-  private readonly ConcurrentDictionary<string, PipeWireStream> _streams = new();
+  private readonly TimeProvider _timeProvider = timeProvider;
 
   private bool _disposed;
   private bool _isInitialized;
+  private long _lastRecoveryAttemptUtcTicks;
+  private ConcurrentDictionary<string, PipeWireStream> _streams = new();
 
-  /// <summary>
-  /// Gets the PipeWire streams mapped by display device name
-  /// </summary>
-  public IReadOnlyDictionary<string, PipeWireStream> Streams => _streams;
 
   public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
@@ -62,24 +59,21 @@ internal class ScreenGrabberWayland(
         return CaptureResult.Fail("Wayland screen capture not initialized. Call InitializeAsync first.");
       }
 
-      var streams = Streams;
-      if (streams.Count == 0)
+      if (_streams.Count == 0)
       {
         return CaptureResult.Fail("No streams available.");
       }
 
       // For single display, just return that display's capture
-      if (streams.Count == 1)
+      if (_streams.Count == 1)
       {
-        var stream = streams.Values.First();
-        var result = CaptureStream(stream);
+        var kvp = _streams.First();
+        var deviceName = kvp.Key;
+        var stream = kvp.Value;
+        var result = await CaptureStream(deviceName, stream, CancellationToken.None);
         if (result.IsSuccess && result.Bitmap is not null)
         {
-          var deviceName = streams.FirstOrDefault(x => ReferenceEquals(x.Value, stream)).Key;
-          if (!string.IsNullOrWhiteSpace(deviceName))
-          {
-            _displayManager.UpdateCaptureSize(deviceName, result.Bitmap.Width, result.Bitmap.Height);
-          }
+          _displayManager.UpdateCaptureSize(deviceName, result.Bitmap.Width, result.Bitmap.Height);
         }
         return result;
       }
@@ -95,20 +89,19 @@ internal class ScreenGrabberWayland(
 
       var displays = await _displayManager.GetDisplays();
 
-      var compositeBitmap = new SKBitmap((int)virtualBounds.Width, (int)virtualBounds.Height);
+      var compositeBitmap = new SKBitmap(virtualBounds.Width, virtualBounds.Height);
       using var canvas = new SKCanvas(compositeBitmap);
       canvas.Clear(SKColors.Black);
 
-      var streamsDict = Streams;
       foreach (var display in displays)
       {
-        if (!streamsDict.TryGetValue(display.DeviceName, out var stream))
+        if (!_streams.TryGetValue(display.DeviceName, out var stream))
         {
           _logger.LogWarning("No stream found for display {DisplayName}", display.DeviceName);
           continue;
         }
 
-        using var captureResult = CaptureStream(stream);
+        using var captureResult = await CaptureStream(display.DeviceName, stream, CancellationToken.None);
         if (!captureResult.IsSuccess || captureResult.Bitmap is null)
         {
           _logger.LogWarning("Failed to capture display {DisplayName}", display.DeviceName);
@@ -118,8 +111,8 @@ internal class ScreenGrabberWayland(
         _displayManager.UpdateCaptureSize(display.DeviceName, captureResult.Bitmap.Width, captureResult.Bitmap.Height);
 
         var destRect = SKRect.Create(
-          (float)(display.LayoutBounds.X - virtualBounds.X),
-          (float)(display.LayoutBounds.Y - virtualBounds.Y),
+          display.LayoutBounds.X - virtualBounds.X,
+          display.LayoutBounds.Y - virtualBounds.Y,
           display.LayoutBounds.Width,
           display.LayoutBounds.Height);
 
@@ -148,18 +141,17 @@ internal class ScreenGrabberWayland(
       }
 
       // Find the stream for the target display
-      var streamsDict = Streams;
-      if (!streamsDict.TryGetValue(targetDisplay.DeviceName, out var stream))
+      if (!_streams.TryGetValue(targetDisplay.DeviceName, out var stream))
       {
         _logger.LogWarning("No stream found for display {DisplayName}. Falling back to first available stream.", targetDisplay.DeviceName);
-        stream = streamsDict.Values.FirstOrDefault();
+        stream = _streams.Values.FirstOrDefault();
         if (stream is null)
         {
           return CaptureResult.Fail($"No stream available for display {targetDisplay.DeviceName}");
         }
       }
 
-      var result = CaptureStream(stream);
+      var result = await CaptureStream(targetDisplay.DeviceName, stream, CancellationToken.None);
       if (result.IsSuccess && result.Bitmap is not null)
       {
         _displayManager.UpdateCaptureSize(targetDisplay.DeviceName, result.Bitmap.Width, result.Bitmap.Height);
@@ -200,7 +192,7 @@ internal class ScreenGrabberWayland(
         return;
       }
 
-      var streams = await _displayManager.CreatePipeWireStreams(cancellationToken);
+      var streams = await _displayManager.CreatePipeWireStreams(cancellationToken: cancellationToken);
       if (streams.Count == 0)
       {
         throw new InvalidOperationException("Failed to get portal streams or connection");
@@ -208,40 +200,8 @@ internal class ScreenGrabberWayland(
 
       _logger.LogInformation("Created {Count} PipeWire stream(s)", streams.Count);
 
-      // Dispose any old streams.
-      DisposeStreams();
-
-      foreach (var kv in streams)
-      {
-        _streams[kv.Key] = kv.Value;
-      }
-
-      // Wait for each stream to be streaming and have at least one frame
-      foreach (var kv in _streams.OrderBy(k => k.Key))
-      {
-        var deviceName = kv.Key;
-        var stream = kv.Value;
-
-        for (var j = 0; j < StreamStartTimeoutMs / StreamStartPollingIntervalMs; j++)
-        {
-          if (stream.IsStreaming && stream.TryGetLatestFrame(out _))
-          {
-            break;
-          }
-          await Task.Delay(StreamStartPollingIntervalMs, cancellationToken);
-        }
-
-        if (stream.Width > 0 && stream.Height > 0)
-        {
-          _logger.LogInformation(
-            "Stream {Device} initialized with physical dimensions: {Width}x{Height}",
-            deviceName,
-            stream.Width,
-            stream.Height);
-
-          _displayManager.UpdateCaptureSize(deviceName, stream.Width, stream.Height);
-        }
-      }
+      await WaitForStreamsReady(streams, cancellationToken);
+      ReplaceStreams(streams);
 
       _isInitialized = true;
       _logger.LogInformation("Wayland screen capture fully initialized");
@@ -257,10 +217,37 @@ internal class ScreenGrabberWayland(
     }
   }
 
-  private CaptureResult CaptureStream(PipeWireStream stream)
+  internal static bool ShouldRecoverStream(
+    DateTime nowUtc,
+    DateTime createdUtc,
+    DateTime? lastFrameReceivedUtc,
+    TimeSpan staleThreshold,
+    DateTime? lastRecoveryAttemptUtc,
+    TimeSpan recoveryCooldown)
+  {
+    var mostRecentActivityUtc = lastFrameReceivedUtc ?? createdUtc;
+    if (nowUtc - mostRecentActivityUtc < staleThreshold)
+    {
+      return false;
+    }
+
+    if (lastRecoveryAttemptUtc is not null && nowUtc - lastRecoveryAttemptUtc < recoveryCooldown)
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  private async Task<CaptureResult> CaptureStream(
+    string deviceName,
+    PipeWireStream stream,
+    CancellationToken cancellationToken)
   {
     try
     {
+      stream = await RefreshStreamIfStale(deviceName, stream, cancellationToken);
+
       if (!stream.TryGetLatestFrame(out var frameData))
       {
         return CaptureResult.NoChanges(CaptureModePipeWire);
@@ -317,5 +304,178 @@ internal class ScreenGrabberWayland(
       try { kv.Value.Dispose(); } catch { }
     }
     _streams.Clear();
+  }
+
+  private DateTime? GetLastRecoveryAttemptUtc()
+  {
+    var ticks = Interlocked.Read(ref _lastRecoveryAttemptUtcTicks);
+    return ticks > 0
+      ? new DateTime(ticks, DateTimeKind.Utc)
+      : null;
+  }
+
+  private async Task<PipeWireStream> RefreshStreamIfStale(
+    string deviceName,
+    PipeWireStream stream,
+    CancellationToken cancellationToken)
+  {
+    var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+    if (!ShouldRecoverStream(
+          nowUtc,
+          stream.CreatedUtc,
+          stream.LastFrameReceivedUtc,
+          _streamStaleThreshold,
+          GetLastRecoveryAttemptUtc(),
+          _recoveryCooldown))
+    {
+      return stream;
+    }
+
+    if (!await TryRefreshStreams(
+          deviceName,
+          $"stream has not produced a new frame since {(stream.LastFrameReceivedUtc ?? stream.CreatedUtc):O}",
+          cancellationToken))
+    {
+      return stream;
+    }
+
+    if (_streams.TryGetValue(deviceName, out var refreshedStream))
+    {
+      return refreshedStream;
+    }
+
+    return _streams.Values.FirstOrDefault() ?? stream;
+  }
+
+  private void ReplaceStreams(IReadOnlyDictionary<string, PipeWireStream> replacementStreams)
+  {
+    var newStreams = new ConcurrentDictionary<string, PipeWireStream>(replacementStreams);
+
+    foreach (var kv in replacementStreams)
+    {
+      newStreams[kv.Key] = kv.Value;
+    }
+
+    var originalStreams =Interlocked.Exchange(ref _streams, newStreams);
+
+    foreach (var kv in originalStreams)
+    {
+      try
+      {
+        kv.Value.Dispose();
+      }
+      catch
+      {
+      }
+    }
+    originalStreams.Clear();
+  }
+
+  private async Task<bool> TryRefreshStreams(
+    string deviceName,
+    string reason,
+    CancellationToken cancellationToken)
+  {
+    if (_disposed)
+    {
+      return false;
+    }
+
+    await _initLock.WaitAsync(cancellationToken);
+    try
+    {
+      var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+      if (GetLastRecoveryAttemptUtc() is { } lastRecoveryAttemptUtc &&
+          nowUtc - lastRecoveryAttemptUtc < _recoveryCooldown)
+      {
+        return false;
+      }
+
+      Interlocked.Exchange(ref _lastRecoveryAttemptUtcTicks, nowUtc.Ticks);
+
+      _logger.LogWarning(
+        "Refreshing Wayland PipeWire streams for display {DeviceName} because {Reason}.",
+        deviceName,
+        reason);
+
+      var replacementStreams = await _displayManager.CreatePipeWireStreams(
+        forcePortalReinitialize: true,
+        cancellationToken: cancellationToken);
+
+      if (replacementStreams.Count == 0)
+      {
+        _logger.LogWarning("Failed to refresh Wayland PipeWire streams. No replacement streams were created.");
+        return false;
+      }
+
+      try
+      {
+        await WaitForStreamsReady(replacementStreams, cancellationToken);
+        ReplaceStreams(replacementStreams);
+        _isInitialized = !_streams.IsEmpty;
+
+        _logger.LogInformation("Wayland PipeWire streams refreshed successfully.");
+        return true;
+      }
+      catch
+      {
+        foreach (var stream in replacementStreams.Values)
+        {
+          stream.Dispose();
+        }
+
+        throw;
+      }
+    }
+    catch (OperationCanceledException)
+    {
+      throw;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Error while refreshing Wayland PipeWire streams.");
+      return false;
+    }
+    finally
+    {
+      _initLock.Release();
+    }
+  }
+
+  private async Task WaitForStreamsReady(
+    IReadOnlyDictionary<string, PipeWireStream> streams,
+    CancellationToken cancellationToken)
+  {
+    foreach (var kv in streams.OrderBy(k => k.Key))
+    {
+      var deviceName = kv.Key;
+      var stream = kv.Value;
+
+      for (var j = 0; j < StreamStartTimeoutMs / StreamStartPollingIntervalMs; j++)
+      {
+        if (stream.IsStreaming && stream.TryGetLatestFrame(out var frameData))
+        {
+          frameData.Dispose();
+          break;
+        }
+
+        await Task.Delay(StreamStartPollingIntervalMs, cancellationToken);
+      }
+
+      if (stream.Width > 0 && stream.Height > 0)
+      {
+        _logger.LogInformation(
+          "Stream {Device} initialized with physical dimensions: {Width}x{Height}",
+          deviceName,
+          stream.Width,
+          stream.Height);
+
+        _displayManager.UpdateCaptureSize(deviceName, stream.Width, stream.Height);
+      }
+      else
+      {
+        _logger.LogWarning("Stream {Device} did not report physical dimensions before timeout.", deviceName);
+      }
+    }
   }
 }

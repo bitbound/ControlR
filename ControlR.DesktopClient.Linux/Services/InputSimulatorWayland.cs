@@ -344,27 +344,33 @@ public class InputSimulatorWayland(
 
   private async Task<bool> EnsureInitializedAsync()
   {
-    if (_isInitialized && _sessionHandle is not null)
-    {
-      return true;
-    }
-
     await _initLock.WaitAsync();
     try
     {
-      if (_isInitialized && _sessionHandle is not null)
+      if (!_isInitialized)
+      {
+        await _portalAccessor.Initialize();
+      }
+
+      var sessionHandle = await _portalAccessor.GetRemoteDesktopSessionHandle();
+
+      if (sessionHandle == null)
+      {
+        _logger.LogError("Failed to get RemoteDesktop session from portal accessor");
+        _isInitialized = false;
+        _sessionHandle = null;
+        _screenCastStreams.Clear();
+        return false;
+      }
+
+      if (_isInitialized && string.Equals(_sessionHandle, sessionHandle, StringComparison.Ordinal))
       {
         return true;
       }
 
-      await _portalAccessor.Initialize();
-      _sessionHandle = await _portalAccessor.GetRemoteDesktopSessionHandle();
-      
-      if (_sessionHandle == null)
-      {
-        _logger.LogError("Failed to get RemoteDesktop session from portal accessor");
-        return false;
-      }
+      var previousSessionHandle = _sessionHandle;
+      _sessionHandle = sessionHandle;
+      _screenCastStreams.Clear();
 
       var screenCastStreams = await _portalAccessor.GetScreenCastStreams();
       foreach (var stream in screenCastStreams)
@@ -378,7 +384,17 @@ public class InputSimulatorWayland(
       }
 
       _isInitialized = true;
-      _logger.LogInformation("Wayland input simulation initialized");
+      if (previousSessionHandle is null)
+      {
+        _logger.LogInformation("Wayland input simulation initialized");
+      }
+      else
+      {
+        _logger.LogInformation(
+          "Wayland input simulation synchronized to refreshed portal session {SessionHandle}",
+          _sessionHandle);
+      }
+
       return true;
     }
     catch (Exception ex)

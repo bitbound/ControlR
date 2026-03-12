@@ -16,7 +16,7 @@ internal interface IDisplayManagerWayland : IDisplayManager
 {
   bool HasAnyCaptureSizes { get; }
 
-  Task<IReadOnlyDictionary<string, PipeWireStream>> CreatePipeWireStreams(CancellationToken cancellationToken = default);
+  Task<IReadOnlyDictionary<string, PipeWireStream>> CreatePipeWireStreams(bool forcePortalReinitialize = false, CancellationToken cancellationToken = default);
   bool TryGetCaptureSize(string deviceName, out Size size);
   void UpdateCaptureSize(string deviceName, int physicalWidth, int physicalHeight);
 }
@@ -49,11 +49,13 @@ internal class DisplayManagerWayland(
 
   public bool HasAnyCaptureSizes => !_captureSizes.IsEmpty;
 
-  public async Task<IReadOnlyDictionary<string, PipeWireStream>> CreatePipeWireStreams(CancellationToken cancellationToken = default)
+  public async Task<IReadOnlyDictionary<string, PipeWireStream>> CreatePipeWireStreams(bool forcePortalReinitialize = false, CancellationToken cancellationToken = default)
   {
     var result = new Dictionary<string, PipeWireStream>();
     try
     {
+      await _portalService.Initialize(forcePortalReinitialize);
+
       var connection = await _portalService.GetPipeWireConnection();
       if (connection is null || _streamFactory is null)
       {

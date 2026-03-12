@@ -9,7 +9,7 @@ namespace ControlR.DesktopClient.Linux.Services;
 public interface IWaylandPermissionProvider
 {
   Task<bool> IsRemoteControlPermissionGranted();
-  Task<bool> RequestRemoteControlPermission(bool force = false);
+  Task<bool> RequestRemoteControlPermission(bool bypassRestoreToken = false);
 }
 
 internal class WaylandPermissionProvider(
@@ -36,12 +36,12 @@ internal class WaylandPermissionProvider(
       return false;
     }
   }
-  public async Task<bool> RequestRemoteControlPermission(bool force = false)
+  public async Task<bool> RequestRemoteControlPermission(bool bypassRestoreToken = false)
   {
     try
     {
       using var xdgPortal = _xdgFactory.CreateNew();
-      await xdgPortal.Initialize(force);
+      await xdgPortal.Initialize(bypassRestoreToken);
       var isGranted = await IsRemoteControlPermissionGranted();
       if (isGranted)
       {

@@ -19,17 +19,21 @@ namespace ControlR.DesktopClient.Linux.Tests;
 
 internal class FakePortal : IXdgDesktopPortal
 {
-  public List<(string session, int keycode, bool pressed)> KeyboardCalls { get; } = new();
+  public List<(string session, int keycode, bool pressed)> KeyboardCalls { get; } = [];
+  public string SessionHandle { get; set; } = "fake-session";
 
   public void Dispose() { }
 
-  public Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection() => Task.FromResult<(SafeFileHandle, string)?>((new SafeFileHandle(System.IntPtr.Zero, false), "fake-session"));
+  public Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection() => Task.FromResult<(SafeFileHandle, string)?>((new SafeFileHandle(System.IntPtr.Zero, false), SessionHandle));
 
-  public Task<string?> GetRemoteDesktopSessionHandle() => Task.FromResult<string?>("fake-session");
+  public Task<string?> GetRemoteDesktopSessionHandle() => Task.FromResult<string?>(SessionHandle);
 
   public Task<List<PipeWireStreamInfo>> GetScreenCastStreams() => Task.FromResult(new List<PipeWireStreamInfo>());
 
-  public Task Initialize(bool force = false) => Task.CompletedTask;
+  public Task Initialize(bool forceReinitialization = false, bool bypassRestoreToken = false)
+  {
+    return Task.CompletedTask;
+  }
 
   public Task NotifyKeyboardKeycodeAsync(string sessionHandle, int keycode, bool pressed)
   {
@@ -68,6 +72,24 @@ internal class FakeDesktopCapturerFactory : IDesktopCapturerFactory
 
 public class InputSimulatorWaylandTests
 {
+  [Fact]
+  public async Task InvokeKeyEvent_RefreshesPortalSessionHandle_AfterPortalSessionChanges()
+  {
+    var portal = new FakePortal();
+    var factory = new FakeDesktopCapturerFactory();
+    var logger = NullLogger<InputSimulatorWayland>.Instance;
+
+    var sim = new InputSimulatorWayland(portal, factory, logger);
+
+    await sim.InvokeKeyEvent("Enter", string.Empty, true, KeyboardInputMode.Auto, KeyEventModifiersDto.None);
+    portal.SessionHandle = "refreshed-session";
+    await sim.InvokeKeyEvent("Enter", string.Empty, true, KeyboardInputMode.Auto, KeyEventModifiersDto.None);
+
+    Assert.Equal(2, portal.KeyboardCalls.Count);
+    Assert.Equal("fake-session", portal.KeyboardCalls[0].session);
+    Assert.Equal("refreshed-session", portal.KeyboardCalls[1].session);
+  }
+
   [Fact]
   public async Task InvokeKeyEvent_Uses_KeyName_When_Code_Is_Null()
   {
