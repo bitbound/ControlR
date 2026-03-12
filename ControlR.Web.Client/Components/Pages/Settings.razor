@@ -141,6 +141,18 @@
   </MudRadioGroup>
 </div>
 
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Default View Mode
+  </MudText>
+
+  <MudRadioGroup @bind-Value:get="_viewMode" @bind-Value:set="SetViewMode" T="ViewMode">
+    <MudRadio Value="@ViewMode.Fit" Color="Color.Primary">Fit</MudRadio>
+    <MudRadio Value="@ViewMode.Stretch" Color="Color.Primary">Stretch</MudRadio>
+    <MudRadio Value="@ViewMode.Scale" Color="Color.Primary">Scale</MudRadio>
+  </MudRadioGroup>
+</div>
+
 @code {
 
   private bool _notifyUser;
@@ -150,6 +162,7 @@
   private bool? _tenantNotifySetting;
   private ThemeMode _themeMode = ThemeMode.Auto;
   private KeyboardInputMode _keyboardInputMode = KeyboardInputMode.Auto;
+  private ViewMode _viewMode = ViewMode.Fit;
 
   protected override async Task OnInitializedAsync()
   {
@@ -171,6 +184,7 @@
     _userDisplayName = await UserSettings.GetUserDisplayName();
     _themeMode = await UserSettings.GetThemeMode();
     _keyboardInputMode = await UserSettings.GetKeyboardInputMode();
+    _viewMode = await UserSettings.GetViewMode();
 
     // If tenant setting is enforced, override the user setting display
     if (_tenantNotifySetting.HasValue)
@@ -225,6 +239,13 @@
     _userDisplayName = value;
     await UserSettings.SetUserDisplayName(value);
     Snackbar.Add("Display name updated", Severity.Success);
+  }
+
+  private async Task SetViewMode(ViewMode value)
+  {
+    _viewMode = value;
+    await UserSettings.SetViewMode(value);
+    Snackbar.Add("View mode updated", Severity.Success);
   }
 
   private static string? ValidateDisplayName(string input)

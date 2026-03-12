@@ -5,9 +5,10 @@ using System.Runtime.Versioning;
 namespace ControlR.Web.Client.Components;
 
 [SupportedOSPlatform("browser")]
-public partial class Dashboard
+public partial class Dashboard : IDisposable
 {
   private readonly ManualResetEventAsync _componentLoadedSignal = new(false);
+  private readonly DisposableCollection _disposables = [];
   private readonly Dictionary<string, SortDefinition<DeviceViewModel>> _sortDefinitions = new()
   {
     ["IsOnline"] = new SortDefinition<DeviceViewModel>(nameof(DeviceViewModel.Dto.IsOnline), true, 0, x => x.Dto.IsOnline),
@@ -18,54 +19,54 @@ public partial class Dashboard
   private MudDataGrid<DeviceViewModel>? _dataGrid;
   private bool _hideOfflineDevices;
   private bool _loading = true;
+  private bool _openDeviceInNewTab;
   private int _rowsPerPage = 25;
   private string? _searchText;
   private HashSet<TagViewModel> _selectedTags = [];
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
-
   [Inject]
   public required IDialogService DialogService { get; init; }
-
   [Inject]
   public required IJsInterop JsInterop { get; init; }
-
   [Inject]
   public required ILogger<Dashboard> Logger { get; init; }
-
   [Inject]
   public required IHubConnection<IViewerHub> MainHub { get; init; }
-
   [Inject]
   public required IMessenger Messenger { get; init; }
-
   [Inject]
   public required NavigationManager NavMan { get; init; }
-
   [Inject]
   public required IUserSettingsProvider Settings { get; init; }
-
   [Inject]
   public required ISnackbar Snackbar { get; init; }
-
   [Inject]
   public required IUserTagStore UserTagStore { get; init; }
-
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
   private bool ShouldBypassHideOfflineDevices =>
     !string.IsNullOrWhiteSpace(_searchText);
 
+  public void Dispose()
+  {
+    _disposables.Dispose();
+    GC.SuppressFinalize(this);
+  }
+
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
 
     _hideOfflineDevices = await Settings.GetHideOfflineDevices();
+    _openDeviceInNewTab = await Settings.GetOpenDeviceInNewTab();
 
-    Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage);
-    Messenger.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceived);
+    _disposables.AddRange(
+      Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage),
+      Messenger.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceived)
+    );
 
     _loading = false;
     _componentLoadedSignal.Set();
@@ -105,13 +106,37 @@ public partial class Dashboard
   private async Task LaunchDeviceAccess(DeviceViewModel device)
   {
     var uri = $"{NavMan.BaseUri.TrimEnd('/')}/device-access?deviceId={device.Id}";
-    await JsInterop.OpenWindow(uri, "_blank");
+    if (_openDeviceInNewTab)
+    {
+      await JsInterop.OpenWindow(uri, "_blank");
+    }
+    else
+    {
+      var navOptions = new NavigationOptions()
+      {
+        ForceLoad = false,
+        HistoryEntryState = HistoryEntryStates.CanGoBack
+      };
+      NavMan.NavigateTo($"/device-access?deviceId={device.Id}", navOptions);
+    }
   }
 
   private async Task LaunchRemoteControl(DeviceViewModel device)
   {
     var uri = $"{NavMan.BaseUri.TrimEnd('/')}/device-access/remote-control?deviceId={device.Id}";
-    await JsInterop.OpenWindow(uri, "_blank");
+    if (_openDeviceInNewTab)
+    {
+      await JsInterop.OpenWindow(uri, "_blank");
+    }
+    else
+    {
+      var navOptions = new NavigationOptions()
+      {
+        ForceLoad = false,
+        HistoryEntryState = HistoryEntryStates.CanGoBack
+      };
+      NavMan.NavigateTo($"/device-access/remote-control?deviceId={device.Id}", navOptions);
+    }
   }
 
   private async Task<GridData<DeviceViewModel>> LoadServerData(GridState<DeviceViewModel> state)
@@ -189,6 +214,13 @@ public partial class Dashboard
     _selectedTags = [.. tags];
     await ReloadGridData();
   }
+
+  private async Task OpenDeviceInNewTabChanged(bool isChecked)
+  {
+    _openDeviceInNewTab = isChecked;
+    await Settings.SetOpenDeviceInNewTab(isChecked);
+  }
+
   private async Task RefreshDeviceInfo(DeviceViewModel device)
   {
     try
@@ -311,6 +343,7 @@ public partial class Dashboard
       Logger.LogError(ex, "Error while shutting down device.");
     }
   }
+
   private async Task UninstallAgent(DeviceViewModel device)
   {
     try

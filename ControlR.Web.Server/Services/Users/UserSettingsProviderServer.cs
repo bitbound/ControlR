@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ControlR.Libraries.Viewer.Common.Enums;
 using ControlR.Web.Client.Constants;
 using ControlR.Web.Client.Models;
 using ControlR.Web.Client.Services;
@@ -26,6 +27,11 @@ internal class UserSettingsProviderServer(
     return GetPref(UserPreferenceNames.KeyboardInputMode, KeyboardInputMode.Auto);
   }
 
+  public Task<bool> GetOpenDeviceInNewTab()
+  {
+    return GetPref(UserPreferenceNames.OpenDeviceInNewTab, true);
+  }
+
   public Task<bool> GetNotifyUserOnSessionStart()
   {
     return GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
@@ -41,6 +47,11 @@ internal class UserSettingsProviderServer(
     return GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
   }
 
+  public Task<ViewMode> GetViewMode()
+  {
+    return GetPref(UserPreferenceNames.ViewMode, ViewMode.Fit);
+  }
+
   public Task SetHideOfflineDevices(bool value)
   {
     return SetPref(UserPreferenceNames.HideOfflineDevices, value);
@@ -49,6 +60,11 @@ internal class UserSettingsProviderServer(
   public Task SetKeyboardInputMode(KeyboardInputMode value)
   {
     return SetPref(UserPreferenceNames.KeyboardInputMode, value);
+  }
+
+  public Task SetOpenDeviceInNewTab(bool value)
+  {
+    return SetPref(UserPreferenceNames.OpenDeviceInNewTab, value);
   }
 
   public Task SetNotifyUserOnSessionStart(bool value)
@@ -64,6 +80,11 @@ internal class UserSettingsProviderServer(
   public Task SetUserDisplayName(string value)
   {
     return SetPref(UserPreferenceNames.UserDisplayName, value);
+  }
+
+  public Task SetViewMode(ViewMode value)
+  {
+    return SetPref(UserPreferenceNames.ViewMode, value);
   }
 
   private async Task<T> GetPref<T>(string preferenceName, T defaultValue)

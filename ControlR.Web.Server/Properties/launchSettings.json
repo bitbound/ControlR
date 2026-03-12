@@ -13,7 +13,7 @@
     },
     "https": {
       "commandName": "Project",
-      "launchBrowser": false,
+      "launchBrowser": true,
       "hotReloadEnabled": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

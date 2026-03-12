@@ -30,6 +30,7 @@ global using ControlR.Web.Client.Components.Dialogs;
 global using ControlR.Web.Client.Authz;
 global using Microsoft.AspNetCore.Authorization;
 global using ControlR.Web.Client.Authz.Policies;
+global using ControlR.Web.Client.Models;
 global using ControlR.Web.Client.StateManagement.Stores;
 global using ControlR.Web.Client.ViewModels;
 global using ControlR.Web.Client.Components.ContentWindows;

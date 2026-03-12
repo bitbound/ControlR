@@ -266,6 +266,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
 
     RemoteControlState.KeyboardInputMode = await UserPreferences.GetKeyboardInputMode();
+    RemoteControlState.ViewMode = await UserPreferences.GetViewMode();
   }
 
   private async Task DrawRegion(ScreenRegionDto dto)

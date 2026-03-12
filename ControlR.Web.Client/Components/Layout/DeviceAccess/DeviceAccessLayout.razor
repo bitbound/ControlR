@@ -13,17 +13,26 @@
 				@if (RendererInfo.IsInteractive)
 				{
 					<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
-												 OnClick="@(() => ToggleNavDrawer())" />
+                         OnClick="@(() => ToggleNavDrawer())" Class="me-2" />
 				}
 				else
 				{
 					<MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
-																		Edge="Edge.Start" />
+																		Edge="Edge.Start" Class="me-2" />
 				}
+
+        @if (_canGoBack)
+        {
+          <MudTooltip Text="Back to Dashboard">
+
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"
+                           OnClick="@(NavigateBackToDashboard)" Class="me-2" />
+          </MudTooltip>
+        }
 
 				@if (!string.IsNullOrWhiteSpace(_deviceName))
 				{
-					<MudText Typo="Typo.subtitle2" Color="Color.Info" Class="ms-4" Inline>
+					<MudText Typo="Typo.subtitle2" Color="Color.Info" Inline>
 						Device:
 					</MudText>
 					<MudText Typo="Typo.subtitle2" Class="ms-1" Inline>
@@ -33,7 +42,13 @@
 
 				<MudSpacer />
 
-				<LayoutHeaderButtons OnThemeChanged="HandleThemeChanged" />
+        @if (RendererInfo.IsInteractive)
+        {
+          <ConnectionIndicator THub="@IViewerHub" />
+        }
+
+        <ThemeToggle OnThemeChanged="HandleThemeChanged" />
+
 			</MudAppBar>
 			<MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
 				<MudDrawerHeader Class="pa-4">

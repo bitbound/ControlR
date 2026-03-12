@@ -10,13 +10,17 @@ public interface IUserSettingsProvider
   Task<bool> GetHideOfflineDevices();
   Task<KeyboardInputMode> GetKeyboardInputMode();
   Task<bool> GetNotifyUserOnSessionStart();
+  Task<bool> GetOpenDeviceInNewTab();
   Task<ThemeMode> GetThemeMode();
   Task<string> GetUserDisplayName();
+  Task<ViewMode> GetViewMode();
   Task SetHideOfflineDevices(bool value);
   Task SetKeyboardInputMode(KeyboardInputMode value);
   Task SetNotifyUserOnSessionStart(bool value);
+  Task SetOpenDeviceInNewTab(bool value);
   Task SetThemeMode(ThemeMode value);
   Task SetUserDisplayName(string value);
+  Task SetViewMode(ViewMode value);
 }
 
 internal class UserSettingsProviderClient(
@@ -26,7 +30,6 @@ internal class UserSettingsProviderClient(
 {
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly ILogger<UserSettingsProviderClient> _logger = logger;
-
   private readonly ConcurrentDictionary<string, object?> _preferences = new();
   private readonly ISnackbar _snackbar = snackbar;
 
@@ -45,6 +48,11 @@ internal class UserSettingsProviderClient(
     return GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
   }
 
+  public Task<bool> GetOpenDeviceInNewTab()
+  { 
+    return GetPref(UserPreferenceNames.OpenDeviceInNewTab, true);
+  }
+
   public Task<ThemeMode> GetThemeMode()
   {
     return GetPref(UserPreferenceNames.ThemeMode, ThemeMode.Auto);
@@ -53,6 +61,11 @@ internal class UserSettingsProviderClient(
   public Task<string> GetUserDisplayName()
   {
     return GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
+  }
+
+  public Task<ViewMode> GetViewMode()
+  {
+    return GetPref(UserPreferenceNames.ViewMode, ViewMode.Fit);
   }
 
   public Task SetHideOfflineDevices(bool value)
@@ -70,6 +83,11 @@ internal class UserSettingsProviderClient(
     return SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
   }
 
+  public Task SetOpenDeviceInNewTab(bool value)
+  {
+    return SetPref(UserPreferenceNames.OpenDeviceInNewTab, value);
+  }
+
   public Task SetThemeMode(ThemeMode value)
   {
     return SetPref(UserPreferenceNames.ThemeMode, value);
@@ -78,6 +96,11 @@ internal class UserSettingsProviderClient(
   public Task SetUserDisplayName(string value)
   {
     return SetPref(UserPreferenceNames.UserDisplayName, value);
+  }
+
+  public Task SetViewMode(ViewMode value)
+  {
+    return SetPref(UserPreferenceNames.ViewMode, value);
   }
 
   private async Task<T> GetPref<T>(string preferenceName, T defaultValue)

@@ -1,11 +1,11 @@
 ﻿using System.Web;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Components.Layout.DeviceAccess;
 
 public partial class DeviceAccessLayout
 {
+  private bool _canGoBack;
   private Guid _deviceId;
   private string? _deviceName;
   private string? _errorText;
@@ -21,6 +21,12 @@ public partial class DeviceAccessLayout
   public required ILazyInjector<IHubConnector> HubConnector { get; init; }
   [Inject]
   public required ILogger<DeviceAccessLayout> Logger { get; init; }
+  [Inject]
+  public required ILazyInjector<IRemoteControlState> RemoteControlState { get; init; }
+  [Inject]
+  public required ILazyInjector<IViewerRemoteControlStream> RemoteControlStream { get; init; }
+  [Inject]
+  public required ILazyInjector<IScreenWake> ScreenWake { get; init; }
   [Inject]
   public required ILazyInjector<ITerminalState> TerminalState { get; init; }
   [Inject]
@@ -57,6 +63,7 @@ public partial class DeviceAccessLayout
       {
         await TryDisposeChat();
         await TryDisposeTerminal();
+        await TryDisposeRemoteControlSession();
         ChatState.Value.Clear();
       }
       await base.DisposeAsync();
@@ -102,13 +109,19 @@ public partial class DeviceAccessLayout
         return;
       }
 
+      _canGoBack = NavManager.HistoryEntryState == HistoryEntryStates.CanGoBack;
+
       await GetDeviceInfo();
 
       Messenger.Value.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage);
       Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
       Messenger.Value.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
 
-      await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+      _hubConnectionState = ViewerHub.Value.ConnectionState;
+      if (_hubConnectionState != HubConnectionState.Connected)
+      {
+        await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+      }
     }
     catch (Exception ex)
     {
@@ -192,6 +205,7 @@ public partial class DeviceAccessLayout
       Snackbar.Value.Add("New chat message received", Severity.Info);
     }
   }
+
   private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceResponseDto> message)
   {
     if (DeviceAccessState.Maybe?.IsDeviceLoaded != true)
@@ -213,10 +227,16 @@ public partial class DeviceAccessLayout
       NavManager.NavigateTo($"/device-access?deviceId={_deviceId}", false);
     }
   }
+
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
   {
     _hubConnectionState = message.NewState;
     await InvokeAsync(StateHasChanged);
+  }
+
+  private void NavigateBackToDashboard()
+  {
+    NavManager.NavigateTo("/");
   }
 
   private async Task TryDisposeChat()
@@ -239,6 +259,36 @@ public partial class DeviceAccessLayout
       Logger.LogError(ex, "Error disposing chat session.");
     }
   }
+
+  private async Task TryDisposeRemoteControlSession()
+  {
+    try
+    {
+      if (RemoteControlStream.Exists && RemoteControlStream.Value.IsConnected)
+      {
+        RemoteControlState.Value.ConnectionClosedRegistration?.Dispose();
+        RemoteControlState.Value.ConnectionClosedRegistration = null;
+        RemoteControlState.Value.CurrentSession = null;
+
+        try 
+        {
+          using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+          await RemoteControlStream.Value.SendCloseStreamingSession(cts.Token);
+        }
+        catch (Exception ex)
+        {
+          Logger.LogError(ex, "Error sending close streaming session command.");
+        }
+        await RemoteControlStream.Value.Close();
+        await ScreenWake.Value.SetScreenWakeLock(false);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error disposing remote control session.");
+    }
+  }
+
   private async Task TryDisposeTerminal()
   {
     try

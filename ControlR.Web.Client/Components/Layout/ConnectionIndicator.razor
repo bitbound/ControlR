@@ -46,6 +46,7 @@ else
   protected override async Task OnInitializedAsync()
   {
     _isAuthenticated = await AuthState.IsAuthenticated();
+    _hubConnectionState = HubConnection.ConnectionState;
     if (RendererInfo.IsInteractive)
     {
       Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);

@@ -102,7 +102,7 @@ public class RemoteControlState(ILogger<ObservableState> logger) : ObservableSta
   }
   public ViewMode ViewMode
   {
-    get => Get(defaultValue: ViewMode.Stretch);
+    get => Get(defaultValue: ViewMode.Fit);
     set => Set(value);
   }
 }

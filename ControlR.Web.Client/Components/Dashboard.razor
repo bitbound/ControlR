@@ -11,13 +11,16 @@
     Devices
   </MudText>
 
-  <div class="top-controls-grid">
-    <div>
+  <div>
+    <div style="max-width: 400px">
       <UserTagsSelector SelectedTagsChanged="OnSelectedTagsChanged" />
     </div>
     <div>
       <MudCheckBox T="bool" Value="_hideOfflineDevices" ValueChanged="HideOfflineDevicesChanged"
-        Label="Hide Offline Devices" Disabled="ShouldBypassHideOfflineDevices" />
+        Label="Hide Offline Devices" Disabled="ShouldBypassHideOfflineDevices" Class="d-inline-block me-4" />
+
+      <MudCheckBox T="bool" Value="_openDeviceInNewTab" ValueChanged="OpenDeviceInNewTabChanged"
+        Label="Open in New Tab" Class="d-inline-block" />
     </div>
   </div>
 
