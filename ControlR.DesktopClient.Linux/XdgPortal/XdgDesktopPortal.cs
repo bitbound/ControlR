@@ -15,6 +15,7 @@ public interface IXdgDesktopPortal : IDisposable
   Task<List<PipeWireStreamInfo>> GetScreenCastStreams();
   Task Initialize(bool forceReinitialization = false, bool bypassRestoreToken = false);
   Task NotifyKeyboardKeycodeAsync(string sessionHandle, int keycode, bool pressed);
+  Task NotifyKeyboardKeysymAsync(string sessionHandle, int keysym, bool pressed);
   Task NotifyPointerAxisAsync(string sessionHandle, double dx, double dy, bool finish = true);
   Task NotifyPointerAxisDiscreteAsync(string sessionHandle, uint axis, int steps);
   Task NotifyPointerButtonAsync(string sessionHandle, int button, bool pressed);
@@ -94,6 +95,20 @@ public sealed class XdgDesktopPortal(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error sending keyboard keycode");
+    }
+  }
+
+  public async Task NotifyKeyboardKeysymAsync(string sessionHandle, int keysym, bool pressed)
+  {
+    try
+    {
+      await EnsureInitializedAsync();
+      var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
+      await proxy.NotifyKeyboardKeysymAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), keysym, pressed ? 1u : 0u).ConfigureAwait(false);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error sending keyboard keysym");
     }
   }
 

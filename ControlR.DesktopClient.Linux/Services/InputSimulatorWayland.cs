@@ -26,21 +26,19 @@ namespace ControlR.DesktopClient.Linux.Services;
 /// 3. Application can simulate input events via portal DBus calls
 /// </summary>
 public class InputSimulatorWayland(
-  IXdgDesktopPortal portalAccessor,
+  IXdgDesktopPortal desktopPortal,
   IDesktopCapturerFactory desktopCapturerFactory,
   ILogger<InputSimulatorWayland> logger) : IInputSimulator, IDisposable
 {
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
+  private readonly IXdgDesktopPortal _desktopPortal = desktopPortal;
   private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<InputSimulatorWayland> _logger = logger;
-  private readonly IXdgDesktopPortal _portalAccessor = portalAccessor;
-
 
   private bool _disposed;
   private bool _isInitialized;
   private ConcurrentDictionary<int, PipeWireStreamInfo> _screenCastStreams = new();
   private string? _sessionHandle;
-
 
   public void Dispose()
   {
@@ -52,7 +50,6 @@ public class InputSimulatorWayland(
     _initLock?.Dispose();
     _disposed = true;
   }
-
 
   public async Task InvokeKeyEvent(
     string key,
@@ -108,14 +105,13 @@ public class InputSimulatorWayland(
 
       Guard.IsNotNull(_sessionHandle);
 
-      await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, isPressed);
+      await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, isPressed);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error simulating key event on Wayland: Code={Code}, Key={Key}", code, key);
     }
   }
-
 
   public async Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
@@ -130,14 +126,13 @@ public class InputSimulatorWayland(
 
       Guard.IsNotNull(_sessionHandle);
 
-      await _portalAccessor.NotifyPointerButtonAsync(_sessionHandle, linuxButton, isPressed);
+      await _desktopPortal.NotifyPointerButtonAsync(_sessionHandle, linuxButton, isPressed);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error simulating mouse button event on Wayland");
     }
   }
-
 
   public async Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
@@ -181,7 +176,7 @@ public class InputSimulatorWayland(
             var physicalX = maxX * clampedX;
             var physicalY = maxY * clampedY;
 
-            await _portalAccessor.NotifyPointerMotionAbsoluteAsync(
+            await _desktopPortal.NotifyPointerMotionAbsoluteAsync(
               _sessionHandle,
               streamInfo.NodeId,
               physicalX,
@@ -203,14 +198,12 @@ public class InputSimulatorWayland(
     }
   }
 
-
   public Task ResetKeyboardState()
   {
     // Not applicable for Wayland RemoteDesktop portal
     _logger.LogDebug("Keyboard state reset not applicable on Wayland");
     return Task.CompletedTask;
   }
-
 
   public async Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
@@ -229,13 +222,13 @@ public class InputSimulatorWayland(
       if (scrollY != 0)
       {
         var steps = scrollY < 0 ? scrollSteps : -scrollSteps;
-        await _portalAccessor.NotifyPointerAxisDiscreteAsync(_sessionHandle, 0, steps);
+        await _desktopPortal.NotifyPointerAxisDiscreteAsync(_sessionHandle, 0, steps);
       }
 
       if (scrollX != 0)
       {
         var steps = scrollX < 0 ? scrollSteps : -scrollSteps;
-        await _portalAccessor.NotifyPointerAxisDiscreteAsync(_sessionHandle, 1, steps);
+        await _desktopPortal.NotifyPointerAxisDiscreteAsync(_sessionHandle, 1, steps);
       }
     }
     catch (Exception ex)
@@ -244,12 +237,10 @@ public class InputSimulatorWayland(
     }
   }
 
-
   public Task<bool> SetBlockInput(bool isBlocked)
   {
     return false.AsTaskResult();
   }
-
 
   public async Task TypeText(string text)
   {
@@ -273,16 +264,16 @@ public class InputSimulatorWayland(
 
         if (needsShift)
         {
-          await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, true);
+          await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, true);
         }
 
-        await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, true);
+        await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, true);
         await Task.Delay(10);
-        await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, false);
+        await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, false);
 
         if (needsShift)
         {
-          await _portalAccessor.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, false);
+          await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, false);
         }
 
         await Task.Delay(10);
@@ -293,7 +284,6 @@ public class InputSimulatorWayland(
       _logger.LogError(ex, "Error typing text on Wayland");
     }
   }
-
 
   private static (int Keycode, bool NeedsShift) CharacterToKeycode(char ch)
   {
@@ -341,7 +331,6 @@ public class InputSimulatorWayland(
     };
   }
 
-
   private async Task<bool> EnsureInitializedAsync()
   {
     await _initLock.WaitAsync();
@@ -349,10 +338,10 @@ public class InputSimulatorWayland(
     {
       if (!_isInitialized)
       {
-        await _portalAccessor.Initialize();
+        await _desktopPortal.Initialize();
       }
 
-      var sessionHandle = await _portalAccessor.GetRemoteDesktopSessionHandle();
+      var sessionHandle = await _desktopPortal.GetRemoteDesktopSessionHandle();
 
       if (sessionHandle == null)
       {
@@ -372,7 +361,7 @@ public class InputSimulatorWayland(
       _sessionHandle = sessionHandle;
       _screenCastStreams.Clear();
 
-      var screenCastStreams = await _portalAccessor.GetScreenCastStreams();
+      var screenCastStreams = await _desktopPortal.GetScreenCastStreams();
       foreach (var stream in screenCastStreams)
       {
         _screenCastStreams[stream.StreamIndex] = stream;

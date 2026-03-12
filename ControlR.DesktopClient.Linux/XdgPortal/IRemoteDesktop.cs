@@ -8,6 +8,7 @@ public interface IRemoteDesktop : IDBusObject
   Task<ObjectPath> CreateSessionAsync(IDictionary<string, object> options);
   Task<T> GetAsync<T>(string prop);
   Task NotifyKeyboardKeycodeAsync(ObjectPath sessionHandle, IDictionary<string, object> options, int keycode, uint state);
+  Task NotifyKeyboardKeysymAsync(ObjectPath sessionHandle, IDictionary<string, object> options, int keysym, uint state);
   Task NotifyPointerAxisAsync(ObjectPath sessionHandle, IDictionary<string, object> options, double dx, double dy);
   Task NotifyPointerAxisDiscreteAsync(ObjectPath sessionHandle, IDictionary<string, object> options, uint axis, int steps);
   Task NotifyPointerButtonAsync(ObjectPath sessionHandle, IDictionary<string, object> options, int button, uint state);
