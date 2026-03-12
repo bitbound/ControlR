@@ -1,6 +1,7 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Linux;
+using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using System.Collections.Concurrent;
@@ -34,21 +35,17 @@ internal class ScreenGrabberWayland(
   ILogger<ScreenGrabberWayland> logger) : IScreenGrabber
 {
   private const string CaptureModePipeWire = "WaylandPipeWire";
-  private const int StreamStartPollingIntervalMs = 100;
-  private const int StreamStartTimeoutMs = 3_000;
-  private static readonly TimeSpan _recoveryCooldown = TimeSpan.FromSeconds(2);
-  private static readonly TimeSpan _streamStaleThreshold = TimeSpan.FromSeconds(2);
 
   private readonly IDisplayManagerWayland _displayManager = displayManager;
   private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<ScreenGrabberWayland> _logger = logger;
+  private readonly TimeSpan _streamStartPollingInterval = TimeSpan.FromMilliseconds(100);
+  private readonly TimeSpan _streamStartTimeout = TimeSpan.FromSeconds(3);
   private readonly TimeProvider _timeProvider = timeProvider;
 
   private bool _disposed;
   private bool _isInitialized;
-  private long _lastRecoveryAttemptUtcTicks;
   private ConcurrentDictionary<string, PipeWireStream> _streams = new();
-
 
   public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
@@ -217,28 +214,6 @@ internal class ScreenGrabberWayland(
     }
   }
 
-  internal static bool ShouldRecoverStream(
-    DateTime nowUtc,
-    DateTime createdUtc,
-    DateTime? lastFrameReceivedUtc,
-    TimeSpan staleThreshold,
-    DateTime? lastRecoveryAttemptUtc,
-    TimeSpan recoveryCooldown)
-  {
-    var mostRecentActivityUtc = lastFrameReceivedUtc ?? createdUtc;
-    if (nowUtc - mostRecentActivityUtc < staleThreshold)
-    {
-      return false;
-    }
-
-    if (lastRecoveryAttemptUtc is not null && nowUtc - lastRecoveryAttemptUtc < recoveryCooldown)
-    {
-      return false;
-    }
-
-    return true;
-  }
-
   private async Task<CaptureResult> CaptureStream(
     string deviceName,
     PipeWireStream stream,
@@ -246,8 +221,6 @@ internal class ScreenGrabberWayland(
   {
     try
     {
-      stream = await RefreshStreamIfStale(deviceName, stream, cancellationToken);
-
       if (!stream.TryGetLatestFrame(out var frameData))
       {
         return CaptureResult.NoChanges(CaptureModePipeWire);
@@ -306,47 +279,6 @@ internal class ScreenGrabberWayland(
     _streams.Clear();
   }
 
-  private DateTime? GetLastRecoveryAttemptUtc()
-  {
-    var ticks = Interlocked.Read(ref _lastRecoveryAttemptUtcTicks);
-    return ticks > 0
-      ? new DateTime(ticks, DateTimeKind.Utc)
-      : null;
-  }
-
-  private async Task<PipeWireStream> RefreshStreamIfStale(
-    string deviceName,
-    PipeWireStream stream,
-    CancellationToken cancellationToken)
-  {
-    var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-    if (!ShouldRecoverStream(
-          nowUtc,
-          stream.CreatedUtc,
-          stream.LastFrameReceivedUtc,
-          _streamStaleThreshold,
-          GetLastRecoveryAttemptUtc(),
-          _recoveryCooldown))
-    {
-      return stream;
-    }
-
-    if (!await TryRefreshStreams(
-          deviceName,
-          $"stream has not produced a new frame since {(stream.LastFrameReceivedUtc ?? stream.CreatedUtc):O}",
-          cancellationToken))
-    {
-      return stream;
-    }
-
-    if (_streams.TryGetValue(deviceName, out var refreshedStream))
-    {
-      return refreshedStream;
-    }
-
-    return _streams.Values.FirstOrDefault() ?? stream;
-  }
-
   private void ReplaceStreams(IReadOnlyDictionary<string, PipeWireStream> replacementStreams)
   {
     var newStreams = new ConcurrentDictionary<string, PipeWireStream>(replacementStreams);
@@ -371,77 +303,6 @@ internal class ScreenGrabberWayland(
     originalStreams.Clear();
   }
 
-  private async Task<bool> TryRefreshStreams(
-    string deviceName,
-    string reason,
-    CancellationToken cancellationToken)
-  {
-    if (_disposed)
-    {
-      return false;
-    }
-
-    await _initLock.WaitAsync(cancellationToken);
-    try
-    {
-      var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-      if (GetLastRecoveryAttemptUtc() is { } lastRecoveryAttemptUtc &&
-          nowUtc - lastRecoveryAttemptUtc < _recoveryCooldown)
-      {
-        return false;
-      }
-
-      Interlocked.Exchange(ref _lastRecoveryAttemptUtcTicks, nowUtc.Ticks);
-
-      _logger.LogWarning(
-        "Refreshing Wayland PipeWire streams for display {DeviceName} because {Reason}.",
-        deviceName,
-        reason);
-
-      var replacementStreams = await _displayManager.CreatePipeWireStreams(
-        forcePortalReinitialize: true,
-        cancellationToken: cancellationToken);
-
-      if (replacementStreams.Count == 0)
-      {
-        _logger.LogWarning("Failed to refresh Wayland PipeWire streams. No replacement streams were created.");
-        return false;
-      }
-
-      try
-      {
-        await WaitForStreamsReady(replacementStreams, cancellationToken);
-        ReplaceStreams(replacementStreams);
-        _isInitialized = !_streams.IsEmpty;
-
-        _logger.LogInformation("Wayland PipeWire streams refreshed successfully.");
-        return true;
-      }
-      catch
-      {
-        foreach (var stream in replacementStreams.Values)
-        {
-          stream.Dispose();
-        }
-
-        throw;
-      }
-    }
-    catch (OperationCanceledException)
-    {
-      throw;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogWarning(ex, "Error while refreshing Wayland PipeWire streams.");
-      return false;
-    }
-    finally
-    {
-      _initLock.Release();
-    }
-  }
-
   private async Task WaitForStreamsReady(
     IReadOnlyDictionary<string, PipeWireStream> streams,
     CancellationToken cancellationToken)
@@ -451,7 +312,11 @@ internal class ScreenGrabberWayland(
       var deviceName = kv.Key;
       var stream = kv.Value;
 
-      for (var j = 0; j < StreamStartTimeoutMs / StreamStartPollingIntervalMs; j++)
+      using var timer = new PeriodicTimer(_streamStartPollingInterval, _timeProvider);
+      using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+      cts.CancelAfter(_streamStartTimeout);
+
+      while (await timer.WaitForNextTick(throwOnCancellation: false, cts.Token))
       {
         if (stream.IsStreaming && stream.TryGetLatestFrame(out var frameData))
         {
@@ -459,7 +324,7 @@ internal class ScreenGrabberWayland(
           break;
         }
 
-        await Task.Delay(StreamStartPollingIntervalMs, cancellationToken);
+        await Task.Delay(_streamStartPollingInterval, cancellationToken);
       }
 
       if (stream.Width > 0 && stream.Height > 0)

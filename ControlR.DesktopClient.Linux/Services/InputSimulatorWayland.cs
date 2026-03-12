@@ -171,16 +171,16 @@ public class InputSimulatorWayland(
             // pixel space (0 to stream width/height), not global virtual screen coordinates.
             var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
             var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
-            var maxX = Math.Max(0, coordinates.Display.CapturePixelSize.Width - 1);
-            var maxY = Math.Max(0, coordinates.Display.CapturePixelSize.Height - 1);
-            var physicalX = maxX * clampedX;
-            var physicalY = maxY * clampedY;
+            var maxX = Math.Max(0, coordinates.Display.LayoutBounds.Width - 1);
+            var maxY = Math.Max(0, coordinates.Display.LayoutBounds .Height - 1);
+            var logicalX = maxX * clampedX;
+            var logicalY = maxY * clampedY;
 
             await _desktopPortal.NotifyPointerMotionAbsoluteAsync(
               _sessionHandle,
               streamInfo.NodeId,
-              physicalX,
-              physicalY);
+              logicalX,
+              logicalY);
             break;
           }
 

@@ -5,10 +5,10 @@ namespace ControlR.DesktopClient.Linux.Tests;
 
 internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
 {
-  public List<bool> InitializeCalls { get; } = [];
+  public int InitializeCallCount { get; private set; }
   public List<(string session, int keycode, bool pressed)> KeyboardCalls { get; } = [];
-  public string? SessionHandle { get; set; } = "fake-session";
   public (SafeFileHandle Fd, string SessionHandle)? PipeWireConnectionResult { get; set; }
+  public string? SessionHandle { get; set; } = "fake-session";
 
   public void Dispose()
   {
@@ -29,9 +29,9 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
     return Task.FromResult<List<PipeWireStreamInfo>>([]);
   }
 
-  public Task Initialize(bool forceReinitialization = false, bool bypassRestoreToken = false)
+  public Task Initialize(bool bypassRestoreToken = false)
   {
-    InitializeCalls.Add(forceReinitialization);
+    InitializeCallCount++;
     return Task.CompletedTask;
   }
 

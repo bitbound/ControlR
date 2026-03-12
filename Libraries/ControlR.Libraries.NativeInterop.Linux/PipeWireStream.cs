@@ -13,7 +13,6 @@ public class PipeWireStream : IDisposable
 
   private const ulong AppSinkPullTimeout = 100 * 1_000_000;
 
-  private readonly DateTime _createdUtc = DateTime.UtcNow;
   private readonly TaskCompletionSource<bool> _firstFrameReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
   private readonly ILogger _logger;
   private readonly int _logicalHeight;
@@ -24,7 +23,6 @@ public class PipeWireStream : IDisposable
   private nint _appsink;
   private Thread? _captureThread;
   private bool _disposed;
-  private long _lastFrameReceivedUtcTicks;
   private PipeWireFrameData? _latestFrame;
   private int _loggedDimensionMismatch;
   private int _loggedStrideMismatch;
@@ -57,20 +55,8 @@ public class PipeWireStream : IDisposable
   /// Gets the latest known physical frame height in pixels.
   /// Returns 0 until the first frame has been negotiated and received.
   /// </summary>
-  public DateTime CreatedUtc => _createdUtc;
   public int Height => Volatile.Read(ref _physicalHeight);
   public bool IsStreaming => !_disposed && _pipeline != nint.Zero;
-  public DateTime? LastFrameReceivedUtc
-  {
-    get
-    {
-      var ticks = Interlocked.Read(ref _lastFrameReceivedUtcTicks);
-      return ticks > 0
-        ? new DateTime(ticks, DateTimeKind.Utc)
-        : null;
-    }
-  }
-
   /// <summary>
   /// Gets the latest known physical frame width in pixels.
   /// Returns 0 until the first frame has been negotiated and received.
@@ -134,6 +120,31 @@ public class PipeWireStream : IDisposable
     return result && Volatile.Read(ref _physicalWidth) > 0 && Volatile.Read(ref _physicalHeight) > 0;
   }
 
+  private static PipeWireFrameData CloneFrameData(PipeWireFrameData source)
+  {
+    var size = source.Data.Length;
+    var array = ArrayPool<byte>.Shared.Rent(size);
+    try
+    {
+      source.Data.Span.CopyTo(array.AsSpan(0, size));
+      var arrayOwner = new ArrayPoolOwner(array, size);
+
+      return new PipeWireFrameData
+      {
+        DataOwner = arrayOwner,
+        Width = source.Width,
+        Height = source.Height,
+        Stride = source.Stride,
+        PixelFormat = source.PixelFormat
+      };
+    }
+    catch
+    {
+      ArrayPool<byte>.Shared.Return(array);
+      throw;
+    }
+  }
+
   private void Cleanup()
   {
     try
@@ -157,31 +168,6 @@ public class PipeWireStream : IDisposable
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error cleaning up");
-    }
-  }
-
-  private PipeWireFrameData CloneFrameData(PipeWireFrameData source)
-  {
-    var size = source.Data.Length;
-    var array = ArrayPool<byte>.Shared.Rent(size);
-    try
-    {
-      source.Data.Span.CopyTo(array.AsSpan(0, size));
-      var arrayOwner = new ArrayPoolOwner(array, size);
-
-      return new PipeWireFrameData
-      {
-        DataOwner = arrayOwner,
-        Width = source.Width,
-        Height = source.Height,
-        Stride = source.Stride,
-        PixelFormat = source.PixelFormat
-      };
-    }
-    catch
-    {
-      ArrayPool<byte>.Shared.Return(array);
-      throw;
     }
   }
 
@@ -245,7 +231,6 @@ public class PipeWireStream : IDisposable
       try
       {
         var sample = GStreamer.gst_app_sink_try_pull_sample(_appsink, AppSinkPullTimeout);
-
         if (sample == nint.Zero)
         {
           if (GStreamer.gst_app_sink_is_eos(_appsink)) break;
@@ -322,7 +307,6 @@ public class PipeWireStream : IDisposable
 
           Volatile.Write(ref _physicalWidth, physicalWidth);
           Volatile.Write(ref _physicalHeight, physicalHeight);
-          Interlocked.Exchange(ref _lastFrameReceivedUtcTicks, DateTime.UtcNow.Ticks);
           _firstFrameReceived.TrySetResult(true);
 
           var stride = physicalWidth * 4;

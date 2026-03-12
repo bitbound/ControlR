@@ -13,7 +13,7 @@ public interface IXdgDesktopPortal : IDisposable
   Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection();
   Task<string?> GetRemoteDesktopSessionHandle();
   Task<List<PipeWireStreamInfo>> GetScreenCastStreams();
-  Task Initialize(bool forceReinitialization = false, bool bypassRestoreToken = false);
+  Task Initialize(bool bypassRestoreToken = false);
   Task NotifyKeyboardKeycodeAsync(string sessionHandle, int keycode, bool pressed);
   Task NotifyKeyboardKeysymAsync(string sessionHandle, int keysym, bool pressed);
   Task NotifyPointerAxisAsync(string sessionHandle, double dx, double dy, bool finish = true);
@@ -79,9 +79,9 @@ public sealed class XdgDesktopPortal(
     return _streams ?? throw new InvalidOperationException("ScreenCast streams are not initialized.");
   }
 
-  public async Task Initialize(bool forceReinitialization = false, bool bypassRestoreToken = false)
+  public async Task Initialize(bool bypassRestoreToken = false)
   {
-    await EnsureInitializedAsync(forceReinitialization, bypassRestoreToken);
+    await EnsureInitializedAsync(bypassRestoreToken);
   }
 
   public async Task NotifyKeyboardKeycodeAsync(string sessionHandle, int keycode, bool pressed)
@@ -250,9 +250,9 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task EnsureInitializedAsync(bool forceReinitialization = false, bool bypassRestoreToken = false)
+  private async Task EnsureInitializedAsync(bool bypassRestoreToken = false)
   {
-    if (_initialized && !forceReinitialization)
+    if (_initialized)
     {
       return;
     }
@@ -260,14 +260,9 @@ public sealed class XdgDesktopPortal(
     await _initLock.WaitAsync();
     try
     {
-      if (_initialized && !forceReinitialization)
+      if (_initialized)
       {
         return;
-      }
-
-      if (forceReinitialization)
-      {
-        ResetState();
       }
 
       await ConnectAsync();
@@ -380,17 +375,6 @@ public sealed class XdgDesktopPortal(
       _logger.LogError(ex, "Error opening PipeWire remote");
       return Result.Fail<SafeFileHandle>($"Exception opening PipeWire remote: {ex.Message}");
     }
-  }
-
-  private void ResetState()
-  {
-    _pipewireFd?.Dispose();
-    _connection?.Dispose();
-    _pipewireFd = null;
-    _connection = null;
-    _sessionHandle = null;
-    _streams = null;
-    _initialized = false;
   }
 
   private void SaveRestoreToken(string token)

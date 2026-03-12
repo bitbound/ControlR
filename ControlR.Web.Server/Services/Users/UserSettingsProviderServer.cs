@@ -27,14 +27,14 @@ internal class UserSettingsProviderServer(
     return GetPref(UserPreferenceNames.KeyboardInputMode, KeyboardInputMode.Auto);
   }
 
-  public Task<bool> GetOpenDeviceInNewTab()
-  {
-    return GetPref(UserPreferenceNames.OpenDeviceInNewTab, true);
-  }
-
   public Task<bool> GetNotifyUserOnSessionStart()
   {
     return GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
+  }
+
+  public Task<bool> GetOpenDeviceInNewTab()
+  {
+    return GetPref(UserPreferenceNames.OpenDeviceInNewTab, true);
   }
 
   public Task<ThemeMode> GetThemeMode()
@@ -62,14 +62,14 @@ internal class UserSettingsProviderServer(
     return SetPref(UserPreferenceNames.KeyboardInputMode, value);
   }
 
-  public Task SetOpenDeviceInNewTab(bool value)
-  {
-    return SetPref(UserPreferenceNames.OpenDeviceInNewTab, value);
-  }
-
   public Task SetNotifyUserOnSessionStart(bool value)
   {
     return SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
+  }
+
+  public Task SetOpenDeviceInNewTab(bool value)
+  {
+    return SetPref(UserPreferenceNames.OpenDeviceInNewTab, value);
   }
 
   public Task SetThemeMode(ThemeMode value)
