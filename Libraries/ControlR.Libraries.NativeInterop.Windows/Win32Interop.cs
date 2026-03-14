@@ -55,6 +55,7 @@ public interface IWin32Interop
   void InvokeCtrlAltDel();
   void InvokeKeyEvent(string key, string code, bool isPressed, KeyboardInputMode inputMode);
   void InvokeMouseButtonEvent(int x, int y, int button, bool isPressed);
+  void InvokeTextEvent(string text, bool isPressed);
   void InvokeWheelScroll(int x, int y, int scrollY, int scrollX);
   bool IsCurrentProcessUiAccess();
   void MovePointer(int x, int y, MovePointerType moveType);
@@ -860,6 +861,34 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
+  public void InvokeTextEvent(string text, bool isPressed)
+  {
+    foreach (var character in text)
+    {
+      var input = CreateUnicodeInput(character, isPressed);
+      var result = PInvoke.SendInput([input], sizeof(INPUT));
+      if (result != 1)
+      {
+        var lastError = Marshal.GetLastPInvokeError();
+        string? lastErrorMessage = null;
+        try
+        {
+          lastErrorMessage = new System.ComponentModel.Win32Exception(lastError).Message;
+        }
+        catch
+        {
+          // Ignore failures when trying to retrieve the error message.
+        }
+
+        _logger.LogWarning(
+          "Failed to send Unicode key input for character '{Character}'. LastError={LastError} ({LastErrorMessage}).",
+          character,
+          lastError,
+          lastErrorMessage);
+      }
+    }
+  }
+
   public void InvokeWheelScroll(int x, int y, int scrollY, int scrollX)
   {
     if (Math.Abs(scrollY) > 0)
@@ -1252,58 +1281,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   public void TypeText(string text)
   {
-    var inputs = new List<INPUT>();
-
     foreach (var character in text)
     {
-      ushort scanCode = character;
-
-      var flags = KEYBD_EVENT_FLAGS.KEYEVENTF_UNICODE;
-
-      var down = new INPUT
-      {
-        type = INPUT_TYPE.INPUT_KEYBOARD,
-        Anonymous =
-        {
-          ki = new KEYBDINPUT
-          {
-            wVk = 0,
-            wScan = scanCode,
-            dwFlags = flags,
-            dwExtraInfo = new nuint(PInvoke.GetMessageExtraInfo().Value.ToPointer()),
-            time = 0
-          }
-        }
-      };
-
-      var up = new INPUT
-      {
-        type = INPUT_TYPE.INPUT_KEYBOARD,
-        Anonymous =
-        {
-          ki = new KEYBDINPUT
-          {
-            wVk = 0,
-            wScan = scanCode,
-            dwFlags = flags | KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
-            dwExtraInfo = new nuint(PInvoke.GetMessageExtraInfo().Value.ToPointer()),
-            time = 0
-          }
-        }
-      };
-
-      inputs.Add(down);
-      inputs.Add(up);
-    }
-
-    foreach (var input in inputs)
-    {
-      var result = PInvoke.SendInput([input], sizeof(INPUT));
-      if (result != 1)
-      {
-        _logger.LogWarning("Failed to type character in text.");
-      }
-
+      InvokeTextEvent(character.ToString(), true);
+      InvokeTextEvent(character.ToString(), false);
       Thread.Sleep(1);
     }
   }
@@ -1377,6 +1358,31 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       Anonymous = { ki = kbdInput }
     };
     return input;
+  }
+
+  private static INPUT CreateUnicodeInput(char character, bool isPressed)
+  {
+    var flags = KEYBD_EVENT_FLAGS.KEYEVENTF_UNICODE;
+    if (!isPressed)
+    {
+      flags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
+    }
+
+    return new INPUT
+    {
+      type = INPUT_TYPE.INPUT_KEYBOARD,
+      Anonymous =
+      {
+        ki = new KEYBDINPUT
+        {
+          wVk = 0,
+          wScan = character,
+          dwFlags = flags,
+          dwExtraInfo = new nuint(PInvoke.GetMessageExtraInfo().Value.ToPointer()),
+          time = 0
+        }
+      }
+    };
   }
 
   private static bool GetDesktopName(HDESK handle, out string desktopName)
@@ -2094,6 +2100,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     uint dwBand);
 
   [return: MarshalAs(UnmanagedType.Bool)]
-  [LibraryImport("kernel32.dll", SetLastError = true)]
-  private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
 }

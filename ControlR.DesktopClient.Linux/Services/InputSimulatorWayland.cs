@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
@@ -30,14 +31,19 @@ public class InputSimulatorWayland(
   IDesktopCapturerFactory desktopCapturerFactory,
   ILogger<InputSimulatorWayland> logger) : IInputSimulator, IDisposable
 {
+  private static bool _keysymResolutionUnavailable;
+
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly IXdgDesktopPortal _desktopPortal = desktopPortal;
   private readonly SemaphoreSlim _initLock = new(1, 1);
+  private readonly SemaphoreSlim _keyboardLock = new(1, 1);
   private readonly ILogger<InputSimulatorWayland> _logger = logger;
+  private readonly HashSet<int> _pressedKeycodes = [];
+  private readonly HashSet<int> _pressedKeysyms = [];
+  private readonly ConcurrentDictionary<int, PipeWireStreamInfo> _screenCastStreams = new();
 
   private bool _disposed;
   private bool _isInitialized;
-  private ConcurrentDictionary<int, PipeWireStreamInfo> _screenCastStreams = new();
   private string? _sessionHandle;
 
   public void Dispose()
@@ -47,8 +53,10 @@ public class InputSimulatorWayland(
       return;
     }
 
-    _initLock?.Dispose();
+    _keyboardLock.Dispose();
+    _initLock.Dispose();
     _disposed = true;
+    GC.SuppressFinalize(this);
   }
 
   public async Task InvokeKeyEvent(
@@ -65,47 +73,36 @@ public class InputSimulatorWayland(
 
     try
     {
-      var mode = inputMode;
-      var isPrintableCharacter = key.Length == 1;
-      var isModifierPressed = modifiers.AreAnyPressed;
-      var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta";
-
-      if (mode == KeyboardInputMode.Virtual)
+      await _keyboardLock.WaitAsync();
+      try
       {
-        if (isPrintableCharacter && !isModifierPressed && !isModifierKey)
+        Guard.IsNotNull(_sessionHandle);
+
+        if (ShouldUseLogicalKeysymInput(key, inputMode, modifiers) &&
+            TryGetKeysym(key, out var keysym))
         {
-          if (isPressed)
-          {
-            await TypeText(key);
-          }
+          await SendKeysymAsync(_sessionHandle, keysym, isPressed);
           return;
         }
 
-        if (!isModifierPressed || isModifierKey)
+        if (inputMode == KeyboardInputMode.Virtual && (!HasShortcutModifier(modifiers) || IsModifierKey(key)))
         {
           code = string.Empty;
         }
-      }
-      else if (mode == KeyboardInputMode.Auto && isPrintableCharacter && !isModifierPressed)
-      {
-        if (isPressed)
+
+        var keycode = LinuxKeycodeMapper.BrowserCodeToLinuxKeycode(code, key);
+        if (keycode < 0)
         {
-          await TypeText(key);
+          _logger.LogWarning("Unknown key: Code={Code}, Key={Key}", code, key);
+          return;
         }
-        return;
-      }
 
-      // Use the code-first mapping and pass both code and key for fallback
-      var keycode = LinuxKeycodeMapper.BrowserCodeToLinuxKeycode(code, key);
-      if (keycode < 0)
+        await SendKeycodeAsync(_sessionHandle, keycode, isPressed);
+      }
+      finally
       {
-        _logger.LogWarning("Unknown key: Code={Code}, Key={Key}", code, key);
-        return;
+        _keyboardLock.Release();
       }
-
-      Guard.IsNotNull(_sessionHandle);
-
-      await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, isPressed);
     }
     catch (Exception ex)
     {
@@ -198,11 +195,45 @@ public class InputSimulatorWayland(
     }
   }
 
-  public Task ResetKeyboardState()
+  public async Task ResetKeyboardState()
   {
-    // Not applicable for Wayland RemoteDesktop portal
-    _logger.LogDebug("Keyboard state reset not applicable on Wayland");
-    return Task.CompletedTask;
+    if (!await EnsureInitializedAsync())
+    {
+      return;
+    }
+
+    Guard.IsNotNull(_sessionHandle);
+
+    await _keyboardLock.WaitAsync();
+    try
+    {
+      var keycodes = _pressedKeycodes.ToArray();
+      var keysyms = _pressedKeysyms.ToArray();
+
+      foreach (var keycode in keycodes)
+      {
+        await SendKeycodeAsync(_sessionHandle, keycode, false);
+      }
+
+      foreach (var keysym in keysyms)
+      {
+        await SendKeysymAsync(_sessionHandle, keysym, false);
+      }
+
+      var releasedCount = keycodes.Length + keysyms.Length;
+      if (releasedCount > 0)
+      {
+        _logger.LogDebug("Released {Count} tracked Wayland keys during keyboard state reset", releasedCount);
+      }
+      else
+      {
+        _logger.LogDebug("No tracked Wayland keys found during keyboard state reset");
+      }
+    }
+    finally
+    {
+      _keyboardLock.Release();
+    }
   }
 
   public async Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
@@ -253,10 +284,20 @@ public class InputSimulatorWayland(
     {
       Guard.IsNotNull(_sessionHandle);
 
+      await _keyboardLock.WaitAsync();
+      try
+      {
       foreach (var ch in text)
       {
-        var (keycode, needsShift) = CharacterToKeycode(ch);
-        if (keycode < 0)
+        if (TryGetKeysym(ch.ToString(), out var keysym))
+        {
+          await SendKeysymAsync(_sessionHandle, keysym, true);
+          await Task.Delay(1);
+          await SendKeysymAsync(_sessionHandle, keysym, false);
+          continue;
+        }
+
+        if (!LinuxKeycodeMapper.TryMapCharacterToLinuxKeycode(ch, out var keycode, out var needsShift))
         {
           _logger.LogDebug("No keycode mapping for character: {Char}", ch);
           continue;
@@ -264,19 +305,24 @@ public class InputSimulatorWayland(
 
         if (needsShift)
         {
-          await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, true);
+          await SendKeycodeAsync(_sessionHandle, 42, true);
         }
 
-        await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, true);
-        await Task.Delay(10);
-        await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, keycode, false);
+        await SendKeycodeAsync(_sessionHandle, keycode, true);
+        await Task.Delay(1);
+        await SendKeycodeAsync(_sessionHandle, keycode, false);
 
         if (needsShift)
         {
-          await _desktopPortal.NotifyKeyboardKeycodeAsync(_sessionHandle, 42, false);
+          await SendKeycodeAsync(_sessionHandle, 42, false);
         }
 
-        await Task.Delay(10);
+        await Task.Delay(1);
+      }
+      }
+      finally
+      {
+        _keyboardLock.Release();
       }
     }
     catch (Exception ex)
@@ -285,50 +331,90 @@ public class InputSimulatorWayland(
     }
   }
 
-  private static (int Keycode, bool NeedsShift) CharacterToKeycode(char ch)
+  private static bool HasShortcutModifier(KeyEventModifiersDto modifiers)
   {
-    return ch switch
+    return modifiers.Control || modifiers.Alt || modifiers.Meta;
+  }
+
+  private static bool IsModifierKey(string key)
+  {
+    return key is "Shift" or "Control" or "Alt" or "Meta";
+  }
+
+  private static bool IsPrintableTextKey(string key)
+  {
+    return key.Length == 1 && !char.IsControl(key[0]);
+  }
+
+  private static bool ShouldUseLogicalKeysymInput(string key, KeyboardInputMode inputMode, KeyEventModifiersDto modifiers)
+  {
+    if (inputMode == KeyboardInputMode.Physical)
     {
-      >= 'a' and <= 'z' => (LinuxKeycodeMapper.BrowserCodeToLinuxKeycode($"Key{char.ToUpper(ch)}", ch.ToString()), false),
-      >= 'A' and <= 'Z' => (LinuxKeycodeMapper.BrowserCodeToLinuxKeycode($"Key{ch}", ch.ToString()), true),
-      >= '0' and <= '9' => (LinuxKeycodeMapper.BrowserCodeToLinuxKeycode($"Digit{ch}", ch.ToString()), false),
-      ' ' => (57, false),
-      '!' => (2, true),
-      '@' => (3, true),
-      '#' => (4, true),
-      '$' => (5, true),
-      '%' => (6, true),
-      '^' => (7, true),
-      '&' => (8, true),
-      '*' => (9, true),
-      '(' => (10, true),
-      ')' => (11, true),
-      '-' => (12, false),
-      '_' => (12, true),
-      '=' => (13, false),
-      '+' => (13, true),
-      '[' => (26, false),
-      '{' => (26, true),
-      ']' => (27, false),
-      '}' => (27, true),
-      '\\' => (43, false),
-      '|' => (43, true),
-      ';' => (39, false),
-      ':' => (39, true),
-      '\'' => (40, false),
-      '"' => (40, true),
-      ',' => (51, false),
-      '<' => (51, true),
-      '.' => (52, false),
-      '>' => (52, true),
-      '/' => (53, false),
-      '?' => (53, true),
-      '`' => (41, false),
-      '~' => (41, true),
-      '\n' => (28, false),
-      '\t' => (15, false),
-      _ => (-1, false)
-    };
+      return false;
+    }
+
+    if (HasShortcutModifier(modifiers))
+    {
+      return false;
+    }
+
+    // In Auto mode, restrict keysym usage to printable text keys so that
+    // commands/navigation/non-text keys continue to use physical-style handling.
+    if (inputMode == KeyboardInputMode.Auto)
+    {
+      return IsPrintableTextKey(key);
+    }
+
+    // In Virtual mode (and any other non-physical mode), keep the existing
+    // behavior of using keysym for non-modifier keys without shortcut modifiers.
+    if (inputMode == KeyboardInputMode.Virtual)
+    {
+      return !IsModifierKey(key);
+    }
+
+    return false;
+  }
+
+  private static bool TryGetKeysym(string? key, out int keysym)
+  {
+    // Cache libxkbcommon unavailability to avoid repeated exception costs.
+
+    if (_keysymResolutionUnavailable)
+    {
+      keysym = 0;
+      return false;
+    }
+
+    keysym = 0;
+    var name = LinuxKeycodeMapper.BrowserKeyToKeysymName(key);
+    if (string.IsNullOrWhiteSpace(name))
+    {
+      return false;
+    }
+
+    uint resolvedKeysym;
+    try
+    {
+      resolvedKeysym = LibXkbCommon.xkb_keysym_from_name(name, 0);
+    }
+    catch (DllNotFoundException)
+    {
+      _keysymResolutionUnavailable = true;
+      return false;
+    }
+    catch (EntryPointNotFoundException)
+    {
+      _keysymResolutionUnavailable = true;
+      return false;
+    }
+
+    if (resolvedKeysym == 0)
+    {
+      return false;
+    }
+
+    keysym = unchecked((int)resolvedKeysym);
+    return true;
   }
 
   private async Task<bool> EnsureInitializedAsync()
@@ -360,6 +446,8 @@ public class InputSimulatorWayland(
       var previousSessionHandle = _sessionHandle;
       _sessionHandle = sessionHandle;
       _screenCastStreams.Clear();
+      _pressedKeycodes.Clear();
+      _pressedKeysyms.Clear();
 
       var screenCastStreams = await _desktopPortal.GetScreenCastStreams();
       foreach (var stream in screenCastStreams)
@@ -394,6 +482,32 @@ public class InputSimulatorWayland(
     finally
     {
       _initLock.Release();
+    }
+  }
+
+  private async Task SendKeycodeAsync(string sessionHandle, int keycode, bool isPressed)
+  {
+    await _desktopPortal.NotifyKeyboardKeycodeAsync(sessionHandle, keycode, isPressed);
+    if (isPressed)
+    {
+      _pressedKeycodes.Add(keycode);
+    }
+    else
+    {
+      _pressedKeycodes.Remove(keycode);
+    }
+  }
+
+  private async Task SendKeysymAsync(string sessionHandle, int keysym, bool isPressed)
+  {
+    await _desktopPortal.NotifyKeyboardKeysymAsync(sessionHandle, keysym, isPressed);
+    if (isPressed)
+    {
+      _pressedKeysyms.Add(keysym);
+    }
+    else
+    {
+      _pressedKeysyms.Remove(keysym);
     }
   }
 }

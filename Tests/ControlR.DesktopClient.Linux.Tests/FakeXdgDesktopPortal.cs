@@ -7,6 +7,7 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
 {
   public int InitializeCallCount { get; private set; }
   public List<(string session, int keycode, bool pressed)> KeyboardCalls { get; } = [];
+  public List<(string session, int keysym, bool pressed)> KeysymCalls { get; } = [];
   public (SafeFileHandle Fd, string SessionHandle)? PipeWireConnectionResult { get; set; }
   public string? SessionHandle { get; set; } = "fake-session";
 
@@ -43,6 +44,7 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
 
   public Task NotifyKeyboardKeysymAsync(string sessionHandle, int keysym, bool pressed)
   {
+    KeysymCalls.Add((sessionHandle, keysym, pressed));
     return Task.CompletedTask;
   }
 

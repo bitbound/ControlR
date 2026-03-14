@@ -37,4 +37,25 @@ public class LinuxKeycodeMapperTests
     Assert.Equal(-1, LinuxKeycodeMapper.BrowserCodeToLinuxKeycode(string.Empty, string.Empty));
     Assert.Equal(-1, LinuxKeycodeMapper.BrowserCodeToLinuxKeycode("UnknownCode", "UnknownKey"));
   }
+
+  [Fact]
+  public void BrowserKeyToKeysymName_Returns_Expected_Logical_Names()
+  {
+    Assert.Equal("z", LinuxKeycodeMapper.BrowserKeyToKeysymName("z"));
+    Assert.Equal("Z", LinuxKeycodeMapper.BrowserKeyToKeysymName("Z"));
+    Assert.Equal("Return", LinuxKeycodeMapper.BrowserKeyToKeysymName("Enter"));
+    Assert.Equal("Up", LinuxKeycodeMapper.BrowserKeyToKeysymName("ArrowUp"));
+  }
+
+  [Fact]
+  public void TryMapCharacterToLinuxKeycode_Returns_Shift_Metadata()
+  {
+    Assert.True(LinuxKeycodeMapper.TryMapCharacterToLinuxKeycode('A', out var uppercaseKeycode, out var uppercaseNeedsShift));
+    Assert.Equal(30, uppercaseKeycode);
+    Assert.True(uppercaseNeedsShift);
+
+    Assert.True(LinuxKeycodeMapper.TryMapCharacterToLinuxKeycode('a', out var lowercaseKeycode, out var lowercaseNeedsShift));
+    Assert.Equal(30, lowercaseKeycode);
+    Assert.False(lowercaseNeedsShift);
+  }
 }

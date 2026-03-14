@@ -40,18 +40,15 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
   private int _currentClickCount;
   private int _lastCalculatedClickCount = 1; // Store the last calculated click count for mouse up events
   private int _lastClickButton = -1;
-
   // Track click timing for double-click detection
   private DateTimeOffset _lastClickTime = DateTimeOffset.MinValue;
   private int _lastClickX = -1;
   private int _lastClickY = -1;
-
   // Track mouse button states for proper drag events
   private bool _leftButtonDown;
   private bool _middleButtonDown;
   private bool _optionDown;
   private bool _rightButtonDown;
-
   // Track modifier key states
   private bool _shiftDown;
 
@@ -103,9 +100,8 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       }
     }
 
-    // In virtual/auto mode, prefer direct Unicode insertion for printable characters
-    // to preserve international layouts and IME/composition output.
-    // Keep physical mode and shortcut combinations as key events.
+    // In virtual/auto mode, prefer direct Unicode events for printable characters
+    // to preserve international layouts while still honoring browser keydown/keyup state.
     if (inputMode is not KeyboardInputMode.Physical &&
         key.Length == 1 &&
         !char.IsControl(key[0]) &&
@@ -113,12 +109,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
         !_optionDown &&
         !_commandDown)
     {
-      if (isPressed)
-      {
-        TypeText(key);
-      }
-
-      return Result.Ok();
+      return InvokeUnicodeKeyEvent(key, isPressed);
     }
 
     // Non-modifier key: set modifier flags if any are down
@@ -130,12 +121,16 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
         return Result.Ok();
       }
 
-      // Fall back to TypeText for unmapped keys (supports Unicode)
-      if (key.Length == 1)
+      // Fall back to Unicode events for unmapped keys in logical modes.
+      if (inputMode is not KeyboardInputMode.Physical &&
+          key.Length == 1 &&
+          !char.IsControl(key[0]) &&
+          !_controlDown &&
+          !_optionDown &&
+          !_commandDown)
       {
         _logger.LogDebug("Key '{Key}' not in map, falling back to TypeText", key);
-        TypeText(key);
-        return Result.Ok();
+        return InvokeUnicodeKeyEvent(key, isPressed);
       }
 
       _logger.LogWarning("Failed to convert key to virtual key: {Key}", key);
@@ -363,6 +358,7 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
       _logger.LogError(ex, "Error moving pointer to ({X}, {Y})", x, y);
     }
   }
+
   public void OpenAccessibilityPreferences()
   {
     var prefPage = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
@@ -454,22 +450,8 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     {
       foreach (var character in text)
       {
-        // Create events for each character using Unicode
-        var keyDownEvent = MacInputSimulation.CGEventCreateKeyboardEvent(_eventSource, 0, true);
-        var keyUpEvent = MacInputSimulation.CGEventCreateKeyboardEvent(_eventSource, 0, false);
-
-        if (keyDownEvent != nint.Zero && keyUpEvent != nint.Zero)
-        {
-          // Set the Unicode character
-          MacInputSimulation.CGEventKeyboardSetUnicodeString(keyDownEvent, 1, [character]);
-          MacInputSimulation.CGEventKeyboardSetUnicodeString(keyUpEvent, 1, [character]);
-
-          MacInputSimulation.CGEventPost(MacInputSimulation.kCGHIDEventTap, keyDownEvent);
-          MacInputSimulation.CGEventPost(MacInputSimulation.kCGHIDEventTap, keyUpEvent);
-
-          MacInputSimulation.CFRelease(keyDownEvent);
-          MacInputSimulation.CFRelease(keyUpEvent);
-        }
+        InvokeUnicodeKeyEvent(character.ToString(), true);
+        InvokeUnicodeKeyEvent(character.ToString(), false);
 
         // Small delay between characters
         Thread.Sleep(1);
@@ -926,6 +908,29 @@ public class MacInterop(ILogger<MacInterop> logger) : IMacInterop
     if (_commandDown)
       flags |= MacInputSimulation.kCGEventFlagMaskCommand;
     return flags;
+  }
+
+  private Result InvokeUnicodeKeyEvent(string text, bool isPressed)
+  {
+    try
+    {
+      var eventRef = MacInputSimulation.CGEventCreateKeyboardEvent(_eventSource, 0, isPressed);
+      if (eventRef == nint.Zero)
+      {
+        _logger.LogWarning("Failed to create Unicode keyboard event for text: {Text}", text);
+        return Result.Fail($"Failed to create Unicode keyboard event for text: {text}");
+      }
+
+      MacInputSimulation.CGEventKeyboardSetUnicodeString(eventRef, text.Length, text.ToCharArray());
+      MacInputSimulation.CGEventPost(MacInputSimulation.kCGHIDEventTap, eventRef);
+      MacInputSimulation.CFRelease(eventRef);
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error invoking Unicode key event for text: {Text}", text);
+      return Result.Fail($"Error invoking Unicode key event: {ex.Message}");
+    }
   }
 
 }

@@ -28,38 +28,16 @@ public class InputSimulatorMac(
     }
 
     var mode = inputMode;
-    var isPrintableCharacter = key.Length == 1;
-    var isModifierPressed = modifiers.AreAnyPressed;
     var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta" or "Command" or "Option";
 
     if (mode == KeyboardInputMode.Virtual)
     {
-      if (isPrintableCharacter && !isModifierPressed && !isModifierKey)
-      {
-        if (isPressed)
-        {
-          return TypeText(key);
-        }
-
-        return Task.CompletedTask;
-      }
-
-      if (isModifierPressed && !isModifierKey)
+      if (HasShortcutModifier(modifiers) && !isModifierKey)
       {
         return InvokeMacKeyEvent(key, code, isPressed, mode);
       }
 
       return InvokeMacKeyEvent(key, string.Empty, isPressed, mode);
-    }
-
-    if (mode == KeyboardInputMode.Auto && isPrintableCharacter && !isModifierPressed)
-    {
-      if (isPressed)
-      {
-        return TypeText(key);
-      }
-
-      return Task.CompletedTask;
     }
 
     return InvokeMacKeyEvent(key, code, isPressed, mode);
@@ -161,6 +139,11 @@ public class InputSimulatorMac(
     logicalX = Math.Clamp(logicalX, bounds.Left, maxX);
     logicalY = Math.Clamp(logicalY, bounds.Top, maxY);
     return (logicalX, logicalY);
+  }
+
+  private static bool HasShortcutModifier(KeyEventModifiersDto modifiers)
+  {
+    return modifiers.Control || modifiers.Alt || modifiers.Meta;
   }
 
   private Task InvokeMacKeyEvent(string key, string code, bool isPressed, KeyboardInputMode inputMode)

@@ -24,37 +24,13 @@ public class InputSimulatorX11 : IInputSimulator
     KeyboardInputMode inputMode,
     KeyEventModifiersDto modifiers)
   {
-    var mode = inputMode;
-    var isPrintableCharacter = key.Length == 1;
-    var isModifierPressed = modifiers.AreAnyPressed;
-    var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta";
-
-    if (mode == KeyboardInputMode.Virtual)
+    if (ShouldUseLogicalKeyInput(key, inputMode, modifiers))
     {
-      if (isPrintableCharacter && !isModifierPressed && !isModifierKey)
-      {
-        if (isPressed)
-        {
-          return TypeText(key);
-        }
-
-        return Task.CompletedTask;
-      }
-
-      if (!isModifierPressed || isModifierKey)
-      {
-        code = string.Empty;
-      }
+      code = string.Empty;
     }
-
-    if (mode == KeyboardInputMode.Auto && isPrintableCharacter && !isModifierPressed)
+    else if (inputMode == KeyboardInputMode.Virtual && (!HasShortcutModifier(modifiers) || IsModifierKey(key)))
     {
-      if (isPressed)
-      {
-        return TypeText(key);
-      }
-
-      return Task.CompletedTask;
+      code = string.Empty;
     }
 
     // For commands, shortcuts, and non-printable keys, use virtual key simulation
@@ -662,6 +638,30 @@ public class InputSimulatorX11 : IInputSimulator
 
     var screenNumber = LibX11.XDefaultScreen(xDisplay);
     return (screenNumber, absoluteX, absoluteY);
+  }
+
+  private static bool HasShortcutModifier(KeyEventModifiersDto modifiers)
+  {
+    return modifiers.Control || modifiers.Alt || modifiers.Meta;
+  }
+
+  private static bool IsModifierKey(string key)
+  {
+    return key is "Shift" or "Control" or "Alt" or "Meta";
+  }
+
+  private static bool IsPrintableCharacterKey(string key)
+  {
+    // Treat as printable when the key is a single, non-control character (e.g., letters, digits, space).
+    return key is { Length: 1 } && !char.IsControl(key[0]);
+  }
+
+  private static bool ShouldUseLogicalKeyInput(string key, KeyboardInputMode inputMode, KeyEventModifiersDto modifiers)
+  {
+    return inputMode is not KeyboardInputMode.Physical &&
+           IsPrintableCharacterKey(key) &&
+           !IsModifierKey(key) &&
+           !HasShortcutModifier(modifiers);
   }
 
 }

@@ -19,7 +19,7 @@ public class JpegEncoder(IImageUtility imageUtility) : IFrameEncoder
         return EncodeToMemory(cropped, quality);
     }
 
-    private byte[] EncodeToMemory(SKBitmap bitmap, int quality)
+    private static byte[] EncodeToMemory(SKBitmap bitmap, int quality)
     {
         using var ms = new MemoryStream();
         bitmap.Encode(ms, SKEncodedImageFormat.Jpeg, quality);

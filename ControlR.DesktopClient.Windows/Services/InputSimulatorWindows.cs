@@ -35,38 +35,21 @@ internal class InputSimulatorWindows(
     }
 
     var mode = inputMode;
-    var isPrintableCharacter = key.Length == 1;
-    var isModifierPressed = modifiers.AreAnyPressed;
     var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta";
+
+    if (ShouldUseTextEvent(key, inputMode, modifiers))
+    {
+      return InvokeOnInputThread(() => _win32Interop.InvokeTextEvent(key, isPressed));
+    }
 
     if (mode == KeyboardInputMode.Virtual)
     {
-      if (isPrintableCharacter && !isModifierPressed && !isModifierKey)
-      {
-        if (isPressed)
-        {
-          return InvokeOnInputThread(() => _win32Interop.TypeText(key));
-        }
-
-        return Task.CompletedTask;
-      }
-
-      if (isModifierPressed && !isModifierKey)
+      if (HasShortcutModifier(modifiers) && !isModifierKey)
       {
         return InvokeOnInputThread(() => _win32Interop.InvokeKeyEvent(key, code, isPressed, mode));
       }
 
       return InvokeOnInputThread(() => _win32Interop.InvokeKeyEvent(key, string.Empty, isPressed, mode));
-    }
-
-    if (mode == KeyboardInputMode.Auto && isPrintableCharacter && !isModifierPressed)
-    {
-      if (isPressed)
-      {
-        return InvokeOnInputThread(() => _win32Interop.TypeText(key));
-      }
-
-      return Task.CompletedTask;
     }
 
     return InvokeOnInputThread(() => _win32Interop.InvokeKeyEvent(key, code, isPressed, mode));
@@ -157,6 +140,19 @@ internal class InputSimulatorWindows(
     absoluteY = Math.Clamp(absoluteY, bounds.Top, maxY);
 
     return (absoluteX, absoluteY);
+  }
+
+  private static bool HasShortcutModifier(KeyEventModifiersDto modifiers)
+  {
+    return modifiers.Control || modifiers.Alt || modifiers.Meta;
+  }
+
+  private static bool ShouldUseTextEvent(string key, KeyboardInputMode inputMode, KeyEventModifiersDto modifiers)
+  {
+    return inputMode is not KeyboardInputMode.Physical &&
+           key.Length == 1 &&
+           !char.IsControl(key[0]) &&
+           !HasShortcutModifier(modifiers);
   }
 
   private Task<T> InvokeOnInputThread<T>(Func<T> action)

@@ -1,4 +1,5 @@
 namespace ControlR.Libraries.NativeInterop.Linux;
+
 /// <summary>
 /// Maps browser key codes to Linux evdev keycodes for Wayland RemoteDesktop portal.
 /// Based on Linux input-event-codes.h and browser KeyboardEvent.code values.
@@ -182,6 +183,103 @@ public static class LinuxKeycodeMapper
     return -1;
   }
 
+  public static string? BrowserKeyToKeysymName(string? key)
+  {
+    if (string.IsNullOrWhiteSpace(key))
+    {
+      return null;
+    }
+
+    if (key.Length == 1)
+    {
+      return CharacterToKeysymName(key[0]);
+    }
+
+    if (key.Length > 1 &&
+        key[0] == 'F' &&
+        int.TryParse(key.AsSpan(1), out var functionNumber) &&
+        functionNumber is >= 1 and <= 35)
+    {
+      return key;
+    }
+
+    return key switch
+    {
+      "ArrowDown" => "Down",
+      "ArrowUp" => "Up",
+      "ArrowLeft" => "Left",
+      "ArrowRight" => "Right",
+      "Enter" => "Return",
+      "Esc" => "Escape",
+      "Escape" => "Escape",
+      "Alt" => "Alt_L",
+      "Control" => "Control_L",
+      "Shift" => "Shift_L",
+      "Meta" => "Super_L",
+      "Backspace" => "BackSpace",
+      "Tab" => "Tab",
+      "CapsLock" => "Caps_Lock",
+      "Delete" => "Delete",
+      "Insert" => "Insert",
+      "Home" => "Home",
+      "End" => "End",
+      "PageUp" => "Page_Up",
+      "PageDown" => "Page_Down",
+      "NumLock" => "Num_Lock",
+      "ScrollLock" => "Scroll_Lock",
+      "Pause" => "Pause",
+      "ContextMenu" => "Menu",
+      "PrintScreen" => "Print",
+      _ => null,
+    };
+  }
+
+  public static string? CharacterToKeysymName(char character)
+  {
+    return character switch
+    {
+      >= 'a' and <= 'z' => character.ToString(),
+      >= 'A' and <= 'Z' => character.ToString(),
+      >= '0' and <= '9' => character.ToString(),
+      ' ' => "space",
+      '!' => "exclam",
+      '"' => "quotedbl",
+      '#' => "numbersign",
+      '$' => "dollar",
+      '%' => "percent",
+      '&' => "ampersand",
+      '\'' => "apostrophe",
+      '(' => "parenleft",
+      ')' => "parenright",
+      '*' => "asterisk",
+      '+' => "plus",
+      ',' => "comma",
+      '-' => "minus",
+      '.' => "period",
+      '/' => "slash",
+      ':' => "colon",
+      ';' => "semicolon",
+      '<' => "less",
+      '=' => "equal",
+      '>' => "greater",
+      '?' => "question",
+      '@' => "at",
+      '[' => "bracketleft",
+      '\\' => "backslash",
+      ']' => "bracketright",
+      '^' => "asciicircum",
+      '_' => "underscore",
+      '`' => "grave",
+      '{' => "braceleft",
+      '|' => "bar",
+      '}' => "braceright",
+      '~' => "asciitilde",
+      '\t' => "Tab",
+      '\n' or '\r' => "Return",
+      _ => null,
+    };
+  }
+
   /// <summary>
   /// Maps mouse button number to Linux evdev button code.
   /// </summary>
@@ -196,5 +294,53 @@ public static class LinuxKeycodeMapper
       4 => 0x114, // BTN_EXTRA
       _ => 0x110  // Default to left
     };
+  }
+
+  public static bool TryMapCharacterToLinuxKeycode(char ch, out int keycode, out bool needsShift)
+  {
+    (keycode, needsShift) = ch switch
+    {
+      >= 'a' and <= 'z' => (BrowserCodeToLinuxKeycode($"Key{char.ToUpperInvariant(ch)}", ch.ToString()), false),
+      >= 'A' and <= 'Z' => (BrowserCodeToLinuxKeycode($"Key{ch}", ch.ToString()), true),
+      >= '0' and <= '9' => (BrowserCodeToLinuxKeycode($"Digit{ch}", ch.ToString()), false),
+      ' ' => (57, false),
+      '!' => (2, true),
+      '@' => (3, true),
+      '#' => (4, true),
+      '$' => (5, true),
+      '%' => (6, true),
+      '^' => (7, true),
+      '&' => (8, true),
+      '*' => (9, true),
+      '(' => (10, true),
+      ')' => (11, true),
+      '-' => (12, false),
+      '_' => (12, true),
+      '=' => (13, false),
+      '+' => (13, true),
+      '[' => (26, false),
+      '{' => (26, true),
+      ']' => (27, false),
+      '}' => (27, true),
+      '\\' => (43, false),
+      '|' => (43, true),
+      ';' => (39, false),
+      ':' => (39, true),
+      '\'' => (40, false),
+      '"' => (40, true),
+      ',' => (51, false),
+      '<' => (51, true),
+      '.' => (52, false),
+      '>' => (52, true),
+      '/' => (53, false),
+      '?' => (53, true),
+      '`' => (41, false),
+      '~' => (41, true),
+      '\n' or '\r' => (28, false),
+      '\t' => (15, false),
+      _ => (-1, false)
+    };
+
+    return keycode >= 0;
   }
 }

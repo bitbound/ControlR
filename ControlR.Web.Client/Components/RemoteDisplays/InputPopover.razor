@@ -46,15 +46,21 @@
     <MudText Typo="Typo.caption">Keyboard Input Mode</MudText>
     <MudRadioGroup Value="RemoteControlState.KeyboardInputMode"
                    ValueChanged="@((KeyboardInputMode v) => HandleKeyboardInputModeChanged(v))">
-      <MudRadio Value="@(KeyboardInputMode.Auto)" Color="Color.Primary" Size="Size.Small">
-        Auto
-      </MudRadio>
-      <MudRadio Value="@(KeyboardInputMode.Physical)" Color="Color.Primary" Size="Size.Small">
-        Physical
-      </MudRadio>
-      <MudRadio Value="@(KeyboardInputMode.Virtual)" Color="Color.Primary" Size="Size.Small">
-        Virtual
-      </MudRadio>
+      <MudTooltip Text="Types the logical character for text input while keeping physical-style handling for commands, navigation keys, and modifiers.">
+        <MudRadio Value="@(KeyboardInputMode.Auto)" Color="Color.Primary" Size="Size.Small">
+          Auto
+        </MudRadio>
+      </MudTooltip>
+      <MudTooltip Text="Simulates the same physical key position on the remote machine, regardless of keyboard layout.">
+        <MudRadio Value="@(KeyboardInputMode.Physical)" Color="Color.Primary" Size="Size.Small">
+          Physical
+        </MudRadio>
+      </MudTooltip>
+      <MudTooltip Text="Prefers the logical key or character value, so pressing a key types that same character regardless of the remote layout.">
+        <MudRadio Value="@(KeyboardInputMode.Virtual)" Color="Color.Primary" Size="Size.Small">
+          Virtual
+        </MudRadio>
+      </MudTooltip>
     </MudRadioGroup>
   </div>
 

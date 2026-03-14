@@ -41,7 +41,7 @@ internal sealed class ScreenGrabberWindows(
   {
     SwitchToInputDesktop();
     var bounds = await _displayManager.GetVirtualScreenLayoutBounds();
-    var captureArea = new Rectangle((int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height);
+    var captureArea = new Rectangle(bounds.X, bounds.Y, bounds.Width, bounds.Height);
     return GetBitBltCapture(captureArea, captureCursor);
   }
   public async Task<CaptureResult> CaptureDisplay(

@@ -29,7 +29,7 @@
                 AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                 OnAdornmentClick="CopyTenantId"
                 Adornment="Adornment.End"
-                Value="_tenantId"/>
+                Value="_tenantId" />
 </div>
 
 <div class="mt-10">
@@ -43,7 +43,7 @@
                 AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                 OnAdornmentClick="CopyUserId"
                 Adornment="Adornment.End"
-                Value="_userId"/>
+                Value="_userId" />
 </div>
 
 <div class="mt-10">
@@ -84,7 +84,7 @@
                @bind-Value:get="_notifyUser"
                @bind-Value:set="SetNotifyUser"
                Disabled="_tenantNotifySetting.HasValue"
-               Label="Notify users when a remote control session starts"/>
+               Label="Notify users when a remote control session starts" />
 </div>
 
 <div class="mt-10">
@@ -135,9 +135,15 @@
   </MudText>
 
   <MudRadioGroup @bind-Value:get="_keyboardInputMode" @bind-Value:set="SetKeyboardInputMode" T="KeyboardInputMode">
-    <MudRadio Value="@KeyboardInputMode.Auto" Color="Color.Primary">Auto</MudRadio>
-    <MudRadio Value="@KeyboardInputMode.Physical" Color="Color.Primary">Physical</MudRadio>
-    <MudRadio Value="@KeyboardInputMode.Virtual" Color="Color.Primary">Virtual</MudRadio>
+    <MudTooltip Text="Types the logical character for text input while keeping physical-style handling for commands, navigation keys, and modifiers.">
+      <MudRadio Value="@KeyboardInputMode.Auto" Color="Color.Primary">Auto</MudRadio>
+    </MudTooltip>
+    <MudTooltip Text="Simulates the same physical key position on the remote machine, regardless of keyboard layout.">
+      <MudRadio Value="@KeyboardInputMode.Physical" Color="Color.Primary">Physical</MudRadio>
+    </MudTooltip>
+    <MudTooltip Text="Prefers the logical key or character value, so pressing a key types that same character regardless of the remote layout.">
+      <MudRadio Value="@KeyboardInputMode.Virtual" Color="Color.Primary">Virtual</MudRadio>
+    </MudTooltip>
   </MudRadioGroup>
 </div>
 
