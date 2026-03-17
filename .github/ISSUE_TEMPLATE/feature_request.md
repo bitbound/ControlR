@@ -7,14 +7,33 @@ assignees: bitbound
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+### Feature Request Checklist
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+- [ ] Searched for existing feature requests
+- [ ] Filled out all the sections below
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+### What problem would this feature solve?
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+Describe the situation where you need this feature. For example:
+- "I want to be able to [...], but currently I can't."
+- "It's difficult to [...] because there's no way to [...]."
+- "I keep having to [...] manually, and it would be helpful if [...]."
+
+### How would you like it to work?
+
+Describe your ideal flow/process for how the feature would work. You don't need to know the technical details.  Just explain what you'd like to happen from a user's perspective.
+
+### For which environment is this feature intended?
+- [ ] Personal use
+- [ ] MSP
+- [ ] Enterprise IT
+- [ ] Other (please describe)
+
+### How important is this feature to you?
+- [ ] Nice to have
+- [ ] Important
+- [ ] Critical
+
+### Any other context?
+
+Add any screenshots, mockups, links to similar features in other apps, or other information that might help me understand what you're looking for.
