@@ -10,7 +10,7 @@
 				x:Class="ControlR.DesktopClient.Views.MainWindow"
 				x:DataType="vm:IMainWindowViewModel"
 				Icon="/Assets/appicon.ico"
-				Title="{x:Static brand:BrandingConstants.ProductName}"
+				Title="{x:Static brand:BrandingConstants.BrandName}"
 				Width="600"
 				Height="500">
 

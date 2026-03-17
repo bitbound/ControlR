@@ -11,9 +11,13 @@ public class AdminTagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger
     return dto.Id;
   }
 
+  protected override IEnumerable<TagViewModel> OrderItems(IEnumerable<TagViewModel> items)
+  {
+    return items.OrderBy(t => t.Name);
+  }
+
   protected override async Task RefreshImpl()
   {
-    Cache.Clear();
     var getResult = await ControlrApi.Tags.GetAllTags(includeLinkedIds: true);
     if (!getResult.IsSuccess)
     {
@@ -21,10 +25,7 @@ public class AdminTagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger
       return;
     }
 
-    foreach (var tag in getResult.Value)
-    {
-      var vm = new TagViewModel(tag);
-      Cache.AddOrUpdate(vm.Id, vm, (_, _) => vm);
-    }
+    var vms = getResult.Value.Select(tag => new TagViewModel(tag));
+    SetItems(vms);
   }
 }

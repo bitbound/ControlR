@@ -16,18 +16,14 @@ internal class RoleStore(
 
   protected override async Task RefreshImpl()
   {
-    Cache.Clear();
     var getResult = await ControlrApi.Roles.GetAllRoles();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);
       return;
     }
-
-    foreach (var role in getResult.Value)
-    {
-      var vm = new RoleViewModel(role);
-      Cache.AddOrUpdate(vm.Id, vm, (_, _) => vm);
-    }
+    
+    var vms = getResult.Value.Select(role => new RoleViewModel(role));
+    SetItems(vms);
   }
 }

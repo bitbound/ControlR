@@ -7,7 +7,7 @@
 						 xmlns:vmf="using:ControlR.DesktopClient.ViewModels.Fakes"
 			       xmlns:brand="using:ControlR.Libraries.Branding"
 						 x:DataType="vm:AppViewModel"
-						 Name="{x:Static brand:BrandingConstants.ProductName}">
+						 Name="{x:Static brand:BrandingConstants.BrandName}">
 	
 	<Application.DataTemplates>
 		<local:ViewLocator/>

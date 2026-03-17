@@ -2,5 +2,5 @@
 
 public static class BrandingConstants
 {
-  public const string ProductName = "ControlR";
+  public const string BrandName = "ControlR";
 }

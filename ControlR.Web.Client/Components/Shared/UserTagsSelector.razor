@@ -4,6 +4,7 @@
 @inject IUserTagStore UserTagStore
 
 <MudSelect T="TagViewModel" MultiSelection="true" MultiSelectionTextFunc="GetTagsMultiSelectText"
+  QuickSearchInterval="@(TimeSpan.FromMilliseconds(50))"
   Placeholder="@(PlaceholderText)" AdornmentIcon="@Icons.Material.Filled.Tag" Adornment="Adornment.End"
   SelectedValues="_selectedTags" SelectedValuesChanged="OnSelectedTagsChanged" SelectAll="true" FullWidth="false"
   SelectAllText="All Tags" Immediate="true" Class="ms-3">

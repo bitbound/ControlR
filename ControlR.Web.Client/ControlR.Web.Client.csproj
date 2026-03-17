@@ -18,6 +18,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Messenger.Extensions\ControlR.Libraries.Messenger.Extensions.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />

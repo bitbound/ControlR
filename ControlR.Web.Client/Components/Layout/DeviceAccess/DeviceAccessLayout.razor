@@ -5,21 +5,21 @@
 
 
 <div class="h-100 @(ThemeClass)">
-	<link rel="stylesheet" href="/device-access.css" />
-	<ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
-		<MudLayout>
-			<MudAppBar Elevation="1">
+  <link rel="stylesheet" href="/device-access.css" />
+  <ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
+    <MudLayout>
+      <MudAppBar Elevation="1">
 
-				@if (RendererInfo.IsInteractive)
-				{
-					<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+        @if (RendererInfo.IsInteractive)
+        {
+          <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
                          OnClick="@(() => ToggleNavDrawer())" Class="me-2" />
-				}
-				else
-				{
-					<MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
-																		Edge="Edge.Start" Class="me-2" />
-				}
+        }
+        else
+        {
+          <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+                                    Edge="Edge.Start" Class="me-2" />
+        }
 
         @if (_canGoBack)
         {
@@ -30,17 +30,17 @@
           </MudTooltip>
         }
 
-				@if (!string.IsNullOrWhiteSpace(_deviceName))
-				{
-					<MudText Typo="Typo.subtitle2" Color="Color.Info" Inline>
-						Device:
-					</MudText>
-					<MudText Typo="Typo.subtitle2" Class="ms-1" Inline>
-						@_deviceName
-					</MudText>
-				}
+        @if (!string.IsNullOrWhiteSpace(_deviceName))
+        {
+          <MudText Typo="Typo.subtitle2" Color="Color.Info" Inline>
+            Device:
+          </MudText>
+          <MudText Typo="Typo.subtitle2" Class="ms-1" Inline>
+            @_deviceName
+          </MudText>
+        }
 
-				<MudSpacer />
+        <MudSpacer />
 
         @if (RendererInfo.IsInteractive)
         {
@@ -49,54 +49,56 @@
 
         <ThemeToggle OnThemeChanged="HandleThemeChanged" />
 
-			</MudAppBar>
-			<MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
-				<MudDrawerHeader Class="pa-4">
-					<MudImage Src=@Assets["appicon-192.png"] Height="30" Class="me-2" />
-					<MudText Typo="Typo.h6" Color="Color.Primary">
-						ControlR
-					</MudText>
-				</MudDrawerHeader>
-				<DeviceAccessNavMenu IsDisabled="@(IsNavMenuDisabled)" />
-			</MudDrawer>
-			<MudMainContent Class="h-100">
-				@if (RendererInfo.IsInteractive)
-				{
-					<ServerAlertDisplay Class="mb-4" />
-				}
+      </MudAppBar>
+      <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudDrawerHeader Class="pa-4">
+          <MudLink Href="/" Underline="Underline.None" Class="d-flex">
+            <MudImage Src=@Assets["appicon-192.png"] Height="30" Class="me-2" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">
+              ControlR
+            </MudText>
+          </MudLink>
+        </MudDrawerHeader>
+        <DeviceAccessNavMenu IsDisabled="@(IsNavMenuDisabled)" />
+      </MudDrawer>
+      <MudMainContent Class="h-100">
+        @if (RendererInfo.IsInteractive)
+        {
+          <ServerAlertDisplay Class="mb-4" />
+        }
 
-				@if (!RendererInfo.IsInteractive)
-				{
-					<div class="w-100 text-center mt-8">
-						<div class="loading-progress-container">
-							<MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
-								Loading <span class="loading-progress-text"></span>
-							</MudText>
-							<MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
-						</div>
-					</div>
-				}
-				else if (_hubConnectionState != HubConnectionState.Connected)
-				{
-					<LoadingIndicator IsVisible Message="Connecting" Class="mt-8" />
-				}
-				else if (!string.IsNullOrWhiteSpace(_errorText))
-				{
-					<MudAlert Severity="Severity.Error" ShowCloseIcon="false" Icon="@(Icons.Material.Filled.Error)">
-						@(_errorText)
-					</MudAlert>
-				}
-				else
-				{
-					if (!string.IsNullOrWhiteSpace(_deviceName))
-					{
-						<PageTitle>
-							ControlR - @(_deviceName)
-						</PageTitle>
-					}
-					@Body
-				}
-			</MudMainContent>
-		</MudLayout>
-	</ControlRLayoutProvider>
+        @if (!RendererInfo.IsInteractive)
+        {
+          <div class="w-100 text-center mt-8">
+            <div class="loading-progress-container">
+              <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+                Loading <span class="loading-progress-text"></span>
+              </MudText>
+              <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+            </div>
+          </div>
+        }
+        else if (_hubConnectionState != HubConnectionState.Connected)
+        {
+          <LoadingIndicator IsVisible Message="Connecting" Class="mt-8" />
+        }
+        else if (!string.IsNullOrWhiteSpace(_errorText))
+        {
+          <MudAlert Severity="Severity.Error" ShowCloseIcon="false" Icon="@(Icons.Material.Filled.Error)">
+            @(_errorText)
+          </MudAlert>
+        }
+        else
+        {
+          if (!string.IsNullOrWhiteSpace(_deviceName))
+          {
+            <PageTitle>
+              ControlR - @(_deviceName)
+            </PageTitle>
+          }
+          @Body
+        }
+      </MudMainContent>
+    </MudLayout>
+  </ControlRLayoutProvider>
 </div>

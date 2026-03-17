@@ -18,7 +18,6 @@ public class InviteStore(
 
   protected override async Task RefreshImpl()
   {
-    Cache.Clear();
     var getResult = await _controlrApi.Invites.GetPendingTenantInvites();
     if (!getResult.IsSuccess)
     {
@@ -26,9 +25,6 @@ public class InviteStore(
       return;
     }
 
-    foreach (var invite in getResult.Value)
-    {
-      Cache.AddOrUpdate(invite.Id, invite, (_, _) => invite);
-    }
+    SetItems(getResult.Value);
   }
 }

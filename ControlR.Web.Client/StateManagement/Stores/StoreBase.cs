@@ -8,7 +8,7 @@ namespace ControlR.Web.Client.StateManagement.Stores;
 public interface IStoreBase<TDto>
   where TDto : class
 {
-  ICollection<TDto> Items { get; }
+  IReadOnlyList<TDto> Items { get; }
   Task AddOrUpdate(TDto dto);
   Task Clear();
   Task InvokeItemsChanged();
@@ -17,6 +17,7 @@ public interface IStoreBase<TDto>
   IDisposable RegisterChangeHandler(object subscriber, Action handler);
   Task<bool> Remove(TDto dto);
   Task<bool> Remove(Guid id);
+  void SetItems(IEnumerable<TDto> items);
   bool TryGet(Guid id, [NotNullWhen(true)] out TDto? dto);
 }
 
@@ -26,12 +27,15 @@ public abstract class StoreBase<TDto>(
   ILogger<StoreBase<TDto>> logger) : IStoreBase<TDto>
   where TDto : class
 {
+  private readonly ConcurrentDictionary<Guid, TDto> _cache = new();
   private readonly ConditionalWeakTable<object, Func<Task>> _changeHandlers = [];
   private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-  public ICollection<TDto> Items => Cache.Values;
+  // Immutable snapshot that consumers read. Rebuilt on mutations to provide a stable, pre-sorted view.
+  private ImmutableArray<TDto> _snapshot = [];
 
-  protected ConcurrentDictionary<Guid, TDto> Cache { get; } = new();
+  public IReadOnlyList<TDto> Items => _snapshot;
+
   protected IControlrApi ControlrApi { get; } = controlrApi;
   protected ILogger<StoreBase<TDto>> Logger { get; } = logger;
   protected ISnackbar Snackbar { get; } = snackbar;
@@ -45,18 +49,21 @@ public abstract class StoreBase<TDto>(
       return;
     }
 
-    Cache.AddOrUpdate(id, dto, (_, _) => dto);
+    _cache.AddOrUpdate(id, dto, (_, _) => dto);
+    RebuildSnapshot();
     await InvokeChangeHandlers();
   }
 
   public async Task Clear()
   {
-    Cache.Clear();
+    _cache.Clear();
+    RebuildSnapshot();
     await InvokeChangeHandlers();
   }
 
   public async Task InvokeItemsChanged()
   {
+    // Snapshot already kept up-to-date; just notify.
     await InvokeChangeHandlers();
   }
 
@@ -74,6 +81,7 @@ public abstract class StoreBase<TDto>(
     try
     {
       await RefreshImpl();
+      RebuildSnapshot();
       await InvokeChangeHandlers();
     }
     catch (Exception ex)
@@ -135,24 +143,44 @@ public abstract class StoreBase<TDto>(
       return false;
     }
 
-    var removed = Cache.Remove(id, out _);
+    var removed = _cache.Remove(id, out _);
+    if (removed) RebuildSnapshot();
     await InvokeChangeHandlers();
     return removed;
   }
 
   public async Task<bool> Remove(Guid id)
   {
-    var removed = Cache.Remove(id, out _);
+    var removed = _cache.Remove(id, out _);
+    if (removed) RebuildSnapshot();
     await InvokeChangeHandlers();
     return removed;
   }
 
+  public void SetItems(IEnumerable<TDto> items)
+  {
+    _cache.Clear();
+    foreach (var dto in items)
+    {
+      var id = GetItemId(dto);
+      if (id == Guid.Empty)
+      {
+        Logger.LogWarning("Cannot add {ResourceName} to store because it has no valid primary key.", typeof(TDto).Name);
+        continue;
+      }
+      _ = _cache.TryAdd(id, dto);
+    }
+  }
+
   public bool TryGet(Guid id, [NotNullWhen(true)] out TDto? dto)
   {
-    return Cache.TryGetValue(id, out dto);
+    return _cache.TryGetValue(id, out dto);
   }
 
   protected abstract Guid GetItemId(TDto dto);
+
+  // Override to provide ordering for the snapshot. Default: preserve enumeration order.
+  protected virtual IEnumerable<TDto> OrderItems(IEnumerable<TDto> items) => items;
 
   protected abstract Task RefreshImpl();
 
@@ -179,5 +207,10 @@ public abstract class StoreBase<TDto>(
         Logger.LogError(ex, "Error while invoking change handler.");
       }
     }
+  }
+
+  private void RebuildSnapshot()
+  {
+    _snapshot = [.. OrderItems(_cache.Values)];
   }
 }

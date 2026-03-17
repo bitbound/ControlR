@@ -8,7 +8,7 @@ namespace ControlR.Libraries.SecureStorage;
 /// </summary>
 public partial class SecureStorageOptions
 {
-  private string _serviceName = BrandingConstants.ProductName;
+  private string _serviceName = BrandingConstants.BrandName;
 
   /// <summary>
   /// Gets or sets the service name used for secure storage.

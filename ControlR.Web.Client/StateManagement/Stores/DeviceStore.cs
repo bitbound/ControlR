@@ -22,12 +22,19 @@ internal class DeviceStore : StoreBase<DeviceResponseDto>, IDeviceStore
     return dto.Id;
   }
 
+  protected override IEnumerable<DeviceResponseDto> OrderItems(IEnumerable<DeviceResponseDto> items)
+  {
+    return items.OrderBy(d => d.Name);
+  }
+
   protected override async Task RefreshImpl()
   {
+    var devices = new List<DeviceResponseDto>();
     await foreach (var device in ControlrApi.Devices.GetAllDevices())
     {
-      Cache.AddOrUpdate(device.Id, device, (_, _) => device);
+      devices.Add(device);
     }
+    SetItems(devices);
   }
 
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
