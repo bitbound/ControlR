@@ -72,6 +72,7 @@ public class TagsController : ControllerBase
 
     var dtos = tags
       .Select(x => x.ToDto())
+      .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
       .ToArray();
 
     return Ok(dtos);

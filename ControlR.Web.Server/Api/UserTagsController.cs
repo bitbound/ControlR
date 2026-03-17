@@ -85,6 +85,7 @@ public class UserTagsController : ControllerBase
     }
 
     var userTags = user.Tags
+      .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
       .Select(x => x.ToDto())
       .ToArray();
 
