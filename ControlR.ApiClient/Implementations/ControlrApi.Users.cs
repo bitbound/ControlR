@@ -13,7 +13,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsJsonAsync(HttpConstants.UsersEndpoint, request, cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<UserResponseDto>(cancellationToken);
     });
   }
@@ -23,7 +23,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.DeleteAsync($"{HttpConstants.UsersEndpoint}/{userId}", cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
 

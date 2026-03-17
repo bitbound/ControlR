@@ -10,7 +10,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.GetAsync($"{HttpConstants.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}", cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     });
   }

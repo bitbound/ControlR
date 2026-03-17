@@ -14,7 +14,7 @@ public partial class ControlrApi
     {
       var url = $"{HttpConstants.TenantSettingsEndpoint}/{settingName}";
       using var response = await _client.DeleteAsync(url, cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
 
@@ -28,7 +28,7 @@ public partial class ControlrApi
         return new TenantSettingResponseDto(Id: null, Name: settingName, Value: null);
       }
 
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>(cancellationToken)
         ?? throw new HttpRequestException("The server response was empty.", null, response.StatusCode);
     });
@@ -45,7 +45,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsJsonAsync(HttpConstants.TenantSettingsEndpoint, request, cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>(cancellationToken);
     });
   }

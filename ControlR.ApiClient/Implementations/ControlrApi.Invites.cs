@@ -16,7 +16,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsJsonAsync($"{HttpConstants.InvitesEndpoint}/accept", request, cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AcceptInvitationResponseDto>(cancellationToken);
     });
   }
@@ -34,7 +34,7 @@ public partial class ControlrApi
           inner: null,
           HttpStatusCode.Conflict);
       }
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<TenantInviteResponseDto>(cancellationToken);
     });
   }
@@ -44,7 +44,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.DeleteAsync($"{HttpConstants.InvitesEndpoint}/{inviteId}", cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
 

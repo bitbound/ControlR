@@ -18,7 +18,7 @@ public partial class ControlrApi
         return new UserPreferenceResponseDto(Id: null, Name: preferenceName, Value: null);
       }
 
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>(cancellationToken)
         ?? throw new HttpRequestException("The server response was empty.", null, response.StatusCode);
     });
@@ -35,7 +35,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request, cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>(cancellationToken);
     });
   }

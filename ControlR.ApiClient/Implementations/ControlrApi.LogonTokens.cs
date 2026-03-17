@@ -12,7 +12,7 @@ public partial class ControlrApi
 		return await ExecuteApiCall(async () =>
 		{
 			using var response = await _client.PostAsJsonAsync(HttpConstants.LogonTokensEndpoint, request, cancellationToken);
-			response.EnsureSuccessStatusCode();
+     await response.EnsureSuccessStatusCodeWithDetails();
 			return await response.Content.ReadFromJsonAsync<LogonTokenResponseDto>(cancellationToken);
 		});
 	}

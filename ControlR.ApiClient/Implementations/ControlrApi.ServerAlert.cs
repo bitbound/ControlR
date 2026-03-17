@@ -17,7 +17,7 @@ public partial class ControlrApi
       {
         return ServerAlertResponseDto.Empty;
       }
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>(cancellationToken)
         ?? throw new HttpRequestException("The server response was empty.", null, response.StatusCode);
     });
@@ -28,7 +28,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsJsonAsync(HttpConstants.ServerAlertEndpoint, request, cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>(cancellationToken);
     });
   }
