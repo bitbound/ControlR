@@ -112,9 +112,34 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      - name: Run Tests
+      - name: Restore Solution
+        shell: pwsh
         run: |
-          dotnet test -c Release
+          dotnet restore ControlR.slnx
+
+      - name: Build Solution
+        shell: pwsh
+        run: |
+          dotnet build ControlR.slnx -c Release --no-restore
+
+      - name: Run Tests
+        shell: pwsh
+        run: |
+          $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
+            Where-Object { $_.Name -like "*.Tests.csproj" } |
+            Sort-Object FullName
+
+          if ($testProjects.Count -eq 0) {
+            throw "No test projects were found under Tests/."
+          }
+
+          foreach ($project in $testProjects) {
+            Write-Host "Running $($project.FullName)..."
+            dotnet run --project $project.FullName -c Release --no-build --no-restore
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test execution failed for $($project.FullName)."
+            }
+          }
 
   build-nugets:
     name: Build NuGet Packages

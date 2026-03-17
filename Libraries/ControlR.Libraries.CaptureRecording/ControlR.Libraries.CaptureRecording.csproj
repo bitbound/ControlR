@@ -3,6 +3,19 @@
   <ItemGroup>
     <PackageReference Include="SkiaSharp" />
   </ItemGroup>
+  
+  <ItemGroup Condition="'$(IsWindows)' == 'true'">
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsLinux)' == 'true'">
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsMacOS)' == 'true'">
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <ProjectReference Include="..\ControlR.Libraries.Api.Contracts\ControlR.Libraries.Api.Contracts.csproj" />

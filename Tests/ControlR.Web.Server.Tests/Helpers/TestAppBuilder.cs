@@ -27,8 +27,10 @@ internal static class TestAppBuilder
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
     var uniqueDatabaseName = $"{testDatabaseName}-{Guid.NewGuid()}";
 
-    var builder = WebApplication.CreateBuilder();
-    builder.Environment.EnvironmentName = "Testing";
+    var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+    {
+      EnvironmentName = "Testing",
+    });
 
     if (useInMemoryDatabase)
     {
