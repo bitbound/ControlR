@@ -115,7 +115,7 @@ public partial class Dashboard : IDisposable
       var navOptions = new NavigationOptions()
       {
         ForceLoad = false,
-        HistoryEntryState = HistoryEntryStates.CanGoBack
+        HistoryEntryState = HistoryEntryStates.CreateDeviceAccess()
       };
       NavMan.NavigateTo($"/device-access?deviceId={device.Id}", navOptions);
     }
@@ -133,7 +133,7 @@ public partial class Dashboard : IDisposable
       var navOptions = new NavigationOptions()
       {
         ForceLoad = false,
-        HistoryEntryState = HistoryEntryStates.CanGoBack
+        HistoryEntryState = HistoryEntryStates.CreateDeviceAccess()
       };
       NavMan.NavigateTo($"/device-access/remote-control?deviceId={device.Id}", navOptions);
     }

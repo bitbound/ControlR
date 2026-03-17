@@ -18,6 +18,8 @@ public partial class DeviceAccessLayout
   [Inject]
   public required ILazyInjector<IDeviceState> DeviceAccessState { get; init; }
   [Inject]
+  public required ILazyInjector<IHistoryEntryParser> HistoryEntryParser { get; init; }
+  [Inject]
   public required ILazyInjector<IHubConnector> HubConnector { get; init; }
   [Inject]
   public required ILogger<DeviceAccessLayout> Logger { get; init; }
@@ -109,7 +111,8 @@ public partial class DeviceAccessLayout
         return;
       }
 
-      _canGoBack = NavManager.HistoryEntryState == HistoryEntryStates.CanGoBack;
+      _canGoBack = HistoryEntryParser.Value.TryParseForDeviceAccess(NavManager.HistoryEntryState, out var historyEntry)
+        && historyEntry?.CanGoBack == true;
 
       await GetDeviceInfo();
 

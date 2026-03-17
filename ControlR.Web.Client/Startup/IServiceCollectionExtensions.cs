@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IWaiter, Waiter>();
     services.AddScoped<IRetryer, Retryer>();
     services.AddScoped<IClipboardManager, ClipboardManager>();
+    services.AddScoped<IHistoryEntryParser, HistoryEntryParser>();
     services.AddScoped<IScreenWake, ScreenWake>();
     services.AddScoped<ISessionStorageAccessor, SessionStorageAccessor>();
     services.AddScoped<ILocalStorageAccessor, LocalStorageAccessor>();

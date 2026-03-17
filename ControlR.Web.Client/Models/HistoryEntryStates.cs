@@ -2,5 +2,11 @@
 
 public static class HistoryEntryStates
 {
-  public const string CanGoBack = "can-go-back";
+  public static string CreateDeviceAccess(bool canGoBack = true)
+  {
+    return JsonSerializer.Serialize(new DeviceAccessHistoryEntry
+    {
+      CanGoBack = canGoBack
+    });
+  }
 }
