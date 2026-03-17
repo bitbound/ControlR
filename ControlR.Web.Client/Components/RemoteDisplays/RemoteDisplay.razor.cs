@@ -98,6 +98,7 @@ public partial class RemoteDisplay : JsInteropableComponent
     float y,
     float width,
     float height,
+    int imageFormat,
     [JSMarshalAs<JSType.MemoryView>()]
     ArraySegment<byte> encodedImage);
 
@@ -276,16 +277,24 @@ public partial class RemoteDisplay : JsInteropableComponent
       if (OperatingSystem.IsBrowser())
       {
         var segment = new ArraySegment<byte>(dto.EncodedImage);
-        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, segment);
+        await DrawFrame(_canvasId, dto.X, dto.Y, dto.Width, dto.Height, (int)dto.ImageFormat, segment);
       }
       else
       {
-        await JsModule.InvokeVoidAsync("drawFrame", _canvasId, dto.X, dto.Y, dto.Width, dto.Height, dto.EncodedImage.ToArray());
+        await JsModule.InvokeVoidAsync("drawFrame", _canvasId, dto.X, dto.Y, dto.Width, dto.Height, (int)dto.ImageFormat, dto.EncodedImage.ToArray());
       }
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while drawing frame.");
+    }
+  }
+
+  private async Task DrawRegions(ScreenRegionsDto dto)
+  {
+    foreach (var region in dto.Regions)
+    {
+      await DrawRegion(region);
     }
   }
 
@@ -442,6 +451,12 @@ public partial class RemoteDisplay : JsInteropableComponent
           {
             var dto = wrapper.GetPayload<ScreenRegionDto>();
             await DrawRegion(dto);
+            break;
+          }
+        case DtoType.ScreenRegions:
+          {
+            var dto = wrapper.GetPayload<ScreenRegionsDto>();
+            await DrawRegions(dto);
             break;
           }
         case DtoType.ClipboardText:

@@ -10,7 +10,7 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsync(HttpConstants.TestEmailEndpoint, null, cancellationToken);
-      response.EnsureSuccessStatusCode();
+      await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
 }

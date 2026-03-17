@@ -6,6 +6,7 @@ public interface IMemoryProvider
 {
   IEphemeralBuffer<T> CreateEphemeralBuffer<T>(int size);
   MemoryStream GetRecyclableStream();
+  MemoryStream GetRecyclableStream(byte[] buffer);
 }
 
 public class MemoryProvider : IMemoryProvider
@@ -19,5 +20,10 @@ public class MemoryProvider : IMemoryProvider
   public MemoryStream GetRecyclableStream()
   {
     return _memoryStreamManager.GetStream();
+  }
+
+  public MemoryStream GetRecyclableStream(byte[] buffer)
+  {
+    return _memoryStreamManager.GetStream(buffer);
   }
 }

@@ -1,6 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace ControlR.Web.Server.Api;
 
@@ -13,7 +14,7 @@ public class TestEmailController() : ControllerBase
   [HttpPost]
   public async Task<IActionResult> SendTestEmail(
     AppDb appDb,
-    IEmailSender emailSender,
+    IControlrEmailSender emailSender,
     IOptionsMonitor<AppOptions> appOptions)
   {
     if (appOptions.CurrentValue.DisableEmailSending)
@@ -37,12 +38,17 @@ public class TestEmailController() : ControllerBase
       return BadRequest("User email not found");
     }
 
-    await emailSender.SendEmailAsync(
+    var result = await emailSender.SendEmailWithResult(
       user.Email,
       "ControlR Test Email",
       "<h1>Test Email</h1>" +
         "<p>This is a test email from your ControlR server.</p>");
 
-    return Ok();
+    if (result.IsSuccess)
+    {
+      return Ok();
+    }
+
+    return Problem(result.Reason);
   }
 }

@@ -22,8 +22,8 @@ internal class FrameBasedCapturer : IDesktopCapturer
 {
   // ReSharper disable once MemberCanBePrivate.Global
   private readonly TimeSpan _afterFailureDelay = TimeSpan.FromMilliseconds(100);
-  private readonly Channel<ScreenRegionDto> _captureChannel = Channel.CreateBounded<ScreenRegionDto>(
-    new BoundedChannelOptions(capacity: 1)
+  private readonly Channel<ScreenRegionsDto> _captureChannel = Channel.CreateBounded<ScreenRegionsDto>(
+    new BoundedChannelOptions(capacity: 2)
     {
       SingleReader = true,
       SingleWriter = true,
@@ -115,9 +115,9 @@ internal class FrameBasedCapturer : IDesktopCapturer
     [EnumeratorCancellation] CancellationToken cancellationToken)
   {
     ObjectDisposedException.ThrowIf(_disposedValue, this);
-    await foreach (var region in _captureChannel.Reader.ReadAllAsync(cancellationToken))
+    await foreach (var regions in _captureChannel.Reader.ReadAllAsync(cancellationToken))
     {
-      yield return DtoWrapper.Create(region, DtoType.ScreenRegion);
+      yield return DtoWrapper.Create(regions, DtoType.ScreenRegions);
     }
   }
 
@@ -174,6 +174,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
     CaptureResult captureResult,
     int quality,
     SKBitmap? previousFrame,
+    ImageFormat imageFormat,
     CancellationToken cancellationToken)
   {
     if (!captureResult.IsSuccess)
@@ -181,70 +182,94 @@ internal class FrameBasedCapturer : IDesktopCapturer
       return;
     }
 
-    var bitmapArea = captureResult.Bitmap.ToSkRect();
-    SKRect dirtyRect;
+    if (captureResult.Bitmap is not { } bitmap)
+    {
+      return;
+    }
 
-    if (captureResult.DirtyRects is { } dirtyRects)
-    {
-      dirtyRect = dirtyRects.Aggregate(SKRect.Empty, (current, rect) => SKRect.Union(current, rect.ToSkRect()));
-      SKRect.Intersect(dirtyRect, bitmapArea);
-    }
-    else
-    {
-      dirtyRect = GetDirtyRect(captureResult.Bitmap, previousFrame);
-    }
+    var dirtyRegions = GetDirtyRegions(bitmap, captureResult.DirtyRects, previousFrame);
 
     // If there are no dirty rects, nothing changed.
-    if (dirtyRect.IsEmpty)
+    if (dirtyRegions.Length == 0)
     {
       await Task.Delay(_noChangeDelay, cancellationToken);
       return;
     }
 
-    await EncodeRegion(captureResult.Bitmap, dirtyRect, quality);
+    await EncodeRegions(bitmap, dirtyRegions, quality, imageFormat, cancellationToken);
   }
 
-  private async Task EncodeRegion(
+  private async Task EncodeRegions(
     SKBitmap bitmap,
-    SKRect region,
-    int quality)
+    SKRect[] regions,
+    int quality,
+    ImageFormat imageFormat,
+    CancellationToken cancellationToken)
   {
-    var encodedImage = _frameEncoder.EncodeRegion(bitmap, region, quality);
+    var regionDtos = new ScreenRegionDto[regions.Length];
 
-    var dto = new ScreenRegionDto(
-      region.Left,
-      region.Top,
-      region.Width,
-      region.Height,
-      encodedImage);
+    Parallel.For(0, regions.Length, index =>
+    {
+      var region = regions[index];
+      var encodedImage = _frameEncoder.EncodeRegion(bitmap, region, quality, imageFormat);
 
-    await _captureChannel.Writer.WriteAsync(dto);
+      regionDtos[index] = new ScreenRegionDto(
+        region.Left,
+        region.Top,
+        region.Width,
+        region.Height,
+        encodedImage,
+        imageFormat);
+    });
+
+    await _captureChannel.Writer.WriteAsync(new ScreenRegionsDto(regionDtos), cancellationToken);
   }
 
-  private SKRect GetDirtyRect(SKBitmap bitmap, SKBitmap? previousFrame)
+  private SKRect[] GetDirtyRegions(SKBitmap bitmap, Rectangle[]? dirtyRects, SKBitmap? previousFrame)
   {
+    if (dirtyRects is { })
+    {
+      try
+      {
+        var changedAreas = Array.ConvertAll(dirtyRects, static rect => rect.ToSkRect());
+        var clampedAreas = _imageUtility.ClampToGridSections(
+          new Size(bitmap.Width, bitmap.Height),
+          changedAreas);
+
+        if (!clampedAreas.IsSuccess)
+        {
+          return [bitmap.ToSkRect()];
+        }
+
+        return Array.FindAll(clampedAreas.Value, static area => !area.IsEmpty);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogDebug(ex, "Failed to clamp DirectX dirty regions to grid sections.");
+        return [bitmap.ToSkRect()];
+      }
+    }
+
     if (previousFrame is null)
     {
-      return new SKRect(0, 0, bitmap.Width, bitmap.Height);
+      return [bitmap.ToSkRect()];
     }
 
     try
     {
-      var diff = _imageUtility.GetChangedArea(bitmap, previousFrame);
+      var diff = _imageUtility.GetChangedAreas(bitmap, previousFrame);
       if (!diff.IsSuccess)
       {
-        return new SKRect(0, 0, bitmap.Width, bitmap.Height);
+        return [bitmap.ToSkRect()];
       }
 
-      return diff.Value.IsEmpty
-        ? SKRect.Empty
-        : diff.Value;
+      return Array.FindAll(diff.Value, static area => !area.IsEmpty);
 
     }
     catch (Exception ex)
     {
-      _logger.LogDebug(ex, "Failed to compute dirty rect diff for X11 virtual capture.");
-      return new SKRect(0, 0, bitmap.Width, bitmap.Height);
+      _logger.LogDebug(ex, "Failed to compute dirty region diff for screen capture.");
+      return [bitmap.ToSkRect()];
     }
   }
 
@@ -380,10 +405,12 @@ internal class FrameBasedCapturer : IDesktopCapturer
 
         if (ShouldSendKeyFrame())
         {
-          await EncodeRegion(
+          await EncodeRegions(
             currentCapture.Bitmap,
-            currentCapture.Bitmap.ToSkRect(),
-            _imageQuality);
+            [currentCapture.Bitmap.ToSkRect()],
+            _imageQuality,
+            ImageFormat.Jpeg,
+            cancellationToken);
 
           _forceKeyFrame = false;
           _lastDisplayId = selectedDisplay.DeviceName;
@@ -395,12 +422,13 @@ internal class FrameBasedCapturer : IDesktopCapturer
             currentCapture,
             _imageQuality,
             previousCapture,
+            ImageFormat.Jpeg,
             cancellationToken);
         }
 
         previousCapture?.Dispose();
         // The built-in SKBitmap.Copy method has a memory leak.
-        previousCapture = currentCapture.Bitmap.Clone();
+        previousCapture = currentCapture.Bitmap.CopyEx();
       }
       catch (OperationCanceledException)
       {

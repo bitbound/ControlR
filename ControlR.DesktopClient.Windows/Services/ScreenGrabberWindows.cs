@@ -192,7 +192,6 @@ internal sealed class ScreenGrabberWindows(
       }
 
       var dirtyRects = GetDirtyRects(outputDuplication);
-
       if (!captureCursor)
       {
         return CaptureResult.Ok(bitmap.ToSkBitmap(), DirectXCaptureMode, dirtyRects);
@@ -280,6 +279,7 @@ internal sealed class ScreenGrabberWindows(
 
     return dirtyRects;
   }
+
   private void SwitchToInputDesktop()
   {
     var inputDesktopSwitchResult = _win32Interop.SwitchToInputDesktop();

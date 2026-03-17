@@ -592,6 +592,58 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     }
   }
 
+  private async Task DrawRegions(ScreenRegionsDto dto)
+  {
+    var decodedBitmaps = new List<(ScreenRegionDto Region, SKBitmap Bitmap)>(dto.Regions.Length);
+
+    try
+    {
+      foreach (var region in dto.Regions)
+      {
+        using var imageStream = new MemoryStream(region.EncodedImage);
+        var decodedBitmap = SKBitmap.Decode(imageStream);
+        if (decodedBitmap is null)
+        {
+          Logger.LogWarning("Decoded screen region bitmap was null.");
+          continue;
+        }
+
+        decodedBitmaps.Add((region, decodedBitmap));
+      }
+
+      await Dispatcher.UIThread.InvokeAsync(() =>
+      {
+        EnsureCompositedFrameSize();
+
+        using var guard = _compositedFrame.Lock();
+        if (guard.Value is null)
+        {
+          return;
+        }
+
+        using var canvas = new SKCanvas(guard.Value);
+
+        foreach (var (region, bitmap) in decodedBitmaps)
+        {
+          canvas.DrawBitmap(bitmap, region.X, region.Y);
+        }
+
+        FrameQueued?.Invoke(this, EventArgs.Empty);
+      }, DispatcherPriority.Render);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while drawing render frame batch.");
+    }
+    finally
+    {
+      foreach (var (_, bitmap) in decodedBitmaps)
+      {
+        bitmap.Dispose();
+      }
+    }
+  }
+
   private void EnsureCompositedFrameSize()
   {
     var width = (int)Math.Ceiling(SelectedDisplayWidth);
@@ -601,16 +653,14 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     {
       return;
     }
-    
-    using (var guard = _compositedFrame.Lock())
-    {
-      if (guard.Value?.Width == width && guard.Value?.Height == height)
-      {
-        return;
-      }
 
-      guard.SetValue(new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul));
+    using var guard = _compositedFrame.Lock();
+    if (guard.Value?.Width == width && guard.Value?.Height == height)
+    {
+      return;
     }
+
+    guard.SetValue(new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul));
   }
 
   private async Task HandleClipboardTextReceived(ClipboardTextDto dto)
@@ -678,6 +728,12 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
           {
             var dto = message.GetPayload<ScreenRegionDto>();
             await DrawRegion(dto);
+            break;
+          }
+        case DtoType.ScreenRegions:
+          {
+            var dto = message.GetPayload<ScreenRegionsDto>();
+            await DrawRegions(dto);
             break;
           }
         case DtoType.ClipboardText:
@@ -835,8 +891,8 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       using (var guard = _compositedFrame.Lock())
       {
         _remoteControlState.SelectedDisplay = displayItem.Display;
-      SelectedDisplayWidth = displayItem.Display.CapturePixelSize.Width;
-      SelectedDisplayHeight = displayItem.Display.CapturePixelSize.Height;
+        SelectedDisplayWidth = displayItem.Display.CapturePixelSize.Width;
+        SelectedDisplayHeight = displayItem.Display.CapturePixelSize.Height;
         UpdateSelectedDisplayState();
       }
 

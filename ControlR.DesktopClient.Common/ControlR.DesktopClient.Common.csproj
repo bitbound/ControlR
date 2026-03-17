@@ -20,4 +20,17 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\Strings\en-US.json" />
 	</ItemGroup>
+
+  <ItemGroup Condition="'$(IsWindows)' == 'true'">
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsLinux)' == 'true'">
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsMacOS)' == 'true'">
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" />
+  </ItemGroup>
+
 </Project>

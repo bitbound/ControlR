@@ -44,7 +44,6 @@
     <ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
   </ItemGroup>
   <ItemGroup Condition="$(DefineConstants.Contains('IS_LINUX'))">
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
     <ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
   </ItemGroup>
 

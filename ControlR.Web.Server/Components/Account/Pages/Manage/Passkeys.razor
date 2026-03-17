@@ -3,6 +3,7 @@
 @inject UserManager<AppUser> UserManager
 @inject SignInManager<AppUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
+@inject ILogger<Passkeys> Logger
 
 <PageTitle>Manage passkeys</PageTitle>
 
@@ -108,7 +109,14 @@ else
     var result = await SignInManager.PerformPasskeyAttestationAsync(Input.Passkey.CredentialJson);
     if (!result.Succeeded)
     {
-      RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to add passkey.", HttpContext);
+      Logger.LogError(
+        result.Failure, 
+        "Failed to add passkey for user {UserId}. Error: {Error}", 
+        _user.Id, 
+        result.Failure?.Message);
+
+      var error = result.Failure?.Message ?? "Unknown error.";
+      RedirectManager.RedirectToCurrentPageWithStatus($"Error: Failed to add passkey. Error: {error}", HttpContext);
       return;
     }
 

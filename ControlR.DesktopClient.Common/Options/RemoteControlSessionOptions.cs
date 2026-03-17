@@ -6,7 +6,7 @@ public class RemoteControlSessionOptions
 {
   private Uri? _webSocketUri;
 
-  public CaptureEncoderType EncoderType { get; set; } = CaptureEncoderType.Jpeg;
+  public CaptureEncoderType EncoderType { get; set; } = CaptureEncoderType.Image;
   public bool NotifyUser { get; set; }
   public bool RequireConsent { get; set; }
   public Guid SessionId { get; set; }

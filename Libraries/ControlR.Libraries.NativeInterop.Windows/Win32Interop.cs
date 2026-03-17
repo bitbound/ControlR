@@ -870,15 +870,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       if (result != 1)
       {
         var lastError = Marshal.GetLastPInvokeError();
-        string? lastErrorMessage = null;
-        try
-        {
-          lastErrorMessage = new System.ComponentModel.Win32Exception(lastError).Message;
-        }
-        catch
-        {
-          // Ignore failures when trying to retrieve the error message.
-        }
+        var lastErrorMessage = Marshal.GetLastPInvokeErrorMessage();
 
         _logger.LogWarning(
           "Failed to send Unicode key input for character '{Character}'. LastError={LastError} ({LastErrorMessage}).",

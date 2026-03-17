@@ -23,6 +23,7 @@ public interface IProcess : IDisposable
   bool EnableRaisingEvents { get; set; }
   int ExitCode { get; }
   DateTime ExitTime { get; }
+  string? FilePath { get; }
   nint Handle { get; }
   int HandleCount { get; }
   bool HasExited { get; }
@@ -101,6 +102,21 @@ public class ProcessWrapper(Process process) : IProcess
   public bool EnableRaisingEvents { get => _process.EnableRaisingEvents; set => _process.EnableRaisingEvents = value; }
   public int ExitCode => _process.ExitCode;
   public DateTime ExitTime => _process.ExitTime;
+  public string? FilePath
+  {
+    get
+    {
+      try
+      {
+        return _process.MainModule?.FileName;
+      }
+      catch
+      {
+        return null;
+      }
+    }
+  }
+
   public nint Handle => _process.Handle;
   public int HandleCount => _process.HandleCount;
   public bool HasExited => _process.HasExited;

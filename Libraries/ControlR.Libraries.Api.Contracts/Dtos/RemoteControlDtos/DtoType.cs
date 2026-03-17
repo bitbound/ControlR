@@ -30,4 +30,5 @@ public enum DtoType
   PrivacyScreenResult = 47,
   SessionDisconnectRequested = 48,
   RemoteControlSessionError = 49,
+  ScreenRegions = 50,
 }

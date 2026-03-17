@@ -62,7 +62,8 @@
 
       <canvas id="@_canvasId" @ref="_canvasRef" 
               width="@CanvasWidth" height="@CanvasHeight"
-              class='@($"remote-screen {CanvasClasses}")' style="@(CanvasStyle)"
+              class='@($"remote-screen {CanvasClasses}")'
+              style="@(CanvasStyle)"
               @onpointermove="HandleCanvasPointerMove"
               @onpointerdown="HandleCanvasPointerDown">
       </canvas>

@@ -2,7 +2,7 @@ namespace ControlR.Libraries.Api.Contracts.Enums;
 
 public enum CaptureEncoderType
 {
-    Jpeg,
+    Image,
     Vpx,
     // Future: Vp8, Av1
 }

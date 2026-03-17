@@ -55,13 +55,13 @@ internal abstract class AgentInstallerBase(
     return createResult.ToResult();
   }
 
-  protected Result StopProcesses()
+  protected Result StopProcesses(string targetAgentPath)
   {
     try
     {
       var procs = ProcessManager
         .GetProcessesByName("ControlR.Agent")
-        .Where(x => x.Id != Environment.ProcessId);
+        .Where(x => x.Id != Environment.ProcessId && x.FilePath == targetAgentPath);
 
       foreach (var proc in procs)
       {

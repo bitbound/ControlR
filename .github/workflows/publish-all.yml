@@ -19,9 +19,9 @@ permissions:
   contents: write
 
 jobs:
-  docker-deploy:
+  publish-docker:
     name: Deploy to Docker Hub
-    uses: ./.github/workflows/docker-deploy.yml
+    uses: ./.github/workflows/publish-docker.yml
     secrets: inherit
     with:
       docker_tag: latest
@@ -30,10 +30,10 @@ jobs:
       actions: read
       contents: read
 
-  github-release:
+  publish-github:
     name: Create GitHub Release
-    needs: docker-deploy
-    uses: ./.github/workflows/github-release.yml
+    needs: publish-docker
+    uses: ./.github/workflows/publish-github.yml
     secrets: inherit
     with:
       prerelease: ${{ inputs.prerelease }}
@@ -43,7 +43,7 @@ jobs:
 
   publish-nugets:
     name: Publish NuGet Packages
-    needs: docker-deploy
+    needs: publish-docker
     uses: ./.github/workflows/publish-nugets.yml
     secrets: inherit
     with:

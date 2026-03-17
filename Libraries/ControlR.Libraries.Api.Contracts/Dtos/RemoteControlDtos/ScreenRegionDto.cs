@@ -11,4 +11,6 @@ public record ScreenRegionDto(
   [property: Key(3)]
   float Height,
   [property: Key(4)]
-  byte[] EncodedImage);
+  byte[] EncodedImage,
+  [property: Key(5)]
+  ImageFormat ImageFormat);

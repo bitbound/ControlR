@@ -232,6 +232,12 @@ internal static class CommandProvider
       cts.Cancel();
     };
 
+    if (!Environment.UserInteractive)
+    {
+      Console.WriteLine("Installation completed.  Shutting down.");
+      return;
+    }
+
     var timeout = TimeSpan.FromSeconds(5);
     Console.WriteLine($"Application will exit in {timeout.TotalSeconds} seconds. Press any key to interrupt.");
 

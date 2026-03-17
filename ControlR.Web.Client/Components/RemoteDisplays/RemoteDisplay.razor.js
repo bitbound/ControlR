@@ -193,13 +193,14 @@ export async function applyPinchZoom(contentDiv, canvasRef, canvasCssWidth, canv
  * @param {Number} y
  * @param {Number} width
  * @param {Number} height
+ * @param {Number} imageFormat
  * @param {MemoryView} encodedRegion
  */
-export async function drawFrame(canvasId, x, y, width, height, encodedRegion) {
+export async function drawFrame(canvasId, x, y, width, height, imageFormat, encodedRegion) {
   try {
     const state = getState(canvasId);
     const byteArray = new Uint8Array(encodedRegion.slice());
-    const imageBlob = new Blob([byteArray], { type: "image/jpeg" });
+    const imageBlob = new Blob([byteArray], { type: getBlobType(imageFormat) });
     const bitmap = await createImageBitmap(imageBlob);
     state.canvas2dContext.drawImage(bitmap, x, y, width, height);
     bitmap.close();
@@ -471,6 +472,13 @@ export async function initialize(componentRef, canvasId) {
       500);
   }, { passive: false });
 
+  canvas.addEventListener("auxclick", ev => {
+    if (ev.button == 3 || ev.button === 4) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }, { passive: false });
+
   canvas.addEventListener("dblclick", async ev => {
     ev.stopPropagation();
 
@@ -653,6 +661,22 @@ function getState(canvasId) {
     window[`controlr-canvas-${canvasId}`] = new State();
   }
   return window[`controlr-canvas-${canvasId}`];
+}
+
+/**
+ * @param {Number} imageFormat
+ * @returns {string}
+ */
+function getBlobType(imageFormat) {
+  switch (imageFormat) {
+    case 1:
+      return "image/png";
+    case 2:
+      return "image/webp";
+    case 0:
+    default:
+      return "image/jpeg";
+  }
 }
 
 /**

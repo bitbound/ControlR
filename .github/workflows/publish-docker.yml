@@ -124,6 +124,16 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PAT }}
 
+      - name: Delete existing dev image
+        if: inputs.docker_tag == 'dev'
+        run: |
+          # Delete the existing image manifest from Docker Hub
+          # This removes the "dev" tag so we can push the new one fresh
+          curl -s -X DELETE \
+            "https://hub.docker.com/v2/repositories/bitbound/controlr/tags/dev/" \
+            -u "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PAT }}"
+          echo "Deleted existing dev tag (if it existed)"
+
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v7
         with:

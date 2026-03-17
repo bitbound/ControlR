@@ -1,13 +1,14 @@
-using Microsoft.Extensions.Hosting;
-using ControlR.Libraries.NativeInterop.Unix;
-using ControlR.Libraries.NativeInterop.Linux;
-using Microsoft.Extensions.DependencyInjection;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Linux.Services;
-using ControlR.Libraries.Serilog;
-using Microsoft.Extensions.Logging;
-using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.Services.Encoders;
+using ControlR.DesktopClient.Linux.Services;
+using ControlR.DesktopClient.Linux.XdgPortal;
+using ControlR.Libraries.NativeInterop.Linux;
+using ControlR.Libraries.NativeInterop.Unix;
+using ControlR.Libraries.Serilog;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux;
 

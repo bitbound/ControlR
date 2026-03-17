@@ -27,7 +27,7 @@ public static class ControlrApiClientBuilder
         $"The API client builder has not been initialized.  Call {nameof(Initialize)} first.");
     }
 
-    return _serviceProvider!.GetRequiredService<IControlrApi>();
+    return _serviceProvider.GetRequiredService<IControlrApi>();
   }
 
   public static void Initialize(Action<ControlrApiClientOptions> configureOptions)
@@ -37,7 +37,7 @@ public static class ControlrApiClientBuilder
     {
       return;
     }
-    _serviceCollection ??= new ServiceCollection();
+    _serviceCollection = new ServiceCollection();
     _serviceCollection.AddControlrApiClient(configureOptions);
     _serviceProvider = _serviceCollection.BuildServiceProvider();
   }

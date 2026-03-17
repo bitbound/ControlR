@@ -56,7 +56,7 @@ public class DesktopCapturerFactory(IServiceProvider serviceProvider, IOptions<R
   {
     _capturer = _options.Value.EncoderType switch
     {
-      CaptureEncoderType.Jpeg => ActivatorUtilities.CreateInstance<FrameBasedCapturer>(_serviceProvider),
+      CaptureEncoderType.Image => ActivatorUtilities.CreateInstance<FrameBasedCapturer>(_serviceProvider),
       CaptureEncoderType.Vpx => CreateStreamBasedCapturer(),
       _ => throw new NotSupportedException($"Encoder type {_options.Value.EncoderType} is not supported.")
     };

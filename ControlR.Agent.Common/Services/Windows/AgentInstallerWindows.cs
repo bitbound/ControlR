@@ -78,13 +78,16 @@ internal class AgentInstallerWindows(
 
       await using var callback = new CallbackDisposableAsync(StartService);
 
+      var installDir = GetInstallDirectory();
+      var targetAgentPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_systemEnvironment.Platform));
+
       var stopResult = StopAgentService();
       if (!stopResult.IsSuccess)
       {
         Logger.LogError("Failed to stop existing agent service. Aborting installation.");
         return;
       }
-      stopResult = StopProcesses();
+      stopResult = StopProcesses(targetAgentPath);
       if (!stopResult.IsSuccess)
       {
         Logger.LogError("Failed to stop existing agent processes. Aborting installation.");
@@ -92,9 +95,7 @@ internal class AgentInstallerWindows(
       }
 
       TryClearDotnetExtractDir(@"C:\Windows\SystemTemp\.net\ControlR.Agent");
-      var installDir = GetInstallDirectory();
       var exePath = _systemEnvironment.StartupExePath;
-      var targetPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_systemEnvironment.Platform));
       FileSystem.CreateDirectory(installDir);
 
       try
@@ -102,8 +103,8 @@ internal class AgentInstallerWindows(
         await retryer.Retry(
           () =>
           {
-            Logger.LogInformation("Copying {source} to {dest}.", exePath, targetPath);
-            FileSystem.CopyFile(exePath, targetPath, true);
+            Logger.LogInformation("Copying {source} to {dest}.", exePath, targetAgentPath);
+            FileSystem.CopyFile(exePath, targetAgentPath, true);
             return Task.CompletedTask;
           },
           5,
@@ -130,7 +131,7 @@ internal class AgentInstallerWindows(
       }
 
       var serviceName = GetServiceName();
-      var createString = $"sc.exe create \"{serviceName}\" binPath= \"\\\"{targetPath}\\\" {subcommand}\" start= auto";
+      var createString = $"sc.exe create \"{serviceName}\" binPath= \"\\\"{targetAgentPath}\\\" {subcommand}\" start= auto";
       var configString = $"sc.exe failure \"{serviceName}\" reset= 5 actions= restart/5000";
 
       var result = await _processes.GetProcessOutput("cmd.exe", $"/c {createString} & {configString}");
@@ -182,7 +183,10 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      var stopResult = StopProcesses();
+      var installDir = GetInstallDirectory();
+      var targetAgentPath = Path.Combine(installDir, AppConstants.GetAgentFileName(_systemEnvironment.Platform));
+
+      var stopResult = StopProcesses(targetAgentPath);
       if (!stopResult.IsSuccess)
       {
         return;

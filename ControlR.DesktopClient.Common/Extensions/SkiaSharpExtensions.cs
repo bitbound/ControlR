@@ -5,7 +5,12 @@ namespace ControlR.DesktopClient.Common.Extensions;
 
 public static class SkiaSharpExtensions
 {
-  public static SKBitmap Clone(this SKBitmap bitmap)
+  /// <summary>
+  /// The built-in Copy method in SkiaSharp has a memory leak.
+  /// </summary>
+  /// <param name="bitmap"></param>
+  /// <returns></returns>
+  public static SKBitmap CopyEx(this SKBitmap bitmap)
   {
     var clone = new SKBitmap(bitmap.Info);
     using var canvas = new SKCanvas(clone);

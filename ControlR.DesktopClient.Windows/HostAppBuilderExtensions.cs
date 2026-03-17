@@ -1,10 +1,11 @@
 ﻿using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.DesktopClient.Windows.Services;
+using ControlR.Libraries.NativeInterop.Windows;
+using ControlR.Libraries.Serilog;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ControlR.Libraries.NativeInterop.Windows;
-using ControlR.DesktopClient.Common.Services;
-using ControlR.Libraries.Serilog;
 
 namespace ControlR.DesktopClient.Windows;
 public static class HostAppBuilderExtensions

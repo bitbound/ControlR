@@ -376,3 +376,4 @@ FodyWeavers.xsd
 /.build/staging-desktop
 ControlR.Agent.Common/Resources/ControlR.DesktopClient.zip
 ControlR.Agent.Common/Resources/ControlR.app.zip
+/Tests/ControlR.DesktopClient.Common.Tests/Resources/*

@@ -1,12 +1,13 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Mac.Services;
+using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.DesktopClient.Mac.Helpers;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using ControlR.DesktopClient.Mac.Services;
+using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Shared.Services;
-using ControlR.Libraries.NativeInterop.Unix;
-using ControlR.DesktopClient.Common.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace ControlR.DesktopClient.Mac;
 
