@@ -3,6 +3,7 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 public class DeviceSearchRequestDto
 {
   public List<DeviceColumnFilter>? FilterDefinitions { get; set; }
+  public bool HideDevicesWithTags { get; set; }
   public bool HideOfflineDevices { get; set; }
   public int Page { get; set; }
   public int PageSize { get; set; }

@@ -3,25 +3,33 @@
 
 @inject IUserTagStore UserTagStore
 
-<MudSelect T="TagViewModel" MultiSelection="true" MultiSelectionTextFunc="GetTagsMultiSelectText"
-  QuickSearchInterval="@(TimeSpan.FromMilliseconds(50))"
-  Placeholder="@(PlaceholderText)" AdornmentIcon="@Icons.Material.Filled.Tag" Adornment="Adornment.End"
-  SelectedValues="_selectedTags" SelectedValuesChanged="OnSelectedTagsChanged" SelectAll="true" FullWidth="false"
-  SelectAllText="All Tags" Immediate="true" Class="ms-3">
+<MudSelect T="string" MultiSelection="true"
+           QuickSearchInterval="@(TimeSpan.FromMilliseconds(50))"
+           Text="@GetText()" MultiSelectionTextFunc="@GetTagsMultiSelectText"
+           AdornmentIcon="@Icons.Material.Filled.Tag" Adornment="Adornment.End"
+           SelectedValues="_selectedTags" SelectedValuesChanged="OnSelectedTagsChanged" SelectAll="true" FullWidth="false"
+           SelectAllText="All Tags" Immediate="true" Class="ms-3">
   @foreach (var tag in UserTagStore.Items)
   {
-    <MudSelectItem Value="@tag">@tag.Name</MudSelectItem>
+    <MudSelectItem Value="@tag.Name">
+      @tag.Name
+    </MudSelectItem>
   }
 </MudSelect>
 
-@code {
-  private HashSet<TagViewModel> _selectedTags = [];
+  @code {
+  private HashSet<string> _selectedTags = [];
+  private ImmutableArray<TagViewModel> _selectedTagViewModels = [];
 
   [Parameter]
   public EventCallback<ImmutableArray<TagViewModel>> SelectedTagsChanged { get; set; }
 
   [Parameter]
-  public string PlaceholderText { get; set; } = "Filter devices by selecting tags";
+  public bool NoneSelected { get; set; }
+
+  [Parameter]
+  public EventCallback<bool> NoneSelectedChanged { get; set; }
+
 
   protected override async Task OnInitializedAsync()
   {
@@ -32,7 +40,7 @@
       await UserTagStore.Refresh();
     }
 
-    _selectedTags = [.. UserTagStore.Items];
+    _selectedTags = [.. UserTagStore.Items.Select(x => x.Name)];
   }
 
   private string GetTagsMultiSelectText(List<string> tags)
@@ -46,24 +54,45 @@
     {
       return "All tags selected";
     }
-    
+
     var tagNoun = tags.Count > 1 ? "tags" : "tag";
     return $"{tags.Count} {tagNoun} selected";
   }
 
-  private async Task OnSelectedTagsChanged(IEnumerable<TagViewModel?>? tags)
+  private string GetText()
   {
-    if (tags is null)
+    if (_selectedTags.Count == 0)
     {
-      _selectedTags = [];
+      return "Showing items with no tags";
+    }
+
+    if (_selectedTags.Count == UserTagStore.Items.Count)
+    {
+      return "All tags selected";
+    }
+
+    var tagNoun = _selectedTags.Count > 1 ? "tags" : "tag";
+    return $"{_selectedTags.Count} {tagNoun} selected";
+  }
+
+  private async Task OnSelectedTagsChanged(IEnumerable<string>? tags)
+  {
+    _selectedTags = tags?.ToHashSet() ?? [];
+
+    if (_selectedTags.Count == 0)
+    {
+      _selectedTagViewModels = [];
+      NoneSelected = true;
     }
     else
     {
-      _selectedTags = tags
-        .Where(x => x is not null)
-        .Select(x => x!)
-        .ToHashSet();
+      _selectedTagViewModels = UserTagStore.Items
+        .Where(x => _selectedTags.Contains(x.Name))
+        .ToImmutableArray();
+      NoneSelected = false;
     }
-    await SelectedTagsChanged.InvokeAsync([.._selectedTags]);
+
+    await NoneSelectedChanged.InvokeAsync(NoneSelected);
+    await SelectedTagsChanged.InvokeAsync([.. _selectedTagViewModels]);
   }
-} 
+}

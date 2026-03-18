@@ -139,8 +139,14 @@ public static class DeviceQueryExtensions
   public static async Task<IQueryable<Device>?> FilterByTagIds(
     this IQueryable<Device> query,
     List<Guid>? tagIds,
+    bool hideDevicesWithTags,
     AppDb appDb)
   {
+    if (hideDevicesWithTags)
+    {
+      return query.Where(d => !d.Tags!.Any());
+    }
+
     if (tagIds is not { Count: > 0 } tags)
     {
       return query;

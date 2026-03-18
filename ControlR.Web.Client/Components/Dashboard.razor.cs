@@ -17,6 +17,7 @@ public partial class Dashboard : IDisposable
 
   private bool? _anyDevicesForUser;
   private MudDataGrid<DeviceViewModel>? _dataGrid;
+  private bool _hideDevicesWithTags;
   private bool _hideOfflineDevices;
   private bool _loading = true;
   private bool _openDeviceInNewTab;
@@ -147,14 +148,13 @@ public partial class Dashboard : IDisposable
       await _componentLoadedSignal.Wait(cts.Token);
     }
 
-    var tagIds = _selectedTags.Count > 0 && _selectedTags.Count < UserTagStore.Items.Count
-        ? _selectedTags.Select(t => t.Id).ToList()
-        : null;
+    var tagIds = _selectedTags.Select(t => t.Id).ToList();
 
     var request = new DeviceSearchRequestDto
     {
       SearchText = _searchText,
       HideOfflineDevices = _hideOfflineDevices && !ShouldBypassHideOfflineDevices,
+      HideDevicesWithTags = _hideDevicesWithTags,
       TagIds = tagIds,
       Page = state.Page,
       PageSize = state.PageSize,

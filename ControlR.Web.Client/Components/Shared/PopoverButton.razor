@@ -2,22 +2,24 @@
 
 <div id="@_elementId" class="popover-wrapper d-inline-flex align-center">
   <MudTooltip Text="@TooltipText" Class="z9002">
-    @if (CurrentBreakpoint >= Breakpoint.Sm)
+
+    @if (HideLabelOnMobile && CurrentBreakpoint < Breakpoint.Sm)
     {
-      <MudButton Variant="Variant.Outlined"
-                 StartIcon="@Icon"
+      <MudIconButton Icon="@StartIcon"
+                     Variant="@Variant"
+                     Size="Size.Small"
+                     OnClick="TogglePopover" />
+    }
+    else
+    {
+      <MudButton Variant="@Variant"
+                 StartIcon="@StartIcon"
+                 EndIcon="@EndIcon"
                  IconSize="Size.Large"
                  Size="Size.Small"
                  OnClick="TogglePopover">
         @Label
       </MudButton>
-    }
-    else
-    {
-      <MudIconButton Icon="@Icon"
-                     Variant="Variant.Outlined"
-                     Size="Size.Small"
-                     OnClick="TogglePopover" />
     }
   </MudTooltip>
 

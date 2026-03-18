@@ -1,9 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using ControlR.Web.Client.DataValidation;
-using ControlR.Web.Client.Extensions;
-using ControlR.Web.Client.StateManagement.Stores;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
 namespace ControlR.Web.Client.Components.Permissions;
@@ -37,6 +34,9 @@ public partial class TagsTabContent : ComponentBase, IDisposable
 
   [Inject]
   public required IUserStore UserStore { get; init; }
+
+  [Inject]
+  public required IUserTagStore UserTagStore { get; init; }
 
   private IOrderedEnumerable<DeviceResponseDto> FilteredDevices =>
     DeviceStore.Items
@@ -92,7 +92,9 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     }
 
     Snackbar.Add("Tag created", Severity.Success);
-    await TagStore.AddOrUpdate(new TagViewModel(createResult.Value));
+    var vm = new TagViewModel(createResult.Value);
+    await TagStore.AddOrUpdate(vm);
+    await UserTagStore.AddOrUpdate(vm);
     _newTagName = null;
     await InvokeAsync(StateHasChanged);
   }
@@ -121,6 +123,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     }
 
     await TagStore.Remove(_selectedTag.Id);
+    await UserTagStore.Remove(_selectedTag.Id);
     _selectedTag = null;
     Snackbar.Add("Tag deleted", Severity.Success);
   }
@@ -180,7 +183,9 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    await TagStore.AddOrUpdate(new TagViewModel(renameResult.Value));
+    var vm = new TagViewModel(renameResult.Value);
+    await TagStore.AddOrUpdate(vm);
+    await UserTagStore.AddOrUpdate(vm);
     Snackbar.Add("Tag renamed", Severity.Success);
   }
 
@@ -211,6 +216,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       }
 
       await TagStore.InvokeItemsChanged();
+      await UserTagStore.InvokeItemsChanged();
 
       Snackbar.Add(isToggled
         ? "Tag added"
@@ -250,6 +256,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       }
 
       await TagStore.InvokeItemsChanged();
+      await UserTagStore.InvokeItemsChanged();
 
       Snackbar.Add(isToggled
         ? "Tag added"

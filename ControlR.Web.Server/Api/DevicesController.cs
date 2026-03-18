@@ -181,7 +181,7 @@ public class DevicesController : ControllerBase
       .FilterByOnlineOffline(requestDto.HideOfflineDevices)
       .FilterByColumnFilters(requestDto.FilterDefinitions, isRelationalDatabase, logger);
 
-    query = await query.FilterByTagIds(requestDto.TagIds, appDb);
+    query = await query.FilterByTagIds(requestDto.TagIds, requestDto.HideDevicesWithTags, appDb);
 
     if (query is null)
     {

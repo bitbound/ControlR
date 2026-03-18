@@ -12,14 +12,19 @@ public partial class PopoverButton : JsInteropableComponent
   [Parameter]
   public RenderFragment? ChildContent { get; set; }
   [Parameter]
-  [EditorRequired]
-  public required string Icon { get; set; }
+  public string? EndIcon { get; set; }
+  [Parameter]
+  public bool HideLabelOnMobile { get; set; }
   [Parameter]
   [EditorRequired]
   public required string Label { get; set; }
   [Parameter]
+  public string? StartIcon { get; set; }
+  [Parameter]
   [EditorRequired]
   public required string TooltipText { get; set; }
+  [Parameter]
+  public Variant Variant { get; set; } = Variant.Outlined;
 
   [JSInvokable]
   public void ClosePopover()

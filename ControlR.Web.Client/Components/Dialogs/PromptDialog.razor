@@ -22,7 +22,7 @@
                           HelperText="@InputHintText"
                           Immediate="true"
                           InputType="InputType.Text"
-                          OnKeyDown="InputKeyDown"
+                          OnKeyUp="InputKeyUp"
                           Required />
 
           </MudCardContent>
@@ -86,7 +86,7 @@
     MudDialog.Cancel();
   }
 
-  private void InputKeyDown(KeyboardEventArgs args)
+  private void InputKeyUp(KeyboardEventArgs args)
   {
     if (args.Key == "Enter")
     {
