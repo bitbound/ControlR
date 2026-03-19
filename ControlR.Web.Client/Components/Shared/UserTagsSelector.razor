@@ -3,12 +3,10 @@
 
 @inject IUserTagStore UserTagStore
 
-<MudSelect T="string" MultiSelection="true"
-           QuickSearchInterval="@(TimeSpan.FromMilliseconds(50))"
-           Text="@GetText()" MultiSelectionTextFunc="@GetTagsMultiSelectText"
-           AdornmentIcon="@Icons.Material.Filled.Tag" Adornment="Adornment.End"
-           SelectedValues="_selectedTags" SelectedValuesChanged="OnSelectedTagsChanged" SelectAll="true" FullWidth="false"
-           SelectAllText="All Tags" Immediate="true" Class="ms-3">
+<MudSelect T="string" MultiSelection="true" QuickSearchInterval="@(TimeSpan.FromMilliseconds(50))" Text="@GetText()"
+           MultiSelectionTextFunc="@GetTagsMultiSelectText" AdornmentIcon="@Icons.Material.Filled.Tag" Adornment="Adornment.End"
+           SelectedValues="_selectedTagNames" SelectedValuesChanged="HandleSelectedTagsChanged" SelectAll="true"
+           FullWidth="false" SelectAllText="All Tags" Immediate="true" Class="ms-3">
   @foreach (var tag in UserTagStore.Items)
   {
     <MudSelectItem Value="@tag.Name">
@@ -17,9 +15,11 @@
   }
 </MudSelect>
 
-  @code {
-  private HashSet<string> _selectedTags = [];
-  private ImmutableArray<TagViewModel> _selectedTagViewModels = [];
+@code {
+  private HashSet<string> _selectedTagNames = [];
+
+  [Parameter]
+  public ImmutableArray<TagViewModel> SelectedTags { get; set; }
 
   [Parameter]
   public EventCallback<ImmutableArray<TagViewModel>> SelectedTagsChanged { get; set; }
@@ -37,10 +37,11 @@
 
     if (UserTagStore.Items.Count == 0)
     {
-      await UserTagStore.Refresh();
+      await UserTagStore.Refresh(); 
     }
 
-    _selectedTags = [.. UserTagStore.Items.Select(x => x.Name)];
+    var currentTagNames = UserTagStore.Items.Select(x => x.Name).ToArray();
+    await SetSelectedTags(currentTagNames);
   }
 
   private string GetTagsMultiSelectText(List<string> tags)
@@ -50,7 +51,7 @@
       return "No tags selected";
     }
 
-    if (_selectedTags.Count == UserTagStore.Items.Count)
+    if (_selectedTagNames.Count == UserTagStore.Items.Count)
     {
       return "All tags selected";
     }
@@ -61,38 +62,41 @@
 
   private string GetText()
   {
-    if (_selectedTags.Count == 0)
+    if (_selectedTagNames.Count == 0)
     {
       return "Showing items with no tags";
     }
 
-    if (_selectedTags.Count == UserTagStore.Items.Count)
+    if (_selectedTagNames.Count == UserTagStore.Items.Count)
     {
       return "All tags selected";
     }
 
-    var tagNoun = _selectedTags.Count > 1 ? "tags" : "tag";
-    return $"{_selectedTags.Count} {tagNoun} selected";
+    var tagNoun = _selectedTagNames.Count > 1 ? "tags" : "tag";
+    return $"{_selectedTagNames.Count} {tagNoun} selected";
   }
 
-  private async Task OnSelectedTagsChanged(IEnumerable<string>? tags)
+  private async Task HandleSelectedTagsChanged(IEnumerable<string>? tags)
   {
-    _selectedTags = tags?.ToHashSet() ?? [];
+    await SetSelectedTags(tags);
+  }
 
-    if (_selectedTags.Count == 0)
+  private async Task SetSelectedTags(IEnumerable<string>? tags)
+  {
+    _selectedTagNames = tags?.ToHashSet() ?? [];
+    if (_selectedTagNames.Count == 0)
     {
-      _selectedTagViewModels = [];
+      SelectedTags = [];
       NoneSelected = true;
     }
     else
     {
-      _selectedTagViewModels = UserTagStore.Items
-        .Where(x => _selectedTags.Contains(x.Name))
+      SelectedTags = UserTagStore.Items
+        .Where(x => _selectedTagNames.Contains(x.Name))
         .ToImmutableArray();
       NoneSelected = false;
     }
-
     await NoneSelectedChanged.InvokeAsync(NoneSelected);
-    await SelectedTagsChanged.InvokeAsync([.. _selectedTagViewModels]);
+    await SelectedTagsChanged.InvokeAsync(SelectedTags);
   }
 }

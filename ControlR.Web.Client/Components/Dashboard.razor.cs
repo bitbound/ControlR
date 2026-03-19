@@ -23,7 +23,7 @@ public partial class Dashboard : IDisposable
   private bool _openDeviceInNewTab;
   private int _rowsPerPage = 25;
   private string? _searchText;
-  private HashSet<TagViewModel> _selectedTags = [];
+  private ImmutableArray<TagViewModel> _selectedTags = [];
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }

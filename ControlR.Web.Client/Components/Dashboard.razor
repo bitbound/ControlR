@@ -13,7 +13,9 @@
 
   <div>
     <div style="max-width: 400px">
-      <UserTagsSelector @bind-NoneSelected="_hideDevicesWithTags" SelectedTagsChanged="OnSelectedTagsChanged" />
+      <UserTagsSelector @bind-SelectedTags:get="_selectedTags" 
+                        @bind-SelectedTags:set="@OnSelectedTagsChanged"
+                        @bind-NoneSelected="_hideDevicesWithTags" />
     </div>
     <div>
       <MudCheckBox T="bool" Value="_hideOfflineDevices" ValueChanged="HideOfflineDevicesChanged"
