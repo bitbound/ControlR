@@ -1,11 +1,11 @@
-name: Deploy to Docker Hub
-run-name: Docker Deploy (${{ inputs.docker_tag }} - ${{ inputs.run_id || 'latest build' }})
+name: Publish to Docker Hub
+run-name: Docker Publish (${{ inputs.docker_tag }} - ${{ inputs.run_id || 'latest build' }})
 
 on:
   workflow_dispatch:
     inputs:
       docker_tag:
-        description: "Docker tag to deploy"
+        description: "Docker tag to publish"
         required: true
         type: choice
         options:
@@ -20,7 +20,7 @@ on:
   workflow_call:
     inputs:
       docker_tag:
-        description: "Docker tag to deploy"
+        description: "Docker tag to publish"
         required: true
         type: string
       run_id:
@@ -33,8 +33,8 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Deploy to Docker Hub
+  publish:
+    name: Publish to Docker Hub
     runs-on: ubuntu-latest
 
     steps:
@@ -148,7 +148,7 @@ jobs:
 
       - name: Image Published
         run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Publish Summary" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
           echo "- bitbound/controlr:${{ inputs.docker_tag }}" >> $GITHUB_STEP_SUMMARY

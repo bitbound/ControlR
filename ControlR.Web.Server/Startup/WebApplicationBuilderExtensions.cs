@@ -342,7 +342,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IUserPreferenceValueHandler, UserDisplayNameUserPreferenceValueHandler>();
     builder.Services.AddSingleton<IUserPreferenceValueHandler, ViewModeUserPreferenceValueHandler>();
     builder.Services.AddScoped<ITenantSettingsManager, TenantSettingsManager>();
-    builder.Services.AddScoped<IUserPreferencesProvider, UserPreferencesProviderServer>();
+    builder.Services.AddScoped<IUserPreferencesProvider>(services => services.GetRequiredService<IUserPreferencesManager>());
     builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderServer>();
     builder.Services.AddScoped<ITenantInvitesProvider, TenantInvitesProvider>();
 

@@ -1,20 +1,32 @@
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Viewer.Common.Enums;
 using ControlR.Web.Client.Models;
 using ControlR.Web.Client.Services;
+using ControlR.Web.Server.Primitives;
 using Microsoft.AspNetCore.Components.Authorization;
 
-namespace ControlR.Web.Server.Services.Users;
+namespace ControlR.Web.Server.Services.Settings;
 
-internal class UserPreferencesProviderServer(
-  IDbContextFactory<AppDb> dbFactory,
+public interface IUserPreferencesManager : IUserPreferencesProvider
+{
+  Task<HttpResult<UserPreferenceResponseDto>> SetPreference(
+    Guid userId,
+    UserPreferenceRequestDto preference,
+    CancellationToken cancellationToken = default);
+}
+
+public class UserPreferencesManager(
   AuthenticationStateProvider authStateProvider,
-  ILogger<UserPreferencesProviderServer> logger) : IUserPreferencesProvider
+  IDbContextFactory<AppDb> dbFactory,
+  IEnumerable<IUserPreferenceValueHandler> handlers,
+  ILogger<UserPreferencesManager> logger) : IUserPreferencesManager
 {
   private readonly AuthenticationStateProvider _authStateProvider = authStateProvider;
   private readonly IDbContextFactory<AppDb> _dbFactory = dbFactory;
-  private readonly ILogger<UserPreferencesProviderServer> _logger = logger;
+  private readonly FrozenDictionary<string, IUserPreferenceValueHandler> _handlers = handlers.ToHandlerDictionary();
+  private readonly ILogger<UserPreferencesManager> _logger = logger;
   private readonly ConcurrentDictionary<string, object?> _preferences = new();
 
   public Task<bool> GetHideOfflineDevices()
@@ -70,6 +82,68 @@ internal class UserPreferencesProviderServer(
   public Task SetOpenDeviceInNewTab(bool value)
   {
     return SetPref(UserPreferenceNames.OpenDeviceInNewTab, value);
+  }
+
+  public async Task<HttpResult<UserPreferenceResponseDto>> SetPreference(
+    Guid userId,
+    UserPreferenceRequestDto preference,
+    CancellationToken cancellationToken = default)
+  {
+    await using var _appDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+    var user = await _appDb.Users
+      .Include(x => x.UserPreferences)
+      .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+
+    if (user is null)
+    {
+      return HttpResult.Fail<UserPreferenceResponseDto>(HttpResultErrorCode.NotFound, "User not found.");
+    }
+
+    user.UserPreferences ??= [];
+
+    if (string.IsNullOrWhiteSpace(preference.Value))
+    {
+      var existingInstanceIdSetting = user.UserPreferences.FirstOrDefault(x => x.Name == preference.Name);
+      if (existingInstanceIdSetting is not null)
+      {
+        user.UserPreferences.Remove(existingInstanceIdSetting);
+        await _appDb.SaveChangesAsync(cancellationToken);
+      }
+
+      return HttpResult.Ok(new UserPreferenceResponseDto(null, preference.Name, null));
+    }
+
+    var normalizationResult = NormalizePreferenceValue(preference);
+    if (!normalizationResult.IsSuccess)
+    {
+      _logger.LogError(
+        "Failed to normalize preference value for {PreferenceName}. Reason: {Reason}",
+        preference.Name,
+        normalizationResult.Reason);
+
+      return normalizationResult.ToHttpResult(new UserPreferenceResponseDto(null, preference.Name, null));
+    }
+
+    var normalizedValue = normalizationResult.Value ?? string.Empty;
+    var existingPreference = user.UserPreferences.FirstOrDefault(x => x.Name == preference.Name);
+    if (existingPreference is not null)
+    {
+      existingPreference.Value = normalizedValue;
+      await _appDb.SaveChangesAsync(cancellationToken);
+      return HttpResult.Ok(existingPreference.ToDto());
+    }
+
+    var entity = new UserPreference
+    {
+      Name = preference.Name,
+      UserId = userId,
+      Value = normalizedValue
+    };
+
+    user.UserPreferences.Add(entity);
+    await _appDb.SaveChangesAsync(cancellationToken);
+    return HttpResult.Ok(entity.ToDto());
   }
 
   public Task SetThemeMode(ThemeMode value)
@@ -160,6 +234,16 @@ internal class UserPreferencesProviderServer(
       _logger.LogError(ex, "Error while getting preference for {PreferenceName}.", preferenceName);
       return defaultValue;
     }
+  }
+
+  private HttpResult<string> NormalizePreferenceValue(UserPreferenceRequestDto preference)
+  {
+    if (_handlers.TryGetValue(preference.Name, out var handler))
+    {
+      return handler.ValidateAndNormalize(preference.Value);
+    }
+
+    return HttpResult.Ok(preference.Value.Trim());
   }
 
   private async Task SetPref<T>(string preferenceName, T newValue)

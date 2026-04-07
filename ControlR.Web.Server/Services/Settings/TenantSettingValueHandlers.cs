@@ -8,7 +8,7 @@ internal sealed class AppendInstanceIdTenantSettingValueHandler : ITenantSetting
 {
   public string Name => TenantSettingNames.AppendInstanceId;
 
-  public HttpResult<string?> ValidateAndNormalize(string value)
+  public HttpResult<string> ValidateAndNormalize(string value)
   {
     return NamedStringValueHandlerResults.NormalizeBoolean(value, nameof(TenantSettingNames.AppendInstanceId));
   }
@@ -18,32 +18,32 @@ internal sealed class NotifyUserOnSessionStartTenantSettingValueHandler : ITenan
 {
   public string Name => TenantSettingNames.NotifyUserOnSessionStart;
 
-  public HttpResult<string?> ValidateAndNormalize(string value)
+  public HttpResult<string> ValidateAndNormalize(string value)
   {
     return NamedStringValueHandlerResults.NormalizeBoolean(value, nameof(TenantSettingNames.NotifyUserOnSessionStart));
   }
 }
 internal sealed class InstanceIdTenantSettingValueHandler : ITenantSettingValueHandler
 {
-  public bool DeleteWhenValueIsNull => true;
-
   public string Name => TenantSettingNames.InstanceId;
 
-  public HttpResult<string?> ValidateAndNormalize(string value)
+  public HttpResult<string> ValidateAndNormalize(string value)
   {
     if (string.IsNullOrWhiteSpace(value))
     {
-      return HttpResult.Ok<string?>(null);
+      return HttpResult.Fail<string>(
+        HttpResultErrorCode.ValidationFailed,
+        $"{nameof(TenantSettingNames.InstanceId)} cannot be empty.");
     }
 
     var normalizedValue = value.Trim();
     var validationError = Validators.ValidateInstanceId(normalizedValue);
     if (validationError is null)
     {
-      return HttpResult.Ok<string?>(normalizedValue);
+      return HttpResult.Ok(normalizedValue);
     }
 
-    return HttpResult.Fail<string?>(
+    return HttpResult.Fail<string>(
       HttpResultErrorCode.ValidationFailed,
       validationError);
   }

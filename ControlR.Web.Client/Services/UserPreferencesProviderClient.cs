@@ -1,7 +1,5 @@
 using System.Collections.Concurrent;
 using System.Net;
-using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Client.Models;
 
 namespace ControlR.Web.Client.Services;
 

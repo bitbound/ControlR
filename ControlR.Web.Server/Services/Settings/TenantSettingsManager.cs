@@ -1,9 +1,7 @@
 using System.Collections.Frozen;
-using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.Primitives;
 
-namespace ControlR.Web.Server.Services;
+namespace ControlR.Web.Server.Services.Settings;
 
 public interface ITenantSettingsManager
 {
@@ -15,10 +13,12 @@ public interface ITenantSettingsManager
 
 public class TenantSettingsManager(
   AppDb appDb,
-  IEnumerable<ITenantSettingValueHandler> handlers) : ITenantSettingsManager
+  IEnumerable<ITenantSettingValueHandler> handlers,
+  ILogger<TenantSettingsManager> logger) : ITenantSettingsManager
 {
   private readonly AppDb _appDb = appDb;
   private readonly FrozenDictionary<string, ITenantSettingValueHandler> _handlers = handlers.ToHandlerDictionary();
+  private readonly ILogger<TenantSettingsManager> _logger = logger;
 
   public async Task<HttpResult<TenantSettingResponseDto>> SetSetting(
     Guid tenantId,
@@ -34,15 +34,9 @@ public class TenantSettingsManager(
       return HttpResult.Fail<TenantSettingResponseDto>(HttpResultErrorCode.NotFound, "Tenant not found.");
     }
 
-    var normalizationResult = NormalizeSettingValue(setting);
-    if (!normalizationResult.IsSuccess)
-    {
-      return normalizationResult.ToHttpResult(new TenantSettingResponseDto(null, setting.Name, null));
-    }
-
     tenant.TenantSettings ??= [];
-    var handler = _handlers.GetValueOrDefault(setting.Name);
-    if (handler?.DeleteWhenValueIsNull == true && normalizationResult.Value is null)
+
+    if (string.IsNullOrWhiteSpace(setting.Value))
     {
       var existingInstanceIdSetting = tenant.TenantSettings.FirstOrDefault(x => x.Name == setting.Name);
       if (existingInstanceIdSetting is not null)
@@ -54,7 +48,20 @@ public class TenantSettingsManager(
       return HttpResult.Ok(new TenantSettingResponseDto(null, setting.Name, null));
     }
 
-    var normalizedValue = normalizationResult.Value ?? string.Empty;
+    var normalizationResult = NormalizeSettingValue(setting);
+    if (!normalizationResult.IsSuccess)
+    {
+      _logger.LogError(
+        "Failed to normalize setting value for {SettingName}. Reason: {Reason}", 
+        setting.Name, 
+        normalizationResult.Reason);
+
+      return normalizationResult.ToHttpResult(new TenantSettingResponseDto(null, setting.Name, null));
+    }
+
+    
+    var normalizedValue = normalizationResult.Value;
+
     var existingSetting = tenant.TenantSettings.FirstOrDefault(x => x.Name == setting.Name);
     if (existingSetting is not null)
     {
@@ -75,13 +82,13 @@ public class TenantSettingsManager(
     return HttpResult.Ok(entity.ToDto());
   }
 
-  private HttpResult<string?> NormalizeSettingValue(TenantSettingRequestDto setting)
+  private HttpResult<string> NormalizeSettingValue(TenantSettingRequestDto setting)
   {
     if (_handlers.TryGetValue(setting.Name, out var handler))
     {
       return handler.ValidateAndNormalize(setting.Value);
     }
 
-    return HttpResult.Ok<string?>(setting.Value.Trim());
+    return HttpResult.Ok(setting.Value.Trim());
   }
 }

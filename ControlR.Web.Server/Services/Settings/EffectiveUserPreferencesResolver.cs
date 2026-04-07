@@ -1,7 +1,6 @@
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Settings;
 
-namespace ControlR.Web.Server.Services.Users;
+namespace ControlR.Web.Server.Services.Settings;
 
 public interface IEffectiveUserPreferencesResolver
 {

@@ -1,4 +1,4 @@
-name: Create GitHub Release
+name: Publish GitHub Release
 run-name: "GitHub Release (Run ID: ${{ inputs.run_id || 'latest build' }})"
 
 on:

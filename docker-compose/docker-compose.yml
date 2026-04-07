@@ -187,7 +187,7 @@ services:
       POSTGRES_DB: controlr
 
   aspire:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.2
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
     container_name: aspire
     restart: unless-stopped
     ports:
