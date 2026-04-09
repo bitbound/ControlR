@@ -1,0 +1,694 @@
+name: Build Custom
+run-name: Build Custom v${{ inputs.version || vars.CURRENT_VERSION }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      use_self_hosted_runners:
+        description: "Use Self-Hosted Runners"
+        required: true
+        default: true
+        type: boolean
+
+      retention_days_artifacts:
+        description: "Retention Days for Artifacts"
+        required: false
+        default: 1
+        type: number
+
+      version:
+        description: "Version number (leave empty for auto)"
+        required: false
+        default: ""
+        type: string
+      
+      prerelease:
+        description: "Is this a prerelease version?"
+        required: false
+        default: true
+        type: boolean
+
+      notarize_mac_bundle:
+        description: "Notarize macOS bundle"
+        required: false
+        default: false
+        type: boolean
+
+      build_nugets:
+        description: "Build NuGet packages"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  VERSION: ${{ inputs.version || vars.CURRENT_VERSION }}
+  RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || 1 }}
+
+jobs:
+  set-version:
+    name: Increment Version
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    permissions:
+      contents: read
+      actions: write
+    outputs:
+      version: ${{ steps.setver.outputs.version }}
+    env:
+      GH_TOKEN: ${{ secrets.GH_VARIABLES_PAT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Set Next Version
+        id: setver
+        shell: pwsh
+        run: |
+          # Use supplied version if provided, otherwise fall back to the repo variable
+          if (-not $env:VERSION) {
+            Write-Error "VERSION is empty. Provide workflow input version or set CURRENT_VERSION repository variable."
+            exit 1
+          }
+
+          Write-Host "Using source version: $env:VERSION"
+          try {
+            $CurrentVersion = [System.Version]::Parse("$env:VERSION")
+          }
+          catch {
+            Write-Error "VERSION '$env:VERSION' is invalid. Expected numeric format like 1.2.3 or 1.2.3.0."
+            exit 1
+          }
+
+          if ($CurrentVersion.Revision -eq -1) { 
+            $CurrentVersion = [System.Version]::new($CurrentVersion.Major, $CurrentVersion.Minor, $CurrentVersion.Build, 0)
+          }
+            
+          Write-Host "Resolved current version: $CurrentVersion"
+          $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1).0"
+          Write-Host "Next version will be: $NextVersion"
+          # Persist next version to GH Variables for future runs
+          if ($IsLinux) {
+            /usr/bin/gh variable set CURRENT_VERSION --body $NextVersion
+          }
+          elseif ($IsMacOS) {
+            /opt/homebrew/bin/gh variable set CURRENT_VERSION --body $NextVersion
+          }
+          else {
+            gh variable set CURRENT_VERSION --body $NextVersion
+          }
+          # Expose the current version as a step output for this run
+          echo "version=$CurrentVersion" >> $env:GITHUB_OUTPUT
+
+  run-tests:
+    name: Run Tests
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    needs: set-version
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Install macOS workload
+        run: dotnet workload install macos
+
+      - name: Restore Solution
+        shell: pwsh
+        run: |
+          dotnet restore ControlR.slnx
+
+      - name: Build Solution
+        shell: pwsh
+        run: |
+          dotnet build ControlR.slnx -c Release --no-restore
+
+      - name: Run Tests
+        shell: pwsh
+        run: |
+          $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
+            Where-Object { $_.Name -like "*.Tests.csproj" } |
+            Sort-Object FullName
+
+          if ($testProjects.Count -eq 0) {
+            throw "No test projects were found under Tests/."
+          }
+
+          foreach ($project in $testProjects) {
+            Write-Host "Running $($project.FullName)..."
+            dotnet run --project $project.FullName -c Release --no-build --no-restore
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test execution failed for $($project.FullName)."
+            }
+          }
+
+  build-nugets:
+    name: Build NuGet Packages
+    needs: set-version
+    if: inputs.build_nugets
+    uses: ./.github/workflows/build-sign-pack-nugets.yml
+    with:
+      version: ${{ needs.set-version.outputs.version }}
+      retention-days: ${{ fromJson(inputs.retention_days_artifacts) }}
+      prerelease: ${{ inputs.prerelease }}
+      use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+
+  build-mac-binaries:
+    name: Apple Build (${{ matrix.arch }})
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-latest"]') }}
+    needs: set-version
+    strategy:
+      matrix:
+        arch: [osx-arm64, osx-x64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Setup .NET
+        if: inputs.use_self_hosted_runners == false
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Setup Code Signing Keychain
+        env:
+          APPLE_P12_BASE64: ${{ secrets.APPLE_P12_BASE64 }}
+          APPLE_P12_PASSWORD: ${{ secrets.APPLE_P12_PASSWORD }}
+          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+        shell: bash
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          
+          echo "Creating temporary keychain..."
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "Configuring keychain settings..."
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          echo "Unlocking keychain..."
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          ORIGINAL_KEYCHAINS=$(security list-keychains -d user | xargs)
+          echo "ORIGINAL_KEYCHAINS=$ORIGINAL_KEYCHAINS" >> "$GITHUB_ENV"
+          echo "Adding temporary keychain to search list..."
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $ORIGINAL_KEYCHAINS
+          
+          echo "Decoding and importing certificate..."
+          P12_PATH="$RUNNER_TEMP/certificate.p12"
+          echo "$APPLE_P12_BASE64" | base64 --decode > "$P12_PATH"
+          
+          security import "$P12_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_P12_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/productsign
+          
+          echo "Setting partition list..."
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          
+          echo "Verifying certificate import..."
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # Extract the unique SHA-1 hash for the identity in the temporary keychain
+          IDENTITY_HASH=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "$APPLE_DEVELOPER_ID" | head -n 1 | awk '{print $2}')
+          if [ -z "$IDENTITY_HASH" ]; then
+            echo "ERROR: No signing identity found for APPLE_DEVELOPER_ID in temporary keychain."
+            exit 1
+          fi
+          echo "IDENTITY_HASH=$IDENTITY_HASH" >> "$GITHUB_ENV"
+
+      - name: Publish DesktopClient Bundle (${{ matrix.arch }})
+        run: |
+          PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
+          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
+
+          mkdir -p "$DOWNLOADS_DIR"
+          mkdir -p "$PUBLISH_DIR"
+
+          echo "Publishing version $VERSION for macOS ${{ matrix.arch }}..."
+          dotnet publish "./ControlR.DesktopClient/" \
+            -c Release \
+            -r osx-arm64 \
+            -f net10.0-macos \
+            --self-contained \
+            -p:CreatePackage=false \
+            -p:EnableCodeSigning=false \
+            -p:AppBundleDir="$PUBLISH_DIR/ControlR.DesktopClient.app" \
+            -p:Version="$VERSION" \
+            -p:FileVersion="$VERSION"
+
+          if [ ! -f "$PUBLISH_DIR/ControlR.DesktopClient.app/Contents/MacOS/ControlR.DesktopClient" ]; then
+            ls -la "$PUBLISH_DIR/" || true
+            echo "ERROR: DesktopClient publish output missing: $PUBLISH_DIR/ControlR.DesktopClient.app/Contents/MacOS/ControlR.DesktopClient"
+            exit 1
+          fi
+
+          mv "$PUBLISH_DIR/ControlR.DesktopClient.app" "$PUBLISH_DIR/ControlR.app"
+
+      - name: Publish Agent (${{ matrix.arch }})
+        run: |
+          AGENT_PUBLISH_DIR="${{ github.workspace }}/ControlR.Agent/bin/publish/${{ matrix.arch }}"
+
+          dotnet publish "./ControlR.Agent/" \
+            -c Release \
+            -r ${{ matrix.arch }} \
+            --self-contained \
+            -p:PublishSingleFile=true \
+            -p:UseAppHost=true \
+            -p:Version=$VERSION \
+            -p:FileVersion=$VERSION \
+            -p:IncludeAllContentForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
+            -p:IncludeAppSettingsInSingleFile=true \
+            -o "$AGENT_PUBLISH_DIR"
+
+          if [ ! -f "$AGENT_PUBLISH_DIR/ControlR.Agent" ]; then
+            ls -la "$AGENT_PUBLISH_DIR/" || true
+            echo "ERROR: Agent publish output missing: $AGENT_PUBLISH_DIR/ControlR.Agent"
+            exit 1
+          fi
+
+      - name: Stage and Sign Bundle (${{ matrix.arch }})
+        run: |
+          PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
+          AGENT_PUBLISH_DIR="${{ github.workspace }}/ControlR.Agent/bin/publish/${{ matrix.arch }}"
+          EMBEDDED_AGENT_PATH="$PUBLISH_DIR/ControlR.app/Contents/Library/LaunchServices/ControlR.Agent"
+
+          echo "Embedding agent helper inside app bundle..."
+          mkdir -p "$PUBLISH_DIR/ControlR.app/Contents/Library/LaunchServices"
+          cp "$AGENT_PUBLISH_DIR/ControlR.Agent" "$EMBEDDED_AGENT_PATH"
+
+          echo "Code signing embedded helper for macOS ${{ matrix.arch }}..."
+          codesign \
+            --force \
+            --options runtime \
+            --timestamp \
+            --entitlements "./ControlR.Agent/Entitlements.plist" \
+            --keychain "$RUNNER_TEMP/build.keychain" \
+            --sign "$IDENTITY_HASH" \
+            "$EMBEDDED_AGENT_PATH"
+
+          shopt -s nullglob
+          for lib in "$PUBLISH_DIR/ControlR.app/Contents/MonoBundle/"*.dylib; do
+            codesign \
+              --force \
+              --options runtime \
+              --timestamp \
+              --keychain "$RUNNER_TEMP/build.keychain" \
+              --sign "$IDENTITY_HASH" \
+              "$lib"
+          done
+
+          echo "Code signing DesktopClient bundle for macOS ${{ matrix.arch }}..."
+          codesign \
+            --force \
+            --options runtime \
+            --timestamp \
+            --entitlements "./ControlR.DesktopClient/Entitlements.plist" \
+            --keychain "$RUNNER_TEMP/build.keychain" \
+            --sign "$IDENTITY_HASH" \
+            "$PUBLISH_DIR/ControlR.app"
+
+          echo "Verifying signed app bundle..."
+          codesign --verify --deep --strict --verbose=2 "$PUBLISH_DIR/ControlR.app"
+
+      - name: Package Bundle (${{ matrix.arch }})
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_KEY_ISSUER_ID: ${{ secrets.APPLE_API_KEY_ISSUER_ID }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
+          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
+          BUNDLE_ZIP="$DOWNLOADS_DIR/ControlR.Agent.bundle.zip"
+
+          if [ "${{ inputs.notarize_mac_bundle }}" = "true" ]; then
+            API_KEY_PATH="$RUNNER_TEMP/apple_api_key.p8"
+            SUBMISSION_ZIP="$RUNNER_TEMP/ControlR.Agent.bundle.${{ matrix.arch }}.zip"
+
+            echo "$APPLE_API_KEY_P8" | base64 --decode > "$API_KEY_PATH"
+
+            rm -f "$SUBMISSION_ZIP"
+            ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/ControlR.app" "$SUBMISSION_ZIP"
+
+            echo "Submitting bundle for notarization (${{ matrix.arch }})..."
+            xcrun notarytool submit "$SUBMISSION_ZIP" \
+              --key "$API_KEY_PATH" \
+              --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_KEY_ISSUER_ID" \
+              --wait
+
+            echo "Stapling notarization ticket to app bundle..."
+            xcrun stapler staple "$PUBLISH_DIR/ControlR.app"
+
+            rm -f "$SUBMISSION_ZIP"
+            rm -f "$API_KEY_PATH"
+          fi
+
+          echo "Creating final bundle ZIP for macOS ${{ matrix.arch }}..."
+          rm -f "$BUNDLE_ZIP"
+          ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/ControlR.app" "$BUNDLE_ZIP"
+
+      - name: Publish Installer (${{ matrix.arch }})
+        run: |
+          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
+
+          dotnet publish "./ControlR.Agent.Installer/" \
+            -c Release \
+            -r ${{ matrix.arch }} \
+            --self-contained \
+            -p:PublishSingleFile=true \
+            -p:UseAppHost=true \
+            -p:EnableCompressionInSingleFile=true \
+            -p:Version=$VERSION \
+            -p:FileVersion=$VERSION \
+            -p:DebugType=none \
+            -o "$DOWNLOADS_DIR"
+
+          if [ ! -f "$DOWNLOADS_DIR/ControlR.Agent.Installer" ]; then
+            ls -la "$DOWNLOADS_DIR" || true
+            echo "ERROR: Installer publish output missing: $DOWNLOADS_DIR/ControlR.Agent.Installer"
+            exit 1
+          fi
+
+      - name: Sign Installer (${{ matrix.arch }})
+        run: |
+          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
+          INSTALLER_PATH="$DOWNLOADS_DIR/ControlR.Agent.Installer"
+
+          echo "Code signing Installer for macOS ${{ matrix.arch }}..."
+          codesign \
+            --force \
+            --options runtime \
+            --timestamp \
+            --entitlements "./ControlR.Agent/Entitlements.plist" \
+            --keychain "$RUNNER_TEMP/build.keychain" \
+            --sign "$IDENTITY_HASH" \
+            "$INSTALLER_PATH"
+
+          codesign --verify --strict --verbose=2 "$INSTALLER_PATH"
+
+      - name: Upload Downloads (${{ matrix.arch }})
+        uses: actions/upload-artifact@v7
+        with:
+          name: Downloads-${{ matrix.arch }}
+          path: ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}/
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
+      - name: Cleanup Keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          if [ -n "$ORIGINAL_KEYCHAINS" ]; then
+            echo "Restoring original keychain search list..."
+            security list-keychains -d user -s $ORIGINAL_KEYCHAINS
+          fi
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            echo "Removing temporary keychain..."
+            security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+          fi
+
+  build-windows-binaries:
+    name: Windows Build (${{ matrix.arch }})
+    # When using self-hosted Windows runners, require both the self-hosted label and OS label.
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
+    environment: secure-signing
+    needs: set-version
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        arch: [win-x86, win-x64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Install macOS workload
+        run: dotnet workload install macos
+
+      # ===== Build Windows =====
+      - name: Build DesktopClient (${{ matrix.arch }})
+        shell: pwsh
+        run: |
+          # Build DesktopClient
+          dotnet publish ControlR.DesktopClient\ -c Release -f net10.0-windows8.0 -r ${{ matrix.arch }} --self-contained -o ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
+
+      - name: Sign DesktopClient (${{ matrix.arch }})
+        uses: ./.github/actions/windows-code-sign
+        with:
+          file-patterns: |
+            ${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.exe
+            ${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.dll
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure-key-vault-uri: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          azure-key-vault-certificate-name: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
+          signing-description-url: ${{ vars.SIGNING_DESCRIPTION_URL }}
+
+      - name: Package and Prepare DesktopClient (${{ matrix.arch }})
+        shell: pwsh
+        run: |
+          # Create staging directory
+          New-Item -Path ".build\staging-desktop\${{ matrix.arch }}" -ItemType Directory -Force | Out-Null
+
+          # Create ZIP
+          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" -DestinationPath ".build\staging-desktop\${{ matrix.arch }}\ControlR.DesktopClient.zip" -Force
+
+      - name: Build Agent (${{ matrix.arch }})
+        shell: pwsh
+        run: |
+          $agentPublishDir = "ControlR.Agent\bin\publish\${{ matrix.arch }}\"
+          New-Item -Path $agentPublishDir -ItemType Directory -Force | Out-Null
+          New-Item -Path "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}" -ItemType Directory -Force | Out-Null
+          dotnet publish ControlR.Agent\ -c Release -r ${{ matrix.arch }} -o $agentPublishDir -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
+
+      - name: Sign Agent (${{ matrix.arch }})
+        uses: ./.github/actions/windows-code-sign
+        with:
+          file-patterns: ${{ github.workspace }}\ControlR.Agent\bin\publish\${{ matrix.arch }}\ControlR.Agent.exe
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure-key-vault-uri: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          azure-key-vault-certificate-name: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
+          signing-description-url: ${{ vars.SIGNING_DESCRIPTION_URL }}
+
+      - name: Build Installer (${{ matrix.arch }})
+        shell: pwsh
+        run: |
+          dotnet publish ControlR.Agent.Installer\ -c Release -r ${{ matrix.arch }} --self-contained -o ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:DebugType=none
+
+      - name: Sign Installer (${{ matrix.arch }})
+        uses: ./.github/actions/windows-code-sign
+        with:
+          file-patterns: ${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.Installer.exe
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          azure-key-vault-uri: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          azure-key-vault-certificate-name: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
+          signing-description-url: ${{ vars.SIGNING_DESCRIPTION_URL }}
+
+      - name: Create Bundle ZIP (${{ matrix.arch }})
+        shell: pwsh
+        run: |
+          $agentPublishDir = "ControlR.Agent\bin\publish\${{ matrix.arch }}\"
+          $bundleDir = ".build\bundle\${{ matrix.arch }}"
+          $desktopDir = Join-Path $bundleDir "DesktopClient"
+          Remove-Item -Path $bundleDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -Path $desktopDir -ItemType Directory -Force | Out-Null
+
+          Copy-Item (Join-Path $agentPublishDir "ControlR.Agent.exe") (Join-Path $bundleDir "ControlR.Agent.exe") -Force
+          Copy-Item "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" $desktopDir -Recurse -Force
+
+          Compress-Archive -Path "$bundleDir\*" -DestinationPath "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.bundle.zip" -Force
+
+      - name: Upload Downloads (${{ matrix.arch }})
+        uses: actions/upload-artifact@v7
+        with:
+          name: Downloads-${{ matrix.arch }}
+          path: ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
+  build-linux-binaries:
+    name: Linux Build
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    needs: [set-version]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Install macOS workload
+        run: dotnet workload install macos
+
+      - name: Build DesktopClient (linux-x64)
+        run: |
+          # Build DesktopClient
+          dotnet publish ./ControlR.DesktopClient/ -c Release -f net10.0 -r linux-x64 --self-contained -o ./ControlR.DesktopClient/bin/publish/linux-x64/ -p:Version=$VERSION -p:FileVersion=$VERSION
+
+          # Create staging directory
+          mkdir -p ".build/staging-desktop/linux-x64"
+
+          # Create ZIP
+          cd ./ControlR.DesktopClient/bin/publish/linux-x64
+          zip -r "${{ github.workspace}}/.build/staging-desktop/linux-x64/ControlR.DesktopClient.zip" .
+          cd ${{ github.workspace}}
+
+      - name: Build Agent (linux-x64)
+        run: |
+          mkdir -p "./ControlR.Agent/bin/publish/linux-x64"
+          mkdir -p "./ControlR.Web.Server/wwwroot/downloads/linux-x64"
+          dotnet publish ./ControlR.Agent/ -c Release -r linux-x64 -o ./ControlR.Agent/bin/publish/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
+
+      - name: Build Installer (linux-x64)
+        run: |
+          dotnet publish ./ControlR.Agent.Installer/ -c Release -r linux-x64 --self-contained -o ./ControlR.Web.Server/wwwroot/downloads/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:DebugType=none
+
+      - name: Create Bundle ZIP (linux-x64)
+        run: |
+          rm -rf ".build/bundle/linux-x64"
+          mkdir -p ".build/bundle/linux-x64/DesktopClient"
+          cp "./ControlR.Agent/bin/publish/linux-x64/ControlR.Agent" ".build/bundle/linux-x64/ControlR.Agent"
+          cp -R ./ControlR.DesktopClient/bin/publish/linux-x64/. ".build/bundle/linux-x64/DesktopClient/"
+
+          cd .build/bundle/linux-x64
+          zip -r "${{ github.workspace }}/ControlR.Web.Server/wwwroot/downloads/linux-x64/ControlR.Agent.bundle.zip" .
+          cd "${{ github.workspace }}"
+
+      - name: Upload Downloads (linux-x64)
+        uses: actions/upload-artifact@v7
+        with:
+          name: Downloads-linux-x64
+          path: ControlR.Web.Server/wwwroot/downloads/linux-x64/
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
+  build-web-server:
+    name: Build Web Server
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["ubuntu-latest"]') }}
+    needs:
+      [
+        run-tests,
+        build-windows-binaries,
+        build-linux-binaries,
+        build-mac-binaries,
+      ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          clean: true
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Download Runtime Downloads (win-x86)
+        uses: actions/download-artifact@v8
+        with:
+          name: Downloads-win-x86
+          path: ControlR.Web.Server/wwwroot/downloads/win-x86/
+
+      - name: Download Runtime Downloads (win-x64)
+        uses: actions/download-artifact@v8
+        with:
+          name: Downloads-win-x64
+          path: ControlR.Web.Server/wwwroot/downloads/win-x64/
+
+      - name: Download Runtime Downloads (linux-x64)
+        uses: actions/download-artifact@v8
+        with:
+          name: Downloads-linux-x64
+          path: ControlR.Web.Server/wwwroot/downloads/linux-x64/
+
+      - name: Download Runtime Downloads (macOS ARM64)
+        uses: actions/download-artifact@v8
+        with:
+          name: Downloads-osx-arm64
+          path: ControlR.Web.Server/wwwroot/downloads/osx-arm64/
+
+      - name: Download Runtime Downloads (macOS x64)
+        uses: actions/download-artifact@v8
+        with:
+          name: Downloads-osx-x64
+          path: ControlR.Web.Server/wwwroot/downloads/osx-x64/
+
+      - name: Create Version.txt
+        shell: pwsh
+        run: |
+          Set-Content -Path "ControlR.Web.Server/wwwroot/downloads/Version.txt" -Value $env:VERSION -Force -Encoding UTF8
+
+      - name: Build Web Server
+        shell: pwsh
+        run: |
+          New-Item -Path "ControlR.Web.Server/bin/publish" -ItemType Directory -Force | Out-Null
+          dotnet publish ControlR.Web.Server/ -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=$env:VERSION -p:FileVersion=$env:VERSION --output ControlR.Web.Server/bin/publish --self-contained true
+
+      - name: Verify Download Artifacts
+        shell: pwsh
+        run: |
+          $TestPaths = @(
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/Version.txt",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/ControlR.Agent.Installer.exe",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/ControlR.Agent.Installer.exe",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/ControlR.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/ControlR.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/ControlR.Agent.Installer",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/ControlR.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/ControlR.Agent.Installer",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/ControlR.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/ControlR.Agent.Installer",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/ControlR.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/novnc/vnc.html"
+          )
+          foreach ($TestPath in $TestPaths) {
+            if (!(Test-Path $TestPath)) {
+              Write-Error "$TestPath not found."
+              exit 1
+            }
+          }
+
+      - name: Upload Server
+        uses: actions/upload-artifact@v7
+        with:
+          name: Server
+          path: ControlR.Web.Server/bin/publish
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+
+      - name: Upload docker-compose
+        uses: actions/upload-artifact@v7
+        with:
+          name: DockerCompose
+          path: docker-compose/docker-compose.yml
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
