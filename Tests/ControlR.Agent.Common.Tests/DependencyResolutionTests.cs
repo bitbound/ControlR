@@ -8,7 +8,6 @@ public class DependencyResolutionTests
 {
   [Theory]
   [InlineData(StartupMode.Run)]
-  [InlineData(StartupMode.Install)]
   [InlineData(StartupMode.Uninstall)]
   internal void Build_InDevelopment_ValidatesDependencyGraph(StartupMode startupMode)
   {
@@ -27,7 +26,6 @@ public class DependencyResolutionTests
 
   [Theory]
   [InlineData(StartupMode.Run)]
-  [InlineData(StartupMode.Install)]
   [InlineData(StartupMode.Uninstall)]
   internal void Build_InProduction_Succeeds(StartupMode startupMode)
   {

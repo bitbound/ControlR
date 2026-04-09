@@ -125,10 +125,6 @@ public class AgentUpdaterTests
         Version = Version.Parse("1.2.3")
       }));
 
-    fixture.AgentUpdateApi
-      .Setup(x => x.GetCurrentAgentHashSha256(It.IsAny<RuntimeId>(), It.IsAny<CancellationToken>()))
-      .Throws(new InvalidOperationException("Legacy hash endpoint should not be used."));
-
     fixture.DownloadsApi
       .Setup(x => x.DownloadFile("/downloads/win-x64/ControlR.Agent.Installer.exe", It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns<string, string, CancellationToken>((_, destinationPath, _) =>
@@ -160,9 +156,6 @@ public class AgentUpdaterTests
     Assert.Contains(_tenantId.ToString(), launchedInstallerArguments, StringComparison.Ordinal);
     Assert.Contains("--instance-id", launchedInstallerArguments, StringComparison.Ordinal);
     Assert.Contains("\"instance-1\"", launchedInstallerArguments, StringComparison.Ordinal);
-    fixture.AgentUpdateApi.Verify(
-      x => x.GetCurrentAgentHashSha256(It.IsAny<RuntimeId>(), It.IsAny<CancellationToken>()),
-      Times.Never);
   }
 
   [Fact]
@@ -183,10 +176,6 @@ public class AgentUpdaterTests
         Version = Version.Parse("1.2.3")
       }));
 
-    fixture.AgentUpdateApi
-      .Setup(x => x.GetCurrentAgentHashSha256(It.IsAny<RuntimeId>(), It.IsAny<CancellationToken>()))
-      .Throws(new InvalidOperationException("Legacy hash endpoint should not be used."));
-
     var updater = fixture.CreateUpdater();
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
@@ -200,9 +189,6 @@ public class AgentUpdaterTests
     fixture.AgentUpdateApi.Verify(
       x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()),
       Times.Once);
-    fixture.AgentUpdateApi.Verify(
-      x => x.GetCurrentAgentHashSha256(It.IsAny<RuntimeId>(), It.IsAny<CancellationToken>()),
-      Times.Never);
   }
 
   private sealed class AgentUpdaterFixture

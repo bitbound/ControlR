@@ -3,6 +3,5 @@ internal enum StartupMode
 {
   None,
   Run,
-  Install,
   Uninstall,
 }

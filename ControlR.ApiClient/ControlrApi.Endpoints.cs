@@ -7,7 +7,6 @@ namespace ControlR.ApiClient;
 public interface IAgentUpdateApi
 {
   Task<ApiResult<BundleMetadataDto>> GetBundleMetadata(RuntimeId runtime, CancellationToken cancellationToken = default);
-  Task<ApiResult<string>> GetCurrentAgentHashSha256(RuntimeId runtime, CancellationToken cancellationToken = default);
 }
 
 public interface IAuthApi

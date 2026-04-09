@@ -2,98 +2,16 @@
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using ControlR.Agent.Common.Models;
-using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Startup;
 using ControlR.Agent.Shared.Interfaces;
-using ControlR.Agent.Shared.Services;
 using ControlR.Libraries.Shared.DataValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace ControlR.Agent.Startup;
 
 internal static class CommandProvider
 {
-  internal static Command GetInstallCommand(string[] args)
-  {
-    var serverUriOption = CreateServerUriOption(required: false);
-    var instanceIdOption = CreateInstanceIdOption();
-    var deviceTagsOption = new Option<string?>("-g", "--device-tags")
-    {
-      Description = "An optional, comma-separated list of tags to which the agent will be assigned."
-    };
-    var tenantIdOption = new Option<Guid?>("-t", "--tenant-id")
-    {
-      Description = "The tenant ID to which the agent will be assigned."
-    };
-    var installerKeySecretOption = new Option<string?>("-ks", "--installer-key-secret")
-    {
-      Description = "An access key that will allow the device to be created on the server."
-    };
-    var installerKeyIdOption = new Option<Guid?>("-ki", "--installer-key-id")
-    {
-      Description = "The ID of the installer key to use for installation."
-    };
-    var deviceIdOption = new Option<Guid?>("-d", "--device-id")
-    {
-      Description = "An optional device ID to which the agent will be assigned."
-    };
-
-    var installCommand = new Command("install", "Download and launch the ControlR bootstrap installer.")
-    {
-      serverUriOption,
-      instanceIdOption,
-      deviceTagsOption,
-      tenantIdOption,
-      installerKeySecretOption,
-      installerKeyIdOption,
-      deviceIdOption,
-    };
-
-    installCommand.SetAction(async parseResult =>
-    {
-      var instanceId = parseResult.GetValue(instanceIdOption);
-      var requestedServerUri = parseResult.GetValue(serverUriOption);
-
-      using var host = CreateHost(StartupMode.Install, args, instanceId, requestedServerUri);
-      var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent");
-
-      try
-      {
-        var bridge = host.Services.GetRequiredService<ILegacyInstallerBridge>();
-        var settingsProvider = host.Services.GetRequiredService<IOptionsAccessor>();
-        var serverUri = requestedServerUri ?? settingsProvider.ServerUri;
-        var tenantId = parseResult.GetValue(tenantIdOption) ?? settingsProvider.GetRequiredTenantId();
-        var deviceId = parseResult.GetValue(deviceIdOption);
-        if (deviceId is null && settingsProvider.DeviceId != Guid.Empty)
-        {
-          deviceId = settingsProvider.DeviceId;
-        }
-
-        var tagIds = ParseTagIds(parseResult.GetValue(deviceTagsOption));
-
-        var forwarded = await bridge.TryForwardToNewInstaller(
-          serverUri,
-          tenantId,
-          parseResult.GetValue(installerKeySecretOption),
-          parseResult.GetValue(installerKeyIdOption),
-          deviceId,
-          tagIds,
-          instanceId);
-
-        return forwarded ? 0 : 1;
-      }
-      catch (Exception ex)
-      {
-        logger.LogError(ex, "Failed to forward install command to the ControlR bootstrap installer.");
-        return 1;
-      }
-    });
-
-    return installCommand;
-  }
-
   internal static Command GetRunCommand(string[] args)
   {
     var instanceIdOption = CreateInstanceIdOption();
@@ -139,12 +57,11 @@ internal static class CommandProvider
   private static IHost CreateHost(
     StartupMode startupMode,
     string[] args,
-    string? instanceId = null,
-    Uri? serverUri = null)
+    string? instanceId = null)
   {
     var host = Host.CreateApplicationBuilder(args);
 
-    host.AddControlRAgent(startupMode, instanceId, serverUri);
+    host.AddControlRAgent(startupMode, instanceId, serverUri: null);
     return host.Build();
   }
 
@@ -157,45 +74,6 @@ internal static class CommandProvider
 
     instanceIdOption.Validators.Add(ValidateInstanceId);
     return instanceIdOption;
-  }
-
-  private static Option<Uri?> CreateServerUriOption(bool required)
-  {
-    return new Option<Uri?>("-s", "--server-uri")
-    {
-      Required = required,
-      Description = "The fully-qualified server URI to which the agent will connect.",
-      CustomParser = result =>
-      {
-        if (result.Tokens.Count == 0)
-        {
-          return null;
-        }
-
-        var uriArg = result.Tokens[0].Value;
-        if (Uri.TryCreate(uriArg, UriKind.Absolute, out var uri))
-        {
-          return uri;
-        }
-
-        result.AddError(
-          $"The server URI '{uriArg}' is not a valid absolute URI. Please provide a valid URI including the scheme (e.g. 'https://').");
-
-        return null;
-      }
-    };
-  }
-
-  private static Guid[]? ParseTagIds(string? deviceTags)
-  {
-    return deviceTags is null
-      ? null
-      : [.. deviceTags
-        .Split(',')
-        .Select(x => Guid.TryParse(x, out var tagId)
-          ? tagId
-          : Guid.Empty)
-        .Where(x => x != Guid.Empty)];
   }
 
   private static void ValidateInstanceId(OptionResult optionResult)

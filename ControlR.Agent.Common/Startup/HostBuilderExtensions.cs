@@ -97,7 +97,6 @@ internal static class HostApplicationBuilderExtensions
       options.BaseUrl = appOptions.ServerUri;
     });
 
-    services.AddSingleton<ILegacyInstallerBridge, LegacyInstallerBridge>();
     services.AddAgentSharedServices();
     services.AddSingleton<IProcessManager, ProcessManager>();
     services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);

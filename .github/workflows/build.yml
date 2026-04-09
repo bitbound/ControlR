@@ -400,27 +400,6 @@ jobs:
 
           codesign --verify --strict --verbose=2 "$INSTALLER_PATH"
 
-      - name: Publish Transitional Standalone Agent (${{ matrix.arch }})
-        run: |
-          AGENT_PUBLISH_DIR="${{ github.workspace }}/ControlR.Agent/bin/publish/${{ matrix.arch }}"
-          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
-          STANDALONE_AGENT_PATH="$DOWNLOADS_DIR/ControlR.Agent"
-
-          echo "Copying transitional standalone agent to downloads directory..."
-          cp "$AGENT_PUBLISH_DIR/ControlR.Agent" "$STANDALONE_AGENT_PATH"
-
-          echo "Code signing transitional standalone agent for macOS ${{ matrix.arch }}..."
-          codesign \
-            --force \
-            --options runtime \
-            --timestamp \
-            --entitlements "./ControlR.Agent/Entitlements.plist" \
-            --keychain "$RUNNER_TEMP/build.keychain" \
-            --sign "$IDENTITY_HASH" \
-            "$STANDALONE_AGENT_PATH"
-
-          codesign --verify --strict --verbose=2 "$STANDALONE_AGENT_PATH"
-
       - name: Upload Downloads (${{ matrix.arch }})
         uses: actions/upload-artifact@v7
         with:
@@ -500,13 +479,15 @@ jobs:
       - name: Build Agent (${{ matrix.arch }})
         shell: pwsh
         run: |
+          $agentPublishDir = "ControlR.Agent\bin\publish\${{ matrix.arch }}\"
+          New-Item -Path $agentPublishDir -ItemType Directory -Force | Out-Null
           New-Item -Path "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Agent\ -c Release -r ${{ matrix.arch }} -o ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
+          dotnet publish ControlR.Agent\ -c Release -r ${{ matrix.arch }} -o $agentPublishDir -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
 
       - name: Sign Agent (${{ matrix.arch }})
         uses: ./.github/actions/windows-code-sign
         with:
-          file-patterns: ${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\*.exe
+          file-patterns: ${{ github.workspace }}\ControlR.Agent\bin\publish\${{ matrix.arch }}\ControlR.Agent.exe
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -533,12 +514,13 @@ jobs:
       - name: Create Bundle ZIP (${{ matrix.arch }})
         shell: pwsh
         run: |
+          $agentPublishDir = "ControlR.Agent\bin\publish\${{ matrix.arch }}\"
           $bundleDir = ".build\bundle\${{ matrix.arch }}"
           $desktopDir = Join-Path $bundleDir "DesktopClient"
           Remove-Item -Path $bundleDir -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -Path $desktopDir -ItemType Directory -Force | Out-Null
 
-          Copy-Item "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.exe" (Join-Path $bundleDir "ControlR.Agent.exe") -Force
+          Copy-Item (Join-Path $agentPublishDir "ControlR.Agent.exe") (Join-Path $bundleDir "ControlR.Agent.exe") -Force
           Copy-Item "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" $desktopDir -Recurse -Force
 
           Compress-Archive -Path "$bundleDir\*" -DestinationPath "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.bundle.zip" -Force
@@ -584,8 +566,9 @@ jobs:
 
       - name: Build Agent (linux-x64)
         run: |
+          mkdir -p "./ControlR.Agent/bin/publish/linux-x64"
           mkdir -p "./ControlR.Web.Server/wwwroot/downloads/linux-x64"
-          dotnet publish ./ControlR.Agent/ -c Release -r linux-x64 -o ./ControlR.Web.Server/wwwroot/downloads/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
+          dotnet publish ./ControlR.Agent/ -c Release -r linux-x64 -o ./ControlR.Agent/bin/publish/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
 
       - name: Build Installer (linux-x64)
         run: |
@@ -595,7 +578,7 @@ jobs:
         run: |
           rm -rf ".build/bundle/linux-x64"
           mkdir -p ".build/bundle/linux-x64/DesktopClient"
-          cp "./ControlR.Web.Server/wwwroot/downloads/linux-x64/ControlR.Agent" ".build/bundle/linux-x64/ControlR.Agent"
+          cp "./ControlR.Agent/bin/publish/linux-x64/ControlR.Agent" ".build/bundle/linux-x64/ControlR.Agent"
           cp -R ./ControlR.DesktopClient/bin/publish/linux-x64/. ".build/bundle/linux-x64/DesktopClient/"
 
           cd .build/bundle/linux-x64
@@ -677,19 +660,14 @@ jobs:
         run: |
           $TestPaths = @(
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/Version.txt",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/ControlR.Agent.exe",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/ControlR.Agent.exe",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/ControlR.Agent.Installer.exe",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/ControlR.Agent.Installer.exe",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/ControlR.Agent.bundle.zip",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/ControlR.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/ControlR.Agent",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/ControlR.Agent.Installer",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/ControlR.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/ControlR.Agent",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/ControlR.Agent.Installer",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/ControlR.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/ControlR.Agent",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/ControlR.Agent.Installer",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/ControlR.Agent.bundle.zip",
             "ControlR.Web.Server/bin/publish/novnc/vnc.html"

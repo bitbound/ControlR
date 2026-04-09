@@ -43,19 +43,6 @@ public static class AppConstants
 
   private static Uri DevServerUri { get; } = new("http://localhost:5120");
 
-  public static string GetAgentFileDownloadPath(RuntimeId runtime)
-  {
-    return runtime switch
-    {
-      RuntimeId.WinX64 => "/downloads/win-x64/ControlR.Agent.exe",
-      RuntimeId.WinX86 => "/downloads/win-x86/ControlR.Agent.exe",
-      RuntimeId.LinuxX64 => "/downloads/linux-x64/ControlR.Agent",
-      RuntimeId.MacOsX64 => "/downloads/osx-x64/ControlR.Agent",
-      RuntimeId.MacOsArm64 => "/downloads/osx-arm64/ControlR.Agent",
-      _ => throw new PlatformNotSupportedException()
-    };
-  }
-
   public static string GetAgentFileName(SystemPlatform platform)
   {
     return platform switch

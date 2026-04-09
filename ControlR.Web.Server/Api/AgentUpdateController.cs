@@ -77,30 +77,6 @@ public class AgentUpdateController(
     return Ok(metadata);
   }
 
-  [OutputCache(Duration = CacheDurationSeconds)]
-  [ResponseCache(Duration = CacheDurationSeconds, Location = ResponseCacheLocation.Any)]
-  [Produces("text/plain")]
-  [HttpGet("get-hash-sha256/{runtime}")]
-  public async Task<ActionResult<string>> GetHash(RuntimeId runtime, CancellationToken cancellationToken)
-  {
-    var filePath = AppConstants.GetAgentFileDownloadPath(runtime);
-    _logger.LogDebug("GetHash request started for downloads file. Path: {FilePath}", filePath);
-
-    var fileInfo = _webHostEnvironment.WebRootFileProvider.GetFileInfo(filePath);
-    if (!fileInfo.Exists || fileInfo.PhysicalPath is null)
-    {
-      _logger.LogWarning("File does not exist: {FilePath}", filePath);
-      return NotFound();
-    }
-
-    _logger.LogDebug("Calculating hash.");
-    await using var fs = new FileStream(fileInfo.PhysicalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-    var sha256Hash = await SHA256.HashDataAsync(fs, cancellationToken);
-    var hexHash = Convert.ToHexString(sha256Hash);
-
-    return Ok(hexHash);
-  }
-
   private static string GetBundleDownloadPath(RuntimeId runtime)
   {
     return AppConstants.GetBundleZipDownloadPath(runtime);

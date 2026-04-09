@@ -15,11 +15,4 @@ public partial class ControlrApi
         $"{HttpConstants.AgentUpdateEndpoint}/get-bundle-metadata/{runtime}",
         cancellationToken));
   }
-
-  async Task<ApiResult<string>> IAgentUpdateApi.GetCurrentAgentHashSha256(RuntimeId runtime, CancellationToken cancellationToken)
-  {
-    return await ExecuteApiCall(async () => await _client.GetStringAsync(
-      $"{HttpConstants.AgentUpdateEndpoint}/get-hash-sha256/{runtime}",
-      cancellationToken));
-  }
 }
