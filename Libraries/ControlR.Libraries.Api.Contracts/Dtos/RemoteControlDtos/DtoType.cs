@@ -31,4 +31,5 @@ public enum DtoType
   SessionDisconnectRequested = 48,
   RemoteControlSessionError = 49,
   ScreenRegions = 50,
+  UpdateCaptureSettings = 51,
 }

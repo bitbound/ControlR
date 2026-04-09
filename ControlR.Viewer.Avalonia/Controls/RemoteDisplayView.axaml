@@ -48,7 +48,7 @@
             Padding="8"
             BorderThickness="0, 1, 0, 1"
             BorderBrush="{DynamicResource DividerBrush}">
-      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto"
+      <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto"
             ColumnSpacing="8">
         <cavac:IconButton x:Name="ViewButton"
                           Grid.Column="0"
@@ -113,6 +113,16 @@
 
                       <ToggleSwitch IsChecked="{Binding IsAutoPanEnabled}"
                                     HorizontalAlignment="Left" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="8"
+                                Margin="0,4,0,0">
+                      <TextBlock Text="{x:Static assets:Resources.CaptureCursor}" FontSize="10" />
+
+                      <ToggleSwitch IsChecked="{Binding CaptureCursor}"
+                                    HorizontalAlignment="Left"
+                                    OffContent="{x:Static assets:Resources.CaptureCursor}"
+                                    OnContent="{x:Static assets:Resources.CaptureCursor}" />
                     </StackPanel>
                   </StackPanel>
 
@@ -276,6 +286,102 @@
                           Color="Info"
                           Focusable="False"
                           IsTabStop="False"
+                          Icon="{DynamicResource desktop_sync_regular}"
+                          Text="{x:Static assets:Resources.Quality}"
+                          ToolTip.Tip="{x:Static assets:Resources.Quality}">
+          <cavac:IconButton.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <Border MinWidth="240"
+                      Padding="8">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="{x:Static assets:Resources.Quality}"
+                             FontSize="10" />
+
+                  <ToggleSwitch IsChecked="{Binding IsAutoQualityEnabled}"
+                                OffContent="{x:Static assets:Resources.EnableAutoQuality}"
+                                OnContent="{x:Static assets:Resources.EnableAutoQuality}"
+                                HorizontalAlignment="Left" />
+
+                  <StackPanel IsVisible="{Binding IsAutoQualityEnabled}"
+                              Spacing="8">
+                    <TextBlock Text="{x:Static assets:Resources.AutoQualityMaximum}"
+                               FontSize="10" />
+
+                    <NumericUpDown Minimum="2"
+                                   Maximum="100"
+                                   Increment="1"
+                                   FormatString="F0"
+                                   Value="{Binding AutoQualityMaximum}" />
+
+                    <TextBlock Text="{x:Static assets:Resources.AutoQualityMinimum}"
+                               FontSize="10" />
+
+                    <NumericUpDown Minimum="1"
+                                   Maximum="99"
+                                   Increment="1"
+                                   FormatString="F0"
+                                   Value="{Binding AutoQualityMinimum}" />
+
+                    <TextBlock Text="{x:Static assets:Resources.AutoQualityLowerThreshold}"
+                               FontSize="10" />
+
+                    <NumericUpDown Minimum="1"
+                                   Increment="1"
+                                   FormatString="F1"
+                                   Value="{Binding AutoQualityLowerThresholdMbps}" />
+
+                    <TextBlock Text="{x:Static assets:Resources.AutoQualityUpperThreshold}"
+                               FontSize="10" />
+
+                    <NumericUpDown Minimum="2"
+                                   Increment="1"
+                                   FormatString="F1"
+                                   Value="{Binding AutoQualityUpperThresholdMbps}" />
+                  </StackPanel>
+
+                  <StackPanel IsVisible="{Binding IsManualQualityVisible}"
+                              Spacing="8">
+                    <TextBlock Text="{x:Static assets:Resources.ManualQuality}"
+                               FontSize="10" />
+
+                    <NumericUpDown Minimum="1"
+                                   Maximum="100"
+                                   Increment="1"
+                                   FormatString="F0"
+                                   Value="{Binding ManualQuality}" />
+
+                    <Slider Minimum="1"
+                            Maximum="100"
+                            Value="{Binding ManualQuality}" />
+
+                  </StackPanel>
+
+                  <ToggleSwitch IsChecked="{Binding IsMaxBandwidthEnabled}"
+                                OffContent="{x:Static assets:Resources.EnableMaxBandwidth}"
+                                OnContent="{x:Static assets:Resources.EnableMaxBandwidth}"
+                                HorizontalAlignment="Left" />
+
+                  <StackPanel IsVisible="{Binding IsMaxBandwidthEnabled}"
+                              Spacing="8">
+                    <TextBlock Text="{x:Static assets:Resources.MaxBandwidthMbps}"
+                               FontSize="10" />
+
+                    <NumericUpDown Minimum="1"
+                                   Increment="1"
+                                   FormatString="F1"
+                                   Value="{Binding MaxBandwidthMbps}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </Flyout>
+          </cavac:IconButton.Flyout>
+        </cavac:IconButton>
+
+        <cavac:IconButton Grid.Column="3"
+                          Variant="Outlined"
+                          Color="Info"
+                          Focusable="False"
+                          IsTabStop="False"
                           Icon="{DynamicResource more_vertical_regular}"
                           Text="{x:Static assets:Resources.Extras}"
                           ToolTip.Tip="{x:Static assets:Resources.Extras}">
@@ -297,7 +403,7 @@
           </cavac:IconButton.Flyout>
         </cavac:IconButton>
 
-        <Button Grid.Column="4"
+        <Button Grid.Column="5"
                 Cursor="Hand"
                 Focusable="False"
                 IsTabStop="False"
@@ -345,7 +451,7 @@
             <Grid IsVisible="{Binding HasMetricsData}"
                   ColumnDefinitions="Auto,*"
                   ColumnSpacing="10"
-                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                   IsHitTestVisible="False">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_MbpsInLabel}" />
               <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding MetricsMbpsIn, StringFormat={}{0:N2}}" />
@@ -359,8 +465,11 @@
               <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_ModeLabel}" />
               <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MetricsMode}" />
 
-              <TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_LatencyLabel}" />
-              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MetricsLatency.TotalMilliseconds, StringFormat={}{0:N2} ms}" />
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_CurrentQualityLabel}" />
+              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MetricsCurrentQuality}" />
+
+              <TextBlock Grid.Row="5" Grid.Column="0" Text="{x:Static assets:Resources.Metrics_LatencyLabel}" />
+              <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding MetricsLatency.TotalMilliseconds, StringFormat={}{0:N2} ms}" />
             </Grid>
 
             <ItemsControl IsVisible="{Binding HasMetricsData}"

@@ -14,27 +14,15 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   private readonly IUserPreferencesManager _userPreferencesManager = userPreferencesManager;
 
   [HttpGet]
-  public async IAsyncEnumerable<UserPreferenceResponseDto> GetAll()
+  public async Task<ActionResult<UserPreferencesDto>> GetAll(CancellationToken cancellationToken)
   {
-    if (User.Identity is null)
+    if (!User.TryGetUserId(out var userId))
     {
-      yield break;
+      return Unauthorized();
     }
 
-    var user = await _appDb.Users
-      .AsNoTracking()
-      .Include(x => x.UserPreferences)
-      .FirstOrDefaultAsync(x => x.UserName == User.Identity.Name);
-
-    if (user?.UserPreferences is null)
-    {
-      yield break;
-    }
-
-    foreach (var preference in user.UserPreferences)
-    {
-      yield return preference.ToDto();
-    }
+    var preferences = await _userPreferencesManager.GetAllPreferences(userId, cancellationToken);
+    return Ok(preferences);
   }
 
   [HttpGet("{name}")]
@@ -75,6 +63,20 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
     }
 
     var result = await _userPreferencesManager.SetPreference(userId, preference);
+    return result.ToActionResult();
+  }
+
+  [HttpPut]
+  public async Task<ActionResult<UserPreferencesDto>> SetPreferences(
+    [FromBody] UserPreferencesDto preferences,
+    CancellationToken cancellationToken)
+  {
+    if (!User.TryGetUserId(out var userId))
+    {
+      return Unauthorized();
+    }
+
+    var result = await _userPreferencesManager.SetPreferences(userId, preferences, cancellationToken);
     return result.ToActionResult();
   }
 }

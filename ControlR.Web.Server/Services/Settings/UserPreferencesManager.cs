@@ -1,9 +1,6 @@
-using System.Collections.Concurrent;
-using System.Collections.Frozen;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Viewer.Common.Enums;
-using ControlR.Web.Client.Models;
 using ControlR.Web.Client.Services;
+using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Primitives;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -11,77 +8,57 @@ namespace ControlR.Web.Server.Services.Settings;
 
 public interface IUserPreferencesManager : IUserPreferencesProvider
 {
+  Task<UserPreferencesDto> GetAllPreferences(
+    Guid userId,
+    CancellationToken cancellationToken = default);
   Task<HttpResult<UserPreferenceResponseDto>> SetPreference(
     Guid userId,
     UserPreferenceRequestDto preference,
+    CancellationToken cancellationToken = default);
+  Task<HttpResult<UserPreferencesDto>> SetPreferences(
+    Guid userId,
+    UserPreferencesDto preferences,
     CancellationToken cancellationToken = default);
 }
 
 public class UserPreferencesManager(
   AuthenticationStateProvider authStateProvider,
   IDbContextFactory<AppDb> dbFactory,
-  IEnumerable<IUserPreferenceValueHandler> handlers,
   ILogger<UserPreferencesManager> logger) : IUserPreferencesManager
 {
   private readonly AuthenticationStateProvider _authStateProvider = authStateProvider;
   private readonly IDbContextFactory<AppDb> _dbFactory = dbFactory;
-  private readonly FrozenDictionary<string, IUserPreferenceValueHandler> _handlers = handlers.ToHandlerDictionary();
   private readonly ILogger<UserPreferencesManager> _logger = logger;
-  private readonly ConcurrentDictionary<string, object?> _preferences = new();
 
-  public Task<bool> GetHideOfflineDevices()
+  public async Task<UserPreferencesDto> GetAllPreferences(
+    Guid userId,
+    CancellationToken cancellationToken = default)
   {
-    return GetPref(UserPreferenceNames.HideOfflineDevices, true);
+    await using var appDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+    var values = await appDb.UserPreferences
+      .AsNoTracking()
+      .Where(x => x.UserId == userId)
+      .ToDictionaryAsync(x => x.Name, x => x.Value, cancellationToken);
+
+    return UserPreferenceDefinitions.CreateDto(values, (name, value) =>
+      _logger.LogWarning(
+        "Failed to parse user preference {PreferenceName} for user {UserId}. Value: {PreferenceValue}",
+        name,
+        userId,
+        value));
   }
 
-  public Task<KeyboardInputMode> GetKeyboardInputMode()
+  public async Task<UserPreferencesDto> GetPreferences()
   {
-    return GetPref(UserPreferenceNames.KeyboardInputMode, KeyboardInputMode.Auto);
-  }
+    var authState = await _authStateProvider.GetAuthenticationStateAsync();
+    if (!authState.User.TryGetUserId(out var userId) || !await _authStateProvider.IsAuthenticated())
+    {
+      Dictionary<string, string> values = [];
+      return UserPreferenceDefinitions.CreateDto(values);
+    }
 
-  public Task<bool> GetNotifyUserOnSessionStart()
-  {
-    return GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
-  }
-
-  public Task<bool> GetOpenDeviceInNewTab()
-  {
-    return GetPref(UserPreferenceNames.OpenDeviceInNewTab, true);
-  }
-
-  public Task<ThemeMode> GetThemeMode()
-  {
-    return GetPref(UserPreferenceNames.ThemeMode, ThemeMode.Auto);
-  }
-
-  public Task<string> GetUserDisplayName()
-  {
-    return GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
-  }
-
-  public Task<ViewMode> GetViewMode()
-  {
-    return GetPref(UserPreferenceNames.ViewMode, ViewMode.Fit);
-  }
-
-  public Task SetHideOfflineDevices(bool value)
-  {
-    return SetPref(UserPreferenceNames.HideOfflineDevices, value);
-  }
-
-  public Task SetKeyboardInputMode(KeyboardInputMode value)
-  {
-    return SetPref(UserPreferenceNames.KeyboardInputMode, value);
-  }
-
-  public Task SetNotifyUserOnSessionStart(bool value)
-  {
-    return SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
-  }
-
-  public Task SetOpenDeviceInNewTab(bool value)
-  {
-    return SetPref(UserPreferenceNames.OpenDeviceInNewTab, value);
+    return await GetAllPreferences(userId);
   }
 
   public async Task<HttpResult<UserPreferenceResponseDto>> SetPreference(
@@ -114,15 +91,17 @@ public class UserPreferencesManager(
       return HttpResult.Ok(new UserPreferenceResponseDto(null, preference.Name, null));
     }
 
-    var normalizationResult = NormalizePreferenceValue(preference);
+    var normalizationResult = UserPreferenceDefinitions.Normalize(preference.Name, preference.Value);
     if (!normalizationResult.IsSuccess)
     {
       _logger.LogError(
         "Failed to normalize preference value for {PreferenceName}. Reason: {Reason}",
         preference.Name,
-        normalizationResult.Reason);
+        normalizationResult.ErrorMessage);
 
-      return normalizationResult.ToHttpResult(new UserPreferenceResponseDto(null, preference.Name, null));
+      return HttpResult.Fail<UserPreferenceResponseDto>(
+        HttpResultErrorCode.ValidationFailed,
+        normalizationResult.ErrorMessage ?? "Preference value is invalid.");
     }
 
     var normalizedValue = normalizationResult.Value ?? string.Empty;
@@ -146,165 +125,103 @@ public class UserPreferencesManager(
     return HttpResult.Ok(entity.ToDto());
   }
 
-  public Task SetThemeMode(ThemeMode value)
+  public async Task SetPreference<T>(string preferenceName, T value)
   {
-    return SetPref(UserPreferenceNames.ThemeMode, value);
-  }
-
-  public Task SetUserDisplayName(string value)
-  {
-    return SetPref(UserPreferenceNames.UserDisplayName, value);
-  }
-
-  public Task SetViewMode(ViewMode value)
-  {
-    return SetPref(UserPreferenceNames.ViewMode, value);
-  }
-
-  private async Task<T> GetPref<T>(string preferenceName, T defaultValue)
-  {
-    try
+    var authState = await _authStateProvider.GetAuthenticationStateAsync();
+    if (!authState.User.TryGetUserId(out var userId) || !await _authStateProvider.IsAuthenticated())
     {
-      if (_preferences.TryGetValue(preferenceName, out var value) &&
-          value is T typedValue)
+      _logger.LogWarning("Cannot set preference {PreferenceName} - user is not authenticated.", preferenceName);
+      return;
+    }
+
+    var stringValue = UserPreferenceDefinitions.FormatValue(preferenceName, value)?.Trim();
+    if (string.IsNullOrWhiteSpace(stringValue))
+    {
+      _logger.LogWarning("Cannot set preference {PreferenceName} - value is null or empty.", preferenceName);
+      return;
+    }
+
+    var result = await SetPreference(userId, new UserPreferenceRequestDto(preferenceName, stringValue));
+    if (!result.IsSuccess)
+    {
+      _logger.LogError(
+        "Failed to set preference {PreferenceName}. Reason: {Reason}",
+        preferenceName,
+        result.Reason);
+    }
+  }
+
+  public async Task<HttpResult<UserPreferencesDto>> SetPreferences(
+    Guid userId,
+    UserPreferencesDto preferences,
+    CancellationToken cancellationToken = default)
+  {
+    await using var appDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+    var user = await appDb.Users
+      .Include(x => x.UserPreferences)
+      .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+
+    if (user is null)
+    {
+      return HttpResult.Fail<UserPreferencesDto>(HttpResultErrorCode.NotFound, "User not found.");
+    }
+
+    user.UserPreferences ??= [];
+
+    var normalizationResults = new List<(string Name, string? Value)>();
+    foreach (var preference in UserPreferenceDefinitions.GetValues(preferences).Select(x => new UserPreferenceRequestDto(x.Name, x.Value ?? string.Empty)))
+    {
+      if (string.IsNullOrWhiteSpace(preference.Value))
       {
-        return typedValue;
+        normalizationResults.Add((preference.Name, null));
+        continue;
       }
 
-      var authState = await _authStateProvider.GetAuthenticationStateAsync();
-      if (!authState.User.TryGetUserId(out var userId))
+      var normalizationResult = UserPreferenceDefinitions.Normalize(preference.Name, preference.Value);
+      if (!normalizationResult.IsSuccess)
       {
-        return defaultValue;
+        _logger.LogError(
+          "Failed to normalize preference value for {PreferenceName}. Reason: {Reason}",
+          preference.Name,
+          normalizationResult.ErrorMessage);
+
+        return HttpResult.Fail<UserPreferencesDto>(
+          HttpResultErrorCode.ValidationFailed,
+          normalizationResult.ErrorMessage ?? "Preference value is invalid.");
       }
 
-      var isAuthenticated = await _authStateProvider.IsAuthenticated();
+      normalizationResults.Add((preference.Name, normalizationResult.Value ?? string.Empty));
+    }
 
-      if (!isAuthenticated)
+    foreach (var result in normalizationResults)
+    {
+      var existingPreference = user.UserPreferences.FirstOrDefault(x => x.Name == result.Name);
+      if (result.Value is null)
       {
-        return defaultValue;
-      }
-
-      await using var db = await _dbFactory.CreateDbContextAsync();
-
-      var preference = await db.UserPreferences
-        .AsNoTracking()
-        .Where(x => x.User!.Id == userId && x.Name == preferenceName)
-        .FirstOrDefaultAsync();
-
-      if (preference is null)
-      {
-        return defaultValue;
-      }
-
-      var targetType = typeof(T);
-
-      if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
-      {
-        targetType = Nullable.GetUnderlyingType(targetType) ??
-          throw new InvalidOperationException($"Failed to convert setting value to type {targetType.Name}.");
-      }
-
-      if (targetType.IsEnum)
-      {
-        if (Enum.TryParse(targetType, preference.Value, true, out var enumValue))
+        if (existingPreference is not null)
         {
-          _preferences[preferenceName] = enumValue;
-          return (T)enumValue;
+          user.UserPreferences.Remove(existingPreference);
         }
 
-        _logger.LogError(
-          "Failed to parse enum preference {PreferenceName} with value {PreferenceValue} to type {TargetType}.",
-          preferenceName,
-          preference.Value,
-          targetType.Name);
-
-        return defaultValue;
+        continue;
       }
 
-      if (Convert.ChangeType(preference.Value, targetType) is not T typedResult)
+      if (existingPreference is not null)
       {
-        return defaultValue;
+        existingPreference.Value = result.Value;
+        continue;
       }
 
-      _preferences[preferenceName] = typedResult;
-      return typedResult;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting preference for {PreferenceName}.", preferenceName);
-      return defaultValue;
-    }
-  }
-
-  private HttpResult<string> NormalizePreferenceValue(UserPreferenceRequestDto preference)
-  {
-    if (_handlers.TryGetValue(preference.Name, out var handler))
-    {
-      return handler.ValidateAndNormalize(preference.Value);
+      user.UserPreferences.Add(new UserPreference
+      {
+        Name = result.Name,
+        UserId = userId,
+        Value = result.Value
+      });
     }
 
-    return HttpResult.Ok(preference.Value.Trim());
-  }
-
-  private async Task SetPref<T>(string preferenceName, T newValue)
-  {
-    try
-    {
-      _preferences[preferenceName] = newValue;
-      var stringValue = Convert.ToString(newValue)?.Trim();
-
-      if (string.IsNullOrEmpty(stringValue))
-      {
-        _logger.LogWarning("Cannot set preference {PreferenceName} - value is null or empty.", preferenceName);
-        return;
-      }
-
-      var authState = await _authStateProvider.GetAuthenticationStateAsync();
-      var userName = authState.User.Identity?.Name;
-
-      if (string.IsNullOrEmpty(userName))
-      {
-        _logger.LogWarning("Cannot set preference {PreferenceName} - user is not authenticated.", preferenceName);
-        return;
-      }
-
-      await using var db = await _dbFactory.CreateDbContextAsync();
-
-      var user = await db.Users
-        .Include(x => x.UserPreferences)
-        .FirstOrDefaultAsync(x => x.UserName == userName);
-
-      if (user is null)
-      {
-        _logger.LogWarning("Cannot set preference {PreferenceName} - user not found.", preferenceName);
-        return;
-      }
-
-      user.UserPreferences ??= [];
-
-      var index = user.UserPreferences.FindIndex(x => x.Name == preferenceName);
-
-      var entity = new UserPreference
-      {
-        Name = preferenceName,
-        Value = stringValue,
-        UserId = user.Id,
-      };
-
-      if (index >= 0)
-      {
-        user.UserPreferences[index] = entity;
-      }
-      else
-      {
-        user.UserPreferences.Add(entity);
-      }
-
-      await db.SaveChangesAsync();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while setting preference for {PreferenceName}.", preferenceName);
-    }
+    await appDb.SaveChangesAsync(cancellationToken);
+    return HttpResult.Ok(await GetAllPreferences(userId, cancellationToken));
   }
 }

@@ -1,6 +1,4 @@
-using ControlR.Web.Client.Models;
 using ControlR.Web.Client.StateManagement;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Layout;
@@ -96,7 +94,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
       // No persisted state, this is SSR or first load
       if (IsAuthenticated)
       {
-        CurrentThemeMode = await UserPreferences.GetThemeMode();
+        CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode.ToClientThemeMode();
       }
       await UpdateIsDarkMode();
 
@@ -111,7 +109,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
       // Still need to load theme mode
       if (IsAuthenticated)
       {
-        CurrentThemeMode = await UserPreferences.GetThemeMode();
+        CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode.ToClientThemeMode();
       }
     }
 

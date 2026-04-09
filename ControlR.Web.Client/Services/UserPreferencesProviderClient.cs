@@ -1,24 +1,11 @@
-using System.Collections.Concurrent;
-using System.Net;
+using ControlR.Libraries.Api.Contracts.Settings;
 
 namespace ControlR.Web.Client.Services;
 
 public interface IUserPreferencesProvider
 {
-  Task<bool> GetHideOfflineDevices();
-  Task<KeyboardInputMode> GetKeyboardInputMode();
-  Task<bool> GetNotifyUserOnSessionStart();
-  Task<bool> GetOpenDeviceInNewTab();
-  Task<ThemeMode> GetThemeMode();
-  Task<string> GetUserDisplayName();
-  Task<ViewMode> GetViewMode();
-  Task SetHideOfflineDevices(bool value);
-  Task SetKeyboardInputMode(KeyboardInputMode value);
-  Task SetNotifyUserOnSessionStart(bool value);
-  Task SetOpenDeviceInNewTab(bool value);
-  Task SetThemeMode(ThemeMode value);
-  Task SetUserDisplayName(string value);
-  Task SetViewMode(ViewMode value);
+  Task<UserPreferencesDto> GetPreferences();
+  Task SetPreference<T>(string preferenceName, T value);
 }
 
 internal class UserPreferencesProviderClient(
@@ -28,161 +15,52 @@ internal class UserPreferencesProviderClient(
 {
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly ILogger<UserPreferencesProviderClient> _logger = logger;
-  private readonly ConcurrentDictionary<string, object?> _preferences = new();
   private readonly ISnackbar _snackbar = snackbar;
 
-  public Task<bool> GetHideOfflineDevices()
-  {
-    return GetPref(UserPreferenceNames.HideOfflineDevices, true);
-  }
+  private UserPreferencesDto? _preferences;
 
-  public Task<KeyboardInputMode> GetKeyboardInputMode()
-  {
-    return GetPref(UserPreferenceNames.KeyboardInputMode, KeyboardInputMode.Auto);
-  }
-
-  public Task<bool> GetNotifyUserOnSessionStart()
-  {
-    return GetPref(UserPreferenceNames.NotifyUserOnSessionStart, true);
-  }
-
-  public Task<bool> GetOpenDeviceInNewTab()
-  {
-    return GetPref(UserPreferenceNames.OpenDeviceInNewTab, true);
-  }
-
-  public Task<ThemeMode> GetThemeMode()
-  {
-    return GetPref(UserPreferenceNames.ThemeMode, ThemeMode.Auto);
-  }
-
-  public Task<string> GetUserDisplayName()
-  {
-    return GetPref(UserPreferenceNames.UserDisplayName, string.Empty);
-  }
-
-  public Task<ViewMode> GetViewMode()
-  {
-    return GetPref(UserPreferenceNames.ViewMode, ViewMode.Fit);
-  }
-
-  public Task SetHideOfflineDevices(bool value)
-  {
-    return SetPref(UserPreferenceNames.HideOfflineDevices, value);
-  }
-
-  public Task SetKeyboardInputMode(KeyboardInputMode value)
-  {
-    return SetPref(UserPreferenceNames.KeyboardInputMode, value);
-  }
-
-  public Task SetNotifyUserOnSessionStart(bool value)
-  {
-    return SetPref(UserPreferenceNames.NotifyUserOnSessionStart, value);
-  }
-
-  public Task SetOpenDeviceInNewTab(bool value)
-  {
-    return SetPref(UserPreferenceNames.OpenDeviceInNewTab, value);
-  }
-
-  public Task SetThemeMode(ThemeMode value)
-  {
-    return SetPref(UserPreferenceNames.ThemeMode, value);
-  }
-
-  public Task SetUserDisplayName(string value)
-  {
-    return SetPref(UserPreferenceNames.UserDisplayName, value);
-  }
-
-  public Task SetViewMode(ViewMode value)
-  {
-    return SetPref(UserPreferenceNames.ViewMode, value);
-  }
-
-  private async Task<T> GetPref<T>(string preferenceName, T defaultValue)
+  public async Task<UserPreferencesDto> GetPreferences()
   {
     try
     {
-      if (_preferences.TryGetValue(preferenceName, out var value) &&
-          value is T typedValue)
+      if (_preferences is not null)
       {
-        return typedValue;
+        return _preferences;
       }
 
-      var getResult = await _controlrApi.UserPreferences.GetUserPreference(preferenceName);
-
+      var getResult = await _controlrApi.UserPreferences.GetUserPreferences();
       if (!getResult.IsSuccess)
       {
-        if (getResult.StatusCode == HttpStatusCode.NotFound)
-        {
-          return defaultValue;
-        }
-
         _snackbar.Add(getResult.Reason, Severity.Error);
-        return defaultValue;
+        return CreateDefaultPreferences();
       }
 
-      if (getResult.Value is null)
-      {
-        return defaultValue;
-      }
-
-      if (!getResult.Value.HasValueSet)
-      {
-        return defaultValue;
-      }
-
-      var targetType = typeof(T);
-
-      if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
-      {
-        targetType = Nullable.GetUnderlyingType(targetType) ??
-          throw new InvalidOperationException($"Failed to convert setting value to type {targetType.Name}.");
-      }
-
-      if (targetType.IsEnum)
-      {
-        if (Enum.TryParse(targetType, getResult.Value.Value, true, out var enumValue))
-        {
-          _preferences[preferenceName] = enumValue;
-          return (T)enumValue;
-        }
-
-        _logger.LogError(
-          "Failed to parse enum preference {PreferenceName} with value {PreferenceValue} to type {TargetType}.",
-          preferenceName,
-          getResult.Value.Value,
-          targetType.Name);
-
-        return defaultValue;
-      }
-
-      if (Convert.ChangeType(getResult.Value.Value, targetType) is not T typedResult)
-      {
-        return defaultValue;
-      }
-
-      _preferences[preferenceName] = typedResult;
-      return typedResult;
+      _preferences = getResult.Value ?? CreateDefaultPreferences();
+      return _preferences;
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while getting preference for {PreferenceName}.", preferenceName);
+      _logger.LogError(ex, "Error while getting preferences.");
       _snackbar.Add("Error while getting preference", Severity.Error);
-      return defaultValue;
+      return CreateDefaultPreferences();
     }
   }
 
-  private async Task SetPref<T>(string preferenceName, T newValue)
+  public async Task SetPreference<T>(string preferenceName, T value)
   {
     try
     {
-      _preferences[preferenceName] = newValue;
-      var stringValue = Convert.ToString(newValue)?.Trim();
+      var stringValue = ConvertPreferenceValue(preferenceName, value)?.Trim();
       Guard.IsNotNull(stringValue);
-      var request = new UserPreferenceRequestDto(preferenceName, stringValue);
+      var normalizationResult = UserPreferenceDefinitions.Normalize(preferenceName, stringValue);
+      if (!normalizationResult.IsSuccess)
+      {
+        _logger.LogWarning("Failed to normalize preference {PreferenceName}. Reason: {Reason}", preferenceName, normalizationResult.ErrorMessage);
+        _snackbar.Add(normalizationResult.ErrorMessage ?? "Preference value is invalid.", Severity.Error);
+        return;
+      }
+
+      var request = new UserPreferenceRequestDto(preferenceName, normalizationResult.Value ?? string.Empty);
       var setResult = await _controlrApi.UserPreferences.SetUserPreference(request);
 
       if (!setResult.IsSuccess)
@@ -192,12 +70,31 @@ internal class UserPreferencesProviderClient(
           setResult.StatusCode);
 
         _snackbar.Add(setResult.Reason, Severity.Error);
+        return;
       }
+
+      _preferences = null;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while setting preference for {PreferenceName}.", preferenceName);
       _snackbar.Add("Error while setting preference", Severity.Error);
     }
+  }
+
+  private static string? ConvertPreferenceValue<T>(string preferenceName, T value)
+  {
+    return value switch
+    {
+      ThemeMode themeMode => themeMode.ToUserPreferenceThemeMode().ToString(),
+      ViewMode viewMode => viewMode.ToUserPreferenceViewMode().ToString(),
+      _ => UserPreferenceDefinitions.FormatValue(preferenceName, value)
+    };
+  }
+
+  private static UserPreferencesDto CreateDefaultPreferences()
+  {
+    Dictionary<string, string> values = [];
+    return UserPreferenceDefinitions.CreateDto(values);
   }
 }

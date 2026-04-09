@@ -1,6 +1,5 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.WebSocketRelay.Client;
 
@@ -10,6 +9,7 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
 {
   Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken);
   Task RequestKeyFrame(CancellationToken cancellationToken);
+  Task SendCaptureSettings(UpdateCaptureSettingsDto settings, CancellationToken cancellationToken);
   Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
   Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
   Task SendCloseStreamingSession(CancellationToken cancellationToken);
@@ -38,8 +38,9 @@ public class ViewerRemoteControlStream(
   IMessenger messenger,
   IMemoryProvider memoryProvider,
   IWaiter waiter,
+  IStreamMetrics streamMetrics,
   ILogger<ViewerRemoteControlStream> logger)
-  : ManagedRelayStream(timeProvider, messenger, memoryProvider, waiter, logger), IViewerRemoteControlStream
+  : ManagedRelayStream(timeProvider, messenger, memoryProvider, waiter, streamMetrics, logger), IViewerRemoteControlStream
 {
   private readonly ILogger<ViewerRemoteControlStream> _logger = logger;
   private readonly IWaiter _waiter = waiter;
@@ -62,6 +63,16 @@ public class ViewerRemoteControlStream(
       {
         var dto = new RequestKeyFrameDto();
         var wrapper = DtoWrapper.Create(dto, DtoType.RequestKeyFrame);
+        await Send(wrapper, cancellationToken);
+      });
+  }
+
+  public async Task SendCaptureSettings(UpdateCaptureSettingsDto settings, CancellationToken cancellationToken)
+  {
+    await TrySend(
+      async () =>
+      {
+        var wrapper = DtoWrapper.Create(settings, DtoType.UpdateCaptureSettings);
         await Send(wrapper, cancellationToken);
       });
   }

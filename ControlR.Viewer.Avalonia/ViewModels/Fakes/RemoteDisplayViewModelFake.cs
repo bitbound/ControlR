@@ -12,6 +12,11 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
   public event PropertyChangedEventHandler? PropertyChanged;
 
   public CursorChangedDto? ActiveCursor => null;
+  public double AutoQualityLowerThresholdMbps { get; set; } = 8;
+  public int AutoQualityMaximum { get; set; } = 80;
+  public int AutoQualityMinimum { get; set; } = 20;
+  public double AutoQualityUpperThresholdMbps { get; set; } = 20;
+  public bool CaptureCursor { get; set; }
   public SKBitmap? CompositedFrame => null;
   public IAsyncRelayCommand DisconnectCommand => new AsyncRelayCommand(() => Task.CompletedTask);
   public ObservableCollection<DisplayLayoutItem> DisplayItems { get; } =
@@ -77,12 +82,15 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
   public bool HasMetricsData => true;
   public bool HasMultipleDisplays => true;
   public bool IsAutoPanEnabled { get; set; } = true;
+  public bool IsAutoQualityEnabled { get; set; }
   public bool IsBlockInputToggleEnabled => true;
   public bool IsBlockUserInputEnabled { get; set; }
   public bool IsFitViewMode { get; set; }
   public bool IsKeyboardInputAuto { get; set; } = true;
   public bool IsKeyboardInputPhysical { get; set; }
   public bool IsKeyboardInputVirtual { get; set; }
+  public bool IsManualQualityVisible => !IsAutoQualityEnabled;
+  public bool IsMaxBandwidthEnabled { get; set; }
   public bool IsMetricsEnabled { get; set; } = true;
   public bool IsPrivacyScreenEnabled { get; set; }
   public bool IsScaleControlsVisible => IsScaleViewMode;
@@ -90,7 +98,10 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
   public bool IsStretchViewMode { get; set; } = true;
   public bool IsViewOnlyEnabled { get; set; }
   public ILogger<RemoteDisplayViewModel> Logger { get; } = new LoggerFactory().CreateLogger<RemoteDisplayViewModel>();
+  public int ManualQuality { get; set; } = 75;
+  public double MaxBandwidthMbps { get; set; } = 30;
   public double MaxRendererScale => 3;
+  public int MetricsCurrentQuality => 72;
   public IReadOnlyDictionary<string, string> MetricsExtraData { get; } =
     new Dictionary<string, string>
     {
@@ -133,6 +144,11 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
   }
 
   public Task RequestClipboardText()
+  {
+    return Task.CompletedTask;
+  }
+
+  public Task SendCaptureSettings()
   {
     return Task.CompletedTask;
   }

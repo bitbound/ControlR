@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Security.Cryptography;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Signalr.Client.Diagnostics;
 using ControlR.Libraries.Signalr.Client.Exceptions;
 using ControlR.Libraries.Signalr.Client.Internals;
@@ -146,6 +147,7 @@ internal sealed class HubConnection<THub, TClient>(
 
   private readonly SemaphoreSlim _connectLock = new(1, 1);
 
+  private readonly LogDeduplicationContext<HubConnection<THub, TClient>> _dedupeLogger = logger.EnterDedupeScope();
   private readonly ConcurrentBag<IDisposable> _handlerRegistrations = [];
   private readonly ILogger<HubConnection<THub, TClient>> _logger = logger;
   private readonly TimeSpan _maxReconnectDelay = TimeSpan.FromSeconds(30);
@@ -232,7 +234,7 @@ internal sealed class HubConnection<THub, TClient>(
       }
       catch (Exception ex)
       {
-        _logger.LogErrorDeduped("Failed to initialize hub connection.", exception: ex);
+        _dedupeLogger.LogErrorDeduped("Failed to initialize hub connection.", exception: ex);
         try
         {
           ConnectThrew?.Invoke(ex);
@@ -276,6 +278,8 @@ internal sealed class HubConnection<THub, TClient>(
       catch {}
       await _connection.DisposeAsync();
     }
+
+    _dedupeLogger.Dispose();
   }
 
   public async Task Send(

@@ -33,7 +33,6 @@ global using ControlR.DesktopClient.Views.Mac;
 global using ControlR.Libraries.NativeInterop.Unix;
 global using ControlR.Libraries.NativeInterop.Mac;
 global using ControlR.DesktopClient.Mac.Helpers;
-global using ControlR.DesktopClient.Services.Mac;
 #endif
 
 #if IS_LINUX
@@ -44,5 +43,4 @@ global using ControlR.Libraries.NativeInterop.Linux;
 global using ControlR.Libraries.NativeInterop.Unix;
 global using ControlR.DesktopClient.ViewModels.Linux;
 global using ControlR.DesktopClient.Linux.XdgPortal;
-global using ControlR.DesktopClient.Services.Linux;
 #endif

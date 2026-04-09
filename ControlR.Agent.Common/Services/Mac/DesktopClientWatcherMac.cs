@@ -1,6 +1,4 @@
-using ControlR.Agent.Shared.Interfaces;
-using ControlR.Agent.Shared.Options;
-using ControlR.Agent.Shared.Services;
+using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -15,13 +13,13 @@ internal class DesktopClientWatcherMac(
   IOptions<InstanceOptions> instanceOptions,
   ILogger<DesktopClientWatcherMac> logger) : BackgroundService
 {
+  private readonly LogDeduplicationContext<DesktopClientWatcherMac> _dedupeLogger = logger.EnterDedupeScope();
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<DesktopClientWatcherMac> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
   private readonly IServiceControl _serviceControl = serviceControl;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
-
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -36,8 +34,7 @@ internal class DesktopClientWatcherMac(
     {
       try
       {
-        using var dedupeScope = _logger.EnterDedupeScope();
-          await CheckAndStartDesktopClientServices(stoppingToken);
+        await CheckAndStartDesktopClientServices(stoppingToken);
       }
       catch (OperationCanceledException)
       {
@@ -49,9 +46,9 @@ internal class DesktopClientWatcherMac(
         _logger.LogError(ex, "Error while checking for desktop processes.");
       }
     }
+    _dedupeLogger.TryDispose();
     await _serviceControl.StopDesktopClientService(throwOnFailure: false);
   }
-
 
   private async Task CheckAndStartDesktopClientServices(CancellationToken cancellationToken)
   {
@@ -61,11 +58,11 @@ internal class DesktopClientWatcherMac(
       var loggedInUsers = await GetLoggedInUsersAsync();
       if (loggedInUsers.Count == 0)
       {
-        _logger.LogDeduped(LogLevel.Information, "No logged-in users found.");
+        _dedupeLogger.LogDeduped(LogLevel.Information, "No logged-in users found.");
         return;
       }
 
-      _logger.LogDeduped(LogLevel.Information, "Found {UserCount} logged-in users.", args: loggedInUsers.Count);
+      _dedupeLogger.LogDeduped(LogLevel.Information, "Found {UserCount} logged-in users.", args: loggedInUsers.Count);
 
       foreach (var uid in loggedInUsers)
       {
@@ -74,7 +71,7 @@ internal class DesktopClientWatcherMac(
     }
     catch (Exception ex)
     {
-      _logger.LogDeduped(LogLevel.Error, "Error checking desktop client services.", exception: ex);
+      _dedupeLogger.LogDeduped(LogLevel.Error, "Error checking desktop client services.", exception: ex);
     }
   }
 
@@ -89,17 +86,17 @@ internal class DesktopClientWatcherMac(
 
       if (!isRunning)
       {
-        _logger.LogDeduped(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
+        _dedupeLogger.LogDeduped(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
         await _serviceControl.StartDesktopClientService(throwOnFailure: true);
       }
       else
       {
-        _logger.LogDeduped(LogLevel.Information, "Desktop client service is running for user {UID}.", args: uid);
+        _dedupeLogger.LogDeduped(LogLevel.Information, "Desktop client service is running for user {UID}.", args: uid);
       }
     }
     catch (Exception ex)
     {
-      _logger.LogDeduped(LogLevel.Warning, "Failed to check/start desktop client service for user {UID}.", args: uid, exception: ex);
+      _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to check/start desktop client service for user {UID}.", args: uid, exception: ex);
     }
   }
 
@@ -146,11 +143,11 @@ internal class DesktopClientWatcherMac(
         }
       }
 
-      return users.Distinct().ToList();
+      return [.. users.Distinct()];
     }
     catch (Exception ex)
     {
-      _logger.LogDeduped(LogLevel.Error, "Failed to get logged-in users. Falling back to empty list.", args: ex);
+      _dedupeLogger.LogDeduped(LogLevel.Error, "Failed to get logged-in users. Falling back to empty list.", exception: ex);
       return [];
     }
   }
@@ -164,7 +161,7 @@ internal class DesktopClientWatcherMac(
 
       if (!result.IsSuccess)
       {
-        _logger.LogDeduped(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: (serviceName, uid, result.Reason));
+        _dedupeLogger.LogDeduped(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: [serviceName, uid, result.Reason]);
         return false;
       }
 
@@ -177,13 +174,13 @@ internal class DesktopClientWatcherMac(
 
       // Check if the output contains "pid = " which indicates a running process
       var isRunning = output.Contains("pid = ");
-      _logger.LogDeduped(LogLevel.Information, "Service {ServiceName} status for user {UID}: {Status}", args: (serviceName, uid, isRunning ? "Running" : "Not running"));
+      _dedupeLogger.LogDeduped(LogLevel.Information, "Service {ServiceName} status for user {UID}: {Status}", args: [serviceName, uid, isRunning ? "Running" : "Not running"]);
 
       return isRunning;
     }
     catch (Exception ex)
     {
-      _logger.LogDeduped(LogLevel.Warning, "Failed to check service status for user {UID}.", args: uid, exception: ex);
+      _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to check service status for user {UID}.", args: [uid], exception: ex);
       return false;
     }
   }

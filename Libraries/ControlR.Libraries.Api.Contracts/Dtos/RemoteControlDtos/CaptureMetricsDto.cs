@@ -4,4 +4,5 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 public record CaptureMetricsDto(
   double Fps,
   string CaptureMode,
+  int CurrentQuality,
   Dictionary<string, string> ExtraData);

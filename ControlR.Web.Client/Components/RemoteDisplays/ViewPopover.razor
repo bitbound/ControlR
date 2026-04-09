@@ -1,4 +1,5 @@
 @using System.ComponentModel
+@using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos
 @inherits DisposableComponent
 @inject IRemoteControlState RemoteControlState
 @inject IViewerRemoteControlStream RemoteControlStream
@@ -100,6 +101,18 @@
     </div>
   }
 
+  @if (DeviceState.TryGetCurrentDevice()?.Platform is SystemPlatform.Windows or SystemPlatform.MacOs)
+  {
+    <div>
+      <MudText Typo="Typo.caption" Class="mb-2 d-block">Capture</MudText>
+      <MudTooltip Text="Include the remote cursor in the captured image stream.">
+        <MudCheckBox T="bool"
+                     Value="RemoteControlState.CaptureCursor"
+                     ValueChanged="@((bool value) => HandleCaptureCursorChanged(value))"
+                     Label="Capture remote cursor" />
+      </MudTooltip>
+    </div>
+  }
 </div>
 
 @code {
@@ -152,6 +165,38 @@
   private void HandleScaleChanged(double scale)
   {
     RemoteControlState.RendererScale = scale;
+  }
+
+  private async Task HandleCaptureCursorChanged(bool value)
+  {
+    try
+    {
+      RemoteControlState.CaptureCursor = value;
+
+      if (RemoteControlStream.State != System.Net.WebSockets.WebSocketState.Open)
+      {
+        return;
+      }
+
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      await RemoteControlStream.SendCaptureSettings(
+        new UpdateCaptureSettingsDto(
+          RemoteControlState.CaptureCursor,
+          RemoteControlState.IsAutoQualityEnabled,
+          RemoteControlState.ManualQuality,
+          RemoteControlState.AutoQualityLowerThresholdMbps,
+          RemoteControlState.AutoQualityMaximum,
+          RemoteControlState.AutoQualityMinimum,
+          RemoteControlState.AutoQualityUpperThresholdMbps,
+          RemoteControlState.IsMaxBandwidthEnabled,
+          RemoteControlState.MaxBandwidthMbps),
+        cts.Token);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while changing cursor capture setting.");
+      Snackbar.Add("An error occurred while changing cursor capture", Severity.Error);
+    }
   }
 
   private async Task HandlePrivacyScreenToggled(bool value)

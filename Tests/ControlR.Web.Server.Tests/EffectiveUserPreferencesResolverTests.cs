@@ -1,9 +1,9 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests;
@@ -17,6 +17,36 @@ public class EffectiveUserPreferencesResolverTests(ITestOutputHelper testOutput)
   public async ValueTask DisposeAsync()
   {
     await _testApp.DisposeAsync();
+  }
+
+  [Fact]
+  public async Task GetEffectiveUserPreferences_WhenTenantSettingExists_ReturnsTenantEnforcedDto()
+  {
+    var tenant = await _testApp.Services.CreateTestTenant();
+    var user = await _testApp.Services.CreateTestUser(tenant.Id, email: $"user-{Guid.NewGuid():N}@test.local");
+
+    await SeedTenantSetting(tenant.Id, bool.FalseString);
+    await SeedUserPreference(user.Id, bool.TrueString);
+
+    var result = await ResolveEffectivePreferences(tenant.Id, user.Id);
+
+    Assert.False(result.NotifyUserOnSessionStart);
+    Assert.True(result.IsNotifyUserOnSessionStartTenantEnforced);
+  }
+
+  [Fact]
+  public async Task GetEffectiveUserPreferences_WhenTenantSettingIsInvalid_UsesUserPreferenceWithoutEnforcement()
+  {
+    var tenant = await _testApp.Services.CreateTestTenant();
+    var user = await _testApp.Services.CreateTestUser(tenant.Id, email: $"user-{Guid.NewGuid():N}@test.local");
+
+    await SeedTenantSetting(tenant.Id, "invalid-bool");
+    await SeedUserPreference(user.Id, bool.FalseString);
+
+    var result = await ResolveEffectivePreferences(tenant.Id, user.Id);
+
+    Assert.False(result.NotifyUserOnSessionStart);
+    Assert.False(result.IsNotifyUserOnSessionStartTenantEnforced);
   }
 
   [Fact]
@@ -87,6 +117,13 @@ public class EffectiveUserPreferencesResolverTests(ITestOutputHelper testOutput)
   public async ValueTask InitializeAsync()
   {
     _testApp = await TestAppBuilder.CreateTestApp(_testOutput, testDatabaseName: $"{Guid.NewGuid()}");
+  }
+
+  private async Task<EffectiveUserPreferencesDto> ResolveEffectivePreferences(Guid tenantId, Guid userId)
+  {
+    await using var scope = _testApp.Services.CreateAsyncScope();
+    var resolver = scope.ServiceProvider.GetRequiredService<IEffectiveUserPreferencesResolver>();
+    return await resolver.GetEffectiveUserPreferences(tenantId, userId, TestContext.Current.CancellationToken);
   }
 
   private async Task<bool> ResolveNotifyUser(Guid tenantId, Guid userId)

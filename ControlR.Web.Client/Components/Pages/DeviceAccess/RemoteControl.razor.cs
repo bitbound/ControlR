@@ -36,6 +36,8 @@ public partial class RemoteControl : ViewportAwareComponent
   [Inject]
   public required ISnackbar Snackbar { get; init; }
   [Inject]
+  public required IUserPreferencesProvider UserPreferences { get; init; }
+  [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
   [Inject]
   public required IWebAssemblyHostEnvironment WebAssemblyEnv { get; init; }
@@ -232,6 +234,20 @@ public partial class RemoteControl : ViewportAwareComponent
     await InvokeAsync(StateHasChanged);
   }
 
+  private async Task InitializeCaptureSettings()
+  {
+    var preferences = await UserPreferences.GetPreferences();
+    RemoteControlState.CaptureCursor = preferences.CaptureCursor;
+    RemoteControlState.IsAutoQualityEnabled = preferences.IsAutoQualityEnabled;
+    RemoteControlState.ManualQuality = preferences.ManualQuality;
+    RemoteControlState.AutoQualityLowerThresholdMbps = preferences.AutoQualityLowerThresholdMbps;
+    RemoteControlState.AutoQualityMaximum = preferences.AutoQualityMaximum;
+    RemoteControlState.AutoQualityMinimum = preferences.AutoQualityMinimum;
+    RemoteControlState.AutoQualityUpperThresholdMbps = preferences.AutoQualityUpperThresholdMbps;
+    RemoteControlState.IsMaxBandwidthEnabled = preferences.IsMaxBandwidthEnabled;
+    RemoteControlState.MaxBandwidthMbps = preferences.MaxBandwidthMbps;
+  }
+
   private async Task PreviewSession(DesktopSession desktopSession)
   {
     try
@@ -316,6 +332,23 @@ public partial class RemoteControl : ViewportAwareComponent
     }
   }
 
+  private async Task SendCaptureSettings()
+  {
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    await RemoteControlStream.SendCaptureSettings(
+      new UpdateCaptureSettingsDto(
+        RemoteControlState.CaptureCursor,
+        RemoteControlState.IsAutoQualityEnabled,
+        RemoteControlState.ManualQuality,
+        RemoteControlState.AutoQualityLowerThresholdMbps,
+        RemoteControlState.AutoQualityMaximum,
+        RemoteControlState.AutoQualityMinimum,
+        RemoteControlState.AutoQualityUpperThresholdMbps,
+        RemoteControlState.IsMaxBandwidthEnabled,
+        RemoteControlState.MaxBandwidthMbps),
+      cts.Token);
+  }
+
   private async Task<bool> StartRemoteControl(DesktopSession desktopSession, bool quiet)
   {
     try
@@ -327,6 +360,7 @@ public partial class RemoteControl : ViewportAwareComponent
 
       RemoteControlState.IsBlockUserInputEnabled = false;
       RemoteControlState.IsPrivacyScreenEnabled = false;
+      await InitializeCaptureSettings();
 
       _systemSessions = null;
       
@@ -386,6 +420,7 @@ public partial class RemoteControl : ViewportAwareComponent
       RemoteControlState.ConnectionClosedRegistration?.Dispose();
       RemoteControlState.ConnectionClosedRegistration = RemoteControlStream.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
+      await SendCaptureSettings();
       
       await ScreenWake.SetScreenWakeLock(true);
       return true;

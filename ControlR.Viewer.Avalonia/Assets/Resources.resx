@@ -231,6 +231,9 @@
   <data name="Metrics_ModeLabel" xml:space="preserve">
     <value>Mode:</value>
   </data>
+  <data name="Metrics_CurrentQualityLabel" xml:space="preserve">
+    <value>Current Quality:</value>
+  </data>
   <data name="Metrics_LatencyLabel" xml:space="preserve">
     <value>Latency:</value>
   </data>
@@ -377,6 +380,36 @@ Details: {0}</value>
   </data>
   <data name="CloseConnection" xml:space="preserve">
     <value>Close Connection</value>
+  </data>
+  <data name="CaptureCursor" xml:space="preserve">
+    <value>Capture Cursor</value>
+  </data>
+  <data name="Quality" xml:space="preserve">
+    <value>Quality</value>
+  </data>
+  <data name="EnableAutoQuality" xml:space="preserve">
+    <value>Enable Auto Quality</value>
+  </data>
+  <data name="AutoQualityLowerThreshold" xml:space="preserve">
+    <value>Auto Quality Lower Threshold</value>
+  </data>
+  <data name="AutoQualityMaximum" xml:space="preserve">
+    <value>Auto Quality Maximum</value>
+  </data>
+  <data name="AutoQualityMinimum" xml:space="preserve">
+    <value>Auto Quality Minimum</value>
+  </data>
+  <data name="AutoQualityUpperThreshold" xml:space="preserve">
+    <value>Auto Quality Upper Threshold</value>
+  </data>
+  <data name="ManualQuality" xml:space="preserve">
+    <value>Manual Quality</value>
+  </data>
+  <data name="EnableMaxBandwidth" xml:space="preserve">
+    <value>Enable Max Mbps</value>
+  </data>
+  <data name="MaxBandwidthMbps" xml:space="preserve">
+    <value>Max Mbps</value>
   </data>
   <data name="RemoteControl_DesktopPreview" xml:space="preserve">
     <value>Desktop Preview</value>

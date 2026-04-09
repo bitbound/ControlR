@@ -15,17 +15,25 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   event EventHandler? FrameQueued;
 
   CursorChangedDto? ActiveCursor { get; }
+  double AutoQualityLowerThresholdMbps { get; set; }
+  int AutoQualityMaximum { get; set; }
+  int AutoQualityMinimum { get; set; }
+  double AutoQualityUpperThresholdMbps { get; set; }
+  bool CaptureCursor { get; set; }
   IAsyncRelayCommand DisconnectCommand { get; }
   ObservableCollection<DisplayLayoutItem> DisplayItems { get; }
   bool HasMetricsData { get; }
   bool HasMultipleDisplays { get; }
   bool IsAutoPanEnabled { get; set; }
+  bool IsAutoQualityEnabled { get; set; }
   bool IsBlockInputToggleEnabled { get; }
   bool IsBlockUserInputEnabled { get; set; }
   bool IsFitViewMode { get; set; }
   bool IsKeyboardInputAuto { get; set; }
   bool IsKeyboardInputPhysical { get; set; }
   bool IsKeyboardInputVirtual { get; set; }
+  bool IsManualQualityVisible { get; }
+  bool IsMaxBandwidthEnabled { get; set; }
   bool IsMetricsEnabled { get; set; }
   bool IsPrivacyScreenEnabled { get; set; }
   bool IsScaleControlsVisible { get; }
@@ -33,7 +41,10 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   bool IsStretchViewMode { get; set; }
   bool IsViewOnlyEnabled { get; set; }
   ILogger<RemoteDisplayViewModel> Logger { get; }
+  int ManualQuality { get; set; }
+  double MaxBandwidthMbps { get; set; }
   double MaxRendererScale { get; }
+  int MetricsCurrentQuality { get; }
   IReadOnlyDictionary<string, string> MetricsExtraData { get; }
   double MetricsFps { get; }
   TimeSpan MetricsLatency { get; }
@@ -56,6 +67,7 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   LockedValueToken<SKBitmap?> AcquireCompositedFrame();
   Task InvokeCtrlAltDel();
   Task RequestClipboardText();
+  Task SendCaptureSettings();
   Task SendClipboardText(string text);
   Task SendKeyboardStateReset();
   Task SendKeyEvent(string key, string code, bool isPressed, KeyEventModifiersDto modifiers);
@@ -117,6 +129,101 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
   public event EventHandler? FrameQueued;
 
+  public double AutoQualityLowerThresholdMbps
+  {
+    get => _remoteControlState.AutoQualityLowerThresholdMbps;
+    set
+    {
+      var previousLower = _remoteControlState.AutoQualityLowerThresholdMbps;
+      var previousUpper = _remoteControlState.AutoQualityUpperThresholdMbps;
+      _remoteControlState.AutoQualityLowerThresholdMbps = value;
+
+      if (Math.Abs(_remoteControlState.AutoQualityLowerThresholdMbps - previousLower) < 0.001)
+      {
+        return;
+      }
+
+      if (Math.Abs(_remoteControlState.AutoQualityUpperThresholdMbps - previousUpper) >= 0.001)
+      {
+        OnPropertyChanged(nameof(AutoQualityUpperThresholdMbps));
+      }
+
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
+  public int AutoQualityMaximum
+  {
+    get => _remoteControlState.AutoQualityMaximum;
+    set
+    {
+      var previous = _remoteControlState.AutoQualityMaximum;
+      _remoteControlState.AutoQualityMaximum = value;
+
+      if (_remoteControlState.AutoQualityMaximum == previous)
+      {
+        return;
+      }
+
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
+  public int AutoQualityMinimum
+  {
+    get => _remoteControlState.AutoQualityMinimum;
+    set
+    {
+      var previousMinimum = _remoteControlState.AutoQualityMinimum;
+      var previousMaximum = _remoteControlState.AutoQualityMaximum;
+      _remoteControlState.AutoQualityMinimum = value;
+
+      if (_remoteControlState.AutoQualityMinimum == previousMinimum)
+      {
+        return;
+      }
+
+      if (_remoteControlState.AutoQualityMaximum != previousMaximum)
+      {
+        OnPropertyChanged(nameof(AutoQualityMaximum));
+      }
+
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
+  public double AutoQualityUpperThresholdMbps
+  {
+    get => _remoteControlState.AutoQualityUpperThresholdMbps;
+    set
+    {
+      var previous = _remoteControlState.AutoQualityUpperThresholdMbps;
+      _remoteControlState.AutoQualityUpperThresholdMbps = value;
+
+      if (Math.Abs(_remoteControlState.AutoQualityUpperThresholdMbps - previous) < 0.001)
+      {
+        return;
+      }
+
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
+  public bool CaptureCursor
+  {
+    get => _remoteControlState.CaptureCursor;
+    set
+    {
+      if (_remoteControlState.CaptureCursor == value)
+      {
+        return;
+      }
+
+      _remoteControlState.CaptureCursor = value;
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
   public ObservableCollection<DisplayLayoutItem> DisplayItems { get; } = [];
   public bool HasMetricsData => _metricsState.CurrentMetrics is not null;
   public bool HasMultipleDisplays => DisplayItems.Count > 1;
@@ -131,6 +238,22 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       }
 
       _remoteControlState.IsAutoPanEnabled = value;
+    }
+  }
+  public bool IsAutoQualityEnabled
+  {
+    get => _remoteControlState.IsAutoQualityEnabled;
+    set
+    {
+      if (_remoteControlState.IsAutoQualityEnabled == value)
+      {
+        return;
+      }
+
+      _remoteControlState.IsAutoQualityEnabled = value;
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+      OnPropertyChanged(nameof(IsManualQualityVisible));
     }
   }
   public bool IsBlockInputToggleEnabled => !IsBlockInputBusy;
@@ -189,6 +312,22 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       {
         SetKeyboardInputMode(KeyboardInputMode.Virtual);
       }
+    }
+  }
+  public bool IsManualQualityVisible => !IsAutoQualityEnabled;
+  public bool IsMaxBandwidthEnabled
+  {
+    get => _remoteControlState.IsMaxBandwidthEnabled;
+    set
+    {
+      if (_remoteControlState.IsMaxBandwidthEnabled == value)
+      {
+        return;
+      }
+
+      _remoteControlState.IsMaxBandwidthEnabled = value;
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
     }
   }
   public bool IsMetricsEnabled
@@ -258,7 +397,42 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
   }
   // This is public so ScreenRenderer can use it.
   public ILogger<RemoteDisplayViewModel> Logger { get; private set; }
+  public int ManualQuality
+  {
+    get => _remoteControlState.ManualQuality;
+    set
+    {
+      var previous = _remoteControlState.ManualQuality;
+      _remoteControlState.ManualQuality = value;
+
+      if (_remoteControlState.ManualQuality == previous)
+      {
+        return;
+      }
+
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
+  public double MaxBandwidthMbps
+  {
+    get => _remoteControlState.MaxBandwidthMbps;
+    set
+    {
+      var previous = _remoteControlState.MaxBandwidthMbps;
+      _remoteControlState.MaxBandwidthMbps = value;
+
+      if (Math.Abs(_remoteControlState.MaxBandwidthMbps - previous) < 0.001)
+      {
+        return;
+      }
+
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
   public double MaxRendererScale => _remoteControlState.MaxRendererScale;
+  public int MetricsCurrentQuality => _metricsState.CurrentMetrics?.CurrentQuality ?? 0;
   public IReadOnlyDictionary<string, string> MetricsExtraData =>
     _metricsState.CurrentMetrics?.ExtraData ?? _emptyExtraData;
   public double MetricsFps => _metricsState.CurrentMetrics?.Fps ?? 0;
@@ -383,6 +557,35 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     {
       Logger.LogError(ex, "Error while requesting clipboard text.");
       _snackbar.Add(Resources.RemoteControl_ErrorReceivingClipboard, SnackbarSeverity.Error);
+    }
+  }
+
+  public async Task SendCaptureSettings()
+  {
+    try
+    {
+      if (_viewerStream.State != System.Net.WebSockets.WebSocketState.Open)
+      {
+        return;
+      }
+
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      var dto = new UpdateCaptureSettingsDto(
+        _remoteControlState.CaptureCursor,
+        _remoteControlState.IsAutoQualityEnabled,
+        _remoteControlState.ManualQuality,
+        _remoteControlState.AutoQualityLowerThresholdMbps,
+        _remoteControlState.AutoQualityMaximum,
+        _remoteControlState.AutoQualityMinimum,
+        _remoteControlState.AutoQualityUpperThresholdMbps,
+        _remoteControlState.IsMaxBandwidthEnabled,
+        _remoteControlState.MaxBandwidthMbps);
+
+      await _viewerStream.SendCaptureSettings(dto, cts.Token);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while sending capture settings.");
     }
   }
 
@@ -768,6 +971,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
             _metricsState.MbpsOut = _viewerStream.GetMbpsOut();
             OnPropertyChanged(nameof(HasMetricsData));
             OnPropertyChanged(nameof(MetricsFps));
+            OnPropertyChanged(nameof(MetricsCurrentQuality));
             OnPropertyChanged(nameof(MetricsLatency));
             OnPropertyChanged(nameof(MetricsMode));
             OnPropertyChanged(nameof(MetricsMbpsIn));
@@ -846,18 +1050,28 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
   {
     SyncDisplayItems();
     OnPropertyChanged(nameof(RendererScale));
+    OnPropertyChanged(nameof(AutoQualityLowerThresholdMbps));
+    OnPropertyChanged(nameof(AutoQualityMaximum));
+    OnPropertyChanged(nameof(AutoQualityMinimum));
+    OnPropertyChanged(nameof(AutoQualityUpperThresholdMbps));
+    OnPropertyChanged(nameof(CaptureCursor));
+    OnPropertyChanged(nameof(IsAutoQualityEnabled));
     OnPropertyChanged(nameof(IsAutoPanEnabled));
     OnPropertyChanged(nameof(IsBlockUserInputEnabled));
     OnPropertyChanged(nameof(IsFitViewMode));
     OnPropertyChanged(nameof(IsKeyboardInputAuto));
     OnPropertyChanged(nameof(IsKeyboardInputPhysical));
     OnPropertyChanged(nameof(IsKeyboardInputVirtual));
+    OnPropertyChanged(nameof(IsManualQualityVisible));
+    OnPropertyChanged(nameof(IsMaxBandwidthEnabled));
     OnPropertyChanged(nameof(IsMetricsEnabled));
     OnPropertyChanged(nameof(IsPrivacyScreenEnabled));
     OnPropertyChanged(nameof(IsScaleControlsVisible));
     OnPropertyChanged(nameof(IsScaleViewMode));
     OnPropertyChanged(nameof(IsStretchViewMode));
     OnPropertyChanged(nameof(IsViewOnlyEnabled));
+    OnPropertyChanged(nameof(ManualQuality));
+    OnPropertyChanged(nameof(MaxBandwidthMbps));
     OnPropertyChanged(nameof(ViewMode));
     OnPropertyChanged(nameof(RendererHorizontalAlignment));
     OnPropertyChanged(nameof(RendererVerticalAlignment));

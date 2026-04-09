@@ -49,7 +49,7 @@
   {
     if (await AuthState.IsAuthenticated())
     {
-      _currentMode = await UserPreferences.GetThemeMode();
+      _currentMode = (await UserPreferences.GetPreferences()).ThemeMode.ToClientThemeMode();
     }
   }
 
@@ -78,7 +78,7 @@
     _currentMode = mode;
     if (await AuthState.IsAuthenticated())
     {
-      await UserPreferences.SetThemeMode(mode);
+      await UserPreferences.SetPreference(UserPreferenceNames.ThemeMode, mode);
     }
     await OnThemeChanged.InvokeAsync(mode);
 

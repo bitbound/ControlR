@@ -461,6 +461,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       });
 
       _remoteControlState.CurrentSession = session;
+      await RemoteDisplayViewModel.SendCaptureSettings();
       OnPropertyChanged(nameof(CurrentState));
       OnPropertyChanged(nameof(IsRemoteDisplayVisible));
 

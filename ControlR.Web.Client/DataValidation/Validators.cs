@@ -4,7 +4,7 @@ namespace ControlR.Web.Client.DataValidation;
 
 public static partial class Validators
 {
-  [GeneratedRegex("[^A-Za-z0-9 _-]")]
+  [GeneratedRegex("[^\\p{L}0-9 _-]")]
   public static partial Regex DisplayNameValidator();
   
   [GeneratedRegex("[^a-z0-9-]")]

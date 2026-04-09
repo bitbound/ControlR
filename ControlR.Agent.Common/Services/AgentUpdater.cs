@@ -1,5 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Libraries.Shared.Services.Processes;
@@ -58,6 +59,7 @@ internal class AgentUpdater(
     }
 
     using var logScope = _logger.BeginMemberScope();
+    using var dedupeLogger = _logger.EnterDedupeScope();
 
     using var updateCts = new CancellationTokenSource(TimeSpan.FromMinutes(15));
     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
@@ -72,7 +74,7 @@ internal class AgentUpdater(
       var metadataResult = await _controlrApi.AgentUpdate.GetBundleMetadata(_systemEnvironment.Runtime, linkedCts.Token);
       if (!metadataResult.IsSuccess || metadataResult.Value is null)
       {
-        _logger.LogErrorDeduped(
+        dedupeLogger.LogErrorDeduped(
           "Failed to retrieve bundle metadata. Reason: {Reason}, StatusCode: {StatusCode}",
           args: [metadataResult.Reason, metadataResult.StatusCode]);
         return;

@@ -5,7 +5,7 @@ public static class Theme
   public static PaletteDark DarkPalette { get; } = new PaletteDark
   {
     Primary = "#2196F3",
-    Secondary = "#21f3e9",
+    Secondary = "#1ddbd2",
     Tertiary = "#7b21f3",
     Info = "#89b4f8",
     Success = "#2cb67d",

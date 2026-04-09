@@ -6,6 +6,7 @@ using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.WebSocketRelay.Client;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Common.Services;
@@ -15,6 +16,7 @@ internal class StreamBasedCapturer(
     IScreenGrabber screenGrabber,
     IStreamEncoder encoder,
     IDisplayManager displayManager,
+    IStreamMetrics streamMetrics,
     ILogger<StreamBasedCapturer> logger) : IDesktopCapturer
 {
   private readonly Channel<DtoWrapper> _channel = Channel.CreateBounded<DtoWrapper>(
@@ -83,6 +85,11 @@ internal class StreamBasedCapturer(
     throw new NotImplementedException();
   }
 
+  public int GetCurrentQuality()
+  {
+    return 75;
+  }
+
   public Task RequestKeyFrame()
   {
     _forceKeyFrame = true;
@@ -96,6 +103,7 @@ internal class StreamBasedCapturer(
       return Task.CompletedTask;
     }
 
+    _ = streamMetrics.GetMbpsOut();
     _captureTask = CaptureLoop(cancellationToken);
     return Task.CompletedTask;
   }

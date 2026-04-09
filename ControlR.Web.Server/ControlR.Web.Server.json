@@ -945,6 +945,35 @@
         }
       }
     },
+    "/api/effective-user-preferences": {
+      "get": {
+        "tags": [
+          "EffectiveUserPreferences"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectiveUserPreferencesDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectiveUserPreferencesDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectiveUserPreferencesDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/installer-keys": {
       "post": {
         "tags": [
@@ -1973,26 +2002,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSettingResponseDto"
-                  }
+                  "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSettingResponseDto"
-                  }
+                  "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSettingResponseDto"
-                  }
+                  "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               }
             }
@@ -2045,6 +2065,53 @@
             }
           }
         }
+      },
+      "put": {
+        "tags": [
+          "TenantSettings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantSettingsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantSettingsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantSettingsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingsDto"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/test-email": {
@@ -2070,26 +2137,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserPreferenceResponseDto"
-                  }
+                  "$ref": "#/components/schemas/UserPreferencesDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserPreferenceResponseDto"
-                  }
+                  "$ref": "#/components/schemas/UserPreferencesDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserPreferenceResponseDto"
-                  }
+                  "$ref": "#/components/schemas/UserPreferencesDto"
                 }
               }
             }
@@ -2137,6 +2195,53 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserPreferenceResponseDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "UserPreferences"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferencesDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferencesDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferencesDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferencesDto"
                 }
               }
             }
@@ -3511,6 +3616,21 @@
           "Ram"
         ]
       },
+      "EffectiveUserPreferencesDto": {
+        "required": [
+          "notifyUserOnSessionStart",
+          "isNotifyUserOnSessionStartTenantEnforced"
+        ],
+        "type": "object",
+        "properties": {
+          "notifyUserOnSessionStart": {
+            "type": "boolean"
+          },
+          "isNotifyUserOnSessionStartTenantEnforced": {
+            "type": "boolean"
+          }
+        }
+      },
       "FileDeleteRequestDto": {
         "required": [
           "deviceId",
@@ -3623,6 +3743,9 @@
         }
       },
       "InstallerKeyType": {
+        "type": "integer"
+      },
+      "KeyboardInputMode": {
         "type": "integer"
       },
       "LogonTokenRequestDto": {
@@ -4007,6 +4130,34 @@
           }
         }
       },
+      "TenantSettingsDto": {
+        "required": [
+          "appendInstanceId",
+          "instanceId",
+          "notifyUserOnSessionStart"
+        ],
+        "type": "object",
+        "properties": {
+          "appendInstanceId": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "instanceId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notifyUserOnSessionStart": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "UpdatePersonalAccessTokenRequestDto": {
         "required": [
           "name"
@@ -4058,6 +4209,95 @@
             ]
           }
         }
+      },
+      "UserPreferencesDto": {
+        "required": [
+          "autoQualityLowerThresholdMbps",
+          "autoQualityMaximum",
+          "autoQualityMinimum",
+          "autoQualityUpperThresholdMbps",
+          "captureCursor",
+          "hideOfflineDevices",
+          "isAutoQualityEnabled",
+          "isMaxBandwidthEnabled",
+          "keyboardInputMode",
+          "manualQuality",
+          "maxBandwidthMbps",
+          "notifyUserOnSessionStart",
+          "openDeviceInNewTab",
+          "themeMode",
+          "userDisplayName",
+          "viewMode"
+        ],
+        "type": "object",
+        "properties": {
+          "autoQualityLowerThresholdMbps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": "number",
+            "format": "double"
+          },
+          "autoQualityMaximum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "autoQualityMinimum": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "autoQualityUpperThresholdMbps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": "number",
+            "format": "double"
+          },
+          "captureCursor": {
+            "type": "boolean"
+          },
+          "hideOfflineDevices": {
+            "type": "boolean"
+          },
+          "isAutoQualityEnabled": {
+            "type": "boolean"
+          },
+          "isMaxBandwidthEnabled": {
+            "type": "boolean"
+          },
+          "keyboardInputMode": {
+            "$ref": "#/components/schemas/KeyboardInputMode"
+          },
+          "manualQuality": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxBandwidthMbps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": "number",
+            "format": "double"
+          },
+          "notifyUserOnSessionStart": {
+            "type": "boolean"
+          },
+          "openDeviceInNewTab": {
+            "type": "boolean"
+          },
+          "themeMode": {
+            "$ref": "#/components/schemas/UserPreferenceThemeMode"
+          },
+          "userDisplayName": {
+            "type": "string"
+          },
+          "viewMode": {
+            "$ref": "#/components/schemas/UserPreferenceViewMode"
+          }
+        }
+      },
+      "UserPreferenceThemeMode": {
+        "type": "integer"
+      },
+      "UserPreferenceViewMode": {
+        "type": "integer"
       },
       "UserResponseDto": {
         "required": [
@@ -4162,6 +4402,9 @@
     },
     {
       "name": "DeviceTags"
+    },
+    {
+      "name": "EffectiveUserPreferences"
     },
     {
       "name": "InstallerKeys"

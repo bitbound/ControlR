@@ -2,7 +2,6 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.DesktopClient.Mac.Services;
-using ControlR.DesktopClient.Services.Mac;
 using ControlR.DesktopClient.ViewModels.Mac;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Serilog;

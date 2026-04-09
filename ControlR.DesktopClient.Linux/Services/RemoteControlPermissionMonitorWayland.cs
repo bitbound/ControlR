@@ -2,13 +2,11 @@ using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.ViewModelInterfaces;
-using ControlR.DesktopClient.Linux.Services;
 using ControlR.DesktopClient.ViewModels.Linux;
 using ControlR.Libraries.Hosting;
-using ControlR.Libraries.Shared.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace ControlR.DesktopClient.Services.Linux;
+namespace ControlR.DesktopClient.Linux.Services;
 
 public class RemoteControlPermissionMonitorWayland(
   TimeProvider timeProvider,
@@ -59,24 +57,23 @@ public class RemoteControlPermissionMonitorWayland(
   {
     try
     {
-      Logger.LogInformationDeduped("Checking Wayland remote control permissions");
+      DedupeLogger.LogInformationDeduped("Checking Wayland remote control permissions");
 
       var arePermissionsGranted = await _waylandPermissionProvider.IsRemoteControlPermissionGranted();
 
-      Logger.LogInformationDeduped("Wayland permissions: RemoteControl={RemoteControl}", args: arePermissionsGranted);
-
+      DedupeLogger.LogInformationDeduped("Wayland permissions: RemoteControl={RemoteControl}", args: arePermissionsGranted);
       if (arePermissionsGranted)
       {
-        Logger.LogInformationDeduped("All required permissions are granted");
+        DedupeLogger.LogInformationDeduped("All required permissions are granted");
         return;
       }
 
-      Logger.LogWarningDeduped("Required permissions are missing");
+      DedupeLogger.LogWarningDeduped("Required permissions are missing");
       await ShowPermissionsMissingToast<IPermissionsViewModelWayland>();
     }
     catch (Exception ex)
     {
-      Logger.LogErrorDeduped("Error while checking permissions", exception: ex);
+      DedupeLogger.LogErrorDeduped("Error while checking permissions", exception: ex);
     }
   }
 
@@ -99,7 +96,7 @@ public class RemoteControlPermissionMonitorWayland(
     }
     catch (Exception ex)
     {
-      Logger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
+      DedupeLogger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
     }
   }
 }

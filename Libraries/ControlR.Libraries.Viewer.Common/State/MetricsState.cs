@@ -6,6 +6,7 @@ public interface IMetricsState
 {
   TimeSpan CurrentLatency { get; set; }
   CaptureMetricsDto? CurrentMetrics { get; set; }
+  int CurrentQuality { get; set; }
   double MbpsIn { get; set; }
   double MbpsOut { get; set; }
 }
@@ -14,6 +15,7 @@ public class MetricsState(ILogger<ObservableState> logger) : ObservableState(log
 {
   private TimeSpan _currentLatency;
   private CaptureMetricsDto? _currentMetrics;
+  private int _currentQuality;
   private double _mbpsIn;
   private double _mbpsOut;
 
@@ -32,6 +34,15 @@ public class MetricsState(ILogger<ObservableState> logger) : ObservableState(log
     set
     {
       _currentMetrics = value;
+      NotifyStateChanged();
+    }
+  }
+  public int CurrentQuality
+  {
+    get => _currentQuality;
+    set
+    {
+      _currentQuality = value;
       NotifyStateChanged();
     }
   }

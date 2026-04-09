@@ -4,6 +4,11 @@ namespace ControlR.Web.Server.Services.Settings;
 
 public interface IEffectiveUserPreferencesResolver
 {
+  Task<EffectiveUserPreferencesDto> GetEffectiveUserPreferences(
+    Guid tenantId,
+    Guid userId,
+    CancellationToken cancellationToken = default);
+
   Task<bool> GetNotifyUserOnSessionStart(
     Guid tenantId,
     Guid userId,
@@ -17,6 +22,41 @@ internal sealed class EffectiveUserPreferencesResolver(
   private readonly AppDb _appDb = appDb;
   private readonly ILogger<EffectiveUserPreferencesResolver> _logger = logger;
 
+  public async Task<EffectiveUserPreferencesDto> GetEffectiveUserPreferences(
+    Guid tenantId,
+    Guid userId,
+    CancellationToken cancellationToken = default)
+  {
+    var tenantValues = await _appDb.TenantSettings
+      .AsNoTracking()
+      .Where(x => x.TenantId == tenantId)
+      .ToDictionaryAsync(x => x.Name, x => x.Value, cancellationToken);
+
+    var userValues = await _appDb.UserPreferences
+      .AsNoTracking()
+      .Where(x => x.UserId == userId)
+      .ToDictionaryAsync(x => x.Name, x => x.Value, cancellationToken);
+
+    var tenantOverride = ParseNullableBoolean(
+      tenantValues,
+      TenantSettingDefinitions.NotifyUserOnSessionStart.Name,
+      tenantId,
+      "tenant setting");
+
+    if (tenantOverride.HasValue)
+    {
+      return new EffectiveUserPreferencesDto(tenantOverride.Value, true);
+    }
+
+    var userPreference = ParseBoolean(
+      userValues,
+      UserPreferenceDefinitions.NotifyUserOnSessionStart,
+      userId,
+      "user preference");
+
+    return new EffectiveUserPreferencesDto(userPreference, false);
+  }
+
   public async Task<bool> GetNotifyUserOnSessionStart(
     Guid tenantId,
     Guid userId,
@@ -27,6 +67,47 @@ internal sealed class EffectiveUserPreferencesResolver(
       tenantId,
       userId,
       cancellationToken);
+  }
+
+  private bool ParseBoolean(
+    IReadOnlyDictionary<string, string> values,
+    SettingDefinition<bool> definition,
+    Guid subjectId,
+    string scopeName)
+  {
+    return definition.ReadValue(values, value =>
+      _logger.LogWarning(
+        "Failed to parse {ScopeName} {SettingName} for {SubjectId}. Value: {SettingValue}",
+        scopeName,
+        definition.Name,
+        subjectId,
+        value));
+  }
+
+  private bool? ParseNullableBoolean(
+    IReadOnlyDictionary<string, string> values,
+    string settingName,
+    Guid subjectId,
+    string scopeName)
+  {
+    if (!values.TryGetValue(settingName, out var value) || string.IsNullOrWhiteSpace(value))
+    {
+      return null;
+    }
+
+    if (bool.TryParse(value, out var parsedValue))
+    {
+      return parsedValue;
+    }
+
+    _logger.LogWarning(
+      "Failed to parse {ScopeName} {SettingName} for {SubjectId}. Value: {SettingValue}",
+      scopeName,
+      settingName,
+      subjectId,
+      value);
+
+    return null;
   }
 
   private async Task<bool> ResolveBoolean(

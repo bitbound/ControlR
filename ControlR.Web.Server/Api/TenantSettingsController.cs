@@ -44,27 +44,15 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
 
   [HttpGet]
   [Authorize]
-  public async IAsyncEnumerable<TenantSettingResponseDto> GetAll()
+  public async Task<ActionResult<TenantSettingsDto>> GetAll(CancellationToken cancellationToken)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      yield break;
+      return Unauthorized();
     }
 
-    var tenant = await _appDb.Tenants
-      .AsNoTracking()
-      .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == tenantId);
-
-    if (tenant?.TenantSettings is null)
-    {
-      yield break;
-    }
-
-    foreach (var setting in tenant.TenantSettings)
-    {
-      yield return setting.ToDto();
-    }
+    var settings = await _tenantSettingsManager.GetAllSettings(tenantId, cancellationToken);
+    return Ok(settings);
   }
 
   [HttpGet("{name}")]
@@ -107,6 +95,21 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
     }
 
     var result = await _tenantSettingsManager.SetSetting(tenantId, setting);
+    return result.ToActionResult();
+  }
+
+  [HttpPut]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<TenantSettingsDto>> SetSettings(
+    [FromBody] TenantSettingsDto settings,
+    CancellationToken cancellationToken)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return Unauthorized();
+    }
+
+    var result = await _tenantSettingsManager.SetSettings(tenantId, settings, cancellationToken);
     return result.ToActionResult();
   }
 }

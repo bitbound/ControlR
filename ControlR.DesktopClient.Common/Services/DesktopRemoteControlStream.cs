@@ -5,8 +5,10 @@ using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
+using ControlR.DesktopClient.Common.State;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
@@ -27,6 +29,7 @@ public interface IDesktopRemoteControlStream : IManagedRelayStream
 internal sealed class DesktopRemoteControlStream(
   TimeProvider timeProvider,
   IMessenger messenger,
+  IStreamMetrics streamMetrics,
   ICaptureMetrics captureMetrics,
   IHostApplicationLifetime appLifetime,
   IToaster toaster,
@@ -36,11 +39,12 @@ internal sealed class DesktopRemoteControlStream(
   IMemoryProvider memoryProvider,
   IInputSimulator inputSimulator,
   IDisplayManager displayManager,
+  IRemoteControlSessionState sessionState,
   IWaiter waiter,
   ISystemEnvironment systemEnvironment,
   IOptions<RemoteControlSessionOptions> startupOptions,
   ILogger<DesktopRemoteControlStream> logger)
-  : ManagedRelayStream(timeProvider, messenger, memoryProvider, waiter, logger), IDesktopRemoteControlStream
+  : ManagedRelayStream(timeProvider, messenger, memoryProvider, waiter, streamMetrics, logger), IDesktopRemoteControlStream
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly ICaptureMetrics _captureMetrics = captureMetrics;
@@ -51,6 +55,7 @@ internal sealed class DesktopRemoteControlStream(
   private readonly ILogger<DesktopRemoteControlStream> _logger = logger;
   private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(3);
   private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
+  private readonly IRemoteControlSessionState _sessionState = sessionState;
   private readonly IOptions<RemoteControlSessionOptions> _startupOptions = startupOptions;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IToaster _toaster = toaster;
@@ -164,11 +169,33 @@ internal sealed class DesktopRemoteControlStream(
     }
   }
 
+  private void ApplyCaptureSettings(UpdateCaptureSettingsDto payload)
+  {
+    _sessionState.CaptureCursor = payload.CaptureCursor;
+    _sessionState.IsAutoQualityEnabled = payload.IsAutoQualityEnabled;
+    _sessionState.ImageQuality = payload.ManualQuality;
+
+    var autoQualityMinimum = payload.AutoQualityMinimum >= 1
+      ? payload.AutoQualityMinimum
+      : AppConstants.DefaultRemoteControlAutoQualityMinimum;
+    var autoQualityMaximum = payload.AutoQualityMaximum >= 2
+      ? payload.AutoQualityMaximum
+      : AppConstants.DefaultRemoteControlAutoQualityMaximum;
+
+    _sessionState.AutoQualityLowerThresholdMbps = payload.AutoQualityLowerThresholdMbps;
+    _sessionState.AutoQualityMaximum = autoQualityMaximum;
+    _sessionState.AutoQualityMinimum = autoQualityMinimum;
+    _sessionState.AutoQualityUpperThresholdMbps = payload.AutoQualityUpperThresholdMbps;
+    _sessionState.IsMaxBandwidthEnabled = payload.IsMaxBandwidthEnabled;
+    _sessionState.MaxBandwidthMbps = payload.MaxBandwidthMbps;
+  }
+
   private Task HandleConnectionClosed()
   {
     _appLifetime.StopApplication();
     return Task.CompletedTask;
   }
+
   private async Task HandleCursorChangedMessage(object subscriber, CursorChangedMessage message)
   {
     try
@@ -310,6 +337,13 @@ internal sealed class DesktopRemoteControlStream(
         case DtoType.RequestKeyFrame:
           {
             _logger.LogInformation("Received request for key frame.");
+            await _desktopCapturer.RequestKeyFrame();
+            break;
+          }
+        case DtoType.UpdateCaptureSettings:
+          {
+            var payload = wrapper.GetPayload<UpdateCaptureSettingsDto>();
+            ApplyCaptureSettings(payload);
             await _desktopCapturer.RequestKeyFrame();
             break;
           }
@@ -462,6 +496,7 @@ internal sealed class DesktopRemoteControlStream(
           var captureMetrics = new CaptureMetricsDto(
             Fps: _desktopCapturer.GetCurrentFps(_metricsWindow),
             CaptureMode: _desktopCapturer.GetCaptureMode(),
+            CurrentQuality: _desktopCapturer.GetCurrentQuality(),
             ExtraData: _captureMetrics.GetExtraMetricsData());
 
           var wrapper = DtoWrapper.Create(captureMetrics, DtoType.CaptureMetricsChanged);

@@ -9,6 +9,7 @@ public static class HttpConstants
   public const string DeviceFileSystemEndpoint = "/api/device-file-system";
   public const string DevicesEndpoint = "/api/devices";
   public const string DeviceTagsEndpoint = "/api/device-tags";
+  public const string EffectiveUserPreferencesEndpoint = "/api/effective-user-preferences";
   public const string InstallerKeysEndpoint = "/api/installer-keys";
   public const string InvitesEndpoint = "/api/invites";
   public const string LogonTokensEndpoint = "/api/logon-tokens";

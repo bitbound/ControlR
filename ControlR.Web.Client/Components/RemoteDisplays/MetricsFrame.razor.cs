@@ -33,6 +33,7 @@ public partial class MetricsFrame : IDisposable
       {
         var dto = wrapper.GetPayload<CaptureMetricsDto>();
         MetricsState.CurrentMetrics = dto;
+        MetricsState.CurrentQuality = dto.CurrentQuality;
         MetricsState.CurrentLatency = RemoteControlStream.CurrentLatency;
         MetricsState.MbpsIn = RemoteControlStream.GetMbpsIn();
         MetricsState.MbpsOut = RemoteControlStream.GetMbpsOut();

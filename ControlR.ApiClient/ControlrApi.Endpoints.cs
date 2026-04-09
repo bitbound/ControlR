@@ -101,6 +101,11 @@ public interface IServerLogsApi
   Task<ApiResult<GetAspireUrlResponseDto>> GetAspireUrl(CancellationToken cancellationToken = default);
 }
 
+public interface IEffectiveUserPreferencesApi
+{
+  Task<ApiResult<EffectiveUserPreferencesDto>> GetEffectiveUserPreferences(CancellationToken cancellationToken = default);
+}
+
 public interface IServerStatsApi
 {
   Task<ApiResult<ServerStatsDto>> GetServerStats(CancellationToken cancellationToken = default);
@@ -118,8 +123,9 @@ public interface ITenantSettingsApi
 {
   Task<ApiResult> DeleteTenantSetting(string settingName, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantSettingResponseDto>> GetTenantSetting(string settingName, CancellationToken cancellationToken = default);
-  Task<ApiResult<TenantSettingResponseDto[]>> GetTenantSettings(CancellationToken cancellationToken = default);
+  Task<ApiResult<TenantSettingsDto>> GetTenantSettings(CancellationToken cancellationToken = default);
   Task<ApiResult<TenantSettingResponseDto>> SetTenantSetting(TenantSettingRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<TenantSettingsDto>> SetTenantSettings(TenantSettingsDto request, CancellationToken cancellationToken = default);
 }
 
 public interface ITestEmailApi
@@ -130,8 +136,9 @@ public interface ITestEmailApi
 public interface IUserPreferencesApi
 {
   Task<ApiResult<UserPreferenceResponseDto>> GetUserPreference(string preferenceName, CancellationToken cancellationToken = default);
-  Task<ApiResult<UserPreferenceResponseDto[]>> GetUserPreferences(CancellationToken cancellationToken = default);
+  Task<ApiResult<UserPreferencesDto>> GetUserPreferences(CancellationToken cancellationToken = default);
   Task<ApiResult<UserPreferenceResponseDto>> SetUserPreference(UserPreferenceRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<UserPreferencesDto>> SetUserPreferences(UserPreferencesDto request, CancellationToken cancellationToken = default);
 }
 
 public interface IUserRolesApi

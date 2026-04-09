@@ -39,6 +39,12 @@ public interface IDesktopCapturer : IAsyncDisposable
   double GetCurrentFps(TimeSpan window);
 
   /// <summary>
+  /// Gets the effective image quality currently being used for outgoing captures.
+  /// </summary>
+  /// <returns>The current quality value in the range 1-100.</returns>
+  int GetCurrentQuality();
+
+  /// <summary>
   /// Forces the next frame to be a key frame.
   /// </summary>
   /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>

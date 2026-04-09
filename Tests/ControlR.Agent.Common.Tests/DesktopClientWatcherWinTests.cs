@@ -109,27 +109,6 @@ public class DesktopClientWatcherWinTests
     Assert.Equal("\"C:\\ControlR\\DesktopClient\\ControlR.DesktopClient.exe\"", launchedCommand);
   }
 
-  [Fact]
-  public async Task RunIteration_WhenLaunchFailsImmediately_IncrementsFailureCount()
-  {
-    using var mutationLock = Mock.Of<IDisposable>();
-    IProcess? startedProcess = null;
-    var watcher = CreateWatcher();
-
-    _desktopSessionProvider
-      .Setup(x => x.GetActiveDesktopClients())
-      .ReturnsAsync([]);
-    _win32Interop
-      .Setup(x => x.CreateInteractiveSystemProcess(It.IsAny<string>(), 5, true, out startedProcess))
-      .Returns(false);
-
-    await watcher.RunIteration(
-      [new DesktopSession { SystemSessionId = 5 }],
-      [],
-      CancellationToken.None);
-
-    Assert.Equal(1, watcher.LaunchFailCount);
-  }
 
   [Fact]
   public void TrackLaunch_MarksSessionCoveredBeforeRegistration()

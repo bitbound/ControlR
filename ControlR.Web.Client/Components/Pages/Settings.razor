@@ -3,15 +3,6 @@
 @attribute [Route(ClientRoutes.Settings)]
 @attribute [Authorize]
 
-@inject ISnackbar Snackbar
-@inject IEffectiveUserPreferences EffectiveUserPreferences
-@inject IUserPreferencesProvider UserPreferences
-@inject IClipboardManager ClipboardManager
-@inject AuthenticationStateProvider AuthState
-@inject IMessenger Messenger
-@inject IJsInterop JsInterop
-@inject ILogger<Settings> Logger
-
 <PageTitle>Settings</PageTitle>
 
 <PrimaryTitle>
@@ -29,6 +20,7 @@
                 AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                 OnAdornmentClick="CopyTenantId"
                 Adornment="Adornment.End"
+                Style="max-width: 500px"
                 Value="_tenantId" />
 </div>
 
@@ -43,6 +35,7 @@
                 AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
                 OnAdornmentClick="CopyUserId"
                 Adornment="Adornment.End"
+                Style="max-width: 500px"
                 Value="_userId" />
 </div>
 
@@ -54,6 +47,7 @@
                 @bind-Value:get="_userDisplayName"
                 @bind-Value:set="SetUserDisplayName"
                 MaxLength="25"
+                Style="max-width: 500px"
                 Validation="(string e) => ValidateDisplayName(e)"
                 Label="Shown to partners when connecting">
 
@@ -159,107 +153,139 @@
   </MudRadioGroup>
 </div>
 
-@code {
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Default Capture Settings
+  </MudText>
 
-  private bool _notifyUser;
-  private bool _isNotifyUserEnforced;
-  private string _userDisplayName = "";
-  private Guid? _tenantId;
-  private Guid? _userId;
-  private ThemeMode _themeMode = ThemeMode.Auto;
-  private KeyboardInputMode _keyboardInputMode = KeyboardInputMode.Auto;
-  private ViewMode _viewMode = ViewMode.Fit;
+  <MudTooltip Text="Include the remote cursor by default when a new remote control session starts.">
+    <MudCheckBox T="bool"
+                 Value="_captureCursor"
+                 ValueChanged="@((bool value) => SetCaptureCursor(value))"
+                 Label="Capture cursor" />
+  </MudTooltip>
+</div>
 
-  protected override async Task OnInitializedAsync()
+<div class="mt-10">
+  <div class="d-flex">
+    <MudText Typo="Typo.h6" Color="Color.Primary">
+      Default Quality Settings
+    </MudText>
+    <MudButton Variant="Variant.Text"
+                Color="Color.Default"
+                Size="Size.Small"
+                Class="ml-4"
+                OnClick="RestoreQualityDefaults">
+      Restore Defaults
+    </MudButton>
+  </div>
+
+  <MudTooltip Text="Automatically adjust image quality based on the remote sender's outbound bandwidth.">
+    <MudSwitch Value="_isAutoQualityEnabled"
+               ValueChanged="@((bool value) => SetIsAutoQualityEnabled(value))"
+               Color="Color.Secondary"
+               Label="Enable auto quality"
+               ThumbIcon="@(Icons.Material.Filled.AutoAwesome)" />
+  </MudTooltip>
+
+  @if (_isAutoQualityEnabled)
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (state.User.TryGetTenantId(out var tenantId))
+    <div class="mt-3 d-flex flex-column gap-3" style="max-width: 500px">
+      <MudTooltip Text="Highest JPEG quality auto mode will use while outbound bandwidth stays below the lower threshold.">
+        <MudNumericField T="int"
+                         Value="_autoQualityMaximum"
+                         ValueChanged="@((int value) => SetAutoQualityMaximum(value))"
+                         Label="Auto Quality Maximum"
+                         Min="2"
+                         Max="100"
+                         Step="1"
+                         Variant="Variant.Outlined" />
+      </MudTooltip>
+
+      <MudTooltip Text="Lowest JPEG quality auto mode will use once outbound bandwidth reaches the upper threshold.">
+        <MudNumericField T="int"
+                         Value="_autoQualityMinimum"
+                         ValueChanged="@((int value) => SetAutoQualityMinimum(value))"
+                         Label="Auto Quality Minimum"
+                         Min="1"
+                         Max="99"
+                         Step="1"
+                         Variant="Variant.Outlined" />
+      </MudTooltip>
+
+      <MudTooltip Text="Quality starts dropping after outbound bandwidth rises above this value.">
+        <MudNumericField T="double"
+                         Value="_autoQualityLowerThresholdMbps"
+                         ValueChanged="@((double value) => SetAutoQualityLowerThresholdMbps(value))"
+                         Label="Auto Quality Lower Threshold"
+                         Min="1"
+                         Step="1"
+                         Variant="Variant.Outlined"
+                         Adornment="Adornment.End"
+                         AdornmentText="Mbps" />
+      </MudTooltip>
+
+      <MudTooltip Text="Quality reaches the minimum auto value once outbound bandwidth reaches this point.">
+        <MudNumericField T="double"
+                         Value="_autoQualityUpperThresholdMbps"
+                         ValueChanged="@((double value) => SetAutoQualityUpperThresholdMbps(value))"
+                         Label="Auto Quality Upper Threshold"
+                         Min="2"
+                         Step="1"
+                         Variant="Variant.Outlined"
+                         Adornment="Adornment.End"
+                         AdornmentText="Mbps" />
+      </MudTooltip>
+    </div>
+  }
+  else
+  {
+    <div class="mt-3 d-flex flex-column gap-3" style="max-width: 500px">
+      <MudTooltip Text="Set a fixed JPEG quality for screen regions sent during remote control sessions.">
+        <MudNumericField T="int"
+                         Value="_manualQuality"
+                         ValueChanged="@((int value) => SetManualQuality(value))"
+                         Label="Manual Quality"
+                         Min="1"
+                         Max="100"
+                         Step="1"
+                         Variant="Variant.Outlined" />
+      </MudTooltip>
+
+      <MudTooltip Text="Set a fixed JPEG quality for screen regions sent during remote control sessions.">
+        <MudSlider T="int"
+                   Value="_manualQuality"
+                   ValueChanged="@((int value) => SetManualQuality(value))"
+                   Min="1"
+                   Max="100"
+                   Step="1"
+                   Color="Color.Primary" />
+      </MudTooltip>
+    </div>
+  }
+
+  <div class="mt-3 d-flex flex-column gap-3" style="max-width: 500px">
+    <MudTooltip Text="Pause capture on the remote end whenever outbound bandwidth rises above this cap, then resume once it falls back below it.">
+      <MudSwitch Value="_isMaxBandwidthEnabled"
+                 ValueChanged="@((bool value) => SetIsMaxBandwidthEnabled(value))"
+                 Color="Color.Secondary"
+                 Label="Enable Max Mbps"
+                 ThumbIcon="@(Icons.Material.Filled.Speed)" />
+    </MudTooltip>
+
+    @if (_isMaxBandwidthEnabled)
     {
-      _tenantId = tenantId;
+      <MudTooltip Text="Hard outbound bandwidth cap that pauses remote capture while usage is above this value.">
+        <MudNumericField T="double"
+                         Value="_maxBandwidthMbps"
+                         ValueChanged="@((double value) => SetMaxBandwidthMbps(value))"
+                         Label="Max Mbps"
+                         Min="1"
+                         Step="1"
+                         Variant="Variant.Outlined"
+                         Adornment="Adornment.End"
+                         AdornmentText="Mbps" />
+      </MudTooltip>
     }
-
-    if (state.User.TryGetUserId(out var userId))
-    {
-      _userId = userId;
-    }
-
-    var notifyUserPreference = await EffectiveUserPreferences.GetNotifyUserOnSessionStart();
-    _notifyUser = notifyUserPreference.Value;
-    _isNotifyUserEnforced = notifyUserPreference.IsTenantEnforced;
-    _userDisplayName = await UserPreferences.GetUserDisplayName();
-    _themeMode = await UserPreferences.GetThemeMode();
-    _keyboardInputMode = await UserPreferences.GetKeyboardInputMode();
-    _viewMode = await UserPreferences.GetViewMode();
-
-    await base.OnInitializedAsync();
-  }
-
-  private async Task CopyUserId()
-  {
-    await ClipboardManager.SetText($"{_userId}");
-    Snackbar.Add("Copied to clipboard", Severity.Success);
-  }
-
-  private async Task CopyTenantId()
-  {
-    await ClipboardManager.SetText($"{_tenantId}");
-    Snackbar.Add("Copied to clipboard", Severity.Success);
-  }
-
-  private async Task SetNotifyUser(bool value)
-  {
-    if (_isNotifyUserEnforced)
-    {
-      return;
-    }
-    
-    _notifyUser = value;
-    await UserPreferences.SetNotifyUserOnSessionStart(value);
-  }
-
-  private async Task SetThemeMode(ThemeMode value)
-  {
-    _themeMode = value;
-    await UserPreferences.SetThemeMode(value);
-    await Messenger.Send(new ThemeChangedMessage(value));
-    Snackbar.Add("Theme updated", Severity.Success);
-  }
-
-  private async Task SetKeyboardInputMode(KeyboardInputMode value)
-  {
-    _keyboardInputMode = value;
-    await UserPreferences.SetKeyboardInputMode(value);
-    Snackbar.Add("Keyboard input mode updated", Severity.Success);
-  }
-
-  private async Task SetUserDisplayName(string value)
-  {
-    _userDisplayName = value;
-    await UserPreferences.SetUserDisplayName(value);
-    Snackbar.Add("Display name updated", Severity.Success);
-  }
-
-  private async Task SetViewMode(ViewMode value)
-  {
-    _viewMode = value;
-    await UserPreferences.SetViewMode(value);
-    Snackbar.Add("View mode updated", Severity.Success);
-  }
-
-  private static string? ValidateDisplayName(string input)
-  {
-    if (string.IsNullOrEmpty(input))
-    {
-      return null;
-    }
-
-    if (input.Length > 25)
-    {
-      return "Username must be 25 characters or less.";
-    }
-
-    return Validators.DisplayNameValidator().IsMatch(input)
-      ? "Username can only contain letters, numbers, underscores, hyphens, and spaces."
-      : null;
-  }
-}
+  </div>
+</div>

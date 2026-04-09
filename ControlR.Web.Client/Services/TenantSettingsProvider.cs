@@ -1,6 +1,4 @@
-using System.Collections.Concurrent;
-using System.Net;
-using ControlR.Libraries.Shared.DataValidation;
+using ControlR.Libraries.Api.Contracts.Settings;
 
 namespace ControlR.Web.Client.Services;
 
@@ -9,6 +7,7 @@ public interface ITenantSettingsProvider
   Task<bool> GetAppendInstanceId();
   Task<string?> GetInstanceId();
   Task<bool?> GetNotifyUserOnSessionStart();
+  Task<TenantSettingsDto> GetSettings();
   Task SetAppendInstanceId(bool value);
   Task<bool> SetInstanceId(string? value);
   Task SetNotifyUserOnSessionStart(bool? value);
@@ -16,28 +15,51 @@ public interface ITenantSettingsProvider
 
 internal class TenantSettingsProvider(
   IControlrApi controlrApi,
+  IEffectiveUserPreferences effectiveUserPreferences,
   ISnackbar snackbar,
   ILogger<TenantSettingsProvider> logger) : ITenantSettingsProvider
 {
   private readonly IControlrApi _controlrApi = controlrApi;
+  private readonly IEffectiveUserPreferences _effectiveUserPreferences = effectiveUserPreferences;
   private readonly ILogger<TenantSettingsProvider> _logger = logger;
-
-  private readonly ConcurrentDictionary<string, object?> _settings = new();
   private readonly ISnackbar _snackbar = snackbar;
+
+  private TenantSettingsDto? _settings;
 
   public async Task<bool> GetAppendInstanceId()
   {
-    return await GetSetting(TenantSettingNames.AppendInstanceId, false);
+    var settings = await GetSettings();
+    return settings.AppendInstanceId ?? false;
   }
 
   public async Task<string?> GetInstanceId()
   {
-    return await GetSetting<string?>(TenantSettingNames.InstanceId, null);
+    var settings = await GetSettings();
+    return settings.InstanceId;
   }
 
   public async Task<bool?> GetNotifyUserOnSessionStart()
   {
-    return await GetSetting(TenantSettingNames.NotifyUserOnSessionStart, (bool?)null);
+    var settings = await GetSettings();
+    return settings.NotifyUserOnSessionStart;
+  }
+
+  public async Task<TenantSettingsDto> GetSettings()
+  {
+    if (_settings is not null)
+    {
+      return _settings;
+    }
+
+    var getResult = await _controlrApi.TenantSettings.GetTenantSettings();
+    if (!getResult.IsSuccess)
+    {
+      _snackbar.Add(getResult.Reason, Severity.Error);
+      return CreateDefaultSettings();
+    }
+
+    _settings = getResult.Value;
+    return _settings ?? CreateDefaultSettings();
   }
 
   public async Task SetAppendInstanceId(bool value)
@@ -51,12 +73,17 @@ internal class TenantSettingsProvider(
       ? null
       : value.Trim();
 
-    var validationError = Validators.ValidateInstanceId(normalizedValue);
-    if (validationError is not null)
+    if (!string.IsNullOrWhiteSpace(normalizedValue))
     {
-      _logger.LogWarning("Rejected invalid instance ID. Reason: {ValidationError}", validationError);
-      _snackbar.Add(validationError, Severity.Error);
-      return false;
+      var normalizationResult = TenantSettingDefinitions.Normalize(TenantSettingNames.InstanceId, normalizedValue);
+      if (!normalizationResult.IsSuccess)
+      {
+        _logger.LogWarning("Rejected invalid instance ID. Reason: {ValidationError}", normalizationResult.ErrorMessage);
+        _snackbar.Add(normalizationResult.ErrorMessage ?? "Invalid instance ID.", Severity.Error);
+        return false;
+      }
+
+      normalizedValue = normalizationResult.Value;
     }
 
     await SetSetting(TenantSettingNames.InstanceId, normalizedValue);
@@ -68,70 +95,16 @@ internal class TenantSettingsProvider(
     await SetSetting(TenantSettingNames.NotifyUserOnSessionStart, value);
   }
 
-  private async Task<T> GetSetting<T>(string settingName, T defaultValue)
+  private static TenantSettingsDto CreateDefaultSettings()
   {
-    try
-    {
-      if (_settings.TryGetValue(settingName, out var value) &&
-          value is T typedValue)
-      {
-        return typedValue;
-      }
-
-      var getResult = await _controlrApi.TenantSettings.GetTenantSetting(settingName);
-
-      if (!getResult.IsSuccess)
-      {
-        if (getResult.StatusCode == HttpStatusCode.NotFound)
-        {
-          return defaultValue;
-        }
-
-        _snackbar.Add(getResult.Reason, Severity.Error);
-        return defaultValue;
-      }
-
-      if (getResult.Value is null)
-      {
-        return defaultValue;
-      }
-
-      if (!getResult.Value.HasValueSet)
-      {
-        return defaultValue;
-      }
-
-      var targetType = typeof(T);
-
-      if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
-      {
-        // Get the underlying type (e.g., bool from bool?)
-        targetType = Nullable.GetUnderlyingType(targetType) ??
-          throw new InvalidOperationException($"Failed to convert setting value to type {targetType.Name}.");
-      }
-
-      if (Convert.ChangeType(getResult.Value.Value, targetType) is not T typedResult)
-      {
-        return defaultValue;
-      }
-
-      _settings[settingName] = typedResult;
-      return typedResult;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting setting for {SettingName}.", settingName);
-      _snackbar.Add("Error while getting setting", Severity.Error);
-      return defaultValue;
-    }
+    Dictionary<string, string> values = [];
+    return TenantSettingDefinitions.CreateDto(values);
   }
 
   private async Task SetSetting<T>(string settingName, T newValue)
   {
     try
     {
-      _settings[settingName] = newValue;
-      
       if (newValue is null)
       {
         var deleteResult = await _controlrApi.TenantSettings.DeleteTenantSetting(settingName);
@@ -143,12 +116,23 @@ internal class TenantSettingsProvider(
 
           _snackbar.Add(deleteResult.Reason, Severity.Error);
         }
+
+        _settings = null;
+        _effectiveUserPreferences.InvalidateCache();
         return;
       }
       
-      var stringValue = Convert.ToString(newValue);
+      var stringValue = TenantSettingDefinitions.FormatValue(settingName, newValue)?.Trim();
       Guard.IsNotNull(stringValue);
-      var request = new TenantSettingRequestDto(settingName, stringValue);
+      var normalizationResult = TenantSettingDefinitions.Normalize(settingName, stringValue);
+      if (!normalizationResult.IsSuccess)
+      {
+        _logger.LogWarning("Failed to normalize setting {SettingName}. Reason: {Reason}", settingName, normalizationResult.ErrorMessage);
+        _snackbar.Add(normalizationResult.ErrorMessage ?? "Setting value is invalid.", Severity.Error);
+        return;
+      }
+
+      var request = new TenantSettingRequestDto(settingName, normalizationResult.Value ?? string.Empty);
       var setResult = await _controlrApi.TenantSettings.SetTenantSetting(request);
 
       if (!setResult.IsSuccess)
@@ -158,7 +142,11 @@ internal class TenantSettingsProvider(
           setResult.StatusCode);
           
         _snackbar.Add(setResult.Reason, Severity.Error);
+        return;
       }
+
+      _settings = null;
+      _effectiveUserPreferences.InvalidateCache();
     }
     catch (Exception ex)
     {

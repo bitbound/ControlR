@@ -1,3 +1,5 @@
+using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 
@@ -21,11 +23,12 @@ internal class DesktopEnvironmentDetectorAgent(
   public async Task<DisplayEnvironmentInfo> DetectDisplayEnvironment()
   {
     var info = new DisplayEnvironmentInfo();
+    using var dedupeLogger = _logger.EnterDedupeScope();
 
     try
     {
       info.DisplayManager = await DetectDisplayManager();
-      info.IsLoginScreen = !await HasActiveUserSessions();
+      info.IsLoginScreen = !await HasActiveUserSessions(dedupeLogger);
 
       if (!info.IsLoginScreen)
       {
@@ -33,26 +36,26 @@ internal class DesktopEnvironmentDetectorAgent(
       }
 
       // Try to detect Wayland display first
-      var (waylandDisplay, runtimeDir) = await DetectCurrentWaylandDisplay();
+      var (waylandDisplay, runtimeDir) = await DetectCurrentWaylandDisplay(dedupeLogger);
       info.WaylandDisplay = waylandDisplay;
       info.WaylandRuntimeDir = runtimeDir;
       info.IsWayland = !string.IsNullOrWhiteSpace(info.WaylandDisplay);
 
       if (info.IsWayland)
       {
-        _logger.LogInformationDeduped("Detected Wayland session at login screen");
+        dedupeLogger.LogInformationDeduped("Detected Wayland session at login screen");
         return info;
       }
 
       // Fall back to X11 detection
-      info.XAuthPath = await DetectCurrentXAuthPath(info.DisplayManager);
-      info.Display = await DetectCurrentDisplay();
+      info.XAuthPath = await DetectCurrentXAuthPath(info.DisplayManager, dedupeLogger);
+      info.Display = await DetectCurrentDisplay(dedupeLogger);
 
       return info;
     }
     catch (Exception ex)
     {
-      _logger.LogErrorDeduped("Error detecting display environment", exception: ex);
+      dedupeLogger.LogErrorDeduped("Error detecting display environment", exception: ex);
       return info;
     }
   }
@@ -84,7 +87,7 @@ internal class DesktopEnvironmentDetectorAgent(
     return info;
   }
 
-  private Task<string> DetectCurrentDisplay()
+  private Task<string> DetectCurrentDisplay(LogDeduplicationContext<DesktopEnvironmentDetectorAgent> dedupeLogger)
   {
     try
     {
@@ -104,12 +107,13 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogErrorDeduped("Error detecting current display", exception: ex);
+      dedupeLogger.LogErrorDeduped("Error detecting current display", exception: ex);
       return Task.FromResult(":0");
     }
   }
 
-  private async Task<(string? WaylandDisplay, string? RuntimeDir)> DetectCurrentWaylandDisplay()
+  private async Task<(string? WaylandDisplay, string? RuntimeDir)> DetectCurrentWaylandDisplay(
+    LogDeduplicationContext<DesktopEnvironmentDetectorAgent> dedupeLogger)
   {
     try
     {
@@ -163,7 +167,7 @@ internal class DesktopEnvironmentDetectorAgent(
           continue;
         }
 
-        _logger.LogInformationDeduped(
+        dedupeLogger.LogInformationDeduped(
           "Found Wayland greeter session: SessionId={SessionId}, UID={Uid}, RuntimeDir={RuntimeDir}",
           args: [sessionId, uid, runtimeDir]);
 
@@ -185,7 +189,7 @@ internal class DesktopEnvironmentDetectorAgent(
         }
 
         var runtimeDir = Path.GetDirectoryName(socketPath);
-        _logger.LogInformationDeduped("Found root Wayland socket at {SocketPath}, RuntimeDir={RuntimeDir}",
+        dedupeLogger.LogInformationDeduped("Found root Wayland socket at {SocketPath}, RuntimeDir={RuntimeDir}",
           args: [socketPath, runtimeDir]);
         return ("wayland-0", runtimeDir);
       }
@@ -194,12 +198,14 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogErrorDeduped("Error detecting Wayland display", exception: ex);
+      dedupeLogger.LogErrorDeduped("Error detecting Wayland display", exception: ex);
       return (null, null);
     }
   }
 
-  private async Task<string?> DetectCurrentXAuthPath(string? displayManager)
+  private async Task<string?> DetectCurrentXAuthPath(
+    string? displayManager,
+    LogDeduplicationContext<DesktopEnvironmentDetectorAgent> dedupeLogger)
   {
     try
     {
@@ -281,7 +287,7 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogErrorDeduped("Error detecting XAUTH path", exception: ex);
+      dedupeLogger.LogErrorDeduped("Error detecting XAUTH path", exception: ex);
       return null;
     }
   }
@@ -313,7 +319,7 @@ internal class DesktopEnvironmentDetectorAgent(
     return null;
   }
 
-  private async Task<bool> HasActiveUserSessions()
+  private async Task<bool> HasActiveUserSessions(LogDeduplicationContext<DesktopEnvironmentDetectorAgent> dedupeLogger)
   {
     try
     {
@@ -368,7 +374,7 @@ internal class DesktopEnvironmentDetectorAgent(
     }
     catch (Exception ex)
     {
-      _logger.LogErrorDeduped("Error checking for active user sessions", exception: ex);
+      dedupeLogger.LogErrorDeduped("Error checking for active user sessions", exception: ex);
       return false;
     }
   }

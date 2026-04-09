@@ -6,38 +6,50 @@ namespace ControlR.Web.Client.Services;
 public interface IEffectiveUserPreferences
 {
   Task<EffectivePreference<bool>> GetNotifyUserOnSessionStart();
+  void InvalidateCache();
 }
 
 internal sealed class EffectiveUserPreferences(
-  ITenantSettingsProvider tenantSettingsProvider,
-  IUserPreferencesProvider userPreferencesProvider) : IEffectiveUserPreferences
+  IControlrApi controlrApi,
+  ILogger<EffectiveUserPreferences> logger,
+  ISnackbar snackbar) : IEffectiveUserPreferences
 {
-  private readonly ITenantSettingsProvider _tenantSettingsProvider = tenantSettingsProvider;
-  private readonly IUserPreferencesProvider _userPreferencesProvider = userPreferencesProvider;
+  private readonly IControlrApi _controlrApi = controlrApi;
+  private readonly ILogger<EffectiveUserPreferences> _logger = logger;
+  private readonly ISnackbar _snackbar = snackbar;
+  private EffectiveUserPreferencesDto? _preferences;
 
   public async Task<EffectivePreference<bool>> GetNotifyUserOnSessionStart()
   {
-    return await ResolveBoolean(
-      EffectivePreferenceDefinitions.NotifyUserOnSessionStart,
-      _tenantSettingsProvider.GetNotifyUserOnSessionStart,
-      _userPreferencesProvider.GetNotifyUserOnSessionStart);
+    try
+    {
+      if (_preferences is null)
+      {
+        var result = await _controlrApi.EffectiveUserPreferences.GetEffectiveUserPreferences();
+        if (!result.IsSuccess)
+        {
+          _snackbar.Add(result.Reason, Severity.Error);
+          return new EffectivePreference<bool>(EffectivePreferenceDefinitions.NotifyUserOnSessionStart.DefaultValue, false);
+        }
+
+        _preferences = result.Value ??
+          new EffectiveUserPreferencesDto(EffectivePreferenceDefinitions.NotifyUserOnSessionStart.DefaultValue, false);
+      }
+
+      return new EffectivePreference<bool>(
+        _preferences.NotifyUserOnSessionStart,
+        _preferences.IsNotifyUserOnSessionStartTenantEnforced);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while getting effective user preferences.");
+      _snackbar.Add("Error while getting effective user preferences", Severity.Error);
+      return new EffectivePreference<bool>(EffectivePreferenceDefinitions.NotifyUserOnSessionStart.DefaultValue, false);
+    }
   }
 
-  private static async Task<EffectivePreference<bool>> ResolveBoolean(
-    EffectivePreferenceDefinition<bool> definition,
-    Func<Task<bool?>> getTenantSetting,
-    Func<Task<bool>> getUserPreference)
+  public void InvalidateCache()
   {
-    var tenantValue = definition.TenantSettingName is null
-      ? null
-      : await getTenantSetting();
-
-    if (tenantValue.HasValue)
-    {
-      return new EffectivePreference<bool>(tenantValue.Value, true);
-    }
-
-    var userValue = await getUserPreference();
-    return new EffectivePreference<bool>(userValue, false);
+    _preferences = null;
   }
 }

@@ -9,6 +9,7 @@ using ControlR.Libraries.Shared.Collections;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.WebSocketRelay.Client;
 using Microsoft.Extensions.Logging;
 using SkiaSharp;
 using System.Collections.Concurrent;
@@ -37,19 +38,23 @@ internal class FrameBasedCapturer : IDesktopCapturer
   private readonly ConcurrentQueue<DateTimeOffset> _framesSent = [];
   private readonly IImageUtility _imageUtility;
   private readonly ILogger<FrameBasedCapturer> _logger;
+  private readonly ManualResetEventAsync _maxBandwidthGate = new(isSet: true);
+  private readonly TimeSpan _maxBandwidthMonitorDelay = TimeSpan.FromMilliseconds(50);
   private readonly TimeSpan _noChangeDelay = TimeSpan.FromMilliseconds(10);
   private readonly IScreenGrabber _screenGrabber;
   private readonly IRemoteControlSessionState _sessionState;
+  private readonly IStreamMetrics _streamMetrics;
   private readonly TimeProvider _timeProvider;
 
-  private bool _captureCursor;
+  private Task? _bandwidthMonitorTask;
   private Task? _captureTask;
   private string? _currentCaptureMode;
   private bool _disposedValue;
   private volatile bool _forceKeyFrame = true;
-  private int _imageQuality;
   private Size? _lastCapturePixelSize;
   private string? _lastDisplayId;
+  private int _lastEncodedQuality;
+  private SKRect? _pendingRecoveryRegion;
   private DisplayInfo? _selectedDisplay;
 
   public FrameBasedCapturer(
@@ -60,6 +65,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
     IFrameEncoder frameEncoder,
     IMessenger messenger,
     IRemoteControlSessionState sessionState,
+    IStreamMetrics streamMetrics,
     ILogger<FrameBasedCapturer> logger)
   {
     _timeProvider = timeProvider;
@@ -68,15 +74,12 @@ internal class FrameBasedCapturer : IDesktopCapturer
     _imageUtility = imageUtility;
     _frameEncoder = frameEncoder;
     _sessionState = sessionState;
+    _streamMetrics = streamMetrics;
     _logger = logger;
 
-    _disposables.AddRange(
-      sessionState.OnStateChanged(HandleSessionStateChanged),
+    _disposables.Add(
       messenger.Register<DisplaySettingsChangedMessage>(this, HandleDisplaySettingsChanged)
     );
-
-    _captureCursor = sessionState.CaptureCursor;
-    _imageQuality = sessionState.ImageQuality;
   }
 
   public async Task ChangeDisplays(string displayId)
@@ -105,7 +108,13 @@ internal class FrameBasedCapturer : IDesktopCapturer
       await _captureTask.ConfigureAwait(false);
     }
 
+    if (_bandwidthMonitorTask is not null)
+    {
+      await _bandwidthMonitorTask.ConfigureAwait(false);
+    }
+
     _disposables.Dispose();
+    _maxBandwidthGate.Dispose();
     GC.SuppressFinalize(this);
   }
 
@@ -141,6 +150,13 @@ internal class FrameBasedCapturer : IDesktopCapturer
     };
   }
 
+  public int GetCurrentQuality()
+  {
+    return _lastEncodedQuality > 0
+      ? _lastEncodedQuality
+      : GetEffectiveQuality(_streamMetrics.GetMbpsOut());
+  }
+
   public Task RequestKeyFrame()
   {
     _forceKeyFrame = true;
@@ -157,6 +173,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
     }
 
     await _screenGrabber.Initialize(cancellationToken);
+    _bandwidthMonitorTask = MonitorBandwidth(cancellationToken);
     _captureTask = StartCapturingChangesImpl(cancellationToken);
   }
 
@@ -170,33 +187,43 @@ internal class FrameBasedCapturer : IDesktopCapturer
     return Result.Fail<DisplayInfo>("No display selected.");
   }
 
-  private async Task EncodeCaptureResult(
-    CaptureResult captureResult,
-    int quality,
-    SKBitmap? previousFrame,
-    ImageFormat imageFormat,
-    CancellationToken cancellationToken)
+  private static SKRect[] AppendRegion(SKRect[] regions, SKRect? additionalRegion)
   {
-    if (!captureResult.IsSuccess)
+    if (additionalRegion is not { } region || region.IsEmpty)
     {
-      return;
+      return regions;
     }
 
-    if (captureResult.Bitmap is not { } bitmap)
+    if (Array.Exists(regions, existingRegion => existingRegion.Equals(region)))
     {
-      return;
+      return regions;
     }
 
-    var dirtyRegions = GetDirtyRegions(bitmap, captureResult.DirtyRects, previousFrame);
+    return [.. regions, region];
+  }
 
-    // If there are no dirty rects, nothing changed.
-    if (dirtyRegions.Length == 0)
+  private static SKRect MergeRegionBounds(SKRect first, SKRect second)
+  {
+    if (first.IsEmpty)
     {
-      await Task.Delay(_noChangeDelay, cancellationToken);
-      return;
+      return second;
     }
 
-    await EncodeRegions(bitmap, dirtyRegions, quality, imageFormat, cancellationToken);
+    if (second.IsEmpty)
+    {
+      return first;
+    }
+
+    return new SKRect(
+      Math.Min(first.Left, second.Left),
+      Math.Min(first.Top, second.Top),
+      Math.Max(first.Right, second.Right),
+      Math.Max(first.Bottom, second.Bottom));
+  }
+
+  private void ClearPendingRecoveryRegion()
+  {
+    _pendingRecoveryRegion = null;
   }
 
   private async Task EncodeRegions(
@@ -222,16 +249,22 @@ internal class FrameBasedCapturer : IDesktopCapturer
         imageFormat);
     });
 
+    _lastEncodedQuality = Math.Clamp(quality, 1, 100);
     await _captureChannel.Writer.WriteAsync(new ScreenRegionsDto(regionDtos), cancellationToken);
   }
 
-  private SKRect[] GetDirtyRegions(SKBitmap bitmap, Rectangle[]? dirtyRects, SKBitmap? previousFrame)
+  private SKRect[] GetDirtyRegions(SKBitmap bitmap, CaptureResult currentCapture, SKBitmap? previousFrame)
   {
-    if (dirtyRects is { })
+    if (currentCapture.HadNoChanges)
+    {
+      return [];
+    }
+
+    if (currentCapture.DirtyRects is { } dirtyRects)
     {
       try
       {
-        var changedAreas = Array.ConvertAll(dirtyRects, static rect => rect.ToSkRect());
+        var changedAreas = Array.ConvertAll(dirtyRects, rect => rect.ToSkRect());
         var clampedAreas = _imageUtility.ClampToGridSections(
           new Size(bitmap.Width, bitmap.Height),
           changedAreas);
@@ -241,7 +274,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
           return [bitmap.ToSkRect()];
         }
 
-        return Array.FindAll(clampedAreas.Value, static area => !area.IsEmpty);
+        return Array.FindAll(clampedAreas.Value, area => !area.IsEmpty);
       }
       catch (Exception ex)
       {
@@ -263,7 +296,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
         return [bitmap.ToSkRect()];
       }
 
-      return Array.FindAll(diff.Value, static area => !area.IsEmpty);
+      return Array.FindAll(diff.Value, area => !area.IsEmpty);
 
     }
     catch (Exception ex)
@@ -271,6 +304,55 @@ internal class FrameBasedCapturer : IDesktopCapturer
       _logger.LogDebug(ex, "Failed to compute dirty region diff for screen capture.");
       return [bitmap.ToSkRect()];
     }
+  }
+
+  private int GetEffectiveQuality(double currentMbps)
+  {
+    if (!_sessionState.IsAutoQualityEnabled)
+    {
+      return Math.Clamp(_sessionState.ImageQuality, 1, 100);
+    }
+
+    var autoQualityMinimum = Math.Clamp(_sessionState.AutoQualityMinimum, 1, 99);
+    var autoQualityMaximum = Math.Clamp(_sessionState.AutoQualityMaximum, autoQualityMinimum + 1, 100);
+    var lowerThreshold = Math.Max(1d, _sessionState.AutoQualityLowerThresholdMbps);
+    var upperThreshold = Math.Max(lowerThreshold + 1d, _sessionState.AutoQualityUpperThresholdMbps);
+
+    if (currentMbps <= lowerThreshold)
+    {
+      return autoQualityMaximum;
+    }
+
+    if (currentMbps >= upperThreshold)
+    {
+      return autoQualityMinimum;
+    }
+
+    var ratio = (currentMbps - lowerThreshold) / (upperThreshold - lowerThreshold);
+    return (int)Math.Round(autoQualityMaximum - ((autoQualityMaximum - autoQualityMinimum) * ratio));
+  }
+
+  private SKRect? GetRecoveryRegion(int effectiveQuality, double currentMbps)
+  {
+    var autoQualityMaximum = Math.Clamp(
+      _sessionState.AutoQualityMaximum,
+      Math.Clamp(_sessionState.AutoQualityMinimum, 1, 99) + 1,
+      100);
+
+    if (effectiveQuality < autoQualityMaximum ||
+        !_sessionState.IsAutoQualityEnabled ||
+        _pendingRecoveryRegion is not { } pendingRecoveryRegion ||
+        pendingRecoveryRegion.IsEmpty)
+    {
+      return null;
+    }
+
+    var lowerThreshold = Math.Max(1d, _sessionState.AutoQualityLowerThresholdMbps);
+    var recoveryThreshold = lowerThreshold * 0.75;
+
+    return currentMbps <= recoveryThreshold
+      ? pendingRecoveryRegion
+      : null;
   }
 
   private DisplayInfo? GetSelectedDisplay()
@@ -306,10 +388,39 @@ internal class FrameBasedCapturer : IDesktopCapturer
     }
   }
 
-  private async Task HandleSessionStateChanged()
+  private async Task MonitorBandwidth(CancellationToken cancellationToken)
   {
-    _captureCursor = _sessionState.CaptureCursor;
-    _imageQuality = _sessionState.ImageQuality;
+    while (!cancellationToken.IsCancellationRequested)
+    {
+      try
+      {
+        if (!_sessionState.IsMaxBandwidthEnabled)
+        {
+          _maxBandwidthGate.Set();
+        }
+        else if (_streamMetrics.GetMbpsOut() > Math.Max(1d, _sessionState.MaxBandwidthMbps))
+        {
+          _maxBandwidthGate.Reset();
+        }
+        else
+        {
+          _maxBandwidthGate.Set();
+        }
+
+        await Task.Delay(_maxBandwidthMonitorDelay, _timeProvider, cancellationToken);
+      }
+      catch (OperationCanceledException)
+      {
+        _maxBandwidthGate.Set();
+        break;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error in bandwidth monitor.");
+        _maxBandwidthGate.Set();
+        await Task.Delay(_maxBandwidthMonitorDelay, _timeProvider, cancellationToken);
+      }
+    }
   }
 
   private void SetSelectedDisplay(DisplayInfo? display)
@@ -342,10 +453,14 @@ internal class FrameBasedCapturer : IDesktopCapturer
   {
     SKBitmap? previousCapture = null;
 
+    using var dedupeScope = _logger.EnterDedupeScope(cacheDuration: TimeSpan.FromSeconds(5));
+
     while (!cancellationToken.IsCancellationRequested)
     {
       try
       {
+        await _maxBandwidthGate.Wait(cancellationToken);
+
         // Wait for a space before capturing the screen.  We want the most recent image possible.
         if (!await _captureChannel.Writer.WaitToWriteAsync(cancellationToken))
         {
@@ -359,7 +474,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
           var primaryDisplay = await _displayManager.GetPrimaryDisplay();
           if (primaryDisplay is null)
           {
-            _logger.LogWarning("Selected display is null.  Unable to capture latest frame.");
+            dedupeScope.LogWarningDeduped("Selected display is null.  Unable to capture latest frame.");
             await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
             continue;
           }
@@ -368,24 +483,55 @@ internal class FrameBasedCapturer : IDesktopCapturer
           selectedDisplay = primaryDisplay;
         }
 
-        using var currentCapture = await _screenGrabber.CaptureDisplay(
-            targetDisplay: selectedDisplay,
-            captureCursor: _captureCursor,
-            forceKeyFrame: _forceKeyFrame);
+        var currentMbps = _streamMetrics.GetMbpsOut();
+        var effectiveQuality = GetEffectiveQuality(currentMbps);
 
-        if (currentCapture.HadNoChanges && !_forceKeyFrame)
+        // Check if we need to send a recovery frame before the normal capture.
+        var recoveryRegion = GetRecoveryRegion(effectiveQuality, currentMbps);
+        if (recoveryRegion is not null)
         {
-          // Nothing changed. Skip encoding.
-          await Task.Delay(_noChangeDelay, cancellationToken);
+          using var recoveryCapture = await _screenGrabber.CaptureDisplay(
+            targetDisplay: selectedDisplay,
+            captureCursor: _sessionState.CaptureCursor,
+            forceKeyFrame: true);
+
+          if (recoveryCapture.IsSuccess)
+          {
+            await EncodeRegions(
+              recoveryCapture.Bitmap,
+              [recoveryRegion.Value],
+              effectiveQuality,
+              ImageFormat.Jpeg,
+              cancellationToken);
+
+            previousCapture?.Dispose();
+            previousCapture = recoveryCapture.Bitmap.CopyEx();
+
+            ClearPendingRecoveryRegion();
+          }
+
           continue;
         }
 
+        var shouldSendKeyFrame = ShouldSendKeyFrame();
+
+        using var currentCapture = await _screenGrabber.CaptureDisplay(
+          targetDisplay: selectedDisplay,
+          captureCursor: _sessionState.CaptureCursor,
+          forceKeyFrame: shouldSendKeyFrame);
+
         if (!currentCapture.IsSuccess)
         {
-          _logger.LogWarning(
-            currentCapture.Exception,
-            "Failed to capture latest frame.  Reason: {ResultReason}",
-            currentCapture.FailureReason);
+          if (currentCapture.HadNoChanges)
+          {
+            await Task.Delay(_noChangeDelay, cancellationToken);
+            continue;
+          }
+
+          dedupeScope.LogWarningDeduped(
+            template: "Failed to capture latest frame.  Reason: {ResultReason}",
+            exception: currentCapture.Exception,
+            args: currentCapture.FailureReason);
 
           if (currentCapture.HadException)
           {
@@ -398,37 +544,45 @@ internal class FrameBasedCapturer : IDesktopCapturer
 
         if (currentCapture.CaptureMode != _currentCaptureMode)
         {
-          // We've switched capture modes (e.g. GDI to DXGI), so we need to force a keyframe.
           _forceKeyFrame = true;
           _currentCaptureMode = currentCapture.CaptureMode;
         }
 
-        if (ShouldSendKeyFrame())
-        {
-          await EncodeRegions(
-            currentCapture.Bitmap,
-            [currentCapture.Bitmap.ToSkRect()],
-            _imageQuality,
-            ImageFormat.Jpeg,
-            cancellationToken);
+        var bitmap = currentCapture.Bitmap;
+        var bitmapSize = new Size(bitmap.Width, bitmap.Height);
 
+        var dirtyRegions = GetDirtyRegions(bitmap, currentCapture, previousCapture);
+
+        if (dirtyRegions.Length == 0)
+        {
+          await Task.Delay(_noChangeDelay, cancellationToken);
+          continue;
+        }
+
+        await EncodeRegions(
+          bitmap,
+          dirtyRegions,
+          effectiveQuality,
+          ImageFormat.Jpeg,
+          cancellationToken);
+
+        if (effectiveQuality < Math.Clamp(
+          _sessionState.AutoQualityMaximum,
+          Math.Clamp(_sessionState.AutoQualityMinimum, 1, 99) + 1,
+          100))
+        {
+          TrackReducedQualityRegion(bitmapSize, dirtyRegions);
+        }
+        
+        if (shouldSendKeyFrame)
+        {
           _forceKeyFrame = false;
           _lastDisplayId = selectedDisplay.DeviceName;
           _lastCapturePixelSize = selectedDisplay.CapturePixelSize;
         }
-        else
-        {
-          await EncodeCaptureResult(
-            currentCapture,
-            _imageQuality,
-            previousCapture,
-            ImageFormat.Jpeg,
-            cancellationToken);
-        }
 
         previousCapture?.Dispose();
-        // The built-in SKBitmap.Copy method has a memory leak.
-        previousCapture = currentCapture.Bitmap.CopyEx();
+        previousCapture = bitmap.CopyEx();
       }
       catch (OperationCanceledException)
       {
@@ -437,7 +591,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error encoding screen captures.");
+        dedupeScope.LogErrorDeduped("Error encoding screen captures.", exception: ex);
       }
       finally
       {
@@ -445,5 +599,40 @@ internal class FrameBasedCapturer : IDesktopCapturer
         _framesSent.Enqueue(_timeProvider.GetUtcNow());
       }
     }
+  }
+
+  private void TrackReducedQualityRegion(Size bitmapSize, IEnumerable<SKRect> regions)
+  {
+    var regionArray = regions.Where(static region => !region.IsEmpty).ToArray();
+    if (regionArray.Length == 0)
+    {
+      return;
+    }
+
+    var clampedRegions = _imageUtility.ClampToGridSections(bitmapSize, regionArray);
+    if (!clampedRegions.IsSuccess)
+    {
+      return;
+    }
+
+    var mergedRegion = SKRect.Empty;
+    foreach (var region in clampedRegions.Value)
+    {
+      if (region.IsEmpty)
+      {
+        continue;
+      }
+
+      mergedRegion = MergeRegionBounds(mergedRegion, region);
+    }
+
+    if (mergedRegion.IsEmpty)
+    {
+      return;
+    }
+
+    _pendingRecoveryRegion = _pendingRecoveryRegion is { } pendingRecoveryRegion
+      ? MergeRegionBounds(pendingRecoveryRegion, mergedRegion)
+      : mergedRegion;
   }
 }

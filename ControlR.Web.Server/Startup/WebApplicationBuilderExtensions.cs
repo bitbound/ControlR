@@ -329,18 +329,8 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
-    builder.Services.AddSingleton<ITenantSettingValueHandler, AppendInstanceIdTenantSettingValueHandler>();
-    builder.Services.AddSingleton<ITenantSettingValueHandler, NotifyUserOnSessionStartTenantSettingValueHandler>();
-    builder.Services.AddSingleton<ITenantSettingValueHandler, InstanceIdTenantSettingValueHandler>();
     builder.Services.AddScoped<IEffectiveUserPreferencesResolver, EffectiveUserPreferencesResolver>();
     builder.Services.AddScoped<IUserPreferencesManager, UserPreferencesManager>();
-    builder.Services.AddSingleton<IUserPreferenceValueHandler, HideOfflineDevicesUserPreferenceValueHandler>();
-    builder.Services.AddSingleton<IUserPreferenceValueHandler, KeyboardInputModeUserPreferenceValueHandler>();
-    builder.Services.AddSingleton<IUserPreferenceValueHandler, NotifyUserOnSessionStartUserPreferenceValueHandler>();
-    builder.Services.AddSingleton<IUserPreferenceValueHandler, OpenDeviceInNewTabUserPreferenceValueHandler>();
-    builder.Services.AddSingleton<IUserPreferenceValueHandler, ThemeModeUserPreferenceValueHandler>();
-    builder.Services.AddSingleton<IUserPreferenceValueHandler, UserDisplayNameUserPreferenceValueHandler>();
-    builder.Services.AddSingleton<IUserPreferenceValueHandler, ViewModeUserPreferenceValueHandler>();
     builder.Services.AddScoped<ITenantSettingsManager, TenantSettingsManager>();
     builder.Services.AddScoped<IUserPreferencesProvider>(services => services.GetRequiredService<IUserPreferencesManager>());
     builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderServer>();

@@ -6,9 +6,10 @@ using ControlR.DesktopClient.Common.ViewModelInterfaces;
 using ControlR.DesktopClient.ViewModels.Mac;
 using ControlR.Libraries.Hosting;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Logging;
 using Microsoft.Extensions.Logging;
 
-namespace ControlR.DesktopClient.Services.Mac;
+namespace ControlR.DesktopClient.Mac.Services;
 
 public class RemoteControlPermissionMonitorMac(
   TimeProvider timeProvider,
@@ -31,8 +32,9 @@ public class RemoteControlPermissionMonitorMac(
   {
     try
     {
+      using var dedupeLogger = Logger.EnterDedupeScope();
       Logger.LogInformation("Starting macOS permission monitoring service");
-      await CheckPermissions();
+      await CheckPermissions(dedupeLogger);
     }
     catch (Exception ex)
     {
@@ -44,39 +46,40 @@ public class RemoteControlPermissionMonitorMac(
 
   protected override async Task HandleElapsed()
   {
-    await CheckPermissions();
+    await CheckPermissions(DedupeLogger);
   }
 
-  private async Task CheckPermissions()
+  private async Task CheckPermissions(LogDeduplicationContext<PeriodicBackgroundService> dedupeLogger)
   {
     try
     {
-      Logger.LogInformationDeduped("Checking macOS remote control permissions");
+      dedupeLogger.LogInformationDeduped("Checking macOS remote control permissions");
 
       var isAccessibilityGranted = _macInterop.IsMacAccessibilityPermissionGranted();
       var isScreenCaptureGranted = _macInterop.IsMacScreenCapturePermissionGranted();
       var arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
-      Logger.LogInformationDeduped(
+      dedupeLogger.LogInformationDeduped(
         "macOS permissions: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
-        args: (isAccessibilityGranted, isScreenCaptureGranted));
+        args: [isAccessibilityGranted, isScreenCaptureGranted]);
 
       if (arePermissionsGranted)
       {
-        Logger.LogInformationDeduped("All required permissions are granted");
+        dedupeLogger.LogInformationDeduped("All required permissions are granted");
         return;
       }
 
-      Logger.LogWarningDeduped("Required permissions are missing");
-      await ShowPermissionsMissingToast<IPermissionsViewModelMac>();
+      dedupeLogger.LogWarningDeduped("Required permissions are missing");
+      await ShowPermissionsMissingToast<IPermissionsViewModelMac>(dedupeLogger);
     }
     catch (Exception ex)
     {
-      Logger.LogErrorDeduped("Error while checking permissions", exception: ex);
+      dedupeLogger.LogErrorDeduped("Error while checking permissions", exception: ex);
     }
   }
 
-  private async Task ShowPermissionsMissingToast<TViewModel>()
+  private async Task ShowPermissionsMissingToast<TViewModel>(
+    LogDeduplicationContext<PeriodicBackgroundService> dedupeLogger)
     where TViewModel : IViewModelBase
   {
     try
@@ -95,7 +98,7 @@ public class RemoteControlPermissionMonitorMac(
     }
     catch (Exception ex)
     {
-      Logger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
+      dedupeLogger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
     }
   }
 }

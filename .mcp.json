@@ -11,11 +11,6 @@
       "url": "https://mcp.deepwiki.com/mcp",
       "headers": {}
     },
-    "GitHub": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": {}
-    },
     "Cloudflare Docs": {
       "type": "stdio",
       "command": "https://docs.mcp.cloudflare.com/mcp",

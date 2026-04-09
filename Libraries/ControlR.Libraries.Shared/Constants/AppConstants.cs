@@ -9,6 +9,15 @@ public static class AppConstants
   public const string AgentHubPath = "/hubs/agent";
   public const int DefaultHubDtoChunkSize = 100;
   public const string DefaultInstallDirectoryName = "default";
+  public const double DefaultRemoteControlAutoQualityLowerThresholdMbps = 5d;
+  public const int DefaultRemoteControlAutoQualityMaximum = 80;
+  public const int DefaultRemoteControlAutoQualityMinimum = 20;
+  public const double DefaultRemoteControlAutoQualityUpperThresholdMbps = 15d;
+  public const bool DefaultRemoteControlCaptureCursor = false;
+  public const bool DefaultRemoteControlIsAutoQualityEnabled = false;
+  public const bool DefaultRemoteControlIsMaxBandwidthEnabled = false;
+  public const int DefaultRemoteControlManualQuality = 75;
+  public const double DefaultRemoteControlMaxBandwidthMbps = 15d;
   public const int DefaultVncPort = 5900;
   public const string ViewerHubPath = "/hubs/viewer";
   public const string WebSocketRelayPath = "/relay";

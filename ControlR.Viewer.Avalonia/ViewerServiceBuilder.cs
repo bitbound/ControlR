@@ -5,6 +5,7 @@ using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
+using ControlR.Libraries.WebSocketRelay.Client;
 using ControlR.Viewer.Avalonia.ViewModels.Dialogs;
 using ControlR.Viewer.Avalonia.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +70,7 @@ public static class ViewerServiceBuilder
     // Register core services.
     services.AddSingleton<IMessenger, WeakReferenceMessenger>();
     services.AddSingleton<IMemoryProvider, MemoryProvider>();
+    services.AddSingleton<IStreamMetrics, StreamMetrics>();
     services.AddSingleton<IWaiter, Waiter>();
     services.AddSingleton(TimeProvider.System);
     services.AddSingleton(clipboard);

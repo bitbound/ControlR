@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using Bitbound.SimpleMessenger;
 using ControlR.Libraries.Shared.Collections;
@@ -34,28 +33,27 @@ public abstract class ManagedRelayStream(
   IMessenger messenger,
   IMemoryProvider memoryProvider,
   IWaiter waiter,
+  IStreamMetrics streamMetrics,
   ILogger<ManagedRelayStream> logger) : IManagedRelayStream
 {
-  private const double MaxQueueAgeSeconds = 3;
   private const int MaxSendBufferLength = ushort.MaxValue * 2;
 
   protected readonly IMessenger Messenger = messenger;
   protected readonly TimeProvider TimeProvider = timeProvider;
 
-  private readonly ConcurrentQueue<TransferRecord> _bytesIn = new();
-  private readonly ConcurrentQueue<TransferRecord> _bytesOut = new();
   private readonly SemaphoreSlim _disposeLock = new(1, 1);
   private readonly ILogger<ManagedRelayStream> _logger = logger;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
   private readonly HandlerCollection<DtoWrapper> _messageHandlers = new(ex => { logger.LogError(ex, "Error while invoking message handler."); return Task.CompletedTask; });
   private readonly ConcurrentList<Func<Task>> _onCloseHandlers = [];
   private readonly SemaphoreSlim _sendLock = new(1);
+  private readonly IStreamMetrics _streamMetrics = streamMetrics;
   private readonly IWaiter _waiter = waiter;
 
   private ClientWebSocket? _client;
   private volatile int _sendBufferLength;
 
-  public TimeSpan CurrentLatency { get; private set; }
+  public TimeSpan CurrentLatency => _streamMetrics.GetCurrentLatency();
   public bool IsConnected => State == WebSocketState.Open;
   public WebSocketState State => _client?.State ?? WebSocketState.Closed;
 
@@ -126,16 +124,12 @@ public abstract class ManagedRelayStream(
 
   public double GetMbpsIn()
   {
-    CleanupQueue(_bytesIn);
-    var totalBytes = _bytesIn.Sum(x => x.Size);
-    return ToMegabits(totalBytes);
+    return _streamMetrics.GetMbpsIn();
   }
 
   public double GetMbpsOut()
   {
-    CleanupQueue(_bytesOut);
-    var totalBytes = _bytesOut.Sum(x => x.Size);
-    return ToMegabits(totalBytes);
+    return _streamMetrics.GetMbpsOut();
   }
 
   public IDisposable OnClosed(Func<Task> callback)
@@ -172,7 +166,7 @@ public abstract class ManagedRelayStream(
       linkedCts.Token);
 
     _ = Interlocked.Add(ref _sendBufferLength, dtoBytes.Length);
-    _bytesOut.Enqueue(new TransferRecord(dtoBytes.Length, TimeProvider.GetTimestamp()));
+    _streamMetrics.RecordBytesOut(new TransferRecord(dtoBytes.Length, TimeProvider.GetTimestamp()));
   }
 
   public async Task WaitForClose(CancellationToken cancellationToken)
@@ -224,30 +218,6 @@ public abstract class ManagedRelayStream(
     }
   }
 
-  private static double ToMegabits(int totalBytes)
-  {
-    var totalBits = totalBytes * 8;
-    var megabits = totalBits / 1_000_000.0;
-    return megabits / MaxQueueAgeSeconds;
-  }
-
-  private void CleanupQueue(ConcurrentQueue<TransferRecord> queue)
-  {
-    var cutoffTime = TimeProvider.GetTimestamp() - TimeProvider.TimestampFrequency * (long)MaxQueueAgeSeconds;
-
-    while (queue.TryPeek(out var record))
-    {
-      if (record.Timestamp < cutoffTime)
-      {
-        queue.TryDequeue(out _);
-      }
-      else
-      {
-        break;
-      }
-    }
-  }
-
   private async Task InvokeOnClosedHandlers()
   {
     foreach (var callback in _onCloseHandlers)
@@ -281,7 +251,7 @@ public abstract class ManagedRelayStream(
           continue;
         }
 
-        _bytesIn.Enqueue(new TransferRecord(totalBytesRead, TimeProvider.GetTimestamp()));
+        _streamMetrics.RecordBytesIn(new TransferRecord(totalBytesRead, TimeProvider.GetTimestamp()));
         
         dtoStream.Seek(0, SeekOrigin.Begin);
         
@@ -295,7 +265,7 @@ public abstract class ManagedRelayStream(
             {
               var ackDto = receivedWrapper.GetPayload<AckDto>();
               _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
-              CurrentLatency = TimeProvider.GetElapsedTime(ackDto.SendTimestamp);
+              _streamMetrics.SetCurrentLatency(TimeProvider.GetElapsedTime(ackDto.SendTimestamp));
               break;
             }
           default:
@@ -336,7 +306,7 @@ public abstract class ManagedRelayStream(
     var ackDto = new AckDto(receivedBytes, sendTimestamp);
     var wrapper = DtoWrapper.Create(ackDto, DtoType.Ack);
     var wrapperBytes = MessagePackSerializer.Serialize(wrapper, cancellationToken: cancellationToken);
-    _bytesOut.Enqueue(new TransferRecord(wrapperBytes.Length, TimeProvider.GetTimestamp()));
+    _streamMetrics.RecordBytesOut(new TransferRecord(wrapperBytes.Length, TimeProvider.GetTimestamp()));
     await Client.SendAsync(
       wrapperBytes,
       WebSocketMessageType.Binary,
@@ -365,5 +335,4 @@ public abstract class ManagedRelayStream(
     }
   }
 
-  private record TransferRecord(int Size, long Timestamp);
 }

@@ -61,8 +61,9 @@ public partial class Dashboard : IDisposable
   {
     await base.OnInitializedAsync();
 
-    _hideOfflineDevices = await UserPreferences.GetHideOfflineDevices();
-    _openDeviceInNewTab = await UserPreferences.GetOpenDeviceInNewTab();
+    var preferences = await UserPreferences.GetPreferences();
+    _hideOfflineDevices = preferences.HideOfflineDevices;
+    _openDeviceInNewTab = preferences.OpenDeviceInNewTab;
 
     _disposables.AddRange(
       Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage),
@@ -100,7 +101,7 @@ public partial class Dashboard : IDisposable
   private async Task HideOfflineDevicesChanged(bool isChecked)
   {
     _hideOfflineDevices = isChecked;
-    await UserPreferences.SetHideOfflineDevices(isChecked);
+    await UserPreferences.SetPreference(UserPreferenceNames.HideOfflineDevices, isChecked);
     await ReloadGridData();
   }
 
@@ -218,7 +219,7 @@ public partial class Dashboard : IDisposable
   private async Task OpenDeviceInNewTabChanged(bool isChecked)
   {
     _openDeviceInNewTab = isChecked;
-    await UserPreferences.SetOpenDeviceInNewTab(isChecked);
+    await UserPreferences.SetPreference(UserPreferenceNames.OpenDeviceInNewTab, isChecked);
   }
 
   private async Task RefreshDeviceInfo(DeviceViewModel device)

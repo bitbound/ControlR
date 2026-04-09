@@ -14,6 +14,7 @@ public interface IControlrApi
   IDeviceFileSystemApi DeviceFileSystem { get; }
   IDevicesApi Devices { get; }
   IDeviceTagsApi DeviceTags { get; }
+  IEffectiveUserPreferencesApi EffectiveUserPreferences { get; }
   IInstallerKeysApi InstallerKeys { get; }
   IInvitesApi Invites { get; }
   ILogonTokensApi LogonTokens { get; }
@@ -45,6 +46,7 @@ public partial class ControlrApi(
   IDeviceFileSystemApi,
   IDeviceTagsApi,
   IDevicesApi,
+  IEffectiveUserPreferencesApi,
   IInstallerKeysApi,
   IInvitesApi,
   ILogonTokensApi,
@@ -76,6 +78,7 @@ public partial class ControlrApi(
   public IDeviceFileSystemApi DeviceFileSystem => this;
   public IDevicesApi Devices => this;
   public IDeviceTagsApi DeviceTags => this;
+  public IEffectiveUserPreferencesApi EffectiveUserPreferences => this;
   public IInstallerKeysApi InstallerKeys => this;
   public IInvitesApi Invites => this;
   public ILogonTokensApi LogonTokens => this;

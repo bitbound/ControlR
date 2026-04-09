@@ -24,10 +24,10 @@ public partial class ControlrApi
     });
   }
 
-  async Task<ApiResult<UserPreferenceResponseDto[]>> IUserPreferencesApi.GetUserPreferences(CancellationToken cancellationToken)
+  async Task<ApiResult<UserPreferencesDto>> IUserPreferencesApi.GetUserPreferences(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
-      await _client.GetFromJsonAsync<UserPreferenceResponseDto[]>(HttpConstants.UserPreferencesEndpoint, cancellationToken));
+      await _client.GetFromJsonAsync<UserPreferencesDto>(HttpConstants.UserPreferencesEndpoint, cancellationToken));
   }
 
   async Task<ApiResult<UserPreferenceResponseDto>> IUserPreferencesApi.SetUserPreference(UserPreferenceRequestDto request, CancellationToken cancellationToken)
@@ -37,6 +37,16 @@ public partial class ControlrApi
       using var response = await _client.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>(cancellationToken);
+    });
+  }
+
+  async Task<ApiResult<UserPreferencesDto>> IUserPreferencesApi.SetUserPreferences(UserPreferencesDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PutAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<UserPreferencesDto>(cancellationToken);
     });
   }
 }

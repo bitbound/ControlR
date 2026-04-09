@@ -104,6 +104,51 @@ namespace ControlR.Viewer.Avalonia.Assets {
                 return ResourceManager.GetString("CloseConnection", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Auto Quality Lower Threshold.
+        /// </summary>
+        public static string AutoQualityLowerThreshold {
+            get {
+                return ResourceManager.GetString("AutoQualityLowerThreshold", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Auto Quality Maximum.
+        /// </summary>
+        public static string AutoQualityMaximum {
+            get {
+                return ResourceManager.GetString("AutoQualityMaximum", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Auto Quality Minimum.
+        /// </summary>
+        public static string AutoQualityMinimum {
+            get {
+                return ResourceManager.GetString("AutoQualityMinimum", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Auto Quality Upper Threshold.
+        /// </summary>
+        public static string AutoQualityUpperThreshold {
+            get {
+                return ResourceManager.GetString("AutoQualityUpperThreshold", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Capture Cursor.
+        /// </summary>
+        public static string CaptureCursor {
+            get {
+                return ResourceManager.GetString("CaptureCursor", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Connect.
@@ -286,6 +331,24 @@ namespace ControlR.Viewer.Avalonia.Assets {
                 return ResourceManager.GetString("Disconnect", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Enable Auto Quality.
+        /// </summary>
+        public static string EnableAutoQuality {
+            get {
+                return ResourceManager.GetString("EnableAutoQuality", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Enable Max Mbps.
+        /// </summary>
+        public static string EnableMaxBandwidth {
+            get {
+                return ResourceManager.GetString("EnableMaxBandwidth", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Disconnected.
@@ -423,6 +486,15 @@ namespace ControlR.Viewer.Avalonia.Assets {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Current Quality:.
+        /// </summary>
+        public static string Metrics_CurrentQualityLabel {
+            get {
+                return ResourceManager.GetString("Metrics_CurrentQualityLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to FPS:.
         /// </summary>
         public static string Metrics_FpsLabel {
@@ -430,7 +502,7 @@ namespace ControlR.Viewer.Avalonia.Assets {
                 return ResourceManager.GetString("Metrics_FpsLabel", resourceCulture);
             }
         }
-        
+
         /// <summary>
         ///   Looks up a localized string similar to Latency:.
         /// </summary>
@@ -464,6 +536,33 @@ namespace ControlR.Viewer.Avalonia.Assets {
         public static string Metrics_ModeLabel {
             get {
                 return ResourceManager.GetString("Metrics_ModeLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Manual Quality.
+        /// </summary>
+        public static string ManualQuality {
+            get {
+                return ResourceManager.GetString("ManualQuality", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Max Mbps.
+        /// </summary>
+        public static string MaxBandwidthMbps {
+            get {
+                return ResourceManager.GetString("MaxBandwidthMbps", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Quality.
+        /// </summary>
+        public static string Quality {
+            get {
+                return ResourceManager.GetString("Quality", resourceCulture);
             }
         }
         

@@ -50,6 +50,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IChatState, ChatState>();
     services.AddScoped<IMetricsState, MetricsState>();
     services.AddScoped<IViewerRemoteControlStream, ViewerRemoteControlStream>();
+    services.AddScoped<IStreamMetrics, StreamMetrics>();
     services.AddTransient<IJsInterop, JsInterop>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
 

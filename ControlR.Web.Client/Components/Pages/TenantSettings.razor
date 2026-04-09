@@ -63,9 +63,10 @@
 
   protected override async Task OnInitializedAsync()
   {
-    _notifyUser = await TenantSettingsProvider.GetNotifyUserOnSessionStart();
-    _appendInstanceId = await TenantSettingsProvider.GetAppendInstanceId();
-    _instanceId = await TenantSettingsProvider.GetInstanceId();
+    var settings = await TenantSettingsProvider.GetSettings();
+    _notifyUser = settings.NotifyUserOnSessionStart;
+    _appendInstanceId = settings.AppendInstanceId ?? false;
+    _instanceId = settings.InstanceId;
     await base.OnInitializedAsync();
   }
 

@@ -1,7 +1,11 @@
+using System.Globalization;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Client.Models;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Data;
+using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -23,10 +27,234 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
     await _testApp.DisposeAsync();
   }
 
+  [Fact]
+  public async Task GetAllPreferences_WhenNoStoredValuesExist_ReturnsDefaults()
+  {
+    var cancellationToken = TestContext.Current.CancellationToken;
+    var tenant = await _testApp.Services.CreateTestTenant();
+    var user = await _testApp.Services.CreateTestUser(tenant.Id, email: $"user-{Guid.NewGuid():N}@test.local");
+
+    var result = await _userPreferencesManager.GetAllPreferences(user.Id, cancellationToken);
+
+    Assert.Equal(UserPreferenceDefinitions.DefaultAutoQualityLowerThresholdMbps, result.AutoQualityLowerThresholdMbps);
+    Assert.Equal(UserPreferenceDefinitions.DefaultAutoQualityMaximum, result.AutoQualityMaximum);
+    Assert.Equal(UserPreferenceDefinitions.DefaultAutoQualityMinimum, result.AutoQualityMinimum);
+    Assert.Equal(UserPreferenceDefinitions.DefaultAutoQualityUpperThresholdMbps, result.AutoQualityUpperThresholdMbps);
+    Assert.Equal(UserPreferenceDefinitions.DefaultCaptureCursor, result.CaptureCursor);
+    Assert.Equal(UserPreferenceDefinitions.DefaultHideOfflineDevices, result.HideOfflineDevices);
+    Assert.Equal(UserPreferenceDefinitions.DefaultNotifyUserOnSessionStart, result.NotifyUserOnSessionStart);
+    Assert.Equal(UserPreferenceThemeMode.Auto, result.ThemeMode);
+    Assert.Equal(UserPreferenceViewMode.Fit, result.ViewMode);
+    Assert.Equal(string.Empty, result.UserDisplayName);
+  }
+
+  [Fact]
+  public async Task GetAllPreferences_WhenStoredValuesExist_ReturnsStoredValuesAndFallsBackForInvalidEntries()
+  {
+    var cancellationToken = TestContext.Current.CancellationToken;
+    var tenant = await _testApp.Services.CreateTestTenant();
+    var user = await _testApp.Services.CreateTestUser(tenant.Id, email: $"user-{Guid.NewGuid():N}@test.local");
+
+    await using (var arrangeScope = _testApp.Services.CreateAsyncScope())
+    {
+      var db = arrangeScope.ServiceProvider.GetRequiredService<AppDb>();
+      db.UserPreferences.AddRange(
+      [
+        new UserPreference
+        {
+          Name = UserPreferenceNames.UserDisplayName,
+          UserId = user.Id,
+          Value = "Display Name"
+        },
+        new UserPreference
+        {
+          Name = UserPreferenceNames.NotifyUserOnSessionStart,
+          UserId = user.Id,
+          Value = bool.FalseString
+        },
+        new UserPreference
+        {
+          Name = UserPreferenceNames.ThemeMode,
+          UserId = user.Id,
+          Value = UserPreferenceThemeMode.Dark.ToString()
+        },
+        new UserPreference
+        {
+          Name = UserPreferenceNames.ManualQuality,
+          UserId = user.Id,
+          Value = "invalid-number"
+        }
+      ]);
+
+      await db.SaveChangesAsync(cancellationToken);
+    }
+
+    var result = await _userPreferencesManager.GetAllPreferences(user.Id, cancellationToken);
+
+    Assert.Equal("Display Name", result.UserDisplayName);
+    Assert.False(result.NotifyUserOnSessionStart);
+    Assert.Equal(UserPreferenceThemeMode.Dark, result.ThemeMode);
+    Assert.Equal(UserPreferenceDefinitions.DefaultManualQuality, result.ManualQuality);
+  }
+
   public async ValueTask InitializeAsync()
   {
     _testApp = await TestAppBuilder.CreateTestApp(_testOutput, testDatabaseName: $"{Guid.NewGuid()}");
     _userPreferencesManager = _testApp.Services.GetRequiredService<IUserPreferencesManager>();
+  }
+
+  [Fact]
+  public async Task SetPreferences_WhenAnyValueIsInvalid_DoesNotPersistChanges()
+  {
+    var cancellationToken = TestContext.Current.CancellationToken;
+    var tenant = await _testApp.Services.CreateTestTenant();
+    var user = await _testApp.Services.CreateTestUser(tenant.Id, email: $"user-{Guid.NewGuid():N}@test.local");
+
+    await _userPreferencesManager.SetPreference(
+      user.Id,
+      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, UserPreferenceThemeMode.Dark.ToString()),
+      cancellationToken);
+
+    var result = await _userPreferencesManager.SetPreferences(
+      user.Id,
+      new UserPreferencesDto(
+        6.5,
+        85,
+        25,
+        16.5,
+        true,
+        false,
+        true,
+        true,
+        KeyboardInputMode.Physical,
+        70,
+        20.5,
+        false,
+        false,
+        (UserPreferenceThemeMode)999,
+        "Updated Name",
+        UserPreferenceViewMode.Stretch),
+      cancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.ValidationFailed, result.ErrorCode);
+
+    var preferences = await _userPreferencesManager.GetAllPreferences(user.Id, cancellationToken);
+    Assert.Equal(UserPreferenceThemeMode.Dark, preferences.ThemeMode);
+    Assert.Equal(string.Empty, preferences.UserDisplayName);
+  }
+
+  [Fact]
+  public async Task SetPreferences_WhenCurrentCultureUsesCommaDecimal_PersistsInvariantNumericStrings()
+  {
+    var originalCulture = CultureInfo.CurrentCulture;
+    CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+    try
+    {
+      var cancellationToken = TestContext.Current.CancellationToken;
+      var tenant = await _testApp.Services.CreateTestTenant();
+      var user = await _testApp.Services.CreateTestUser(tenant.Id, email: $"user-{Guid.NewGuid():N}@test.local");
+
+      var result = await _userPreferencesManager.SetPreferences(
+        user.Id,
+        new UserPreferencesDto(
+          6.5,
+          85,
+          25,
+          16.5,
+          true,
+          false,
+          true,
+          true,
+          KeyboardInputMode.Physical,
+          70,
+          20.5,
+          false,
+          false,
+          UserPreferenceThemeMode.Light,
+          string.Empty,
+          UserPreferenceViewMode.Stretch),
+        cancellationToken);
+
+      Assert.True(result.IsSuccess);
+
+      await using var assertScope = _testApp.Services.CreateAsyncScope();
+      var assertDb = assertScope.ServiceProvider.GetRequiredService<AppDb>();
+      var lowerThresholdPreference = await assertDb.UserPreferences
+        .FirstAsync(x => x.UserId == user.Id && x.Name == UserPreferenceNames.AutoQualityLowerThresholdMbps, cancellationToken);
+      var upperThresholdPreference = await assertDb.UserPreferences
+        .FirstAsync(x => x.UserId == user.Id && x.Name == UserPreferenceNames.AutoQualityUpperThresholdMbps, cancellationToken);
+      var bandwidthPreference = await assertDb.UserPreferences
+        .FirstAsync(x => x.UserId == user.Id && x.Name == UserPreferenceNames.MaxBandwidthMbps, cancellationToken);
+
+      Assert.Equal("6.5", lowerThresholdPreference.Value);
+      Assert.Equal("16.5", upperThresholdPreference.Value);
+      Assert.Equal("20.5", bandwidthPreference.Value);
+    }
+    finally
+    {
+      CultureInfo.CurrentCulture = originalCulture;
+    }
+  }
+
+  [Fact]
+  public async Task SetPreferences_WhenDtoIsValid_UpdatesAllPreferences()
+  {
+    var cancellationToken = TestContext.Current.CancellationToken;
+    var tenant = await _testApp.Services.CreateTestTenant();
+    var user = await _testApp.Services.CreateTestUser(tenant.Id, email: $"user-{Guid.NewGuid():N}@test.local");
+
+    await _userPreferencesManager.SetPreference(
+      user.Id,
+      new UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, "Existing Name"),
+      cancellationToken);
+
+    var result = await _userPreferencesManager.SetPreferences(
+      user.Id,
+      new UserPreferencesDto(
+        6.5,
+        85,
+        25,
+        16.5,
+        true,
+        false,
+        true,
+        true,
+        KeyboardInputMode.Physical,
+        70,
+        20.5,
+        false,
+        false,
+        UserPreferenceThemeMode.Light,
+        string.Empty,
+        UserPreferenceViewMode.Stretch),
+      cancellationToken);
+
+    Assert.True(result.IsSuccess);
+    Assert.NotNull(result.Value);
+    Assert.Equal(6.5, result.Value.AutoQualityLowerThresholdMbps);
+    Assert.Equal(85, result.Value.AutoQualityMaximum);
+    Assert.Equal(25, result.Value.AutoQualityMinimum);
+    Assert.Equal(16.5, result.Value.AutoQualityUpperThresholdMbps);
+    Assert.True(result.Value.CaptureCursor);
+    Assert.False(result.Value.HideOfflineDevices);
+    Assert.True(result.Value.IsAutoQualityEnabled);
+    Assert.True(result.Value.IsMaxBandwidthEnabled);
+    Assert.Equal(KeyboardInputMode.Physical, result.Value.KeyboardInputMode);
+    Assert.Equal(70, result.Value.ManualQuality);
+    Assert.Equal(20.5, result.Value.MaxBandwidthMbps);
+    Assert.False(result.Value.NotifyUserOnSessionStart);
+    Assert.False(result.Value.OpenDeviceInNewTab);
+    Assert.Equal(UserPreferenceThemeMode.Light, result.Value.ThemeMode);
+    Assert.Equal(string.Empty, result.Value.UserDisplayName);
+    Assert.Equal(UserPreferenceViewMode.Stretch, result.Value.ViewMode);
+
+    await using var assertScope = _testApp.Services.CreateAsyncScope();
+    var assertDb = assertScope.ServiceProvider.GetRequiredService<AppDb>();
+    var displayNamePreference = await assertDb.UserPreferences
+      .FirstOrDefaultAsync(x => x.UserId == user.Id && x.Name == UserPreferenceNames.UserDisplayName, cancellationToken);
+
+    Assert.Null(displayNamePreference);
   }
 
   [Fact]

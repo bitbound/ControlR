@@ -21,38 +21,16 @@ The easiest way to build and run the application is to use the provided launch p
 - Do not include any files or folders within `ControlR.Web.Server/novnc/` in your context.
 - Do not include anything within folders named `node_modules` in your context.
 
-## High-Level Architecture
+## Key Features
 
-The following diagram shows the communication flow between the major components of the system.
-
-```mermaid
-graph TD
-    subgraph "User's Browser"
-        A[Web Client - Blazor]
-    end
-
-    subgraph "Cloud / Server Host"
-        B[Web Server - ASP.NET Core]
-        C[WebSocket Relay]
-    end
-
-    subgraph "Remote Machine"
-        D[Agent - Background Service]
-        E[Desktop Client - Avalonia]
-    end
-
-    A -- HTTP & SignalR --> B
-    B -- SignalR UI Updates --> A
-
-    D -- SignalR Heartbeat/Data --> B
-    B -- SignalR Commands --> D
-
-    A -- Remote Control Stream --> C
-    C -- Remote Control Stream --> E
-
-    D -- IPC via Named Pipes --> E
-    E -- IPC via Named Pipes --> D
-```
+- **Remote Desktop Control** - Full desktop access and control
+- **Screen Sharing** - Real-time screen streaming
+- **File Transfer** - Secure file operations between devices
+- **Multi-tenancy** - Support for multiple organizations
+- **Self-hosting** - Can be deployed on-premises
+- **Cross-platform** - Windows, Linux, macOS support
+- **Authentication** - Identity Framework with optional OAuth integration (GitHub, Microsoft)
+- **Real-time Communication** - SignalR and WebSocket support
 
 ## Project Structure
 
@@ -168,17 +146,6 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - **Agent service layout** — The shared library `ControlR.Agent.Common` organizes platform-specific implementations under platform-named `Services` sub-namespaces/folders (for example `.Services.Windows`, `.Services.Linux`, `.Services.Mac`). Interfaces live in the common namespace and the platform implementations are selected via conditional compilation, platform attributes, or at host registration time.
 - **DesktopClient per-platform projects** — The Desktop client isolates native UI/OS integrations into separate projects (`ControlR.DesktopClient.Windows`, `.Linux`, `.Mac`) while keeping shared UI and view-model code in `ControlR.DesktopClient.Common`. `ControlR.DesktopClient.csproj` conditionally references or multi-targets the appropriate platform project so only the target-OS code is built and linked. This keeps native UI and OS integrations isolated in their own projects while allowing shared UI and view-model code to remain common.
 
-## Key Features
-
-- **Remote Desktop Control** - Full desktop access and control
-- **Screen Sharing** - Real-time screen streaming
-- **File Transfer** - Secure file operations between devices
-- **Multi-tenancy** - Support for multiple organizations
-- **Self-hosting** - Can be deployed on-premises
-- **Cross-platform** - Windows, Linux, macOS support
-- **Authentication** - Identity Framework with optional OAuth integration (GitHub, Microsoft)
-- **Real-time Communication** - SignalR and WebSocket support
-
 ## Development Guidelines
 
 ### General Coding Standards
@@ -186,6 +153,7 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - Use 2 spaces for indentation
 - Don't try to be overly clever. Code should be easily readable.
 - Don't try to fit everything on one line. Use white space for readability.
+- User prefers refactors that reduce code and simplify architecture rather than merely extracting logic into more private methods.
 - Never write placeholder implementations, TODOs, or comments suggesting the code needs improvement "in production" or is a "simplification". Every implementation must be complete, correct, and production-ready.
 - **Never use phrases like:**
   - "In production, you should..."

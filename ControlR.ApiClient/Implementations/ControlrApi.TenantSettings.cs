@@ -34,10 +34,10 @@ public partial class ControlrApi
     });
   }
 
-  async Task<ApiResult<TenantSettingResponseDto[]>> ITenantSettingsApi.GetTenantSettings(CancellationToken cancellationToken)
+  async Task<ApiResult<TenantSettingsDto>> ITenantSettingsApi.GetTenantSettings(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
-      await _client.GetFromJsonAsync<TenantSettingResponseDto[]>(HttpConstants.TenantSettingsEndpoint, cancellationToken));
+      await _client.GetFromJsonAsync<TenantSettingsDto>(HttpConstants.TenantSettingsEndpoint, cancellationToken));
   }
 
   async Task<ApiResult<TenantSettingResponseDto>> ITenantSettingsApi.SetTenantSetting(TenantSettingRequestDto request, CancellationToken cancellationToken)
@@ -47,6 +47,16 @@ public partial class ControlrApi
       using var response = await _client.PostAsJsonAsync(HttpConstants.TenantSettingsEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>(cancellationToken);
+    });
+  }
+
+  async Task<ApiResult<TenantSettingsDto>> ITenantSettingsApi.SetTenantSettings(TenantSettingsDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PutAsJsonAsync(HttpConstants.TenantSettingsEndpoint, request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<TenantSettingsDto>(cancellationToken);
     });
   }
 }

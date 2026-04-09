@@ -7,6 +7,7 @@ using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Hosting;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Logging;
 
 namespace ControlR.Agent.Common.Services.Windows;
 
@@ -26,6 +27,7 @@ internal class DesktopClientWatcherWin(
   IFileSystemPathProvider pathProvider,
   ILogger<DesktopClientWatcherWin> logger) : BackgroundService
 {
+  private readonly LogDeduplicationContext<DesktopClientWatcherWin> _dedupeLogger = logger.EnterDedupeScope();
   private readonly IDesktopClientFileVerifier _desktopClientFileVerifier = desktopClientFileVerifier;
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
   private readonly ISystemEnvironment _environment = environment;
@@ -39,10 +41,6 @@ internal class DesktopClientWatcherWin(
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IWaiter _waiter = waiter;
   private readonly IWin32Interop _win32Interop = win32Interop;
-
-  private int _launchFailCount;
-
-  internal int LaunchFailCount => _launchFailCount;
 
   internal async Task RunIteration(
     IReadOnlyCollection<DesktopSession> activeSessions,
@@ -80,25 +78,14 @@ internal class DesktopClientWatcherWin(
       var installationVerificationResult = VerifyDesktopClientInstallation();
       if (!installationVerificationResult.IsSuccess)
       {
-        _logger.LogError(
-          "Desktop client launch skipped because the installed desktop client is invalid. Reason: {Reason}",
-          installationVerificationResult.Reason);
-        _launchFailCount++;
+        _dedupeLogger.LogErrorDeduped(
+          template: "Desktop client launch skipped because the installed desktop client is invalid. Reason: {Reason}",
+          args: installationVerificationResult.Reason);
         continue;
       }
 
-      if (!await LaunchDesktopClient(session.SystemSessionId, stoppingToken))
-      {
-        _launchFailCount++;
-      }
+      await LaunchDesktopClient(session.SystemSessionId, stoppingToken);
     }
-
-    if (_launchFailCount < 10)
-    {
-      return;
-    }
-
-    _launchFailCount = 0;
 
     _logger.LogWarning(
       "Failed to launch desktop client in one or more sessions repeatedly. " +
@@ -130,15 +117,17 @@ internal class DesktopClientWatcherWin(
         catch (OperationCanceledException)
         {
           _logger.LogInformation("Stopping DesktopClientWatcher.  Application is shutting down.");
+          break;
         }
         catch (Exception ex)
         {
-          _logger.LogError(ex, "Error while checking for desktop client processes.");
+          _dedupeLogger.LogErrorDeduped("Error while checking for desktop client processes.", exception: ex);
         }
       }
     }
     finally
     {
+      _dedupeLogger.TryDispose();
       _launchTracker.Clear();
     }
   }
@@ -215,7 +204,7 @@ internal class DesktopClientWatcherWin(
     }
   }
 
-  private async Task<bool> LaunchDesktopClient(int sessionId, CancellationToken cancellationToken)
+  private async Task LaunchDesktopClient(int sessionId, CancellationToken cancellationToken)
   {
     IProcess? trackedProcess = null;
 
@@ -223,7 +212,8 @@ internal class DesktopClientWatcherWin(
     {
       if (_environment.IsDebug)
       {
-        return await StartDebugSession();
+        await StartDebugSession();
+        return;
       }
 
       var binaryPath = _pathProvider.GetDesktopExecutablePath();
@@ -240,7 +230,7 @@ internal class DesktopClientWatcherWin(
       if (!result || process is null || process.Id == -1)
       {
         _logger.LogError("Failed to start desktop client process in session {SessionId}.", sessionId);
-        return false;
+        return;
       }
 
       trackedProcess = process;
@@ -266,7 +256,7 @@ internal class DesktopClientWatcherWin(
           "Desktop client for session {SessionId} registered with IPC shortly after launch. PID: {ProcessId}",
           sessionId,
           trackedProcess.Id);
-        return true;
+        return;
       }
 
       if (trackedProcess.HasExited)
@@ -275,7 +265,7 @@ internal class DesktopClientWatcherWin(
           "Desktop client process for session {SessionId} exited before IPC registration completed. PID: {ProcessId}",
           sessionId,
           trackedProcess.Id);
-        return true;
+        return;
       }
 
       _logger.LogInformation(
@@ -283,7 +273,7 @@ internal class DesktopClientWatcherWin(
         sessionId,
         trackedProcess.Id);
 
-      return true;
+      return;
     }
     catch (Exception ex)
     {
@@ -294,18 +284,24 @@ internal class DesktopClientWatcherWin(
         removedState.Dispose();
       }
 
-      _logger.LogError(ex, "Error while launching desktop client in session {SessionId}.", sessionId);
-      return false;
+      _dedupeLogger.LogErrorDeduped(
+        template: "Error while launching desktop client in session {SessionId}. This error has been seen before.",
+        args: sessionId,
+        exception: ex);
+      return;
     }
   }
 
-  private async Task<bool> StartDebugSession()
+  private async Task StartDebugSession()
   {
     var solutionDirResult = IoHelper.GetSolutionDir(Environment.CurrentDirectory);
 
     if (!solutionDirResult.IsSuccess)
     {
-      return false;
+      _dedupeLogger.LogErrorDeduped(
+        template: "Failed to find solution directory. Desktop client cannot be launched in debug mode. Reason: {Reason}", 
+        args: solutionDirResult.Reason);
+      return;
     }
 
     var desktopClientBin = Path.Combine(
@@ -336,11 +332,18 @@ internal class DesktopClientWatcherWin(
     Guard.IsNotNull(process);
 
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-    return await _waiter.WaitFor(
+    var waitResult = await _waiter.WaitFor(
       () => !process.HasExited && _ipcServerStore.ContainsServer(process.Id),
       TimeSpan.FromSeconds(1),
       throwOnCancellation: false,
       cancellationToken: cts.Token);
+
+    if (!waitResult)
+    {
+      _dedupeLogger.LogErrorDeduped(
+        template: "Launched desktop client process in debug mode but it failed to register with IPC within the expected time. PID: {ProcessId}",
+        args: process.Id);
+    }
   }
 
   private Result VerifyDesktopClientInstallation()

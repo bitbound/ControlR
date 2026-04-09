@@ -19,6 +19,7 @@ internal class FakeDesktopCapturerFactory : IDesktopCapturerFactory
     public string GetCaptureMode() => string.Empty;
     public async IAsyncEnumerable<DtoWrapper> GetCaptureStream([EnumeratorCancellation] System.Threading.CancellationToken cancellationToken) { yield break; }
     public double GetCurrentFps(System.TimeSpan window) => 0;
+    public int GetCurrentQuality() => 0;
     public Task RequestKeyFrame() => Task.CompletedTask;
     public Task StartCapturingChanges(System.Threading.CancellationToken cancellationToken) => Task.CompletedTask;
     public Task<Result<ControlR.DesktopClient.Common.Models.DisplayInfo>> TryGetSelectedDisplay() => Task.FromResult(Result.Fail<DisplayInfo>("No display"));
