@@ -93,8 +93,13 @@ public sealed class ScreenGrabberMac(
 
           if (captureCursor)
           {
-            var captureArea = displays[0].LayoutBounds;
-            DrawCursorOnBitmap(bitmap, captureArea, displays);
+            var display = displays[0];
+            var captureArea = new Rectangle(
+              (int)(display.LayoutBounds.X * display.CapturePixelsPerLayoutUnit),
+              (int)(display.LayoutBounds.Y * display.CapturePixelsPerLayoutUnit),
+              bitmap.Width,
+              bitmap.Height);
+            DrawCursorOnBitmap(bitmap, captureArea, displays, isPixelSpace: true);
           }
 
           return CaptureResult.Ok(bitmap, captureMode: CoreGraphicsCaptureMode);
@@ -157,7 +162,7 @@ public sealed class ScreenGrabberMac(
       if (captureCursor)
       {
         var boundsRect = new Rectangle((int)virtualBounds.X, (int)virtualBounds.Y, (int)virtualBounds.Width, (int)virtualBounds.Height);
-        DrawCursorOnBitmap(compositeBitmap, boundsRect, displays);
+        DrawCursorOnBitmap(compositeBitmap, boundsRect, displays, isPixelSpace: false);
       }
 
       return CaptureResult.Ok(compositeBitmap, captureMode: CoreGraphicsCaptureMode);
@@ -240,7 +245,7 @@ public sealed class ScreenGrabberMac(
           (int)(bounds.Y * display.CapturePixelsPerLayoutUnit),
           bitmap.Width,
           bitmap.Height);
-        DrawCursorOnBitmap(bitmap, boundsRect, [display]);
+        DrawCursorOnBitmap(bitmap, boundsRect, [display], isPixelSpace: true);
       }
 
       return CaptureResult.Ok(bitmap, captureMode: CoreGraphicsCaptureMode);
@@ -252,7 +257,11 @@ public sealed class ScreenGrabberMac(
     }
   }
 
-  private void DrawCursorOnBitmap(SKBitmap bitmap, Rectangle captureArea, IReadOnlyList<DisplayInfo> displays)
+  private void DrawCursorOnBitmap(
+    SKBitmap bitmap,
+    Rectangle captureArea,
+    IReadOnlyList<DisplayInfo> displays,
+    bool isPixelSpace)
   {
     try
     {
@@ -261,10 +270,22 @@ public sealed class ScreenGrabberMac(
         return;
       }
 
-      if (!TryGetMouseLocationInPixelCoordinates(displays, out var cursorX, out var cursorY))
+      int cursorX, cursorY;
+      if (isPixelSpace)
       {
-        _logger.LogDebug("Failed to get mouse location");
-        return;
+        if (!TryGetMouseLocationInPixelCoordinates(displays, out cursorX, out cursorY))
+        {
+          _logger.LogDebug("Failed to get mouse location");
+          return;
+        }
+      }
+      else
+      {
+        if (!TryGetMouseLocationInLogicalCoordinates(displays, out cursorX, out cursorY))
+        {
+          _logger.LogDebug("Failed to get mouse location");
+          return;
+        }
       }
 
       // Adjust coordinates if we have a capture area (for multi-display)
@@ -294,6 +315,40 @@ public sealed class ScreenGrabberMac(
     }
   }
 
+  private bool TryGetMouseLocationInLogicalCoordinates(
+    IReadOnlyList<DisplayInfo> displays,
+    out int x,
+    out int y)
+  {
+    x = 0;
+    y = 0;
+
+    var cgEventRef = CoreGraphicsInterop.CGEventCreate(nint.Zero);
+    if (cgEventRef == nint.Zero)
+    {
+      return false;
+    }
+
+    using var cgEventDisposer = new CallbackDisposable(
+      () => CoreGraphicsInterop.CFRelease(cgEventRef));
+
+    var location = CoreGraphicsInterop.CGEventGetLocation(cgEventRef);
+
+    var targetDisplay = displays.FirstOrDefault(d =>
+      location.X >= d.LayoutBounds.Left &&
+      location.X < d.LayoutBounds.Right &&
+      location.Y >= d.LayoutBounds.Top &&
+      location.Y < d.LayoutBounds.Bottom);
+    if (targetDisplay is null)
+    {
+      return false;
+    }
+
+    x = (int)Math.Round(location.X);
+    y = (int)Math.Round(location.Y);
+    return true;
+  }
+
   private bool TryGetMouseLocationInPixelCoordinates(
     IReadOnlyList<DisplayInfo> displays,
     out int x,
@@ -313,17 +368,19 @@ public sealed class ScreenGrabberMac(
 
     var location = CoreGraphicsInterop.CGEventGetLocation(cgEventRef);
 
-    var unscaledX = (int)Math.Round(location.X);
-    var unscaledY = (int)Math.Round(location.Y);
-
-    if (displays.Any(d => d.LayoutBounds.Contains(unscaledX, unscaledY)))
+    var targetDisplay = displays.FirstOrDefault(d =>
+      location.X >= d.LayoutBounds.Left &&
+      location.X < d.LayoutBounds.Right &&
+      location.Y >= d.LayoutBounds.Top &&
+      location.Y < d.LayoutBounds.Bottom);
+    if (targetDisplay is null)
     {
-      x = unscaledX;
-      y = unscaledY;
-      return true;
+      return false;
     }
 
-    return false;
+    x = (int)Math.Round(location.X * targetDisplay.CapturePixelsPerLayoutUnit);
+    y = (int)Math.Round(location.Y * targetDisplay.CapturePixelsPerLayoutUnit);
+    return true;
   }
 
   private sealed class CursorBitmapSnapshot(SKBitmap bitmap, double hotspotX, double hotspotY) : IDisposable

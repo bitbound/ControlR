@@ -46,8 +46,21 @@
       "type": "coreclr",
       "request": "launch",
       "program": "${workspaceFolder}/ControlR.DesktopClient/bin/Debug/net10.0/ControlR.DesktopClient.dll",
+      "args": [],
       "osx": {
-        "program": "${workspaceFolder}/ControlR.DesktopClient/bin/Debug/net10.0-macos/osx-arm64/ControlR.DesktopClient.app/Contents/MacOS/ControlR.DesktopClient"
+        "preLaunchTask": "build desktopclient mac",
+        "program": "dotnet",
+        "args": [
+          "exec",
+          "${workspaceFolder}/ControlR.DesktopClient/bin/Debug/net10.0-macos/osx-arm64/ControlR.DesktopClient.dll",
+          "--instance-id",
+          "localhost"
+        ],
+        "env": {
+          "DOTNET_ENVIRONMENT": "Development",
+          "Logging__LogLevel__Default": "Debug",
+          "Serilog__MinimumLevel__Default": "Debug"
+        }
       },
       "linux": {
         "program": "${workspaceFolder}/ControlR.DesktopClient/bin/Debug/net10.0/ControlR.DesktopClient.dll",
@@ -55,7 +68,6 @@
       "windows": {
         "program": "${workspaceFolder}/ControlR.DesktopClient/bin/Debug/net10.0-windows8.0/ControlR.DesktopClient.dll"
       },
-      "args": [],
       "cwd": "${workspaceFolder}/ControlR.DesktopClient",
       "launchSettingsProfile": "Run",
       "stopAtEntry": false,
@@ -140,6 +152,9 @@
           "net10.0-macos",
           "--runtime",
           "osx-arm64",
+          "-p:_CanOutputAppBundle=false",
+          "-p:GenerateDependencyFile=true",
+          "-p:GenerateRuntimeConfigurationFiles=true",
           "--launch-profile",
           "Run"
         ]

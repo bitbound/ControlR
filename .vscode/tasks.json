@@ -38,6 +38,29 @@
       "file": "ControlR.DesktopClient/ControlR.DesktopClient.csproj"
     },
     {
+      "label": "build desktopclient mac",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "ControlR.DesktopClient/ControlR.DesktopClient.csproj",
+        "-f",
+        "net10.0-macos",
+        "-r",
+        "osx-arm64",
+        "-p:_CanOutputAppBundle=false",
+        "-p:GenerateDependencyFile=true",
+        "-p:GenerateRuntimeConfigurationFiles=true",
+        "--verbosity",
+        "quiet"
+      ],
+      "group": "build",
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
       "label": "build server",
       "type": "dotnet",
       "task": "build",

@@ -25,9 +25,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- Commented code. It can be helpful for examples/docs. -->
-    <NoWarn>S125</NoWarn>
-    <NoWarn>NU1608</NoWarn>
+    <NoWarn>$(NoWarn);S125;NU1608;NU1903</NoWarn>
     <WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001</WarningsNotAsErrors>
   </PropertyGroup>
 

@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>$(WindowsTargetFramework);$(MacTargetFramework);$(LinuxTargetFramework)</TargetFrameworks>
+    <TargetFramework></TargetFramework>
+    <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">$(MacTargetFramework);$(LinuxTargetFramework);$(WindowsTargetFramework)</TargetFrameworks>
+    <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`Windows`))' == 'true'">$(WindowsTargetFramework);$(MacTargetFramework);$(LinuxTargetFramework)</TargetFrameworks>
+    <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`OSX`))' != 'true' and '$([MSBuild]::IsOSPlatform(`Windows`))' != 'true'">$(LinuxTargetFramework);$(MacTargetFramework);$(WindowsTargetFramework)</TargetFrameworks>
+    <OutputType>Exe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <PackageIcon>appicon.png</PackageIcon>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
@@ -14,11 +18,16 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(IsMacOS)' == 'true'">
     <SelfContained>true</SelfContained>
-    <OutputType>Exe</OutputType>
+    <ApplicationTitle>ControlR</ApplicationTitle>
+    <ApplicationId>app.controlr.desktop.dev</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
     <CreatePackage>false</CreatePackage>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
     <RuntimeIdentifiers>osx-x64;osx-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">osx-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">osx-x64</RuntimeIdentifier>
     <PublishTrimmed>true</PublishTrimmed>
     <MtouchLink>None</MtouchLink>
     <TrimMode>none</TrimMode>
@@ -26,8 +35,12 @@
     <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
     <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(IsMacOS)' == 'true' and '$(Configuration)' == 'Debug'">
+    <_CanOutputAppBundle>false</_CanOutputAppBundle>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(IsLinux)' == 'true'">
-    <OutputType>Exe</OutputType>
     <IsLinux>true</IsLinux>
     <IsUnix>true</IsUnix>
   </PropertyGroup>

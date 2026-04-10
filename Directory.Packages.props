@@ -105,8 +105,8 @@
     <PackageVersion Include="System.Net.Http.Json" Version="10.0.3" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.3" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.10.0" />
-    <PackageVersion Include="Tmds.DBus" Version="0.90.3" />
-    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.90.3" />
+    <PackageVersion Include="Tmds.DBus" Version="0.92.0" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.abstractions" Version="2.0.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

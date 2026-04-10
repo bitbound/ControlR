@@ -201,6 +201,7 @@ In general, services are not registered directly in `Program.cs`. Instead, exten
 - Use `[SupportedOSPlatform]` attributes for platform-specific code
 - Conditional compilation symbols: `IS_WINDOWS`, `IS_MACOS`, `IS_LINUX`, `IS_UNIX`
 - Platform detection via `ISystemEnvironment.Platform` and `RuntimeInformation`
+- On macOS, `ControlR.DesktopClient` debug builds should disable app-bundle output and emit managed launch files (`.dll`, `.deps.json`, `.runtimeconfig.json`) so VS Code debug and hot reload can launch through `dotnet` instead of the app-bundle executable path.
 
 ### Web UI Guidelines
 
