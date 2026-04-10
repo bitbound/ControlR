@@ -1,3 +1,4 @@
+using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Client.DataValidation;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -58,9 +59,9 @@ public partial class Settings
     _notifyUser = notifyUserPreference.Value;
     _isNotifyUserEnforced = notifyUserPreference.IsTenantEnforced;
     _userDisplayName = preferences.UserDisplayName;
-    _themeMode = preferences.ThemeMode.ToClientThemeMode();
+    _themeMode = preferences.ThemeMode;
     _keyboardInputMode = preferences.KeyboardInputMode;
-    _viewMode = preferences.ViewMode.ToClientViewMode();
+    _viewMode = preferences.ViewMode;
     _captureCursor = preferences.CaptureCursor;
     _isAutoQualityEnabled = preferences.IsAutoQualityEnabled;
     _manualQuality = Math.Clamp(preferences.ManualQuality, 1, 100);
@@ -218,11 +219,20 @@ public partial class Settings
     Snackbar.Add("Keyboard input mode updated", Severity.Success);
   }
 
-  private async Task SetManualQuality(int value)
+  private Task SetManualQuality(int value)
   {
     _manualQuality = Math.Clamp(value, 1, 100);
-    await UserPreferences.SetPreference(UserPreferenceNames.ManualQuality, _manualQuality);
-    Snackbar.Add("Manual quality updated", Severity.Success);
+    Debouncer.Debounce(
+      TimeSpan.FromMilliseconds(300),
+      async () =>
+      {
+        await InvokeAsync(async () =>
+          {
+            await UserPreferences.SetPreference(UserPreferenceNames.ManualQuality, _manualQuality);
+            Snackbar.Add("Manual quality updated", Severity.Success);
+          });
+      });
+    return Task.CompletedTask;
   }
 
   private async Task SetMaxBandwidthMbps(double value)

@@ -1,6 +1,6 @@
 namespace ControlR.Libraries.Api.Contracts.Enums;
 
-public enum UserPreferenceViewMode
+public enum ViewMode
 {
   Fit,
   Stretch,

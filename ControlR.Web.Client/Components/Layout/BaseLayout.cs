@@ -94,7 +94,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
       // No persisted state, this is SSR or first load
       if (IsAuthenticated)
       {
-        CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode.ToClientThemeMode();
+        CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode;
       }
       await UpdateIsDarkMode();
 
@@ -109,7 +109,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
       // Still need to load theme mode
       if (IsAuthenticated)
       {
-        CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode.ToClientThemeMode();
+        CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode;
       }
     }
 

@@ -48,8 +48,8 @@ public static class UserPreferenceDefinitions
     SettingDefinition.CreateBoolean(UserPreferenceNames.NotifyUserOnSessionStart, DefaultNotifyUserOnSessionStart);
   public static SettingDefinition<bool> OpenDeviceInNewTab { get; } =
     SettingDefinition.CreateBoolean(UserPreferenceNames.OpenDeviceInNewTab, DefaultOpenDeviceInNewTab);
-  public static SettingDefinition<UserPreferenceThemeMode> ThemeMode { get; } =
-    SettingDefinition.CreateEnum(UserPreferenceNames.ThemeMode, UserPreferenceThemeMode.Auto);
+  public static SettingDefinition<ThemeMode> ThemeMode { get; } =
+    SettingDefinition.CreateEnum(UserPreferenceNames.ThemeMode, Enums.ThemeMode.Auto);
   public static SettingDefinition<string> UserDisplayName { get; } =
     new(
       UserPreferenceNames.UserDisplayName,
@@ -57,8 +57,8 @@ public static class UserPreferenceDefinitions
       value => ParseResult<string>.Success(value.Trim()),
       validate: ValidateUserDisplayName,
       invalidValueMessageFactory: settingName => $"{settingName} must be a valid display name.");
-  public static SettingDefinition<UserPreferenceViewMode> ViewMode { get; } =
-    SettingDefinition.CreateEnum(UserPreferenceNames.ViewMode, UserPreferenceViewMode.Fit);
+  public static SettingDefinition<ViewMode> ViewMode { get; } =
+    SettingDefinition.CreateEnum(UserPreferenceNames.ViewMode, Enums.ViewMode.Fit);
 
   public static UserPreferencesDto CreateDto(
     IReadOnlyDictionary<string, string> values,

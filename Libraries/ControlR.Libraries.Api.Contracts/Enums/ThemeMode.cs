@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace ControlR.Web.Client.Models;
+namespace ControlR.Libraries.Api.Contracts.Enums;
 
 public enum ThemeMode
 {

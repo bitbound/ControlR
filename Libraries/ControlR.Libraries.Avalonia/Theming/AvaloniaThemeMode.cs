@@ -2,7 +2,7 @@ using System.Runtime.Serialization;
 
 namespace ControlR.Libraries.Avalonia.Theming;
 
-public enum ThemeMode
+public enum AvaloniaThemeMode
 {
   [EnumMember]
   Dark = 0,

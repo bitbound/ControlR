@@ -14,12 +14,12 @@ public partial class SettingsViewModel(IThemeProvider themeProvider) : ViewModel
 
   public bool IsDarkModeChecked
   {
-    get => _themeProvider.CurrentThemeMode == ThemeMode.Dark;
+    get => _themeProvider.CurrentThemeMode == Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark;
     set
     {
       if (value)
       {
-        _themeProvider.SetThemeMode(ThemeMode.Dark);
+        _themeProvider.SetThemeMode(Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark);
       }
       OnPropertyChanged(nameof(IsLightModeChecked));
       OnPropertyChanged(nameof(IsDarkModeChecked));
@@ -28,12 +28,12 @@ public partial class SettingsViewModel(IThemeProvider themeProvider) : ViewModel
 
   public bool IsLightModeChecked
   {
-    get => _themeProvider.CurrentThemeMode == ThemeMode.Light;
+    get => _themeProvider.CurrentThemeMode == Libraries.Avalonia.Theming.AvaloniaThemeMode.Light;
     set
     {
       if (value)
       {
-        _themeProvider.SetThemeMode(ThemeMode.Light);
+        _themeProvider.SetThemeMode(Libraries.Avalonia.Theming.AvaloniaThemeMode.Light);
       }
       OnPropertyChanged(nameof(IsLightModeChecked));
       OnPropertyChanged(nameof(IsDarkModeChecked));

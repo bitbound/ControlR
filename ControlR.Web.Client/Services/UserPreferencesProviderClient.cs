@@ -50,7 +50,7 @@ internal class UserPreferencesProviderClient(
   {
     try
     {
-      var stringValue = ConvertPreferenceValue(preferenceName, value)?.Trim();
+      var stringValue = UserPreferenceDefinitions.FormatValue(preferenceName, value)?.Trim();
       Guard.IsNotNull(stringValue);
       var normalizationResult = UserPreferenceDefinitions.Normalize(preferenceName, stringValue);
       if (!normalizationResult.IsSuccess)
@@ -80,16 +80,6 @@ internal class UserPreferencesProviderClient(
       _logger.LogError(ex, "Error while setting preference for {PreferenceName}.", preferenceName);
       _snackbar.Add("Error while setting preference", Severity.Error);
     }
-  }
-
-  private static string? ConvertPreferenceValue<T>(string preferenceName, T value)
-  {
-    return value switch
-    {
-      ThemeMode themeMode => themeMode.ToUserPreferenceThemeMode().ToString(),
-      ViewMode viewMode => viewMode.ToUserPreferenceViewMode().ToString(),
-      _ => UserPreferenceDefinitions.FormatValue(preferenceName, value)
-    };
   }
 
   private static UserPreferencesDto CreateDefaultPreferences()

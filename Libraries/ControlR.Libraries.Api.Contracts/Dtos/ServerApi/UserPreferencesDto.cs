@@ -16,6 +16,6 @@ public sealed record UserPreferencesDto(
   double MaxBandwidthMbps,
   bool NotifyUserOnSessionStart,
   bool OpenDeviceInNewTab,
-  UserPreferenceThemeMode ThemeMode,
+  ThemeMode ThemeMode,
   string UserDisplayName,
-  UserPreferenceViewMode ViewMode);
+  ViewMode ViewMode);

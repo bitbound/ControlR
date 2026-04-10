@@ -1,7 +1,8 @@
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Client.Services;
 using ControlR.Libraries.Api.Contracts.Settings;
+using ControlR.Web.Server.Data.Extensions;
 using ControlR.Web.Server.Primitives;
+using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Server.Services.Settings;
@@ -66,9 +67,8 @@ public class UserPreferencesManager(
     UserPreferenceRequestDto preference,
     CancellationToken cancellationToken = default)
   {
-    await using var _appDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
-    var user = await _appDb.Users
+    await using var appDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
+    var user = await appDb.Users
       .Include(x => x.UserPreferences)
       .FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
 
@@ -81,11 +81,11 @@ public class UserPreferencesManager(
 
     if (string.IsNullOrWhiteSpace(preference.Value))
     {
-      var existingInstanceIdSetting = user.UserPreferences.FirstOrDefault(x => x.Name == preference.Name);
-      if (existingInstanceIdSetting is not null)
+      var existingPreferenceToDelete = user.UserPreferences.FirstOrDefault(x => x.Name == preference.Name);
+      if (existingPreferenceToDelete is not null)
       {
-        user.UserPreferences.Remove(existingInstanceIdSetting);
-        await _appDb.SaveChangesAsync(cancellationToken);
+        user.UserPreferences.Remove(existingPreferenceToDelete);
+        await appDb.SaveChangesAsync(cancellationToken);
       }
 
       return HttpResult.Ok(new UserPreferenceResponseDto(null, preference.Name, null));
@@ -104,25 +104,21 @@ public class UserPreferencesManager(
         normalizationResult.ErrorMessage ?? "Preference value is invalid.");
     }
 
-    var normalizedValue = normalizationResult.Value ?? string.Empty;
-    var existingPreference = user.UserPreferences.FirstOrDefault(x => x.Name == preference.Name);
-    if (existingPreference is not null)
-    {
-      existingPreference.Value = normalizedValue;
-      await _appDb.SaveChangesAsync(cancellationToken);
-      return HttpResult.Ok(existingPreference.ToDto());
-    }
-
     var entity = new UserPreference
     {
+      Id = Guid.NewGuid(),
       Name = preference.Name,
       UserId = userId,
-      Value = normalizedValue
+      Value = normalizationResult.Value ?? string.Empty
     };
 
-    user.UserPreferences.Add(entity);
-    await _appDb.SaveChangesAsync(cancellationToken);
-    return HttpResult.Ok(entity.ToDto());
+    await appDb.UpsertAsync(entity, [x => x.Name, x => x.UserId], cancellationToken);
+
+    var savedPreference = await appDb.UserPreferences
+      .AsNoTracking()
+      .SingleAsync(x => x.UserId == userId && x.Name == preference.Name, cancellationToken);
+
+    return HttpResult.Ok(savedPreference.ToDto());
   }
 
   public async Task SetPreference<T>(string preferenceName, T value)

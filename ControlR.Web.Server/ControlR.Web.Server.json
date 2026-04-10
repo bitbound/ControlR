@@ -4158,6 +4158,9 @@
           }
         }
       },
+      "ThemeMode": {
+        "type": "integer"
+      },
       "UpdatePersonalAccessTokenRequestDto": {
         "required": [
           "name"
@@ -4283,21 +4286,15 @@
             "type": "boolean"
           },
           "themeMode": {
-            "$ref": "#/components/schemas/UserPreferenceThemeMode"
+            "$ref": "#/components/schemas/ThemeMode"
           },
           "userDisplayName": {
             "type": "string"
           },
           "viewMode": {
-            "$ref": "#/components/schemas/UserPreferenceViewMode"
+            "$ref": "#/components/schemas/ViewMode"
           }
         }
-      },
-      "UserPreferenceThemeMode": {
-        "type": "integer"
-      },
-      "UserPreferenceViewMode": {
-        "type": "integer"
       },
       "UserResponseDto": {
         "required": [
@@ -4378,6 +4375,9 @@
             "type": "string"
           }
         }
+      },
+      "ViewMode": {
+        "type": "integer"
       }
     }
   },

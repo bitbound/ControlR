@@ -1,5 +1,4 @@
 @using ControlR.Libraries.Api.Contracts.Enums
-@using ControlR.Web.Client.Models
 @inject IUserPreferencesProvider UserPreferences
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthState
@@ -49,7 +48,7 @@
   {
     if (await AuthState.IsAuthenticated())
     {
-      _currentMode = (await UserPreferences.GetPreferences()).ThemeMode.ToClientThemeMode();
+      _currentMode = (await UserPreferences.GetPreferences()).ThemeMode;
     }
   }
 

@@ -7,26 +7,26 @@ public interface IThemeProvider
 {
   event EventHandler? ThemeChanged;
   ThemeVariant CurrentTheme { get; }
-  ThemeMode CurrentThemeMode { get; }
-  void SetThemeMode(ThemeMode mode);
+  AvaloniaThemeMode CurrentThemeMode { get; }
+  void SetThemeMode(AvaloniaThemeMode mode);
   void ToggleTheme();
 }
 
 public class ThemeProvider : IThemeProvider
 {
-  private ThemeMode _currentThemeMode = ThemeMode.Dark;
+  private AvaloniaThemeMode _currentThemeMode = Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark;
 
   public event EventHandler? ThemeChanged;
 
   public ThemeVariant CurrentTheme =>
     _currentThemeMode switch
     {
-      ThemeMode.Light => ThemeVariant.Light,
-      ThemeMode.Dark => ThemeVariant.Dark,
+      Libraries.Avalonia.Theming.AvaloniaThemeMode.Light => ThemeVariant.Light,
+      Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark => ThemeVariant.Dark,
       _ => ThemeVariant.Default
     };
 
-  public ThemeMode CurrentThemeMode
+  public AvaloniaThemeMode CurrentThemeMode
   {
     get => _currentThemeMode;
     private set
@@ -39,7 +39,7 @@ public class ThemeProvider : IThemeProvider
       }
     }
   }
-  public void SetThemeMode(ThemeMode mode)
+  public void SetThemeMode(AvaloniaThemeMode mode)
   {
     CurrentThemeMode = mode;
   }
@@ -48,9 +48,9 @@ public class ThemeProvider : IThemeProvider
   {
     CurrentThemeMode = _currentThemeMode switch
     {
-      ThemeMode.Light => ThemeMode.Dark,
-      ThemeMode.Dark => ThemeMode.Light,
-      _ => ThemeMode.Dark
+      Libraries.Avalonia.Theming.AvaloniaThemeMode.Light => Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark,
+      Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark => Libraries.Avalonia.Theming.AvaloniaThemeMode.Light,
+      _ => Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark
     };
   }
 

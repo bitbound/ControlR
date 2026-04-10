@@ -1,6 +1,5 @@
 using System.Globalization;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Client.Models;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Settings;
@@ -43,8 +42,8 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
     Assert.Equal(UserPreferenceDefinitions.DefaultCaptureCursor, result.CaptureCursor);
     Assert.Equal(UserPreferenceDefinitions.DefaultHideOfflineDevices, result.HideOfflineDevices);
     Assert.Equal(UserPreferenceDefinitions.DefaultNotifyUserOnSessionStart, result.NotifyUserOnSessionStart);
-    Assert.Equal(UserPreferenceThemeMode.Auto, result.ThemeMode);
-    Assert.Equal(UserPreferenceViewMode.Fit, result.ViewMode);
+    Assert.Equal(ThemeMode.Auto, result.ThemeMode);
+    Assert.Equal(ViewMode.Fit, result.ViewMode);
     Assert.Equal(string.Empty, result.UserDisplayName);
   }
 
@@ -76,7 +75,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         {
           Name = UserPreferenceNames.ThemeMode,
           UserId = user.Id,
-          Value = UserPreferenceThemeMode.Dark.ToString()
+          Value = ThemeMode.Dark.ToString()
         },
         new UserPreference
         {
@@ -93,7 +92,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     Assert.Equal("Display Name", result.UserDisplayName);
     Assert.False(result.NotifyUserOnSessionStart);
-    Assert.Equal(UserPreferenceThemeMode.Dark, result.ThemeMode);
+    Assert.Equal(ThemeMode.Dark, result.ThemeMode);
     Assert.Equal(UserPreferenceDefinitions.DefaultManualQuality, result.ManualQuality);
   }
 
@@ -112,7 +111,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, UserPreferenceThemeMode.Dark.ToString()),
+      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, ThemeMode.Dark.ToString()),
       cancellationToken);
 
     var result = await _userPreferencesManager.SetPreferences(
@@ -131,16 +130,16 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         20.5,
         false,
         false,
-        (UserPreferenceThemeMode)999,
+        (ThemeMode)999,
         "Updated Name",
-        UserPreferenceViewMode.Stretch),
+        ViewMode.Stretch),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
     Assert.Equal(HttpResultErrorCode.ValidationFailed, result.ErrorCode);
 
     var preferences = await _userPreferencesManager.GetAllPreferences(user.Id, cancellationToken);
-    Assert.Equal(UserPreferenceThemeMode.Dark, preferences.ThemeMode);
+    Assert.Equal(ThemeMode.Dark, preferences.ThemeMode);
     Assert.Equal(string.Empty, preferences.UserDisplayName);
   }
 
@@ -171,9 +170,9 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
           20.5,
           false,
           false,
-          UserPreferenceThemeMode.Light,
+          ThemeMode.Light,
           string.Empty,
-          UserPreferenceViewMode.Stretch),
+          ViewMode.Stretch),
         cancellationToken);
 
       Assert.True(result.IsSuccess);
@@ -225,9 +224,9 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         20.5,
         false,
         false,
-        UserPreferenceThemeMode.Light,
+        ThemeMode.Light,
         string.Empty,
-        UserPreferenceViewMode.Stretch),
+        ViewMode.Stretch),
       cancellationToken);
 
     Assert.True(result.IsSuccess);
@@ -245,9 +244,9 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
     Assert.Equal(20.5, result.Value.MaxBandwidthMbps);
     Assert.False(result.Value.NotifyUserOnSessionStart);
     Assert.False(result.Value.OpenDeviceInNewTab);
-    Assert.Equal(UserPreferenceThemeMode.Light, result.Value.ThemeMode);
+    Assert.Equal(ThemeMode.Light, result.Value.ThemeMode);
     Assert.Equal(string.Empty, result.Value.UserDisplayName);
-    Assert.Equal(UserPreferenceViewMode.Stretch, result.Value.ViewMode);
+    Assert.Equal(ViewMode.Stretch, result.Value.ViewMode);
 
     await using var assertScope = _testApp.Services.CreateAsyncScope();
     var assertDb = assertScope.ServiceProvider.GetRequiredService<AppDb>();

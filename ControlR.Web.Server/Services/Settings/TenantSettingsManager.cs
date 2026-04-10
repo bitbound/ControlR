@@ -1,5 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Settings;
+using ControlR.Web.Server.Data.Extensions;
 using ControlR.Web.Server.Primitives;
+using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Services.Settings;
 
@@ -60,10 +62,10 @@ public class TenantSettingsManager(
 
     if (string.IsNullOrWhiteSpace(setting.Value))
     {
-      var existingInstanceIdSetting = tenant.TenantSettings.FirstOrDefault(x => x.Name == setting.Name);
-      if (existingInstanceIdSetting is not null)
+      var existingSettingToDelete = tenant.TenantSettings.FirstOrDefault(x => x.Name == setting.Name);
+      if (existingSettingToDelete is not null)
       {
-        tenant.TenantSettings.Remove(existingInstanceIdSetting);
+        tenant.TenantSettings.Remove(existingSettingToDelete);
         await _appDb.SaveChangesAsync(cancellationToken);
       }
 
@@ -74,35 +76,30 @@ public class TenantSettingsManager(
     if (!normalizationResult.IsSuccess)
     {
       _logger.LogError(
-        "Failed to normalize setting value for {SettingName}. Reason: {Reason}", 
-        setting.Name, 
+        "Failed to normalize setting value for {SettingName}. Reason: {Reason}",
+        setting.Name,
         normalizationResult.ErrorMessage);
 
       return HttpResult.Fail<TenantSettingResponseDto>(
         HttpResultErrorCode.ValidationFailed,
         normalizationResult.ErrorMessage ?? "Setting value is invalid.");
     }
-    
-    var normalizedValue = normalizationResult.Value ?? string.Empty;
-
-    var existingSetting = tenant.TenantSettings.FirstOrDefault(x => x.Name == setting.Name);
-    if (existingSetting is not null)
-    {
-      existingSetting.Value = normalizedValue;
-      await _appDb.SaveChangesAsync(cancellationToken);
-      return HttpResult.Ok(existingSetting.ToDto());
-    }
 
     var entity = new TenantSetting
     {
+      Id = Guid.NewGuid(),
       Name = setting.Name,
-      Value = normalizedValue,
+      Value = normalizationResult.Value ?? string.Empty,
       TenantId = tenantId
     };
 
-    tenant.TenantSettings.Add(entity);
-    await _appDb.SaveChangesAsync(cancellationToken);
-    return HttpResult.Ok(entity.ToDto());
+    await _appDb.UpsertAsync(entity, [x => x.Name, x => x.TenantId], cancellationToken);
+
+    var savedSetting = await _appDb.TenantSettings
+      .AsNoTracking()
+      .SingleAsync(x => x.TenantId == tenantId && x.Name == setting.Name, cancellationToken);
+
+    return HttpResult.Ok(savedSetting.ToDto());
   }
 
   public async Task<HttpResult<TenantSettingsDto>> SetSettings(
