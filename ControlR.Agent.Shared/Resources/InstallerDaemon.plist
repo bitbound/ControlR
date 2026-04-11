@@ -4,8 +4,6 @@
 <dict>
     <key>Label</key>
     <string>{{SERVICE_NAME}}</string>
-    <key>RunAtLoad</key>
-    <true/>
     <key>ProgramArguments</key>
     <array>
         <string>{{INSTALLER_PATH}}</string>

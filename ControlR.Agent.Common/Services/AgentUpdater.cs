@@ -1,6 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Libraries.Shared.Services.Processes;
@@ -341,6 +339,9 @@ internal class AgentUpdater(
 
         var bootstrapStartInfo = GetMacLaunchctlStartInfo("launchctl", "bootstrap", "system", plistPath);
         await _processManager.StartAndWaitForExit(bootstrapStartInfo, TimeSpan.FromSeconds(15));
+
+        var kickstartStartInfo = GetMacLaunchctlStartInfo("launchctl", "kickstart", "-k", $"system/{launchdJobLabel}");
+        await _processManager.StartAndWaitForExit(kickstartStartInfo, TimeSpan.FromSeconds(15));
         break;
 
       default:
