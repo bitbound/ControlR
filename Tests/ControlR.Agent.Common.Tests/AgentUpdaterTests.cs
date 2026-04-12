@@ -85,7 +85,7 @@ public class AgentUpdaterTests
     fixture.ProcessManager.Verify(
       x => x.Start("sudo", It.Is<string>(args => args.Contains("chmod +x", StringComparison.Ordinal))),
       Times.Once);
-    Assert.Equal(2, launchctlStartInfos.Count);
+    Assert.Equal(3, launchctlStartInfos.Count);
     Assert.Equal("sudo", launchctlStartInfos[0].FileName);
     Assert.Equal("launchctl bootout system/app.controlr.agent.installer.instance-1", string.Join(" ", launchctlStartInfos[0].ArgumentList));
     Assert.Equal("sudo", launchctlStartInfos[1].FileName);
@@ -95,6 +95,10 @@ public class AgentUpdaterTests
     Assert.Equal(
       $"launchctl bootstrap system {expectedPlistPath}",
       string.Join(" ", launchctlStartInfos[1].ArgumentList));
+    Assert.Equal("sudo", launchctlStartInfos[2].FileName);
+    Assert.Equal(
+      "launchctl kickstart -k system/app.controlr.agent.installer.instance-1",
+      string.Join(" ", launchctlStartInfos[2].ArgumentList));
   }
 
   [Fact]
