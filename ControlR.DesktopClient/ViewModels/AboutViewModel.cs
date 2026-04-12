@@ -7,7 +7,7 @@ namespace ControlR.DesktopClient.ViewModels;
 public interface IAboutViewModel : IViewModelBase
 {
   string? AppVersion { get; }
-  string? InstanceId { get; }
+  string InstanceId { get; }
   IRelayCommand<string> OpenUrlCommand { get; }
 }
 
@@ -19,7 +19,9 @@ public partial class AboutViewModel(
   [ObservableProperty]
   private string? _appVersion;
 
-  public string? InstanceId => _options.CurrentValue.InstanceId ?? $"({Localization.None.ToLower()})";
+  public string InstanceId => string.IsNullOrWhiteSpace(_options.CurrentValue.InstanceId) 
+    ? $"({Localization.None.ToLower()})" 
+    : _options.CurrentValue.InstanceId;
 
   protected override async Task OnInitializeAsync()
   {
