@@ -9,6 +9,9 @@ using System.Drawing;
 
 namespace ControlR.DesktopClient.Mac.Services;
 
+/// <summary>
+/// Captures screenshots and cursor images on macOS using CoreGraphics.
+/// </summary>
 public sealed class ScreenGrabberMac(
   IDisplayManager displayManager,
   IUiThread uiThread,
@@ -20,6 +23,11 @@ public sealed class ScreenGrabberMac(
   private readonly ILogger<ScreenGrabberMac> _logger = logger;
   private readonly IUiThread _uiThread = uiThread;
 
+  /// <summary>
+  /// Captures all displays as a single composite image.
+  /// </summary>
+  /// <param name="captureCursor">Whether to capture and overlay the cursor image.</param>
+  /// <returns>A capture result containing the composite bitmap or an error.</returns>
   public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
     try
@@ -33,6 +41,13 @@ public sealed class ScreenGrabberMac(
     }
   }
 
+  /// <summary>
+  /// Captures a single display.
+  /// </summary>
+  /// <param name="targetDisplay">The display to capture.</param>
+  /// <param name="captureCursor">Whether to capture and overlay the cursor image.</param>
+  /// <param name="forceKeyFrame">Ignored on macOS; present for interface compatibility.</param>
+  /// <returns>A capture result containing the display bitmap or an error.</returns>
   public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -59,6 +74,10 @@ public sealed class ScreenGrabberMac(
     return Task.CompletedTask;
   }
 
+  /// <summary>
+  /// Captures all displays and composites them into a single bitmap.
+  /// Handles single-display and multi-display scenarios with cursor overlay.
+  /// </summary>
   private async Task<CaptureResult> CaptureAllDisplaysImpl(bool captureCursor)
   {
     try
@@ -174,6 +193,10 @@ public sealed class ScreenGrabberMac(
     }
   }
 
+  /// <summary>
+  /// Captures the current cursor image and hotspot offset using NSCursor.
+  /// </summary>
+  /// <returns>A snapshot containing the cursor bitmap and hotspot, or null if capture fails.</returns>
   private CursorBitmapSnapshot? CaptureCursorSnapshot()
   {
     using var autoreleasePool = AppKitInterop.CreateAutoreleasePool();
@@ -210,6 +233,9 @@ public sealed class ScreenGrabberMac(
     return new CursorBitmapSnapshot(cursorBitmap, hotspotX, hotspotY);
   }
 
+  /// <summary>
+  /// Captures a single display using CGDisplayCreateImage.
+  /// </summary>
   private CaptureResult CaptureDisplayImpl(DisplayInfo display, bool captureCursor)
   {
     try
@@ -257,6 +283,13 @@ public sealed class ScreenGrabberMac(
     }
   }
 
+  /// <summary>
+  /// Draws the cursor onto a bitmap at the current mouse position.
+  /// </summary>
+  /// <param name="bitmap">The bitmap to draw onto.</param>
+  /// <param name="captureArea">The capture area bounds for coordinate translation.</param>
+  /// <param name="displays">The list of displays for coordinate conversion.</param>
+  /// <param name="isPixelSpace">Whether coordinates are in pixel space versus logical space.</param>
   private void DrawCursorOnBitmap(
     SKBitmap bitmap,
     Rectangle captureArea,
@@ -315,6 +348,9 @@ public sealed class ScreenGrabberMac(
     }
   }
 
+  /// <summary>
+  /// Gets the mouse location in logical coordinates (accounting for Retina scaling).
+  /// </summary>
   private bool TryGetMouseLocationInLogicalCoordinates(
     IReadOnlyList<DisplayInfo> displays,
     out int x,
@@ -349,6 +385,9 @@ public sealed class ScreenGrabberMac(
     return true;
   }
 
+  /// <summary>
+  /// Gets the mouse location in pixel coordinates (native display resolution).
+  /// </summary>
   private bool TryGetMouseLocationInPixelCoordinates(
     IReadOnlyList<DisplayInfo> displays,
     out int x,
@@ -383,6 +422,9 @@ public sealed class ScreenGrabberMac(
     return true;
   }
 
+  /// <summary>
+  /// Holds a captured cursor bitmap with its hotspot offset.
+  /// </summary>
   private sealed class CursorBitmapSnapshot(SKBitmap bitmap, double hotspotX, double hotspotY) : IDisposable
   {
     public SKBitmap Bitmap { get; } = bitmap;

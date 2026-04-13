@@ -35,6 +35,7 @@ CloseClipboard
 EmptyClipboard
 GetCursorInfo
 GetIconInfo
+DeleteObject
 LoadCursor
 IsOS
 Windows.Win32.Graphics.Dxgi

@@ -240,7 +240,7 @@ jobs:
           echo "Publishing version $VERSION for macOS ${{ matrix.arch }}..."
           dotnet publish "./ControlR.DesktopClient/" \
             -c Release \
-            -r osx-arm64 \
+            -r ${{ matrix.arch }} \
             -f net10.0-macos \
             --self-contained \
             -p:CreatePackage=false \

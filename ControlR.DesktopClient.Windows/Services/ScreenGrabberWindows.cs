@@ -3,12 +3,15 @@ using System.Drawing.Imaging;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ControlR.DesktopClient.Common.Models;
+using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Windows.Extensions;
+using ControlR.DesktopClient.Windows.Models;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
+using SkiaSharp;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Direct3D11;
@@ -37,6 +40,8 @@ internal sealed class ScreenGrabberWindows(
   private readonly ILogger<ScreenGrabberWindows> _logger = logger;
   private readonly IWin32Interop _win32Interop = win32Interop;
 
+  private IntPtr _cachedCursorHandle = IntPtr.Zero;
+  private SKBitmap? _cachedCursorSkBitmap;
   private bool _inputDesktopSwitchResult = true;
 
   public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
@@ -46,6 +51,7 @@ internal sealed class ScreenGrabberWindows(
     var captureArea = new Rectangle(bounds.X, bounds.Y, bounds.Width, bounds.Height);
     return GetBitBltCapture(captureArea, captureCursor);
   }
+
   public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -72,15 +78,109 @@ internal sealed class ScreenGrabberWindows(
 
   public ValueTask DisposeAsync()
   {
+    _cachedCursorSkBitmap?.Dispose();
     _dxOutputGenerator.Dispose();
     _dedupeLogger.Dispose();
     return ValueTask.CompletedTask;
   }
 
-
   public Task Initialize(CancellationToken cancellationToken)
   {
     return Task.CompletedTask;
+  }
+
+  private static void ApplyRotation(Bitmap bitmap, DXGI_MODE_ROTATION rotation)
+  {
+    switch (rotation)
+    {
+      case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_UNSPECIFIED:
+      case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_IDENTITY:
+        break;
+      case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_ROTATE90:
+        bitmap.RotateFlip(RotateFlipType.Rotate270FlipNone);
+        break;
+      case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_ROTATE180:
+        bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
+        break;
+      case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_ROTATE270:
+        bitmap.RotateFlip(RotateFlipType.Rotate90FlipNone);
+        break;
+    }
+  }
+
+  private unsafe Bitmap CopyDxTextureToBitmap(
+    ID3D11Device device,
+    ID3D11DeviceContext deviceContext,
+    IDXGIResource screenResource,
+    Rectangle bounds)
+  {
+    var bitmap = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
+
+    try
+    {
+      var bitmapData = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, bitmap.PixelFormat);
+      using var bitmapUnlocker = new CallbackDisposable(() => bitmap.UnlockBits(bitmapData));
+
+      var textureDescription = DxTextureHelper.Create2dTextureDescription(bounds.Width, bounds.Height);
+
+      device.CreateTexture2D(textureDescription, null, out var texture2d);
+      using var texture2dDisposer = new CallbackDisposable(() =>
+      {
+        Marshal.FinalReleaseComObject(texture2d);
+      });
+
+      // ReSharper disable once SuspiciousTypeConversion.Global
+      deviceContext.CopyResource(texture2d, (ID3D11Texture2D)screenResource);
+
+      var subResource = new D3D11_MAPPED_SUBRESOURCE();
+      var subResourceRef = &subResource;
+      deviceContext.Map(texture2d, 0, D3D11_MAP.D3D11_MAP_READ, 0, subResourceRef);
+      using var mapDisposer = new CallbackDisposable(() => deviceContext.Unmap(texture2d, 0));
+
+      var subResPointer = new nint(subResource.pData);
+
+      for (var y = 0; y < bounds.Height; y++)
+      {
+        var bitmapIndex = (void*)(bitmapData.Scan0 + y * bitmapData.Stride);
+        var resourceIndex = (void*)(subResPointer + y * subResource.RowPitch);
+
+        Unsafe.CopyBlock(bitmapIndex, resourceIndex, (uint)bitmapData.Stride);
+      }
+
+      return bitmap;
+    }
+    catch
+    {
+      bitmap.Dispose();
+      throw;
+    }
+  }
+
+  private Rectangle[] DrawCursorAndGetDirtyRects(
+    SKCanvas canvas,
+    DxOutput dxOutput,
+    Rectangle captureArea,
+    CURSORINFO? cursorInfo)
+  {
+    var dirtyRects = new List<Rectangle>();
+
+    if (!dxOutput.LastCursorArea.IsEmpty)
+    {
+      dirtyRects.Add(dxOutput.LastCursorArea);
+    }
+
+    var iconArea = TryDrawCursor(canvas, captureArea, cursorInfo);
+    if (!iconArea.IsEmpty)
+    {
+      dirtyRects.Add(iconArea);
+      dxOutput.LastCursorArea = iconArea;
+    }
+    else
+    {
+      dxOutput.LastCursorArea = Rectangle.Empty;
+    }
+
+    return [.. dirtyRects];
   }
 
   private CaptureResult GetBitBltCapture(
@@ -106,12 +206,14 @@ internal sealed class ScreenGrabberWindows(
         }
       }
 
+      var skBitmap = bitmap.ToSkBitmap();
       if (captureCursor)
       {
-        _ = TryDrawCursor(graphics, captureArea);
+        var cursorInfo = TryGetCursorInfo();
+        using var canvas = new SKCanvas(skBitmap);
+        _ = TryDrawCursor(canvas, captureArea, cursorInfo);
       }
 
-      var skBitmap = bitmap.ToSkBitmap();
       return CaptureResult.Ok(skBitmap, captureMode: GdiCaptureMode);
     }
     catch (Exception ex)
@@ -123,6 +225,7 @@ internal sealed class ScreenGrabberWindows(
       return CaptureResult.Fail(exception: ex);
     }
   }
+
   private CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
   {
     var dxOutput = _dxOutputGenerator.DuplicateOutput(display.DeviceName);
@@ -135,90 +238,53 @@ internal sealed class ScreenGrabberWindows(
     try
     {
       var outputDuplication = dxOutput.OutputDuplication;
-      var device = dxOutput.Device;
-      var deviceContext = dxOutput.DeviceContext;
       var bounds = new Rectangle(0, 0, dxOutput.Bounds.Width, dxOutput.Bounds.Height);
 
       TryHelper.TryAll(outputDuplication.ReleaseFrame);
       outputDuplication.AcquireNextFrame(0, out var duplicateFrameInfo, out var screenResource);
+      using var screenResourceDisposer = new CallbackDisposable(() => Marshal.FinalReleaseComObject(screenResource));
+
       if (duplicateFrameInfo.AccumulatedFrames == 0)
       {
-        return CaptureResult.NoChanges(captureMode: DirectXCaptureMode);
+        return HandleCursorOnlyUpdate(dxOutput, display.LayoutBounds, captureCursor);
       }
 
-      using var bitmap = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
-      var bitmapData = bitmap.LockBits(bounds, ImageLockMode.WriteOnly, bitmap.PixelFormat);
-      var bitmapDataPointer = bitmapData.Scan0;
-
-      unsafe
-      {
-        var textureDescription = DxTextureHelper.Create2dTextureDescription(bounds.Width, bounds.Height);
-
-        device.CreateTexture2D(textureDescription, null, out var texture2d);
-
-        // ReSharper disable once SuspiciousTypeConversion.Global
-        deviceContext.CopyResource(texture2d, (ID3D11Texture2D)screenResource);
-
-        var subResource = new D3D11_MAPPED_SUBRESOURCE();
-        var subResourceRef = &subResource;
-        deviceContext.Map(texture2d, 0, D3D11_MAP.D3D11_MAP_READ, 0, subResourceRef);
-        var subResPointer = new nint(subResource.pData);
-
-        for (var y = 0; y < bounds.Height; y++)
-        {
-          var bitmapIndex = (void*)(bitmapDataPointer + y * bitmapData.Stride);
-          var resourceIndex = (void*)(subResPointer + y * subResource.RowPitch);
-
-          Unsafe.CopyBlock(bitmapIndex, resourceIndex, (uint)bitmapData.Stride);
-        }
-
-        bitmap.UnlockBits(bitmapData);
-        deviceContext.Unmap(texture2d, 0);
-        Marshal.FinalReleaseComObject(texture2d);
-        Marshal.FinalReleaseComObject(screenResource);
-      }
-
-      switch (dxOutput.Rotation)
-      {
-        case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_UNSPECIFIED:
-        case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_IDENTITY:
-          break;
-        case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_ROTATE90:
-          bitmap.RotateFlip(RotateFlipType.Rotate270FlipNone);
-          break;
-        case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_ROTATE180:
-          bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
-          break;
-        case DXGI_MODE_ROTATION.DXGI_MODE_ROTATION_ROTATE270:
-          bitmap.RotateFlip(RotateFlipType.Rotate90FlipNone);
-          break;
-      }
+      using var bitmap = CopyDxTextureToBitmap(dxOutput.Device, dxOutput.DeviceContext, screenResource, bounds);
+      ApplyRotation(bitmap, dxOutput.Rotation);
 
       var dirtyRects = GetDirtyRects(outputDuplication);
-      if (!captureCursor)
+      var cursorInfo = TryGetCursorInfo();
+      var cursorVisible = cursorInfo?.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING) ?? false;
+      var cursorHandle = cursorInfo?.hCursor ?? IntPtr.Zero;
+
+      // Convert to SKBitmap once, then cache/modify as needed.
+      var skBitmap = bitmap.ToSkBitmap();
+
+      if (cursorInfo.HasValue)
       {
-        return CaptureResult.Ok(bitmap.ToSkBitmap(), DirectXCaptureMode, dirtyRects);
+        dxOutput.LastCursorPosition = cursorVisible
+          ? new Point(cursorInfo.Value.ptScreenPos.X, cursorInfo.Value.ptScreenPos.Y)
+          : null;
       }
 
-      if (!dxOutput.LastCursorArea.IsEmpty)
-      {
-        dirtyRects = [.. dirtyRects, dxOutput.LastCursorArea];
-      }
+      dxOutput.LastCursorVisible = cursorVisible;
+      dxOutput.LastCursorHandle = cursorHandle;
 
-      using var graphics = Graphics.FromImage(bitmap);
-
-      var iconArea = TryDrawCursor(graphics, display.LayoutBounds);
-      if (!iconArea.IsEmpty)
+      if (captureCursor)
       {
-        dirtyRects = [.. dirtyRects, iconArea];
-        dxOutput.LastCursorArea = iconArea;
+        // Cache the clean (cursor-free) frame for use in cursor-only updates.
+        dxOutput.SetLastCapturedSkBitmap(skBitmap.CopyEx());
+
+        // Draw cursor directly on the result SKBitmap.
+        using var canvas = new SKCanvas(skBitmap);
+        dirtyRects = [.. dirtyRects, .. DrawCursorAndGetDirtyRects(canvas, dxOutput, display.LayoutBounds, cursorInfo)];
       }
       else
       {
-        dxOutput.LastCursorArea = Rectangle.Empty;
+        dxOutput.SetLastCapturedSkBitmap(null);
       }
 
-      return CaptureResult.Ok(bitmap.ToSkBitmap(), captureMode: DirectXCaptureMode, dirtyRects);
+      return CaptureResult.Ok(skBitmap, captureMode: DirectXCaptureMode, dirtyRects);
     }
     catch (COMException ex) when (ex.Message.StartsWith("The timeout value has elapsed"))
     {
@@ -243,6 +309,7 @@ internal sealed class ScreenGrabberWindows(
       return CaptureResult.Fail(ex);
     }
   }
+
   private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)
   {
     var rectSize = (uint)sizeof(RECT);
@@ -265,22 +332,73 @@ internal sealed class ScreenGrabberWindows(
     var numRects = (int)(bufferSizeNeeded / rectSize);
     var dirtyRects = new Rectangle[numRects];
     var dirtyRectsPtr = (RECT*)NativeMemory.Alloc(bufferSizeNeeded);
+    using var memoryDisposer = new CallbackDisposable(() => NativeMemory.Free(dirtyRectsPtr));
 
-    try
-    {
-      outputDuplication.GetFrameDirtyRects(bufferSizeNeeded, dirtyRectsPtr, out _);
+    outputDuplication.GetFrameDirtyRects(bufferSizeNeeded, dirtyRectsPtr, out _);
 
-      for (var i = 0; i < numRects; i++)
-      {
-        dirtyRects[i] = dirtyRectsPtr[i].ToRectangle();
-      }
-    }
-    finally
+    for (var i = 0; i < numRects; i++)
     {
-      NativeMemory.Free(dirtyRectsPtr);
+      dirtyRects[i] = dirtyRectsPtr[i].ToRectangle();
     }
 
     return dirtyRects;
+  }
+
+  private SKBitmap GetOrCacheCursorSkBitmap(IntPtr cursorHandle)
+  {
+    if (cursorHandle == _cachedCursorHandle && _cachedCursorSkBitmap is not null)
+    {
+      return _cachedCursorSkBitmap;
+    }
+
+    _cachedCursorSkBitmap?.Dispose();
+    using var icon = Icon.FromHandle(cursorHandle);
+    using var gdiBitmap = icon.ToBitmap();
+    _cachedCursorSkBitmap = gdiBitmap.ToSkBitmap();
+    _cachedCursorHandle = cursorHandle;
+    return _cachedCursorSkBitmap;
+  }
+
+  private CaptureResult HandleCursorOnlyUpdate(DxOutput dxOutput, Rectangle captureArea, bool captureCursor)
+  {
+    if (!captureCursor)
+    {
+      return CaptureResult.NoChanges(captureMode: DirectXCaptureMode);
+    }
+
+    var cursorInfo = TryGetCursorInfo();
+    var cursorScreenPos = cursorInfo.HasValue && cursorInfo.Value.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING)
+      ? new Point(cursorInfo.Value.ptScreenPos.X, cursorInfo.Value.ptScreenPos.Y)
+      : (Point?)null;
+    var cursorVisible = cursorInfo?.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING) ?? false;
+    var cursorHandle = cursorInfo?.hCursor ?? IntPtr.Zero;
+
+    // Check if cursor state changed (position, visibility, or shape)
+    var cursorStateChanged = cursorScreenPos != dxOutput.LastCursorPosition ||
+                             cursorVisible != dxOutput.LastCursorVisible ||
+                             cursorHandle != dxOutput.LastCursorHandle;
+
+    if (!cursorStateChanged)
+    {
+      return CaptureResult.NoChanges(captureMode: DirectXCaptureMode);
+    }
+
+    // Update tracked cursor state
+    dxOutput.LastCursorVisible = cursorVisible;
+    dxOutput.LastCursorHandle = cursorHandle;
+    dxOutput.LastCursorPosition = cursorScreenPos;
+
+    if (dxOutput.LastCapturedSkBitmap is null)
+    {
+      return CaptureResult.NoChanges(captureMode: DirectXCaptureMode);
+    }
+
+    // Copy the cached clean frame and draw the cursor on top.
+    // Ownership of resultBitmap is transferred to CaptureResult, so we must not dispose it here.
+    var resultBitmap = dxOutput.LastCapturedSkBitmap.CopyEx();
+    using var canvas = new SKCanvas(resultBitmap);
+    var cursorDirtyRects = DrawCursorAndGetDirtyRects(canvas, dxOutput, captureArea, cursorInfo);
+    return CaptureResult.Ok(resultBitmap, captureMode: DirectXCaptureMode, cursorDirtyRects);
   }
 
   private void SwitchToInputDesktop()
@@ -292,19 +410,17 @@ internal sealed class ScreenGrabberWindows(
     }
     _inputDesktopSwitchResult = inputDesktopSwitchResult;
   }
-  private unsafe Rectangle TryDrawCursor(Graphics graphics, Rectangle captureArea)
+
+  private unsafe Rectangle TryDrawCursor(SKCanvas canvas, Rectangle captureArea, CURSORINFO? cursorInfo)
   {
     try
     {
-      var ci = new CURSORINFO();
-      ci.cbSize = (uint)Marshal.SizeOf(ci);
-      PInvoke.GetCursorInfo(ref ci);
-
-      if (!ci.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
+      if (cursorInfo is null || !cursorInfo.Value.flags.HasFlag(CURSORINFO_FLAGS.CURSOR_SHOWING))
       {
         return Rectangle.Empty;
       }
 
+      var ci = cursorInfo.Value;
       using var icon = Icon.FromHandle(ci.hCursor);
 
       uint hotspotX = 0;
@@ -313,23 +429,39 @@ internal sealed class ScreenGrabberWindows(
       var iconInfoPtr = stackalloc ICONINFO[1];
       if (PInvoke.GetIconInfo(hicon, iconInfoPtr))
       {
-        hotspotX = iconInfoPtr->xHotspot;
-        hotspotY = iconInfoPtr->yHotspot;
+        try
+        {
+          hotspotX = iconInfoPtr->xHotspot;
+          hotspotY = iconInfoPtr->yHotspot;
+        }
+        finally
+        {
+          if (iconInfoPtr->hbmMask.Value != null)
+          {
+            PInvoke.DeleteObject(iconInfoPtr->hbmMask);
+          }
+          if (iconInfoPtr->hbmColor.Value != null)
+          {
+            PInvoke.DeleteObject(iconInfoPtr->hbmColor);
+          }
+        }
       }
 
       var x = (int)(ci.ptScreenPos.X - captureArea.Left - hotspotX);
       var y = (int)(ci.ptScreenPos.Y - captureArea.Top - hotspotY);
 
       var targetArea = new Rectangle(x, y, icon.Width, icon.Height);
-      if (!captureArea.Contains(targetArea))
+      var localBounds = new Rectangle(0, 0, captureArea.Width, captureArea.Height);
+      if (!localBounds.IntersectsWith(targetArea))
       {
         _dedupeLogger.LogDebugDeduped("Cursor is outside of capture area. Skipping.");
         return Rectangle.Empty;
       }
 
-      graphics.DrawIcon(icon, x, y);
+      var cursorBitmap = GetOrCacheCursorSkBitmap(ci.hCursor);
+      canvas.DrawBitmap(cursorBitmap, x, y);
 
-      return targetArea;
+      return Rectangle.Intersect(targetArea, localBounds);
     }
     catch (Exception ex)
     {
@@ -337,6 +469,24 @@ internal sealed class ScreenGrabberWindows(
         "Failed to draw cursor on capture.",
         exception: ex);
       return Rectangle.Empty;
+    }
+  }
+
+  private CURSORINFO? TryGetCursorInfo()
+  {
+    try
+    {
+      var ci = new CURSORINFO();
+      ci.cbSize = (uint)Marshal.SizeOf(ci);
+      if (!PInvoke.GetCursorInfo(ref ci))
+      {
+        return null;
+      }
+      return ci;
+    }
+    catch
+    {
+      return null;
     }
   }
 }
