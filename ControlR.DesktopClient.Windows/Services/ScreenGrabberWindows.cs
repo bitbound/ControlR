@@ -25,6 +25,10 @@ using ControlR.Libraries.Shared.Logging;
 
 namespace ControlR.DesktopClient.Windows.Services;
 
+/// <summary>
+/// Windows-specific screen grabber utilizing DirectX Desktop Duplication 
+/// and GDI BitBlt as a fallback.
+/// </summary>
 internal sealed class ScreenGrabberWindows(
   IDxOutputDuplicator dxOutputGenerator,
   IWin32Interop win32Interop,
@@ -44,6 +48,11 @@ internal sealed class ScreenGrabberWindows(
   private SKBitmap? _cachedCursorSkBitmap;
   private bool _inputDesktopSwitchResult = true;
 
+  /// <summary>
+  /// Captures the entire virtual desktop as a single composite image.
+  /// </summary>
+  /// <param name="captureCursor">Whether to include the system cursor in the capture.</param>
+  /// <returns>A result containing the composite bitmap.</returns>
   public async Task<CaptureResult> CaptureAllDisplays(bool captureCursor = true)
   {
     SwitchToInputDesktop();
@@ -52,6 +61,13 @@ internal sealed class ScreenGrabberWindows(
     return GetBitBltCapture(captureArea, captureCursor);
   }
 
+  /// <summary>
+  /// Captures a specific display using DirectX if available, falling back to GDI if needed.
+  /// </summary>
+  /// <param name="targetDisplay">Metadata for the display to capture.</param>
+  /// <param name="captureCursor">Whether to include the system cursor.</param>
+  /// <param name="forceKeyFrame">Whether to force a full frame refresh.</param>
+  /// <returns>The capture result containing the bitmap and any dirty regions.</returns>
   public async Task<CaptureResult> CaptureDisplay(
     DisplayInfo targetDisplay,
     bool captureCursor = true,
@@ -76,6 +92,9 @@ internal sealed class ScreenGrabberWindows(
     }
   }
 
+  /// <summary>
+  /// Releases the cursor cache and DirectX output generator.
+  /// </summary>
   public ValueTask DisposeAsync()
   {
     _cachedCursorSkBitmap?.Dispose();
@@ -89,6 +108,9 @@ internal sealed class ScreenGrabberWindows(
     return Task.CompletedTask;
   }
 
+  /// <summary>
+  /// Adjusts bitmap orientation according to the specified DXGI rotation.
+  /// </summary>
   private static void ApplyRotation(Bitmap bitmap, DXGI_MODE_ROTATION rotation)
   {
     switch (rotation)
@@ -108,6 +130,9 @@ internal sealed class ScreenGrabberWindows(
     }
   }
 
+  /// <summary>
+  /// Transfers frame data from a GPU texture to a CPU-accessible bitmap.
+  /// </summary>
   private unsafe Bitmap CopyDxTextureToBitmap(
     ID3D11Device device,
     ID3D11DeviceContext deviceContext,
@@ -156,6 +181,9 @@ internal sealed class ScreenGrabberWindows(
     }
   }
 
+  /// <summary>
+  /// Renders the cursor and tracks the affected screen areas for dirty rect calculation.
+  /// </summary>
   private Rectangle[] DrawCursorAndGetDirtyRects(
     SKCanvas canvas,
     DxOutput dxOutput,
@@ -183,6 +211,9 @@ internal sealed class ScreenGrabberWindows(
     return [.. dirtyRects];
   }
 
+  /// <summary>
+  /// Performs a legacy screen capture using GDI BitBlt.
+  /// </summary>
   private CaptureResult GetBitBltCapture(
     Rectangle captureArea,
     bool captureCursor)
@@ -226,6 +257,9 @@ internal sealed class ScreenGrabberWindows(
     }
   }
 
+  /// <summary>
+  /// Attempts a high-performance capture using the DXGI Desktop Duplication API.
+  /// </summary>
   private CaptureResult GetDirectXCapture(DisplayInfo display, bool captureCursor)
   {
     var dxOutput = _dxOutputGenerator.DuplicateOutput(display.DeviceName);
@@ -310,6 +344,9 @@ internal sealed class ScreenGrabberWindows(
     }
   }
 
+  /// <summary>
+  /// Retrieves the list of changed rectangles from the current DXGI frame.
+  /// </summary>
   private unsafe Rectangle[] GetDirtyRects(IDXGIOutputDuplication outputDuplication)
   {
     var rectSize = (uint)sizeof(RECT);
@@ -344,6 +381,9 @@ internal sealed class ScreenGrabberWindows(
     return dirtyRects;
   }
 
+  /// <summary>
+  /// Retrieves or generates a SkiaSharp version of the cursor, caching it for performance.
+  /// </summary>
   private SKBitmap GetOrCacheCursorSkBitmap(IntPtr cursorHandle)
   {
     if (cursorHandle == _cachedCursorHandle && _cachedCursorSkBitmap is not null)
@@ -359,6 +399,9 @@ internal sealed class ScreenGrabberWindows(
     return _cachedCursorSkBitmap;
   }
 
+  /// <summary>
+  /// Handles updates where only the cursor has moved by re-using the cached screen frame.
+  /// </summary>
   private CaptureResult HandleCursorOnlyUpdate(DxOutput dxOutput, Rectangle captureArea, bool captureCursor)
   {
     if (!captureCursor)
@@ -401,6 +444,9 @@ internal sealed class ScreenGrabberWindows(
     return CaptureResult.Ok(resultBitmap, captureMode: DirectXCaptureMode, cursorDirtyRects);
   }
 
+  /// <summary>
+  /// Ensures the process is attached to the active input desktop.
+  /// </summary>
   private void SwitchToInputDesktop()
   {
     var inputDesktopSwitchResult = _win32Interop.SwitchToInputDesktop();
@@ -411,6 +457,9 @@ internal sealed class ScreenGrabberWindows(
     _inputDesktopSwitchResult = inputDesktopSwitchResult;
   }
 
+  /// <summary>
+  /// Attempts to render the system cursor onto the provided canvas.
+  /// </summary>
   private unsafe Rectangle TryDrawCursor(SKCanvas canvas, Rectangle captureArea, CURSORINFO? cursorInfo)
   {
     try
@@ -472,6 +521,9 @@ internal sealed class ScreenGrabberWindows(
     }
   }
 
+  /// <summary>
+  /// Safely retrieves metadata for the system cursor.
+  /// </summary>
   private CURSORINFO? TryGetCursorInfo()
   {
     try

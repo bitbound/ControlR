@@ -9,8 +9,8 @@ using Windows.Win32.Graphics.Dxgi.Common;
 namespace ControlR.DesktopClient.Windows.Models;
 
 /// <summary>
-/// Holds state and resources for a single DirectX output (display).
-/// Used by <see cref="ScreenGrabberWindows"/> to manage frame duplication.
+/// Maintains DirectX resources and state for a specific display output, 
+/// facilitating high-performance frame duplication.
 /// </summary>
 internal sealed class DxOutput(
   string deviceName,
@@ -26,60 +26,60 @@ internal sealed class DxOutput(
   private SKBitmap? _lastCapturedSkBitmap;
 
   /// <summary>
-  /// Gets the DXGI adapter that created the device.
+  /// The adapter that provides this output.
   /// </summary>
   public IDXGIAdapter1 Adapter { get; } = adapter;
   /// <summary>
-  /// Gets the bounds of this output in screen coordinates.
+  /// The output's coordinates and size within the virtual desktop.
   /// </summary>
   public Rectangle Bounds { get; } = bounds;
   /// <summary>
-  /// Gets the Direct3D 11 device for this output.
+  /// The Direct3D 11 device used for frame capture.
   /// </summary>
   public ID3D11Device Device { get; } = device;
   /// <summary>
-  /// Gets the Direct3D 11 device context.
+  /// The device context for issuing GPU commands.
   /// </summary>
   public ID3D11DeviceContext DeviceContext { get; } = deviceContext;
   /// <summary>
-  /// Gets the device name identifier for this output.
+  /// The unique system name for this display device.
   /// </summary>
   public string DeviceName { get; } = deviceName;
   /// <summary>
-  /// Gets whether this output has been disposed.
+  /// Indicates if the resources for this output have been released.
   /// </summary>
   public bool IsDisposed { get; private set; }
   /// <summary>
-  /// Gets the last captured SKBitmap (without cursor) for cursor-only updates.
+  /// A cached, cursor-free bitmap used for optimizing cursor-only updates.
   /// </summary>
   public SKBitmap? LastCapturedSkBitmap => _lastCapturedSkBitmap;
   /// <summary>
-  /// Gets or sets the screen area occupied by the cursor in the last capture.
+  /// The area occupied by the cursor in the previous capture iteration.
   /// </summary>
   public Rectangle LastCursorArea { get; set; }
   /// <summary>
-  /// Gets or sets the handle of the cursor observed during the last captured output update.
+  /// The system handle for the cursor as of the last update.
   /// </summary>
   public IntPtr LastCursorHandle { get; set; }
   /// <summary>
-  /// Gets or sets the screen position of the cursor in the last capture, or null when the cursor was hidden.
+  /// The screen coordinates of the cursor in the last frame, or null if hidden.
   /// </summary>
   public Point? LastCursorPosition { get; set; }
   /// <summary>
-  /// Gets or sets a value indicating whether the cursor was visible during the last captured output update.
+  /// Tracks the visibility state of the cursor in the previous update.
   /// </summary>
   public bool LastCursorVisible { get; set; }
   /// <summary>
-  /// Gets the DXGI output duplication interface for frame capture.
+  /// The DXGI interface providing frame duplication capabilities.
   /// </summary>
   public IDXGIOutputDuplication OutputDuplication { get; } = outputDuplication;
   /// <summary>
-  /// Gets the rotation applied to this output's content.
+  /// The current hardware rotation of the output.
   /// </summary>
   public DXGI_MODE_ROTATION Rotation { get; } = rotation;
 
   /// <summary>
-  /// Releases all DirectX resources and the cached SKBitmap.
+  /// Disposes of all COM objects and cached bitmaps.
   /// </summary>
   public void Dispose()
   {
@@ -103,7 +103,7 @@ internal sealed class DxOutput(
   }
 
   /// <summary>
-  /// Sets the last captured SKBitmap, disposing any previous one.
+  /// Updates the cached frame, ensuring the previous one is correctly disposed.
   /// </summary>
   /// <param name="newSkBitmap">The new SKBitmap to cache, or null to clear.</param>
   public void SetLastCapturedSkBitmap(SKBitmap? newSkBitmap)

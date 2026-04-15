@@ -20,8 +20,8 @@ using System.Threading.Channels;
 namespace ControlR.DesktopClient.Common.Services;
 
 /// <summary>
-/// Orchestrates screen capture by combining <see cref="IScreenGrabber"/> captures
-/// with encoding and streaming via channels.
+/// Implements desktop capture by coordinating raw frame acquisition, 
+/// region-based encoding, and asynchronous distribution via channels.
 /// </summary>
 internal class FrameBasedCapturer : IDesktopCapturer
 {
@@ -87,7 +87,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Changes the current capture target to the specified display.
+  /// Switches the capture target to the specified display.
   /// </summary>
   /// <param name="displayId">The device name of the display to select.</param>
   public async Task ChangeDisplays(string displayId)
@@ -127,12 +127,12 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Returns the name of the capture mode currently in use (e.g., "DirectX" or "GDI").
+  /// Returns the name of the capture mode currently active.
   /// </summary>
   public string GetCaptureMode() => _currentCaptureMode ?? string.Empty;
 
   /// <summary>
-  /// Streams encoded screen capture regions as an async enumerable.
+  /// Provides a stream of encoded screen updates as an async sequence.
   /// </summary>
   /// <param name="cancellationToken">Cancellation token to stop the stream.</param>
   /// <returns>An async sequence of DTO wrappers containing screen region data.</returns>
@@ -147,7 +147,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Calculates the current frames per second based on sent frames within the given window.
+  /// Measures the frame rate based on the frequency of sent frames within the provided window.
   /// </summary>
   /// <param name="window">The time window to measure FPS over.</param>
   /// <returns>The calculated FPS value.</returns>
@@ -172,8 +172,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Gets the current encoding quality, either from the last encoded frame
-  /// or computed from the current bandwidth usage.
+  /// Determines the encoding quality based on the last frame or current bandwidth metrics.
   /// </summary>
   /// <returns>The quality value (1-100).</returns>
   public int GetCurrentQuality()
@@ -184,8 +183,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Requests a key frame to be sent on the next capture iteration.
-  /// Forces a full frame capture instead of delta updates.
+  /// Marks the next iteration to send a complete key frame rather than a delta update.
   /// </summary>
   public Task RequestKeyFrame()
   {
@@ -194,8 +192,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Starts the capture loop, initializing the screen grabber and beginning
-  /// bandwidth monitoring and frame capture tasks.
+  /// Initializes the grabber and launches the capture and bandwidth monitoring tasks.
   /// </summary>
   /// <param name="cancellationToken">Cancellation token to stop capturing.</param>
   public async Task StartCapturingChanges(CancellationToken cancellationToken)
@@ -213,7 +210,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Gets the currently selected display for capture.
+  /// Retrieves the display info for the current capture target.
   /// </summary>
   /// <returns>A result containing the display info if one is selected.</returns>
   public async Task<Result<DisplayInfo>> TryGetSelectedDisplay()
@@ -227,7 +224,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Adds a region to the list if it is non-empty and not already present.
+  /// Adds a unique, non-empty region to the collection of changed areas.
   /// </summary>
   private static SKRect[] AppendRegion(SKRect[] regions, SKRect? additionalRegion)
   {
@@ -245,8 +242,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Computes a bounding rectangle that encompasses both input rectangles.
-  /// Returns an empty rect if either input is empty.
+  /// Computes a bounding box that encompasses both provided rectangles.
   /// </summary>
   private static SKRect MergeRegionBounds(SKRect first, SKRect second)
   {
@@ -268,7 +264,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Clears the pending recovery region, indicating it has been sent.
+  /// Resets the tracked recovery area after it has been successfully sent.
   /// </summary>
   private void ClearPendingRecoveryRegion()
   {
@@ -276,7 +272,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Encodes bitmap regions in parallel and writes them to the capture channel.
+  /// Encodes the specified bitmap regions in parallel and writes them to the output channel.
   /// </summary>
   /// <param name="bitmap">The source bitmap containing the capture.</param>
   /// <param name="regions">The regions of the bitmap to encode.</param>
@@ -311,8 +307,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Determines which regions of the bitmap have changed since the previous frame.
-  /// Uses DirectX dirty rects when available, otherwise computes pixel diff.
+  /// Identifies modified areas by comparing frames or utilizing hardware dirty rects.
   /// </summary>
   /// <param name="bitmap">The current frame bitmap.</param>
   /// <param name="currentCapture">The capture result with dirty rect info.</param>
@@ -372,8 +367,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Determines the effective encoding quality based on auto-quality settings
-  /// and current bandwidth utilization.
+  /// Calculates target quality by applying auto-quality logic to current bandwidth usage.
   /// </summary>
   /// <param name="currentMbps">The current outgoing bandwidth in Mbps.</param>
   /// <returns>The quality value to use for encoding (1-100).</returns>
@@ -404,8 +398,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Computes a recovery region when reduced quality was used for a prior frame.
-  /// Returns null if no recovery is needed or bandwidth is still high.
+  /// Checks if a high-quality recovery update is needed for previously degraded regions.
   /// </summary>
   /// <param name="effectiveQuality">The current encoding quality.</param>
   /// <param name="currentMbps">Current outgoing bandwidth.</param>
@@ -434,7 +427,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Gets the currently selected display under a read lock.
+  /// Safely retrieves the currently selected display.
   /// </summary>
   private DisplayInfo? GetSelectedDisplay()
   {
@@ -443,8 +436,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Handles display settings change events by re-enumerating displays
-  /// and updating the selected display reference.
+  /// Responds to system-level display changes by reloading the display list.
   /// </summary>
   private async Task HandleDisplaySettingsChanged(object subscriber, DisplaySettingsChangedMessage message)
   {
@@ -474,8 +466,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Monitors outgoing bandwidth and controls the max bandwidth gate.
-  /// Resets the gate when bandwidth is within limits, blocks when exceeded.
+  /// Throttles frame capture if the outgoing bandwidth exceeds configured limits.
   /// </summary>
   private async Task MonitorBandwidth(CancellationToken cancellationToken)
   {
@@ -513,7 +504,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Sets the selected display under a write lock.
+  /// Safely updates the target display for capture.
   /// </summary>
   private void SetSelectedDisplay(DisplayInfo? display)
   {
@@ -522,8 +513,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Determines whether a key frame should be sent based on forced key frame,
-  /// display change, or resolution change.
+  /// Evaluates whether a full frame refresh is required.
   /// </summary>
   /// <returns>True if a full key frame capture should be performed.</returns>
   private bool ShouldSendKeyFrame()
@@ -547,8 +537,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Main capture loop that coordinates grabbing, encoding, and streaming frames.
-  /// Handles bandwidth limiting, key frames, recovery frames, and quality tracking.
+  /// The primary loop managing the capture, encoding, and recovery lifecycle.
   /// </summary>
   private async Task StartCapturingChangesImpl(CancellationToken cancellationToken)
   {
@@ -703,8 +692,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   }
 
   /// <summary>
-  /// Tracks regions that were encoded at reduced quality and need recovery.
-  /// Merges overlapping or adjacent reduced-quality regions for efficient recovery.
+  /// Accumulates regions sent at reduced quality to schedule future high-quality recovery.
   /// </summary>
   /// <param name="bitmapSize">The dimensions of the captured bitmap.</param>
   /// <param name="regions">The regions that were encoded at lower quality.</param>
