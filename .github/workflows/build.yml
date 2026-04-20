@@ -31,7 +31,7 @@ on:
       notarize_mac_bundle:
         description: "Notarize macOS bundle"
         required: false
-        default: false
+        default: true
         type: boolean
 
       build_nugets:
