@@ -6,7 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -22,8 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference
-      Include="..\..\Libraries\ControlR.Libraries.Configuration.InMemory\ControlR.Libraries.Configuration.InMemory.csproj" />
+    <ProjectReference Include="..\..\Libraries\ControlR.Libraries.Configuration.InMemory\ControlR.Libraries.Configuration.InMemory.csproj" />
   </ItemGroup>
 
   <ItemGroup>
