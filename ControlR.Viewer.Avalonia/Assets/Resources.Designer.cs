@@ -756,6 +756,24 @@ namespace ControlR.Viewer.Avalonia.Assets {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to An error occurred while requesting remote control permissions.
+        /// </summary>
+        public static string RemoteControl_ErrorRequestingPermissions {
+            get {
+                return ResourceManager.GetString("RemoteControl_ErrorRequestingPermissions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Requesting remote control permissions.
+        /// </summary>
+        public static string RemoteControl_RequestingPermissions {
+            get {
+                return ResourceManager.GetString("RemoteControl_RequestingPermissions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to An error occurred while sending clipboard.
         /// </summary>
         public static string RemoteControl_ErrorSendingClipboard {
@@ -869,6 +887,42 @@ namespace ControlR.Viewer.Avalonia.Assets {
         public static string RemoteControl_InputSuppressedViewOnlyMode {
             get {
                 return ResourceManager.GetString("RemoteControl_InputSuppressedViewOnlyMode", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Permission request failed: {0}.
+        /// </summary>
+        public static string RemoteControl_PermissionRequestFailed {
+            get {
+                return ResourceManager.GetString("RemoteControl_PermissionRequestFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Permission request granted.  Refreshing sessions.
+        /// </summary>
+        public static string RemoteControl_PermissionGranted {
+            get {
+                return ResourceManager.GetString("RemoteControl_PermissionGranted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Permissions not granted.
+        /// </summary>
+        public static string RemoteControl_PermissionsNotGranted {
+            get {
+                return ResourceManager.GetString("RemoteControl_PermissionsNotGranted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Request Now.
+        /// </summary>
+        public static string RemoteControl_RequestPermissionsNow {
+            get {
+                return ResourceManager.GetString("RemoteControl_RequestPermissionsNow", resourceCulture);
             }
         }
         

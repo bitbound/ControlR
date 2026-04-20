@@ -173,6 +173,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     {
       session.PreviewRequested -= HandlePreviewRequested;
       session.ConnectRequested -= HandleConnectRequested;
+      session.RemoteControlPermissionRequested -= HandleRequestPermissionsResult;
     }
     base.Dispose(disposing);
   }
@@ -220,6 +221,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       {
         existingSession.PreviewRequested -= HandlePreviewRequested;
         existingSession.ConnectRequested -= HandleConnectRequested;
+        existingSession.RemoteControlPermissionRequested -= HandleRequestPermissionsResult;
       }
 
       DesktopSessions.Clear();
@@ -228,6 +230,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
         var vm = new DesktopSessionViewModel(session);
         vm.PreviewRequested += HandlePreviewRequested;
         vm.ConnectRequested += HandleConnectRequested;
+        vm.RemoteControlPermissionRequested += HandleRequestPermissionsResult;
         DesktopSessions.Add(vm);
       }
 
@@ -294,6 +297,34 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
   private async void HandlePreviewRequested(object? sender, DesktopSession session)
   {
     await ShowPreviewDialog(session);
+  }
+
+  private async void HandleRequestPermissionsResult(object? sender, DesktopSession session)
+  {
+    try
+    {
+      _snackbar.Add(Resources.RemoteControl_RequestingPermissions, SnackbarSeverity.Info);
+      var result = await _hubConnection.Server.RequestRemoteControlPermission(
+        _viewerOptions.Value.DeviceId,
+        session.ProcessId);
+
+      if (result.IsSuccess)
+      {
+        _snackbar.Add(Resources.RemoteControl_PermissionGranted, SnackbarSeverity.Success);
+        await GetDeviceDesktopSessions(quiet: true);
+      }
+      else
+      {
+        _snackbar.Add(
+          string.Format(CultureInfo.CurrentCulture, Resources.RemoteControl_PermissionRequestFailed, result.Reason),
+          SnackbarSeverity.Warning);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while requesting remote control permissions.");
+      _snackbar.Add(Resources.RemoteControl_ErrorRequestingPermissions, SnackbarSeverity.Warning);
+    }
   }
 
   private async Task HandleStreamingConnectionLost()

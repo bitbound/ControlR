@@ -1,15 +1,10 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
-public enum DesktopClientPermissionScope
-{
-  RemoteControl = 0,
-  DesktopPreview = 1
-}
-
 /// <summary>
-/// IPC request to check OS-level desktop client permission status.
+/// IPC request to actively request (not just check) OS-level remote control permissions
+/// on the desktop client. On Linux/Wayland, this triggers the XDG portal permission dialog.
 /// </summary>
 [MessagePackObject(keyAsPropertyName: true)]
-public record CheckOsPermissionsIpcDto(
+public record RequestRemoteControlPermissionIpcDto(
   int TargetProcessId,
   DesktopClientPermissionScope Scope = DesktopClientPermissionScope.RemoteControl);

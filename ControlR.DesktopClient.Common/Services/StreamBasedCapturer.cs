@@ -118,7 +118,7 @@ internal class StreamBasedCapturer(
     return Result.Fail<DisplayInfo>("No display selected.");
   }
 
-  private async Task CaptureLoop(CancellationToken ct)
+  private async Task CaptureLoop(CancellationToken cancellationToken)
   {
     var selectResult = await TryGetSelectedDisplay();
     if (selectResult.IsSuccess)
@@ -144,7 +144,7 @@ internal class StreamBasedCapturer(
     // Producer: Capture and feed to encoder
     var producer = Task.Run(async () =>
     {
-      while (!ct.IsCancellationRequested)
+      while (!cancellationToken.IsCancellationRequested)
       {
         try
         {
@@ -156,7 +156,7 @@ internal class StreamBasedCapturer(
           }
           else
           {
-            await Task.Delay(100, ct);
+            await Task.Delay(100, cancellationToken);
           }
         }
         catch (Exception ex)
@@ -164,21 +164,21 @@ internal class StreamBasedCapturer(
           _logger.LogError(ex, "Error capturing frame.");
         }
       }
-    }, ct);
+    }, cancellationToken);
 
     // Consumer: Read packets and push to channel
-    while (!ct.IsCancellationRequested)
+    while (!cancellationToken.IsCancellationRequested)
     {
       var packet = _encoder.GetNextPacket();
       if (packet != null)
       {
         var dto = new VideoStreamPacketDto(packet, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         var wrapper = DtoWrapper.Create(dto, DtoType.VideoStreamPacket);
-        await _channel.Writer.WriteAsync(wrapper, ct);
+        await _channel.Writer.WriteAsync(wrapper, cancellationToken);
       }
       else
       {
-        await Task.Delay(1, ct);
+        await Task.Delay(1, cancellationToken);
       }
     }
 

@@ -7,7 +7,8 @@ namespace ControlR.Libraries.Hosting;
 
 public abstract class PeriodicBackgroundService(
   TimeSpan period,
-  TimeProvider timeProvider, 
+  bool catchExceptions,
+  TimeProvider timeProvider,
   ILogger<PeriodicBackgroundService> logger) : BackgroundService
 {
   protected readonly ILogger<PeriodicBackgroundService> Logger = logger;
@@ -22,18 +23,34 @@ public abstract class PeriodicBackgroundService(
     using var dedupeScope = Logger.EnterDedupeScope();
     _dedupeLogger = dedupeScope;
     using var timer = new PeriodicTimer(period, timeProvider);
+
+    try 
+    {
+      await OnStartingAsync(stoppingToken);
+    }
+    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+    {
+      Logger.LogInformation("Background service is stopping during startup due to cancellation.");
+      return;
+    }
+    catch (Exception ex) when (catchExceptions)
+    {
+      Logger.LogError(ex, "Error during background service startup.");
+      return;
+    }
+
     while (await timer.WaitForNextTick(throwOnCancellation: false, stoppingToken))
     {
       try
       {
         await HandleElapsed();
       }
-      catch (OperationCanceledException)
+      catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
       {
         Logger.LogInformation("Background service is stopping due to cancellation.");
         break;
       }
-      catch (Exception ex)
+      catch (Exception ex) when (catchExceptions)
       {
         Logger.LogError(ex, "Error in periodic background service.");
       }
@@ -44,4 +61,6 @@ public abstract class PeriodicBackgroundService(
   }
 
   protected abstract Task HandleElapsed();
+
+  protected virtual Task OnStartingAsync(CancellationToken stoppingToken) => Task.CompletedTask;
 }

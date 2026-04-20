@@ -294,6 +294,12 @@
   <data name="RemoteControl_ErrorRequestingSession" xml:space="preserve">
     <value>An error occurred while requesting the remote control session.</value>
   </data>
+  <data name="RemoteControl_ErrorRequestingPermissions" xml:space="preserve">
+    <value>An error occurred while requesting remote control permissions.</value>
+  </data>
+  <data name="RemoteControl_RequestingPermissions" xml:space="preserve">
+    <value>Requesting remote control permissions.</value>
+  </data>
   <data name="Loading" xml:space="preserve">
     <value>Loading</value>
     <comment>e.g. "Loading.  Please wait."</comment>
@@ -533,5 +539,17 @@ Details: {0}</value>
   </data>
   <data name="RemoteControl_InputSuppressedViewOnlyMode" xml:space="preserve">
     <value>Input is disabled due to view-only mode.</value>
+  </data>
+  <data name="RemoteControl_PermissionsNotGranted" xml:space="preserve">
+    <value>Permissions not granted.</value>
+  </data>
+  <data name="RemoteControl_RequestPermissionsNow" xml:space="preserve">
+    <value>Request Now</value>
+  </data>
+  <data name="RemoteControl_PermissionRequestFailed" xml:space="preserve">
+    <value>Permission request failed: {0}</value>
+  </data>
+  <data name="RemoteControl_PermissionGranted" xml:space="preserve">
+    <value>Permission granted. Refreshing sessions.</value>
   </data>
 </root>

@@ -6,10 +6,12 @@ using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
+using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Signalr.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
@@ -162,6 +164,20 @@ internal class AgentHubClient(
           "No IPC server found for process ID {ProcessId}.  Cannot create remote control session.",
           dto.TargetProcessId);
         return HubResult.Fail($"Process with ID {dto.TargetProcessId} is no longer running.");
+      }
+
+      var remoteControlPermissionState = await EnsureDesktopClientPermissionGranted(
+        ipcServer.Server.Client,
+        dto.TargetProcessId,
+        DesktopClientPermissionScope.RemoteControl);
+
+      if (!remoteControlPermissionState.ArePermissionsGranted)
+      {
+        _logger.LogWarning(
+          "Remote control session rejected for process ID {ProcessId}. Reason: {Reason}",
+          dto.TargetProcessId,
+          remoteControlPermissionState.Reason ?? "Unknown reason");
+        return HubResult.Fail(remoteControlPermissionState.Reason ?? "Remote control permission is not granted on the desktop client.");
       }
 
       var ipcDto = new RemoteControlRequestIpcDto(
@@ -524,6 +540,20 @@ internal class AgentHubClient(
         return HubResult.Fail("IPC server not found for target process.");
       }
 
+      var desktopPreviewPermissionState = await EnsureDesktopClientPermissionGranted(
+        ipcServer.Server.Client,
+        dto.TargetProcessId,
+        DesktopClientPermissionScope.DesktopPreview);
+
+      if (!desktopPreviewPermissionState.ArePermissionsGranted)
+      {
+        _logger.LogWarning(
+          "Desktop preview rejected for process ID {ProcessId}. Reason: {Reason}",
+          dto.TargetProcessId,
+          desktopPreviewPermissionState.Reason ?? "Unknown reason");
+        return HubResult.Fail(desktopPreviewPermissionState.Reason ?? "Desktop preview permission is not granted on the desktop client.");
+      }
+
       var ipcDto = new DesktopPreviewRequestIpcDto(dto.RequesterId, dto.StreamId, dto.TargetProcessId);
       var response = await ipcServer.Server.Client.GetDesktopPreview(ipcDto);
 
@@ -559,6 +589,47 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Error while requesting desktop preview.");
       return HubResult.Fail("An error occurred while requesting desktop preview.");
+    }
+  }
+
+  public async Task<HubResult> RequestRemoteControlPermission(int targetProcessId)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Remote control permission request received for process ID {ProcessId}",
+        targetProcessId);
+
+      if (!_ipcServerStore.TryGetServer(targetProcessId, out var ipcServer))
+      {
+        _logger.LogWarning(
+          "No IPC server found for process ID {ProcessId}. Cannot request remote control permission.",
+          targetProcessId);
+        return HubResult.Fail("IPC server not found for target process.");
+      }
+
+      var ipcDto = new RequestRemoteControlPermissionIpcDto(targetProcessId);
+      var response = await ipcServer.Server.Client.RequestRemoteControlPermission(ipcDto);
+
+      if (!response.ArePermissionsGranted)
+      {
+        _logger.LogWarning(
+          "Remote control permission request denied for process ID {ProcessId}. Reason: {Reason}",
+          targetProcessId,
+          response.Reason ?? "Unknown reason");
+        return HubResult.Fail(response.Reason ?? "Remote control permission request was denied.");
+      }
+
+      _logger.LogInformation(
+        "Remote control permission granted for process ID {ProcessId}",
+        targetProcessId);
+
+      return HubResult.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while requesting remote control permission.");
+      return HubResult.Fail("An error occurred while requesting remote control permission.");
     }
   }
 
@@ -805,6 +876,24 @@ internal class AgentHubClient(
         dto.DirectoryPath);
       return new ValidateFilePathResponseDto(false, "An error occurred while validating file path.");
     }
+  }
+
+  private async Task<CheckOsPermissionsResponseIpcDto> EnsureDesktopClientPermissionGranted(
+    IDesktopClientRpcService desktopClient,
+    int targetProcessId,
+    DesktopClientPermissionScope scope)
+  {
+    var response = await desktopClient.CheckOsPermissions(
+      new CheckOsPermissionsIpcDto(targetProcessId, scope));
+
+    _logger.LogInformation(
+      "Desktop client preflight for {Scope} on process ID {ProcessId}: Granted={Granted}, Reason={Reason}",
+      scope,
+      targetProcessId,
+      response.ArePermissionsGranted,
+      response.Reason ?? "None");
+
+    return response;
   }
 
   private async Task SendFileStream(Guid streamId, string fileSystemPath, bool isTempFile)

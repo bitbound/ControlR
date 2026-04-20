@@ -3,6 +3,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.ViewModelInterfaces;
 using ControlR.DesktopClient.ViewModels.Linux;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -11,45 +12,42 @@ namespace ControlR.DesktopClient.Linux.Services;
 public class RemoteControlPermissionMonitorWayland(
   TimeProvider timeProvider,
   IToaster toaster,
+  IDesktopClientPermissionService desktopClientPermissionService,
   IDesktopEnvironmentDetector desktopEnvironmentDetector,
   INavigationProvider navigationProvider,
-  IWaylandPermissionProvider waylandPermissionProvider,
   IUiThread uiThread,
   ILogger<RemoteControlPermissionMonitorWayland> logger)
   : PeriodicBackgroundService(
-      TimeSpan.FromMinutes(10),
+      period: TimeSpan.FromMinutes(10),
+      catchExceptions: true,
       timeProvider,
       logger)
 {
+  private readonly IDesktopClientPermissionService _desktopClientPermissionService = desktopClientPermissionService;
   private readonly IDesktopEnvironmentDetector _desktopEnvironmentDetector = desktopEnvironmentDetector;
   private readonly INavigationProvider _navigationProvider = navigationProvider;
   private readonly IToaster _toaster = toaster;
   private readonly IUiThread _uiThread = uiThread;
-  private readonly IWaylandPermissionProvider _waylandPermissionProvider = waylandPermissionProvider;
-
-  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-  {
-    try
-    {
-      if (!_desktopEnvironmentDetector.IsWayland())
-      {
-        Logger.LogInformation("Permission monitoring is not required on this platform");
-        return;
-      }
-
-      Logger.LogInformation("Starting Wayland permission monitoring service");
-      await CheckPermissions();
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error starting RemoteControlPermissionMonitor.");
-    }
-
-    await base.ExecuteAsync(stoppingToken);
-  }
 
   protected override async Task HandleElapsed()
   {
+    if (!_desktopEnvironmentDetector.IsWayland())
+    {
+      return;
+    }
+
+    await CheckPermissions();
+  }
+
+  protected override async Task OnStartingAsync(CancellationToken stoppingToken)
+  {
+    if (!_desktopEnvironmentDetector.IsWayland())
+    {
+      Logger.LogInformation("Permission monitoring is not required on this platform");
+      return;
+    }
+
+    Logger.LogInformation("Starting Wayland permission monitoring service");
     await CheckPermissions();
   }
 
@@ -59,9 +57,13 @@ public class RemoteControlPermissionMonitorWayland(
     {
       DedupeLogger.LogInformationDeduped("Checking Wayland remote control permissions");
 
-      var arePermissionsGranted = await _waylandPermissionProvider.IsRemoteControlPermissionGranted();
+      var permissionState = await _desktopClientPermissionService.GetPermissionState(DesktopClientPermissionScope.RemoteControl);
+      var arePermissionsGranted = permissionState.ArePermissionsGranted;
 
-      DedupeLogger.LogInformationDeduped("Wayland permissions: RemoteControl={RemoteControl}", args: arePermissionsGranted);
+      DedupeLogger.LogInformationDeduped(
+        "Wayland permissions: RemoteControl={RemoteControl}",
+        args: [arePermissionsGranted]);
+
       if (arePermissionsGranted)
       {
         DedupeLogger.LogInformationDeduped("All required permissions are granted");

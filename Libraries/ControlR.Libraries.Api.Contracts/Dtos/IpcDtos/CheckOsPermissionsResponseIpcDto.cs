@@ -1,10 +1,10 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
 /// <summary>
-/// IPC response containing the status of OS-level remote control permissions.
-/// Returns whether the necessary permissions for remote control are granted
-/// (e.g., macOS Accessibility/Screen Recording, Linux Wayland permissions).
+/// IPC response containing the status of OS-level desktop client permissions.
+/// Returns whether the requested desktop client operation is allowed and an optional reason.
 /// </summary>
 [MessagePackObject(keyAsPropertyName: true)]
 public record CheckOsPermissionsResponseIpcDto(
-  bool ArePermissionsGranted);
+  bool ArePermissionsGranted,
+  string? Reason = null);

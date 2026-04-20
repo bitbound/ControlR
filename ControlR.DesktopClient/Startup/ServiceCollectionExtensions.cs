@@ -40,6 +40,7 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<IRemoteControlHostManager, RemoteControlHostManager>()
       .AddSingleton<IDialogProvider, DialogProvider>()
       .AddSingleton<IUserInteractionService, UserInteractionService>()
+      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionService>()
       .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>()
       .AddSingleton<IChatSessionManager, ChatSessionManager>()
       .AddSingleton<IpcClientManager>()

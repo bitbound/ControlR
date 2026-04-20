@@ -17,6 +17,7 @@ internal class DesktopSessionViewModelFake : IDesktopSessionViewModel
 
   public event EventHandler<DesktopSession>? PreviewRequested;
   public event EventHandler<DesktopSession>? ConnectRequested;
+  public event EventHandler<DesktopSession>? RemoteControlPermissionRequested;
 
   public bool AreRemoteControlPermissionsGranted => Session.AreRemoteControlPermissionsGranted;
   public string Name => Session.Name;

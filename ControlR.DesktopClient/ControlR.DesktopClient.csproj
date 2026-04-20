@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework></TargetFramework>
     <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">$(MacTargetFramework);$(LinuxTargetFramework);$(WindowsTargetFramework)</TargetFrameworks>
     <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`Windows`))' == 'true'">$(WindowsTargetFramework);$(MacTargetFramework);$(LinuxTargetFramework)</TargetFrameworks>
     <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`OSX`))' != 'true' and '$([MSBuild]::IsOSPlatform(`Windows`))' != 'true'">$(LinuxTargetFramework);$(WindowsTargetFramework)</TargetFrameworks>

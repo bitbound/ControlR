@@ -160,6 +160,12 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(HubResult.Ok());
   }
 
+  public Task<HubResult> RequestRemoteControlPermission(int targetProcessId)
+  {
+    Console.WriteLine($"Remote control permission requested for process {targetProcessId}");
+    return Task.FromResult(HubResult.Ok());
+  }
+
   public Task<HubResult> SendChatMessage(ChatMessageHubDto dto)
   {
     Console.WriteLine($"Sending chat message from {dto.SenderName} ({dto.SenderEmail}): {dto.Message}");

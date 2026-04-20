@@ -2,11 +2,10 @@ using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Common;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Mac.Services;
-using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Views.Mac;
 using ControlR.Libraries.Api.Contracts.Enums;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.DesktopClient.ViewModels.Mac;
 
@@ -24,9 +23,12 @@ public interface IPermissionsViewModelMac : IPermissionsViewModel
 }
 
 [SuppressMessage("Performance", "CA1822:Mark members as static")]
-public partial class PermissionsViewModelMac(IServiceProvider serviceProvider) : ViewModelBase<PermissionsViewMac>, IPermissionsViewModelMac
+public partial class PermissionsViewModelMac(
+  IMacInterop macInterop,
+  IDesktopClientPermissionService desktopClientPermissionService) : ViewModelBase<PermissionsViewMac>, IPermissionsViewModelMac
 {
-  private readonly IServiceProvider _serviceProvider = serviceProvider;
+  private readonly IDesktopClientPermissionService _desktopClientPermissionService = desktopClientPermissionService;
+  private readonly IMacInterop _macInterop = macInterop;
 
   [ObservableProperty]
   private bool _isMacAccessibilityPermissionGranted;
@@ -42,9 +44,9 @@ public partial class PermissionsViewModelMac(IServiceProvider serviceProvider) :
 
   public async Task SetPermissionValues()
   {
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    IsMacAccessibilityPermissionGranted = macInterop.IsMacAccessibilityPermissionGranted();
-    IsMacScreenCapturePermissionGranted = macInterop.IsMacScreenCapturePermissionGranted();
+    var platformState = await _desktopClientPermissionService.GetPlatformPermissionState();
+    IsMacAccessibilityPermissionGranted = platformState.IsAccessibilityGranted == true;
+    IsMacScreenCapturePermissionGranted = platformState.IsScreenCaptureGranted == true;
 
     if (!IsMacAccessibilityPermissionGranted || !IsMacScreenCapturePermissionGranted)
     {
@@ -69,8 +71,7 @@ public partial class PermissionsViewModelMac(IServiceProvider serviceProvider) :
   [RelayCommand]
   private async Task GrantMacAccessibilityPermission()
   {
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    if (!macInterop.RequestAccessibilityPermission())
+    if (!_macInterop.RequestAccessibilityPermission())
     {
       PermissionStatusMessage = Localization.MacAccessibilityPermissionRestartRequired;
       PermissionStatusSeverity = MessageSeverity.Warning;
@@ -82,8 +83,7 @@ public partial class PermissionsViewModelMac(IServiceProvider serviceProvider) :
   [RelayCommand]
   private async Task GrantMacScreenCapturePermission()
   {
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    if (!macInterop.RequestScreenCapturePermission())
+    if (!_macInterop.RequestScreenCapturePermission())
     {
       PermissionStatusMessage = Localization.MacScreenCapturePermissionRestartRequired;
       PermissionStatusSeverity = MessageSeverity.Warning;
@@ -95,14 +95,12 @@ public partial class PermissionsViewModelMac(IServiceProvider serviceProvider) :
   [RelayCommand]
   private void OpenAccessibilitySettings()
   {
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    macInterop.OpenAccessibilityPreferences();
+    _macInterop.OpenAccessibilityPreferences();
   }
 
   [RelayCommand]
   private void OpenScreenCaptureSettings()
   {
-    var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-    macInterop.OpenScreenRecordingPreferences();
+    _macInterop.OpenScreenRecordingPreferences();
   }
 }

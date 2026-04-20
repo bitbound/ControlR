@@ -332,6 +332,29 @@ public partial class RemoteControl : ViewportAwareComponent
     }
   }
 
+  private async Task RequestPermissions(DesktopSession session)
+  {
+    try
+    {
+      Snackbar.Add("Requesting permission for remote control", Severity.Info);
+      var result = await ViewerHub.Server.RequestRemoteControlPermission(DeviceId, session.ProcessId);
+      if (result.IsSuccess)
+      {
+        Snackbar.Add("Permission granted. Refreshing sessions.", Severity.Success);
+        await GetDeviceDesktopSessions(false);
+      }
+      else
+      {
+        Snackbar.Add($"Permission request failed: {result.Reason}", Severity.Warning);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while requesting remote control permissions.");
+      Snackbar.Add("Error requesting permissions", Severity.Error);
+    }
+  }
+
   private async Task SendCaptureSettings()
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));

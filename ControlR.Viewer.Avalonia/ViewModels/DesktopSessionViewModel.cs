@@ -6,6 +6,7 @@ public interface IDesktopSessionViewModel
 {
   event EventHandler<DesktopSession>? PreviewRequested;
   event EventHandler<DesktopSession>? ConnectRequested;
+  event EventHandler<DesktopSession>? RemoteControlPermissionRequested;
   bool AreRemoteControlPermissionsGranted { get; }
   string Name { get; }
   int ProcessId { get; }
@@ -26,6 +27,7 @@ public partial class DesktopSessionViewModel : ObservableObject, IDesktopSession
 
   public event EventHandler<DesktopSession>? PreviewRequested;
   public event EventHandler<DesktopSession>? ConnectRequested;
+  public event EventHandler<DesktopSession>? RemoteControlPermissionRequested;
 
   public bool AreRemoteControlPermissionsGranted => _session.AreRemoteControlPermissionsGranted;
   public string Name => _session.Name;
@@ -45,5 +47,11 @@ public partial class DesktopSessionViewModel : ObservableObject, IDesktopSession
   private void Preview()
   {
     PreviewRequested?.Invoke(this, _session);
+  }
+
+  [RelayCommand]
+  private void RequestPermissions()
+  {
+    RemoteControlPermissionRequested?.Invoke(this, _session);
   }
 }

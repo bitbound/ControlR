@@ -11,157 +11,197 @@ namespace ControlR.DesktopClient.Services;
 public class DesktopClientRpcService(
     IServiceProvider serviceProvider,
     IChatSessionManager chatSessionManager,
+    IDesktopClientPermissionService desktopClientPermissionService,
     IDesktopPreviewProvider desktopPreviewService,
     IRemoteControlHostManager remoteControlHostManager,
     IControlledApplicationLifetime appLifetime,
     ILogger<DesktopClientRpcService> logger) : IDesktopClientRpcService
 {
-    private readonly IControlledApplicationLifetime _appLifetime = appLifetime;
-    private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
-    private readonly IDesktopPreviewProvider _desktopPreviewService = desktopPreviewService;
-    private readonly ILogger<DesktopClientRpcService> _logger = logger;
-    private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
+  private readonly IControlledApplicationLifetime _appLifetime = appLifetime;
+  private readonly IChatSessionManager _chatSessionManager = chatSessionManager;
+  private readonly IDesktopClientPermissionService _desktopClientPermissionService = desktopClientPermissionService;
+  private readonly IDesktopPreviewProvider _desktopPreviewService = desktopPreviewService;
+  private readonly ILogger<DesktopClientRpcService> _logger = logger;
+  private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
+  private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-    public async Task<CheckOsPermissionsResponseIpcDto> CheckOsPermissions(CheckOsPermissionsIpcDto dto)
+  public async Task<CheckOsPermissionsResponseIpcDto> CheckOsPermissions(CheckOsPermissionsIpcDto dto)
+  {
+    try
     {
-        try
-        {
-            _logger.LogInformation("Handling OS permissions check request for process ID: {ProcessId}", dto.TargetProcessId);
+      _logger.LogInformation(
+        "Handling OS permissions check request for {Scope}. Process ID: {ProcessId}",
+        dto.Scope,
+        dto.TargetProcessId);
 
-            var arePermissionsGranted = false;
+      var permissionState = await _desktopClientPermissionService.GetPermissionState(dto.Scope);
+      var response = new CheckOsPermissionsResponseIpcDto(
+          permissionState.ArePermissionsGranted,
+          permissionState.Reason);
 
-            #if IS_MACOS
-              var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
-              var isAccessibilityGranted = macInterop.IsMacAccessibilityPermissionGranted();
-              var isScreenCaptureGranted = macInterop.IsMacScreenCapturePermissionGranted();
-              arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
+      _logger.LogInformation(
+        "Desktop client permission check result for {Scope}: Granted={Granted}, Reason={Reason}",
+        dto.Scope,
+        response.ArePermissionsGranted,
+        response.Reason ?? "None");
 
-              _logger.LogInformation(
-                "macOS permissions check: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
-                isAccessibilityGranted,
-                isScreenCaptureGranted);
-            #elif IS_LINUX
-                var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
-                if (detector.IsWayland())
-                {
-                    var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-                    arePermissionsGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
-
-                    _logger.LogInformation("Wayland permissions check: RemoteControl={RemoteControl}", arePermissionsGranted);
-                }
-                else
-                {
-                    // X11 doesn't require special permissions
-                    arePermissionsGranted = true;
-                    _logger.LogInformation("X11 detected, no special permissions required");
-                }
-            #else
-                arePermissionsGranted = true;
-                _logger.LogInformation("Windows detected, no special permissions required");
-            #endif
-
-            return new CheckOsPermissionsResponseIpcDto(arePermissionsGranted);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while checking OS permissions.");
-            return new CheckOsPermissionsResponseIpcDto(false);
-        }
+      return response;
     }
-    public async Task CloseChatSession(CloseChatSessionIpcDto dto)
+    catch (Exception ex)
     {
-        try
-        {
-            _logger.LogInformation(
-              "Handling close chat session request. Session ID: {SessionId}, Process ID: {ProcessId}",
-              dto.SessionId,
-              dto.TargetProcessId);
-
-            // Close the session through the chat session manager
-            await _chatSessionManager.CloseChatSession(dto.SessionId, true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while handling close chat session request.");
-        }
+      _logger.LogError(ex, "Error while checking OS permissions for {Scope}.", dto.Scope);
+      return new CheckOsPermissionsResponseIpcDto(false, "Unable to determine desktop client permissions.");
     }
-    public async Task<DesktopPreviewResponseIpcDto> GetDesktopPreview(DesktopPreviewRequestIpcDto dto)
+  }
+  public async Task CloseChatSession(CloseChatSessionIpcDto dto)
+  {
+    try
     {
-        try
-        {
-            _logger.LogInformation(
-              "Handling desktop preview request. Requester ID: {RequesterId}, Stream ID: {StreamId}, Process ID: {ProcessId}",
-              dto.RequesterId,
-              dto.StreamId,
-              dto.TargetProcessId);
+      _logger.LogInformation(
+        "Handling close chat session request. Session ID: {SessionId}, Process ID: {ProcessId}",
+        dto.SessionId,
+        dto.TargetProcessId);
 
-            var result = await _desktopPreviewService.CapturePreview();
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogWarning("Failed to capture preview: {Error}", result.Reason);
-                return new DesktopPreviewResponseIpcDto([], false, result.Reason);
-            }
-
-            _logger.LogInformation(
-              "Desktop preview captured successfully. JPEG size: {Size} bytes",
-              result.Value.Length);
-
-            return new DesktopPreviewResponseIpcDto(result.Value, true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while handling desktop preview request.");
-            return new DesktopPreviewResponseIpcDto([], false, "An error occurred while capturing desktop preview.");
-        }
+      // Close the session through the chat session manager
+      await _chatSessionManager.CloseChatSession(dto.SessionId, true);
     }
-    
-    public Task InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
+    catch (Exception ex)
     {
-      #if IS_WINDOWS
+      _logger.LogError(ex, "Error while handling close chat session request.");
+    }
+  }
+  public async Task<DesktopPreviewResponseIpcDto> GetDesktopPreview(DesktopPreviewRequestIpcDto dto)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Handling desktop preview request. Requester ID: {RequesterId}, Stream ID: {StreamId}, Process ID: {ProcessId}",
+        dto.RequesterId,
+        dto.StreamId,
+        dto.TargetProcessId);
+
+      var permissionState = await CheckOsPermissions(
+          new CheckOsPermissionsIpcDto(
+              dto.TargetProcessId,
+              DesktopClientPermissionScope.DesktopPreview));
+
+      if (!permissionState.ArePermissionsGranted)
+      {
+        _logger.LogWarning(
+            "Desktop preview denied for process ID {ProcessId}. Reason: {Reason}",
+            dto.TargetProcessId,
+            permissionState.Reason ?? "Unknown reason");
+        return new DesktopPreviewResponseIpcDto([], false, permissionState.Reason ?? "Desktop preview permission is not granted.");
+      }
+
+      var result = await _desktopPreviewService.CapturePreview();
+
+      if (!result.IsSuccess)
+      {
+        _logger.LogWarning("Failed to capture preview: {Error}", result.Reason);
+        return new DesktopPreviewResponseIpcDto([], false, result.Reason);
+      }
+
+      _logger.LogInformation(
+        "Desktop preview captured successfully. JPEG size: {Size} bytes",
+        result.Value.Length);
+
+      return new DesktopPreviewResponseIpcDto(result.Value, true);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling desktop preview request.");
+      return new DesktopPreviewResponseIpcDto([], false, "An error occurred while capturing desktop preview.");
+    }
+  }
+
+  public Task InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
+  {
+#if IS_WINDOWS
         _logger.LogInformation("Handling Ctrl+Alt+Del request. Requester ID: {RequesterId}", dto.InvokerUserName);
         var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
         win32Interop.InvokeCtrlAltDel();
-      #else
-        _logger.LogWarning("Ctrl+Alt+Del invocation requested on non-Windows OS. Ignoring.");
-      #endif
-      return Task.CompletedTask;
+#else
+    _logger.LogWarning("Ctrl+Alt+Del invocation requested on non-Windows OS. Ignoring.");
+#endif
+    return Task.CompletedTask;
 
-    }
-    public async Task ReceiveChatMessage(ChatMessageIpcDto dto)
+  }
+  public async Task ReceiveChatMessage(ChatMessageIpcDto dto)
+  {
+    try
     {
-        try
-        {
-            _logger.LogInformation(
-              "Handling chat message. Session ID: {SessionId}, Sender: {SenderName} ({SenderEmail})",
-              dto.SessionId,
-              dto.SenderName,
-              dto.SenderEmail);
+      _logger.LogInformation(
+        "Handling chat message. Session ID: {SessionId}, Sender: {SenderName} ({SenderEmail})",
+        dto.SessionId,
+        dto.SenderName,
+        dto.SenderEmail);
 
-            // Add the message to the session
-            await _chatSessionManager.AddMessage(dto.SessionId, dto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while handling chat message.");
-        }
+      // Add the message to the session
+      await _chatSessionManager.AddMessage(dto.SessionId, dto);
     }
-    public async Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
+    catch (Exception ex)
     {
-        return (await _remoteControlHostManager.StartHost(dto)).ToResult();
+      _logger.LogError(ex, "Error while handling chat message.");
     }
-    public async Task ShutdownDesktopClient(ShutdownCommandDto dto)
+  }
+  public async Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
+  {
+    var permissionState = await CheckOsPermissions(
+        new CheckOsPermissionsIpcDto(
+            dto.TargetProcessId,
+            DesktopClientPermissionScope.RemoteControl));
+
+    if (!permissionState.ArePermissionsGranted)
     {
-        try
-        {
-            _logger.LogInformation("Handling shutdown command. Reason: {Reason}", dto.Reason);
-            await _remoteControlHostManager.StopAllHosts(dto.Reason);
-            _appLifetime.Shutdown(0);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while handling shutdown command.");
-        }
+      _logger.LogWarning(
+          "Remote control denied for process ID {ProcessId}. Reason: {Reason}",
+          dto.TargetProcessId,
+          permissionState.Reason ?? "Unknown reason");
+      return Result.Fail(permissionState.Reason ?? "Remote control permission is not granted.");
     }
+
+    return (await _remoteControlHostManager.StartHost(dto)).ToResult();
+  }
+  public async Task<CheckOsPermissionsResponseIpcDto> RequestRemoteControlPermission(RequestRemoteControlPermissionIpcDto dto)
+  {
+    try
+    {
+      _logger.LogInformation(
+        "Handling remote control permission request for {Scope}. Process ID: {ProcessId}",
+        dto.Scope,
+        dto.TargetProcessId);
+
+      var permissionState = await _desktopClientPermissionService.RequestPermission(dto.Scope);
+
+      _logger.LogInformation(
+        "Remote control permission request result for {Scope}: Granted={Granted}, Reason={Reason}",
+        dto.Scope,
+        permissionState.ArePermissionsGranted,
+        permissionState.Reason ?? "None");
+
+      return new CheckOsPermissionsResponseIpcDto(
+          permissionState.ArePermissionsGranted,
+          permissionState.Reason);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while requesting remote control permissions for {Scope}.", dto.Scope);
+      return new CheckOsPermissionsResponseIpcDto(false, "Unable to request desktop client permissions.");
+    }
+  }
+  public async Task ShutdownDesktopClient(ShutdownCommandDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Handling shutdown command. Reason: {Reason}", dto.Reason);
+      await _remoteControlHostManager.StopAllHosts(dto.Reason);
+      _appLifetime.Shutdown(0);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while handling shutdown command.");
+    }
+  }
+
 }

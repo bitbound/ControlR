@@ -16,5 +16,6 @@ public partial interface IDesktopClientRpcService
     Task InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto);
     Task ReceiveChatMessage(ChatMessageIpcDto dto);
     Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto);
+    Task<CheckOsPermissionsResponseIpcDto> RequestRemoteControlPermission(RequestRemoteControlPermissionIpcDto dto);
     Task ShutdownDesktopClient(ShutdownCommandDto dto);
 }

@@ -21,6 +21,7 @@ public interface IViewerHub
   Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType);
   Task RefreshDeviceInfo(Guid deviceId);
+  Task<HubResult> RequestRemoteControlPermission(Guid deviceId, int targetProcessId);
 
   Task<HubResult> RequestRemoteControlSession(Guid deviceId, RemoteControlSessionRequestDto sessionRequestDto);
   Task<HubResult> RequestVncSession(Guid deviceId, VncSessionRequestDto sessionRequestDto);

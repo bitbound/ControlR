@@ -24,8 +24,8 @@ public class DbusConnectionTests
   [WaylandOnlyFact]
   public async Task CanCallCreateSessionDirectly()
   {
-    var address = Address.Session!;
-    var connection = new Connection(address);
+    var address = DBusAddress.Session!;
+    var connection = new DBusConnection(address);
     await connection.ConnectAsync();
 
     _output.WriteLine($"Connected as: {connection.UniqueName}");
@@ -80,8 +80,8 @@ public class DbusConnectionTests
   [WaylandOnlyFact]
   public async Task CanCallPortalPropertyGet()
   {
-    var address = Address.Session!;
-    var connection = new Connection(address);
+    var address = DBusAddress.Session!;
+    var connection = new DBusConnection(address);
     await connection.ConnectAsync();
 
     _output.WriteLine($"Connected as: {connection.UniqueName}");
@@ -126,11 +126,11 @@ public class DbusConnectionTests
   [WaylandOnlyFact]
   public async Task CanConnectToSessionBus()
   {
-    var address = Address.Session;
+    var address = DBusAddress.Session;
     _output.WriteLine($"Session bus address: {address}");
     Assert.False(string.IsNullOrEmpty(address));
 
-    var connection = new Connection(address);
+    var connection = new DBusConnection(address);
     await connection.ConnectAsync();
 
     _output.WriteLine($"Connected as: {connection.UniqueName}");

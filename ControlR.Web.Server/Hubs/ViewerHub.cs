@@ -294,6 +294,26 @@ public class ViewerHub(
     }
   }
 
+  public async Task<HubResult> RequestRemoteControlPermission(Guid deviceId, int targetProcessId)
+  {
+    try
+    {
+      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      {
+        return HubResult.Fail("Unauthorized.");
+      }
+
+      return await _agentHub.Clients
+        .Client(authResult.Value.ConnectionId)
+        .RequestRemoteControlPermission(targetProcessId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while requesting remote control permission.");
+      return HubResult.Fail("An error occurred while requesting remote control permission.");
+    }
+  }
+
   public async Task<HubResult> RequestRemoteControlSession(
     Guid deviceId,
     RemoteControlSessionRequestDto sessionRequestDto)

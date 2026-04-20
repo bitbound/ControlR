@@ -119,7 +119,10 @@
                     <MudCardContent Class="pt-0">
                       <MudText Typo="Typo.caption" Color="Color.Warning" Class="d-flex align-center">
                         <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="me-1" />
-                        Permissions not granted. User will be prompted.
+                        Permissions not granted.
+                        <MudButton Variant="Variant.Text" OnClick="@(_ => RequestPermissions(session))" Class="ms-1" Size="Size.Small">
+                          Request Now
+                        </MudButton>
                       </MudText>
                     </MudCardContent>
                   }

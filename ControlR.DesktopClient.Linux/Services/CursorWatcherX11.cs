@@ -15,7 +15,7 @@ internal class CursorWatcherX11(
   IMessenger messenger,
   IImageUtility imageUtility,
   ILogger<CursorWatcherX11> logger)
-  : PeriodicBackgroundService(TimeSpan.FromMilliseconds(10), timeProvider, logger)
+  : PeriodicBackgroundService(TimeSpan.FromMilliseconds(10), catchExceptions: true, timeProvider, logger)
 {
   private readonly IImageUtility _imageUtility = imageUtility;
   private readonly IMessenger _messenger = messenger;

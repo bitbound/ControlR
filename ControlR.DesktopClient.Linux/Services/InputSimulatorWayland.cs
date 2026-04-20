@@ -123,7 +123,7 @@ public class InputSimulatorWayland(
 
       Guard.IsNotNull(_sessionHandle);
 
-      await _desktopPortal.NotifyPointerButtonAsync(_sessionHandle, linuxButton, isPressed);
+      await _desktopPortal.NotifyPointerButton(_sessionHandle, linuxButton, isPressed);
     }
     catch (Exception ex)
     {
@@ -173,7 +173,7 @@ public class InputSimulatorWayland(
             var logicalX = maxX * clampedX;
             var logicalY = maxY * clampedY;
 
-            await _desktopPortal.NotifyPointerMotionAbsoluteAsync(
+            await _desktopPortal.NotifyPointerMotionAbsolute(
               _sessionHandle,
               streamInfo.NodeId,
               logicalX,
@@ -253,13 +253,13 @@ public class InputSimulatorWayland(
       if (scrollY != 0)
       {
         var steps = scrollY < 0 ? scrollSteps : -scrollSteps;
-        await _desktopPortal.NotifyPointerAxisDiscreteAsync(_sessionHandle, 0, steps);
+        await _desktopPortal.NotifyPointerAxisDiscrete(_sessionHandle, 0, steps);
       }
 
       if (scrollX != 0)
       {
         var steps = scrollX < 0 ? scrollSteps : -scrollSteps;
-        await _desktopPortal.NotifyPointerAxisDiscreteAsync(_sessionHandle, 1, steps);
+        await _desktopPortal.NotifyPointerAxisDiscrete(_sessionHandle, 1, steps);
       }
     }
     catch (Exception ex)
@@ -487,7 +487,7 @@ public class InputSimulatorWayland(
 
   private async Task SendKeycodeAsync(string sessionHandle, int keycode, bool isPressed)
   {
-    await _desktopPortal.NotifyKeyboardKeycodeAsync(sessionHandle, keycode, isPressed);
+    await _desktopPortal.NotifyKeyboardKeycode(sessionHandle, keycode, isPressed);
     if (isPressed)
     {
       _pressedKeycodes.Add(keycode);
@@ -500,7 +500,7 @@ public class InputSimulatorWayland(
 
   private async Task SendKeysymAsync(string sessionHandle, int keysym, bool isPressed)
   {
-    await _desktopPortal.NotifyKeyboardKeysymAsync(sessionHandle, keysym, isPressed);
+    await _desktopPortal.NotifyKeyboardKeysym(sessionHandle, keysym, isPressed);
     if (isPressed)
     {
       _pressedKeysyms.Add(keysym);

@@ -24,7 +24,7 @@ public partial class App : Application
     {
       DisableAvaloniaDataAnnotationValidation();
 
-      var viewModel = Design.IsDesignMode
+      IMainWindowViewModel viewModel = Design.IsDesignMode
         ? GetFakeViewModel()
         : GetActualViewModel();
 
@@ -49,11 +49,13 @@ public partial class App : Application
     }
   }
 
-  private IMainWindowViewModel GetActualViewModel()
+  private MainWindowViewModel GetActualViewModel()
   {
+    var environmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
     // Load configuration from user secrets and appsettings.json
     var configuration = new ConfigurationBuilder()
       .AddJsonFile("appsettings.json", optional: true)
+      .AddJsonFile($"appsettings.{environmentName}.json", optional: true)
       .AddUserSecrets<App>(optional: true)
       .Build();
 
@@ -74,7 +76,7 @@ public partial class App : Application
     return new MainWindowViewModel(viewerOptions);
   }
 
-  private IMainWindowViewModel GetFakeViewModel()
+  private MainWindowViewModelFake GetFakeViewModel()
   {
     return new MainWindowViewModelFake();
   }

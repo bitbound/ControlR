@@ -19,7 +19,7 @@ internal class CursorWatcherMac(
   IImageUtility imageUtility,
   IUiThread uiThread,
   ILogger<CursorWatcherMac> logger)
-  : PeriodicBackgroundService(TimeSpan.FromMilliseconds(10), timeProvider, logger)
+  : PeriodicBackgroundService(TimeSpan.FromMilliseconds(10), catchExceptions: true, timeProvider, logger)
 {
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IImageUtility _imageUtility = imageUtility;
