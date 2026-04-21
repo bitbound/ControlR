@@ -85,6 +85,14 @@
       "console": "internalConsole"
     },
     {
+      "name": "Browser (Debug)",
+      "type": "msedge",
+      "request": "launch",
+      "url": "https://localhost:7033",
+      "webRoot": "${workspaceFolder}/ControlR.Web.Server",
+      "preLaunchTask": "wait for webapp"
+    },
+    {
       "name": "Agent (Hot Reload)",
       "type": "coreclr",
       "request": "launch",
@@ -251,6 +259,22 @@
   ],
   "compounds": [
     {
+      "name": "Full Stack + Browser (Debug)",
+      "preLaunchTask": "build + compose",
+      "configurations": [
+        "Server (Debug)",
+        "Agent (Debug)",
+        "DesktopClient (Debug)",
+        "Browser (Debug)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "Compounds",
+        "order": 0
+      }
+    },
+    {
       "name": "Full Stack (Debug)",
       "preLaunchTask": "build + compose",
       "configurations": [
@@ -262,7 +286,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 0
+        "order": 1
       }
     },
     {
@@ -277,7 +301,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 1,
+        "order": 2,
       }
     },
     {
@@ -292,7 +316,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 1
+        "order": 3
       }
     },
     {
@@ -308,7 +332,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 2
+        "order": 4
       }
     },
     {
@@ -322,7 +346,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 3
+        "order": 5
       }
     },
     {
@@ -335,7 +359,7 @@
       "presentation": {
         "hidden": false,
         "group": "Compounds",
-        "order": 3
+        "order": 6
       }
     }
   ]

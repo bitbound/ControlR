@@ -56,8 +56,9 @@ jobs:
 
       - name: Run Tests
         run: |
+          # UI tests require Playwright browsers and a live server; run via the UI Tests workflow instead.
           $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
-            Where-Object { $_.Name -like "*.Tests.csproj" } |
+            Where-Object { $_.Name -like "*.Tests.csproj" -and $_.Name -notlike "*.UITests.csproj" } |
             Sort-Object FullName
 
           if ($testProjects.Count -eq 0) {

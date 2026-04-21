@@ -1,0 +1,50 @@
+name: UI Tests
+
+on:
+  workflow_dispatch:
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  ui-tests:
+    name: UI Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Install macOS workload
+        run: dotnet workload install macos
+
+      - name: Restore Solution
+        run: dotnet restore ControlR.slnx
+
+      - name: Build Solution
+        run: dotnet build ControlR.slnx -c Release --no-restore
+
+      - name: Run UI Tests
+        run: |
+          dotnet run --project Tests/ControlR.Web.Server.UITests/ControlR.Web.Server.UITests.csproj -c Release --no-build --no-restore
+          if ($LASTEXITCODE -ne 0) {
+            throw "UI test execution failed."
+          }
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-test-results
+          path: TestResults/ControlR.Web.Server.UITests/
+          retention-days: 7

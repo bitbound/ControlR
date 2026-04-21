@@ -29,10 +29,7 @@ if (appOptions.UseHttpLogging)
     appBuilder => appBuilder.UseHttpLogging());
 }
 
-if (!app.Environment.IsEnvironment("Testing"))
-{
-  app.MapDefaultEndpoints();
-}
+app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

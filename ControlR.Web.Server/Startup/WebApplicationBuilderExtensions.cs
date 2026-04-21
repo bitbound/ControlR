@@ -84,12 +84,19 @@ public static class WebApplicationBuilderExtensions
       // Add telemetry.
       builder.AddServiceDefaults(ServiceNames.Controlr, useServiceDiscovery: true);
     }
+    else
+    {
+      builder.AddDefaultHealthChecks();
+    }
 
     if (appOptions.UseInMemoryDatabase)
     {
       builder.Services.AddDbContextFactory<AppDb>((_, options) =>
       {
-        var dbName = appOptions.InMemoryDatabaseName ?? "Controlr";
+        var dbName = string.IsNullOrWhiteSpace(appOptions.InMemoryDatabaseName)
+          ? Guid.NewGuid().ToString("N")
+          : appOptions.InMemoryDatabaseName;
+
         options.UseInMemoryDatabase(dbName);
         options.EnableDetailedErrors(appOptions.EnableDatabaseDetailedErrors);
       }, lifetime: ServiceLifetime.Transient);

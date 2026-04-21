@@ -81,9 +81,75 @@
       "file": "Tests/ControlR.Agent.LoadTester/ControlR.Agent.LoadTester.csproj"
     },
     {
+      "label": "build web ui tests",
+      "type": "dotnet",
+      "task": "build",
+      "group": "build",
+      "dependsOrder": "sequence",
+      "dependsOn": ["build server"],
+      "problemMatcher": [],
+      "file": "Tests/ControlR.Web.Server.UITests/ControlR.Web.Server.UITests.csproj"
+    },
+    {
       "label": "build + compose",
       "dependsOn": ["build solution", "compose"],
       "dependsOrder": "sequence"
+    },
+    {
+      "label": "wait for webapp",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/.vscode/Wait-ControlRWebApp.ps1",
+        "-Url",
+        "https://localhost:7033",
+        "-TimeoutSeconds",
+        "90"
+      ],
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "install playwright browsers",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/Tests/ControlR.Web.Server.UITests/bin/Debug/net10.0/playwright.ps1",
+        "install",
+        "chromium"
+      ],
+      "dependsOrder": "sequence",
+      "dependsOn": ["build web ui tests"],
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "verify web ui smoke",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "Tests/ControlR.Web.Server.UITests/ControlR.Web.Server.UITests.csproj"
+      ],
+      "dependsOrder": "sequence",
+      "dependsOn": ["build web ui tests", "install playwright browsers"],
+      "problemMatcher": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
     },
     {
       "label": "kill agent",
