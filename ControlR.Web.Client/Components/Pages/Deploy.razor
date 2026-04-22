@@ -1,4 +1,4 @@
-﻿@attribute [Route(ClientRoutes.Deploy)]
+@attribute [Route(ClientRoutes.Deploy)]
 @attribute [Authorize(Roles = RoleNames.AgentInstaller)]
 
 <PageTitle>Deploy</PageTitle>
@@ -13,7 +13,7 @@
     You must first generate an installer access key or use an existing one.
   </MudText>
 
-  <MudTabs PanelClass="pa-4">
+  <MudTabs TabPanelsClass="pa-4">
     <MudTabPanel Text="Create New Key" OnClick="@(() => ToggleKeyMode(false))">
       <MudGrid Class="mt-2">
         <MudItem xs="12" sm="6">

@@ -44,7 +44,7 @@
     await SetSelectedTags(currentTagNames);
   }
 
-  private string GetTagsMultiSelectText(List<string> tags)
+  private string GetTagsMultiSelectText(IReadOnlyList<string> tags)
   {
     if (tags.Count == 0)
     {

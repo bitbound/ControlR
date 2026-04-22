@@ -142,6 +142,16 @@ jobs:
           }
 
           foreach ($project in $testProjects) {
+            $targetFramework = (dotnet msbuild $project.FullName -nologo -getProperty:TargetFramework | Select-Object -Last 1).Trim()
+            if (-not $targetFramework) {
+              throw "Unable to resolve TargetFramework for $($project.FullName)."
+            }
+
+            if ($targetFramework -match '-windows' -or $targetFramework -match '-macos') {
+              Write-Host "Skipping $($project.FullName) on Linux runner because it targets $targetFramework."
+              continue
+            }
+
             Write-Host "Running $($project.FullName)..."
             dotnet run --project $project.FullName -c Release --no-build --no-restore
             if ($LASTEXITCODE -ne 0) {
@@ -186,6 +196,24 @@ jobs:
       - name: Install macOS workload
         if: inputs.use_self_hosted_runners == false
         run: dotnet workload install macos
+
+      - name: Run Desktop Tests
+        shell: pwsh
+        # Temporarily skip until fixed
+        if: false
+        run: |
+          # Run the shared desktop dependency tests on a native macOS runner.
+          $testProjects = @(
+            "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj"
+          )
+
+          foreach ($project in $testProjects) {
+            Write-Host "Running $project on macOS..."
+            dotnet run --project $project -c Release -r ${{ matrix.arch }} --self-contained
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test execution failed for $project."
+            }
+          }
 
       - name: Setup Code Signing Keychain
         env:
@@ -451,6 +479,23 @@ jobs:
 
       - name: Install macOS workload
         run: dotnet workload install macos
+
+      - name: Run Desktop Tests
+        shell: pwsh
+        run: |
+          # Run shared desktop tests plus Windows-only desktop coverage on a native Windows runner.
+          $testProjects = @(
+            "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
+            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj"
+          )
+
+          foreach ($project in $testProjects) {
+            Write-Host "Running $project on Windows..."
+            dotnet run --project $project -c Release
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test execution failed for $project."
+            }
+          }
 
       # ===== Build Windows =====
       - name: Build DesktopClient (${{ matrix.arch }})

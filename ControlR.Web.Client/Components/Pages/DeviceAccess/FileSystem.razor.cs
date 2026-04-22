@@ -101,10 +101,10 @@ public partial class FileSystem : JsInteropableComponent
     };
   }
 
-  private static TreeItemData<string>? FindTreeItem(IEnumerable<TreeItemData<string>>? items, string path)
+  private static TreeItemData<string>? FindTreeItem(IEnumerable<ITreeItemData<string>>? items, string path)
   {
     return items?.FirstOrDefault(item =>
-      string.Equals(item.Value, path, StringComparison.OrdinalIgnoreCase));
+      string.Equals(item.Value, path, StringComparison.OrdinalIgnoreCase)) as TreeItemData<string>;
   }
 
   private async Task<bool> BuildTreeToPath(string targetPath)
@@ -151,7 +151,7 @@ public partial class FileSystem : JsInteropableComponent
 
       // Build the path progressively and ensure each level exists in the tree
       var currentPath = segments[0]; // Start with root
-      var currentItems = InitialTreeItems;
+      IReadOnlyCollection<ITreeItemData<string>> currentItems = InitialTreeItems;
 
       // Navigate through each segment, expanding the tree as needed
       for (var i = 1; i < segments.Length; i++)
@@ -191,10 +191,10 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
-  private EventCallback<IReadOnlyCollection<TreeItemData<string?>>?> CreateItemsChangedCallback(
+  private EventCallback<IReadOnlyCollection<ITreeItemData<string?>>?> CreateItemsChangedCallback(
     TreeItemData<string> treeItem)
   {
-    return EventCallback.Factory.Create<IReadOnlyCollection<TreeItemData<string?>>?>(this, children =>
+    return EventCallback.Factory.Create<IReadOnlyCollection<ITreeItemData<string?>>?>(this, children =>
     {
       treeItem.Children = children
         ?.Where(x => x.Value is not null)
@@ -435,7 +435,7 @@ public partial class FileSystem : JsInteropableComponent
       ? $"Are you sure you want to delete '{SelectedItems.First().Name}'?"
       : $"Are you sure you want to delete {SelectedItems.Count} items? ({itemNames})";
 
-    var result = await DialogService.ShowMessageBox(
+    var result = await DialogService.ShowMessageBoxAsync(
       "Confirm Delete",
       message,
       "Delete",
@@ -727,7 +727,7 @@ public partial class FileSystem : JsInteropableComponent
       if (existingFile != null)
       {
         // Show the confirmation dialog for overwriting
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
           "File Already Exists",
           $"The file '{file.Name}' already exists in the selected directory. Do you want to overwrite it?",
           "Overwrite",

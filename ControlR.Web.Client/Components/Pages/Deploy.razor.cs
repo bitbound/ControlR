@@ -1,4 +1,4 @@
-﻿using ControlR.Web.Client.Extensions;
+using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -20,7 +20,7 @@ public partial class Deploy
   private string? _instanceId;
   private string? _keyExpiration;
   private AgentInstallerKeyDto? _selectedExistingKey;
-  private IEnumerable<TagResponseDto>? _selectedTags;
+  private IReadOnlyCollection<TagResponseDto>? _selectedTags;
   private IReadOnlyList<TagResponseDto> _tags = [];
   private Guid? _tenantId;
   private uint _totalUsesAllowed = 1;

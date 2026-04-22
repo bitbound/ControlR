@@ -9,10 +9,6 @@ internal class DesktopEnvironmentDetector(ILogger<DesktopEnvironmentDetector> lo
   private readonly ILogger<DesktopEnvironmentDetector> _logger = logger;
   private DesktopEnvironmentType? _cachedType;
 
-  public static DesktopEnvironmentDetector Instance {get;} = 
-    new DesktopEnvironmentDetector(
-      new SerilogLogger<DesktopEnvironmentDetector>());
-
   public DesktopEnvironmentType GetDesktopEnvironment()
   {
     if (_cachedType.HasValue)

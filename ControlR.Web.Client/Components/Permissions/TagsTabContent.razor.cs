@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using ControlR.Web.Client.DataValidation;
 using Microsoft.AspNetCore.Components.Web;
@@ -106,7 +106,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    var result = await DialogService.ShowMessageBox(
+    var result = await DialogService.ShowMessageBoxAsync(
         "Confirm Deletion",
         "Are you sure you want to delete this tag?", "Yes", "No");
 

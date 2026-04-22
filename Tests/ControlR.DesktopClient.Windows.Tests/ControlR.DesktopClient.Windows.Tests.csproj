@@ -3,7 +3,9 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TargetFramework>$(WindowsTargetFramework)</TargetFramework>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="coverlet.collector">
       <PrivateAssets>all</PrivateAssets>
@@ -18,8 +20,10 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
-    <ProjectReference Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
+    <ProjectReference
+      Include="..\..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
+    <ProjectReference
+      Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

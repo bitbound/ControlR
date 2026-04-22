@@ -27,6 +27,7 @@ public static class ServiceRegistrationExtensions
   public static IHostApplicationBuilder AddRemoteControlPlatformServices(this IHostApplicationBuilder builder)
   {
     builder.Services.AddSharedPlatformServices();
+    AddInputSimulator(builder.Services);
     AddRemoteControlHostedServices(builder.Services);
 
     return builder;
@@ -42,8 +43,13 @@ public static class ServiceRegistrationExtensions
       .AddSingleton(provider => provider.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IClipboardManager, ClipboardManagerMac>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsMac>()
-      .AddSingleton<IInputSimulator, InputSimulatorMac>()
       .AddSingleton<IFileSystemUnix, FileSystemUnix>();
+  }
+
+  private static IServiceCollection AddInputSimulator(IServiceCollection services)
+  {
+    return services
+      .AddSingleton<IInputSimulator, InputSimulatorMac>();
   }
 
   private static IServiceCollection AddRemoteControlHostedServices(IServiceCollection services)

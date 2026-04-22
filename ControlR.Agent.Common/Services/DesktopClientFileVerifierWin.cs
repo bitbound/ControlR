@@ -18,6 +18,12 @@ public class DesktopClientFileVerifierWin(
 
   public Result VerifyFile(string executablePath)
   {
+    if (_systemEnvironment.IsDebug)
+    {
+      _logger.LogInformation("Running in debug mode. Skipping desktop client file verification.");
+      return Result.Ok();
+    }
+
     var verificationStopwatch = Stopwatch.StartNew();
 
     try

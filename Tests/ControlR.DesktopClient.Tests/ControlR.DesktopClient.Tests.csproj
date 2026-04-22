@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework>$(XplatTarget)</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <TargetFramework>$(LinuxTargetFramework)</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector">
@@ -20,11 +20,18 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\ControlR.DesktopClient\ControlR.DesktopClient.csproj" />
-    <ProjectReference Include="..\..\ControlR.DesktopClient.Common\ControlR.DesktopClient.Common.csproj" />
-    <ProjectReference Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
-    <ProjectReference Include="..\..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" Condition="'$(IsWindows)' == 'true'" />
-    <ProjectReference Include="..\..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" Condition="'$(IsMacOS)' == 'true'" />
-    <ProjectReference Include="..\..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" Condition="'$(IsLinux)' == 'true'" />
+    <ProjectReference
+      Include="..\..\ControlR.DesktopClient.Common\ControlR.DesktopClient.Common.csproj" />
+    <ProjectReference
+      Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
+    <ProjectReference
+      Include="..\..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj"
+      Condition="'$(IsWindows)' == 'true'" />
+    <ProjectReference Include="..\..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj"
+      Condition="'$(IsMacOS)' == 'true'" />
+    <ProjectReference
+      Include="..\..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj"
+      Condition="'$(IsLinux)' == 'true'" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

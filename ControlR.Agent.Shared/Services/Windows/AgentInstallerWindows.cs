@@ -354,7 +354,7 @@ internal class AgentInstallerWindows(
       {
         Logger.LogInformation("Stopping service.");
         existingService.Stop();
-        existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
+        existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(60));
       }
       return Result.Ok();
     }

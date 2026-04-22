@@ -1,4 +1,4 @@
-﻿namespace ControlR.Web.Client;
+namespace ControlR.Web.Client;
 
 public static class Theme
 {

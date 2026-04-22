@@ -1,4 +1,4 @@
-﻿using ControlR.Web.Client.Extensions;
+using ControlR.Web.Client.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Collections.Immutable;
@@ -94,7 +94,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
 
     try
     {
-      var messageResult = await DialogService.ShowMessageBox(
+      var messageResult = await DialogService.ShowMessageBoxAsync(
         "Confirm Deletion",
         "Are you sure you want to delete this user?", "Yes", "No");
 

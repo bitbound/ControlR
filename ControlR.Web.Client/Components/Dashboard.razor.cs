@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
 
@@ -141,7 +141,7 @@ public partial class Dashboard : IDisposable
     }
   }
 
-  private async Task<GridData<DeviceViewModel>> LoadServerData(GridState<DeviceViewModel> state)
+  private async Task<GridData<DeviceViewModel>> LoadServerData(GridState<DeviceViewModel> state, CancellationToken cancellationToken)
   {
     if (_loading)
     {
@@ -270,7 +270,7 @@ public partial class Dashboard : IDisposable
   {
     try
     {
-      var result = await DialogService.ShowMessageBox(
+      var result = await DialogService.ShowMessageBoxAsync(
         "Confirm Removal",
         "Are you sure you want to remove this device?",
         "Remove",
@@ -301,7 +301,7 @@ public partial class Dashboard : IDisposable
   {
     try
     {
-      var result = await DialogService.ShowMessageBox(
+      var result = await DialogService.ShowMessageBoxAsync(
         "Confirm Restart",
         $"Are you sure you want to restart {device.Dto.Name}?",
         "Yes",
@@ -325,7 +325,7 @@ public partial class Dashboard : IDisposable
   {
     try
     {
-      var result = await DialogService.ShowMessageBox(
+      var result = await DialogService.ShowMessageBoxAsync(
         "Confirm Shutdown",
         $"Are you sure you want to shut down {device.Dto.Name}?",
         "Yes",
@@ -349,7 +349,7 @@ public partial class Dashboard : IDisposable
   {
     try
     {
-      var result = await DialogService.ShowMessageBox(
+      var result = await DialogService.ShowMessageBoxAsync(
         "Confirm Uninstall",
         $"Are you sure you want to uninstall the agent from {device.Dto.Name}?",
         "Yes",

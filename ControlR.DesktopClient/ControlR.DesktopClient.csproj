@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">$(MacTargetFramework);$(LinuxTargetFramework);$(WindowsTargetFramework)</TargetFrameworks>
-    <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`Windows`))' == 'true'">$(WindowsTargetFramework);$(MacTargetFramework);$(LinuxTargetFramework)</TargetFrameworks>
-    <TargetFrameworks Condition="'$([MSBuild]::IsOSPlatform(`OSX`))' != 'true' and '$([MSBuild]::IsOSPlatform(`Windows`))' != 'true'">$(LinuxTargetFramework);$(WindowsTargetFramework)</TargetFrameworks>
+    <TargetFramework>$(XplatTarget)</TargetFramework>
     <OutputType>Exe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <PackageIcon>appicon.png</PackageIcon>
@@ -10,13 +8,14 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
   </PropertyGroup>
+
   <PropertyGroup Condition="'$(IsWindows)' == 'true'">
     <OutputType Condition="'$(Configuration)' == 'Debug'">Exe</OutputType>
     <OutputType Condition="'$(Configuration)' != 'Debug'">WinExe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(IsMacOS)' == 'true'">
-    <SelfContained>true</SelfContained>
+    <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
     <ApplicationTitle>ControlR</ApplicationTitle>
     <ApplicationId>app.controlr.desktop.dev</ApplicationId>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -24,7 +23,6 @@
     <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
     <CreatePackage>false</CreatePackage>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
-    <RuntimeIdentifiers>osx-x64;osx-arm64</RuntimeIdentifiers>
     <RuntimeIdentifier Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">osx-arm64</RuntimeIdentifier>
     <RuntimeIdentifier Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">osx-x64</RuntimeIdentifier>
     <PublishTrimmed>true</PublishTrimmed>
@@ -68,12 +66,15 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
-    <ProjectReference Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(IsWindows)' == 'true'">
-    <ProjectReference Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
+    <ProjectReference
+      Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(IsMacOS)' == 'true'">
     <ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />

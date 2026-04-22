@@ -1,13 +1,8 @@
-using Avalonia.Controls;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
-using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Windows.Services;
 using ControlR.Libraries.NativeInterop.Windows;
-using ControlR.Libraries.Serilog;
-using ControlR.Libraries.Shared.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -27,6 +22,7 @@ public static class ServiceRegistrationExtensions
   public static IHostApplicationBuilder AddRemoteControlPlatformServices(this IHostApplicationBuilder builder)
   {
     builder.Services.AddSharedPlatformServices();
+    AddInputSimulator(builder.Services);
     AddRemoteControlHostedServices(builder.Services);
 
     return builder;
@@ -36,8 +32,6 @@ public static class ServiceRegistrationExtensions
   {
     return services
       .AddSingleton<IWin32Interop, Win32Interop>()
-      .AddSingleton<InputSimulatorWindows>()
-      .AddSingleton<IInputSimulator>(provider => provider.GetRequiredService<InputSimulatorWindows>())
       .AddSingleton<ICaptureMetrics, CaptureMetricsWindows>()
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()
       .AddSingleton<DisplayManagerWindows>()
@@ -48,6 +42,13 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
       .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
       .AddSingleton<IAeroPeekProvider, AeroPeekProvider>();
+  }
+
+  private static IServiceCollection AddInputSimulator(IServiceCollection services)
+  {
+    return services
+      .AddSingleton<InputSimulatorWindows>()
+      .AddSingleton<IInputSimulator>(provider => provider.GetRequiredService<InputSimulatorWindows>());
   }
 
   private static IServiceCollection AddRemoteControlHostedServices(IServiceCollection services)

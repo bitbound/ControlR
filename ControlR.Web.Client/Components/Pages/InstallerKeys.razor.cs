@@ -55,7 +55,7 @@ public partial class InstallerKeys
   {
     try
     {
-    var confirmed = await DialogService.ShowMessageBox(
+    var confirmed = await DialogService.ShowMessageBoxAsync(
         "Confirm Delete",
         $"Are you sure you want to delete the key \"{key.FriendlyName ?? key.Id.ToString()}\"?",
         yesText: "Delete",

@@ -216,8 +216,8 @@
         Hard Drive
       </MudText>
       <MudChart ChartType="ChartType.Donut" Width="250px" Height="250px" Class="d-inline-block"
-        InputData="@(new double[] { drive.TotalSize - drive.FreeSpace, drive.FreeSpace })"
-        InputLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
+        ChartSeries="@GetDriveChartSeries(drive)"
+        ChartLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
         <CustomGraphics>
           <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="@(Palette?.TextPrimary)"
             font-family="Helvetica" font-size="16">
@@ -279,4 +279,16 @@
   [CascadingParameter]
   public required Palette Palette { get; init; }
 
+  private static List<ChartSeries<double>> GetDriveChartSeries(Drive drive)
+  {
+    var usedSpace = drive.TotalSize - drive.FreeSpace;
+    var freeSpace = drive.FreeSpace;
+    return new List<ChartSeries<double>>
+    {
+      new ChartSeries<double>
+      {
+        Data = new List<double> { usedSpace, freeSpace }
+      }
+    };
+  }
 }

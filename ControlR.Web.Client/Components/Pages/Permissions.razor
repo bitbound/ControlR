@@ -1,4 +1,4 @@
-﻿@attribute [Route(ClientRoutes.Permissions)]
+@attribute [Route(ClientRoutes.Permissions)]
 @attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
 
 <PageTitle>Permissions</PageTitle>
@@ -7,7 +7,7 @@
   Permissions
 </PrimaryTitle>
 
-<MudTabs PanelClass="pa-4">
+<MudTabs TabPanelsClass="pa-4">
   <MudTabPanel Text="Tags" Icon="@(Icons.Material.Filled.Label)" IconColor="Color.Secondary">
     <TagsTabContent />
   </MudTabPanel>

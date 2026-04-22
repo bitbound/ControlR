@@ -38,7 +38,7 @@
         }
         <MudTextField T="string" @ref="@(_commandInputElement)" InputId="@(_commandInputElementId)"
                       @bind-Value="@TerminalState.CommandInputText" @bind-Text="@TerminalState.CommandInputText"
-                      Label="Enter a command" HelperText="Type a command and press Enter to send" TextUpdateSuppression="false"
+                      Label="Enter a command" HelperText="Type a command and press Enter to send"
                       Lines="@CommandInputLineCount" HelperTextOnFocus="true" AutoFocus="true" Immediate="true"
                       UserAttributes="_commandInputAttributes" OnKeyDown="@OnInputKeyDown" Class="mt-2" />
       </div>

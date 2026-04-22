@@ -9,17 +9,4 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
-
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'ControlR.DesktopClient' and '$(RuntimeIdentifier)' != ''">
-    <ExpectedDesktopTargetFramework Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-'))">$(WindowsTargetFramework)</ExpectedDesktopTargetFramework>
-    <ExpectedDesktopTargetFramework Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux-'))">$(LinuxTargetFramework)</ExpectedDesktopTargetFramework>
-    <ExpectedDesktopTargetFramework Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))">$(MacTargetFramework)</ExpectedDesktopTargetFramework>
-  </PropertyGroup>
-
-  <Target
-    Name="ValidateDesktopClientRuntimeTargetFramework"
-    BeforeTargets="PrepareForBuild"
-    Condition="'$(MSBuildProjectName)' == 'ControlR.DesktopClient' and '$(RuntimeIdentifier)' != '' and '$(TargetFramework)' != '' and '$(ExpectedDesktopTargetFramework)' != '' and '$(TargetFramework)' != '$(ExpectedDesktopTargetFramework)'">
-    <Error Text="ControlR.DesktopClient publish/build for RuntimeIdentifier '$(RuntimeIdentifier)' must use TargetFramework '$(ExpectedDesktopTargetFramework)'. Pass -f $(ExpectedDesktopTargetFramework)." />
-  </Target>
 </Project>

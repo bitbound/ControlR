@@ -66,6 +66,16 @@ jobs:
           }
 
           foreach ($project in $testProjects) {
+            $targetFramework = (dotnet msbuild $project.FullName -nologo -getProperty:TargetFramework | Select-Object -Last 1).Trim()
+            if (-not $targetFramework) {
+              throw "Unable to resolve TargetFramework for $($project.FullName)."
+            }
+
+            if ($targetFramework -match '-windows' -or $targetFramework -match '-macos') {
+              Write-Host "Skipping $($project.FullName) on Linux runner because it targets $targetFramework."
+              continue
+            }
+
             Write-Host "Running $($project.FullName)..."
             dotnet run --project $project.FullName -c Release --no-build --no-restore
             if ($LASTEXITCODE -ne 0) {

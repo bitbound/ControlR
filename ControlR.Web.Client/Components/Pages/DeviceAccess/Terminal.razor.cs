@@ -483,7 +483,8 @@ public partial class Terminal : IAsyncDisposable
   {
     if (_commandInputElement is not null)
     {
-      await _commandInputElement.SetText(text);
+      TerminalState.CommandInputText = text;
+      await InvokeAsync(StateHasChanged);
       await Task.Delay(50);
       await _commandInputElement.SelectRangeAsync(text.Length, text.Length);
     }

@@ -34,8 +34,8 @@
           Dense="true" ExpandOnDoubleClick>
           <ItemTemplate>
             <MudTreeViewItem Value="@context.Value" Text="@context.Text" Items="@context.Children"
-              ItemsChanged="@(CreateItemsChangedCallback(context))" @bind-Expanded="@context.Expanded"
-              CanExpand="@context.Expandable" Icon="@context.Icon" LoadingIconColor="Color.Info" />
+              @bind-Expanded="@context.Expanded"
+              CanExpand="@context.Expandable" Icon="@context.Icon" />
           </ItemTemplate>
         </MudTreeView>
       }

@@ -23,7 +23,7 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<INavigationItemProvider, LinuxNavigationItemProvider>()
       .AddSingleton<IRemoteControlHostBuilderFactory, LinuxRemoteControlHostBuilderFactory>();
 
-    return DesktopEnvironmentDetector.Instance.GetDesktopEnvironment() switch
+    return GetDesktopEnvironmentDetector().GetDesktopEnvironment() switch
     {
       DesktopEnvironmentType.Wayland => services
         .AddSingleton<IPermissionsViewModelWayland, PermissionsViewModelWayland>()
@@ -37,6 +37,7 @@ public static class ServiceRegistrationExtensions
   public static IHostApplicationBuilder AddRemoteControlPlatformServices(this IHostApplicationBuilder builder)
   {
     builder.Services.AddSharedPlatformServices();
+    AddInputSimulator(builder.Services);
     AddRemoteControlHostedServices(builder.Services);
 
     return builder;
@@ -44,7 +45,7 @@ public static class ServiceRegistrationExtensions
 
   public static IServiceCollection AddSharedPlatformServices(this IServiceCollection services)
   {
-    var desktopEnvironment = DesktopEnvironmentDetector.Instance.GetDesktopEnvironment();
+    var desktopEnvironment = GetDesktopEnvironmentDetector().GetDesktopEnvironment();
     var logger = new SerilogLogger<IServiceCollection>();
 
     switch (desktopEnvironment)
@@ -59,7 +60,6 @@ public static class ServiceRegistrationExtensions
           .AddSingleton<IDisplayManagerWayland>(provider => provider.GetRequiredService<DisplayManagerWayland>())
           .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWayland>>()
           .AddSingleton(provider => provider.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
-          .AddSingleton<IInputSimulator, InputSimulatorWayland>()
           .AddSingleton<IClipboardManager, ClipboardManagerGtk>()
           .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
           .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>();
@@ -70,8 +70,7 @@ public static class ServiceRegistrationExtensions
           .AddSingleton<IDisplayManager, DisplayManagerX11>()
           .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberX11>>()
           .AddSingleton(provider => provider.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
-          .AddSingleton<IClipboardManager, ClipboardManagerX11>()
-          .AddSingleton<IInputSimulator, InputSimulatorX11>();
+          .AddSingleton<IClipboardManager, ClipboardManagerX11>();
         break;
       default:
         logger.LogError("Could not detect desktop environment.");
@@ -84,13 +83,31 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<ICaptureMetrics, CaptureMetricsLinux>();
   }
 
+  private static IServiceCollection AddInputSimulator(IServiceCollection services)
+  {
+    return GetDesktopEnvironmentDetector().GetDesktopEnvironment() switch
+    {
+      DesktopEnvironmentType.Wayland => services
+        .AddSingleton<IInputSimulator, InputSimulatorWayland>(),
+      DesktopEnvironmentType.X11 => services
+        .AddSingleton<IInputSimulator, InputSimulatorX11>(),
+      _ => throw new NotSupportedException("Unsupported desktop environment detected.")
+    };
+  }
+
   private static IServiceCollection AddRemoteControlHostedServices(IServiceCollection services)
   {
-    return DesktopEnvironmentDetector.Instance.GetDesktopEnvironment() switch
+    return GetDesktopEnvironmentDetector().GetDesktopEnvironment() switch
     {
       DesktopEnvironmentType.Wayland => services.AddHostedService<WaylandDisplaySettingsWatcher>(),
       DesktopEnvironmentType.X11 => services.AddHostedService<CursorWatcherX11>(),
       _ => throw new NotSupportedException("Unsupported desktop environment detected.")
     };
+  }
+
+  private static DesktopEnvironmentDetector GetDesktopEnvironmentDetector()
+  {
+    return new DesktopEnvironmentDetector(
+      new SerilogLogger<DesktopEnvironmentDetector>());
   }
 }

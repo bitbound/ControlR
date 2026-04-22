@@ -75,7 +75,7 @@ public partial class PersonalAccessTokens
 
   private async Task DeletePersonalAccessToken(PersonalAccessTokenDto personalAccessToken)
   {
-    var confirmed = await DialogService.ShowMessageBox(
+    var confirmed = await DialogService.ShowMessageBoxAsync(
       "Confirm Delete",
       $"Are you sure you want to delete the personal access token '{personalAccessToken.Name}'?",
       yesText: "Delete",

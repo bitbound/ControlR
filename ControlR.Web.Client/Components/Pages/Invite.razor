@@ -1,4 +1,4 @@
-﻿@using ControlR.Web.Client.StateManagement.Stores
+@using ControlR.Web.Client.StateManagement.Stores
 @attribute [Route(ClientRoutes.Invite)]
 @attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
 @inject ILogger<Invite> Logger
@@ -174,9 +174,9 @@
 
   private async Task DeleteInvite(TenantInviteResponseDto dto)
   {
-    var result = await DialogService.ShowMessageBox(
+    var result = await DialogService.ShowMessageBoxAsync(
       "Confirm Delete",
-      "Are you sure you want to delete this invitaiton and user?",
+      "Are you sure you want to delete this invitation and user?",
       yesText: "Yes",
       noText: "No");
 
