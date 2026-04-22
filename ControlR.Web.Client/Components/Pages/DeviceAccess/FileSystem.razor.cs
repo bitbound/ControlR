@@ -191,18 +191,6 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
-  private EventCallback<IReadOnlyCollection<ITreeItemData<string?>>?> CreateItemsChangedCallback(
-    TreeItemData<string> treeItem)
-  {
-    return EventCallback.Factory.Create<IReadOnlyCollection<ITreeItemData<string?>>?>(this, children =>
-    {
-      treeItem.Children = children
-        ?.Where(x => x.Value is not null)
-        .Cast<TreeItemData<string>>()
-        .ToList();
-    });
-  }
-
   private async Task DeleteSingleItem(FileSystemEntryViewModel item)
   {
     try

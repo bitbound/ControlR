@@ -87,8 +87,8 @@ internal class DesktopClientWatcherWin(
       await LaunchDesktopClient(session.SystemSessionId, stoppingToken);
     }
 
-    _logger.LogWarning(
-      "Failed to launch desktop client in one or more sessions repeatedly. " +
+    _dedupeLogger.LogWarningDeduped(
+      template: "Failed to launch desktop client in one or more sessions repeatedly. " +
       "Clearing tracked launch state and waiting for the installer to repair the installation if needed.");
 
     _launchTracker.Clear();
