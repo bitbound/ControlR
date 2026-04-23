@@ -51,7 +51,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     var result = await _keyManager.DeleteKey(dto.Id, _creatorId, _tenantId, isTenantAdmin: true);
     Assert.True(result.IsSuccess);
 
-    var keyResult = await _keyManager.TryGetKey(dto.Id);
+    var keyResult = await _keyManager.TryGetKey(dto.Id, _tenantId);
     Assert.False(keyResult.IsSuccess);
   }
 
@@ -69,7 +69,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     var result = await _keyManager.DeleteKey(dto.Id, _creatorId, _tenantId, isTenantAdmin: false);
     Assert.True(result.IsSuccess);
 
-    var keyResult = await _keyManager.TryGetKey(dto.Id);
+    var keyResult = await _keyManager.TryGetKey(dto.Id, _tenantId);
     Assert.False(keyResult.IsSuccess);
   }
 
@@ -89,7 +89,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     Assert.False(result.IsSuccess);
     Assert.Equal(HttpResultErrorCode.Forbidden, result.ErrorCode);
 
-    var keyResult = await _keyManager.TryGetKey(dto.Id);
+    var keyResult = await _keyManager.TryGetKey(dto.Id, _tenantId);
     Assert.True(keyResult.IsSuccess);
   }
 
@@ -165,7 +165,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
 
     await _keyManager.GetAllKeys(_tenantId, _creatorId, isTenantAdmin: true);
 
-    var keyResult = await _keyManager.TryGetKey(expiring.Id);
+    var keyResult = await _keyManager.TryGetKey(expiring.Id, _tenantId);
     Assert.False(keyResult.IsSuccess);
   }
 
@@ -311,7 +311,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
 
     // Verify key was removed by trying to validate it
     var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.False(validateResult);
+    Assert.False(validateResult.IsSuccess);
   }
 
   public async ValueTask InitializeAsync()
@@ -340,7 +340,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     var result = await _keyManager.RenameKey(dto.Id, "Renamed", _creatorId, _tenantId, isTenantAdmin: false);
     Assert.True(result.IsSuccess);
 
-    var keyResult = await _keyManager.TryGetKey(dto.Id);
+    var keyResult = await _keyManager.TryGetKey(dto.Id, _tenantId);
     Assert.True(keyResult.IsSuccess);
     Assert.Equal("Renamed", keyResult.Value.FriendlyName);
   }
@@ -360,7 +360,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     Assert.False(result.IsSuccess);
     Assert.Equal(HttpResultErrorCode.Forbidden, result.ErrorCode);
 
-    var keyResult = await _keyManager.TryGetKey(dto.Id);
+    var keyResult = await _keyManager.TryGetKey(dto.Id, _tenantId);
     Assert.True(keyResult.IsSuccess);
     Assert.Equal("Original", keyResult.Value!.FriendlyName);
   }
@@ -398,7 +398,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     var remoteIp = "192.168.1.100";
     var deviceId = Guid.NewGuid();
     var validateResult = await _keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, deviceId, remoteIp);
-    Assert.True(validateResult);
+    Assert.True(validateResult.IsSuccess);
   }
 
   [Fact]
@@ -414,7 +414,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
 
     _timeProvider.Advance(TimeSpan.FromHours(25));
     var result = await _keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
-    Assert.False(result);
+    Assert.False(result.IsSuccess);
   }
 
   [Theory]
@@ -434,11 +434,11 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     for (var i = 0; i < allowedUses; i++)
     {
       var validateResult = await _keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
-      Assert.True(validateResult);
+      Assert.True(validateResult.IsSuccess);
     }
 
     var finalValidateResult = await _keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
-    Assert.False(finalValidateResult);
+    Assert.False(finalValidateResult.IsSuccess);
   }
 
   [Fact]
@@ -453,7 +453,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
       friendlyName: null);
 
     var validateResult = await _keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
-    Assert.True(validateResult);
+    Assert.True(validateResult.IsSuccess);
   }
 
   [Fact]
@@ -471,12 +471,12 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     for (var i = 0; i < 5; i++)
     {
       var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-      Assert.True(validateResult);
+      Assert.True(validateResult.IsSuccess);
     }
 
     // Key should still be valid because we haven't consumed any usage
     var finalResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.True(finalResult);
+    Assert.True(finalResult.IsSuccess);
   }
 
   [Fact]
@@ -491,18 +491,18 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
         friendlyName: "Test Key");
 
     var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.True(validateResult);
+    Assert.True(validateResult.IsSuccess);
 
     _timeProvider.Advance(TimeSpan.FromHours(25));
     validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.False(validateResult);
+    Assert.False(validateResult.IsSuccess);
   }
 
   [Fact]
   public async Task ValidateKey_WhenKeyDoesNotExist_Fails()
   {
     var validateResult = await _keyManager.ValidateKey(Guid.NewGuid(), "asdf");
-    Assert.False(validateResult);
+    Assert.False(validateResult.IsSuccess);
   }
 
   [Fact]
@@ -517,7 +517,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
         friendlyName: "Test Key");
 
     var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.True(validateResult);
+    Assert.True(validateResult.IsSuccess);
   }
 
   [Fact]
@@ -532,7 +532,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
       friendlyName: null);
 
     var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.True(validateResult);
+    Assert.True(validateResult.IsSuccess);
 
     // Advance time 50 minutes, in increments of 10 minutes.
     // Key should be valid at each point in time.
@@ -540,13 +540,13 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     {
       _timeProvider.Advance(TimeSpan.FromMinutes(10));
       validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-      Assert.True(validateResult);
+      Assert.True(validateResult.IsSuccess);
     }
 
     // Advance time 1 hour. Key should now be expired.
     _timeProvider.Advance(TimeSpan.FromHours(1));
     validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.False(validateResult);
+    Assert.False(validateResult.IsSuccess);
   }
 
   [Fact]
@@ -562,7 +562,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
 
     var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
 
-    Assert.True(validateResult);
+    Assert.True(validateResult.IsSuccess);
   }
 
   [Fact]
@@ -580,11 +580,11 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     _timeProvider.Advance(TimeSpan.FromHours(2));
 
     var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.False(validateResult);
+    Assert.False(validateResult.IsSuccess);
 
     // Verify key was removed by trying to validate it again
     validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.False(validateResult);
+    Assert.False(validateResult.IsSuccess);
   }
 
   [Fact]
@@ -599,7 +599,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
         friendlyName: "Test Key");
 
     var validateResult = await _keyManager.ValidateKey(Guid.NewGuid(), dto.KeySecret);
-    Assert.False(validateResult);
+    Assert.False(validateResult.IsSuccess);
   }
 
   [Fact]
@@ -614,6 +614,6 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
         friendlyName: "Test Key");
 
     var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
-    Assert.True(validateResult);
+    Assert.True(validateResult.IsSuccess);
   }
 }

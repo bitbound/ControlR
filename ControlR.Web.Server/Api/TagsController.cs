@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
@@ -37,9 +37,14 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromRoute] Guid tagId)
   {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return NotFound("User tenant not found.");
+    }
+
     var tag = await appDb.Tags
       .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == tagId);
+      .FirstOrDefaultAsync(x => x.Id == tagId && x.TenantId == tenantId);
 
     if (tag == null)
     {
@@ -84,7 +89,13 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] TagRenameRequestDto dto)
   {
-    var tag = await appDb.Tags.FindAsync(dto.TagId);
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return NotFound("User tenant not found.");
+    }
+
+    var tag = await appDb.Tags
+      .FirstOrDefaultAsync(x => x.Id == dto.TagId && x.TenantId == tenantId);
     if (tag is null)
     {
       return NotFound();

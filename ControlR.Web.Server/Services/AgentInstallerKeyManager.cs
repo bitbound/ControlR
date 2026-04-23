@@ -18,17 +18,17 @@ public interface IAgentInstallerKeyManager
   Task<HttpResult<IReadOnlyList<AgentInstallerKeyUsageDto>>> GetKeyUsages(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin);
   Task<HttpResult> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null);
   Task<HttpResult> RenameKey(Guid keyId, string friendlyName, Guid userId, Guid tenantId, bool isTenantAdmin);
-  Task<Result<AgentInstallerKey>> TryGetKey(Guid keyId);
+  Task<HttpResult<AgentInstallerKey>> TryGetKey(Guid keyId, Guid tenantId);
   /// <summary>
-  /// Validates the key and consumes a usage if valid. Use this as the final step when
-  /// creating/updating a device.
+  /// Validates the key, consumes a usage if it is valid, and returns the key.
+  /// Use this as the final step when creating/updating a device, not for non-consuming checks.
   /// </summary>
-  Task<bool> ValidateAndConsumeKey(Guid keyId, string keySecret, Guid deviceId, string? remoteIpAddress = null);
+  Task<HttpResult<AgentInstallerKey>> ValidateAndConsumeKey(Guid keyId, string keySecret, Guid deviceId, string? remoteIpAddress = null);
   /// <summary>
-  /// Validates the key without consuming a usage. Use this when you need to check key validity
-  /// before performing other operations.
+  /// Validates the key without consuming a usage. Returns the key if valid.
+  /// Use this when you need to check key validity before performing other operations.
   /// </summary>
-  Task<bool> ValidateKey(Guid keyId, string keySecret);
+  Task<HttpResult<AgentInstallerKey>> ValidateKey(Guid keyId, string keySecret);
 }
 
 public class AgentInstallerKeyManager(
@@ -204,48 +204,49 @@ public class AgentInstallerKeyManager(
     return HttpResult.Ok();
   }
 
-  public async Task<Result<AgentInstallerKey>> TryGetKey(Guid keyId)
+  public async Task<HttpResult<AgentInstallerKey>> TryGetKey(Guid keyId, Guid tenantId)
   {
     if (keyId == Guid.Empty)
     {
-      return Result.Fail<AgentInstallerKey>("Key ID is empty");
+      return HttpResult.Fail<AgentInstallerKey>(HttpResultErrorCode.BadRequest, "Key ID is empty");
     }
 
     await using var db = await _dbContextFactory.CreateDbContextAsync();
-    var storedKey = await db.AgentInstallerKeys.FindAsync(keyId);
+    var storedKey = await db.AgentInstallerKeys
+        .FirstOrDefaultAsync(x => x.Id == keyId && x.TenantId == tenantId);
 
     if (storedKey is null)
     {
-      return Result.Fail<AgentInstallerKey>("Key not found");
+      return HttpResult.Fail<AgentInstallerKey>(HttpResultErrorCode.NotFound, "Key not found");
     }
 
-    return Result.Ok(storedKey);
+    return HttpResult.Ok(storedKey);
   }
 
-  public async Task<bool> ValidateAndConsumeKey(
+  public async Task<HttpResult<AgentInstallerKey>> ValidateAndConsumeKey(
     Guid keyId,
     string keySecret,
     Guid deviceId,
     string? remoteIpAddress = null)
   {
-    var isValid = await ValidateKeyImpl(keyId, keySecret, consumeUsage: true, deviceId, remoteIpAddress);
-    if (!isValid)
+    var result = await ValidateKeyImpl(keyId, keySecret, consumeUsage: true, deviceId, remoteIpAddress);
+    if (!result.IsSuccess)
     {
       _logger.LogError("Installer key validation and consume failed.  Key ID: {KeyId}", keyId);
     }
 
-    return isValid;
+    return result;
   }
 
-  public async Task<bool> ValidateKey(Guid keyId, string keySecret)
+  public async Task<HttpResult<AgentInstallerKey>> ValidateKey(Guid keyId, string keySecret)
   {
-    var isValid = await ValidateKeyImpl(keyId, keySecret, consumeUsage: false, deviceId: null, remoteIpAddress: null);
-    if (!isValid)
+    var result = await ValidateKeyImpl(keyId, keySecret, consumeUsage: false, deviceId: null, remoteIpAddress: null);
+    if (!result.IsSuccess)
     {
       _logger.LogError("Installer key validation failed.  Key ID: {KeyId}", keyId);
     }
 
-    return isValid;
+    return result;
   }
 
   private static async Task AddUsageAndUpdateKey(
@@ -283,7 +284,7 @@ public class AgentInstallerKeyManager(
     };
   }
 
-  private async Task<bool> ValidateKeyImpl(
+  private async Task<HttpResult<AgentInstallerKey>> ValidateKeyImpl(
     Guid keyId,
     string keySecret,
     bool consumeUsage,
@@ -292,7 +293,7 @@ public class AgentInstallerKeyManager(
   {
     if (keyId == Guid.Empty)
     {
-      return false;
+      return HttpResult.Fail<AgentInstallerKey>(HttpResultErrorCode.BadRequest, "Key ID is empty");
     }
 
     await using var db = await _dbContextFactory.CreateDbContextAsync();
@@ -302,13 +303,13 @@ public class AgentInstallerKeyManager(
 
     if (installerKey is null)
     {
-      return false;
+      return HttpResult.Fail<AgentInstallerKey>(HttpResultErrorCode.NotFound, "Key not found");
     }
 
     var hashResult = _passwordHasher.VerifyHashedPassword(string.Empty, installerKey.HashedKey, keySecret);
     if (hashResult != PasswordVerificationResult.Success)
     {
-      return false;
+      return HttpResult.Fail<AgentInstallerKey>(HttpResultErrorCode.Unauthorized, "Invalid key secret");
     }
 
     var now = _timeProvider.GetUtcNow();
@@ -330,7 +331,7 @@ public class AgentInstallerKeyManager(
         db.AgentInstallerKeys.Remove(installerKey);
         await db.SaveChangesAsync();
       }
-      return false;
+      return HttpResult.Fail<AgentInstallerKey>(HttpResultErrorCode.BadRequest, "Key has expired or is otherwise invalid");
     }
 
     if (consumeUsage)
@@ -338,6 +339,6 @@ public class AgentInstallerKeyManager(
       await AddUsageAndUpdateKey(db, installerKey, deviceId, remoteIpAddress);
     }
 
-    return true;
+    return HttpResult.Ok(installerKey);
   }
 }

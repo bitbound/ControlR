@@ -30,22 +30,23 @@ public class DevicesController : ControllerBase
     }
 
     // Validate key without consuming usage - we'll consume at the end if all checks pass
-    if (!await keyManager.ValidateKey(requestDto.InstallerKeyId, requestDto.InstallerKeySecret))
+    var keyResult = await keyManager.ValidateKey(requestDto.InstallerKeyId, requestDto.InstallerKeySecret);
+    if (!keyResult.IsSuccess)
     {
       logger.LogWarning("Invalid installer key.");
       return BadRequest();
     }
 
-    var getKeyResult = await keyManager.TryGetKey(requestDto.InstallerKeyId);
-    if (!getKeyResult.IsSuccess)
+    var installerKey = keyResult.Value;
+    var tenantId = installerKey.TenantId;
+
+    if (tenantId != deviceDto.TenantId)
     {
-      logger.LogWarning("Error retrieving installer key: {Reason}", getKeyResult.Reason);
+      logger.LogWarning("Installer key tenant does not match device tenant.");
       return BadRequest();
     }
 
-    var installerKey = getKeyResult.Value;
-
-    var existingDevice = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceDto.Id);
+    var existingDevice = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceDto.Id && x.TenantId == tenantId);
     if (existingDevice is not null)
     {
       logger.LogInformation("Device already exists.  Verifying user authorization.");
@@ -67,11 +68,13 @@ public class DevicesController : ControllerBase
     }
 
     // All checks passed - now consume the key usage
-    if (!await keyManager.ValidateAndConsumeKey(
+    var consumeResult = await keyManager.ValidateAndConsumeKey(
       requestDto.InstallerKeyId,
       requestDto.InstallerKeySecret,
       deviceDto.Id,
-      HttpContext.Connection.RemoteIpAddress?.ToString()))
+      HttpContext.Connection.RemoteIpAddress?.ToString());
+
+    if (!consumeResult.IsSuccess)
     {
       logger.LogWarning("Failed to consume installer key usage.");
       return BadRequest();
@@ -94,7 +97,12 @@ public class DevicesController : ControllerBase
     [FromServices] IAuthorizationService authorizationService,
     [FromRoute] Guid deviceId)
   {
-    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("Tenant ID not found.");
+    }
+
+    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId && x.TenantId == tenantId);
     if (device is null)
     {
       return NotFound();
