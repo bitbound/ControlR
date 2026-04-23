@@ -9,4 +9,25 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <PropertyGroup Condition="$([System.String]::Copy($(MSBuildProjectName)).EndsWith('Tests')) and '$(TargetFramework)' == '$(MacTargetFramework)'">
+    <UseAppHost>true</UseAppHost>
+    <_CanOutputAppBundle>false</_CanOutputAppBundle>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <RuntimeIdentifiers></RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">osx-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">osx-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <Target Name="OverrideMacTestRunCommand"
+    AfterTargets="_PrepareRunDesktop"
+    BeforeTargets="Run"
+    Condition="$([System.String]::Copy($(MSBuildProjectName)).EndsWith('Tests')) and '$(TargetFramework)' == '$(MacTargetFramework)'">
+    <PropertyGroup>
+      <RunCommand>$(TargetDir)$(AssemblyName)</RunCommand>
+      <RunArguments></RunArguments>
+      <RunWorkingDirectory>$(TargetDir)</RunWorkingDirectory>
+    </PropertyGroup>
+  </Target>
 </Project>

@@ -26,59 +26,6 @@ env:
 jobs:
   test:
     name: test
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: pwsh
-
-    steps:
-      - name: Show Inputs
-        run: |
-          echo "Inputs: ${{ toJSON(github.event.inputs) }}"
-
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-          clean: true
-
-      - name: Setup .NET
-        uses: ./.github/actions/setup-dotnet
-
-      - name: Install macOS workload
-        run: dotnet workload install macos
-
-      - name: Restore Solution
-        run: dotnet restore ControlR.slnx
-
-      - name: Build Solution
-        run: dotnet build ControlR.slnx -c Release --no-restore
-
-      - name: Run Tests
-        run: |
-          # UI tests require Playwright browsers and a live server; run via the UI Tests workflow instead.
-          $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
-            Where-Object { $_.Name -like "*.Tests.csproj" -and $_.Name -notlike "*.UITests.csproj" } |
-            Sort-Object FullName
-
-          if ($testProjects.Count -eq 0) {
-            throw "No test projects were found under Tests/."
-          }
-
-          foreach ($project in $testProjects) {
-            $targetFramework = (dotnet msbuild $project.FullName -nologo -getProperty:TargetFramework | Select-Object -Last 1).Trim()
-            if (-not $targetFramework) {
-              throw "Unable to resolve TargetFramework for $($project.FullName)."
-            }
-
-            if ($targetFramework -match '-windows' -or $targetFramework -match '-macos') {
-              Write-Host "Skipping $($project.FullName) on Linux runner because it targets $targetFramework."
-              continue
-            }
-
-            Write-Host "Running $($project.FullName)..."
-            dotnet run --project $project.FullName -c Release --no-build --no-restore
-            if ($LASTEXITCODE -ne 0) {
-              throw "Test execution failed for $($project.FullName)."
-            }
-          }
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      use_self_hosted_runners: false

@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup Condition="'$(IsMacOS)' == 'true'">
+    <TargetPlatformVersion>$(MacTargetPlatformVersion)</TargetPlatformVersion>
+    <SelfContained>true</SelfContained>
+    <ApplicationTitle>ControlR</ApplicationTitle>
+    <UseAppHost>true</UseAppHost>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
+    <CreatePackage>false</CreatePackage>
+    <RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers>
+    <PublishTrimmed>true</PublishTrimmed>
+    <MtouchLink>None</MtouchLink>
+    <TrimMode>none</TrimMode>
+    <LinkMode>none</LinkMode>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+  </PropertyGroup>
+</Project>

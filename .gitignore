@@ -368,10 +368,10 @@ FodyWeavers.xsd
 
 # ControlR-specific ignores
 .plans/*
+.kilo/plans/*
 /ControlR.Web.Server/wwwroot/downloads/**
 /ControlR.Web.Server/appsettings.Development.json
 .DS_Store
 .idea/.idea.ControlR/.idea/copilot.data.migration.agent.xml
 .idea/.idea.ControlR/.idea/copilot.data.migration.edit.xml
-/.build/staging-desktop
 /Tests/ControlR.DesktopClient.Common.Tests/Resources/*

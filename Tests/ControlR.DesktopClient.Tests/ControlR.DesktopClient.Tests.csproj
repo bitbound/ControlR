@@ -3,7 +3,11 @@
     <TargetFramework>$(XplatTarget)</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <ApplicationId>app.controlr.desktop.tests</ApplicationId>
   </PropertyGroup>
+
+  <Import Project="../../Mac.Build.props" />
+  
   <ItemGroup>
     <PackageReference Include="coverlet.collector">
       <PrivateAssets>all</PrivateAssets>

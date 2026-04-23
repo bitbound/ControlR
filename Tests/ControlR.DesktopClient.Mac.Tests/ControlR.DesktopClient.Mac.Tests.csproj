@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(MacTargetFramework)</TargetFramework>
+    <TargetPlatformVersion>$(MacTargetPlatformVersion)</TargetPlatformVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <ApplicationId>app.controlr.desktop.mac.tests</ApplicationId>
+  </PropertyGroup>
+
+  <Import Project="..\..\Mac.Build.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.v3.runner.console">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../ControlR.DesktopClient.Mac/ControlR.DesktopClient.Mac.csproj" />
+    <ProjectReference
+      Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
+  </ItemGroup>
+
+
+  <PropertyGroup Condition="'$(IsMacOS)' != 'true'">
+    <IsTestProject>false</IsTestProject>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <SkipCopyBuildProduct>true</SkipCopyBuildProduct>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsMacOS)' != 'true'">
+    <ProjectCapability Remove="TestContainer" />
+    <ProjectCapability Remove="TestExecutable" />
+  </ItemGroup>
+
+</Project>

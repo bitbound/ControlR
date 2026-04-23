@@ -34,4 +34,15 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
+  <PropertyGroup Condition="'$(IsWindows)' != 'true'">
+    <IsTestProject>false</IsTestProject>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <SkipCopyBuildProduct>true</SkipCopyBuildProduct>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsWindows)' != 'true'">
+    <ProjectCapability Remove="TestContainer" />
+    <ProjectCapability Remove="TestExecutable" />
+  </ItemGroup>
 </Project>

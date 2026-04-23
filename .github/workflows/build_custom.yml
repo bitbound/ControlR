@@ -103,65 +103,14 @@ jobs:
 
   run-tests:
     name: Run Tests
-    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     needs: set-version
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          clean: true
-          fetch-depth: 0
-
-      - name: Setup .NET
-        uses: ./.github/actions/setup-dotnet
-
-      - name: Install macOS workload
-        run: dotnet workload install macos
-
-      - name: Restore Solution
-        shell: pwsh
-        run: |
-          dotnet restore ControlR.slnx
-
-      - name: Build Solution
-        shell: pwsh
-        run: |
-          dotnet build ControlR.slnx -c Release --no-restore
-
-      - name: Run Tests
-        shell: pwsh
-        run: |
-          # UI tests require Playwright browsers and a live server; run via the UI Tests workflow instead.
-          $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
-            Where-Object { $_.Name -like "*.Tests.csproj" -and $_.Name -notlike "*.UITests.csproj" } |
-            Sort-Object FullName
-
-          if ($testProjects.Count -eq 0) {
-            throw "No test projects were found under Tests/."
-          }
-
-          foreach ($project in $testProjects) {
-            $targetFramework = (dotnet msbuild $project.FullName -nologo -getProperty:TargetFramework | Select-Object -Last 1).Trim()
-            if (-not $targetFramework) {
-              throw "Unable to resolve TargetFramework for $($project.FullName)."
-            }
-
-            if ($targetFramework -match '-windows' -or $targetFramework -match '-macos') {
-              Write-Host "Skipping $($project.FullName) on Linux runner because it targets $targetFramework."
-              continue
-            }
-
-            Write-Host "Running $($project.FullName)..."
-            dotnet run --project $project.FullName -c Release --no-build --no-restore
-            if ($LASTEXITCODE -ne 0) {
-              throw "Test execution failed for $($project.FullName)."
-            }
-          }
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
 
   build-nugets:
     name: Build NuGet Packages
-    needs: set-version
+    needs: [set-version, run-tests]
     if: inputs.build_nugets
     uses: ./.github/workflows/build-sign-pack-nugets.yml
     with:
@@ -176,8 +125,8 @@ jobs:
 
   build-mac-binaries:
     name: Apple Build (${{ matrix.arch }})
-    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-latest"]') }}
-    needs: set-version
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-26"]') }}
+    needs: [set-version, run-tests]
     strategy:
       matrix:
         arch: [osx-arm64, osx-x64]
@@ -193,23 +142,16 @@ jobs:
         if: inputs.use_self_hosted_runners == false
         uses: ./.github/actions/setup-dotnet
 
-      - name: Run Desktop Tests
-        shell: pwsh
-        # Temporarily skip until fixed
-        if: false
-        run: |
-          # Run the shared desktop dependency tests on a native macOS runner.
-          $testProjects = @(
-            "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj"
-          )
+      - name: Install macOS .NET workload  
+        if: inputs.use_self_hosted_runners == false  
+        shell: bash  
+        run: dotnet workload install macos 
 
-          foreach ($project in $testProjects) {
-            Write-Host "Running $project on macOS..."
-            dotnet run --project $project -c Release -r ${{ matrix.arch }} --self-contained
-            if ($LASTEXITCODE -ne 0) {
-              throw "Test execution failed for $project."
-            }
-          }
+      - name: Setup Xcode
+        if: inputs.use_self_hosted_runners == false
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.3'
 
       - name: Setup Code Signing Keychain
         env:
@@ -454,7 +396,7 @@ jobs:
     # When using self-hosted Windows runners, require both the self-hosted label and OS label.
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
     environment: secure-signing
-    needs: set-version
+    needs: [set-version, run-tests]
     permissions:
       id-token: write
       contents: read
@@ -472,26 +414,6 @@ jobs:
 
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
-
-      - name: Install macOS workload
-        run: dotnet workload install macos
-
-      - name: Run Desktop Tests
-        shell: pwsh
-        run: |
-          # Run shared desktop tests plus Windows-only desktop coverage on a native Windows runner.
-          $testProjects = @(
-            "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
-            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj"
-          )
-
-          foreach ($project in $testProjects) {
-            Write-Host "Running $project on Windows..."
-            dotnet run --project $project -c Release
-            if ($LASTEXITCODE -ne 0) {
-              throw "Test execution failed for $project."
-            }
-          }
 
       # ===== Build Windows =====
       - name: Build DesktopClient (${{ matrix.arch }})
@@ -581,7 +503,7 @@ jobs:
   build-linux-binaries:
     name: Linux Build
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
-    needs: [set-version]
+    needs: [set-version, run-tests]
 
     steps:
       - name: Checkout

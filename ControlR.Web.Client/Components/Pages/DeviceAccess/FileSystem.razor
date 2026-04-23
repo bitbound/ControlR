@@ -33,7 +33,7 @@
         <MudTreeView ServerData="@LoadServerData" Items="@InitialTreeItems" @bind-SelectedValue="SelectedPath" T="string"
           Dense="true" ExpandOnDoubleClick>
           <ItemTemplate>
-            <MudTreeViewItem Value="@context.Value" Text="@context.Text" Items="@context.Children"
+            <MudTreeViewItem Value="@context.Value" Text="@context.Text" @bind-Items="@context.Children"
               @bind-Expanded="@context.Expanded"
               CanExpand="@context.Expandable" Icon="@context.Icon" />
           </ItemTemplate>

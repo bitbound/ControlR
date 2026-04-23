@@ -40,6 +40,7 @@
     <Project Path="Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Common.Tests/ControlR.DesktopClient.Common.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.Tests/ControlR.DesktopClient.Linux.Tests.csproj" />
+    <Project Path="Tests/ControlR.DesktopClient.Mac.Tests/ControlR.DesktopClient.Mac.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.CaptureRecording.Tests/ControlR.Libraries.CaptureRecording.Tests.csproj" />
