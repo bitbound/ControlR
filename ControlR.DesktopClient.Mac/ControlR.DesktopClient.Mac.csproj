@@ -3,6 +3,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <TargetFramework>$(MacTargetFramework)</TargetFramework>
+    <TargetPlatformVersion>$(MacTargetPlatformVersion)</TargetPlatformVersion>
   </PropertyGroup>
   <ItemGroup>
 		<ProjectReference Include="..\ControlR.DesktopClient.Common\ControlR.DesktopClient.Common.csproj" />

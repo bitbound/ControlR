@@ -14,33 +14,20 @@
     <OutputType Condition="'$(Configuration)' != 'Debug'">WinExe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <Import Project="..\Mac.Build.props" />
+
   <PropertyGroup Condition="'$(IsMacOS)' == 'true'">
-    <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
-    <ApplicationTitle>ControlR</ApplicationTitle>
     <ApplicationId>app.controlr.desktop.dev</ApplicationId>
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>1</ApplicationVersion>
-    <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
-    <CreatePackage>false</CreatePackage>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
-    <RuntimeIdentifier Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">osx-arm64</RuntimeIdentifier>
-    <RuntimeIdentifier Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">osx-x64</RuntimeIdentifier>
-    <PublishTrimmed>true</PublishTrimmed>
-    <MtouchLink>None</MtouchLink>
-    <TrimMode>none</TrimMode>
-    <LinkMode>none</LinkMode>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
-    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
   </PropertyGroup>
+
   <PropertyGroup Condition="'$(IsMacOS)' == 'true' and '$(Configuration)' == 'Debug'">
     <_CanOutputAppBundle>false</_CanOutputAppBundle>
     <GenerateDependencyFile>true</GenerateDependencyFile>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(IsLinux)' == 'true'">
-    <IsLinux>true</IsLinux>
-    <IsUnix>true</IsUnix>
-  </PropertyGroup>
+  
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
