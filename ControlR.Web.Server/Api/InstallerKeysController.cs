@@ -1,5 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Extensions;
+using ControlR.Web.Server.Services.AgentInstaller;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;

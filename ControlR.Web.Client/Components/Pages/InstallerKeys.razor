@@ -37,9 +37,17 @@
         <PropertyColumn Property="@(x => x.FriendlyName)" Title="Friendly Name" />
         <PropertyColumn Property="@(x => x.KeyType)" Title="Key Type" />
         <PropertyColumn Property="@(x => x.AllowedUses)" Title="Allowed Uses" />
-        <PropertyColumn Property="@(x => x.Usages.Count)" Title="Times Used" />
-        <PropertyColumn Property="@(x => x.Expiration)" Title="Expiration" />
-        <PropertyColumn Property="@(x => x.CreatedAt)" Title="Created" />
+        <PropertyColumn Property="@(x => x.UsageCount)" Title="Times Used" />
+        <PropertyColumn Property="@(x => x.Expiration)" Title="Expiration">
+            <CellTemplate>
+                @context.Item.Expiration?.ToLocalTime()
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="@(x => x.CreatedAt)" Title="Created">
+            <CellTemplate>
+                @context.Item.CreatedAt.ToLocalTime()
+            </CellTemplate>
+        </PropertyColumn>
         <TemplateColumn Sortable="false">
             <CellTemplate>
                 <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Info" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopRight">

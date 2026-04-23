@@ -8,6 +8,7 @@ public record AgentInstallerKeyDto(
     uint? AllowedUses = null,
     DateTimeOffset? Expiration = null,
     string? FriendlyName = null,
+    int UsageCount = 0,
     List<AgentInstallerKeyUsageDto>? Usages = null)
 {
   public List<AgentInstallerKeyUsageDto> Usages { get; init; } = Usages ?? [];

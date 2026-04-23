@@ -21,6 +21,8 @@ using ControlR.Web.Client.Services;
 using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
+using ControlR.Libraries.Hosting;
+using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
 
 namespace ControlR.Web.Server.Startup;
@@ -331,6 +333,8 @@ public static class WebApplicationBuilderExtensions
       options.RequireAuthenticationForRequester = true;
     });
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
+    builder.Services.AddSingleton<AgentInstallerKeyUsageCleaner>();
+    builder.Services.AddHostedService<AgentInstallerKeyUsageCleanupBackgroundService>();
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IAgentVersionProvider, AgentVersionProvider>();
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();

@@ -61,6 +61,11 @@ services:
       # Allows devices to self-register without requiring an installer key.
       ControlR_AppOptions__AllowAgentsToSelfBootstrap: false
 
+      # The number of days to retain installer key usage history.
+      # Usage entries older than this are excluded from installer key history queries and cleaned up by a background service.
+      # Set this to 0 or a negative value to disable history expiration.
+      ControlR_AppOptions__AgentInstallerKeyHistoryDays: 90
+
       # The name that appears in TOTP authenticator apps.
       ControlR_AppOptions__AuthenticatorIssuerName: "ControlR"
 

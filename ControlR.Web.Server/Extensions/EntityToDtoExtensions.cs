@@ -108,6 +108,7 @@ public static class EntityToDtoExtensions
       key.AllowedUses,
       key.Expiration,
       key.FriendlyName,
+      key.Usages?.Count ?? 0,
       key.Usages?.Select(u => new AgentInstallerKeyUsageDto(u.Id, u.DeviceId, u.CreatedAt, u.RemoteIpAddress)).ToList());
   }
 }

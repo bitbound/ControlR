@@ -10,6 +10,7 @@
 		<OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
 	</PropertyGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\Libraries\ControlR.Libraries.Hosting\ControlR.Libraries.Hosting.csproj" />
 		<ProjectReference Include="..\ControlR.Web.Client\ControlR.Web.Client.csproj" />
 		<ProjectReference Include="..\ControlR.Web.ServiceDefaults\ControlR.Web.ServiceDefaults.csproj" />
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.DataRedaction\ControlR.Libraries.DataRedaction.csproj" />

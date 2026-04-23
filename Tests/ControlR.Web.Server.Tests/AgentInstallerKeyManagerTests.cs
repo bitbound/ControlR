@@ -1,11 +1,10 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.TestingUtilities;
+using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Primitives;
-using ControlR.Web.Server.Services;
+using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -18,6 +17,13 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
   private Guid _tenantId;
   private TestApp _testApp = null!;
   private FakeTimeProvider _timeProvider = null!;
+
+  [Fact]
+  public void AgentInstallerKeyHistoryDays_DefaultValue_Is90()
+  {
+    var options = new AppOptions();
+    Assert.Equal(90, options.AgentInstallerKeyHistoryDays);
+  }
 
   [Fact]
   public async Task CreateKey_UsageBased_Sets24HourExpiration()
@@ -151,9 +157,9 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
   }
 
   [Fact]
-  public async Task GetAllKeys_DeletesExpiredKeysFromDb()
+  public async Task GetAllKeys_DoesNotReturnExpiredKeys()
   {
-    var expiring = await _keyManager.CreateKey(
+    await _keyManager.CreateKey(
         tenantId: _tenantId,
         creatorId: _creatorId,
         keyType: InstallerKeyType.TimeBased,
@@ -163,10 +169,44 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
 
     _timeProvider.Advance(TimeSpan.FromHours(2));
 
-    await _keyManager.GetAllKeys(_tenantId, _creatorId, isTenantAdmin: true);
+    var keys = await _keyManager.GetAllKeys(_tenantId, _creatorId, isTenantAdmin: true);
+    Assert.Empty(keys);
+  }
 
-    var keyResult = await _keyManager.TryGetKey(expiring.Id, _tenantId);
-    Assert.False(keyResult.IsSuccess);
+  [Fact]
+  public async Task GetAllKeys_FiltersOldUsageEntriesFromSummary()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput,
+      testDatabaseName: $"{Guid.NewGuid()}",
+      extraConfiguration: new Dictionary<string, string?>
+      {
+        { "AppOptions:AgentInstallerKeyHistoryDays", "1" }
+      });
+
+    var keyManager = (AgentInstallerKeyManager)testApp.Services.GetRequiredService<IAgentInstallerKeyManager>();
+    var timeProvider = testApp.TimeProvider;
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+
+    var dto = await keyManager.CreateKey(
+        tenantId: tenant.Id,
+        creatorId: user.Id,
+        keyType: InstallerKeyType.Persistent,
+        allowedUses: null,
+        expiration: null,
+        friendlyName: "Test Key");
+
+    await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
+    await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
+
+    timeProvider.Advance(TimeSpan.FromDays(2));
+
+    await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
+
+    var keys = await keyManager.GetAllKeys(tenant.Id, user.Id, isTenantAdmin: true);
+    var key = Assert.Single(keys);
+    Assert.Equal(1, key.UsageCount);
+    Assert.Empty(key.Usages);
   }
 
   [Fact]
@@ -243,6 +283,39 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
   }
 
   [Fact]
+  public async Task GetKeyUsages_FiltersOldUsageEntries()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput,
+      testDatabaseName: $"{Guid.NewGuid()}",
+      extraConfiguration: new Dictionary<string, string?>
+      {
+        { "AppOptions:AgentInstallerKeyHistoryDays", "1" }
+      });
+
+    var keyManager = (AgentInstallerKeyManager)testApp.Services.GetRequiredService<IAgentInstallerKeyManager>();
+    var timeProvider = testApp.TimeProvider;
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+
+    var dto = await keyManager.CreateKey(
+        tenantId: tenant.Id,
+        creatorId: user.Id,
+        keyType: InstallerKeyType.Persistent,
+        allowedUses: null,
+        expiration: null,
+        friendlyName: "Test Key");
+
+    await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
+    await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
+
+    timeProvider.Advance(TimeSpan.FromDays(2));
+
+    var result = await keyManager.GetKeyUsages(dto.Id, user.Id, tenant.Id, isTenantAdmin: true);
+    Assert.True(result.IsSuccess);
+    Assert.Empty(result.Value);
+  }
+
+  [Fact]
   public async Task GetKeyUsages_KeyNotFound_Fails()
   {
     var result = await _keyManager.GetKeyUsages(Guid.NewGuid(), _creatorId, _tenantId, isTenantAdmin: false);
@@ -269,6 +342,41 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     Assert.Single(result.Value);
     Assert.Equal(deviceId, result.Value[0].DeviceId);
     Assert.Equal("1.2.3.4", result.Value[0].RemoteIpAddress);
+  }
+
+  [Fact]
+  public async Task IncrementUsage_DoesNotShowExpiredUsageEntries()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput,
+      testDatabaseName: $"{Guid.NewGuid()}",
+      extraConfiguration: new Dictionary<string, string?>
+      {
+        { "AppOptions:AgentInstallerKeyHistoryDays", "1" }
+      });
+
+    var keyManager = (AgentInstallerKeyManager)testApp.Services.GetRequiredService<IAgentInstallerKeyManager>();
+    var timeProvider = testApp.TimeProvider;
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+
+    var dto = await keyManager.CreateKey(
+        tenantId: tenant.Id,
+        creatorId: user.Id,
+        keyType: InstallerKeyType.Persistent,
+        allowedUses: null,
+        expiration: null,
+        friendlyName: "Test Key");
+
+    await keyManager.IncrementUsage(dto.Id, Guid.NewGuid());
+    await keyManager.IncrementUsage(dto.Id, Guid.NewGuid());
+
+    timeProvider.Advance(TimeSpan.FromDays(2));
+
+    await keyManager.IncrementUsage(dto.Id, Guid.NewGuid());
+
+    var result = await keyManager.GetKeyUsages(dto.Id, user.Id, tenant.Id, isTenantAdmin: true);
+    Assert.True(result.IsSuccess);
+    Assert.Single(result.Value);
   }
 
   [Fact]

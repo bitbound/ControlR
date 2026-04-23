@@ -13,6 +13,13 @@ public class AppOptions
   public const string SectionKey = "AppOptions";
 
   /// <summary>
+  /// The number of days to retain installer key usage history.
+  /// Usage entries older than this are excluded from installer key history queries and cleaned up by a background service.
+  /// Values less than or equal to 0 disable history expiration and retain usage history indefinitely.
+  /// </summary>
+  public int AgentInstallerKeyHistoryDays { get; init; } = 90;
+
+  /// <summary>
   /// Allows devices to self-register without requiring an installer key.
   /// When enabled, agents can bootstrap themselves without manual intervention.
   /// </summary>

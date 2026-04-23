@@ -13,7 +13,11 @@
             <Columns>
                 <PropertyColumn Property="@(x => x.DeviceId)" Title="Device ID" />
                 <PropertyColumn Property="@(x => x.RemoteIpAddress)" Title="Remote IP" />
-                <PropertyColumn Property="@(x => x.Timestamp)" Title="Timestamp" />
+                <PropertyColumn Property="@(x => x.Timestamp)" Title="Timestamp">
+                    <CellTemplate>
+                        @context.Item.Timestamp.LocalDateTime
+                    </CellTemplate>
+                </PropertyColumn>
             </Columns>
             <PagerContent>
                 <MudDataGridPager T="AgentInstallerKeyUsageDto" />

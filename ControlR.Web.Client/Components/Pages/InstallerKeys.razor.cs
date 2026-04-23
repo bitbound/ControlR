@@ -55,26 +55,26 @@ public partial class InstallerKeys
   {
     try
     {
-    var confirmed = await DialogService.ShowMessageBoxAsync(
-        "Confirm Delete",
-        $"Are you sure you want to delete the key \"{key.FriendlyName ?? key.Id.ToString()}\"?",
-        yesText: "Delete",
-        cancelText: "Cancel");
+      var confirmed = await DialogService.ShowMessageBoxAsync(
+          "Confirm Delete",
+          $"Are you sure you want to delete the key \"{key.FriendlyName ?? key.Id.ToString()}\"?",
+          yesText: "Delete",
+          cancelText: "Cancel");
 
-    if (confirmed != true)
-    {
-      return;
-    }
-    var apiResult = await ControlrApi.InstallerKeys.DeleteInstallerKey(key.Id);
-    if (apiResult.IsSuccess)
-    {
-      Snackbar.Add("Key deleted.", Severity.Success);
-      await LoadKeys();
-    }
-    else
-    {
-      Snackbar.Add($"Failed to delete key: {apiResult.Reason}", Severity.Error);
-    }
+      if (confirmed != true)
+      {
+        return;
+      }
+      var apiResult = await ControlrApi.InstallerKeys.DeleteInstallerKey(key.Id);
+      if (apiResult.IsSuccess)
+      {
+        Snackbar.Add("Key deleted.", Severity.Success);
+        await LoadKeys();
+      }
+      else
+      {
+        Snackbar.Add($"Failed to delete key: {apiResult.Reason}", Severity.Error);
+      }
     }
     catch (Exception ex)
     {
@@ -136,29 +136,29 @@ public partial class InstallerKeys
   {
     try
     {
-    var newName = await DialogService.ShowPrompt(
-        title: "Rename Key",
-        subtitle: $"Enter a new name for the key \"{key.FriendlyName ?? key.Id.ToString()}\".",
-        inputLabel: "New Name",
-        inputHintText: "Enter a new name here.");
+      var newName = await DialogService.ShowPrompt(
+          title: "Rename Key",
+          subtitle: $"Enter a new name for the key \"{key.FriendlyName ?? key.Id.ToString()}\".",
+          inputLabel: "New Name",
+          inputHintText: "Enter a new name here.");
 
-    if (string.IsNullOrWhiteSpace(newName))
-    {
-      return;
-    }
+      if (string.IsNullOrWhiteSpace(newName))
+      {
+        return;
+      }
 
-    var dto = new RenameInstallerKeyRequestDto(key.Id, newName);
-    var result = await ControlrApi.InstallerKeys.RenameInstallerKey(dto);
+      var dto = new RenameInstallerKeyRequestDto(key.Id, newName);
+      var result = await ControlrApi.InstallerKeys.RenameInstallerKey(dto);
 
-    if (result.IsSuccess)
-    {
-      Snackbar.Add("Key renamed.", Severity.Success);
-      await LoadKeys();
-    }
-    else
-    {
-      Snackbar.Add($"Failed to rename key: {result.Reason}", Severity.Error);
-    }
+      if (result.IsSuccess)
+      {
+        Snackbar.Add("Key renamed.", Severity.Success);
+        await LoadKeys();
+      }
+      else
+      {
+        Snackbar.Add($"Failed to rename key: {result.Reason}", Severity.Error);
+      }
     }
     catch (Exception ex)
     {
@@ -170,19 +170,26 @@ public partial class InstallerKeys
   {
     try
     {
-    var parameters = new DialogParameters
+      var result = await ControlrApi.InstallerKeys.GetInstallerKeyUsages(key.Id);
+      if (!result.IsSuccess)
+      {
+        Snackbar.Add($"Failed to load key usages: {result.Reason}", Severity.Error);
+        return;
+      }
+
+      var parameters = new DialogParameters
         {
-            { "Usages", key.Usages }
+            { "Usages", result.Value }
         };
 
-    var options = new DialogOptions
-    {
-      CloseButton = true,
-      MaxWidth = MaxWidth.Medium,
-      FullWidth = true
-    };
+      var options = new DialogOptions
+      {
+        CloseButton = true,
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+      };
 
-    await DialogService.ShowAsync<InstallerKeyUsagesDialog>("Key Usages", parameters, options);
+      await DialogService.ShowAsync<InstallerKeyUsagesDialog>("Key Usages", parameters, options);
     }
     catch (Exception ex)
     {

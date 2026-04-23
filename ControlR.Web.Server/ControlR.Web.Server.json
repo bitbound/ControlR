@@ -2905,6 +2905,12 @@
               "string"
             ]
           },
+          "usageCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
           "usages": {
             "type": [
               "null",
