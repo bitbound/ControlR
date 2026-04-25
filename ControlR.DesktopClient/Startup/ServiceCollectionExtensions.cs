@@ -1,5 +1,6 @@
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Services;
 using ControlR.Libraries.Ipc;
@@ -50,6 +51,7 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<IImageUtility, ImageUtility>()
       .AddSingleton<IAppLifetimeNotifier, AppLifetimeNotifier>()
       .AddSingleton<IViewModelFactory, ViewModelFactory>()
+      .AddSingleton<IUrlLauncher, UrlLauncher>()
       .AddSingleton<IWaiter, Waiter>()
       .AddSingleton<INavigationItemProvider, ShellNavigationItemProvider>()
       .AddTransient<MainWindow>()

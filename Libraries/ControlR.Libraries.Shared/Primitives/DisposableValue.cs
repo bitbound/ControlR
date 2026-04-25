@@ -4,9 +4,9 @@ namespace ControlR.Libraries.Shared.Primitives;
 
 public sealed class DisposableValue<T>(
   T value,
-  Action? disposeCallback = null) : IDisposable
+  Action<T>? disposeCallback = null) : IDisposable
 {
-  private readonly Action? _disposeCallback = disposeCallback;
+  private readonly Action<T>? _disposeCallback = disposeCallback;
 
   public T Value { get; } = value;
 
@@ -14,7 +14,7 @@ public sealed class DisposableValue<T>(
   {
     try
     {
-      _disposeCallback?.Invoke();
+      _disposeCallback?.Invoke(Value);
     }
     catch (Exception ex)
     {

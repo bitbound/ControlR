@@ -7,6 +7,12 @@ on:
         description: "Version number (leave empty for auto)"
         required: false
         type: string
+      use_self_hosted_runners:
+        description: Use self-hosted runners.
+        required: false
+        default: true
+        type: boolean
+
   pull_request:
     branches: 
       - main
@@ -28,4 +34,4 @@ jobs:
     name: test
     uses: ./.github/workflows/run-tests.yml
     with:
-      use_self_hosted_runners: false
+      use_self_hosted_runners: ${{ inputs.use_self_hosted_runners || false }}

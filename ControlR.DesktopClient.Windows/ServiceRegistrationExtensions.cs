@@ -32,6 +32,7 @@ public static class ServiceRegistrationExtensions
   {
     return services
       .AddSingleton<IWin32Interop, Win32Interop>()
+      .AddSingleton<IUrlLauncher, WindowsUrlLauncher>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsWindows>()
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()
       .AddSingleton<DisplayManagerWindows>()

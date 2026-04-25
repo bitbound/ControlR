@@ -36,7 +36,8 @@
 
 				<HyperlinkButton Grid.Row="2" Grid.Column="1" Margin="0" Padding="0"
 												 Content="{x:Static common:Localization.AboutLicenseLabel}"
-												 NavigateUri="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
+												 Command="{Binding OpenUrlCommand}"
+												 CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
 
 				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold">
 					<Run Text="{x:Static common:Localization.AboutProjectLabel}" />
@@ -44,7 +45,8 @@
 				</TextBlock>
 				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0"
 												 Content="https://github.com/bitbound/controlr"
-												 NavigateUri="https://github.com/bitbound/controlr" />
+												 Command="{Binding OpenUrlCommand}"
+												 CommandParameter="https://github.com/bitbound/controlr" />
 
 				<TextBlock Grid.Row="4" Grid.Column="0" FontWeight="SemiBold">
 					<Run Text="{x:Static common:Localization.AboutWebsiteLabel}" />
@@ -52,7 +54,8 @@
 				</TextBlock>
 				<HyperlinkButton Grid.Row="4" Grid.Column="1" Margin="0" Padding="0"
 												 Content="https://controlr.app"
-												 NavigateUri="https://controlr.app" />
+												 Command="{Binding OpenUrlCommand}"
+												 CommandParameter="https://controlr.app" />
 
 				<TextBlock Grid.Row="5" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top">
 					<Run Text="{x:Static common:Localization.AboutSponsorLabel}" />
@@ -81,31 +84,38 @@
 				<TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static common:Localization.AboutLibraryAvaloniaUi}" VerticalAlignment="Center" />
 				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 					<HyperlinkButton Content="{x:Static common:Localization.AboutSourceText}"
-													 NavigateUri="https://github.com/AvaloniaUI/Avalonia" />
+											 Command="{Binding OpenUrlCommand}"
+											 CommandParameter="https://github.com/AvaloniaUI/Avalonia" />
 					<HyperlinkButton Content="{x:Static common:Localization.LinkLicenseText}"
-													 NavigateUri="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md" />
+											 Command="{Binding OpenUrlCommand}"
+											 CommandParameter="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md" />
 				</StackPanel>
 
 				<TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static common:Localization.AboutLibrarySerilog}" VerticalAlignment="Center" />
 				<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 					<HyperlinkButton Content="{x:Static common:Localization.AboutSourceText}"
-													 NavigateUri="https://github.com/serilog/serilog" />
+											 Command="{Binding OpenUrlCommand}"
+											 CommandParameter="https://github.com/serilog/serilog" />
 					<HyperlinkButton Content="{x:Static common:Localization.LinkLicenseText}"
-													 NavigateUri="https://github.com/serilog/serilog/blob/dev/LICENSE" />
+											 Command="{Binding OpenUrlCommand}"
+											 CommandParameter="https://github.com/serilog/serilog/blob/dev/LICENSE" />
 				</StackPanel>
 
 				<TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static common:Localization.AboutLibraryTmdsDbus}" VerticalAlignment="Center" />
 				<StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 					<HyperlinkButton Content="{x:Static common:Localization.AboutSourceText}"
-													 NavigateUri="https://github.com/tmds/Tmds.DBus" />
+											 Command="{Binding OpenUrlCommand}"
+											 CommandParameter="https://github.com/tmds/Tmds.DBus" />
 					<HyperlinkButton Content="{x:Static common:Localization.LinkLicenseText}"
-													 NavigateUri="https://github.com/tmds/Tmds.DBus/blob/main/COPYING" />
+											 Command="{Binding OpenUrlCommand}"
+											 CommandParameter="https://github.com/tmds/Tmds.DBus/blob/main/COPYING" />
 				</StackPanel>
 
 				<TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static common:Localization.AboutLibraryMicrosoftLibraries}" VerticalAlignment="Center" />
 				<HyperlinkButton Grid.Row="3" Grid.Column="1"
 												 Content="{x:Static common:Localization.AboutSourceText}"
-												 NavigateUri="https://github.com/microsoft"
+												 Command="{Binding OpenUrlCommand}"
+												 CommandParameter="https://github.com/microsoft"
 												 VerticalAlignment="Center" />
 
 			</Grid>

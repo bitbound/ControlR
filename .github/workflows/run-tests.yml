@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       use_self_hosted_runners:
-        description: Use self-hosted runners where available.
+        description: Use self-hosted runners.
         required: false
         default: false
         type: boolean

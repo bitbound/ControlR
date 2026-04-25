@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using ControlR.DesktopClient.Common.Options;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.ViewModels;
@@ -12,9 +12,11 @@ public interface IAboutViewModel : IViewModelBase
 }
 
 public partial class AboutViewModel(
-  IOptionsMonitor<DesktopClientOptions> options) : ViewModelBase<AboutView>, IAboutViewModel
+  IOptionsMonitor<DesktopClientOptions> options,
+  IUrlLauncher urlLauncher) : ViewModelBase<AboutView>, IAboutViewModel
 {
   private readonly IOptionsMonitor<DesktopClientOptions> _options = options;
+  private readonly IUrlLauncher _urlLauncher = urlLauncher;
 
   [ObservableProperty]
   private string? _appVersion;
@@ -37,17 +39,6 @@ public partial class AboutViewModel(
       return;
     }
 
-    try
-    {
-      Process.Start(new ProcessStartInfo
-      {
-        FileName = url,
-        UseShellExecute = true
-      });
-    }
-    catch
-    {
-      // Silently fail if browser cannot be opened
-    }
+    _ = _urlLauncher.Open(url);
   }
 }

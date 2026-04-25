@@ -60,6 +60,7 @@ public interface IWin32Interop
   bool IsCurrentProcessUiAccess();
   void MovePointer(int x, int y, MovePointerType moveType);
   nint OpenInputDesktop();
+  bool OpenUrlInActiveSession(string targetUrl);
   void ResetKeyboardState();
   bool SetBlockInput(bool isBlocked);
   void SetClipboardText(string? text);
@@ -950,6 +951,116 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   public nint OpenInputDesktop()
   {
     return PInvoke.OpenInputDesktop(0, true, (DESKTOP_ACCESS_FLAGS)0x10000000u);
+  }
+
+  public bool OpenUrlInActiveSession(string targetUrl)
+  {
+    if (string.IsNullOrWhiteSpace(targetUrl))
+    {
+      return false;
+    }
+
+    try
+    {
+      var sessionId = (uint)Process.GetCurrentProcess().SessionId;
+      if (sessionId == 0)
+      {
+        _logger.LogError("Cannot open URL in active session because current session ID is 0.");
+        return false;
+      }
+
+      HANDLE userTokenHandle = default;
+
+      if (!PInvoke.WTSQueryUserToken(sessionId, ref userTokenHandle))
+      {
+        _logger.LogError(
+          "WTSQueryUserToken failed for session {SessionId}. Error: {Error} {Message}",
+          sessionId,
+          Marshal.GetLastPInvokeError(),
+          Marshal.GetLastPInvokeErrorMessage());
+        return false;
+      }
+
+      using var userToken = new SafeFileHandle(userTokenHandle, ownsHandle: true);
+
+      if (!PInvoke.DuplicateTokenEx(
+            userToken,
+            (TOKEN_ACCESS_MASK)MaximumAllowedRights,
+            null,
+            SECURITY_IMPERSONATION_LEVEL.SecurityIdentification,
+            TOKEN_TYPE.TokenPrimary,
+            out var primaryToken))
+      {
+        _logger.LogError(
+          "DuplicateTokenEx(user session) failed for session {SessionId}. Error: {Error} {Message}",
+          sessionId,
+          Marshal.GetLastPInvokeError(),
+          Marshal.GetLastPInvokeErrorMessage());
+        return false;
+      }
+
+      using var primaryTokenDisposable = primaryToken;
+
+      var explorerPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+      var securityAttributes = new SECURITY_ATTRIBUTES
+      {
+        nLength = (uint)sizeof(SECURITY_ATTRIBUTES)
+      };
+
+      var startupInfo = new STARTUPINFOW
+      {
+        cb = (uint)sizeof(STARTUPINFOW)
+      };
+
+      var desktopPtr = Marshal.StringToHGlobalAuto("winsta0\\Default\0");
+      using var desktopPtrDisposable = new DisposableValue<nint>(
+        desktopPtr, 
+        ptr => Marshal.FreeHGlobal(ptr));
+
+      startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());
+
+      var commandLineSpan = $"\"{explorerPath}\" \"{targetUrl}\"\0".ToCharArray().AsSpan();
+      var createResult = PInvoke.CreateProcessAsUser(
+        primaryToken,
+        null,
+        ref commandLineSpan,
+        securityAttributes,
+        securityAttributes,
+        false,
+        PROCESS_CREATION_FLAGS.NORMAL_PRIORITY_CLASS | PROCESS_CREATION_FLAGS.CREATE_UNICODE_ENVIRONMENT,
+        null,
+        null,
+        in startupInfo,
+        out var processInfo);
+
+      if (!createResult)
+      {
+        _logger.LogError(
+          "CreateProcessAsUser(explorer) failed for session {SessionId}. Error: {Error} {Message}. Target: {Target}",
+          sessionId,
+          Marshal.GetLastPInvokeError(),
+          Marshal.GetLastPInvokeErrorMessage(),
+          targetUrl);
+        return false;
+      }
+
+      if (processInfo.hProcess != HANDLE.Null)
+      {
+        PInvoke.CloseHandle(processInfo.hProcess);
+      }
+
+      if (processInfo.hThread != HANDLE.Null)
+      {
+        PInvoke.CloseHandle(processInfo.hThread);
+      }
+
+      return true;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to open URL in active session. Target: {Target}", targetUrl);
+      return false;
+    }
   }
 
   public void ResetKeyboardState()
