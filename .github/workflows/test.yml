@@ -34,4 +34,4 @@ jobs:
     name: test
     uses: ./.github/workflows/run-tests.yml
     with:
-      use_self_hosted_runners: ${{ inputs.use_self_hosted_runners || false }}
+      use_self_hosted_runners: ${{ github.event_name != 'workflow_dispatch' || inputs.use_self_hosted_runners }}
