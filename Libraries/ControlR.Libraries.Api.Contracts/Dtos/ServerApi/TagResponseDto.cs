@@ -7,4 +7,7 @@ public record TagResponseDto(
   string Name,
   TagType Type,
   IReadOnlyList<Guid> UserIds,
-  IReadOnlyList<Guid> DeviceIds);
+  IReadOnlyList<Guid> DeviceIds)
+{
+  public override string ToString() => Name;
+}
