@@ -1,0 +1,50 @@
+<Project>
+
+  <PropertyGroup>
+    <EnableWindowsBundleSigning Condition="'$(EnableWindowsBundleSigning)' == ''">false</EnableWindowsBundleSigning>
+    <BundleSigningDescriptionUrl Condition="'$(BundleSigningDescriptionUrl)' == ''">$(SIGNING_DESCRIPTION_URL)</BundleSigningDescriptionUrl>
+    <BundleSigningKeyVaultUri Condition="'$(BundleSigningKeyVaultUri)' == ''">$(AZURE_KEY_VAULT_URI)</BundleSigningKeyVaultUri>
+    <BundleSigningCertificateName Condition="'$(BundleSigningCertificateName)' == ''">$(AZURE_KEY_VAULT_CERTIFICATE_NAME)</BundleSigningCertificateName>
+    <BundleSigningTimestampUrl Condition="'$(BundleSigningTimestampUrl)' == '' and '$(TIMESTAMP_URL)' != ''">$(TIMESTAMP_URL)</BundleSigningTimestampUrl>
+    <BundleSigningTimestampUrl Condition="'$(BundleSigningTimestampUrl)' == ''">http://timestamp.digicert.com</BundleSigningTimestampUrl>
+    <BundleSigningEnabled Condition="'$(BundleSigningEnabled)' == '' and '$(EnableWindowsBundleSigning)' == 'true' and '$(OS)' == 'Windows_NT' and ('$(ContinuousIntegrationBuild)' == 'true' or '$(GITHUB_ACTIONS)' == 'true') and '$(BundleSigningKeyVaultUri)' != '' and '$(BundleSigningCertificateName)' != '' and '$(BundleSigningDescriptionUrl)' != ''">true</BundleSigningEnabled>
+  </PropertyGroup>
+
+  <Target Name="SignBundledFiles"
+    BeforeTargets="GenerateSingleFileBundle"
+    DependsOnTargets="PrepareForBundle"
+    Condition="'$(EnableWindowsBundleSigning)' == 'true' AND '$(IsWindows)' == 'true'">
+    <PropertyGroup>
+      <SignedBundleAppHostFileName>$([System.IO.Path]::GetFileName('$(AppHostFile)'))</SignedBundleAppHostFileName>
+      <_SignFileListPath>$(IntermediateOutputPath)bundle-files-to-sign.txt</_SignFileListPath>
+    </PropertyGroup>
+
+    <!--
+      FilesToBundle includes all files about to be embedded in the single-file bundle,
+      including DLLs in subdirectories (runtimes/*, culture folders, etc.).
+      Exclude the apphost EXE (which the bundler modifies) and non-binary files.
+    -->
+    <ItemGroup Condition="'$(BundleSigningEnabled)' == 'true'">
+      <_BundleBinaryFilesToSign Include="@(FilesToBundle)"
+        Condition="'%(FilesToBundle.RelativePath)' != '$(SignedBundleAppHostFileName)'" />
+      <_BundleBinaryFilesToSign Remove="@(_BundleBinaryFilesToSign)"
+        Condition="'%(Extension)' != '.dll' and '%(Extension)' != '.exe'" />
+    </ItemGroup>
+
+    <WriteLinesToFile Condition="'$(BundleSigningEnabled)' == 'true' and '@(_BundleBinaryFilesToSign)' != ''"
+      File="$(_SignFileListPath)"
+      Lines="@(_BundleBinaryFilesToSign -> '%(Identity)')"
+      Overwrite="true"
+      Encoding="utf-8" />
+
+    <Exec
+      Command="dnx azuresigntool --yes sign --du=&quot;$(BundleSigningDescriptionUrl)&quot; --fd=sha256 --kvu=&quot;$(BundleSigningKeyVaultUri)&quot; --kvc=&quot;$(BundleSigningCertificateName)&quot; --kvm --tr=&quot;$(BundleSigningTimestampUrl)&quot; --td=sha256 --skip-signed --input-file-list=&quot;$(_SignFileListPath)&quot;"
+      Condition="'$(BundleSigningEnabled)' == 'true' and '@(_BundleBinaryFilesToSign)' != ''"
+      StandardOutputImportance="high"
+      StandardErrorImportance="high" />
+
+    <Message Condition="'$(BundleSigningEnabled)' == 'true'"
+      Text="Bundle signing is enabled. Signed @(_BundleBinaryFilesToSign->Count()) files via --input-file-list."
+      Importance="high" />
+  </Target>
+</Project>

@@ -7,6 +7,7 @@
     <PublishSingleFile>true</PublishSingleFile>
     <UseAppHost>true</UseAppHost>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <EnableWindowsBundleSigning>true</EnableWindowsBundleSigning>
   </PropertyGroup>
 
   <!-- Dependencies for installer -->
@@ -24,4 +25,5 @@
     <ProjectReference Include="..\Libraries\ControlR.Libraries.Serilog\ControlR.Libraries.Serilog.csproj" />
   </ItemGroup>
 
+  <Import Project="../WindowsBundleSign.Build.targets" Condition="'$(IsWindows)' == 'true'" />
 </Project>

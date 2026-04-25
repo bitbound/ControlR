@@ -1,33 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<ApplicationIcon>..\.assets\appicon.ico</ApplicationIcon>
-		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-		<UserSecretsId>a11d53e3-322a-427d-a035-74dd588427a9</UserSecretsId>
-	</PropertyGroup>
-	<ItemGroup>
-		<None Remove="appsettings.Development.json" />
-		<None Remove="appsettings.json" />
-		<None Include="..\.assets\appicon.ico">
-			<Link>appicon.ico</Link>
-		</None>
-	</ItemGroup>
-	<ItemGroup>
-		<Content Include="appsettings.Development.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="appsettings.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="System.CommandLine" />
-		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\ControlR.Agent.Common\ControlR.Agent.Common.csproj" />
-	</ItemGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ApplicationIcon>..\.assets\appicon.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <UserSecretsId>a11d53e3-322a-427d-a035-74dd588427a9</UserSecretsId>
+    <EnableWindowsBundleSigning>true</EnableWindowsBundleSigning>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="appsettings.Development.json" />
+    <None Remove="appsettings.json" />
+    <None Include="..\.assets\appicon.ico">
+      <Link>appicon.ico</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Update="Bitbound.Analyzers.MemberOrder">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ControlR.Agent.Common\ControlR.Agent.Common.csproj" />
+  </ItemGroup>
+
+  <Import Project="../WindowsBundleSign.Build.targets" Condition="'$(IsWindows)' == 'true'" />
 </Project>
