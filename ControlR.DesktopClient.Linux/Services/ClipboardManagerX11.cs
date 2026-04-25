@@ -8,16 +8,21 @@ namespace ControlR.DesktopClient.Linux.Services;
 
 public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
 {
-  private static readonly object _lock = new();
+  private static readonly Lock _lock = new();
+  private static readonly Lock _threadingInitLock = new();
+
+  private static bool _isXlibThreadingInitialized;
 
   private readonly ILogger<ClipboardManagerX11> _logger;
 
   private nint _clipboardAtom;
   private nint _clipboardDataAtom;
   private nint _clipboardManagerAtom;
-  private string? _currentClipboardText;
+  private volatile string? _currentClipboardText;
   private nint _display;
+  private Thread? _eventPumpThread;
   private nint _saveTargetsAtom;
+  private volatile bool _stopEventPump = true;
   private nint _stringAtom;
   private nint _targetsAtom;
   private nint _utf8StringAtom;
@@ -31,6 +36,7 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
 
   public void Dispose()
   {
+    StopEventPump();
     lock (_lock)
     {
       if (_window != nint.Zero)
@@ -59,6 +65,7 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
           Initialize();
         }
 
+        _logger.LogInformation("Getting clipboard text.");
         // Only get from the CLIPBOARD selection (Ctrl+C/Ctrl+V)
         var text = GetSelectionText(_clipboardAtom);
         return Task.FromResult(text);
@@ -77,16 +84,23 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
     {
       try
       {
+
         if (_display == nint.Zero)
         {
           Initialize();
         }
 
-        if (string.IsNullOrEmpty(text))
+        if (string.IsNullOrWhiteSpace(text))
         {
+          _logger.LogInformation("Clearing clipboard text.");
+          // Clear clipboard by releasing ownership
+          LibX11.XSetSelectionOwner(_display, _clipboardAtom, nint.Zero, LibX11.CurrentTime);
+          _currentClipboardText = null;
+          LibX11.XFlush(_display);
           return Task.CompletedTask;
         }
 
+        _logger.LogInformation("Setting clipboard text.");
         SetClipboardText(text);
       }
       catch (Exception ex)
@@ -94,6 +108,57 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
         _logger.LogError(ex, "Error while setting clipboard text.");
       }
       return Task.CompletedTask;
+    }
+  }
+
+  private static void EnsureXlibThreadingInitialized()
+  {
+    if (_isXlibThreadingInitialized)
+    {
+      return;
+    }
+
+    lock (_threadingInitLock)
+    {
+      if (_isXlibThreadingInitialized)
+      {
+        return;
+      }
+
+      if (LibX11.XInitThreads() == 0)
+      {
+        throw new InvalidOperationException("XInitThreads failed.");
+      }
+
+      _isXlibThreadingInitialized = true;
+    }
+  }
+
+  private void EventPumpLoop()
+  {
+    while (true)
+    {
+      lock (_lock)
+      {
+        if (_stopEventPump || _currentClipboardText is null || _display == nint.Zero)
+        {
+          return;
+        }
+
+        try
+        {
+          if (LibX11.XPending(_display) > 0)
+          {
+            _ = LibX11.XNextEvent(_display, out var xEvent);
+            HandleEvent(ref xEvent);
+          }
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error in clipboard event pump");
+        }
+      }
+      Thread.Sleep(20);
     }
   }
 
@@ -212,6 +277,8 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
 
   private void Initialize()
   {
+    _logger.LogInformation("Initializing X11 clipboard manager.");
+    EnsureXlibThreadingInitialized();
     _display = LibX11.XOpenDisplay(null);
     if (_display == nint.Zero)
     {
@@ -307,8 +374,7 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
           return;
         }
 
-        // Process any pending events to handle selection requests
-        ProcessPendingEvents();
+        StartEventPump();
 
         // Store atoms in clipboard manager to persist after our process exits
         StoreAtomsInClipboardManager(text);
@@ -324,6 +390,30 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
     {
       _logger.LogError(ex, "Failed to set clipboard text");
     }
+  }
+
+  private void StartEventPump()
+  {
+    if (_eventPumpThread is not null && _eventPumpThread.IsAlive)
+    {
+      return;
+    }
+
+    StopEventPump();
+    _stopEventPump = false;
+    _eventPumpThread = new Thread(EventPumpLoop)
+    {
+      IsBackground = true,
+      Name = "X11ClipboardEventPump"
+    };
+    _eventPumpThread.Start();
+  }
+
+  private void StopEventPump()
+  {
+    _stopEventPump = true;
+    _eventPumpThread?.Join(1000);
+    _eventPumpThread = null;
   }
 
   private void StoreAtomsInClipboardManager(string text)

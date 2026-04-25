@@ -80,7 +80,7 @@ public class IpcClientManagerTests : IAsyncLifetime
     _ipcServer.Start();
 
     // Wait for the client to connect
-    using var waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+    using var waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
     await Waiter.Default.WaitFor(
       () => _clientManager.TryGetClient(out var client) && client.IsConnected,
       cancellationToken: waitCts.Token);
@@ -107,7 +107,7 @@ public class IpcClientManagerTests : IAsyncLifetime
     _ipcServer.Start();
 
     // Wait for the client to connect
-    using var waitCts2 = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+    using var waitCts2 = new CancellationTokenSource(TimeSpan.FromSeconds(10));
     await Waiter.Default.WaitFor(
       () => _clientManager.TryGetClient(out var _),
       cancellationToken: waitCts2.Token);

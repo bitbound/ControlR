@@ -131,6 +131,9 @@ public static unsafe class LibX11
     public static extern int XHeightOfScreen(nint screen);
 
     [DllImport(LibraryName)]
+    public static extern int XInitThreads();
+
+    [DllImport(LibraryName)]
     public static extern nint XInternAtom(nint display, string atom_name, bool only_if_exists);
 
     [DllImport(LibraryName)]
