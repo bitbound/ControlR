@@ -206,7 +206,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
     var keys = await keyManager.GetAllKeys(tenant.Id, user.Id, isTenantAdmin: true);
     var key = Assert.Single(keys);
     Assert.Equal(1, key.UsageCount);
-    Assert.Empty(key.Usages);
+    Assert.NotNull(key.CreatorName);
   }
 
   [Fact]

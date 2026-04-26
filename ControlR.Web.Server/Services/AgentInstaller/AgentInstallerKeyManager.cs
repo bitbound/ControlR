@@ -116,23 +116,44 @@ public class AgentInstallerKeyManager(
     var now = _timeProvider.GetUtcNow();
     var cutoff = GetUsageHistoryCutoff();
 
-    var keys = await query
-        .Select(x => new AgentInstallerKeyDto(
+    query = query.Where(x =>
+        x.KeyType == InstallerKeyType.Persistent ||
+        (x.Expiration.HasValue && x.Expiration.Value >= now));
+
+    var keyData = await query
+        .Select(x => new
+        {
             x.Id,
             x.CreatorId,
+          CreatorName = db.Users
+            .Where(u => u.Id == x.CreatorId)
+            .Select(u => u.UserName)
+            .FirstOrDefault(),
             x.KeyType,
             x.CreatedAt,
             x.AllowedUses,
             x.Expiration,
             x.FriendlyName,
-            db.AgentInstallerKeyUsages.Count(u =>
+            UsageCount = db.AgentInstallerKeyUsages.Count(u =>
                 u.AgentInstallerKeyId == x.Id &&
                 u.TenantId == x.TenantId &&
-                (!cutoff.HasValue || u.CreatedAt >= cutoff.Value)),
-            null))
+                (!cutoff.HasValue || u.CreatedAt >= cutoff.Value))
+        })
+        .Where(x =>
+          x.KeyType != InstallerKeyType.UsageBased ||
+          (x.AllowedUses.HasValue && x.UsageCount < x.AllowedUses.Value))
         .ToListAsync();
 
-    return keys.Where(x => !IsExpired(x.KeyType, x.Expiration, x.AllowedUses, x.UsageCount, now)).ToList();
+      return keyData.Select(x => new AgentInstallerKeyDto(
+        x.Id,
+        x.CreatorId,
+        x.CreatorName,
+        x.KeyType,
+        x.CreatedAt,
+        x.AllowedUses,
+        x.Expiration,
+        x.FriendlyName,
+        x.UsageCount)).ToList();
   }
 
   public async Task<HttpResult<IReadOnlyList<AgentInstallerKeyUsageDto>>> GetKeyUsages(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin)
@@ -168,7 +189,6 @@ public class AgentInstallerKeyManager(
   {
     await using var db = await _dbContextFactory.CreateDbContextAsync();
     var installerKey = await db.AgentInstallerKeys
-        .Include(x => x.Usages)
         .FirstOrDefaultAsync(x => x.Id == keyId);
 
     if (installerKey is null)
@@ -190,12 +210,18 @@ public class AgentInstallerKeyManager(
       }
     }
 
-    if (installerKey.KeyType == InstallerKeyType.UsageBased && installerKey.Usages.Count >= installerKey.AllowedUses)
+    var usageCount = 0;
+    if (installerKey.KeyType == InstallerKeyType.UsageBased)
     {
-      return HttpResult.Fail(HttpResultErrorCode.BadRequest, "Key usage limit reached");
+      usageCount = await db.AgentInstallerKeyUsages
+          .CountAsync(u => u.AgentInstallerKeyId == keyId);
+      if (usageCount >= installerKey.AllowedUses)
+      {
+        return HttpResult.Fail(HttpResultErrorCode.BadRequest, "Key usage limit reached");
+      }
     }
 
-    _ = await AddUsageAndUpdateKey(db, installerKey, deviceId, remoteIpAddress);
+    _ = await AddUsageAndUpdateKey(db, installerKey, usageCount, deviceId, remoteIpAddress);
     return HttpResult.Ok();
   }
 
@@ -284,10 +310,11 @@ public class AgentInstallerKeyManager(
   private async Task<bool> AddUsageAndUpdateKey(
     AppDb db,
     AgentInstallerKey installerKey,
+    int currentUsageCount,
     Guid? deviceId,
     string? remoteIpAddress)
   {
-    installerKey.Usages.Add(new AgentInstallerKeyUsage()
+    db.AgentInstallerKeyUsages.Add(new AgentInstallerKeyUsage
     {
       AgentInstallerKeyId = installerKey.Id,
       CreatedAt = _timeProvider.GetUtcNow(),
@@ -295,13 +322,13 @@ public class AgentInstallerKeyManager(
       DeviceId = deviceId ?? Guid.Empty,
       RemoteIpAddress = remoteIpAddress
     });
-
-    if (installerKey.KeyType == InstallerKeyType.UsageBased && installerKey.Usages.Count >= installerKey.AllowedUses)
+    if (installerKey.KeyType == InstallerKeyType.UsageBased && currentUsageCount + 1 >= installerKey.AllowedUses)
     {
       db.AgentInstallerKeys.Remove(installerKey);
       await db.SaveChangesAsync();
       return true;
     }
+
 
     await db.SaveChangesAsync();
     return false;
@@ -332,7 +359,6 @@ public class AgentInstallerKeyManager(
 
     await using var db = await _dbContextFactory.CreateDbContextAsync();
     var installerKey = await db.AgentInstallerKeys
-      .Include(x => x.Usages)
       .FirstOrDefaultAsync(x => x.Id == keyId);
 
     if (installerKey is null)
@@ -347,11 +373,19 @@ public class AgentInstallerKeyManager(
     }
 
     var now = _timeProvider.GetUtcNow();
+
+    var usageCount = 0;
+    if (installerKey.KeyType == InstallerKeyType.UsageBased)
+    {
+      usageCount = await db.AgentInstallerKeyUsages
+          .CountAsync(u => u.AgentInstallerKeyId == keyId);
+    }
+
     var isValid = installerKey.KeyType switch
     {
       InstallerKeyType.Persistent => true,
       InstallerKeyType.UsageBased =>
-        !IsExpired(installerKey.KeyType, installerKey.Expiration, installerKey.AllowedUses, installerKey.Usages.Count, now) &&
+        !IsExpired(installerKey.KeyType, installerKey.Expiration, installerKey.AllowedUses, usageCount, now) &&
         installerKey.Expiration.HasValue && installerKey.Expiration.Value >= now,
       InstallerKeyType.TimeBased => installerKey.Expiration.HasValue && installerKey.Expiration.Value >= now,
       _ => false
@@ -370,7 +404,7 @@ public class AgentInstallerKeyManager(
 
     if (consumeUsage)
     {
-      _ = await AddUsageAndUpdateKey(db, installerKey, deviceId, remoteIpAddress);
+      _ = await AddUsageAndUpdateKey(db, installerKey, usageCount, deviceId, remoteIpAddress);
     }
 
     return HttpResult.Ok(installerKey);

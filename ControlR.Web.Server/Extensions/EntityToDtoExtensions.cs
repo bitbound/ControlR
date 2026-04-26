@@ -98,17 +98,4 @@ public static class EntityToDtoExtensions
       userIds,
       deviceIds);
   }
-  public static AgentInstallerKeyDto ToDto(this AgentInstallerKey key)
-  {
-    return new AgentInstallerKeyDto(
-      key.Id,
-      key.CreatorId,
-      key.KeyType,
-      key.CreatedAt,
-      key.AllowedUses,
-      key.Expiration,
-      key.FriendlyName,
-      key.Usages?.Count ?? 0,
-      key.Usages?.Select(u => new AgentInstallerKeyUsageDto(u.Id, u.DeviceId, u.CreatedAt, u.RemoteIpAddress)).ToList());
-  }
 }

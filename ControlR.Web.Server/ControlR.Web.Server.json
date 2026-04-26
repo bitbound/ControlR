@@ -2864,6 +2864,7 @@
         "required": [
           "id",
           "creatorId",
+          "creatorName",
           "keyType",
           "createdAt"
         ],
@@ -2876,6 +2877,12 @@
           "creatorId": {
             "type": "string",
             "format": "uuid"
+          },
+          "creatorName": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "keyType": {
             "$ref": "#/components/schemas/InstallerKeyType"
@@ -2910,15 +2917,6 @@
             "type": "integer",
             "format": "int32",
             "default": 0
-          },
-          "usages": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/AgentInstallerKeyUsageDto"
-            }
           }
         }
       },
