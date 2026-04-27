@@ -6,6 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ctrlr="using:ControlR.Viewer.Avalonia"
         xmlns:cavac="using:ControlR.Libraries.Avalonia.Controls"
+  xmlns:nav="using:ControlR.Viewer.Avalonia.Services.Navigation"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
         x:Class="ControlR.AvaloniaViewerExample.Views.MainWindow"
         x:DataType="vm:IMainWindowViewModel"
@@ -15,33 +16,147 @@
         Icon="/Assets/appicon.ico"
         Title="ControlR Viewer Example">
 
+  <Window.Styles>
+    <Style Selector="ListBox#SidebarNavList">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style Selector="ListBox#SidebarNavList /template/ Border#border">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style Selector="ListBoxItem.SidebarNavItem">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0" />
+    </Style>
+
+    <Style Selector="ListBoxItem.SidebarNavItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <Style Selector="ListBoxItem.SidebarNavItem PathIcon">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
+    <Style Selector="ListBoxItem.SidebarNavItem TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DefaultColor}" />
+    </Style>
+
+    <Style Selector="ListBoxItem.SidebarNavItem:selected PathIcon">
+      <Setter Property="Foreground" Value="{DynamicResource InfoColor}" />
+    </Style>
+
+    <Style Selector="ListBoxItem.SidebarNavItem:selected TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource InfoColor}" />
+    </Style>
+
+    <Style Selector="ListBoxItem.SidebarNavItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource DividerLightBrush}" />
+    </Style>
+  </Window.Styles>
+
   <Design.DataContext>
     <fakes:MainWindowViewModelFake/>
   </Design.DataContext>
 
-  <Grid>
-    <StackPanel x:Name="ConnectPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
-      <cavac:IconButton Icon="{DynamicResource play_circle_regular}"
-                      Color="Primary"
-                      IconSize="64"
-                      Padding="14"
-                      FontSize="20"
-                      Text="Connect"
-                      Cursor="Hand"
-                      CornerRadius="14"
-                      ToolTip.Tip="Connect"
-                      HorizontalAlignment="Center"
-                      Variant="Outlined"
-                      Click="IconButton_Click" />
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0"
+            Padding="16,12"
+            BorderBrush="{DynamicResource DividerBrush}"
+            BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="*,Auto,Auto"
+            ColumnSpacing="10">
+        <TextBlock Grid.Column="0"
+                   VerticalAlignment="Center"
+                   FontSize="18"
+                   FontWeight="Bold"
+                   Text="ControlR Viewer Example" />
 
-      <TextBlock MaxWidth="450"
-                 TextWrapping="Wrap"
-                 HorizontalAlignment="Center"
-                 TextAlignment="Center">
-        This view is not part of the `Controlr.Viewer.Avalonia` library.  It's only an example that demonstrates changing the `ControlrViewer` visibility to start the connection.
-      </TextBlock>
-    </StackPanel>
+        <TextBlock Grid.Column="1"
+                   VerticalAlignment="Center"
+                   Text="Light" />
 
-    <ctrlr:ControlrViewer x:Name="Viewer" Options="{Binding ViewerOptions}" IsVisible="false" />
+        <ToggleSwitch Grid.Column="2"
+                      VerticalAlignment="Center"
+                      OffContent="Light"
+                      OnContent="Dark"
+                      IsChecked="{Binding IsDarkMode}" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="220,*">
+      <Border Grid.Column="0"
+              Background="{DynamicResource BackgroundGrayBrush}"
+              BorderBrush="{DynamicResource DividerBrush}"
+              BorderThickness="0,0,1,0">
+        <ListBox x:Name="SidebarNavList"
+                 Margin="0,12,0,0"
+                 Background="Transparent"
+                 SelectionChanged="SidebarNavList_OnSelectionChanged">
+          <ListBoxItem Classes="SidebarNavItem"
+                       Tag="{x:Static nav:ViewerPage.RemoteControl}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{DynamicResource share_desktop_regular}"
+                        Width="20"
+                        Height="20" />
+              <TextBlock VerticalAlignment="Center"
+                         FontSize="15"
+                         FontWeight="SemiBold"
+                         Text="Remote Control" />
+            </StackPanel>
+          </ListBoxItem>
+
+          <ListBoxItem Classes="SidebarNavItem"
+                       Tag="{x:Static nav:ViewerPage.Terminal}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{DynamicResource code_regular}"
+                        Width="20"
+                        Height="20" />
+              <TextBlock VerticalAlignment="Center"
+                         FontSize="15"
+                         FontWeight="SemiBold"
+                         Text="Terminal" />
+            </StackPanel>
+          </ListBoxItem>
+        </ListBox>
+      </Border>
+
+      <Grid Grid.Column="1">
+        <StackPanel x:Name="ConnectPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+          <cavac:IconButton Icon="{DynamicResource play_circle_regular}"
+                            Color="Primary"
+                            IconSize="64"
+                            Padding="14"
+                            FontSize="20"
+                            Text="Connect"
+                            Cursor="Hand"
+                            CornerRadius="14"
+                            ToolTip.Tip="Connect"
+                            HorizontalAlignment="Center"
+                            Variant="Outlined"
+                            Click="ConnectButton_Click" />
+
+          <TextBlock MaxWidth="450"
+                     TextWrapping="Wrap"
+                     HorizontalAlignment="Center"
+                     TextAlignment="Center">
+            This view is not part of the `Controlr.Viewer.Avalonia` library. It's only an example that demonstrates changing the `ControlrViewer` visibility to start the connection.
+          </TextBlock>
+        </StackPanel>
+
+        <ctrlr:ControlrViewer x:Name="Viewer"
+                              Options="{Binding ViewerOptions}"
+                              Page="{Binding ActivePage}"
+                              IsVisible="false" />
+      </Grid>
+    </Grid>
   </Grid>
 </Window>

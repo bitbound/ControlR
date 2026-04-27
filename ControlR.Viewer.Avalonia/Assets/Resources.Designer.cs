@@ -925,6 +925,258 @@ namespace ControlR.Viewer.Avalonia.Assets {
                 return ResourceManager.GetString("RemoteControl_RequestPermissionsNow", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Enter a command.
+        /// </summary>
+        public static string Terminal_CommandWatermark {
+            get {
+                return ResourceManager.GetString("Terminal_CommandWatermark", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to get cursor index for completions.
+        /// </summary>
+        public static string Terminal_FailedToGetCursorIndexForCompletions {
+            get {
+                return ResourceManager.GetString("Terminal_FailedToGetCursorIndexForCompletions", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to start terminal.
+        /// </summary>
+        public static string Terminal_FailedToStart {
+            get {
+                return ResourceManager.GetString("Terminal_FailedToStart", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to An error occurred while getting completions.
+        /// </summary>
+        public static string Terminal_GetCompletionsError {
+            get {
+                return ResourceManager.GetString("Terminal_GetCompletionsError", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Terminal initialization error.
+        /// </summary>
+        public static string Terminal_InitializationError {
+            get {
+                return ResourceManager.GetString("Terminal_InitializationError", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Keyboard Shortcuts.
+        /// </summary>
+        public static string Terminal_KeyboardShortcutsTitle {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcutsTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Arrow Down.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_ArrowDownDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_ArrowDownDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Arrow Down.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_ArrowDownLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_ArrowDownLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Arrow Up.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_ArrowUpDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_ArrowUpDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Arrow Up.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_ArrowUpLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_ArrowUpLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Show all completions.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_CtrlPeriodDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_CtrlPeriodDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl + ..
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_CtrlPeriodLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_CtrlPeriodLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Show all completions.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_CtrlSpaceDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_CtrlSpaceDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Ctrl + Space.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_CtrlSpaceLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_CtrlSpaceLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Close completions.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_EscapeDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_EscapeDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Escape.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_EscapeLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_EscapeLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Execute command.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_EnterDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_EnterDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Enter.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_EnterLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_EnterLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Shift + Enter.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_ShiftEnterDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_ShiftEnterDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Shift + Enter.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_ShiftEnterLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_ShiftEnterLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Previous completion.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_ShiftTabDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_ShiftTabDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Shift + Tab.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_ShiftTabLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_ShiftTabLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Next completion.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_TabDescription {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_TabDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Tab.
+        /// </summary>
+        public static string Terminal_KeyboardShortcut_TabLabel {
+            get {
+                return ResourceManager.GetString("Terminal_KeyboardShortcut_TabLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Loading terminal.
+        /// </summary>
+        public static string Terminal_Loading {
+            get {
+                return ResourceManager.GetString("Terminal_Loading", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Multiline Input.
+        /// </summary>
+        public static string Terminal_MultilineInput {
+            get {
+                return ResourceManager.GetString("Terminal_MultilineInput", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to An error occurred while sending terminal input.
+        /// </summary>
+        public static string Terminal_SendInputError {
+            get {
+                return ResourceManager.GetString("Terminal_SendInputError", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Too many items to retrieve ({0}).
+        /// </summary>
+        public static string Terminal_TooManyCompletionItems {
+            get {
+                return ResourceManager.GetString("Terminal_TooManyCompletionItems", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Loading preview....

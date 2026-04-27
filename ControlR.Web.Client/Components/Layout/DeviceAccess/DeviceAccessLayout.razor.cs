@@ -305,6 +305,7 @@ public partial class DeviceAccessLayout
     try
     {
       TerminalState.Value.CommandInputText = string.Empty;
+      TerminalState.Value.DraftCommandInputText = string.Empty;
       TerminalState.Value.InputHistory.Clear();
       TerminalState.Value.Output.Clear();
       

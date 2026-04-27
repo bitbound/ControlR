@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace ControlR.Viewer.Avalonia.ViewModels.Fakes;
 
@@ -17,6 +18,12 @@ internal class ViewerShellViewModelFake : ViewModelBaseFake<ViewerShell>, IViewe
     ReconnectCommand = new AsyncRelayCommand(() => Task.CompletedTask);
   }
 
+  public event PropertyChangedEventHandler? PropertyChanged
+  {
+    add { }
+    remove { }
+  }
+
   public string? AlertMessage { get; set; }
   public SnackbarSeverity AlertSeverity { get; set; }
   public HubConnectionState ConnectionState => HubConnectionState.Connected;
@@ -28,4 +35,9 @@ internal class ViewerShellViewModelFake : ViewModelBaseFake<ViewerShell>, IViewe
   public bool IsDeviceOffline => false;
   public IAsyncRelayCommand ReconnectCommand { get; }
   public bool ShowReconnectButton => false;
+
+  public Task ReinitializeCurrentView()
+  {
+    return Task.CompletedTask;
+  }
 }

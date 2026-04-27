@@ -1,4 +1,5 @@
 using System.Net;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
@@ -12,7 +13,7 @@ using Avalonia.Threading;
 
 namespace ControlR.Viewer.Avalonia.ViewModels;
 
-public interface IViewerShellViewModel : IViewModelBase
+public interface IViewerShellViewModel : IViewModelBase, INotifyPropertyChanged
 {
   string? AlertMessage { get; }
   SnackbarSeverity AlertSeverity { get; }
@@ -24,6 +25,7 @@ public interface IViewerShellViewModel : IViewModelBase
   bool IsDeviceOffline { get; }
   IAsyncRelayCommand ReconnectCommand { get; }
   bool ShowReconnectButton { get; }
+  Task ReinitializeCurrentView();
 }
 
 public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerShellViewModel
@@ -36,7 +38,6 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
   private readonly IMessenger _messenger;
   private readonly INavigationProvider _navigationProvider;
   private readonly ControlrViewerOptions _options;
-  private readonly IServiceProvider _serviceProvider;
   private readonly ISnackbar _snackbar;
 
   [ObservableProperty]
@@ -59,7 +60,6 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     IViewerHubConnector hubConnector,
     IMessenger messenger,
     INavigationProvider navigationProvider,
-    IServiceProvider serviceProvider,
     ISnackbar snackbar,
     IChatState chatState,
     IDeviceState deviceState,
@@ -70,7 +70,6 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     _hubConnector = hubConnector;
     _messenger = messenger;
     _navigationProvider = navigationProvider;
-    _serviceProvider = serviceProvider;
     _snackbar = snackbar;
     _deviceState = deviceState;
     _chatState = chatState;
@@ -108,6 +107,16 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
   public bool ShowReconnectButton =>
     ConnectionState == HubConnectionState.Disconnected && _isShellInitialized;
 
+  public async Task ReinitializeCurrentView()
+  {
+    if (CurrentViewModel is null)
+    {
+      return;
+    }
+
+    await CurrentViewModel.Initialize(forceReinit: true);
+  }
+
   protected override async Task OnInitializeAsync()
   {
     await base.OnInitializeAsync();
@@ -126,9 +135,6 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     }
 
     AlertMessage = null;
-
-    CurrentViewModel = _serviceProvider.GetRequiredService<IRemoteControlViewModel>();
-    await CurrentViewModel.Initialize(forceReinit: true);
   }
 
   private async Task<bool> GetDeviceInfo()
@@ -257,6 +263,7 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
       }
 
       await Connect();
+      await ReinitializeCurrentView();
     }
     finally
     {
@@ -268,13 +275,7 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
 
   private void OnNavigationOccurred(IViewModelBase? viewModel)
   {
-    if (viewModel is null)
-    {
-      return;
-    }
-
     CurrentViewModel = viewModel;
-    viewModel.Initialize();
   }
 
   [RelayCommand]

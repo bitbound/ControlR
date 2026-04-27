@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Viewer.Avalonia.ViewModels"
+             xmlns:assets="using:ControlR.Viewer.Avalonia.Assets"
+             xmlns:enums="using:ControlR.Libraries.Api.Contracts.Enums"
+             xmlns:hubDtos="using:ControlR.Libraries.Api.Contracts.Dtos.HubDtos"
+             xmlns:pwsh="using:ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions"
+             mc:Ignorable="d"
+             d:DesignWidth="900"
+             d:DesignHeight="600"
+             x:Class="ControlR.Viewer.Avalonia.Views.TerminalView"
+             x:DataType="vm:ITerminalViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="ListBox#CompletionListBox">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style Selector="ListBox#CompletionListBox /template/ Border#border">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style Selector="ListBox#CompletionListBox ListBoxItem">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style Selector="ListBox#CompletionListBox ListBoxItem /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+
+    <Style Selector="ListBox#CompletionListBox ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource PrimaryColor}" />
+    </Style>
+
+    <Style Selector="ListBox#CompletionListBox ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource PrimaryColor}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Margin="16" RowDefinitions="*,Auto,Auto" RowSpacing="12">
+    <Border Grid.Row="0" Classes="Card">
+      <Grid>
+        <ScrollViewer x:Name="OutputScrollViewer" Margin="4">
+          <ItemsControl ItemsSource="{Binding OutputLines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="hubDtos:TerminalOutputDto">
+                <Grid>
+                  <TextBlock Text="{Binding Output}"
+                             FontFamily="Cascadia Mono"
+                             Foreground="{DynamicResource DefaultColor}"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding OutputKind, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static enums:TerminalOutputKind.StandardOutput}}" />
+                  <TextBlock Text="{Binding Output}"
+                             FontFamily="Cascadia Mono"
+                             TextWrapping="Wrap"
+                             Classes="Error"
+                             IsVisible="{Binding OutputKind, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static enums:TerminalOutputKind.StandardError}}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+
+        <StackPanel IsVisible="{Binding IsLoading}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="12">
+          <TextBlock Text="{x:Static assets:Resources.Terminal_Loading}"
+                     FontSize="20"
+                     Classes="Info"
+                     HorizontalAlignment="Center" />
+          <ProgressBar Width="200" IsIndeterminate="True" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1"
+            IsVisible="{Binding HasCompletions}"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource DividerBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="6">
+      <ListBox x:Name="CompletionListBox"
+               MaxHeight="180"
+               ItemsSource="{Binding CurrentCompletions}"
+               KeyDown="CompletionListBox_OnKeyDown"
+               DoubleTapped="CompletionListBox_OnDoubleTapped">
+        <ListBox.ItemTemplate>
+          <DataTemplate DataType="pwsh:PwshCompletionMatch">
+            <TextBlock Text="{Binding ListItemText}"
+                       Foreground="{DynamicResource DefaultColor}"
+                       FontFamily="Cascadia Mono" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <Grid Grid.Row="2" RowDefinitions="Auto,Auto" RowSpacing="8">
+      <TextBox x:Name="CommandInputTextBox"
+               Grid.Row="0"
+               Text="{Binding CommandInputText}"
+               AcceptsReturn="{Binding EnableMultiline}"
+               TextWrapping="Wrap"
+               Height="{Binding CommandInputHeight}"
+               Background="{DynamicResource SurfaceBrush}"
+               Foreground="{DynamicResource DefaultColor}"
+               CaretBrush="{DynamicResource DefaultColor}"
+               BorderBrush="{DynamicResource DividerBrush}"
+               Watermark="{x:Static assets:Resources.Terminal_CommandWatermark}"
+               FontFamily="Cascadia Mono" />
+
+      <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
+        <ToggleSwitch Grid.Column="0"
+                      IsChecked="{Binding EnableMultiline}"
+                      Content="{x:Static assets:Resources.Terminal_MultilineInput}"
+                      HorizontalAlignment="Left" />
+
+        <Button Grid.Column="2"
+                Width="32"
+                Height="32"
+                Classes="TransparentButton"
+                Cursor="Hand"
+                HorizontalAlignment="Right"
+                ToolTip.Tip="{x:Static assets:Resources.Terminal_KeyboardShortcutsTitle}"
+                Click="KeyboardShortcutsButton_OnClick">
+          <PathIcon Classes="Info" Data="{DynamicResource info_regular}" />
+        </Button>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

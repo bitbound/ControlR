@@ -552,4 +552,88 @@ Details: {0}</value>
   <data name="RemoteControl_PermissionGranted" xml:space="preserve">
     <value>Permission granted. Refreshing sessions.</value>
   </data>
+  <data name="Terminal_CommandWatermark" xml:space="preserve">
+    <value>Enter a command</value>
+  </data>
+  <data name="Terminal_MultilineInput" xml:space="preserve">
+    <value>Multiline Input</value>
+  </data>
+  <data name="Terminal_KeyboardShortcutsTitle" xml:space="preserve">
+    <value>Keyboard Shortcuts</value>
+  </data>
+  <data name="Terminal_Loading" xml:space="preserve">
+    <value>Loading terminal</value>
+  </data>
+  <data name="Terminal_FailedToStart" xml:space="preserve">
+    <value>Failed to start terminal</value>
+  </data>
+  <data name="Terminal_InitializationError" xml:space="preserve">
+    <value>Terminal initialization error</value>
+  </data>
+  <data name="Terminal_FailedToGetCursorIndexForCompletions" xml:space="preserve">
+    <value>Failed to get cursor index for completions</value>
+  </data>
+  <data name="Terminal_TooManyCompletionItems" xml:space="preserve">
+    <value>Too many items to retrieve ({0})</value>
+  </data>
+  <data name="Terminal_GetCompletionsError" xml:space="preserve">
+    <value>An error occurred while getting completions</value>
+  </data>
+  <data name="Terminal_SendInputError" xml:space="preserve">
+    <value>An error occurred while sending terminal input</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_TabLabel" xml:space="preserve">
+    <value>Tab</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_TabDescription" xml:space="preserve">
+    <value>Next completion</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_ShiftTabLabel" xml:space="preserve">
+    <value>Shift + Tab</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_ShiftTabDescription" xml:space="preserve">
+    <value>Previous completion</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_CtrlSpaceLabel" xml:space="preserve">
+    <value>Ctrl + Space</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_CtrlSpaceDescription" xml:space="preserve">
+    <value>Show all completions</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_CtrlPeriodLabel" xml:space="preserve">
+    <value>Ctrl + .</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_CtrlPeriodDescription" xml:space="preserve">
+    <value>Show all completions</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_EnterLabel" xml:space="preserve">
+    <value>Enter</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_EnterDescription" xml:space="preserve">
+    <value>Execute command</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_ShiftEnterLabel" xml:space="preserve">
+    <value>Shift + Enter</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_ShiftEnterDescription" xml:space="preserve">
+    <value>New line (multiline mode)</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_ArrowUpLabel" xml:space="preserve">
+    <value>Arrow Up</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_ArrowUpDescription" xml:space="preserve">
+    <value>Previous command</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_ArrowDownLabel" xml:space="preserve">
+    <value>Arrow Down</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_ArrowDownDescription" xml:space="preserve">
+    <value>Next command</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_EscapeLabel" xml:space="preserve">
+    <value>Escape</value>
+  </data>
+  <data name="Terminal_KeyboardShortcut_EscapeDescription" xml:space="preserve">
+    <value>Close completions</value>
+  </data>
 </root>

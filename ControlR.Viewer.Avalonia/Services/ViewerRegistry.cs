@@ -70,7 +70,7 @@ public static class ViewerRegistry
   /// </summary>
   public static void Register(Guid instanceId, ControlrViewer viewer, IServiceProvider serviceProvider)
   {
-    var info = new ViewerInstanceInfo(viewer, serviceProvider);
+    var info = new ViewerInstanceInfo(instanceId, viewer, serviceProvider);
     _instances.TryAdd(instanceId, info);
   }
 
@@ -81,11 +81,7 @@ public static class ViewerRegistry
     Guid instanceId,
     [NotNullWhen(true)] out ViewerInstanceInfo? viewerInstanceInfo)
   {
-    if (_instances.TryGetValue(instanceId, out viewerInstanceInfo))
-    {
-      return true;
-    }
-    return false;
+    return _instances.TryGetValue(instanceId, out viewerInstanceInfo);
   }
 
   /// <summary>

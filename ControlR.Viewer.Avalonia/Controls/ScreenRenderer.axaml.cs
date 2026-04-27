@@ -81,6 +81,13 @@ public partial class ScreenRenderer : UserControl
     return true;
   }
 
+  protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+  {
+    base.OnAttachedToVisualTree(e);
+    SubscribeCurrentViewModel();
+    InvalidateVisual();
+  }
+
   protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
   {
     base.OnDetachedFromVisualTree(e);
@@ -113,6 +120,16 @@ public partial class ScreenRenderer : UserControl
 
   private void HandleDataContextChanged(object? sender, EventArgs e)
   {
+    SubscribeCurrentViewModel();
+  }
+
+  private void HandleFrameQueued(object? sender, EventArgs e)
+  {
+    Dispatcher.UIThread.Post(InvalidateVisual, DispatcherPriority.Render);
+  }
+
+  private void SubscribeCurrentViewModel()
+  {
     UnsubscribeCurrentViewModel();
 
     _currentViewModel = ViewModel;
@@ -122,11 +139,6 @@ public partial class ScreenRenderer : UserControl
     }
 
     _currentViewModel.FrameQueued += HandleFrameQueued;
-  }
-
-  private void HandleFrameQueued(object? sender, EventArgs e)
-  {
-    Dispatcher.UIThread.Post(InvalidateVisual, DispatcherPriority.Render);
   }
 
   private void UnsubscribeCurrentViewModel()

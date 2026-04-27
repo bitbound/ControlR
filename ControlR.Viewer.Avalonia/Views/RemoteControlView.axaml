@@ -97,7 +97,7 @@
             </ItemsControl.ItemsPanel>
 
             <ItemsControl.ItemTemplate>
-              <DataTemplate DataType="vmc:DesktopSessionViewModel">
+              <DataTemplate DataType="vmc:IDesktopSessionViewModel">
                 <Border Classes="Card" Margin="0, 0, 12, 12">
                   <StackPanel Spacing="18">
                     <Grid ColumnDefinitions="Auto,*"

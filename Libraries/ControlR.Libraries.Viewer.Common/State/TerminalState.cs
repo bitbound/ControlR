@@ -5,6 +5,7 @@ namespace ControlR.Libraries.Viewer.Common.State;
 public interface ITerminalState
 {
   string CommandInputText { get; set; }
+  string DraftCommandInputText { get; set; }
   bool EnableMultiline { get; set; }
   Guid Id { get; }
   ConcurrentList<string> InputHistory { get; }
@@ -17,6 +18,7 @@ public interface ITerminalState
 public class TerminalState : ITerminalState
 {
   public string CommandInputText { get; set; } = string.Empty;
+  public string DraftCommandInputText { get; set; } = string.Empty;
   public bool EnableMultiline { get; set; }
   public Guid Id { get; } = Guid.NewGuid();
   public ConcurrentList<string> InputHistory { get; } = [];

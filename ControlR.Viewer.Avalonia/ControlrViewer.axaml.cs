@@ -6,6 +6,8 @@ using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Layout;
 using ControlR.Viewer.Avalonia.ViewModels.Fakes;
+using ControlR.Viewer.Avalonia.Services.Navigation;
+using System.ComponentModel;
 
 namespace ControlR.Viewer.Avalonia;
 
@@ -15,12 +17,18 @@ public partial class ControlrViewer : UserControl
     AvaloniaProperty.Register<ControlrViewer, Guid>(nameof(InstanceId));
   public static readonly StyledProperty<ControlrViewerOptions?> OptionsProperty =
     AvaloniaProperty.Register<ControlrViewer, ControlrViewerOptions?>(nameof(Options));
+  public static readonly StyledProperty<ViewerPage> PageProperty =
+    AvaloniaProperty.Register<ControlrViewer, ViewerPage>(nameof(Page), ViewerPage.None);
 
   private readonly Lock _intializeLock = new();
   private readonly IDisposable _isVisibleSubscription;
+  private readonly IDisposable _pageSubscription;
 
   private bool _isInitialized;
+  private bool _isShellConnected;
+  private ViewerPage _pendingPage;
   private IServiceProvider? _serviceProvider;
+  private IViewerShellViewModel? _shellViewModel;
 
   public ControlrViewer()
   {
@@ -28,10 +36,14 @@ public partial class ControlrViewer : UserControl
 
     // Generate unique instance ID.
     InstanceId = Guid.NewGuid();
+    _pendingPage = Page;
 
     _isVisibleSubscription = this
       .GetObservable(IsVisibleProperty)
       .Subscribe(HandleIsVisibleChanged);
+    _pageSubscription = this
+      .GetObservable(PageProperty)
+      .Subscribe(HandlePageChanged);
   }
 
   public Guid InstanceId
@@ -43,6 +55,11 @@ public partial class ControlrViewer : UserControl
   {
     get => GetValue(OptionsProperty);
     set => SetValue(OptionsProperty, value);
+  }
+  public ViewerPage Page
+  {
+    get => GetValue(PageProperty);
+    set => SetValue(PageProperty, value);
   }
 
   /// <summary>
@@ -120,7 +137,13 @@ public partial class ControlrViewer : UserControl
 
     try
     {
+      _pageSubscription.Dispose();
       _isVisibleSubscription.Dispose();
+
+      if (_shellViewModel is not null)
+      {
+        _shellViewModel.PropertyChanged -= HandleShellViewModelPropertyChanged;
+      }
 
       if (_serviceProvider is IAsyncDisposable asyncDisposable)
       {
@@ -137,12 +160,77 @@ public partial class ControlrViewer : UserControl
     }
   }
 
+  private static Type? GetViewModelType(ViewerPage page)
+  {
+    return page switch
+    {
+      ViewerPage.None => null,
+      ViewerPage.RemoteControl => typeof(RemoteControlViewModel),
+      ViewerPage.Terminal => typeof(TerminalViewModel),
+      _ => null,
+    };
+  }
+
+  private async Task ApplyPendingPage()
+  {
+    if (_serviceProvider is null)
+    {
+      return;
+    }
+
+    if (_pendingPage != ViewerPage.None && !_isShellConnected)
+    {
+      return;
+    }
+
+    if (!Dispatcher.UIThread.CheckAccess())
+    {
+      await Dispatcher.UIThread.InvokeAsync(ApplyPendingPage);
+      return;
+    }
+
+    var navigationProvider = _serviceProvider.GetRequiredService<INavigationProvider>();
+    if (_pendingPage == ViewerPage.None && navigationProvider.ActiveViewModel is null)
+    {
+      return;
+    }
+
+    if (_pendingPage != ViewerPage.None && navigationProvider.ActiveViewModel == GetViewModelType(_pendingPage))
+    {
+      return;
+    }
+
+    var navigator = _serviceProvider.GetRequiredService<INavigator>();
+    var result = await navigator.NavigateTo(_pendingPage);
+    if (!result.IsSuccess)
+    {
+      SetErrorContent(result.Reason);
+    }
+  }
+
   private void HandleIsVisibleChanged(bool obj)
   {
     if (obj && IsLoaded && !_isInitialized)
     {
       InitializeServices();
     }
+  }
+
+  private void HandlePageChanged(ViewerPage page)
+  {
+    _pendingPage = page;
+    ApplyPendingPage().Forget();
+  }
+
+  private void HandleShellViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+  {
+    if (e.PropertyName != nameof(IViewerShellViewModel.ConnectionState) || _shellViewModel is null)
+    {
+      return;
+    }
+
+    _isShellConnected = _shellViewModel.IsConnected;
+    ApplyPendingPage().Forget();
   }
 
   private void InitializeServices()
@@ -181,6 +269,8 @@ public partial class ControlrViewer : UserControl
 
       // Build the service provider for this instance
       _serviceProvider = ViewerServiceBuilder.BuildServiceProvider(Options, InstanceId, clipboard);
+      _shellViewModel = _serviceProvider.GetRequiredService<IViewerShellViewModel>();
+      _shellViewModel.PropertyChanged += HandleShellViewModelPropertyChanged;
 
       // Register this instance in the global registry
       ViewerRegistry.Register(InstanceId, this, _serviceProvider);
@@ -190,6 +280,7 @@ public partial class ControlrViewer : UserControl
       {
         var viewerShell = _serviceProvider.GetRequiredService<ViewerShell>();
         Content = viewerShell;
+        ApplyPendingPage().Forget();
       });
     }
     catch (Exception ex)

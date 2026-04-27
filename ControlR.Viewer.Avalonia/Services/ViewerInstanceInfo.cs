@@ -1,7 +1,16 @@
-﻿namespace ControlR.Viewer.Avalonia.Services;
+﻿using ControlR.ApiClient;
+using ControlR.Viewer.Avalonia.Services.Navigation;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace ControlR.Viewer.Avalonia.Services;
 
 
 /// <summary>
 /// Information about a registered viewer instance.
 /// </summary>
-public record ViewerInstanceInfo(ControlrViewer Viewer, IServiceProvider ServiceProvider);
+public record ViewerInstanceInfo(Guid InstanceId, ControlrViewer Viewer, IServiceProvider ServiceProvider)
+{
+  public IHubConnection<IViewerHub> GetHubConnection() => ServiceProvider.GetRequiredService<IHubConnection<IViewerHub>>();
+  public IControlrApi GetControlrApi() => ServiceProvider.GetRequiredService<IControlrApi>();
+  public INavigator GetNavigator() => ServiceProvider.GetRequiredService<INavigator>();
+}

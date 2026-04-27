@@ -1,16 +1,19 @@
 using Microsoft.Extensions.DependencyInjection;
+using ControlR.Viewer.Avalonia.Services.Navigation;
 
 namespace ControlR.Viewer.Avalonia.Services;
 
 /// <summary>
-/// Interface for programmatic navigation within a viewer instance.
+/// A service for programmatic navigation within a viewer instance.  This service is mostly intended
+/// for internal use.  For public-facing navigation, use the <see cref="INavigator"/> service, 
+/// which provides a more user-friendly API.
 /// </summary>
 public interface INavigationProvider
 {
   /// <summary>
   /// Raised when navigation to a new view model occurs.
   /// </summary>
-  event Action<IViewModelBase>? NavigationOccurred;
+  event Action<IViewModelBase?>? NavigationOccurred;
 
   /// <summary>
   /// The currently active view model type, if any.
@@ -18,10 +21,13 @@ public interface INavigationProvider
   Type? ActiveViewModel { get; }
 
   /// <summary>
+  /// Clear the currently active view model.
+  /// </summary>
+  Task Clear();
+  /// <summary>
   /// Navigate to a view model by type, resolving it from DI.
   /// </summary>
   Task NavigateTo<TViewModel>() where TViewModel : class, IViewModelBase;
-
   /// <summary>
   /// Navigate to a specific view model instance.
   /// </summary>
@@ -34,11 +40,19 @@ internal class NavigationProvider(
 {
   private readonly ILogger<NavigationProvider> _logger = logger;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
+
   private Type? _activeViewModelType;
 
-  public event Action<IViewModelBase>? NavigationOccurred;
+  public event Action<IViewModelBase?>? NavigationOccurred;
 
   public Type? ActiveViewModel => _activeViewModelType;
+
+  public Task Clear()
+  {
+    SetActiveViewModelType(null);
+    NavigationOccurred?.Invoke(null);
+    return Task.CompletedTask;
+  }
 
   public async Task NavigateTo<TViewModel>() where TViewModel : class, IViewModelBase
   {
@@ -71,6 +85,7 @@ internal class NavigationProvider(
       throw;
     }
   }
+
   private void SetActiveViewModelType(Type? type)
   {
     _activeViewModelType = type;

@@ -281,21 +281,38 @@ public partial class Terminal : IAsyncDisposable
   {
     if (TerminalState.InputHistory.Count == 0)
     {
-      return "";
+      return TerminalState.CommandInputText;
     }
 
-    if (forward && TerminalState.InputHistoryIndex < TerminalState.InputHistory.Count)
+    if (forward)
     {
-      TerminalState.InputHistoryIndex++;
+      if (TerminalState.InputHistoryIndex < TerminalState.InputHistory.Count)
+      {
+        TerminalState.InputHistoryIndex++;
+      }
+
+      if (TerminalState.InputHistoryIndex >= TerminalState.InputHistory.Count)
+      {
+        TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count;
+        return TerminalState.DraftCommandInputText;
+      }
     }
-    else if (!forward && TerminalState.InputHistoryIndex > 0)
+    else
     {
-      TerminalState.InputHistoryIndex--;
+      if (TerminalState.InputHistoryIndex >= TerminalState.InputHistory.Count)
+      {
+        TerminalState.DraftCommandInputText = TerminalState.CommandInputText;
+        TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count - 1;
+      }
+      else if (TerminalState.InputHistoryIndex > 0)
+      {
+        TerminalState.InputHistoryIndex--;
+      }
     }
 
     if (TerminalState.InputHistoryIndex < 0 || TerminalState.InputHistoryIndex >= TerminalState.InputHistory.Count)
     {
-      return "";
+      return TerminalState.CommandInputText;
     }
 
     return TerminalState.InputHistory[TerminalState.InputHistoryIndex];
@@ -323,6 +340,7 @@ public partial class Terminal : IAsyncDisposable
       TerminalState.CommandInputText = TerminalState.CommandInputText.Trim();
       TerminalState.InputHistory.Add(TerminalState.CommandInputText);
       TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count;
+      TerminalState.DraftCommandInputText = string.Empty;
 
       var dto = new TerminalInputDto(TerminalState.Id, TerminalState.CommandInputText);
       var result = await ViewerHub.Server.SendTerminalInput(
@@ -335,6 +353,7 @@ public partial class Terminal : IAsyncDisposable
       }
 
       TerminalState.CommandInputText = string.Empty;
+      TerminalState.DraftCommandInputText = string.Empty;
     }
     catch (Exception ex)
     {
@@ -365,20 +384,40 @@ public partial class Terminal : IAsyncDisposable
   private async Task<bool> IsEscapeKey(KeyboardEventArgs args)
   {
     if (!args.Key.Equals("Escape", StringComparison.OrdinalIgnoreCase) ||
-        args.CtrlKey || args.ShiftKey || args.AltKey ||
-        _currentCompletions is null)
+        args.CtrlKey || args.ShiftKey || args.AltKey)
     {
       return false;
     }
 
-    // Clear completions and focus command input
-    _currentCompletions = null;
+    TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count;
+
+    if (_currentCompletions is not null)
+    {
+      TerminalState.LastCompletionInput = null;
+      _currentCompletions = null;
+
+      if (_commandInputElement is not null)
+      {
+        await _commandInputElement.FocusAsync();
+      }
+
+      await InvokeAsync(StateHasChanged);
+      return true;
+    }
+
+    var hadInput = !string.IsNullOrEmpty(TerminalState.CommandInputText);
+
+    TerminalState.LastCompletionInput = null;
+    TerminalState.DraftCommandInputText = string.Empty;
+    TerminalState.CommandInputText = string.Empty;
+
     if (_commandInputElement is not null)
     {
       await _commandInputElement.FocusAsync();
     }
+
     await InvokeAsync(StateHasChanged);
-    return true;
+    return hadInput;
   }
 
   private async Task OnCompletionSelected(PwshCompletionMatch match)

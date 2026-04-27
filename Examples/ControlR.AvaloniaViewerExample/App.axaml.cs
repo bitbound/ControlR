@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using ControlR.AvaloniaViewerExample.ViewModels;
 using ControlR.AvaloniaViewerExample.ViewModels.Fakes;
 using ControlR.AvaloniaViewerExample.Views;
@@ -20,6 +21,8 @@ public partial class App : Application
 
   public override void OnFrameworkInitializationCompleted()
   {
+    RequestedThemeVariant = ThemeVariant.Dark;
+
     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
     {
       DisableAvaloniaDataAnnotationValidation();

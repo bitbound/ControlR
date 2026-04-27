@@ -6,6 +6,7 @@ using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
 using ControlR.Libraries.WebSocketRelay.Client;
+using ControlR.Viewer.Avalonia.Services.Navigation;
 using ControlR.Viewer.Avalonia.ViewModels.Dialogs;
 using ControlR.Viewer.Avalonia.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,17 +98,23 @@ public static class ViewerServiceBuilder
 
     // Register navigation service.
     services.AddSingleton<INavigationProvider, NavigationProvider>();
+    services.AddSingleton<INavigator, Navigator>();
 
     // Register ViewModels.
     services.AddSingleton<IViewerShellViewModel, ViewerShellViewModel>();
     services.AddSingleton<IRemoteControlViewModel, RemoteControlViewModel>();
     services.AddSingleton<IDesktopSessionViewModel, DesktopSessionViewModel>();
     services.AddSingleton<IRemoteDisplayViewModel, RemoteDisplayViewModel>();
+    services.AddSingleton<TerminalViewModel>();
+    services.AddSingleton<ITerminalViewModel>(serviceProvider => serviceProvider.GetRequiredService<TerminalViewModel>());
+    services.AddSingleton<ITerminalKeyboardShortcutsDialogViewModel, TerminalKeyboardShortcutsDialogViewModel>();
 
     // Register Views.
     services.AddSingleton<ViewerShell>();
-    services.AddSingleton<RemoteControlView>();
-    services.AddSingleton<RemoteDisplayView>();
+    services.AddTransient<RemoteControlView>();
+    services.AddTransient<RemoteDisplayView>();
+    services.AddTransient<TerminalView>();
+    services.AddSingleton<TerminalKeyboardShortcutsDialogView>();
     services.AddTransient<DesktopPreviewDialogView>();
 
     services.AddControlrSnackbar();

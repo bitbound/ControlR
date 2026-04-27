@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:assets="using:ControlR.Viewer.Avalonia.Assets"
+             xmlns:dialogs="using:ControlR.Viewer.Avalonia.ViewModels.Dialogs"
+             x:Class="ControlR.Viewer.Avalonia.Views.Dialogs.TerminalKeyboardShortcutsDialogView"
+             x:DataType="dialogs:ITerminalKeyboardShortcutsDialogViewModel">
+
+  <Grid RowDefinitions="*,Auto"
+        RowSpacing="12"
+        MinHeight="380"
+        MinWidth="520">
+    <Grid Grid.Row="0"
+          ColumnDefinitions="Auto,*"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+          ColumnSpacing="20"
+          RowSpacing="16">
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_TabLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_TabDescription}" />
+
+      <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_ShiftTabLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_ShiftTabDescription}" />
+
+      <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_CtrlSpaceLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_CtrlSpaceDescription}" />
+
+      <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_CtrlPeriodLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_CtrlPeriodDescription}" />
+
+      <TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_EnterLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_EnterDescription}" />
+
+      <TextBlock Grid.Row="5" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_ShiftEnterLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_ShiftEnterDescription}" />
+
+      <TextBlock Grid.Row="6" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_ArrowUpLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="6" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_ArrowUpDescription}" />
+
+      <TextBlock Grid.Row="7" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_ArrowDownLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="7" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_ArrowDownDescription}" />
+
+      <TextBlock Grid.Row="8" Grid.Column="0" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_EscapeLabel}" FontWeight="Bold" />
+      <TextBlock Grid.Row="8" Grid.Column="1" Text="{x:Static assets:Resources.Terminal_KeyboardShortcut_EscapeDescription}" />
+    </Grid>
+
+    <StackPanel Grid.Row="1"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="8">
+      <Button Command="{Binding CloseCommand}"
+              Content="{x:Static assets:Resources.Close}" />
+    </StackPanel>
+  </Grid>
+</UserControl>
