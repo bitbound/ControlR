@@ -4,5 +4,6 @@ public enum ViewerPage
 {
   None,
   RemoteControl,
+  FileSystem,
   Terminal
 }

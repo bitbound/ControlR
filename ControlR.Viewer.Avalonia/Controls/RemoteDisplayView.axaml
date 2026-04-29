@@ -129,7 +129,8 @@
                   <StackPanel Spacing="8">
                     <TextBlock Text="{x:Static assets:Resources.Displays}" FontSize="10" />
 
-                    <ItemsControl ItemsSource="{Binding DisplayItems}">
+                    <ItemsControl ItemsSource="{Binding DisplayItems}"
+                                  x:CompileBindings="False">
                       <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                           <WrapPanel Orientation="Horizontal" />
@@ -137,7 +138,7 @@
                       </ItemsControl.ItemsPanel>
 
                       <ItemsControl.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate DataType="vm:DisplayLayoutItem">
                           <RadioButton GroupName="DisplaySelection"
                                        Margin="0,0,20,6"
                                        IsChecked="{Binding IsSelected, Mode=OneWay}"
@@ -156,11 +157,12 @@
                     <Border Classes="display-layout-container"
                             IsVisible="{Binding HasMultipleDisplays}">
                       <ItemsControl x:Name="DisplayLayoutItemsControl"
-                                    ItemsSource="{Binding DisplayItems}">
+                                    ItemsSource="{Binding DisplayItems}"
+                                    x:CompileBindings="False">
                         <ItemsControl.Styles>
                           <Style Selector="ContentPresenter" x:DataType="vm:DisplayLayoutItem">
-                            <Setter Property="Canvas.Left" Value="{Binding LayoutLeft}" />
-                            <Setter Property="Canvas.Top" Value="{Binding LayoutTop}" />
+                            <Setter Property="Canvas.Left" Value="{ReflectionBinding LayoutLeft}" />
+                            <Setter Property="Canvas.Top" Value="{ReflectionBinding LayoutTop}" />
                           </Style>
                         </ItemsControl.Styles>
 
@@ -172,7 +174,7 @@
                         </ItemsControl.ItemsPanel>
 
                         <ItemsControl.ItemTemplate>
-                          <DataTemplate>
+                          <DataTemplate DataType="vm:DisplayLayoutItem">
                             <Button MinWidth="0"
                                     MinHeight="0"
                                     Padding="0"

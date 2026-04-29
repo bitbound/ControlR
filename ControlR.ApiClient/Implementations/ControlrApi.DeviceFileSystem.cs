@@ -30,6 +30,23 @@ public partial class ControlrApi
     });
   }
 
+  async Task<ApiResult<ResponseStream>> IDeviceFileSystemApi.DownloadArchive(Guid deviceId, DownloadArchiveRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{HttpConstants.DeviceFileSystemEndpoint}/download-archive/{deviceId}")
+      {
+        Content = JsonContent.Create(request)
+      };
+
+      var response = await _client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+
+      var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+      return new ResponseStream(response, stream);
+    });
+  }
+
   async Task<ApiResult<ResponseStream>> IDeviceFileSystemApi.DownloadFile(Guid deviceId, string filePath, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>

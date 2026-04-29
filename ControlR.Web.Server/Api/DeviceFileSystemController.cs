@@ -1,6 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -139,6 +140,47 @@ public class DeviceFileSystemController : ControllerBase
         request.FilePath, deviceId);
       return StatusCode(500, "An error occurred during file deletion.");
     }
+  }
+
+  [HttpPost("download-archive/{deviceId:guid}")]
+  [DisableRequestTimeout]
+  public async Task<IActionResult> DownloadArchive(
+    [FromRoute] Guid deviceId,
+    [FromBody] DownloadArchiveRequestDto request,
+    [FromServices] AppDb appDb,
+    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+    [FromServices] IHubStreamStore hubStreamStore,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IOptionsMonitor<AppOptions> appOptions,
+    [FromServices] ILogger<DeviceFileSystemController> logger,
+    CancellationToken cancellationToken)
+  {
+    return await ExecuteDownloadArchive(deviceId, request, appDb, agentHub, hubStreamStore, authorizationService, appOptions, logger, cancellationToken);
+  }
+
+  [HttpPost("download-archive/{deviceId:guid}/form")]
+  [DisableRequestTimeout]
+  [Consumes("application/x-www-form-urlencoded")]
+  [ApiExplorerSettings(IgnoreApi = true)]
+  public async Task<IActionResult> DownloadArchiveForm(
+    [FromRoute] Guid deviceId,
+    [FromServices] AppDb appDb,
+    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+    [FromServices] IHubStreamStore hubStreamStore,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IOptionsMonitor<AppOptions> appOptions,
+    [FromServices] ILogger<DeviceFileSystemController> logger,
+    CancellationToken cancellationToken)
+  {
+    var form = await Request.ReadFormAsync(cancellationToken);
+    var request = new DownloadArchiveRequestDto(
+      form["archiveFileName"].ToString(),
+      form["targetPaths"]
+        .Select(path => path ?? string.Empty)
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .ToArray());
+
+    return await ExecuteDownloadArchive(deviceId, request, appDb, agentHub, hubStreamStore, authorizationService, appOptions, logger, cancellationToken);
   }
 
   [HttpGet("download/{deviceId:guid}")]
@@ -838,6 +880,110 @@ public class DeviceFileSystemController : ControllerBase
       logger.LogError(ex, "Error validating file path {FileName} in {DirectoryPath} on device {DeviceId}",
         request.FileName, request.DirectoryPath, deviceId);
       return StatusCode(500, "An error occurred while validating the file path.");
+    }
+  }
+
+  private async Task<IActionResult> ExecuteDownloadArchive(
+    Guid deviceId,
+    DownloadArchiveRequestDto request,
+    AppDb appDb,
+    IHubContext<AgentHub, IAgentHubClient> agentHub,
+    IHubStreamStore hubStreamStore,
+    IAuthorizationService authorizationService,
+    IOptionsMonitor<AppOptions> appOptions,
+    ILogger<DeviceFileSystemController> logger,
+    CancellationToken cancellationToken)
+  {
+    if (request.TargetPaths is null || request.TargetPaths.Length == 0)
+    {
+      return BadRequest("At least one target path is required.");
+    }
+
+    var archiveFileName = ArchiveFileNameHelper.NormalizeArchiveFileName(request.ArchiveFileName);
+    if (archiveFileName is null)
+    {
+      return BadRequest("Archive file name is invalid.");
+    }
+
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+
+    if (device is null)
+    {
+      logger.LogWarning("Device {DeviceId} not found.", deviceId);
+      return NotFound();
+    }
+
+    var authResult = await authorizationService.AuthorizeAsync(
+      User,
+      device,
+      DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (!authResult.Succeeded)
+    {
+      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
+        User.Identity?.Name, deviceId);
+      return Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    {
+      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
+      return BadRequest("Device is not currently connected.");
+    }
+
+    var streamId = Guid.NewGuid();
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+    var downloadRequest = new FileArchiveDownloadHubDto(streamId, archiveFileName, request.TargetPaths);
+
+    try
+    {
+      var requestResult = await agentHub.Clients
+        .Client(device.ConnectionId)
+        .UploadArchiveToViewer(downloadRequest);
+
+      if (!requestResult.IsSuccess)
+      {
+        logger.LogWarning("Archive download request failed for device {DeviceId}: {Reason}",
+          deviceId,
+          requestResult.Reason);
+        return StatusCode(StatusCodes.Status500InternalServerError, requestResult.Reason);
+      }
+
+      var fileSize = requestResult.Value.FileSize;
+      var maxFileSize = appOptions.CurrentValue.MaxFileTransferSize;
+      if (maxFileSize > 0 && fileSize > maxFileSize)
+      {
+        return StatusCode(StatusCodes.Status413RequestEntityTooLarge);
+      }
+
+      Response.ContentType = "application/octet-stream";
+      var contentDisposition = new ContentDispositionHeaderValue("attachment");
+      contentDisposition.SetHttpFileName(requestResult.Value.FileDisplayName);
+      Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
+      Response.Headers.ContentLength = fileSize;
+
+      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
+      {
+        await Response.Body.WriteAsync(chunk, cancellationToken);
+      }
+
+      logger.LogInformation("Archive download completed for device {DeviceId} with {ItemCount} item(s)",
+        deviceId,
+        request.TargetPaths.Length);
+
+      return new EmptyResult();
+    }
+    catch (OperationCanceledException)
+    {
+      logger.LogWarning("Archive download for device {DeviceId} timed out or was canceled.", deviceId);
+      return StatusCode(StatusCodes.Status408RequestTimeout);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error downloading archive from device {DeviceId}", deviceId);
+      return StatusCode(500, "An error occurred during archive download.");
     }
   }
 }

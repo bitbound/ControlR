@@ -37,6 +37,7 @@ public interface IAgentHubClient : IHubClient
   Task<HubResult> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto);
   Task<HubResult> TestVncConnection(int port);
   Task UninstallAgent(string reason);
+  Task<HubResult<FileDownloadResponseHubDto>> UploadArchiveToViewer(FileArchiveDownloadHubDto dto);
   Task<HubResult<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto);
   Task<ValidateFilePathResponseDto> ValidateFilePath(ValidateFilePathHubDto dto);
 }

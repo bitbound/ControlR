@@ -9,6 +9,8 @@ public record FileUploadHubDto(
 
 public record FileDownloadHubDto(Guid StreamId, string FilePath);
 
+public record FileArchiveDownloadHubDto(Guid StreamId, string ArchiveFileName, string[] TargetPaths);
+
 public record FileDownloadResponseHubDto(long FileSize, string FileDisplayName);
 
 public record FileDeleteHubDto(string TargetPath);

@@ -116,7 +116,9 @@
               <SelectColumn T="FileSystemEntryViewModel" />
               <PropertyColumn Property="x => x.Icon" Title="" Sortable="false" Filterable="false">
                 <CellTemplate>
-                  <MudIcon Icon="@context.Item.Icon" Size="Size.Small" />
+                  <MudIcon Icon="@context.Item.Icon"
+                           Size="Size.Small"
+                           Color="@(context.Item.IsDirectory ? Color.Primary : Color.Default)" />
                 </CellTemplate>
               </PropertyColumn>
               <PropertyColumn Property="x => x.Name" Title="Name" />

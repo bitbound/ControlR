@@ -15,10 +15,9 @@ public interface IMainWindowViewModel : INotifyPropertyChanged
 public partial class MainWindowViewModel(ControlrViewerOptions viewerOptions) : ObservableObject, IMainWindowViewModel
 {
   [ObservableProperty]
-  private ViewerPage _activePage = ViewerPage.RemoteControl;
-
+  public partial ViewerPage ActivePage { get; set; } = ViewerPage.RemoteControl;
+  
   [ObservableProperty]
-  private bool _isDarkMode = true;
-
+  public partial bool IsDarkMode { get; set; } = true;
   public ControlrViewerOptions ViewerOptions { get; } = viewerOptions;
 }

@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:dialogs="using:ControlR.Viewer.Avalonia.ViewModels.Dialogs"
+             x:Class="ControlR.Viewer.Avalonia.Views.Dialogs.TextPromptDialogView"
+             x:DataType="dialogs:ITextPromptDialogViewModel">
+
+  <Grid RowDefinitions="Auto,Auto,Auto"
+        RowSpacing="16"
+        MinWidth="420">
+    <TextBlock Grid.Row="0"
+               Text="{Binding Subtitle}"
+               TextWrapping="Wrap"
+               FontSize="16" />
+
+    <StackPanel Grid.Row="1"
+                Spacing="6">
+      <TextBlock Text="{Binding InputLabel}"
+                 Foreground="{DynamicResource PrimaryColor}"
+                 FontWeight="SemiBold" />
+      <TextBox x:Name="PromptTextBox"
+               Text="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               Watermark="{Binding InputHint}"
+               KeyDown="PromptTextBox_OnKeyDown" />
+        <TextBlock Text="{Binding ValidationMessage}"
+                     IsVisible="{Binding HasValidationError}"
+                     Foreground="{DynamicResource WarningColor}"
+                     TextWrapping="Wrap" />
+    </StackPanel>
+
+    <StackPanel Grid.Row="2"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="8">
+      <Button Command="{Binding CancelCommand}"
+              Content="{Binding CancelText}" />
+      <Button Command="{Binding SubmitCommand}"
+              IsEnabled="{Binding CanSubmit}"
+              Background="{DynamicResource PrimaryColor}"
+              Foreground="{DynamicResource PrimaryContrastText}"
+              Content="{Binding SubmitText}" />
+    </StackPanel>
+  </Grid>
+</UserControl>

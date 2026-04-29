@@ -1,23 +1,17 @@
-using Microsoft.AspNetCore.Components;
-
 namespace ControlR.Web.Client.Components.Dialogs;
 
 public partial class PersonalAccessTokenDialog
 {
+  [Inject]
+  public required IClipboardManager ClipboardManager { get; set; }
   [CascadingParameter]
   public required IMudDialogInstance MudDialog { get; init; }
-
   [Parameter]
   public required PersonalAccessTokenDto PersonalAccessToken { get; set; }
-
   [Parameter]
   public required string PlainTextKey { get; set; }
-
   [Inject]
-  private IClipboardManager ClipboardManager { get; set; } = default!;
-
-  [Inject]
-  private ISnackbar Snackbar { get; set; } = default!;
+  public required ISnackbar Snackbar { get; set; }
 
   private async Task CopyToClipboard()
   {

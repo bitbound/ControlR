@@ -16,9 +16,9 @@ public interface INavigationProvider
   event Action<IViewModelBase?>? NavigationOccurred;
 
   /// <summary>
-  /// The currently active view model type, if any.
+  /// The currently active page.
   /// </summary>
-  Type? ActiveViewModel { get; }
+  ViewerPage ActivePage { get; }
 
   /// <summary>
   /// Clear the currently active view model.
@@ -27,11 +27,11 @@ public interface INavigationProvider
   /// <summary>
   /// Navigate to a view model by type, resolving it from DI.
   /// </summary>
-  Task NavigateTo<TViewModel>() where TViewModel : class, IViewModelBase;
+  Task NavigateTo<TViewModel>(ViewerPage page) where TViewModel : class, IViewModelBase;
   /// <summary>
   /// Navigate to a specific view model instance.
   /// </summary>
-  Task NavigateTo<TViewModel>(TViewModel viewModel) where TViewModel : IViewModelBase;
+  Task NavigateTo<TViewModel>(TViewModel viewModel, ViewerPage page) where TViewModel : IViewModelBase;
 }
 
 internal class NavigationProvider(
@@ -41,25 +41,25 @@ internal class NavigationProvider(
   private readonly ILogger<NavigationProvider> _logger = logger;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-  private Type? _activeViewModelType;
+  private ViewerPage _activePage;
 
   public event Action<IViewModelBase?>? NavigationOccurred;
 
-  public Type? ActiveViewModel => _activeViewModelType;
+  public ViewerPage ActivePage => _activePage;
 
   public Task Clear()
   {
-    SetActiveViewModelType(null);
+    SetActivePage(ViewerPage.None);
     NavigationOccurred?.Invoke(null);
     return Task.CompletedTask;
   }
 
-  public async Task NavigateTo<TViewModel>() where TViewModel : class, IViewModelBase
+  public async Task NavigateTo<TViewModel>(ViewerPage page) where TViewModel : class, IViewModelBase
   {
     try
     {
       var viewModel = _serviceProvider.GetRequiredService<TViewModel>();
-      await NavigateTo(viewModel);
+      await NavigateTo(viewModel, page);
     }
     catch (Exception ex)
     {
@@ -68,7 +68,7 @@ internal class NavigationProvider(
     }
   }
 
-  public async Task NavigateTo<TViewModel>(TViewModel viewModel) where TViewModel : IViewModelBase
+  public async Task NavigateTo<TViewModel>(TViewModel viewModel, ViewerPage page) where TViewModel : IViewModelBase
   {
     try
     {
@@ -76,7 +76,7 @@ internal class NavigationProvider(
       await viewModel.Initialize();
       
       // Notify navigation occurred with the view model
-      SetActiveViewModelType(viewModel.GetType());
+      SetActivePage(page);
       NavigationOccurred?.Invoke(viewModel);
     }
     catch (Exception ex)
@@ -86,8 +86,8 @@ internal class NavigationProvider(
     }
   }
 
-  private void SetActiveViewModelType(Type? type)
+  private void SetActivePage(ViewerPage page)
   {
-    _activeViewModelType = type;
+    _activePage = page;
   }
 }

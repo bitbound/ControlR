@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" />
     <PackageReference Include="Avalonia.Skia" />
     <PackageReference Include="Bitbound.SimpleMessenger" />
     <PackageReference Include="CommunityToolkit.Diagnostics" />

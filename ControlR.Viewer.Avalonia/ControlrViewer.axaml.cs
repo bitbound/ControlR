@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Layout;
 using ControlR.Viewer.Avalonia.ViewModels.Fakes;
+using ControlR.Viewer.Avalonia.Services;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 using System.ComponentModel;
 
@@ -24,6 +25,7 @@ public partial class ControlrViewer : UserControl
   private readonly IDisposable _isVisibleSubscription;
   private readonly IDisposable _pageSubscription;
 
+  private ViewerInstanceInfo? _instanceInfo;
   private bool _isInitialized;
   private bool _isShellConnected;
   private ViewerPage _pendingPage;
@@ -60,6 +62,19 @@ public partial class ControlrViewer : UserControl
   {
     get => GetValue(PageProperty);
     set => SetValue(PageProperty, value);
+  }
+
+  /// <summary>
+  /// Get the public-facing instance information for this viewer.
+  /// </summary>
+  public ViewerInstanceInfo GetInstanceInfo()
+  {
+    if (_instanceInfo is null)
+    {
+      throw new InvalidOperationException(Assets.Resources.ControlrViewer_ServiceProviderNotInitialized);
+    }
+
+    return _instanceInfo;
   }
 
   /// <summary>
@@ -137,6 +152,7 @@ public partial class ControlrViewer : UserControl
 
     try
     {
+      _instanceInfo = null;
       _pageSubscription.Dispose();
       _isVisibleSubscription.Dispose();
 
@@ -160,17 +176,6 @@ public partial class ControlrViewer : UserControl
     }
   }
 
-  private static Type? GetViewModelType(ViewerPage page)
-  {
-    return page switch
-    {
-      ViewerPage.None => null,
-      ViewerPage.RemoteControl => typeof(RemoteControlViewModel),
-      ViewerPage.Terminal => typeof(TerminalViewModel),
-      _ => null,
-    };
-  }
-
   private async Task ApplyPendingPage()
   {
     if (_serviceProvider is null)
@@ -190,12 +195,12 @@ public partial class ControlrViewer : UserControl
     }
 
     var navigationProvider = _serviceProvider.GetRequiredService<INavigationProvider>();
-    if (_pendingPage == ViewerPage.None && navigationProvider.ActiveViewModel is null)
+    if (_pendingPage == ViewerPage.None && navigationProvider.ActivePage == ViewerPage.None)
     {
       return;
     }
 
-    if (_pendingPage != ViewerPage.None && navigationProvider.ActiveViewModel == GetViewModelType(_pendingPage))
+    if (_pendingPage == navigationProvider.ActivePage)
     {
       return;
     }
@@ -273,7 +278,7 @@ public partial class ControlrViewer : UserControl
       _shellViewModel.PropertyChanged += HandleShellViewModelPropertyChanged;
 
       // Register this instance in the global registry
-      ViewerRegistry.Register(InstanceId, this, _serviceProvider);
+      _instanceInfo = ViewerRegistry.Register(InstanceId, this, _serviceProvider);
 
       // Create and set the ViewerShell
       Dispatcher.UIThread.Post(() =>

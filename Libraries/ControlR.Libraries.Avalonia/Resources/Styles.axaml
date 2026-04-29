@@ -106,13 +106,19 @@
                 BorderBrush="{TemplateBinding BorderBrush}"
                 BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="2">
-          <ContentPresenter HorizontalAlignment="Center"
+          <ContentPresenter x:Name="PART_ContentPresenter"
+                            HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Content="{TemplateBinding Content}"
                             ContentTemplate="{TemplateBinding ContentTemplate}"/>
         </Border>
       </ControlTemplate>
     </Setter>
+  </Style>
+
+  <Style Selector=":is(Button).TransparentButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Opacity" Value="0.45" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextDisabledBrush}" />
   </Style>
 
   <Style Selector=":is(controls|ThemeButton)">

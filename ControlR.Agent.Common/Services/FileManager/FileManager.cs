@@ -2,6 +2,7 @@ using System.IO.Compression;
 using ControlR.Agent.Shared.Constants;
 using ControlR.Agent.Shared.Services;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.FileSystem;
 
 namespace ControlR.Agent.Common.Services.FileManager;
@@ -13,6 +14,7 @@ public interface IFileManager
 {
   Task<FileReferenceResult> CreateDirectory(string parentPath, string directoryName);
   Task<FileReferenceResult> CreateDirectory(string directoryPath);
+  Task<FileReferenceResult> CreateDownloadArchive(string[] targetPaths, string archiveFileName);
   Task<FileReferenceResult> DeleteFileSystemEntry(string targetPath);
   Task<DirectoryContentsResult> GetDirectoryContents(string directoryPath);
   Task<List<LogFileGroupDto>> GetLogFiles();
@@ -94,6 +96,80 @@ internal class FileManager(
     {
       _logger.LogError(ex, "Error creating directory: {DirectoryPath}", directoryPath);
       return Task.FromResult(FileReferenceResult.Fail(ex.Message));
+    }
+  }
+
+  public async Task<FileReferenceResult> CreateDownloadArchive(string[] targetPaths, string archiveFileName)
+  {
+    try
+    {
+      var normalizedPaths = targetPaths
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+      if (normalizedPaths.Length == 0)
+      {
+        return FileReferenceResult.Fail("At least one target path is required");
+      }
+
+      var normalizedArchiveFileName = ArchiveFileNameHelper.NormalizeArchiveFileName(archiveFileName);
+      if (string.IsNullOrWhiteSpace(normalizedArchiveFileName))
+      {
+        return FileReferenceResult.Fail("Archive file name is invalid");
+      }
+
+      var tempZipPath = Path.Combine(Path.GetTempPath(), $"controlr-download-{Guid.NewGuid()}.zip");
+      await using var zipStream = _fileSystem.CreateFile(tempZipPath);
+      using var archive = new ZipArchive(zipStream, ZipArchiveMode.Create);
+
+      var rootEntryNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+      foreach (var targetPath in normalizedPaths)
+      {
+        if (_fileSystem.DirectoryExists(targetPath))
+        {
+          var directoryInfo = _fileSystem.GetDirectoryInfo(targetPath);
+          var directoryEntryName = GetUniqueArchiveEntryName(rootEntryNames, directoryInfo.Name, isDirectory: true);
+          await AddDirectoryToZip(archive, targetPath, directoryEntryName);
+          continue;
+        }
+
+        if (_fileSystem.FileExists(targetPath))
+        {
+          var fileInfo = _fileSystem.GetFileInfo(targetPath);
+          var fileEntryName = GetUniqueArchiveEntryName(rootEntryNames, fileInfo.Name, isDirectory: false);
+          await AddFileToZip(archive, targetPath, fileEntryName);
+          continue;
+        }
+
+        archive.Dispose();
+        await zipStream.DisposeAsync();
+
+        try
+        {
+          _fileSystem.DeleteFile(tempZipPath);
+        }
+        catch (Exception ex)
+        {
+          _logger.LogWarning(ex, "Error cleaning up temporary ZIP file after failure: {ZipPath}", tempZipPath);
+        }
+        
+        _logger.LogWarning("Target path does not exist: {TargetPath}", targetPath);
+        return FileReferenceResult.Fail($"Target path does not exist: {targetPath}");
+      }
+
+      _logger.LogInformation(
+        "Successfully created download archive {ArchiveFileName} with {ItemCount} item(s)",
+        normalizedArchiveFileName,
+        normalizedPaths.Length);
+
+      return FileReferenceResult.Ok(tempZipPath, normalizedArchiveFileName, isTempFile: true);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error creating download archive {ArchiveFileName}", archiveFileName);
+      return FileReferenceResult.Fail(ex.Message);
     }
   }
 
@@ -499,12 +575,38 @@ internal class FileManager(
     }
   }
 
+  private static string GetUniqueArchiveEntryName(HashSet<string> existingNames, string originalName, bool isDirectory)
+  {
+    var baseName = isDirectory
+      ? originalName
+      : Path.GetFileNameWithoutExtension(originalName);
+    var extension = isDirectory ? string.Empty : Path.GetExtension(originalName);
+    var candidate = originalName;
+    var suffix = 2;
+
+    while (!existingNames.Add(candidate))
+    {
+      candidate = $"{baseName} ({suffix}){extension}";
+      suffix++;
+    }
+
+    return candidate;
+  }
+
   private async Task AddDirectoryToZip(ZipArchive archive, string directoryPath, string entryPrefix)
   {
     try
     {
       // Add all files in the directory
       var files = _fileSystem.GetFiles(directoryPath);
+      var directories = _fileSystem.GetDirectories(directoryPath);
+
+      if (files.Length == 0 && directories.Length == 0 && !string.IsNullOrWhiteSpace(entryPrefix))
+      {
+        archive.CreateEntry($"{entryPrefix}/");
+        return;
+      }
+
       foreach (var filePath in files)
       {
         var fileInfo = _fileSystem.GetFileInfo(filePath);
@@ -512,14 +614,10 @@ internal class FileManager(
           ? fileInfo.Name
           : $"{entryPrefix}/{fileInfo.Name}";
 
-        var entry = archive.CreateEntry(entryName);
-        await using var entryStream = entry.Open();
-        await using var fileStream = _fileSystem.OpenFileStream(filePath, FileMode.Open, FileAccess.Read);
-        await fileStream.CopyToAsync(entryStream);
+        await AddFileToZip(archive, filePath, entryName);
       }
 
       // Recursively add subdirectories
-      var directories = _fileSystem.GetDirectories(directoryPath);
       foreach (var subDirectoryPath in directories)
       {
         var dirInfo = _fileSystem.GetDirectoryInfo(subDirectoryPath);
@@ -535,6 +633,14 @@ internal class FileManager(
       _logger.LogWarning(ex, "Error adding directory to ZIP: {DirectoryPath}", directoryPath);
       // Continue with other files/directories even if one fails
     }
+  }
+
+  private async Task AddFileToZip(ZipArchive archive, string filePath, string entryName)
+  {
+    var entry = archive.CreateEntry(entryName);
+    await using var entryStream = entry.Open();
+    await using var fileStream = _fileSystem.OpenFileStream(filePath, FileMode.Open, FileAccess.Read);
+    await fileStream.CopyToAsync(entryStream);
   }
 
   private LogFileGroupDto GetAgentLogs()

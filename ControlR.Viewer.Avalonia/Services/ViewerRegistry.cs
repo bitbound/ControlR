@@ -68,10 +68,10 @@ public static class ViewerRegistry
   /// <summary>
   /// Register a new viewer instance.
   /// </summary>
-  public static void Register(Guid instanceId, ControlrViewer viewer, IServiceProvider serviceProvider)
+  public static ViewerInstanceInfo Register(Guid instanceId, ControlrViewer viewer, IServiceProvider serviceProvider)
   {
     var info = new ViewerInstanceInfo(instanceId, viewer, serviceProvider);
-    _instances.TryAdd(instanceId, info);
+    return _instances.GetOrAdd(instanceId, info);
   }
 
   /// <summary>

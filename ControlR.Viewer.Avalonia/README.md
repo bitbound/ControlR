@@ -20,6 +20,24 @@ Your view model must expose a `ControlrViewerOptions` instance containing:
 
 How those values are resolved is up to your application architecture.
 
+## Core APIs
+
+`ControlrViewer` exposes these primary bindable/public members:
+
+- `Options` (`ControlrViewerOptions?`) - connection settings for the viewer instance.
+- `Page` (`ViewerPage`) - declaratively selects the active page.
+- `InstanceId` (`Guid`) - unique ID assigned to the viewer instance after construction.
+- `GetInstanceInfo()` - returns the public-facing `ViewerInstanceInfo` for this viewer instance.
+- `GetRequiredService<T>()` - resolves a required service from this viewer instance.
+- `GetService<T>()` - resolves an optional service from this viewer instance.
+
+Available `ViewerPage` values:
+
+- `None`
+- `RemoteControl`
+- `FileSystem`
+- `Terminal`
+
 ## Usage Example
 
 In this example, `ControlrViewer` is hosted in `ParentView.axaml`, with options provided by `ParentViewModel`.
@@ -31,10 +49,12 @@ In this example, `ControlrViewer` is hosted in `ParentView.axaml`, with options 
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:YourApp.ViewModels"
              xmlns:ctrlr="using:ControlR.Viewer.Avalonia"
+             xmlns:nav="using:ControlR.Viewer.Avalonia.Services.Navigation"
              x:Class="YourApp.Views.ParentView"
              x:DataType="vm:ParentViewModel">
 
-	<ctrlr:ControlrViewer Options="{Binding ViewerOptions}" />
+	<ctrlr:ControlrViewer Options="{Binding ViewerOptions}"
+	                     Page="{Binding CurrentPage}" />
 </UserControl>
 ```
 
@@ -42,6 +62,7 @@ In this example, `ControlrViewer` is hosted in `ParentView.axaml`, with options 
 
 ```csharp
 using ControlR.Libraries.Viewer.Common.Options;
+using ControlR.Viewer.Avalonia.Services.Navigation;
 using Microsoft.Extensions.Options;
 
 namespace YourApp.ViewModels;
@@ -53,9 +74,43 @@ public class ParentViewModel
     ViewerOptions = viewerOptions.Value;
   }
 
+  public ViewerPage CurrentPage { get; set; } = ViewerPage.RemoteControl;
   public ControlrViewerOptions ViewerOptions { get; }
 }
 ```
+
+## Declarative Navigation
+
+Set the `Page` property to control which page the embedded viewer should display.
+
+```xml
+<ctrlr:ControlrViewer Options="{Binding ViewerOptions}"
+                     Page="{Binding CurrentPage}" />
+```
+
+```csharp
+CurrentPage = ViewerPage.FileSystem;
+```
+
+If the viewer is not fully connected yet, the requested page is stored and applied once navigation becomes available.
+
+## Imperative Navigation
+
+For imperative page changes, resolve `INavigator` from the viewer instance and call `NavigateTo`.
+
+```csharp
+using ControlR.Viewer.Avalonia.Services.Navigation;
+
+var navigator = controlrViewer.GetInstanceInfo().GetNavigator();
+var result = await navigator.NavigateTo(ViewerPage.Terminal);
+
+if (!result.IsSuccess)
+{
+  // Handle result.Reason.
+}
+```
+
+You can also get `INavigator` through `ViewerRegistry` or `ViewerInstanceInfo` if you are operating from outside the control tree.
 
 ## ViewerRegistry
 
@@ -71,19 +126,45 @@ Important APIs:
 - `ViewerRegistry.GetService<T>(Guid instanceId)` — attempts to resolve a service and returns null if not found.
 - `ViewerRegistry.GetService(Guid instanceId, Type serviceType)` — non-generic service resolution.
 - `ViewerRegistry.GetAllInstanceIds()` — returns all currently registered viewer instance IDs.
-- `ViewerRegistry.TryGetInstance(Guid instanceId, out ControlrViewer? viewer)` — attempts to get a registered viewer instance.
+- `ViewerRegistry.TryGetInstance(Guid instanceId, out ViewerInstanceInfo? viewerInstanceInfo)` — attempts to get a registered viewer instance plus its service provider.
+
+`ViewerInstanceInfo` exposes:
+
+- `InstanceId`
+- `Viewer`
+- `ServiceProvider`
+- `GetHubConnection()`
+- `GetControlrApi()`
+- `GetNavigator()`
 
 Example usage:
 
 ```csharp
-// Obtain a service from a running viewer (registration is handled by the control itself)
+using ControlR.Viewer.Avalonia.Services;
+using ControlR.Viewer.Avalonia.Services.Navigation;
+
+if (ViewerRegistry.TryGetInstance(viewerId, out var instance))
+{
+  var navigator = instance.GetNavigator();
+  await navigator.NavigateTo(ViewerPage.FileSystem);
+
+  var api = instance.GetControlrApi();
+  var hubConnection = instance.GetHubConnection();
+}
+```
+
+You can also resolve arbitrary services directly:
+
+```csharp
 var remoteControlStream = ViewerRegistry.GetRequiredService<IViewerRemoteControlStream>(viewerId);
 ```
 
 ## Notes
 
 - Keep PATs out of source control.
-- The `ControlrViewer` will intitialize and connect to the server once it's made visible.
+- The `ControlrViewer` initializes and connects to the server once it becomes visible.
 - Options will be validated automatically before connecting.
   - If any options are missing or invalid, the control will render an error message instead.
+- Viewer instances register themselves with `ViewerRegistry` after their internal service provider is built.
+- `Page` defaults to `ViewerPage.None`.
 

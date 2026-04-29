@@ -367,6 +367,49 @@
         }
       }
     },
+    "/api/device-file-system/download-archive/{deviceId}": {
+      "post": {
+        "tags": [
+          "DeviceFileSystem"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadArchiveRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadArchiveRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadArchiveRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/device-file-system/download/{deviceId}": {
       "get": {
         "tags": [
@@ -3575,6 +3618,24 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Drive"
+            }
+          }
+        }
+      },
+      "DownloadArchiveRequestDto": {
+        "required": [
+          "archiveFileName",
+          "targetPaths"
+        ],
+        "type": "object",
+        "properties": {
+          "archiveFileName": {
+            "type": "string"
+          },
+          "targetPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         }

@@ -636,4 +636,232 @@ Details: {0}</value>
   <data name="Terminal_KeyboardShortcut_EscapeDescription" xml:space="preserve">
     <value>Close completions</value>
   </data>
+  <data name="FileSystem_AddressLabel" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="FileSystem_GoButtonText" xml:space="preserve">
+    <value>Go</value>
+  </data>
+  <data name="FileSystem_FoldersHeading" xml:space="preserve">
+    <value>Folders</value>
+  </data>
+  <data name="FileSystem_LoadingDrives" xml:space="preserve">
+    <value>Loading drives...</value>
+  </data>
+  <data name="FileSystem_NoDrivesMessage" xml:space="preserve">
+    <value>No drives were returned by the remote device.</value>
+  </data>
+  <data name="FileSystem_SearchPlaceholder" xml:space="preserve">
+    <value>Filter current directory</value>
+  </data>
+  <data name="FileSystem_UploadButtonText" xml:space="preserve">
+    <value>Upload</value>
+  </data>
+  <data name="FileSystem_DownloadButtonText" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="FileSystem_DeleteButtonText" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="FileSystem_NewFolderButtonText" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="FileSystem_UpButtonText" xml:space="preserve">
+    <value>Up</value>
+  </data>
+  <data name="FileSystem_NameColumnHeader" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="FileSystem_TypeColumnHeader" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="FileSystem_SizeColumnHeader" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="FileSystem_ModifiedColumnHeader" xml:space="preserve">
+    <value>Modified</value>
+  </data>
+  <data name="FileSystem_LoadingDirectoryContents" xml:space="preserve">
+    <value>Loading directory contents...</value>
+  </data>
+  <data name="FileSystem_SelectDirectoryPrompt" xml:space="preserve">
+    <value>Select a directory to view its contents.</value>
+  </data>
+  <data name="FileSystem_EntryTypeFolder" xml:space="preserve">
+    <value>Folder</value>
+  </data>
+  <data name="FileSystem_EntryTypeFile" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="FileSystem_SelectItemsToDelete" xml:space="preserve">
+    <value>Select at least one item to delete.</value>
+  </data>
+  <data name="FileSystem_DeleteSingleMessage" xml:space="preserve">
+    <value>Delete {0}?</value>
+  </data>
+  <data name="FileSystem_DeleteMultipleMessage" xml:space="preserve">
+    <value>Delete {0} items? {1}</value>
+  </data>
+  <data name="FileSystem_DeleteDialogTitle" xml:space="preserve">
+    <value>Delete Items</value>
+  </data>
+  <data name="FileSystem_CancelButtonText" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="FileSystem_DeleteSuccessMessage" xml:space="preserve">
+    <value>Deleted {0} item(s).</value>
+  </data>
+  <data name="FileSystem_DeleteFailureMessage" xml:space="preserve">
+    <value>Failed to delete the selected item(s).</value>
+  </data>
+  <data name="FileSystem_SelectItemsToDownload" xml:space="preserve">
+    <value>Select at least one item to download.</value>
+  </data>
+  <data name="FileSystem_DownloadSizeExceededMessage" xml:space="preserve">
+    <value>The selected files exceed the maximum transfer size of {0:n1} MB: {1}</value>
+  </data>
+  <data name="FileSystem_DownloadFailureDetailsMessage" xml:space="preserve">
+    <value>Download failed. Details: {0}</value>
+  </data>
+  <data name="FileSystem_DownloadAlreadyInProgressMessage" xml:space="preserve">
+    <value>A download is already in progress.</value>
+  </data>
+  <data name="FileSystem_DownloadPreparingMessage" xml:space="preserve">
+    <value>Preparing download...</value>
+  </data>
+  <data name="FileSystem_DownloadProgressKnownSizeMessage" xml:space="preserve">
+    <value>{0} of {1} downloaded</value>
+  </data>
+  <data name="FileSystem_DownloadProgressTitle" xml:space="preserve">
+    <value>Downloading {0}</value>
+  </data>
+  <data name="FileSystem_DownloadProgressUnknownSizeMessage" xml:space="preserve">
+    <value>{0} downloaded</value>
+  </data>
+  <data name="FileSystem_DownloadSavedMessage" xml:space="preserve">
+    <value>Saved download to {0}.</value>
+  </data>
+  <data name="FileSystem_DownloadFailureMessage" xml:space="preserve">
+    <value>Failed to download the selected item(s).</value>
+  </data>
+  <data name="FileSystem_SelectDirectoryFirst" xml:space="preserve">
+    <value>Select a destination folder first.</value>
+  </data>
+  <data name="FileSystem_OverwriteDialogTitle" xml:space="preserve">
+    <value>Overwrite File</value>
+  </data>
+  <data name="FileSystem_OverwriteDialogMessage" xml:space="preserve">
+    <value>{0} already exists. Replace it?</value>
+  </data>
+  <data name="FileSystem_OverwriteButtonText" xml:space="preserve">
+    <value>Overwrite</value>
+  </data>
+  <data name="FileSystem_UploadSizeExceededMessage" xml:space="preserve">
+    <value>{0} exceeds the maximum transfer size of {1:n1} MB.</value>
+  </data>
+  <data name="FileSystem_UploadAlreadyInProgressMessage" xml:space="preserve">
+    <value>An upload is already in progress.</value>
+  </data>
+  <data name="FileSystem_UploadFailureDetailsMessage" xml:space="preserve">
+    <value>Failed to upload {0}. Details: {1}</value>
+  </data>
+  <data name="FileSystem_UploadProgressStatusMessage" xml:space="preserve">
+    <value>{0} of {1} uploaded</value>
+  </data>
+  <data name="FileSystem_UploadProgressStatusWithSpeedMessage" xml:space="preserve">
+    <value>{0} of {1} uploaded at {2}</value>
+  </data>
+  <data name="FileSystem_UploadProgressTitle" xml:space="preserve">
+    <value>Uploading {0}</value>
+  </data>
+  <data name="FileSystem_UploadSuccessMessage" xml:space="preserve">
+    <value>Uploaded {0}.</value>
+  </data>
+  <data name="FileSystem_UploadErrorMessage" xml:space="preserve">
+    <value>An error occurred while uploading {0}.</value>
+  </data>
+  <data name="FileSystem_UpOneLevelUnavailable" xml:space="preserve">
+    <value>Unable to determine the parent directory.</value>
+  </data>
+  <data name="FileSystem_UpOneLevelFailureDetailsMessage" xml:space="preserve">
+    <value>Unable to move to the parent directory. Details: {0}</value>
+  </data>
+  <data name="FileSystem_UpOneLevelFailureMessage" xml:space="preserve">
+    <value>Failed to move to the parent directory.</value>
+  </data>
+  <data name="FileSystem_NewFolderDialogTitle" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="FileSystem_NewFolderSubtitle" xml:space="preserve">
+    <value>Create a new folder in the current directory.</value>
+  </data>
+  <data name="FileSystem_NewFolderLabel" xml:space="preserve">
+    <value>Folder Name</value>
+  </data>
+  <data name="FileSystem_NewFolderHint" xml:space="preserve">
+    <value>Enter a folder name</value>
+  </data>
+  <data name="FileSystem_NewFolderValidationInvalidCharacter" xml:space="preserve">
+    <value>The folder name cannot contain '{0}'.</value>
+  </data>
+  <data name="FileSystem_NewFolderValidationRequired" xml:space="preserve">
+    <value>Enter a folder name.</value>
+  </data>
+  <data name="FileSystem_NewFolderValidationTrailingCharacter" xml:space="preserve">
+    <value>The folder name cannot end with a space or period.</value>
+  </data>
+  <data name="FileSystem_SubmitButtonText" xml:space="preserve">
+    <value>Submit</value>
+  </data>
+  <data name="FileSystem_CreateFolderFailureDetailsMessage" xml:space="preserve">
+    <value>Failed to create the folder. Details: {0}</value>
+  </data>
+  <data name="FileSystem_CreateFolderSuccessMessage" xml:space="preserve">
+    <value>Created folder {0}.</value>
+  </data>
+  <data name="FileSystem_CreateFolderFailureMessage" xml:space="preserve">
+    <value>Failed to create the folder.</value>
+  </data>
+  <data name="FileSystem_PathValidationErrorMessage" xml:space="preserve">
+    <value>Unable to validate path {0}.</value>
+  </data>
+  <data name="FileSystem_PathValidationErrorDetailsMessage" xml:space="preserve">
+    <value>Unable to validate path {0}. Details: {1}</value>
+  </data>
+  <data name="FileSystem_PathNotFoundMessage" xml:space="preserve">
+    <value>Path not found: {0}</value>
+  </data>
+  <data name="FileSystem_NavigateErrorMessage" xml:space="preserve">
+    <value>Unable to navigate to {0}.</value>
+  </data>
+  <data name="FileSystem_MaxTransferSizeFailureMessage" xml:space="preserve">
+    <value>Failed to retrieve the maximum transfer size.</value>
+  </data>
+  <data name="FileSystem_DirectoryNotFoundMessage" xml:space="preserve">
+    <value>Directory not found: {0}</value>
+  </data>
+  <data name="FileSystem_LoadContentsFailureDetailsMessage" xml:space="preserve">
+    <value>Failed to load directory contents. Details: {0}</value>
+  </data>
+  <data name="FileSystem_LoadContentsFailureMessage" xml:space="preserve">
+    <value>Failed to load directory contents.</value>
+  </data>
+  <data name="FileSystem_LoadDrivesFailureDetailsMessage" xml:space="preserve">
+    <value>Failed to load root drives. Details: {0}</value>
+  </data>
+  <data name="FileSystem_LoadDrivesFailureMessage" xml:space="preserve">
+    <value>Failed to load root drives.</value>
+  </data>
+  <data name="FileSystem_ZipArchiveFileType" xml:space="preserve">
+    <value>ZIP Archive</value>
+  </data>
+  <data name="FileSystem_SaveDownloadDialogTitle" xml:space="preserve">
+    <value>Save Download</value>
+  </data>
+  <data name="FileSystem_UploadDialogTitle" xml:space="preserve">
+    <value>Select Files to Upload</value>
+  </data>
+  <data name="FileSystem_TabTitle" xml:space="preserve">
+    <value>File System</value>
+  </data>
 </root>

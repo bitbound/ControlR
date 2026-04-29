@@ -61,6 +61,22 @@
     <Style Selector="ListBoxItem.SidebarNavItem:selected /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource DividerLightBrush}" />
     </Style>
+
+    <Style Selector="ListBox#SidebarNavList:disabled">
+      <Setter Property="Opacity" Value="0.55" />
+    </Style>
+
+    <Style Selector="ListBox#SidebarNavList:disabled ListBoxItem.SidebarNavItem">
+      <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+
+    <Style Selector="ListBox#SidebarNavList:disabled ListBoxItem.SidebarNavItem TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
+    <Style Selector="ListBox#SidebarNavList:disabled ListBoxItem.SidebarNavItem PathIcon">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
   </Window.Styles>
 
   <Design.DataContext>
@@ -100,8 +116,10 @@
         <ListBox x:Name="SidebarNavList"
                  Margin="0,12,0,0"
                  Background="Transparent"
+                 IsEnabled="{Binding IsVisible, ElementName=Viewer}"
                  SelectionChanged="SidebarNavList_OnSelectionChanged">
           <ListBoxItem Classes="SidebarNavItem"
+                       Cursor="Hand"
                        Tag="{x:Static nav:ViewerPage.RemoteControl}">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <PathIcon Data="{DynamicResource share_desktop_regular}"
@@ -115,6 +133,7 @@
           </ListBoxItem>
 
           <ListBoxItem Classes="SidebarNavItem"
+                       Cursor="Hand"
                        Tag="{x:Static nav:ViewerPage.Terminal}">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <PathIcon Data="{DynamicResource code_regular}"
@@ -124,6 +143,20 @@
                          FontSize="15"
                          FontWeight="SemiBold"
                          Text="Terminal" />
+            </StackPanel>
+          </ListBoxItem>
+
+          <ListBoxItem Classes="SidebarNavItem"
+                       Cursor="Hand"
+                       Tag="{x:Static nav:ViewerPage.FileSystem}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{DynamicResource desktop_regular}"
+                        Width="20"
+                        Height="20" />
+              <TextBlock VerticalAlignment="Center"
+                         FontSize="15"
+                         FontWeight="SemiBold"
+                         Text="File System" />
             </StackPanel>
           </ListBoxItem>
         </ListBox>

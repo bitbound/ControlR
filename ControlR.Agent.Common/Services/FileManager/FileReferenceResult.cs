@@ -41,6 +41,7 @@ public class FileReferenceResult
     return new FileReferenceResult(
       isSuccess: true,
       fileSystemPath: fileSystemPath,
-      fileDisplayName: displayName);
+      fileDisplayName: displayName,
+      isTempFile: isTempFile);
   }
 }

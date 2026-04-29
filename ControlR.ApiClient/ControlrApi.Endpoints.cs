@@ -23,6 +23,7 @@ public interface IDeviceFileSystemApi
 {
   Task<ApiResult> CreateDirectory(CreateDirectoryRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteFile(FileDeleteRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<ResponseStream>> DownloadArchive(Guid deviceId, DownloadArchiveRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<ResponseStream>> DownloadFile(Guid deviceId, string filePath, CancellationToken cancellationToken = default);
   Task<ApiResult<GetDirectoryContentsResponseDto>> GetDirectoryContents(GetDirectoryContentsRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<string>> GetLogFileContents(Guid deviceId, GetLogFileContentsRequestDto request, CancellationToken cancellationToken = default);

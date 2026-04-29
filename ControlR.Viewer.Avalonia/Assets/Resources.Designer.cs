@@ -655,6 +655,471 @@ namespace ControlR.Viewer.Avalonia.Assets {
                 return ResourceManager.GetString("RefreshSessions", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Path.
+        /// </summary>
+        public static string FileSystem_AddressLabel {
+            get {
+                return ResourceManager.GetString("FileSystem_AddressLabel", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Cancel.
+        /// </summary>
+        public static string FileSystem_CancelButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_CancelButtonText", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to create the folder.
+        /// </summary>
+        public static string FileSystem_CreateFolderFailureDetailsMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_CreateFolderFailureDetailsMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_CreateFolderFailureMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_CreateFolderFailureMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_CreateFolderSuccessMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_CreateFolderSuccessMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DeleteButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_DeleteButtonText", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DeleteDialogTitle {
+            get {
+                return ResourceManager.GetString("FileSystem_DeleteDialogTitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DeleteFailureMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DeleteFailureMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DeleteMultipleMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DeleteMultipleMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DeleteSingleMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DeleteSingleMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DeleteSuccessMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DeleteSuccessMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DirectoryNotFoundMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DirectoryNotFoundMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadButtonText", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadAlreadyInProgressMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadAlreadyInProgressMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadFailureDetailsMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadFailureDetailsMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadFailureMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadFailureMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadPreparingMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadPreparingMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadProgressKnownSizeMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadProgressKnownSizeMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadProgressTitle {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadProgressTitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadProgressUnknownSizeMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadProgressUnknownSizeMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadSavedMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadSavedMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_DownloadSizeExceededMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_DownloadSizeExceededMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_EntryTypeFile {
+            get {
+                return ResourceManager.GetString("FileSystem_EntryTypeFile", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_EntryTypeFolder {
+            get {
+                return ResourceManager.GetString("FileSystem_EntryTypeFolder", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_FoldersHeading {
+            get {
+                return ResourceManager.GetString("FileSystem_FoldersHeading", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_GoButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_GoButtonText", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_LoadContentsFailureDetailsMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_LoadContentsFailureDetailsMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_LoadContentsFailureMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_LoadContentsFailureMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_LoadDrivesFailureDetailsMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_LoadDrivesFailureDetailsMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_LoadDrivesFailureMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_LoadDrivesFailureMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_LoadingDirectoryContents {
+            get {
+                return ResourceManager.GetString("FileSystem_LoadingDirectoryContents", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_LoadingDrives {
+            get {
+                return ResourceManager.GetString("FileSystem_LoadingDrives", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_MaxTransferSizeFailureMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_MaxTransferSizeFailureMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_ModifiedColumnHeader {
+            get {
+                return ResourceManager.GetString("FileSystem_ModifiedColumnHeader", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NameColumnHeader {
+            get {
+                return ResourceManager.GetString("FileSystem_NameColumnHeader", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NavigateErrorMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_NavigateErrorMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NewFolderButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_NewFolderButtonText", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NewFolderDialogTitle {
+            get {
+                return ResourceManager.GetString("FileSystem_NewFolderDialogTitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NewFolderHint {
+            get {
+                return ResourceManager.GetString("FileSystem_NewFolderHint", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NewFolderLabel {
+            get {
+                return ResourceManager.GetString("FileSystem_NewFolderLabel", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NewFolderSubtitle {
+            get {
+                return ResourceManager.GetString("FileSystem_NewFolderSubtitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NewFolderValidationInvalidCharacter {
+            get {
+                return ResourceManager.GetString("FileSystem_NewFolderValidationInvalidCharacter", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NewFolderValidationRequired {
+            get {
+                return ResourceManager.GetString("FileSystem_NewFolderValidationRequired", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NewFolderValidationTrailingCharacter {
+            get {
+                return ResourceManager.GetString("FileSystem_NewFolderValidationTrailingCharacter", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_NoDrivesMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_NoDrivesMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_OverwriteButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_OverwriteButtonText", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_OverwriteDialogMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_OverwriteDialogMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_OverwriteDialogTitle {
+            get {
+                return ResourceManager.GetString("FileSystem_OverwriteDialogTitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_PathNotFoundMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_PathNotFoundMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_PathValidationErrorDetailsMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_PathValidationErrorDetailsMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_PathValidationErrorMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_PathValidationErrorMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_SaveDownloadDialogTitle {
+            get {
+                return ResourceManager.GetString("FileSystem_SaveDownloadDialogTitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_SearchPlaceholder {
+            get {
+                return ResourceManager.GetString("FileSystem_SearchPlaceholder", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_SelectDirectoryFirst {
+            get {
+                return ResourceManager.GetString("FileSystem_SelectDirectoryFirst", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_SelectDirectoryPrompt {
+            get {
+                return ResourceManager.GetString("FileSystem_SelectDirectoryPrompt", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_SelectItemsToDelete {
+            get {
+                return ResourceManager.GetString("FileSystem_SelectItemsToDelete", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_SelectItemsToDownload {
+            get {
+                return ResourceManager.GetString("FileSystem_SelectItemsToDownload", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_SizeColumnHeader {
+            get {
+                return ResourceManager.GetString("FileSystem_SizeColumnHeader", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_SubmitButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_SubmitButtonText", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_TabTitle {
+            get {
+                return ResourceManager.GetString("FileSystem_TabTitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_TypeColumnHeader {
+            get {
+                return ResourceManager.GetString("FileSystem_TypeColumnHeader", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadButtonText", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadAlreadyInProgressMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadAlreadyInProgressMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadDialogTitle {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadDialogTitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadErrorMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadErrorMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadFailureDetailsMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadFailureDetailsMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadProgressStatusMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadProgressStatusMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadProgressStatusWithSpeedMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadProgressStatusWithSpeedMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadProgressTitle {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadProgressTitle", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadSizeExceededMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadSizeExceededMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UploadSuccessMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UploadSuccessMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UpButtonText {
+            get {
+                return ResourceManager.GetString("FileSystem_UpButtonText", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UpOneLevelFailureDetailsMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UpOneLevelFailureDetailsMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UpOneLevelFailureMessage {
+            get {
+                return ResourceManager.GetString("FileSystem_UpOneLevelFailureMessage", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_UpOneLevelUnavailable {
+            get {
+                return ResourceManager.GetString("FileSystem_UpOneLevelUnavailable", resourceCulture);
+            }
+        }
+
+        public static string FileSystem_ZipArchiveFileType {
+            get {
+                return ResourceManager.GetString("FileSystem_ZipArchiveFileType", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Input blocking disabled.

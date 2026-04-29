@@ -201,6 +201,12 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.CompletedTask;
   }
 
+  public Task<HubResult<FileDownloadResponseHubDto>> UploadArchiveToViewer(FileArchiveDownloadHubDto dto)
+  {
+    Console.WriteLine($"Received archive download request for {dto.ArchiveFileName}");
+    return HubResult.Ok(new FileDownloadResponseHubDto(FileSize: 0, FileDisplayName: dto.ArchiveFileName)).AsTaskResult();
+  }
+
   public Task<HubResult<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto)
   {
     Console.WriteLine($"Received file download request for {dto.FilePath}");

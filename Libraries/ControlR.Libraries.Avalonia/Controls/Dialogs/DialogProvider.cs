@@ -10,10 +10,16 @@ public interface IDialogProvider : INotifyPropertyChanged
 {
   object? Content { get; }
   bool IsVisible { get; }
+  double MaxHeight { get; }
+  double MaxWidth { get; }
   string? Title { get; }
 
   void Close();
-  void Show<TViewModel, TView>(string title, TViewModel viewModel)
+  void Show<TViewModel, TView>(
+    string title,
+    TViewModel viewModel,
+    double maxWidth = double.PositiveInfinity,
+    double maxHeight = double.PositiveInfinity)
     where TViewModel : IViewReference<TView>;
 }
 
@@ -22,6 +28,8 @@ internal sealed class DialogProvider(IServiceProvider serviceProvider) : Observa
   private readonly IServiceProvider _serviceProvider = serviceProvider;
   private object? _content;
   private bool _isVisible;
+  private double _maxHeight = double.PositiveInfinity;
+  private double _maxWidth = double.PositiveInfinity;
   private string? _title;
 
   public object? Content
@@ -33,6 +41,16 @@ internal sealed class DialogProvider(IServiceProvider serviceProvider) : Observa
   {
     get => _isVisible;
     private set => SetProperty(ref _isVisible, value);
+  }
+  public double MaxHeight
+  {
+    get => _maxHeight;
+    private set => SetProperty(ref _maxHeight, value);
+  }
+  public double MaxWidth
+  {
+    get => _maxWidth;
+    private set => SetProperty(ref _maxWidth, value);
   }
   public string? Title
   {
@@ -47,6 +65,8 @@ internal sealed class DialogProvider(IServiceProvider serviceProvider) : Observa
       DisposeContentIfNeeded(Content);
       Content = null;
       Title = null;
+      MaxWidth = double.PositiveInfinity;
+      MaxHeight = double.PositiveInfinity;
       IsVisible = false;
     }
 
@@ -59,7 +79,11 @@ internal sealed class DialogProvider(IServiceProvider serviceProvider) : Observa
     Dispatcher.UIThread.Post(CloseCore);
   }
 
-  public void Show<TViewModel, TView>(string title, TViewModel viewModel)
+  public void Show<TViewModel, TView>(
+    string title,
+    TViewModel viewModel,
+    double maxWidth = double.PositiveInfinity,
+    double maxHeight = double.PositiveInfinity)
     where TViewModel : IViewReference<TView>
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -75,11 +99,11 @@ internal sealed class DialogProvider(IServiceProvider serviceProvider) : Observa
 
     if (Dispatcher.UIThread.CheckAccess())
     {
-      ShowCore(title, control);
+      ShowCore(title, control, maxWidth, maxHeight);
       return;
     }
 
-    Dispatcher.UIThread.Post(() => ShowCore(title, control));
+    Dispatcher.UIThread.Post(() => ShowCore(title, control, maxWidth, maxHeight));
   }
 
 
@@ -91,10 +115,12 @@ internal sealed class DialogProvider(IServiceProvider serviceProvider) : Observa
     }
   }
 
-   private void ShowCore(string title, ContentControl control)
+   private void ShowCore(string title, ContentControl control, double maxWidth, double maxHeight)
   {
     DisposeContentIfNeeded(Content);
     Title = title;
+    MaxWidth = maxWidth;
+    MaxHeight = maxHeight;
     Content = control;
     IsVisible = true;
   }

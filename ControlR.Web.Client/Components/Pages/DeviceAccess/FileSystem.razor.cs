@@ -1,9 +1,6 @@
 using System.Threading.Channels;
 using ControlR.Libraries.Shared.IO;
-using ControlR.Libraries.Viewer.Common.State;
 using ControlR.Web.Client.Components.FileSystem;
-using ControlR.Web.Client.Extensions;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 
@@ -211,6 +208,20 @@ public partial class FileSystem : JsInteropableComponent
     }
   }
 
+  private async Task DownloadMultipleItems(IReadOnlyCollection<FileSystemEntryViewModel> items)
+  {
+    var archiveFileName = GetArchiveFileName();
+    var downloadUrl = $"{HttpConstants.DeviceFileSystemEndpoint}/download-archive/{DeviceId}/form";
+
+    await JsModule.InvokeVoidAsync(
+      "downloadArchive",
+      downloadUrl,
+      archiveFileName,
+      items.Select(item => item.FullPath).ToArray());
+
+    Snackbar.Add($"Started download of '{archiveFileName}'", Severity.Success);
+  }
+
   private async Task DownloadSingleItem(FileSystemEntryViewModel item)
   {
     try
@@ -226,6 +237,19 @@ public partial class FileSystem : JsInteropableComponent
       Logger.LogError(ex, "Error downloading {ItemName}", item.Name);
       throw;
     }
+  }
+
+  private string GetArchiveFileName()
+  {
+    var selectedDirectoryName = string.IsNullOrWhiteSpace(SelectedPath)
+      ? null
+      : Path.GetFileName(SelectedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+    var archiveBaseName = string.IsNullOrWhiteSpace(selectedDirectoryName)
+      ? "controlr-download"
+      : $"{selectedDirectoryName}-download";
+
+    return $"{archiveBaseName}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.zip";
   }
 
   private async Task<Result<long>> GetMaxFileSize()
@@ -256,12 +280,14 @@ public partial class FileSystem : JsInteropableComponent
       {
         SelectedItems.Add(args.Item);
       }
+
+      SelectedItems = [.. SelectedItems];
+      await InvokeAsync(StateHasChanged);
+      return;
     }
-    else
-    {
-      AddressBarValue = args.Item.FullPath;
-      await NavigateToAddress();
-    }
+
+    AddressBarValue = args.Item.FullPath;
+    await NavigateToAddress();
   }
 
   private async Task LoadDirectoryContents(string directoryPath)
@@ -500,10 +526,13 @@ public partial class FileSystem : JsInteropableComponent
         return;
       }
 
-      foreach (var item in SelectedItems)
+      if (SelectedItems.Count == 1)
       {
-        await DownloadSingleItem(item);
+        await DownloadSingleItem(SelectedItems.First());
+        return;
       }
+
+      await DownloadMultipleItems(SelectedItems.ToList());
     }
     catch (Exception ex)
     {

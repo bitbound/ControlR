@@ -41,6 +41,7 @@ internal class AgentHubClient(
   IAgentUpdater agentUpdater,
   IWakeOnLanService wakeOnLan,
   IAgentHeartbeatTimer heartbeatTimer,
+  IRetryer retryer,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
   private readonly IAgentUpdater _agentUpdater = agentUpdater;
@@ -60,6 +61,7 @@ internal class AgentHubClient(
   private readonly IOptionsAccessor _optionsAccessor = optionsAccessor;
   private readonly IPowerControl _powerControl = powerControl;
   private readonly IProcessManager _processManager = processManager;
+  private readonly IRetryer _retryer = retryer;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly ITerminalStore _terminalStore = terminalStore;
   private readonly IWakeOnLanService _wakeOnLan = wakeOnLan;
@@ -826,6 +828,40 @@ internal class AgentHubClient(
     return Task.CompletedTask;
   }
 
+  public async Task<HubResult<FileDownloadResponseHubDto>> UploadArchiveToViewer(FileArchiveDownloadHubDto dto)
+  {
+    try
+    {
+      _logger.LogInformation("Sending archive to viewer: {ArchiveFileName}, Stream ID: {StreamId}",
+        dto.ArchiveFileName,
+        dto.StreamId);
+
+      var resolveResult = await _fileManager.CreateDownloadArchive(dto.TargetPaths, dto.ArchiveFileName);
+      
+      if (!resolveResult.IsSuccess)
+      {
+        _logger.LogWarning("Failed to prepare archive for download: {ArchiveFileName}, Error: {Error}",
+          dto.ArchiveFileName,
+          resolveResult.ErrorMessage);
+        return HubResult.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ?? "Failed to prepare archive for download");
+      }
+
+      var fileInfo = _fileSystem.GetFileInfo(resolveResult.FileSystemPath);
+
+      Task
+        .Run(() => SendFileStream(dto.StreamId, resolveResult.FileSystemPath, resolveResult.IsTempFile))
+        .Forget();
+
+      _logger.LogInformation("Archive file handed off for streaming.  Returning response.  File: {ArchiveFileName}", dto.ArchiveFileName);
+      return HubResult.Ok(new FileDownloadResponseHubDto(fileInfo.Length, resolveResult.FileDisplayName));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending archive download: {ArchiveFileName}", dto.ArchiveFileName);
+      return HubResult.Fail<FileDownloadResponseHubDto>("An error occurred while sending archive download.");
+    }
+  }
+
   public async Task<HubResult<FileDownloadResponseHubDto>> UploadFileToViewer(FileDownloadHubDto dto)
   {
     try
@@ -898,44 +934,50 @@ internal class AgentHubClient(
 
   private async Task SendFileStream(Guid streamId, string fileSystemPath, bool isTempFile)
   {
+    _logger.LogInformation("Starting file stream. Stream ID: {StreamId}, File: {FilePath}", streamId, fileSystemPath);
     using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
-    await using var fileStream = _fileSystem.OpenFileStream(fileSystemPath, FileMode.Open,
+    var fileStream = _fileSystem.OpenFileStream(fileSystemPath, FileMode.Open,
       FileAccess.Read, FileShare.ReadWrite);
 
-    var channel = Channel.CreateBounded<byte[]>(10);
-
-    var writeTask = Task.Run(async () =>
+    await using (fileStream)
     {
+      var channel = Channel.CreateBounded<byte[]>(10);
+
+      var writeTask = Task.Run(async () =>
+      {
+        try
+        {
+          var buffer = new byte[AppConstants.SignalrMaxMessageSize];
+          int bytesRead;
+          while ((bytesRead = await fileStream.ReadAsync(buffer, cts.Token)) > 0)
+          {
+            await channel.Writer.WriteAsync(buffer[..bytesRead], cts.Token);
+          }
+          channel.Writer.TryComplete();
+        }
+        catch (Exception ex)
+        {
+          channel.Writer.TryComplete(ex);
+          _logger.LogError(ex, "Error writing file stream chunks for stream ID: {StreamId}", streamId);
+        }
+      }, cts.Token);
+
       try
       {
-        var buffer = new byte[AppConstants.SignalrMaxMessageSize];
-        int bytesRead;
-        while ((bytesRead = await fileStream.ReadAsync(buffer, cts.Token)) > 0)
-        {
-          await channel.Writer.WriteAsync(buffer[..bytesRead], cts.Token);
-        }
-        channel.Writer.TryComplete();
+        await _hubConnection.Send(
+          nameof(IAgentHub.SendFileContentStream),
+          [streamId, channel.Reader],
+          cts.Token);
+
+        await writeTask;
+
+        _logger.LogInformation("File stream sent successfully for stream ID: {StreamId}", streamId);
       }
       catch (Exception ex)
       {
-        channel.Writer.TryComplete(ex);
-        _logger.LogError(ex, "Error writing file stream chunks for stream ID: {StreamId}", streamId);
+        _logger.LogError(ex, "Error while sending file stream for stream ID: {StreamId}", streamId);
+        await cts.CancelAsync();
       }
-    }, cts.Token);
-
-    try
-    {
-      await _hubConnection.Send(
-        nameof(IAgentHub.SendFileContentStream),
-        [streamId, channel.Reader],
-        cts.Token);
-      await writeTask;
-      _logger.LogInformation("File stream sent successfully for stream ID: {StreamId}", streamId);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending file stream for stream ID: {StreamId}", streamId);
-      await cts.CancelAsync();
     }
     
     if (isTempFile)
@@ -943,7 +985,14 @@ internal class AgentHubClient(
       try
       {
         _logger.LogInformation("Deleting temporary file: {FilePath}", fileSystemPath);
-        _fileSystem.DeleteFile(fileSystemPath);
+        await _retryer.Retry(
+          func: () =>
+          {
+            _fileSystem.DeleteFile(fileSystemPath);
+            return Task.CompletedTask;
+          },
+          tryCount: 5,
+          retryDelay: TimeSpan.FromSeconds(2));
       }
       catch (Exception ex)
       {

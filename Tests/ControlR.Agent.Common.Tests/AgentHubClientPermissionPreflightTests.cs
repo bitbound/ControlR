@@ -130,6 +130,7 @@ public class AgentHubClientPermissionPreflightTests
       Mock.Of<IAgentUpdater>(),
       Mock.Of<IWakeOnLanService>(),
       Mock.Of<IAgentHeartbeatTimer>(),
+      Mock.Of<IRetryer>(),
       Mock.Of<ILogger<AgentHubClient>>());
   }
 }

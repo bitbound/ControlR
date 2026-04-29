@@ -10,6 +10,8 @@
         VerticalAlignment="Stretch">
     <Border HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
+          MaxWidth="{Binding DialogProvider.MaxWidth}"
+          MaxHeight="{Binding DialogProvider.MaxHeight}"
             Margin="24"
             Padding="16"
             Classes="Card">
@@ -19,7 +21,7 @@
               ColumnDefinitions="*,Auto"
               ColumnSpacing="8">
           <TextBlock Grid.Column="0"
-                     Classes="Info"
+                     Foreground="{DynamicResource PrimaryColor}"
                      FontSize="20"
                      FontWeight="Bold"
                      Text="{Binding DialogProvider.Title}" />

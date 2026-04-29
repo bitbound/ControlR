@@ -1,0 +1,350 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Viewer.Avalonia.ViewModels"
+             xmlns:assets="using:ControlR.Viewer.Avalonia.Assets"
+             xmlns:cava="using:ControlR.Libraries.Avalonia.Controls"
+             xmlns:dataGrid="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
+             mc:Ignorable="d"
+             d:DesignWidth="1100"
+             d:DesignHeight="720"
+             x:Class="ControlR.Viewer.Avalonia.Views.FileSystemView"
+             x:DataType="vm:IFileSystemViewModel">
+
+  <UserControl.Styles>
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+    <Style Selector="dataGrid|DataGridRow">
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Margin="16"
+        RowDefinitions="Auto,*"
+        RowSpacing="12">
+    <Grid Grid.Row="0"
+          ColumnDefinitions="*,Auto"
+          ColumnSpacing="8">
+      <TextBox x:Name="AddressBarTextBox"
+               Grid.Column="0"
+               Text="{Binding AddressBarValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+               Watermark="{x:Static assets:Resources.FileSystem_AddressLabel}"
+               KeyDown="AddressBarTextBox_OnKeyDown" />
+      <cava:IconButton Grid.Column="1"
+                       Click="NavigateButton_OnClick"
+                       Variant="Outlined"
+                       Color="Primary"
+                       Icon="{DynamicResource arrow_reply_down_regular}"
+                       Text="{x:Static assets:Resources.FileSystem_GoButtonText}" />
+    </Grid>
+
+    <Grid Grid.Row="1"
+          ColumnDefinitions="300,6,*">
+      <Border Grid.Column="0"
+              Classes="Card"
+              Padding="12">
+        <Grid RowDefinitions="Auto,*"
+              RowSpacing="12">
+          <TextBlock Grid.Row="0"
+                     Text="{x:Static assets:Resources.FileSystem_FoldersHeading}"
+                     FontSize="18"
+                     FontWeight="SemiBold" />
+
+          <Grid Grid.Row="1">
+            <TreeView ItemsSource="{Binding RootItems}"
+                      x:CompileBindings="False">
+              <TreeView.Styles>
+                <Style Selector="TreeViewItem"
+                       x:DataType="vm:FileSystemTreeItemViewModel">
+                  <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
+                  <Setter Property="IsSelected" Value="{ReflectionBinding IsSelected, Mode=TwoWay}" />
+                </Style>
+              </TreeView.Styles>
+              <TreeView.ItemTemplate>
+                <TreeDataTemplate DataType="vm:FileSystemTreeItemViewModel"
+                                  ItemsSource="{Binding Children}">
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="8">
+                    <PathIcon Width="16"
+                              Height="16"
+                              Data="{DynamicResource folder_regular}"
+                              Foreground="{DynamicResource PrimaryColor}" />
+                    <TextBlock Text="{Binding Name}" />
+                  </StackPanel>
+                </TreeDataTemplate>
+              </TreeView.ItemTemplate>
+            </TreeView>
+
+            <StackPanel IsVisible="{Binding IsLoading}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+              <TextBlock Text="{x:Static assets:Resources.FileSystem_LoadingDrives}" />
+              <ProgressBar Width="180" IsIndeterminate="True" />
+            </StackPanel>
+
+            <TextBlock IsVisible="{Binding ShowNoDrivesMessage}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Text="{x:Static assets:Resources.FileSystem_NoDrivesMessage}" />
+          </Grid>
+        </Grid>
+      </Border>
+
+      <GridSplitter Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    ResizeBehavior="PreviousAndNext"
+                    Background="{DynamicResource DividerBrush}" />
+
+      <Border Grid.Column="2"
+              Classes="Card"
+              Padding="12">
+        <Grid RowDefinitions="Auto,*"
+              RowSpacing="12">
+          <Grid Grid.Row="0">
+            <Grid Grid.Row="0"
+              x:Name="FileActionsToolbarGrid"
+              ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="8">
+              <Button Grid.Column="0"
+                      Click="UpOneLevelButton_OnClick"
+                      IsEnabled="{Binding CanUpOneLevel}"
+                      Classes="TransparentButton"
+                      Cursor="Hand"
+                      ToolTip.Tip="{x:Static assets:Resources.FileSystem_UpButtonText}">
+                <PathIcon Data="{DynamicResource arrow_up_regular}"
+                          Foreground="{DynamicResource PrimaryColor}"
+                          Width="18"
+                          Height="18" />
+              </Button>
+              <TextBox Grid.Column="1"
+                       Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       Watermark="{x:Static assets:Resources.FileSystem_SearchPlaceholder}" />
+
+              <StackPanel Grid.Column="2"
+                          Orientation="Horizontal"
+                          Spacing="8"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center">
+                <StackPanel x:Name="InlineActionButtons"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                  <cava:ThemeButton Click="UploadButton_OnClick"
+                                    IsEnabled="{Binding CanUpload}"
+                                    Variant="Outlined"
+                                    Content="{x:Static assets:Resources.FileSystem_UploadButtonText}" />
+                  <cava:ThemeButton Click="DownloadButton_OnClick"
+                                    IsEnabled="{Binding CanDownload}"
+                                    Variant="Outlined"
+                                    Content="{x:Static assets:Resources.FileSystem_DownloadButtonText}" />
+                  <cava:ThemeButton Click="DeleteButton_OnClick"
+                                    IsEnabled="{Binding CanDelete}"
+                                    Variant="Outlined"
+                                    Color="Error"
+                                    Content="{x:Static assets:Resources.FileSystem_DeleteButtonText}" />
+                  <cava:ThemeButton Click="NewFolderButton_OnClick"
+                                    IsEnabled="{Binding CanCreateFolder}"
+                                    Variant="Outlined"
+                                    Content="{x:Static assets:Resources.FileSystem_NewFolderButtonText}" />
+                </StackPanel>
+
+                <cava:IconButton Click="RefreshButton_OnClick"
+                                 Variant="Text"
+                                 Color="Primary"
+                                 Icon="{DynamicResource arrow_sync_regular}"
+                                 ToolTip.Tip="{x:Static assets:Resources.Refresh}" />
+
+                <cava:IconButton x:Name="OverflowActionsButton"
+                                 IsVisible="False"
+                                 Variant="Text"
+                                 Color="Default"
+                                 Icon="{DynamicResource more_vertical_regular}"
+                                 ToolTip.Tip="More actions">
+                  <cava:IconButton.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                      <Border MinWidth="180"
+                              Padding="8">
+                        <StackPanel Spacing="8">
+                          <Button Click="UploadButton_OnClick"
+                                  IsEnabled="{Binding CanUpload}"
+                                  Content="{x:Static assets:Resources.FileSystem_UploadButtonText}" />
+                          <Button Click="DownloadButton_OnClick"
+                                  IsEnabled="{Binding CanDownload}"
+                                  Content="{x:Static assets:Resources.FileSystem_DownloadButtonText}" />
+                          <Button Click="DeleteButton_OnClick"
+                                  IsEnabled="{Binding CanDelete}"
+                                  Content="{x:Static assets:Resources.FileSystem_DeleteButtonText}" />
+                          <Button Click="NewFolderButton_OnClick"
+                                  IsEnabled="{Binding CanCreateFolder}"
+                                  Content="{x:Static assets:Resources.FileSystem_NewFolderButtonText}" />
+                        </StackPanel>
+                      </Border>
+                    </Flyout>
+                  </cava:IconButton.Flyout>
+                </cava:IconButton>
+              </StackPanel>
+            </Grid>
+          </Grid>
+
+          <Grid Grid.Row="1">
+            <dataGrid:DataGrid x:Name="DirectoryContentsGrid"
+                               IsReadOnly="False"
+                               AutoGenerateColumns="False"
+                               SelectionMode="Extended"
+                               GridLinesVisibility="Horizontal"
+                               HeadersVisibility="Column"
+                               ItemsSource="{Binding DirectoryContents}"
+                               Sorting="DirectoryContentsGrid_OnSorting"
+                               Tapped="DirectoryContentsGrid_OnTapped">
+              <dataGrid:DataGrid.Columns>
+                <dataGrid:DataGridTemplateColumn Width="55"
+                                                 CanUserSort="False"
+                                                 Header="">
+                  <dataGrid:DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="vm:FileSystemEntryItemViewModel">
+                      <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                    </DataTemplate>
+                  </dataGrid:DataGridTemplateColumn.CellTemplate>
+                </dataGrid:DataGridTemplateColumn>
+
+                <dataGrid:DataGridTemplateColumn Width="42"
+                                                 CanUserSort="False"
+                                                 Header="">
+                  <dataGrid:DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="vm:FileSystemEntryItemViewModel">
+                      <Grid>
+                        <PathIcon HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Width="16"
+                                  Height="16"
+                                  Data="{DynamicResource folder_regular}"
+                                  IsVisible="{Binding IsDirectory}"
+                                  Foreground="{DynamicResource PrimaryColor}" />
+                        <PathIcon HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Width="16"
+                                  Height="16"
+                                  Data="{DynamicResource document_regular}"
+                                  IsVisible="{Binding IsFile}"
+                                  Foreground="{DynamicResource TextSecondaryBrush}" />
+                      </Grid>
+                    </DataTemplate>
+                  </dataGrid:DataGridTemplateColumn.CellTemplate>
+                </dataGrid:DataGridTemplateColumn>
+
+                <dataGrid:DataGridTextColumn Header="{x:Static assets:Resources.FileSystem_NameColumnHeader}"
+                                             SortMemberPath="Name"
+                                             Binding="{Binding Name}"
+                                             Width="3*" />
+                <dataGrid:DataGridTextColumn Header="{x:Static assets:Resources.FileSystem_TypeColumnHeader}"
+                                             CanUserSort="False"
+                                             Binding="{Binding EntryType}"
+                                             Width="*" />
+                <dataGrid:DataGridTextColumn Header="{x:Static assets:Resources.FileSystem_SizeColumnHeader}"
+                                             SortMemberPath="Size"
+                                             Binding="{Binding FormattedSize}"
+                                             Width="*" />
+                <dataGrid:DataGridTextColumn Header="{x:Static assets:Resources.FileSystem_ModifiedColumnHeader}"
+                                             SortMemberPath="LastModified"
+                                             Binding="{Binding LastModified}"
+                                             Width="2*" />
+              </dataGrid:DataGrid.Columns>
+            </dataGrid:DataGrid>
+
+            <Grid IsVisible="{Binding IsLoadingContents}"
+                  Classes="DialogOverlay">
+              <Border Classes="Card"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      MinWidth="260"
+                      MaxWidth="320"
+                      Padding="20">
+                <StackPanel Spacing="12">
+                  <TextBlock HorizontalAlignment="Center"
+                             FontWeight="SemiBold"
+                             Text="{x:Static assets:Resources.FileSystem_LoadingDirectoryContents}" />
+                  <ProgressBar Width="180"
+                               HorizontalAlignment="Center"
+                               IsIndeterminate="True" />
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <TextBlock IsVisible="{Binding ShowSelectDirectoryMessage}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Text="{x:Static assets:Resources.FileSystem_SelectDirectoryPrompt}" />
+
+            <Grid Grid.RowSpan="2"
+                  IsVisible="{Binding IsDownloadInProgress}"
+                  Classes="DialogOverlay">
+              <Border Classes="Card"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      MinWidth="300"
+                      MaxWidth="380"
+                      Padding="20">
+                <StackPanel Spacing="12">
+                  <TextBlock HorizontalAlignment="Center"
+                             TextAlignment="Center"
+                             FontWeight="SemiBold"
+                             Text="{Binding DownloadProgressTitle}" />
+                  <TextBlock HorizontalAlignment="Center"
+                             TextAlignment="Center"
+                             TextWrapping="Wrap"
+                             Text="{Binding DownloadProgressStatusText}" />
+                  <ProgressBar Minimum="0"
+                               Maximum="100"
+                               Height="10"
+                               IsIndeterminate="{Binding IsDownloadProgressIndeterminate}"
+                               Value="{Binding DownloadProgressPercent}" />
+                  <TextBlock HorizontalAlignment="Center"
+                             TextAlignment="Center"
+                             Text="{Binding DownloadProgressPercentText}" />
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <Grid Grid.RowSpan="2"
+                  IsVisible="{Binding IsUploadInProgress}"
+                  Classes="DialogOverlay">
+              <Border Classes="Card"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      MinWidth="300"
+                      MaxWidth="380"
+                      Padding="20">
+                <StackPanel Spacing="12">
+                  <TextBlock HorizontalAlignment="Center"
+                             TextAlignment="Center"
+                             FontWeight="SemiBold"
+                             Text="{Binding UploadProgressTitle}" />
+                  <TextBlock HorizontalAlignment="Center"
+                             TextAlignment="Center"
+                             TextWrapping="Wrap"
+                             Text="{Binding UploadProgressStatusText}" />
+                  <ProgressBar Minimum="0"
+                               Maximum="100"
+                               Height="10"
+                               IsIndeterminate="{Binding IsUploadProgressIndeterminate}"
+                               Value="{Binding UploadProgressPercent}" />
+                  <TextBlock HorizontalAlignment="Center"
+                             TextAlignment="Center"
+                             Text="{Binding UploadProgressPercentText}" />
+                </StackPanel>
+              </Border>
+            </Grid>
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

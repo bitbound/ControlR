@@ -27,10 +27,13 @@ internal class Navigator(
           await _navigationProvider.Clear();
           break;
         case ViewerPage.RemoteControl:
-          await _navigationProvider.NavigateTo<IRemoteControlViewModel>();
+          await _navigationProvider.NavigateTo<IRemoteControlViewModel>(page);
+          break;
+        case ViewerPage.FileSystem:
+          await _navigationProvider.NavigateTo<IFileSystemViewModel>(page);
           break;
         case ViewerPage.Terminal:
-          await _navigationProvider.NavigateTo<ITerminalViewModel>();
+          await _navigationProvider.NavigateTo<ITerminalViewModel>(page);
           break;
         default:
           return Result.Fail($"Unsupported page: {page}.");

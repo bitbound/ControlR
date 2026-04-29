@@ -3,9 +3,9 @@ using System.Globalization;
 using System.Net.WebSockets;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using ControlR.ApiClient;
 using ControlR.Libraries.Avalonia.Controls.Dialogs;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Viewer.Avalonia.ViewModels.Dialogs;
 using ControlR.Viewer.Avalonia.Views.Dialogs;
 using ControlR.Libraries.Messenger.Extensions;
@@ -32,6 +32,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
 {
   private const uint CommandTimeoutSeconds = 30;
 
+  private readonly IControlrApi _controlrApi;
   private readonly IDeviceState _deviceState;
   private readonly IDialogProvider _dialogProvider;
   private readonly IHubConnection<IViewerHub> _hubConnection;
@@ -61,6 +62,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
   private string? _loadingMessage = Resources.ConnectionStatus_Connecting;
 
   public RemoteControlViewModel(
+    IControlrApi controlrApi,
     TimeProvider timeProvider,
     IDeviceState deviceState,
     IViewerRemoteControlStream streamingClient,
@@ -74,6 +76,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     ILogger<RemoteControlViewModel> logger,
     IRemoteDisplayViewModel remoteDisplayViewModel)
   {
+    _controlrApi = controlrApi;
     _deviceState = deviceState;
     _dialogProvider = dialogProvider;
     _hubConnection = hubConnection;
@@ -338,6 +341,26 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     await GetDeviceDesktopSessions(quiet: true);
   }
 
+  private async Task InitializeCaptureSettings()
+  {
+    var result = await _controlrApi.UserPreferences.GetUserPreferences();
+    if (!result.IsSuccess)
+    {
+      return;
+    }
+
+    var preferences = result.Value;
+    _remoteControlState.CaptureCursor = preferences.CaptureCursor;
+    _remoteControlState.IsAutoQualityEnabled = preferences.IsAutoQualityEnabled;
+    _remoteControlState.ManualQuality = preferences.ManualQuality;
+    _remoteControlState.AutoQualityLowerThresholdMbps = preferences.AutoQualityLowerThresholdMbps;
+    _remoteControlState.AutoQualityMaximum = preferences.AutoQualityMaximum;
+    _remoteControlState.AutoQualityMinimum = preferences.AutoQualityMinimum;
+    _remoteControlState.AutoQualityUpperThresholdMbps = preferences.AutoQualityUpperThresholdMbps;
+    _remoteControlState.IsMaxBandwidthEnabled = preferences.IsMaxBandwidthEnabled;
+    _remoteControlState.MaxBandwidthMbps = preferences.MaxBandwidthMbps;
+  }
+
   private async Task<bool> Reconnect()
   {
     try
@@ -492,6 +515,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       });
 
       _remoteControlState.CurrentSession = session;
+      await InitializeCaptureSettings();
       await RemoteDisplayViewModel.SendCaptureSettings();
       OnPropertyChanged(nameof(CurrentState));
       OnPropertyChanged(nameof(IsRemoteDisplayVisible));
