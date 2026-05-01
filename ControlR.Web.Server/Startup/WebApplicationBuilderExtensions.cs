@@ -247,6 +247,7 @@ public static class WebApplicationBuilderExtensions
 
     builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
     builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequirementHandler>();
+    builder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
 
     // Add Identity services.
     builder.Services

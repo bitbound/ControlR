@@ -15,6 +15,7 @@ public static class UserPreferenceDefinitions
   public const double DefaultAutoQualityUpperThresholdMbps = 15d;
   public const bool DefaultCaptureCursor = false;
   public const bool DefaultHideOfflineDevices = true;
+  public const bool DefaultIncludeUntaggedDevices = false;
   public const bool DefaultIsAutoQualityEnabled = false;
   public const bool DefaultIsMaxBandwidthEnabled = false;
   public const int DefaultManualQuality = 75;
@@ -34,6 +35,8 @@ public static class UserPreferenceDefinitions
     SettingDefinition.CreateBoolean(UserPreferenceNames.CaptureCursor, DefaultCaptureCursor);
   public static SettingDefinition<bool> HideOfflineDevices { get; } =
     SettingDefinition.CreateBoolean(UserPreferenceNames.HideOfflineDevices, DefaultHideOfflineDevices);
+  public static SettingDefinition<bool> IncludeUntaggedDevices { get; } =
+    SettingDefinition.CreateBoolean(UserPreferenceNames.IncludeUntaggedDevices, DefaultIncludeUntaggedDevices);
   public static SettingDefinition<bool> IsAutoQualityEnabled { get; } =
     SettingDefinition.CreateBoolean(UserPreferenceNames.IsAutoQualityEnabled, DefaultIsAutoQualityEnabled);
   public static SettingDefinition<bool> IsMaxBandwidthEnabled { get; } =

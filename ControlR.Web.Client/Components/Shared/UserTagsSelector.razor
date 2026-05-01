@@ -5,8 +5,8 @@
 
 <MudSelect T="string" MultiSelection="true" QuickSearchInterval="@(TimeSpan.FromMilliseconds(50))" Text="@GetText()"
            MultiSelectionTextFunc="@GetTagsMultiSelectText" AdornmentIcon="@Icons.Material.Filled.Tag" Adornment="Adornment.End"
-           SelectedValues="_selectedTagNames" SelectedValuesChanged="HandleSelectedTagsChanged" SelectAll="true"
-           FullWidth="false" SelectAllText="All Tags" Immediate="true" Class="ms-3">
+           SelectedValues="_selectedTagNames" SelectedValuesChanged="HandleSelectedTagsChanged" SelectAll="true" FullWidth="true"
+           SelectAllText="All Tags" Immediate="true">
   @foreach (var tag in UserTagStore.Items)
   {
     <MudSelectItem Value="@tag.Name">
@@ -24,12 +24,6 @@
   [Parameter]
   public EventCallback<ImmutableArray<TagViewModel>> SelectedTagsChanged { get; set; }
 
-  [Parameter]
-  public bool NoneSelected { get; set; }
-
-  [Parameter]
-  public EventCallback<bool> NoneSelectedChanged { get; set; }
-
 
   protected override async Task OnInitializedAsync()
   {
@@ -37,11 +31,14 @@
 
     if (UserTagStore.Items.Count == 0)
     {
-      await UserTagStore.Refresh(); 
+      await UserTagStore.Refresh();
     }
+  }
 
-    var currentTagNames = UserTagStore.Items.Select(x => x.Name).ToArray();
-    await SetSelectedTags(currentTagNames);
+  protected override void OnParametersSet()
+  {
+    base.OnParametersSet();
+    SyncSelectedTagNames();
   }
 
   private string GetTagsMultiSelectText(IReadOnlyList<string> tags)
@@ -64,7 +61,7 @@
   {
     if (_selectedTagNames.Count == 0)
     {
-      return "Showing items with no tags";
+      return "No tag filter";
     }
 
     if (_selectedTagNames.Count == UserTagStore.Items.Count)
@@ -84,19 +81,16 @@
   private async Task SetSelectedTags(IEnumerable<string>? tags)
   {
     _selectedTagNames = tags?.ToHashSet() ?? [];
-    if (_selectedTagNames.Count == 0)
-    {
-      SelectedTags = [];
-      NoneSelected = true;
-    }
-    else
-    {
-      SelectedTags = UserTagStore.Items
-        .Where(x => _selectedTagNames.Contains(x.Name))
-        .ToImmutableArray();
-      NoneSelected = false;
-    }
-    await NoneSelectedChanged.InvokeAsync(NoneSelected);
+
+    SelectedTags = UserTagStore.Items
+      .Where(x => _selectedTagNames.Contains(x.Name))
+      .ToImmutableArray();
+
     await SelectedTagsChanged.InvokeAsync(SelectedTags);
+  }
+
+  private void SyncSelectedTagNames()
+  {
+    _selectedTagNames = SelectedTags.Select(x => x.Name).ToHashSet();
   }
 }

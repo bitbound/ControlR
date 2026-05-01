@@ -142,10 +142,12 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
 
     // Assert
     Assert.NotNull(result1.Value);
+    Assert.NotNull(result1.Value.FilterCounts);
     Assert.NotNull(result1.Value.Items);
     Assert.Single(result1.Value.Items); // First call should have one device
 
     Assert.NotNull(result3.Value);
+    Assert.NotNull(result3.Value.FilterCounts);
     Assert.NotNull(result3.Value.Items);
     Assert.Equal(2, result3.Value.Items.Count); // After cache invalidation we should have two devices
     Assert.Contains(result3.Value.Items, d => d.Id == newDeviceId);

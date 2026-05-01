@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
@@ -8,8 +9,11 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.DevicesEndpoint)]
 [ApiController]
 [Authorize]
-public class DevicesController : ControllerBase
+public class DevicesController(
+  IDeviceAccessScopeResolver deviceAccessScopeResolver) : ControllerBase
 {
+  private readonly IDeviceAccessScopeResolver _deviceAccessScopeResolver = deviceAccessScopeResolver;
+
   [HttpPost]
   [AllowAnonymous]
   public async Task<ActionResult<DeviceResponseDto>> CreateDevice(
@@ -109,6 +113,7 @@ public class DevicesController : ControllerBase
       return NotFound();
     }
 
+    // Single-device operations use the resource policy directly.
     var authResult =
       await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
     if (!authResult.Succeeded)
@@ -124,21 +129,26 @@ public class DevicesController : ControllerBase
   [HttpGet]
   public async IAsyncEnumerable<DeviceResponseDto> Get(
     [FromServices] AppDb appDb,
-    [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] IAuthorizationService authorizationService)
+    [FromServices] IAgentVersionProvider agentVersionProvider)
   {
-    var deviceStream = appDb.Devices.AsAsyncEnumerable();
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      yield break;
+    }
+
+    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+
+    var deviceStream = appDb.Devices
+      .ApplyAccessScope(tenantId, accessScope)
+      .Include(x => x.Tags)
+      .AsSplitQuery()
+      .OrderBy(x => x.CreatedAt)
+      .AsAsyncEnumerable();
 
     await foreach (var device in deviceStream)
     {
-      var authResult =
-        await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
-
-      if (authResult.Succeeded)
-      {
-        var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-        yield return device.ToDto(isOutdated);
-      }
+      var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+      yield return device.ToDto(isOutdated);
     }
   }
 
@@ -175,71 +185,116 @@ public class DevicesController : ControllerBase
     [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] ILogger<DevicesController> logger)
   {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("Tenant ID not found.");
+    }
+
     var isRelationalDatabase = appDb.Database.IsRelational();
-    // Start with all devices
-    var anyDevices = await appDb.Devices.AnyAsync();
-    var query = appDb.Devices
-      .Include(x => x.Tags)
-      .AsSplitQuery()
-      .OrderBy(x => x.CreatedAt)
+    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+
+    var authorizedQuery = appDb.Devices
+      .ApplyAccessScope(tenantId, accessScope)
       .AsQueryable();
 
-    // Apply filtering
-    query = query
+    var anyDevices = await authorizedQuery.AnyAsync();
+
+    var filteredQuery = authorizedQuery
       .FilterBySearchText(requestDto.SearchText, isRelationalDatabase)
       .FilterByOnlineOffline(requestDto.HideOfflineDevices)
       .FilterByColumnFilters(requestDto.FilterDefinitions, isRelationalDatabase, logger);
 
-    query = await query.FilterByTagIds(requestDto.TagIds, requestDto.HideDevicesWithTags, appDb);
+    var hiddenUntaggedDevices = requestDto.IncludeUntaggedDevices
+      ? 0
+      : await filteredQuery.CountAsync(x => !x.Tags!.Any());
 
-    if (query is null)
-    {
-      // No matching devices found
-      return new DeviceSearchResponseDto
-      {
-        Items = [],
-        TotalItems = 0,
-        AnyDevicesForUser = anyDevices
-      };
-    }
+    var scopedQuery = filteredQuery.FilterByTagIds(requestDto.TagIds, requestDto.IncludeUntaggedDevices);
+    var filterCounts = await GetFilterCounts(scopedQuery);
+    var totalCount = await scopedQuery.CountAsync();
 
-    // Apply sorting
-    query = query.ApplySorting(requestDto.SortDefinitions, logger);
-
-    // Get the total count of matching items (before pagination)
-    var totalCount = await query.CountAsync();
-
-    // Get the devices for the current page
-    var devices = await query
+    var devices = await scopedQuery
+      .ApplySorting(requestDto.SortDefinitions)
+      .Include(x => x.Tags)
+      .AsSplitQuery()
       .Skip(requestDto.Page * requestDto.PageSize)
       .Take(requestDto.PageSize)
       .ToListAsync();
 
-    // Filter for authorized devices
-    var authorizedDevices = new List<DeviceResponseDto>();
-
+    var pagedDtos = new List<DeviceResponseDto>(devices.Count);
     foreach (var device in devices)
     {
-      var authResult = await authorizationService.AuthorizeAsync(
-          User,
-          device,
-          DeviceAccessByDeviceResourcePolicy.PolicyName);
-
-      if (authResult.Succeeded)
-      {
-        var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-        authorizedDevices.Add(device.ToDto(isOutdated));
-      }
+      var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+      pagedDtos.Add(device.ToDto(isOutdated));
     }
 
     var response = new DeviceSearchResponseDto
     {
-      Items = authorizedDevices,
-      TotalItems = totalCount,
-      AnyDevicesForUser = anyDevices
+      AnyDevicesForUser = anyDevices,
+      FilterCounts = filterCounts,
+      HiddenUntaggedDevices = hiddenUntaggedDevices,
+      Items = pagedDtos,
+      TotalItems = totalCount
     };
 
     return response;
+  }
+
+  [HttpPatch("{deviceId:guid}/alias")]
+  [Authorize]
+  public async Task<ActionResult<DeviceResponseDto>> UpdateDeviceAlias(
+    [FromRoute] Guid deviceId,
+    [FromBody] UpdateDeviceAliasRequestDto requestDto,
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IAgentVersionProvider agentVersionProvider,
+    [FromServices] ILogger<DevicesController> logger)
+  {
+    if (deviceId != requestDto.DeviceId)
+    {
+      return BadRequest("Device ID mismatch.");
+    }
+
+    if (requestDto.Alias is not null && requestDto.Alias.Length > 100)
+    {
+      return BadRequest("Alias must be 100 characters or fewer.");
+    }
+
+    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+    if (device is null)
+    {
+      logger.LogWarning("Device {DeviceId} not found for alias update.", deviceId);
+      return NotFound();
+    }
+
+    var authResult =
+      await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+    if (!authResult.Succeeded)
+    {
+      logger.LogWarning("User {UserName} denied access to update alias for device {DeviceId}.", User.Identity?.Name, deviceId);
+      return Forbid();
+    }
+
+    device.Alias = requestDto.Alias ?? string.Empty;
+    await appDb.SaveChangesAsync();
+
+    var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+    return device.ToDto(isOutdated);
+  }
+
+  private static async Task<DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)
+  {
+    return await query
+      .Select(x => new { IsTagged = x.Tags!.Any(), x.IsOnline })
+      .GroupBy(_ => 1)
+      .Select(group => new DeviceSearchFilterCountsDto
+      {
+        TaggedDevices = group.Count(x => x.IsTagged),
+        UntaggedDevices = group.Count(x => !x.IsTagged),
+        OnlineDevices = group.Count(x => x.IsOnline),
+        OfflineDevices = group.Count(x => !x.IsOnline)
+      })
+      .FirstOrDefaultAsync()
+      ?? new DeviceSearchFilterCountsDto();
   }
 
   private static async Task<bool> GetIsOutdated(Device entity, IAgentVersionProvider agentVersionProvider)

@@ -7,8 +7,7 @@ public static class DeviceQueryExtensions
 {
   public static IQueryable<Device> ApplySorting(
     this IQueryable<Device> query,
-    List<DeviceColumnSort>? sortDefinitions,
-    ILogger logger)
+    List<DeviceColumnSort>? sortDefinitions)
   {
     if (sortDefinitions is not { Count: > 0 })
     {
@@ -136,34 +135,21 @@ public static class DeviceQueryExtensions
       string.Join("", d.CurrentUsers).Contains(searchText, StringComparison.OrdinalIgnoreCase));
   }
 
-  public static async Task<IQueryable<Device>?> FilterByTagIds(
+  public static IQueryable<Device> FilterByTagIds(
     this IQueryable<Device> query,
     List<Guid>? tagIds,
-    bool hideDevicesWithTags,
-    AppDb appDb)
+    bool includeUntaggedDevices)
   {
-    if (hideDevicesWithTags)
+    if (tagIds is not { Count: > 0 })
     {
-      return query.Where(d => !d.Tags!.Any());
+      return includeUntaggedDevices
+        ? query.Where(d => !d.Tags!.Any())
+        : query;
     }
 
-    if (tagIds is not { Count: > 0 } tags)
-    {
-      return query;
-    }
-
-    // Find devices through the many-to-many relationship
-    var deviceIds = await appDb.Devices
-        .Where(d => d.Tags!.Any(t => tagIds.Contains(t.Id)))
-        .Select(d => d.Id)
-        .ToListAsync();
-
-    if (deviceIds.Count > 0)
-    {
-      return query.Where(d => deviceIds.Contains(d.Id));
-    }
-
-    return null;
+    return includeUntaggedDevices
+      ? query.Where(d => d.Tags!.Any(t => tagIds.Contains(t.Id)) || !d.Tags!.Any())
+      : query.Where(d => d.Tags!.Any(t => tagIds.Contains(t.Id)));
   }
 
   private static IOrderedQueryable<Device> ApplySort<TKey>(

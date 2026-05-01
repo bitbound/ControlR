@@ -75,16 +75,61 @@
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
           Alias:
         </MudText>
-        <MudText Typo="Typo.body1">
-          @Device.Alias
-        </MudText>
+        <div class="d-flex align-center gap-2">
+          @if (_isEditingAlias)
+          {
+            <MudTextField T="string"
+                          @bind-Value="_aliasValue"
+                          Immediate
+                          Variant="Variant.Text"
+                          MaxLength="100"
+                          Disabled="@_isSavingAlias"
+                          Validation="@((string x) => ValidateAlias(x))"
+                          @onkeydown="HandleAliasKeyDown"
+                          Class="flex-grow-1" />
+            <MudTooltip Text="Cancel">
+              <MudIconButton Icon="@Icons.Material.Filled.Close"
+                             Color="Color.Default"
+                             Size="Size.Small"
+                             Disabled="@_isSavingAlias"
+                             OnClick="CancelEditAlias" />
+            </MudTooltip>
+            <MudTooltip Text="Save">
+              <MudIconButton Icon="@Icons.Material.Filled.Check"
+                             Color="Color.Primary"
+                             Size="Size.Small"
+                             Disabled="@_isSavingAlias"
+                             OnClick="SaveAlias" />
+            </MudTooltip>
+          }
+          else
+          {
+            <MudText Typo="Typo.body1" Class="flex-grow-1 align-self-center">
+              @_aliasValue
+            </MudText>
+            <MudTooltip Text="Edit Alias">
+              <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                             Color="Color.Default"
+                             Size="Size.Small"
+                             OnClick="StartEditAlias" />
+            </MudTooltip>
+          }
+        </div>
 
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
           Id:
         </MudText>
-        <MudText Typo="Typo.body1">
-          @Device.Id
-        </MudText>
+        <div class="d-flex align-center gap-2">
+          <MudText Typo="Typo.body1">
+            @Device.Id
+          </MudText>
+          <MudTooltip Text="Copy ID">
+            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                           Color="Color.Default"
+                           Size="Size.Small"
+                           OnClick="CopyDeviceId" />
+          </MudTooltip>
+        </div>
 
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
           Agent Version:
@@ -271,24 +316,3 @@
   }
 </MudGrid>
 
-@code {
-  [Parameter]
-  [EditorRequired]
-  public required DeviceResponseDto Device { get; init; }
-
-  [CascadingParameter]
-  public required Palette Palette { get; init; }
-
-  private static List<ChartSeries<double>> GetDriveChartSeries(Drive drive)
-  {
-    var usedSpace = drive.TotalSize - drive.FreeSpace;
-    var freeSpace = drive.FreeSpace;
-    return new List<ChartSeries<double>>
-    {
-      new ChartSeries<double>
-      {
-        Data = new List<double> { usedSpace, freeSpace }
-      }
-    };
-  }
-}

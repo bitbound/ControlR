@@ -368,7 +368,7 @@ FodyWeavers.xsd
 
 # ControlR-specific ignores
 .plans/*
-.kilo/plans/*
+.kilo/*
 /ControlR.Web.Server/wwwroot/downloads/**
 /ControlR.Web.Server/appsettings.Development.json
 .DS_Store

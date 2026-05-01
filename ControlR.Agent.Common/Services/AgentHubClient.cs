@@ -934,10 +934,12 @@ internal class AgentHubClient(
 
   private async Task SendFileStream(Guid streamId, string fileSystemPath, bool isTempFile)
   {
-    _logger.LogInformation("Starting file stream. Stream ID: {StreamId}, File: {FilePath}", streamId, fileSystemPath);
+    using var logScope = _logger.BeginScope("FileStream: {FilePath}, StreamId: {StreamId}", fileSystemPath, streamId);
+    _logger.LogInformation("Starting file stream. File: {FilePath}.", fileSystemPath);
     using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
     var fileStream = _fileSystem.OpenFileStream(fileSystemPath, FileMode.Open,
       FileAccess.Read, FileShare.ReadWrite);
+    var fileName = Path.GetFileName(fileSystemPath);
 
     await using (fileStream)
     {
@@ -958,7 +960,7 @@ internal class AgentHubClient(
         catch (Exception ex)
         {
           channel.Writer.TryComplete(ex);
-          _logger.LogError(ex, "Error writing file stream chunks for stream ID: {StreamId}", streamId);
+          _logger.LogError(ex, "Error writing file stream chunks for file '{FileName}'.", fileName);
         }
       }, cts.Token);
 
@@ -971,11 +973,11 @@ internal class AgentHubClient(
 
         await writeTask;
 
-        _logger.LogInformation("File stream sent successfully for stream ID: {StreamId}", streamId);
+        _logger.LogInformation("File stream sent successfully for file '{FileName}'.", fileName);
       }
       catch (Exception ex)
       {
-        _logger.LogError(ex, "Error while sending file stream for stream ID: {StreamId}", streamId);
+        _logger.LogError(ex, "Error while sending file stream for file '{FileName}'.", fileName);
         await cts.CancelAsync();
       }
     }

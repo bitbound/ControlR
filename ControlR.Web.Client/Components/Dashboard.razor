@@ -7,42 +7,75 @@
     </MudAlert>
   }
 
-  <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
-    Devices
-  </MudText>
+  <div class="dashboard-header">
+    <MudText Typo="Typo.h4" Color="Color.Primary" Class="dashboard-title">
+      Devices
+    </MudText>
 
-  <div>
-    <div style="max-width: 400px">
-      <UserTagsSelector @bind-SelectedTags:get="_selectedTags" 
-                        @bind-SelectedTags:set="@OnSelectedTagsChanged"
-                        @bind-NoneSelected="_hideDevicesWithTags" />
-    </div>
-    <div>
-      <MudCheckBox T="bool" Value="_hideOfflineDevices" ValueChanged="HideOfflineDevicesChanged"
-        Label="Hide Offline Devices" Disabled="ShouldBypassHideOfflineDevices" Class="d-inline-block me-4" />
+    <div class="dashboard-header-actions">
+      <div class="dashboard-search-container">
+        <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearch" Placeholder="Search devices" Clearable
+          Adornment="Adornment.Start" Immediate DebounceInterval="500" AdornmentIcon="@Icons.Material.Filled.Search"
+          IconSize="Size.Medium" Class="dashboard-search" />
+      </div>
 
-      <MudCheckBox T="bool" Value="_openDeviceInNewTab" ValueChanged="OpenDeviceInNewTabChanged"
-        Label="Open in New Tab" Class="d-inline-block" />
+      <MudTooltip Text="Refresh">
+        <MudIconButton Variant="Variant.Outlined" Color="Color.Info"
+          Icon="@(Icons.Material.Filled.Refresh)" OnClick="HandleRefreshClicked" />
+      </MudTooltip>
     </div>
   </div>
+
+  <MudPaper Elevation="0" Class="pa-3 mb-3">
+    <div class="dashboard-toolbar-main">
+      <div class="dashboard-scope-controls">
+        <div class="dashboard-tags-selector">
+          <UserTagsSelector @bind-SelectedTags:get="_selectedTags"
+                            @bind-SelectedTags:set="@OnSelectedTagsChanged" />
+        </div>
+
+        <div class="dashboard-toolbar-options">
+          <MudCheckBox T="bool"
+                       Value="_includeUntaggedDevices"
+                       ValueChanged="IncludeUntaggedDevicesChanged"
+                       Label="Include untagged"
+                       Class="dashboard-checkbox" />
+
+          <MudCheckBox T="bool"
+                       Value="_hideOfflineDevices"
+                       ValueChanged="HideOfflineDevicesChanged"
+                       Label="Hide offline"
+                       Disabled="ShouldBypassHideOfflineDevices"
+                       Class="dashboard-checkbox" />
+
+          <MudCheckBox T="bool"
+                       Value="_openDeviceInNewTab"
+                       ValueChanged="OpenDeviceInNewTabChanged"
+                       Label="Open in new tab"
+                       Class="dashboard-checkbox" />
+        </div>
+      </div>
+    </div>
+
+    @if (!_loading && !HasScopeSelection)
+    {
+      <MudAlert Severity="Severity.Info" Dense="true" Class="dashboard-inline-alert mt-3">
+        Select at least one tag or include untagged devices.
+      </MudAlert>
+    }
+
+    @if (!_loading && HasHiddenUntaggedDevices)
+    {
+      <MudAlert Severity="Severity.Warning" Dense="true" Class="dashboard-inline-alert mt-3"
+        Icon="@(Icons.Material.Filled.LabelOff)">
+        @HiddenUntaggedAlertText
+      </MudAlert>
+    }
+  </MudPaper>
 
   <MudDataGrid T="DeviceViewModel" @ref="_dataGrid" ServerData="LoadServerData" @bind-RowsPerPage="_rowsPerPage"
     SortMode="SortMode.Multiple" Loading="_loading" Hideable="true" SortDefinitions="_sortDefinitions"
     ShowColumnOptions="true" Filterable="true">
-
-    <ToolBarContent>
-      <MudSpacer />
-
-      <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearch" Placeholder="Search" Clearable
-        Adornment="Adornment.Start" Immediate DebounceInterval="500" AdornmentIcon="@Icons.Material.Filled.Search"
-        IconSize="Size.Medium" Class="mt-0">
-      </MudTextField>
-
-      <MudTooltip Text="Refresh">
-        <MudIconButton Variant="Variant.Outlined" Color="Color.Info" Class="ml-4"
-          Icon="@(Icons.Material.Filled.Refresh)" OnClick="HandleRefreshClicked" />
-      </MudTooltip>
-    </ToolBarContent>
 
     <Columns>
       <TemplateColumn T="DeviceViewModel" Sortable="false" Filterable="false" ShowColumnOptions="false" Title="Actions">
@@ -106,16 +139,14 @@
 
       <PropertyColumn Title="Name" Property="x => x.Dto.Name" Sortable="true" Filterable="true" StickyLeft="true">
         <CellTemplate>
-          @if (string.IsNullOrWhiteSpace(context.Item.Dto.Alias))
-          {
-            @(context.Item.Dto.Name)
-          }
-          else
-          {
-            @($"{context.Item.Dto.Name} ({context.Item.Dto.Alias})")
-          }
+          @context.Item.Dto.Name
         </CellTemplate>
+      </PropertyColumn>
 
+      <PropertyColumn Title="Alias" Property="x => x.Dto.Alias" Sortable="true" Filterable="true">
+        <CellTemplate>
+          @context.Item.Dto.Alias
+        </CellTemplate>
       </PropertyColumn>
 
       <PropertyColumn Property="@(x => x.Dto.IsOnline)" Sortable="true" Filterable="true" Title="Online">
@@ -143,6 +174,30 @@
           }
         </CellTemplate>
       </PropertyColumn>
+
+      <TemplateColumn T="DeviceViewModel" Sortable="false" Filterable="false" Title="Tags">
+        <CellTemplate>
+          @{
+            var tagCount = context.Item.Dto.TagIds?.Length ?? 0;
+          }
+
+          @if (tagCount == 0)
+          {
+            <MudTooltip Text="Untagged device">
+              <MudText Typo="Typo.body2" Color="Color.Warning">
+                <strong>0</strong>
+              </MudText>
+            </MudTooltip>
+          }
+          else
+          {
+            <MudTooltip Text="@($"{tagCount} tag{(tagCount == 1 ? string.Empty : "s")}")">
+              <MudText Typo="Typo.body2">@tagCount</MudText>
+            </MudTooltip>
+          }
+        </CellTemplate>
+      </TemplateColumn>
+
       <PropertyColumn Property="@(x => x.Dto.Platform)" Sortable="true" Filterable="true" Title="Platform">
         <CellTemplate>
           @switch (context.Item.Dto.Platform)
@@ -206,7 +261,17 @@
     </ChildRowContent>
 
     <PagerContent>
-      <MudDataGridPager T="DeviceViewModel" />
+      <div class="d-flex flex-wrap justify-space-between align-center w-100 gap-2 ps-4">
+        <div class="d-flex flex-wrap align-center gap-2">
+          <MudText Typo="Typo.body2">Online: @_filterCounts.OnlineDevices</MudText>
+          <MudText Typo="Typo.body2">|</MudText>
+          <MudText Typo="Typo.body2">Offline: @_filterCounts.OfflineDevices</MudText>
+          <MudText Typo="Typo.body2">|</MudText>
+          <MudText Typo="Typo.body2">Total: @_totalFilteredDevices</MudText>
+        </div>
+
+        <MudDataGridPager T="DeviceViewModel" />
+      </div>
     </PagerContent>
   </MudDataGrid>
 </div>

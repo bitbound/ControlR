@@ -9,6 +9,7 @@ public sealed record UserPreferencesDto(
   double AutoQualityUpperThresholdMbps,
   bool CaptureCursor,
   bool HideOfflineDevices,
+  bool IncludeUntaggedDevices,
   bool IsAutoQualityEnabled,
   bool IsMaxBandwidthEnabled,
   KeyboardInputMode KeyboardInputMode,

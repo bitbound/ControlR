@@ -41,6 +41,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
     Assert.Equal(UserPreferenceDefinitions.DefaultAutoQualityUpperThresholdMbps, result.AutoQualityUpperThresholdMbps);
     Assert.Equal(UserPreferenceDefinitions.DefaultCaptureCursor, result.CaptureCursor);
     Assert.Equal(UserPreferenceDefinitions.DefaultHideOfflineDevices, result.HideOfflineDevices);
+    Assert.Equal(UserPreferenceDefinitions.DefaultIncludeUntaggedDevices, result.IncludeUntaggedDevices);
     Assert.Equal(UserPreferenceDefinitions.DefaultNotifyUserOnSessionStart, result.NotifyUserOnSessionStart);
     Assert.Equal(ThemeMode.Auto, result.ThemeMode);
     Assert.Equal(ViewMode.Fit, result.ViewMode);
@@ -125,6 +126,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         false,
         true,
         true,
+        true,
         KeyboardInputMode.Physical,
         70,
         20.5,
@@ -163,6 +165,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
           16.5,
           true,
           false,
+            true,
           true,
           true,
           KeyboardInputMode.Physical,
@@ -219,6 +222,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         false,
         true,
         true,
+        true,
         KeyboardInputMode.Physical,
         70,
         20.5,
@@ -237,6 +241,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
     Assert.Equal(16.5, result.Value.AutoQualityUpperThresholdMbps);
     Assert.True(result.Value.CaptureCursor);
     Assert.False(result.Value.HideOfflineDevices);
+    Assert.True(result.Value.IncludeUntaggedDevices);
     Assert.True(result.Value.IsAutoQualityEnabled);
     Assert.True(result.Value.IsMaxBandwidthEnabled);
     Assert.Equal(KeyboardInputMode.Physical, result.Value.KeyboardInputMode);

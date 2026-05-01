@@ -907,6 +907,66 @@
         }
       }
     },
+    "/api/devices/{deviceId}/alias": {
+      "patch": {
+        "tags": [
+          "Devices"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDeviceAliasRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDeviceAliasRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDeviceAliasRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/device-tags": {
       "post": {
         "tags": [
@@ -3422,6 +3482,31 @@
           }
         }
       },
+      "DeviceSearchFilterCountsDto": {
+        "type": "object",
+        "properties": {
+          "offlineDevices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "onlineDevices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "taggedDevices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
+          },
+          "untaggedDevices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "DeviceSearchRequestDto": {
         "type": "object",
         "properties": {
@@ -3434,10 +3519,10 @@
               "$ref": "#/components/schemas/DeviceColumnFilter"
             }
           },
-          "hideDevicesWithTags": {
+          "hideOfflineDevices": {
             "type": "boolean"
           },
-          "hideOfflineDevices": {
+          "includeUntaggedDevices": {
             "type": "boolean"
           },
           "page": {
@@ -3482,6 +3567,14 @@
         "properties": {
           "anyDevicesForUser": {
             "type": "boolean"
+          },
+          "filterCounts": {
+            "$ref": "#/components/schemas/DeviceSearchFilterCountsDto"
+          },
+          "hiddenUntaggedDevices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32"
           },
           "items": {
             "type": [
@@ -4226,6 +4319,25 @@
       "ThemeMode": {
         "type": "integer"
       },
+      "UpdateDeviceAliasRequestDto": {
+        "required": [
+          "deviceId",
+          "alias"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alias": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "UpdatePersonalAccessTokenRequestDto": {
         "required": [
           "name"
@@ -4286,6 +4398,7 @@
           "autoQualityUpperThresholdMbps",
           "captureCursor",
           "hideOfflineDevices",
+          "includeUntaggedDevices",
           "isAutoQualityEnabled",
           "isMaxBandwidthEnabled",
           "keyboardInputMode",
@@ -4323,6 +4436,9 @@
             "type": "boolean"
           },
           "hideOfflineDevices": {
+            "type": "boolean"
+          },
+          "includeUntaggedDevices": {
             "type": "boolean"
           },
           "isAutoQualityEnabled": {

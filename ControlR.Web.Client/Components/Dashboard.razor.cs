@@ -17,13 +17,16 @@ public partial class Dashboard : IDisposable
 
   private bool? _anyDevicesForUser;
   private MudDataGrid<DeviceViewModel>? _dataGrid;
-  private bool _hideDevicesWithTags;
+  private DeviceSearchFilterCountsDto _filterCounts = new();
+  private int _hiddenUntaggedDevices;
   private bool _hideOfflineDevices;
+  private bool _includeUntaggedDevices;
   private bool _loading = true;
   private bool _openDeviceInNewTab;
   private int _rowsPerPage = 25;
   private string? _searchText;
   private ImmutableArray<TagViewModel> _selectedTags = [];
+  private int _totalFilteredDevices;
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -48,6 +51,14 @@ public partial class Dashboard : IDisposable
   [Inject]
   public required IDeviceContentWindowStore WindowStore { get; init; }
 
+  private bool HasHiddenUntaggedDevices =>
+    !_includeUntaggedDevices && _hiddenUntaggedDevices > 0;
+  private bool HasScopeSelection =>
+    _selectedTags.Length > 0 || _includeUntaggedDevices;
+  private string HiddenUntaggedAlertText =>
+    _hiddenUntaggedDevices == 1
+      ? "1 untagged device is currently hidden by scope."
+      : $"{_hiddenUntaggedDevices} untagged devices are currently hidden by scope.";
   private bool ShouldBypassHideOfflineDevices =>
     !string.IsNullOrWhiteSpace(_searchText);
 
@@ -64,6 +75,22 @@ public partial class Dashboard : IDisposable
     var preferences = await UserPreferences.GetPreferences();
     _hideOfflineDevices = preferences.HideOfflineDevices;
     _openDeviceInNewTab = preferences.OpenDeviceInNewTab;
+
+    if (UserTagStore.Items.Count == 0)
+    {
+      await UserTagStore.Refresh();
+    }
+
+    if (UserTagStore.Items.Count == 0)
+    {
+      _selectedTags = [];
+      _includeUntaggedDevices = true;
+    }
+    else
+    {
+      _selectedTags = [.. UserTagStore.Items];
+      _includeUntaggedDevices = preferences.IncludeUntaggedDevices;
+    }
 
     _disposables.AddRange(
       Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage),
@@ -102,6 +129,13 @@ public partial class Dashboard : IDisposable
   {
     _hideOfflineDevices = isChecked;
     await UserPreferences.SetPreference(UserPreferenceNames.HideOfflineDevices, isChecked);
+    await ReloadGridData();
+  }
+
+  private async Task IncludeUntaggedDevicesChanged(bool isChecked)
+  {
+    _includeUntaggedDevices = isChecked;
+    await UserPreferences.SetPreference(UserPreferenceNames.IncludeUntaggedDevices, isChecked);
     await ReloadGridData();
   }
 
@@ -149,13 +183,27 @@ public partial class Dashboard : IDisposable
       await _componentLoadedSignal.Wait(cts.Token);
     }
 
+    if (!HasScopeSelection)
+    {
+      _filterCounts = new DeviceSearchFilterCountsDto();
+      _hiddenUntaggedDevices = 0;
+      _totalFilteredDevices = 0;
+      await InvokeAsync(StateHasChanged);
+
+      return new GridData<DeviceViewModel>
+      {
+        TotalItems = 0,
+        Items = []
+      };
+    }
+
     var tagIds = _selectedTags.Select(t => t.Id).ToList();
 
     var request = new DeviceSearchRequestDto
     {
       SearchText = _searchText,
       HideOfflineDevices = _hideOfflineDevices && !ShouldBypassHideOfflineDevices,
-      HideDevicesWithTags = _hideDevicesWithTags,
+      IncludeUntaggedDevices = _includeUntaggedDevices,
       TagIds = tagIds,
       Page = state.Page,
       PageSize = state.PageSize,
@@ -178,11 +226,19 @@ public partial class Dashboard : IDisposable
     var result = await ControlrApi.Devices.SearchDevices(request);
     if (!result.IsSuccess)
     {
+      _filterCounts = new DeviceSearchFilterCountsDto();
+      _hiddenUntaggedDevices = 0;
+      _totalFilteredDevices = 0;
+      await InvokeAsync(StateHasChanged);
       Snackbar.Add("Failed to load devices", Severity.Error);
       return new GridData<DeviceViewModel> { TotalItems = 0, Items = [] };
     }
 
     _anyDevicesForUser = result.Value.AnyDevicesForUser;
+    _filterCounts = result.Value.FilterCounts;
+    _hiddenUntaggedDevices = result.Value.HiddenUntaggedDevices;
+    _totalFilteredDevices = result.Value.TotalItems;
+    await InvokeAsync(StateHasChanged);
 
     if (result.Value.Items is null)
     {

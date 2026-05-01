@@ -1,19 +1,23 @@
 using System.Collections.Immutable;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api;
+using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,7 +28,9 @@ namespace ControlR.Web.Server.Tests;
 
 public class DevicesControllerTests(ITestOutputHelper testOutput)
 {
-  private readonly ITestOutputHelper _testOutputHelper = testOutput; [Fact]
+  private readonly ITestOutputHelper _testOutputHelper = testOutput; 
+
+[Fact]
   public async Task GetDevicesGridData_AppliesCombinedFilters()
   {
     // Arrange
@@ -1186,22 +1192,72 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var response5 = result5.Value;
 
+    // Test case 6: Filter by selected tag plus untagged devices
+    var request6 = new DeviceSearchRequestDto
+    {
+      TagIds = [tagIds[0]],
+      IncludeUntaggedDevices = true,
+      Page = 0,
+      PageSize = 20
+    };
+
+    var result6 = await controller.SearchDevices(
+        request6,
+        db,
+        authorizationService,
+        agentVersionProvider,
+        logger);
+
+    var response6 = result6.Value;
+
+    // Test case 7: Filter by untagged devices only
+    var request7 = new DeviceSearchRequestDto
+    {
+      IncludeUntaggedDevices = true,
+      Page = 0,
+      PageSize = 20
+    };
+
+    var result7 = await controller.SearchDevices(
+        request7,
+        db,
+        authorizationService,
+        agentVersionProvider,
+        logger);
+
+    var response7 = result7.Value;
+
     // Assert
     // Test case 1: Pagination
     Assert.NotNull(response1);
     Assert.NotNull(response1.Items);
     Assert.Equal(5, response1.Items.Count);
     Assert.Equal(10, response1.TotalItems);
+    Assert.NotNull(response1.FilterCounts);
+    Assert.Equal(5, response1.FilterCounts.OnlineDevices);
+    Assert.Equal(5, response1.FilterCounts.OfflineDevices);
+    Assert.Equal(4, response1.FilterCounts.TaggedDevices);
+    Assert.Equal(6, response1.FilterCounts.UntaggedDevices);
+    Assert.Equal(6, response1.HiddenUntaggedDevices);
 
     // Test case 2: Filter by online status
     Assert.NotNull(response2);
     Assert.NotNull(response2.Items);
     Assert.All(response2.Items, device => Assert.True(device.IsOnline));
     Assert.Equal(5, response2.Items.Count);
+    Assert.Equal(5, response2.FilterCounts.OnlineDevices);
+    Assert.Equal(0, response2.FilterCounts.OfflineDevices);
+    Assert.Equal(2, response2.FilterCounts.TaggedDevices);
+    Assert.Equal(3, response2.FilterCounts.UntaggedDevices);
+    Assert.Equal(3, response2.HiddenUntaggedDevices);
     Assert.NotNull(response3);
     Assert.NotNull(response3.Items);
     Assert.All(response3.Items, device => Assert.NotNull(device.TagIds));
     Assert.All(response3.Items, device => Assert.Contains(tagIds[0], device.TagIds!));
+    Assert.Equal(4, response3.TotalItems);
+    Assert.Equal(4, response3.FilterCounts.TaggedDevices);
+    Assert.Equal(0, response3.FilterCounts.UntaggedDevices);
+    Assert.Equal(6, response3.HiddenUntaggedDevices);
 
     // Test case 4: Search by name
     Assert.NotNull(response4);
@@ -1215,5 +1271,552 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     {
       Assert.True(response5.Items[i].CpuUtilization >= response5.Items[i + 1].CpuUtilization);
     }
+
+    // Test case 6: Selected tag plus untagged devices
+    Assert.NotNull(response6);
+    Assert.NotNull(response6.Items);
+    Assert.Equal(10, response6.Items.Count);
+    Assert.Equal(5, response6.FilterCounts.OnlineDevices);
+    Assert.Equal(5, response6.FilterCounts.OfflineDevices);
+    Assert.Equal(4, response6.FilterCounts.TaggedDevices);
+    Assert.Equal(6, response6.FilterCounts.UntaggedDevices);
+    Assert.Equal(0, response6.HiddenUntaggedDevices);
+    Assert.Contains(response6.Items, device => device.TagIds is { Length: 0 });
+    Assert.Contains(response6.Items, device => device.TagIds?.Contains(tagIds[0]) == true);
+
+    // Test case 7: Untagged devices only
+    Assert.NotNull(response7);
+    Assert.NotNull(response7.Items);
+    Assert.Equal(6, response7.Items.Count);
+    Assert.Equal(0, response7.FilterCounts.TaggedDevices);
+    Assert.Equal(6, response7.FilterCounts.UntaggedDevices);
+    Assert.Equal(0, response7.HiddenUntaggedDevices);
+    Assert.All(response7.Items, device => Assert.True(device.TagIds is null or { Length: 0 }));
+  }
+
+  [Fact]
+  public async Task GetDevices_StreamOnlyAuthorizedDevices()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
+
+    var tenant = await services.CreateTestTenant();
+    _ = await services.CreateTestUser(tenant.Id, email: "seed-user-stream@test.local");
+    var user = await services.CreateTestUser(tenant.Id, email: "tagged-user-stream@test.local");
+
+    var allowedTag = new Tag { Id = Guid.NewGuid(), Name = "Allowed", TenantId = tenant.Id };
+    var blockedTag = new Tag { Id = Guid.NewGuid(), Name = "Blocked", TenantId = tenant.Id };
+    db.Tags.AddRange(allowedTag, blockedTag);
+
+    var persistedUser = await db.Users
+      .Include(x => x.Tags)
+      .FirstAsync(x => x.Id == user.Id, TestContext.Current.CancellationToken);
+    persistedUser.Tags ??= [];
+    persistedUser.Tags.Add(allowedTag);
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+    for (var i = 0; i < 3; i++)
+    {
+      var deviceDto = new DeviceUpdateRequestDto(
+        Name: $"Scoped Stream Device {i}",
+        AgentVersion: "1.0.0",
+        CpuUtilization: i + 1,
+        Id: Guid.NewGuid(),
+        Is64Bit: true,
+        OsArchitecture: Architecture.X64,
+        Platform: SystemPlatform.Windows,
+        ProcessorCount: 8,
+        OsDescription: "Windows 11",
+        TenantId: tenant.Id,
+        TotalMemory: 16384,
+        TotalStorage: 1024000,
+        UsedMemory: 8192,
+        UsedStorage: 512000,
+        CurrentUsers: [$"User{i}"],
+        MacAddresses: [$"00:00:00:00:10:{i:D2}"],
+        LocalIpV4: $"10.0.0.{i}",
+        LocalIpV6: $"fe80::10:{i}",
+        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
+
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: $"stream-auth-{i}",
+        RemoteIpAddress: IPAddress.Loopback,
+        LastSeen: DateTimeOffset.UtcNow,
+        IsOnline: true);
+
+      Guid[]? tagIds = i switch
+      {
+        0 => [allowedTag.Id],
+        1 => [blockedTag.Id],
+        _ => null
+      };
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext, tagIds);
+    }
+
+    await controller.SetControllerUser(user, userManager);
+
+    var results = new List<DeviceResponseDto>();
+    await foreach (var device in controller.Get(db, agentVersionProvider))
+    {
+      results.Add(device);
+    }
+
+    Assert.Single(results);
+    Assert.All(results, device => Assert.Contains(allowedTag.Id, device.TagIds!));
+  }
+
+  [Fact]
+  public async Task SearchDevices_FiltersCountsToAuthorizedDevices()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var authorizationService = services.GetRequiredService<IAuthorizationService>();
+    var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
+    var logger = services.GetRequiredService<ILogger<DevicesController>>();
+
+    var tenant = await services.CreateTestTenant();
+  _ = await services.CreateTestUser(tenant.Id, email: "seed-user@test.local");
+    var user = await services.CreateTestUser(tenant.Id, email: "tagged-user@test.local");
+
+    var allowedTag = new Tag { Id = Guid.NewGuid(), Name = "Allowed", TenantId = tenant.Id };
+    var blockedTag = new Tag { Id = Guid.NewGuid(), Name = "Blocked", TenantId = tenant.Id };
+    db.Tags.AddRange(allowedTag, blockedTag);
+
+    var persistedUser = await db.Users
+      .Include(x => x.Tags)
+      .FirstAsync(x => x.Id == user.Id, TestContext.Current.CancellationToken);
+    persistedUser.Tags ??= [];
+    persistedUser.Tags.Add(allowedTag);
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+    for (var i = 0; i < 3; i++)
+    {
+      var deviceDto = new DeviceUpdateRequestDto(
+        Name: $"Scoped Device {i}",
+        AgentVersion: "1.0.0",
+        CpuUtilization: i + 1,
+        Id: Guid.NewGuid(),
+        Is64Bit: true,
+        OsArchitecture: Architecture.X64,
+        Platform: SystemPlatform.Windows,
+        ProcessorCount: 8,
+        OsDescription: "Windows 11",
+        TenantId: tenant.Id,
+        TotalMemory: 16384,
+        TotalStorage: 1024000,
+        UsedMemory: 8192,
+        UsedStorage: 512000,
+        CurrentUsers: [$"User{i}"],
+        MacAddresses: [$"00:00:00:00:00:{i:D2}"],
+        LocalIpV4: $"192.168.50.{i}",
+        LocalIpV6: $"fe80::{i}",
+        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
+
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: $"auth-test-{i}",
+        RemoteIpAddress: IPAddress.Loopback,
+        LastSeen: DateTimeOffset.UtcNow,
+        IsOnline: i == 0);
+
+      Guid[]? tagIds = i switch
+      {
+        0 => [allowedTag.Id],
+        1 => [blockedTag.Id],
+        _ => null
+      };
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext, tagIds);
+    }
+
+    await controller.SetControllerUser(user, userManager);
+
+    var result = await controller.SearchDevices(
+      new DeviceSearchRequestDto
+      {
+        Page = 0,
+        PageSize = 20
+      },
+      db,
+      authorizationService,
+      agentVersionProvider,
+      logger);
+
+    var response = result.Value;
+
+    Assert.NotNull(response);
+    Assert.True(response.AnyDevicesForUser);
+    Assert.NotNull(response.Items);
+    Assert.Single(response.Items);
+    Assert.Equal(1, response.TotalItems);
+    Assert.Equal(1, response.FilterCounts.TaggedDevices);
+    Assert.Equal(0, response.FilterCounts.UntaggedDevices);
+    Assert.Equal(1, response.FilterCounts.OnlineDevices);
+    Assert.Equal(0, response.FilterCounts.OfflineDevices);
+    Assert.Equal(0, response.HiddenUntaggedDevices);
+    Assert.All(response.Items, device => Assert.Contains(allowedTag.Id, device.TagIds!));
+  }
+
+  [Fact]
+  public async Task SearchDevices_LogonTokenSession_IsRestrictedToScopedDevice()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var authorizationService = services.GetRequiredService<IAuthorizationService>();
+    var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
+    var logger = services.GetRequiredService<ILogger<DevicesController>>();
+
+    var tenant = await services.CreateTestTenant();
+    _ = await services.CreateTestUser(tenant.Id, email: "seed-logon-scope@test.local");
+
+    var scopedDeviceId = Guid.NewGuid();
+    var otherDeviceId = Guid.NewGuid();
+
+    foreach (var deviceId in new[] { scopedDeviceId, otherDeviceId })
+    {
+      var deviceDto = new DeviceUpdateRequestDto(
+        Name: $"Scoped Bulk Device {deviceId}",
+        AgentVersion: "1.0.0",
+        CpuUtilization: 5,
+        Id: deviceId,
+        Is64Bit: true,
+        OsArchitecture: Architecture.X64,
+        Platform: SystemPlatform.Windows,
+        ProcessorCount: 8,
+        OsDescription: "Windows 11",
+        TenantId: tenant.Id,
+        TotalMemory: 16384,
+        TotalStorage: 1024000,
+        UsedMemory: 8192,
+        UsedStorage: 512000,
+        CurrentUsers: ["ScopedUser"],
+        MacAddresses: [$"00:00:00:00:{(deviceId == scopedDeviceId ? "20" : "21")}:01"],
+        LocalIpV4: deviceId == scopedDeviceId ? "10.10.0.1" : "10.10.0.2",
+        LocalIpV6: deviceId == scopedDeviceId ? "fe80::201" : "fe80::202",
+        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
+
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: $"logon-scope-{deviceId}",
+        RemoteIpAddress: IPAddress.Loopback,
+        LastSeen: DateTimeOffset.UtcNow,
+        IsOnline: true);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+    }
+
+    var claims = new List<Claim>
+    {
+      new(UserClaimTypes.TenantId, tenant.Id.ToString()),
+      new(UserClaimTypes.AuthenticationMethod, LogonTokenAuthenticationSchemeOptions.DefaultScheme),
+      new(UserClaimTypes.DeviceSessionScope, scopedDeviceId.ToString())
+    };
+
+    controller.ControllerContext = new ControllerContext
+    {
+      HttpContext = new DefaultHttpContext
+      {
+        User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuthentication"))
+      }
+    };
+
+    var result = await controller.SearchDevices(
+      new DeviceSearchRequestDto
+      {
+        Page = 0,
+        PageSize = 20
+      },
+      db,
+      authorizationService,
+      agentVersionProvider,
+      logger);
+
+    var response = result.Value;
+
+    Assert.NotNull(response);
+    Assert.True(response.AnyDevicesForUser);
+    Assert.NotNull(response.Items);
+    Assert.Single(response.Items);
+    Assert.Equal(scopedDeviceId, response.Items[0].Id);
+    Assert.Equal(1, response.TotalItems);
+    Assert.Equal(0, response.FilterCounts.TaggedDevices);
+    Assert.Equal(1, response.FilterCounts.UntaggedDevices);
+    Assert.Equal(1, response.FilterCounts.OnlineDevices);
+    Assert.Equal(0, response.FilterCounts.OfflineDevices);
+    Assert.Equal(1, response.HiddenUntaggedDevices);
+  }
+
+  [Fact]
+  public async Task UpdateDeviceAlias_AliasTooLong_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var deviceId = Guid.NewGuid();
+    var longAlias = new string('x', 101);
+    var request = new UpdateDeviceAliasRequestDto(deviceId, longAlias);
+
+    var result = await controller.UpdateDeviceAlias(
+      deviceId,
+      request,
+      db,
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
+
+    Assert.IsType<BadRequestObjectResult>(result.Result);
+  }
+
+  [Fact]
+  public async Task UpdateDeviceAlias_DeviceNotFound_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var deviceId = Guid.NewGuid();
+    var request = new UpdateDeviceAliasRequestDto(deviceId, "Alias");
+
+    var result = await controller.UpdateDeviceAlias(
+      deviceId,
+      request,
+      db,
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
+
+    Assert.IsType<NotFoundResult>(result.Result);
+  }
+
+  [Fact]
+  public async Task UpdateDeviceAlias_NullAlias_NormalizesToEmptyString()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+
+    var deviceId = Guid.NewGuid();
+    var deviceDto = new DeviceUpdateRequestDto(
+      Name: "Test Device",
+      AgentVersion: "1.0.0",
+      CpuUtilization: 10,
+      Id: deviceId,
+      Is64Bit: true,
+      OsArchitecture: Architecture.X64,
+      Platform: SystemPlatform.Windows,
+      ProcessorCount: 8,
+      OsDescription: "Windows 10",
+      TenantId: tenant.Id,
+      TotalMemory: 16384,
+      TotalStorage: 1024000,
+      UsedMemory: 8192,
+      UsedStorage: 512000,
+      CurrentUsers: ["TestUser"],
+      MacAddresses: ["00:00:00:00:00:01"],
+      LocalIpV4: "192.168.0.1",
+      LocalIpV6: "fe80::1",
+      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
+
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "test-conn",
+      RemoteIpAddress: IPAddress.Loopback,
+      LastSeen: DateTimeOffset.UtcNow,
+      IsOnline: true);
+
+    await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+
+    await controller.SetControllerUser(user, userManager);
+
+    var request = new UpdateDeviceAliasRequestDto(deviceId, null);
+
+    var result = await controller.UpdateDeviceAlias(
+      deviceId,
+      request,
+      db,
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
+
+    Assert.NotNull(result.Value);
+    Assert.Equal(string.Empty, result.Value.Alias);
+  }
+
+  [Fact]
+  public async Task UpdateDeviceAlias_RouteIdMismatch_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var routeId = Guid.NewGuid();
+    var bodyId = Guid.NewGuid();
+    var request = new UpdateDeviceAliasRequestDto(bodyId, "Alias");
+
+    var result = await controller.UpdateDeviceAlias(
+      routeId,
+      request,
+      db,
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
+
+    Assert.IsType<BadRequestObjectResult>(result.Result);
+  }
+
+  [Fact]
+  public async Task UpdateDeviceAlias_UserWithoutAccess_ReturnsForbid()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+
+    // Create device in one tenant
+    var deviceTenant = await services.CreateTestTenant("Device Tenant");
+    var deviceId = Guid.NewGuid();
+    var deviceDto = new DeviceUpdateRequestDto(
+      Name: "Test Device",
+      AgentVersion: "1.0.0",
+      CpuUtilization: 10,
+      Id: deviceId,
+      Is64Bit: true,
+      OsArchitecture: Architecture.X64,
+      Platform: SystemPlatform.Windows,
+      ProcessorCount: 8,
+      OsDescription: "Windows 10",
+      TenantId: deviceTenant.Id,
+      TotalMemory: 16384,
+      TotalStorage: 1024000,
+      UsedMemory: 8192,
+      UsedStorage: 512000,
+      CurrentUsers: ["TestUser"],
+      MacAddresses: ["00:00:00:00:00:01"],
+      LocalIpV4: "192.168.0.1",
+      LocalIpV6: "fe80::1",
+      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
+
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "test-conn",
+      RemoteIpAddress: IPAddress.Loopback,
+      LastSeen: DateTimeOffset.UtcNow,
+      IsOnline: true);
+
+    await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+
+    // Create user in a different tenant
+    var userTenant = await services.CreateTestTenant("User Tenant");
+    var user = await services.CreateTestUser(userTenant.Id, roles: RoleNames.DeviceSuperUser);
+
+    await controller.SetControllerUser(user, userManager);
+
+    var request = new UpdateDeviceAliasRequestDto(deviceId, "Alias");
+
+    var result = await controller.UpdateDeviceAlias(
+      deviceId,
+      request,
+      db,
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
+
+    Assert.IsType<ForbidResult>(result.Result);
+  }
+
+  [Fact]
+  public async Task UpdateDeviceAlias_WithValidAlias_ReturnsUpdatedDevice()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+
+    var deviceId = Guid.NewGuid();
+    var deviceDto = new DeviceUpdateRequestDto(
+      Name: "Test Device",
+      AgentVersion: "1.0.0",
+      CpuUtilization: 10,
+      Id: deviceId,
+      Is64Bit: true,
+      OsArchitecture: Architecture.X64,
+      Platform: SystemPlatform.Windows,
+      ProcessorCount: 8,
+      OsDescription: "Windows 10",
+      TenantId: tenant.Id,
+      TotalMemory: 16384,
+      TotalStorage: 1024000,
+      UsedMemory: 8192,
+      UsedStorage: 512000,
+      CurrentUsers: ["TestUser"],
+      MacAddresses: ["00:00:00:00:00:01"],
+      LocalIpV4: "192.168.0.1",
+      LocalIpV6: "fe80::1",
+      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 1024000, FreeSpace = 512000 }]);
+
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "test-conn",
+      RemoteIpAddress: IPAddress.Loopback,
+      LastSeen: DateTimeOffset.UtcNow,
+      IsOnline: true);
+
+    await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+
+    await controller.SetControllerUser(user, userManager);
+
+    var request = new UpdateDeviceAliasRequestDto(deviceId, "My Alias");
+
+    var result = await controller.UpdateDeviceAlias(
+      deviceId,
+      request,
+      db,
+      services.GetRequiredService<IAuthorizationService>(),
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
+
+    Assert.NotNull(result.Value);
+    Assert.Equal("My Alias", result.Value.Alias);
+    Assert.Equal(deviceId, result.Value.Id);
   }
 }

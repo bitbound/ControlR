@@ -77,4 +77,15 @@ public partial class ControlrApi
       return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>(cancellationToken);
     });
   }
+
+  async Task<ApiResult<DeviceResponseDto>> IDevicesApi.UpdateDeviceAlias(UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var content = JsonContent.Create(request);
+      using var response = await _client.PatchAsync($"{HttpConstants.DevicesEndpoint}/{request.DeviceId}/alias", content, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<DeviceResponseDto>(cancellationToken);
+    });
+  }
 }

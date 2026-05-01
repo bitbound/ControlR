@@ -1,4 +1,5 @@
 ﻿using ControlR.Web.Server.Authn;
+using ControlR.Web.Server.Services.DeviceManagement;
 
 namespace ControlR.Web.Server.Authz.Policies;
 
@@ -34,21 +35,17 @@ public static class DeviceAccessByDeviceResourcePolicy
           return Fail("User ID claim is missing.", handlerCtx, authzHandler, logger);
         }
 
-        // For logon token users, check if the device ID matches the token's device
-        var authMethod = handlerCtx.User.FindFirst(UserClaimTypes.AuthenticationMethod)?.Value;
-        if (authMethod == LogonTokenAuthenticationSchemeOptions.DefaultScheme)
+        var accessScopeResolver = sp.GetRequiredService<IDeviceAccessScopeResolver>();
+        var accessScope = await accessScopeResolver.Resolve(handlerCtx.User, tenantId);
+
+        if (accessScope.Kind == DeviceAccessScopeKind.SingleDevice)
         {
-          // Prefer the new scoped claim; fall back to legacy DeviceId claim if absent.
-          var scopedDeviceIdValue = handlerCtx.User.FindFirst(UserClaimTypes.DeviceSessionScope)?.Value;
-          if (Guid.TryParse(scopedDeviceIdValue, out var tokenDeviceId))
+          if (accessScope.DeviceId == device.Id)
           {
-            if (device.Id == tokenDeviceId)
-            {
-              logger.LogInformation(
-                "Logon token user {UserId} authorized for scoped device {DeviceId}",
-                userId, device.Id);
-              return true;
-            }
+            logger.LogInformation(
+              "Logon token user {UserId} authorized for scoped device {DeviceId}",
+              userId, device.Id);
+            return true;
           }
 
           return Fail(
@@ -58,35 +55,31 @@ public static class DeviceAccessByDeviceResourcePolicy
             logger);
         }
 
-        if (handlerCtx.User.IsInRole(RoleNames.TenantAdministrator) ||
-            handlerCtx.User.IsInRole(RoleNames.DeviceSuperUser))
+        if (accessScope.Kind == DeviceAccessScopeKind.TenantWide)
         {
           return true;
         }
 
-        await using var scope = sp.CreateAsyncScope();
-        await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-        var user = await db.Users
-          .AsNoTracking()
-          .Include(x => x.Tags)
-          .FirstOrDefaultAsync(x => x.Id == userId);
-
-        if (user is null)
+        if (accessScope.Kind == DeviceAccessScopeKind.None)
         {
-          return Fail("User does not exist.", handlerCtx, authzHandler, logger);
+          return Fail("User does not have access tags.", handlerCtx, authzHandler, logger);
         }
 
-        await db
-          .Update(device)
-          .Collection(x => x.Tags!)
-          .LoadAsync();
+        var db = sp.GetRequiredService<AppDb>();
+        var entry = db.Entry(device);
+        if (entry.State == EntityState.Detached)
+        {
+          db.Attach(device);
+          entry = db.Entry(device);
+        }
 
-        if (user.Tags is null ||
-            device.Tags is null ||
-            !user.Tags.Any(x => device.Tags.Exists(y => y.Id == x.Id)))
+        await entry.Collection(x => x.Tags!).LoadAsync();
+
+        if (device.Tags is null ||
+            !device.Tags.Any(x => accessScope.TagIds.Contains(x.Id)))
         {
           return Fail(
-            $"User {user.UserName} is not authorized to access device {device.Name} (ID: {device.Id}).",
+            $"User {userId} is not authorized to access device {device.Name} (ID: {device.Id}).",
             handlerCtx,
             authzHandler,
             logger);
