@@ -641,7 +641,9 @@ internal class FrameBasedCapturer : IDesktopCapturer
         var bitmap = currentCapture.Bitmap;
         var bitmapSize = new Size(bitmap.Width, bitmap.Height);
 
-        var dirtyRegions = GetDirtyRegions(bitmap, currentCapture, previousCapture);
+        var dirtyRegions = shouldSendKeyFrame
+          ? [bitmap.ToSkRect()]
+          : GetDirtyRegions(bitmap, currentCapture, previousCapture);
 
         if (dirtyRegions.Length == 0)
         {
