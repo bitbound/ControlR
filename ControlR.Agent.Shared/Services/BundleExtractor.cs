@@ -33,6 +33,7 @@ public class BundleExtractor(
 
       await _fileSystem.ExtractZipArchiveAsync(bundlePath, normalizedInstallDirectory, overwriteFiles: true, cancellationToken);
       SetKnownExecutablePermissions(normalizedInstallDirectory);
+      await CleanupMacosxMetadata(normalizedInstallDirectory, cancellationToken);
 
       _logger.LogInformation("Bundle extracted successfully");
     }
@@ -41,6 +42,18 @@ public class BundleExtractor(
       _logger.LogError(ex, "Failed to extract bundle");
       throw;
     }
+  }
+
+  private Task CleanupMacosxMetadata(string installDirectory, CancellationToken cancellationToken)
+  {
+    var macosxPath = Path.Combine(installDirectory, "__MACOSX");
+    if (_fileSystem.DirectoryExists(macosxPath))
+    {
+      _logger.LogInformation("Removing __MACOSX metadata directory.");
+      _fileSystem.DeleteDirectory(macosxPath, true);
+    }
+
+    return Task.CompletedTask;
   }
 
   private void SetKnownExecutablePermissions(string installDirectory)
