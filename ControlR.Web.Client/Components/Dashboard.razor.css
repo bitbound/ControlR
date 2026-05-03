@@ -57,6 +57,18 @@
   min-width: 0;
 }
 
+.dashboard-pager-stats {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+@media (min-width: 600px) {
+  .dashboard-pager-stats {
+    justify-content: flex-end;
+  }
+}
+
 .dashboard-inline-alert {
   margin-bottom: 0;
 }

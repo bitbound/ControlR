@@ -261,16 +261,13 @@
     </ChildRowContent>
 
     <PagerContent>
-      <div class="d-flex flex-wrap justify-space-between align-center w-100 gap-2 ps-4">
-        <div class="d-flex flex-wrap align-center gap-2">
+      <MudDataGridPager T="DeviceViewModel" />
+      <div class="dashboard-pager-stats pa-4">
           <MudText Typo="Typo.body2">Online: @_filterCounts.OnlineDevices</MudText>
           <MudText Typo="Typo.body2">|</MudText>
           <MudText Typo="Typo.body2">Offline: @_filterCounts.OfflineDevices</MudText>
           <MudText Typo="Typo.body2">|</MudText>
           <MudText Typo="Typo.body2">Total: @_totalFilteredDevices</MudText>
-        </div>
-
-        <MudDataGridPager T="DeviceViewModel" />
       </div>
     </PagerContent>
   </MudDataGrid>
