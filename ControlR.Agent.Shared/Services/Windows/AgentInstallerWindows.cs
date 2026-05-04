@@ -26,11 +26,10 @@ internal class AgentInstallerWindows(
   IRegistryAccessor registryAccessor,
   IOptions<InstanceOptions> instanceOptions,
   IFileSystem fileSystem,
-  IBundleExtractor bundleExtractor,
   IOptionsAccessor optionsAccessor,
   IOptionsMonitor<AgentAppOptions> appOptions,
   ILogger<AgentInstallerWindows> logger)
-  : AgentInstallerBase(fileSystem, bundleExtractor, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processes, systemEnvironment, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processes, systemEnvironment, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 

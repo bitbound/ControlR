@@ -8,7 +8,6 @@ namespace ControlR.Agent.Shared.Services.Base;
 
 internal abstract class AgentInstallerBase(
   IFileSystem fileSystem,
-  IBundleExtractor bundleExtractor,
   IFileSystemPathProvider fileSystemPathProvider,
   IControlrApi controlrApi,
   IDeviceInfoProvider deviceDataGenerator,
@@ -80,7 +79,7 @@ internal abstract class AgentInstallerBase(
     return createResult.ToResult();
   }
 
-  protected Task ExtractBundleToInstallDirectory(
+  protected async Task ExtractBundleToInstallDirectory(
     string bundleZipPath,
     string installDirectory,
     CancellationToken cancellationToken = default)
@@ -95,7 +94,8 @@ internal abstract class AgentInstallerBase(
       throw new FileNotFoundException($"Bundle zip '{bundleZipPath}' does not exist.", bundleZipPath);
     }
 
-    return bundleExtractor.ExtractBundle(bundleZipPath, installDirectory, cancellationToken);
+    FileSystem.CreateDirectory(installDirectory);
+    await FileSystem.ExtractZipArchiveAsync(bundleZipPath, installDirectory, overwriteFiles: true, cancellationToken);
   }
 
   protected Result StopProcesses(string targetAgentPath, string? targetDesktopClientPath = null)

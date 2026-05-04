@@ -22,7 +22,6 @@ public static class AgentSharedBuilderExtensions
   {
     services.AddSingleton<IOptionsAccessor, OptionsAccessor>();
     services.AddSingleton<IFileSystemPathProvider, FileSystemPathProvider>();
-    services.AddSingleton<IBundleExtractor, BundleExtractor>();
 
     if (OperatingSystem.IsWindowsVersionAtLeast(8))
     {

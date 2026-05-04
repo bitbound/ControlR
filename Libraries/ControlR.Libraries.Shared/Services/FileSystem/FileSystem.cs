@@ -30,6 +30,7 @@ public interface IFileSystem
 
   FileVersionInfo GetFileVersionInfo(string filePath);
   string JoinPaths(char separator, params string[] paths);
+  void MoveDirectory(string sourceDirectory, string destinationDirectory);
   void MoveFile(string sourceFile, string destinationFile, bool overwrite);
   Stream OpenFileStream(string path, FileMode mode, FileAccess access);
   Stream OpenFileStream(string path, FileMode mode, FileAccess access, FileShare fileShare);
@@ -201,6 +202,11 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
     }
 
     return builder.ToString();
+  }
+
+  public void MoveDirectory(string sourceDirectory, string destinationDirectory)
+  {
+    Directory.Move(sourceDirectory, destinationDirectory);
   }
 
   public void MoveFile(string sourceFile, string destinationFile, bool overwrite)

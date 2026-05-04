@@ -73,7 +73,6 @@ public class AgentInstallerBaseTests
   private sealed class TestAgentInstaller(IProcessManager processManager, ISystemEnvironment systemEnvironment)
     : AgentInstallerBase(
       Mock.Of<IFileSystem>(),
-      Mock.Of<IBundleExtractor>(),
       Mock.Of<IFileSystemPathProvider>(),
       Mock.Of<IControlrApi>(),
       Mock.Of<IDeviceInfoProvider>(),

@@ -330,7 +330,7 @@ jobs:
 
           echo "Creating final bundle ZIP for macOS ${{ matrix.arch }}..."
           rm -f "$BUNDLE_ZIP"
-          ditto -c -k --keepParent "$PUBLISH_DIR/ControlR.app" "$BUNDLE_ZIP"
+          ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/ControlR.app" "$BUNDLE_ZIP"
 
       - name: Publish Installer (${{ matrix.arch }})
         run: |

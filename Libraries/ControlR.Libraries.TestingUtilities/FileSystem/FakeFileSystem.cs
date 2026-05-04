@@ -384,6 +384,70 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
 		return builder.ToString();
 	}
 
+  public void MoveDirectory(string sourceDirectory, string destinationDirectory)
+  {
+    lock (_syncRoot)
+    {
+      var sourcePath = NormalizePath(sourceDirectory);
+      var destinationPath = NormalizePath(destinationDirectory);
+
+      if (!_directories.ContainsKey(sourcePath))
+      {
+        throw new DirectoryNotFoundException($"Could not find a part of the path '{sourceDirectory}'.");
+      }
+
+      if (_directories.ContainsKey(destinationPath))
+      {
+        throw new IOException($"The directory '{destinationDirectory}' already exists.");
+      }
+
+      EnsureParentDirectoryExists(destinationPath, createIfMissing: true);
+
+      // Move the directory entry
+      var directoryEntry = _directories[sourcePath];
+      _directories[destinationPath] = new FakeDirectoryEntry(destinationPath)
+      {
+        Attributes = directoryEntry.Attributes,
+        CreationTime = directoryEntry.CreationTime,
+        LastWriteTime = DateTime.UtcNow,
+        UnixFileMode = directoryEntry.UnixFileMode
+      };
+      _directories.Remove(sourcePath);
+
+      // Move child directories
+      foreach (var childDirectory in _directories.Keys.Where(x => IsDescendant(sourcePath, x)).ToArray())
+      {
+        var newChildDirectory = CombineNormalized(destinationPath, childDirectory[(sourcePath.Length + 1)..]);
+        var childEntry = _directories[childDirectory];
+        _directories[newChildDirectory] = new FakeDirectoryEntry(newChildDirectory)
+        {
+          Attributes = childEntry.Attributes,
+          CreationTime = childEntry.CreationTime,
+          LastWriteTime = DateTime.UtcNow,
+          UnixFileMode = childEntry.UnixFileMode
+        };
+        _directories.Remove(childDirectory);
+      }
+
+      // Move child files
+      foreach (var childFile in _files.Keys.Where(x => IsDescendant(sourcePath, x)).ToArray())
+      {
+        var newChildFile = CombineNormalized(destinationPath, childFile[(sourcePath.Length + 1)..]);
+        var fileEntry = _files[childFile];
+        _files[newChildFile] = new FakeFileEntry(newChildFile, fileEntry.Content.ToArray())
+        {
+          Attributes = fileEntry.Attributes,
+          LastWriteTime = DateTime.UtcNow,
+          UnixFileMode = fileEntry.UnixFileMode
+        };
+        _files.Remove(childFile);
+      }
+
+      TouchParent(sourcePath);
+      TouchParent(destinationPath);
+    }
+  }
+
 	public void MoveFile(string sourceFile, string destinationFile, bool overwrite)
 	{
 		lock (_syncRoot)

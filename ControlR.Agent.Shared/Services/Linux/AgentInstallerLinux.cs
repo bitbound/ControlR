@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using ControlR.Agent.Shared.Models;
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.NativeInterop.Unix;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Shared.Services.Linux;
 
+[SupportedOSPlatform("linux")]
 internal class AgentInstallerLinux(
   IHostApplicationLifetime lifetime,
   IFileSystem fileSystem,
@@ -22,11 +24,10 @@ internal class AgentInstallerLinux(
   IElevationChecker elevationChecker,
   IServiceControl serviceControl,
   IEmbeddedResourceAccessor embeddedResourceAccessor,
-  IBundleExtractor bundleExtractor,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerLinux> logger)
-  : AgentInstallerBase(fileSystem, bundleExtractor, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAcccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAcccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 
@@ -79,6 +80,8 @@ internal class AgentInstallerLinux(
         () => ExtractBundleToInstallDirectory(request.BundleZipPath, installDir),
         5,
         TimeSpan.FromSeconds(1));
+
+      SetExecutablePermissions(installDir);
 
       var serviceFile = (await GetAgentServiceFile()).Trim();
       var desktopServiceFile = (await GetDesktopServiceFile()).Trim();
@@ -197,6 +200,25 @@ internal class AgentInstallerLinux(
     }
   }
 
+  internal async Task<string> GetDesktopServiceFile()
+  {
+    var template = await _embeddedResourceAccessor.GetResourceAsString(
+      typeof(AgentInstallerLinux).Assembly,
+      "controlr.desktop.service");
+
+    var installDir = GetInstallDirectory();
+
+    var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
+      ? ""
+      : $" --instance-id {instanceOptions.Value.InstanceId}";
+
+    template = template
+      .Replace("{{INSTALL_DIRECTORY}}", installDir)
+      .Replace("{{INSTANCE_ARGS}}", instanceArgs);
+
+    return template;
+  }
+
   private async Task<string> GetAgentServiceFile()
   {
     var template = await _embeddedResourceAccessor.GetResourceAsString(
@@ -208,25 +230,6 @@ internal class AgentInstallerLinux(
     var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
       ? ""
       : $" -i {instanceOptions.Value.InstanceId}";
-
-    template = template
-      .Replace("{{INSTALL_DIRECTORY}}", installDir)
-      .Replace("{{INSTANCE_ARGS}}", instanceArgs);
-
-    return template;
-  }
-
-  private async Task<string> GetDesktopServiceFile()
-  {
-    var template = await _embeddedResourceAccessor.GetResourceAsString(
-      typeof(AgentInstallerLinux).Assembly,
-      "controlr.desktop.service");
-
-    var installDir = GetInstallDirectory();
-
-    var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
-      ? ""
-      : $" --instance-id {instanceOptions.Value.InstanceId}";
 
     template = template
       .Replace("{{INSTALL_DIRECTORY}}", installDir)
@@ -268,6 +271,33 @@ internal class AgentInstallerLinux(
   private string GetServiceName()
   {
     return Path.GetFileName(GetServiceFilePath());
+  }
+
+  private void SetExecutablePermissions(string installDirectory)
+  {
+    var executableFileMode =
+      UnixFileMode.UserRead |
+      UnixFileMode.UserWrite |
+      UnixFileMode.UserExecute |
+      UnixFileMode.GroupRead |
+      UnixFileMode.GroupExecute |
+      UnixFileMode.OtherRead |
+      UnixFileMode.OtherExecute;
+
+    foreach (var executablePath in new[]
+    {
+      Path.Combine(installDirectory, "ControlR.Agent"),
+      Path.Combine(installDirectory, "DesktopClient", "ControlR.DesktopClient")
+    })
+    {
+      if (!_fileSystem.FileExists(executablePath))
+      {
+        continue;
+      }
+
+      _fileSystem.SetUnixFileMode(executablePath, executableFileMode);
+      _logger.LogDebug("Set executable permissions on {FilePath}", executablePath);
+    }
   }
 
   private async Task WriteFileIfChanged(string filePath, string content)

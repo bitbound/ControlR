@@ -1,6 +1,6 @@
 using System.Reflection;
+using System.Runtime.Versioning;
 using ControlR.Agent.Shared.Interfaces;
-using ControlR.Agent.Shared.Models;
 using ControlR.Agent.Shared.Options;
 using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Shared.Services.Linux;
@@ -9,6 +9,7 @@ using ControlR.ApiClient;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
+using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -18,7 +19,8 @@ namespace ControlR.Agent.Shared.Tests;
 
 public class DesktopClientLaunchArgumentTests
 {
-  [Fact]
+  [LinuxOnlyFact]
+  [SupportedOSPlatform("linux")]
   public async Task GetDesktopServiceFile_WhenInstanceIdMissing_OmitsInstanceIdArgument()
   {
     var embeddedResources = new Mock<IEmbeddedResourceAccessor>();
@@ -28,13 +30,14 @@ public class DesktopClientLaunchArgumentTests
 
     var sut = CreateLinuxInstaller(embeddedResources.Object, instanceId: null);
 
-    var result = await InvokePrivateAsync<string>(sut, "GetDesktopServiceFile");
+    var result = await sut.GetDesktopServiceFile();
 
     Assert.DoesNotContain("--instance-id", result, StringComparison.Ordinal);
     Assert.DoesNotContain("{{INSTANCE_ARGS}}", result, StringComparison.Ordinal);
   }
 
-  [Fact]
+  [MacOnlyFact]
+  [SupportedOSPlatform("macos")]
   public async Task GetLaunchAgentFile_WhenInstanceIdMissing_OmitsInstanceIdArgument()
   {
     var template = """
@@ -51,12 +54,13 @@ public class DesktopClientLaunchArgumentTests
 
     var sut = CreateMacInstaller(embeddedResources.Object, instanceId: null);
 
-    var result = await InvokePrivateAsync<string>(sut, "GetLaunchAgentFile");
+    var result = await sut.GetLaunchAgentFile();
 
     Assert.DoesNotContain("--instance-id", result, StringComparison.Ordinal);
     Assert.DoesNotContain("{{INSTANCE_ID}}", result, StringComparison.Ordinal);
   }
 
+  [SupportedOSPlatform("linux")]
   private static AgentInstallerLinux CreateLinuxInstaller(IEmbeddedResourceAccessor embeddedResources, string? instanceId)
   {
     return new AgentInstallerLinux(
@@ -72,12 +76,12 @@ public class DesktopClientLaunchArgumentTests
       Mock.Of<IElevationChecker>(),
       Mock.Of<IServiceControl>(),
       embeddedResources,
-      Mock.Of<IBundleExtractor>(),
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = instanceId }),
       NullLogger<AgentInstallerLinux>.Instance);
   }
 
+  [SupportedOSPlatform("macos")]
   private static AgentInstallerMac CreateMacInstaller(IEmbeddedResourceAccessor embeddedResources, string? instanceId)
   {
     var fileSystem = new Mock<IFileSystem>();
@@ -96,20 +100,10 @@ public class DesktopClientLaunchArgumentTests
       Mock.Of<IOptionsAccessor>(),
       Mock.Of<IProcessManager>(),
       Mock.Of<ISystemEnvironment>(),
-      Mock.Of<IBundleExtractor>(),
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
         Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = instanceId }),
       NullLogger<AgentInstallerMac>.Instance);
   }
 
-  private static async Task<T> InvokePrivateAsync<T>(object target, string methodName)
-  {
-    var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)
-      ?? throw new MissingMethodException(target.GetType().FullName, methodName);
 
-    var task = method.Invoke(target, null) as Task<T>
-      ?? throw new InvalidOperationException($"Method {methodName} did not return Task<{typeof(T).Name}>.");
-
-    return await task;
-  }
 }

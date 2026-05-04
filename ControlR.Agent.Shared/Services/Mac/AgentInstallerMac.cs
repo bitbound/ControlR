@@ -6,9 +6,11 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using System.Runtime.Versioning;
 
 namespace ControlR.Agent.Shared.Services.Mac;
 
+[SupportedOSPlatform("macos")]
 internal class AgentInstallerMac(
   IFileSystem fileSystem,
   IFileSystemPathProvider fileSystemPathProvider,
@@ -20,14 +22,12 @@ internal class AgentInstallerMac(
   IOptionsAccessor optionsAccessor,
   IProcessManager processManager,
   ISystemEnvironment systemEnvironment,
-  IBundleExtractor bundleExtractor,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<AgentInstallerMac> logger)
-  : AgentInstallerBase(fileSystem, bundleExtractor, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
 {
   private const string MacAgentInstallDirectory = "/Library/Application Support/ControlR";
-  private const string MacAppBundleName = "ControlR.app";
   private const string MacBundleStateDirectory = "/Library/Application Support/ControlR";
   private const string MacInstallerTempDirectory = "/tmp/ControlR_Update";
 
@@ -58,7 +58,7 @@ internal class AgentInstallerMac(
       }
 
       var appBundleInstallPath = GetInstalledAppBundlePath();
-      var extractedAppBundlePath = GetExtractedAppBundlePath();
+      var tempExtractDirectory = GetTempExtractDirectory();
       var installedAgentPath = GetInstalledAgentPath();
       var installedAgentDirectory = Path.GetDirectoryName(installedAgentPath)
         ?? throw new DirectoryNotFoundException("Unable to determine the agent install directory.");
@@ -77,24 +77,30 @@ internal class AgentInstallerMac(
         _fileSystem.DeleteFile(installedAgentPath);
       }
 
-      _fileSystem.CreateDirectory(appBundleInstallPath);
       _fileSystem.CreateDirectory(installedAgentDirectory);
       _fileSystem.CreateDirectory(bundleStateDirectory);
+      _fileSystem.CreateDirectory(tempExtractDirectory);
 
-      _logger.LogInformation("Extracting bundle {BundleZipPath} to {InstallDirectory}.", request.BundleZipPath, PathConstants.MacApplicationsDirectory);
-      await retryer.Retry(
-        () => ExtractBundleToInstallDirectory(request.BundleZipPath, PathConstants.MacApplicationsDirectory),
-        tryCount: 5,
-        retryDelay: TimeSpan.FromSeconds(1));
-
-      if (!string.Equals(extractedAppBundlePath, appBundleInstallPath, StringComparison.Ordinal))
+      try
       {
-        if (_fileSystem.DirectoryExists(appBundleInstallPath))
-        {
-          _fileSystem.DeleteDirectory(appBundleInstallPath, true);
-        }
+        var tempAppBundlePath = Path.Combine(tempExtractDirectory, "ControlR.app");
+        await retryer.Retry(
+          async () => {
+            await ExtractBundleToInstallDirectory(request.BundleZipPath, tempExtractDirectory);
+            _fileSystem.MoveDirectory(tempAppBundlePath, appBundleInstallPath);
+          },
+          tryCount: 5,
+          retryDelay: TimeSpan.FromSeconds(1));
 
-        Directory.Move(extractedAppBundlePath, appBundleInstallPath);
+        SetExecutablePermissions(appBundleInstallPath);
+
+      }
+      finally
+      {
+        if (_fileSystem.DirectoryExists(tempExtractDirectory))
+        {
+          _fileSystem.DeleteDirectory(tempExtractDirectory, true);
+        }
       }
 
       var sourceAgentPath = GetSourceAgentPath(appBundleInstallPath);
@@ -210,6 +216,37 @@ internal class AgentInstallerMac(
     }
   }
 
+  internal async Task<string> GetLaunchAgentFile()
+  {
+    var serviceName = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      ? "app.controlr.desktop"
+      : $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
+
+    var template = await _embeddedResourceAccessor.GetResourceAsString(
+      typeof(AgentInstallerMac).Assembly,
+      "LaunchAgent.plist");
+
+    template = template
+      .Replace("{{SERVICE_NAME}}", serviceName)
+      .Replace("{{DESKTOP_EXECUTABLE_PATH}}", GetDesktopExecutablePath());
+
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    {
+      // Remove lines containing {{INSTANCE_ID}} and <string>--instance-id</string>
+      var lines = template.Split('\n');
+      lines = [.. lines.Where(line =>
+        !line.Contains("{{INSTANCE_ID}}") &&
+        !line.Contains("<string>--instance-id</string>"))];
+
+      template = string.Join("\n", lines);
+    }
+    else
+    {
+      template = template.Replace("{{INSTANCE_ID}}", _instanceOptions.Value.InstanceId);
+    }
+    return template;
+  }
+
   private string GetAgentServiceName()
   {
     return string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
@@ -225,11 +262,6 @@ internal class AgentInstallerMac(
   private string GetDesktopExecutablePath()
   {
     return _fileSystem.JoinPaths('/', GetInstalledAppBundlePath(), PathConstants.MacDesktopExecutableRelativePath);
-  }
-
-  private string GetExtractedAppBundlePath()
-  {
-    return $"{PathConstants.MacApplicationsDirectory}/{MacAppBundleName}";
   }
 
   private string GetInstalledAgentPath()
@@ -293,37 +325,6 @@ internal class AgentInstallerMac(
     return $"app.controlr.agent.installer.{_instanceOptions.Value.InstanceId}";
   }
 
-  private async Task<string> GetLaunchAgentFile()
-  {
-    var serviceName = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? "app.controlr.desktop"
-      : $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
-
-    var template = await _embeddedResourceAccessor.GetResourceAsString(
-      typeof(AgentInstallerMac).Assembly,
-      "LaunchAgent.plist");
-
-    template = template
-      .Replace("{{SERVICE_NAME}}", serviceName)
-      .Replace("{{DESKTOP_EXECUTABLE_PATH}}", GetDesktopExecutablePath());
-
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      // Remove lines containing {{INSTANCE_ID}} and <string>--instance-id</string>
-      var lines = template.Split('\n');
-      lines = [.. lines.Where(line =>
-        !line.Contains("{{INSTANCE_ID}}") &&
-        !line.Contains("<string>--instance-id</string>"))];
-
-      template = string.Join("\n", lines);
-    }
-    else
-    {
-      template = template.Replace("{{INSTANCE_ID}}", _instanceOptions.Value.InstanceId);
-    }
-    return template;
-  }
-
   private string GetLaunchAgentFilePath()
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
@@ -382,6 +383,15 @@ internal class AgentInstallerMac(
     return sourceAgentPath;
   }
 
+  private string GetTempExtractDirectory()
+  {
+    var instanceSegment = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      ? AppConstants.DefaultInstallDirectoryName
+      : _instanceOptions.Value.InstanceId;
+
+    return Path.Combine(MacInstallerTempDirectory, instanceSegment, "bundle");
+  }
+
   private string GetUpdaterInstallerPath()
   {
     var instanceSegment = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
@@ -411,6 +421,33 @@ internal class AgentInstallerMac(
       UnixFileMode.GroupExecute |
       UnixFileMode.OtherRead |
       UnixFileMode.OtherExecute);
+  }
+
+  private void SetExecutablePermissions(string appBundlePath)
+  {
+    var executableFileMode =
+      UnixFileMode.UserRead |
+      UnixFileMode.UserWrite |
+      UnixFileMode.UserExecute |
+      UnixFileMode.GroupRead |
+      UnixFileMode.GroupExecute |
+      UnixFileMode.OtherRead |
+      UnixFileMode.OtherExecute;
+
+    foreach (var executablePath in new[]
+    {
+      Path.Combine(appBundlePath, "Contents", "MacOS", "ControlR.DesktopClient"),
+      Path.Combine(appBundlePath, "Contents", "Library", "LaunchServices", "ControlR.Agent")
+    })
+    {
+      if (!_fileSystem.FileExists(executablePath))
+      {
+        continue;
+      }
+
+      _fileSystem.SetUnixFileMode(executablePath, executableFileMode);
+      _logger.LogDebug("Set executable permissions on {FilePath}", executablePath);
+    }
   }
 
   private async Task StopInstallerDaemonService()

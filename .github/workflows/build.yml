@@ -34,6 +34,12 @@ on:
         default: true
         type: boolean
 
+      run_tests:
+        description: "Run tests"
+        required: false
+        default: false
+        type: boolean
+
       build_nugets:
         description: "Build NuGet packages"
         required: false
@@ -104,13 +110,14 @@ jobs:
   run-tests:
     name: Run Tests
     needs: set-version
+    if: inputs.run_tests
     uses: ./.github/workflows/run-tests.yml
     with:
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
 
   build-nugets:
     name: Build NuGet Packages
-    needs: [set-version, run-tests]
+    needs: [set-version]
     if: inputs.build_nugets
     uses: ./.github/workflows/build-sign-pack-nugets.yml
     with:
@@ -126,7 +133,7 @@ jobs:
   build-mac-binaries:
     name: Apple Build (${{ matrix.arch }})
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-26"]') }}
-    needs: [set-version, run-tests]
+    needs: [set-version]
     strategy:
       matrix:
         arch: [osx-arm64, osx-x64]
@@ -329,7 +336,7 @@ jobs:
 
           echo "Creating final bundle ZIP for macOS ${{ matrix.arch }}..."
           rm -f "$BUNDLE_ZIP"
-          ditto -c -k --keepParent "$PUBLISH_DIR/ControlR.app" "$BUNDLE_ZIP"
+          ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/ControlR.app" "$BUNDLE_ZIP"
 
       - name: Publish Installer (${{ matrix.arch }})
         run: |
@@ -395,7 +402,7 @@ jobs:
     # When using self-hosted Windows runners, require both the self-hosted label and OS label.
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
     environment: secure-signing
-    needs: [set-version, run-tests]
+    needs: [set-version]
     permissions:
       id-token: write
       contents: read
@@ -530,7 +537,7 @@ jobs:
   build-linux-binaries:
     name: Linux Build
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
-    needs: [set-version, run-tests]
+    needs: [set-version]
 
     steps:
       - name: Checkout

@@ -100,6 +100,102 @@ public class FakeFileSystemTests
   }
 
   [Fact]
+  public void MoveDirectory_CreatesDestinationParentHierarchy()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddFile("/src/file.txt", "content");
+
+    fileSystem.MoveDirectory("/src", "/deep/nested/dst");
+
+    Assert.True(fileSystem.DirectoryExists("/deep/nested/dst"));
+    Assert.True(fileSystem.FileExists("/deep/nested/dst/file.txt"));
+    Assert.False(fileSystem.FileExists("/src/file.txt"));
+  }
+
+  [Fact]
+  public void MoveDirectory_MovesFilesToNewPath()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddFile("/src/file1.txt", "content1");
+    fileSystem.AddFile("/src/file2.txt", "content2");
+
+    fileSystem.MoveDirectory("/src", "/dst");
+
+    Assert.False(fileSystem.DirectoryExists("/src"));
+    Assert.True(fileSystem.DirectoryExists("/dst"));
+    Assert.True(fileSystem.FileExists("/dst/file1.txt"));
+    Assert.True(fileSystem.FileExists("/dst/file2.txt"));
+    Assert.False(fileSystem.FileExists("/src/file1.txt"));
+    Assert.False(fileSystem.FileExists("/src/file2.txt"));
+  }
+
+  [Fact]
+  public async Task MoveDirectory_MovesNestedDirectoriesAndFiles()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddFile("/src/sub/deep/file.txt", "deep-content");
+
+    fileSystem.MoveDirectory("/src", "/dst");
+
+    Assert.False(fileSystem.DirectoryExists("/src"));
+    Assert.False(fileSystem.DirectoryExists("/src/sub"));
+    Assert.True(fileSystem.DirectoryExists("/dst/sub/deep"));
+    Assert.True(fileSystem.FileExists("/dst/sub/deep/file.txt"));
+
+    var content = await fileSystem.ReadAllTextAsync("/dst/sub/deep/file.txt");
+    Assert.Equal("deep-content", content);
+  }
+
+  [Fact]
+  public void MoveDirectory_PreservesDirectoryAttributes()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddDirectory("/src", attributes: FileAttributes.Directory | FileAttributes.Hidden);
+
+    fileSystem.MoveDirectory("/src", "/dst");
+
+    var dirInfo = fileSystem.GetDirectoryInfo("/dst");
+    Assert.True(dirInfo.Exists);
+    Assert.Equal(FileAttributes.Directory | FileAttributes.Hidden, dirInfo.Attributes);
+  }
+
+  [Fact]
+  public async Task MoveDirectory_PreservesFileContent()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddFile("/src/data.bin", "binary-content");
+
+    fileSystem.MoveDirectory("/src", "/dst");
+
+    var content = await fileSystem.ReadAllTextAsync("/dst/data.bin");
+    Assert.Equal("binary-content", content);
+  }
+
+  [Fact]
+  public void MoveDirectory_ThrowsWhenDestinationAlreadyExists()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddFile("/src/file.txt", "content");
+    fileSystem.AddDirectory("/dst");
+
+    var ex = Assert.Throws<IOException>(() =>
+      fileSystem.MoveDirectory("/src", "/dst"));
+
+    Assert.Contains("/dst", ex.Message);
+  }
+
+  [Fact]
+  public void MoveDirectory_ThrowsWhenSourceDoesNotExist()
+  {
+    var fileSystem = new FakeFileSystem();
+
+    var ex = Assert.Throws<DirectoryNotFoundException>(() =>
+      fileSystem.MoveDirectory("/nonexistent", "/dst"));
+
+    Assert.Contains("/nonexistent", ex.Message);
+  }
+
+  [Fact]
   public void OpenFileStream_AllowsSharedReads()
   {
     var fileSystem = new FakeFileSystem();
