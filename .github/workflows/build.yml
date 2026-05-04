@@ -21,12 +21,6 @@ on:
         required: false
         default: ""
         type: string
-      
-      prerelease:
-        description: "Is this a prerelease version?"
-        required: false
-        default: true
-        type: boolean
 
       notarize_mac_bundle:
         description: "Notarize macOS bundle"
@@ -34,14 +28,20 @@ on:
         default: true
         type: boolean
 
-      run_tests:
-        description: "Run tests"
+      build_nugets:
+        description: "Build NuGet packages"
+        required: false
+        default: true
+        type: boolean
+
+      prerelease:
+        description: "Is prerelease?"
         required: false
         default: false
         type: boolean
 
-      build_nugets:
-        description: "Build NuGet packages"
+      run_tests:
+        description: "Run tests"
         required: false
         default: false
         type: boolean
@@ -599,7 +599,6 @@ jobs:
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["ubuntu-latest"]') }}
     needs:
       [
-        run-tests,
         build-windows-binaries,
         build-linux-binaries,
         build-mac-binaries,
