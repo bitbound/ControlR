@@ -56,42 +56,16 @@ public abstract class ManagedRelayStream(
   public TimeSpan CurrentLatency => _streamMetrics.GetCurrentLatency();
   public bool IsConnected => State == WebSocketState.Open;
   public WebSocketState State => _client?.State ?? WebSocketState.Closed;
-
-  protected ClientWebSocket Client => _client ?? throw new InvalidOperationException("Client not initialized.");
   protected bool IsDisposed { get; private set; }
 
   public async Task<Result> Close()
   {
-    try
-    {
-      if (Client.State == WebSocketState.Open)
-      {
-        using var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await Client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed.", closeCts.Token);
-      }
-      await InvokeOnClosedHandlers();
-      return Result.Ok();
-    }
-    catch (OperationCanceledException ex)
-    {
-      if (Client.State == WebSocketState.Open)
-      {
-        const string message = "Timed out while closing connection.";
-        _logger.LogWarning(ex, message);
-        return Result.Fail(ex, message);
-      }
-      return Result.Ok();
-    }
-    catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.InvalidState or WebSocketError.ConnectionClosedPrematurely)
+    if (_client is not {} client)
     {
       return Result.Ok();
     }
-    catch (Exception ex)
-    {
-      const string message = "Error while closing connection.";
-      _logger.LogWarning(ex, message);
-      return Result.Fail(ex, message);
-    }
+
+    return await Close(client);
   }
 
   public async Task Connect(Uri websocketUri, CancellationToken cancellationToken)
@@ -101,7 +75,7 @@ public abstract class ManagedRelayStream(
     _client = new ClientWebSocket();
     await _client.ConnectAsync(websocketUri, cancellationToken);
     _logger.LogInformation("Connection successful.");
-    ReadFromStream(cancellationToken).Forget();
+    ReadFromStream(_client, cancellationToken).Forget();
   }
 
   public async Task Connect(Uri websocketUri, Action<ClientWebSocketOptions> configureOptions, CancellationToken cancellationToken)
@@ -113,7 +87,7 @@ public abstract class ManagedRelayStream(
 
     await _client.ConnectAsync(websocketUri, cancellationToken);
     _logger.LogInformation("Connection successful.");
-    ReadFromStream(cancellationToken).Forget();
+    ReadFromStream(_client, cancellationToken).Forget();
   }
 
   public async ValueTask DisposeAsync()
@@ -145,6 +119,11 @@ public abstract class ManagedRelayStream(
 
   public async Task Send(DtoWrapper dto, CancellationToken cancellationToken)
   {
+    if (_client is not {} client)
+    {
+      throw new InvalidOperationException("Client has not been initialized.");
+    }
+
     if (dto.DtoType == DtoType.Ack)
     {
       throw new ArgumentException("Cannot send ACK DTOs with this method.  Use SendAck instead.");
@@ -159,7 +138,7 @@ public abstract class ManagedRelayStream(
 
     var dtoBytes = MessagePackSerializer.Serialize(dto, cancellationToken: linkedCts.Token);
 
-    await Client.SendAsync(
+    await client.SendAsync(
       dtoBytes,
       WebSocketMessageType.Binary,
       true,
@@ -218,6 +197,40 @@ public abstract class ManagedRelayStream(
     }
   }
 
+  private async Task<Result> Close(ClientWebSocket client)
+  {
+    try
+    {
+      if (client.State == WebSocketState.Open)
+      {
+        using var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed.", closeCts.Token);
+      }
+      await InvokeOnClosedHandlers();
+      return Result.Ok();
+    }
+    catch (OperationCanceledException ex)
+    {
+      if (client.State == WebSocketState.Open)
+      {
+        const string message = "Timed out while closing connection.";
+        _logger.LogWarning(ex, message);
+        return Result.Fail(ex, message);
+      }
+      return Result.Ok();
+    }
+    catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.InvalidState or WebSocketError.ConnectionClosedPrematurely)
+    {
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      const string message = "Error while closing connection.";
+      _logger.LogWarning(ex, message);
+      return Result.Fail(ex, message);
+    }
+  }
+
   private async Task InvokeOnClosedHandlers()
   {
     foreach (var callback in _onCloseHandlers)
@@ -233,14 +246,14 @@ public abstract class ManagedRelayStream(
     }
   }
 
-  private async Task ReadFromStream(CancellationToken cancellationToken)
+  private async Task ReadFromStream(ClientWebSocket client, CancellationToken cancellationToken)
   {
-    while (Client.State == WebSocketState.Open)
+    while (client.State == WebSocketState.Open)
     {
       try
       {
         using var dtoStream = _memoryProvider.GetRecyclableStream();
-        using var webSocketStream = WebSocketStream.CreateReadableMessageStream(Client);
+        using var webSocketStream = WebSocketStream.CreateReadableMessageStream(client);
         await webSocketStream.CopyToAsync(dtoStream, cancellationToken);
 
         var totalBytesRead = (int)dtoStream.Length;
@@ -270,7 +283,7 @@ public abstract class ManagedRelayStream(
             }
           default:
             {
-              await SendAck(totalBytesRead, receivedWrapper.SendTimestamp, cancellationToken);
+              await SendAck(client, totalBytesRead, receivedWrapper.SendTimestamp, cancellationToken);
               await _messageHandlers.InvokeHandlers(receivedWrapper, cancellationToken);
               break;
             }
@@ -298,16 +311,16 @@ public abstract class ManagedRelayStream(
       }
     }
 
-    await Close();
+    await Close(client);
   }
 
-  private async Task SendAck(int receivedBytes, long sendTimestamp, CancellationToken cancellationToken)
+  private async Task SendAck(ClientWebSocket client, int receivedBytes, long sendTimestamp, CancellationToken cancellationToken)
   {
     var ackDto = new AckDto(receivedBytes, sendTimestamp);
     var wrapper = DtoWrapper.Create(ackDto, DtoType.Ack);
     var wrapperBytes = MessagePackSerializer.Serialize(wrapper, cancellationToken: cancellationToken);
     _streamMetrics.RecordBytesOut(new TransferRecord(wrapperBytes.Length, TimeProvider.GetTimestamp()));
-    await Client.SendAsync(
+    await client.SendAsync(
       wrapperBytes,
       WebSocketMessageType.Binary,
       true,
@@ -334,5 +347,4 @@ public abstract class ManagedRelayStream(
       _logger.LogError("Timed out while waiting for send buffer to drain.");
     }
   }
-
 }

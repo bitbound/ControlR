@@ -13,6 +13,7 @@ public partial class RemoteControl : ViewportAwareComponent
   private Severity _alertSeverity;
   private bool _isReconnecting;
   private string? _loadingMessage = "Connecting";
+  private Guid _previousDeviceId;
   private DesktopSession[]? _systemSessions;
 
   [SupplyParameterFromQuery]
@@ -102,6 +103,7 @@ public partial class RemoteControl : ViewportAwareComponent
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
+    _previousDeviceId = DeviceId;
     try
     {
       if (CurrentState == SignalingState.ConnectionActive)
@@ -127,6 +129,22 @@ public partial class RemoteControl : ViewportAwareComponent
     finally
     {
       _loadingMessage = null;
+    }
+  }
+
+  protected override async Task OnParametersSetAsync()
+  {
+    await base.OnParametersSetAsync();
+
+    if (_previousDeviceId == Guid.Empty)
+    {
+      return;
+    }
+
+    if (_previousDeviceId != DeviceId)
+    {
+      _previousDeviceId = DeviceId;
+      await CleanupRemoteControlSession(sendCloseStreamingSession: true, refreshSessionsQuiet: false);
     }
   }
 
@@ -300,7 +318,7 @@ public partial class RemoteControl : ViewportAwareComponent
           }
 
           await GetDeviceDesktopSessions(true);
-          if (_systemSessions is null)
+          if (_systemSessions is null or { Length: 0 })
           {
             continue;
           }

@@ -26,6 +26,8 @@ using WTS_SESSION_INFOW = Windows.Win32.System.RemoteDesktop.WTS_SESSION_INFOW;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Shared.Services.Processes;
+using ControlR.Libraries.Shared.Logging;
+using ControlR.Libraries.Shared.Extensions;
 
 namespace ControlR.Libraries.NativeInterop.Windows;
 
@@ -101,6 +103,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     "MSCTFIME UI" // Input method editor
   ];
 
+  private readonly LogDeduplicationContext<Win32Interop> _dedupeLogger = logger.EnterDedupeScope(cacheDuration: TimeSpan.FromMinutes(1));
   private readonly ILogger<Win32Interop> _logger = logger;
   private readonly Lock _windowClassLock = new();
 
@@ -517,8 +520,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
       if (!PInvoke.GetCursorInfo(ref cursorInfo) || cursorInfo.hCursor == default)
       {
-        _logger.LogDebug("Failed to get cursor info.  Last p/invoke error: {LastError}",
-          Marshal.GetLastPInvokeErrorMessage());
+        _dedupeLogger.LogDebugDeduped(
+          template: "Failed to get cursor info.  Last p/invoke error: {LastError}",
+          args: [Marshal.GetLastPInvokeErrorMessage()]);
+          
         return PointerCursor.Unknown;
       }
 
@@ -529,7 +534,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while getting current cursor.");
+      _dedupeLogger.LogErrorDeduped(
+        template: "Error while getting current cursor.",
+        exception: ex);
     }
 
     return PointerCursor.Unknown;

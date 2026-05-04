@@ -10,6 +10,7 @@ public partial class DeviceAccessLayout
   private string? _deviceName;
   private string? _errorText;
   private HubConnectionState _hubConnectionState = HubConnectionState.Disconnected;
+  private Guid _previousDeviceId;
 
   [Inject]
   public required ILazyInjector<IChatState> ChatState { get; init; }
@@ -113,6 +114,7 @@ public partial class DeviceAccessLayout
         && historyEntry?.CanGoBack == true;
 
       await GetDeviceInfo();
+      _previousDeviceId = _deviceId;
 
       Messenger.Value.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage);
       Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
@@ -128,6 +130,26 @@ public partial class DeviceAccessLayout
     {
       _errorText = "An error occurred during initialization.";
       Logger.LogError(ex, "Error initializing DeviceAccessLayout");
+    }
+  }
+
+  protected override async Task OnParametersSetAsync()
+  {
+    await base.OnParametersSetAsync();
+
+    if (_previousDeviceId == Guid.Empty)
+    {
+      return;
+    }
+
+    var currentUri = new Uri(NavManager.Uri);
+    var query = HttpUtility.ParseQueryString(currentUri.Query);
+    if (Guid.TryParse(query.Get("deviceId"), out var currentDeviceId) &&
+        currentDeviceId != Guid.Empty &&
+        currentDeviceId != _previousDeviceId)
+    {
+      await GetDeviceInfo();
+      _previousDeviceId = _deviceId;
     }
   }
 
