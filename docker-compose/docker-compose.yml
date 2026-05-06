@@ -110,6 +110,10 @@ services:
       # This can be helpful for debugging but may leak sensitive information, so it is disabled by default.
       ControlR_AppOptions__EnableSignalrDetailedErrors: false
 
+      # When enabled, the Scalar UI endpoint for exploring the OpenAPI document is served.
+      # Recommended for development/debugging; disable in production.
+      ControlR_AppOptions__EnableScalarUi: false
+
       # Configure X.509 certificate-based encryption for Data Protection keys at rest.
       # If false, keys are not encrypted (not recommended for production).
       # When true, Data Protection keys will be encrypted using the certificate specified below.

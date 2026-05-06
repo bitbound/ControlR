@@ -31,11 +31,15 @@ if (appOptions.UseHttpLogging)
 
 app.MapDefaultEndpoints();
 
+if (appOptions.EnableScalarUi)
+{
+  app.MapScalarApiReference();
+  app.MapOpenApi();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-  app.MapOpenApi();
-  app.MapScalarApiReference();
   app.UseWebAssemblyDebugging();
   app.UseMigrationsEndPoint();
 }

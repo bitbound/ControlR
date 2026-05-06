@@ -21,7 +21,6 @@ using ControlR.Web.Client.Services;
 using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
-using ControlR.Libraries.Hosting;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
 
