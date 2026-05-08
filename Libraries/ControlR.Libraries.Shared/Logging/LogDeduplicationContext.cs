@@ -191,7 +191,7 @@ public sealed class LogDeduplicationContext<T>(ILogger<T> logger, TimeSpan? cach
       return;
     }
 
-    var template = $"{logRecord.Template} (Repeated {logRecord.TimesLogged} time(s))";
+    var template = $"(DEDUPED: {logRecord.TimesLogged} time(s)) {logRecord.Template}";
     _logger.Log(logRecord.LogLevel, logRecord.Exception, template, logRecord.Args);
   }
 
