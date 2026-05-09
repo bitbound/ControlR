@@ -10,12 +10,6 @@
       "type": "http",
       "url": "https://mcp.deepwiki.com/mcp",
       "headers": {}
-    },
-    "Cloudflare Docs": {
-      "type": "stdio",
-      "command": "https://docs.mcp.cloudflare.com/mcp",
-      "args": [],
-      "env": {}
     }
   }
 }
