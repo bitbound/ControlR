@@ -1,4 +1,6 @@
+using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Shared.Logging;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
@@ -10,10 +12,12 @@ namespace ControlR.Agent.Common.Services.Linux;
 internal class DesktopClientWatcherLinux(
   TimeProvider timeProvider,
   IServiceControl serviceControl,
+  IDesktopClientRepairCoordinator desktopClientRepairCoordinator,
   IDesktopEnvironmentDetectorAgent desktopEnvironmentDetector,
   IHeadlessServerDetector headlessServerDetector,
   ISystemEnvironment systemEnvironment,
   IFileSystem fileSystem,
+  IDesktopClientFileVerifier desktopClientFileVerifier,
   ILoggedInUserProvider loggedInUserProvider,
   IProcessManager processManager,
   IOptions<InstanceOptions> instanceOptions,
@@ -22,6 +26,8 @@ internal class DesktopClientWatcherLinux(
   private const int ProcessCommandTimeoutMs = 5_000;
 
   private readonly LogDeduplicationContext<DesktopClientWatcherLinux> _dedupeLogger = logger.EnterDedupeScope();
+  private readonly IDesktopClientFileVerifier _desktopClientFileVerifier = desktopClientFileVerifier;
+  private readonly IDesktopClientRepairCoordinator _desktopClientRepairCoordinator = desktopClientRepairCoordinator;
   private readonly IDesktopEnvironmentDetectorAgent _desktopEnvironmentDetector = desktopEnvironmentDetector;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
@@ -32,6 +38,7 @@ internal class DesktopClientWatcherLinux(
   private readonly IServiceControl _serviceControl = serviceControl;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
+
   private IProcess? _loginScreenProcess;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -67,6 +74,11 @@ internal class DesktopClientWatcherLinux(
     await _serviceControl.StopDesktopClientService(throwOnFailure: false);
   }
 
+  private static string GetRepairKey(string uid)
+  {
+    return $"linux-user-{uid}";
+  }
+
   private async Task CheckAndStartDesktopClientServices(CancellationToken cancellationToken)
   {
     try
@@ -99,8 +111,19 @@ internal class DesktopClientWatcherLinux(
   {
     try
     {
+      var installationValidation = ValidateDesktopClientInstallation();
+      if (!installationValidation.IsSuccess)
+      {
+        _desktopClientRepairCoordinator.ReportFailure(
+          "desktop-installation",
+          installationValidation.Reason ?? "Desktop client installation is invalid.",
+          immediate: true);
+        return;
+      }
+
       var serviceName = GetDesktopClientServiceName();
       var isRunning = await IsDesktopClientServiceRunning(uid, serviceName);
+      var repairKey = GetRepairKey(uid);
 
       cancellationToken.ThrowIfCancellationRequested();
 
@@ -118,10 +141,14 @@ internal class DesktopClientWatcherLinux(
         return;
       }
 
+      _desktopClientRepairCoordinator.ReportHealthy(repairKey);
       _dedupeLogger.LogDeduped(LogLevel.Information, "Desktop client service is running for user {UID}.", args: uid);
     }
     catch (Exception ex)
     {
+      _desktopClientRepairCoordinator.ReportFailure(
+        GetRepairKey(uid),
+        $"Failed to check or start the desktop client for user {uid}: {ex.Message}");
       _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to check/start desktop client service for user {UID}.", args: uid, exception: ex);
     }
   }
@@ -144,6 +171,7 @@ internal class DesktopClientWatcherLinux(
     {
       // If not at the login screen, ensure the login screen client is stopped
       await StopLoginScreenDesktopClient();
+      _desktopClientRepairCoordinator.ReportHealthy("linux-login-screen");
       return;
     }
 
@@ -167,7 +195,10 @@ internal class DesktopClientWatcherLinux(
     if (!isLoginScreenRunning)
     {
       _ = LaunchLoginScreenDesktopClient(displayInfo, cancellationToken);
+      return;
     }
+
+    _desktopClientRepairCoordinator.ReportHealthy("linux-login-screen");
   }
 
   private async Task<int?> GetDesktopClientMainProcessId(string uid, string serviceName)
@@ -314,6 +345,10 @@ internal class DesktopClientWatcherLinux(
 
       if (!_fileSystem.FileExists(desktopClientPath))
       {
+        _desktopClientRepairCoordinator.ReportFailure(
+          "desktop-installation",
+          $"Desktop client executable was not found at '{desktopClientPath}'.",
+          immediate: true);
         _logger.LogError("Desktop client executable not found at {Path}", desktopClientPath);
         return;
       }
@@ -364,6 +399,7 @@ internal class DesktopClientWatcherLinux(
 
       if (_loginScreenProcess is null)
       {
+        _desktopClientRepairCoordinator.ReportFailure("linux-login-screen", "Failed to start the login screen desktop client process.");
         _logger.LogError("Failed to start login screen desktop client process");
         return;
       }
@@ -387,6 +423,7 @@ internal class DesktopClientWatcherLinux(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error launching login screen desktop client");
+      _desktopClientRepairCoordinator.ReportFailure("linux-login-screen", $"Error launching the login screen desktop client: {ex.Message}");
     }
   }
 
@@ -434,5 +471,23 @@ internal class DesktopClientWatcherLinux(
     }
 
     return Task.CompletedTask;
+  }
+
+  private Result ValidateDesktopClientInstallation()
+  {
+    var desktopClientPath = Path.Combine(GetInstallDirectory(), "DesktopClient", AppConstants.DesktopClientFileName);
+    if (!_fileSystem.FileExists(desktopClientPath))
+    {
+      return Result.Fail($"Desktop client executable was not found at '{desktopClientPath}'.");
+    }
+
+    var verificationResult = _desktopClientFileVerifier.VerifyFile(desktopClientPath);
+    if (verificationResult.IsSuccess)
+    {
+      _desktopClientRepairCoordinator.ReportHealthy("desktop-installation");
+      return verificationResult;
+    }
+
+    return verificationResult;
   }
 }

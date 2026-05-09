@@ -17,6 +17,7 @@ internal class DesktopClientWatcherWin(
   IWin32Interop win32Interop,
   IProcessManager processManager,
   IIpcServerStore ipcServerStore,
+  IDesktopClientRepairCoordinator desktopClientRepairCoordinator,
   ISystemEnvironment environment,
   IFileSystem fileSystem,
   IOptionsAccessor optionsAccessor,
@@ -29,6 +30,7 @@ internal class DesktopClientWatcherWin(
 {
   private readonly LogDeduplicationContext<DesktopClientWatcherWin> _dedupeLogger = logger.EnterDedupeScope();
   private readonly IDesktopClientFileVerifier _desktopClientFileVerifier = desktopClientFileVerifier;
+  private readonly IDesktopClientRepairCoordinator _desktopClientRepairCoordinator = desktopClientRepairCoordinator;
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
   private readonly ISystemEnvironment _environment = environment;
   private readonly IFileSystem _fileSystem = fileSystem;
@@ -58,6 +60,14 @@ internal class DesktopClientWatcherWin(
 
     foreach (var session in activeSessions)
     {
+      var repairKey = GetRepairSessionKey(session.SystemSessionId);
+
+      if (desktopClients.Any(x => x.SystemSessionId == session.SystemSessionId))
+      {
+        _desktopClientRepairCoordinator.ReportHealthy(repairKey);
+        continue;
+      }
+
       if (_launchTracker.IsSessionCovered(session.SystemSessionId, desktopClients))
       {
         continue;
@@ -70,6 +80,12 @@ internal class DesktopClientWatcherWin(
       var refreshedDesktopClients = await _desktopSessionProvider.GetActiveDesktopClients();
       _launchTracker.Reconcile(activeSessionIds, refreshedDesktopClients);
 
+      if (refreshedDesktopClients.Any(x => x.SystemSessionId == session.SystemSessionId))
+      {
+        _desktopClientRepairCoordinator.ReportHealthy(repairKey);
+        continue;
+      }
+
       if (_launchTracker.IsSessionCovered(session.SystemSessionId, refreshedDesktopClients))
       {
         continue;
@@ -81,17 +97,23 @@ internal class DesktopClientWatcherWin(
         _dedupeLogger.LogErrorDeduped(
           template: "Desktop client launch skipped because the installed desktop client is invalid. Reason: {Reason}",
           args: installationVerificationResult.Reason);
+        _desktopClientRepairCoordinator.ReportFailure(
+          "desktop-installation",
+          installationVerificationResult.Reason ?? "Desktop client installation is invalid.",
+          immediate: true);
         continue;
       }
 
-      await LaunchDesktopClient(session.SystemSessionId, stoppingToken);
+      _desktopClientRepairCoordinator.ReportHealthy("desktop-installation");
+
+      var launchSucceeded = await LaunchDesktopClient(session.SystemSessionId, stoppingToken);
+      if (!launchSucceeded)
+      {
+        _desktopClientRepairCoordinator.ReportFailure(
+          repairKey,
+          $"Failed to launch desktop client in session {session.SystemSessionId}.");
+      }
     }
-
-    _dedupeLogger.LogWarningDeduped(
-      template: "Failed to launch desktop client in one or more sessions repeatedly. " +
-      "Clearing tracked launch state and waiting for the installer to repair the installation if needed.");
-
-    _launchTracker.Clear();
   }
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -132,15 +154,52 @@ internal class DesktopClientWatcherWin(
     }
   }
 
+  private static string GetRepairSessionKey(int sessionId)
+  {
+    return $"windows-session-{sessionId}";
+  }
+
+  private static bool TryGetProcessSessionId(IProcess process, out int sessionId)
+  {
+    try
+    {
+      sessionId = process.SessionId;
+      return true;
+    }
+    catch
+    {
+      sessionId = -1;
+      return false;
+    }
+  }
+
   private async Task DisposeDuplicateClients(DesktopSession[] activeClients, CancellationToken cancellationToken)
   {
     try
     {
       // Get all IPC servers grouped by session ID
-      var allServers = _ipcServerStore.Servers.Values;
-      var serversBySession = allServers
-        .GroupBy(s => s.Process.SessionId)
-        .ToDictionary(g => g.Key, g => g.ToList());
+      var serversBySession = new Dictionary<int, List<IpcServerRecord>>();
+
+      foreach (var serverRecord in _ipcServerStore.Servers.Values)
+      {
+        if (!TryGetProcessSessionId(serverRecord.Process, out var sessionId))
+        {
+          if (_ipcServerStore.TryRemove(serverRecord.Process.Id, out var removedRecord) && removedRecord is not null)
+          {
+            Disposer.DisposeAll(removedRecord.Process, removedRecord.Server);
+          }
+
+          continue;
+        }
+
+        if (!serversBySession.TryGetValue(sessionId, out var serversInSession))
+        {
+          serversInSession = [];
+          serversBySession[sessionId] = serversInSession;
+        }
+
+        serversInSession.Add(serverRecord);
+      }
 
       // For each session with active clients, find and dispose duplicates
       foreach (var activeClient in activeClients)
@@ -204,7 +263,7 @@ internal class DesktopClientWatcherWin(
     }
   }
 
-  private async Task LaunchDesktopClient(int sessionId, CancellationToken cancellationToken)
+  private async Task<bool> LaunchDesktopClient(int sessionId, CancellationToken cancellationToken)
   {
     IProcess? trackedProcess = null;
 
@@ -213,7 +272,7 @@ internal class DesktopClientWatcherWin(
       if (_environment.IsDebug)
       {
         await StartDebugSession();
-        return;
+        return true;
       }
 
       var binaryPath = _pathProvider.GetDesktopExecutablePath();
@@ -230,7 +289,7 @@ internal class DesktopClientWatcherWin(
       if (!result || process is null || process.Id == -1)
       {
         _logger.LogError("Failed to start desktop client process in session {SessionId}.", sessionId);
-        return;
+        return false;
       }
 
       trackedProcess = process;
@@ -256,16 +315,22 @@ internal class DesktopClientWatcherWin(
           "Desktop client for session {SessionId} registered with IPC shortly after launch. PID: {ProcessId}",
           sessionId,
           trackedProcess.Id);
-        return;
+        return true;
       }
 
       if (trackedProcess.HasExited)
       {
+        if (_launchTracker.TryRemove(sessionId, trackedProcess.Id, out var removedState) &&
+            removedState is not null)
+        {
+          removedState.Dispose();
+        }
+
         _logger.LogWarning(
           "Desktop client process for session {SessionId} exited before IPC registration completed. PID: {ProcessId}",
           sessionId,
           trackedProcess.Id);
-        return;
+        return false;
       }
 
       _logger.LogInformation(
@@ -273,7 +338,7 @@ internal class DesktopClientWatcherWin(
         sessionId,
         trackedProcess.Id);
 
-      return;
+      return true;
     }
     catch (Exception ex)
     {
@@ -288,7 +353,7 @@ internal class DesktopClientWatcherWin(
         template: "Error while launching desktop client in session {SessionId}. This error has been seen before.",
         args: sessionId,
         exception: ex);
-      return;
+      return false;
     }
   }
 

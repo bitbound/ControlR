@@ -1,4 +1,6 @@
+using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Shared.Logging;
+using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -8,12 +10,20 @@ namespace ControlR.Agent.Common.Services.Mac;
 internal class DesktopClientWatcherMac(
   TimeProvider timeProvider,
   IServiceControl serviceControl,
+  IDesktopClientRepairCoordinator desktopClientRepairCoordinator,
   IProcessManager processManager,
+  IFileSystem fileSystem,
+  IFileSystemPathProvider fileSystemPathProvider,
+  IDesktopClientFileVerifier desktopClientFileVerifier,
   ISystemEnvironment systemEnvironment,
   IOptions<InstanceOptions> instanceOptions,
   ILogger<DesktopClientWatcherMac> logger) : BackgroundService
 {
   private readonly LogDeduplicationContext<DesktopClientWatcherMac> _dedupeLogger = logger.EnterDedupeScope();
+  private readonly IDesktopClientFileVerifier _desktopClientFileVerifier = desktopClientFileVerifier;
+  private readonly IDesktopClientRepairCoordinator _desktopClientRepairCoordinator = desktopClientRepairCoordinator;
+  private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<DesktopClientWatcherMac> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
@@ -50,6 +60,11 @@ internal class DesktopClientWatcherMac(
     await _serviceControl.StopDesktopClientService(throwOnFailure: false);
   }
 
+  private static string GetRepairKey(string uid)
+  {
+    return $"mac-user-{uid}";
+  }
+
   private async Task CheckAndStartDesktopClientServices(CancellationToken cancellationToken)
   {
     try
@@ -79,8 +94,19 @@ internal class DesktopClientWatcherMac(
   {
     try
     {
+      var installationValidation = ValidateDesktopClientInstallation();
+      if (!installationValidation.IsSuccess)
+      {
+        _desktopClientRepairCoordinator.ReportFailure(
+          "desktop-installation",
+          installationValidation.Reason ?? "Desktop client installation is invalid.",
+          immediate: true);
+        return;
+      }
+
       var serviceName = GetDesktopClientServiceName();
       var isRunning = await IsDesktopClientServiceRunning(uid, serviceName);
+      var repairKey = GetRepairKey(uid);
 
       cancellationToken.ThrowIfCancellationRequested();
 
@@ -91,13 +117,27 @@ internal class DesktopClientWatcherMac(
       }
       else
       {
+        _desktopClientRepairCoordinator.ReportHealthy(repairKey);
         _dedupeLogger.LogDeduped(LogLevel.Information, "Desktop client service is running for user {UID}.", args: uid);
       }
     }
     catch (Exception ex)
     {
+      _desktopClientRepairCoordinator.ReportFailure(
+        GetRepairKey(uid),
+        $"Failed to check or start the desktop client for user {uid}: {ex.Message}");
       _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to check/start desktop client service for user {UID}.", args: uid, exception: ex);
     }
+  }
+
+  private string GetDesktopClientPlistPath()
+  {
+    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    {
+      return "/Library/LaunchAgents/app.controlr.desktop.plist";
+    }
+
+    return $"/Library/LaunchAgents/app.controlr.desktop.{_instanceOptions.Value.InstanceId}.plist";
   }
 
   private string GetDesktopClientServiceName()
@@ -183,5 +223,29 @@ internal class DesktopClientWatcherMac(
       _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to check service status for user {UID}.", args: [uid], exception: ex);
       return false;
     }
+  }
+
+  private Result ValidateDesktopClientInstallation()
+  {
+    var desktopExecutablePath = _fileSystemPathProvider.GetDesktopExecutablePath();
+    if (!_fileSystem.FileExists(desktopExecutablePath))
+    {
+      return Result.Fail($"Desktop client executable was not found at '{desktopExecutablePath}'.");
+    }
+
+    var desktopClientPlistPath = GetDesktopClientPlistPath();
+    if (!_fileSystem.FileExists(desktopClientPlistPath))
+    {
+      return Result.Fail($"Desktop client LaunchAgent plist was not found at '{desktopClientPlistPath}'.");
+    }
+
+    var verificationResult = _desktopClientFileVerifier.VerifyFile(desktopExecutablePath);
+    if (verificationResult.IsSuccess)
+    {
+      _desktopClientRepairCoordinator.ReportHealthy("desktop-installation");
+      return verificationResult;
+    }
+
+    return verificationResult;
   }
 }

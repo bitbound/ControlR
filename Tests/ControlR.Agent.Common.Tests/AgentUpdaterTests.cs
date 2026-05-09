@@ -19,7 +19,7 @@ using System.Security.Cryptography;
 
 namespace ControlR.Agent.Common.Tests;
 
-public class AgentUpdaterTests
+public class AgentMaintenanceServiceTests
 {
   private static readonly Uri _serverUri = new("https://controlr.example/");
   private static readonly Guid _tenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -27,7 +27,7 @@ public class AgentUpdaterTests
   [Fact]
   public async Task CheckForUpdate_OnMac_BootstrapsOneShotLaunchDaemon()
   {
-    var fixture = new AgentUpdaterFixture();
+    var fixture = new AgentMaintenanceServiceFixture();
     fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
     fixture.SystemEnvironment
       .SetupGet(x => x.Platform)
@@ -78,7 +78,7 @@ public class AgentUpdaterTests
         return Task.FromResult(0);
       });
 
-    var updater = fixture.CreateUpdater();
+    var updater = fixture.CreateMaintenanceService();
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -104,7 +104,7 @@ public class AgentUpdaterTests
   [Fact]
   public async Task CheckForUpdate_WhenInstalledBundleHashDiffers_DownloadsAndLaunchesInstaller()
   {
-    var fixture = new AgentUpdaterFixture();
+    var fixture = new AgentMaintenanceServiceFixture();
     fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
 
     var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
@@ -147,7 +147,7 @@ public class AgentUpdaterTests
         return launchedProcess.Object;
       });
 
-    var updater = fixture.CreateUpdater();
+    var updater = fixture.CreateMaintenanceService();
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -165,7 +165,7 @@ public class AgentUpdaterTests
   [Fact]
   public async Task CheckForUpdate_WhenInstalledBundleHashMatches_DoesNotDownloadOrLaunchInstaller()
   {
-    var fixture = new AgentUpdaterFixture();
+    var fixture = new AgentMaintenanceServiceFixture();
     fixture.FileSystem.AddFile(fixture.BundleHashPath, "ABC123");
 
     fixture.AgentUpdateApi
@@ -180,7 +180,7 @@ public class AgentUpdaterTests
         Version = Version.Parse("1.2.3")
       }));
 
-    var updater = fixture.CreateUpdater();
+    var updater = fixture.CreateMaintenanceService();
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -195,9 +195,9 @@ public class AgentUpdaterTests
       Times.Once);
   }
 
-  private sealed class AgentUpdaterFixture
+  private sealed class AgentMaintenanceServiceFixture
   {
-    public AgentUpdaterFixture()
+    public AgentMaintenanceServiceFixture()
     {
       ControlrApi
         .SetupGet(x => x.AgentUpdate)
@@ -240,9 +240,9 @@ public class AgentUpdaterTests
     public Mock<IOptionsAccessor> SettingsProvider { get; } = new();
     public Mock<ISystemEnvironment> SystemEnvironment { get; } = new();
 
-    public AgentUpdater CreateUpdater()
+    public AgentMaintenanceService CreateMaintenanceService()
     {
-      return new AgentUpdater(
+      return new AgentMaintenanceService(
         TimeProvider.System,
         ControlrApi.Object,
         DownloadsApi.Object,
@@ -253,7 +253,7 @@ public class AgentUpdaterTests
         SettingsProvider.Object,
         HostApplicationLifetime.Object,
         Options.Create(new InstanceOptions { InstanceId = "instance-1" }),
-        NullLogger<AgentUpdater>.Instance);
+        NullLogger<AgentMaintenanceService>.Instance);
     }
 
     private sealed class NoopDisposable : IDisposable

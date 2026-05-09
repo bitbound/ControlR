@@ -145,6 +145,87 @@ internal class AgentInstallerMac(
     }
   }
 
+  public async Task RepairDesktopClient(AgentInstallRequest request)
+  {
+    if (!await _installLock.WaitAsync(0))
+    {
+      _logger.LogWarning("Installer lock already acquired.  Aborting desktop repair.");
+      return;
+    }
+
+    try
+    {
+      _logger.LogInformation("Desktop repair started.");
+
+      if (Libc.Geteuid() != 0)
+      {
+        _logger.LogError("Desktop repair command must be run with sudo.");
+        return;
+      }
+
+      var installedAppBundlePath = GetInstalledAppBundlePath();
+      var stageDirectory = GetRepairStageDirectory();
+      var stagedAppBundlePath = _fileSystem.JoinPaths('/', stageDirectory, PathConstants.GetMacAppBundleName(_instanceOptions.Value.InstanceId));
+      var backupAppBundlePath = $"{installedAppBundlePath}.backup-{Guid.NewGuid():N}";
+
+      try
+      {
+        await retryer.Retry(
+          () =>
+          {
+            TryDeleteDirectory(stageDirectory);
+            _fileSystem.CreateDirectory(stageDirectory);
+            _logger.LogInformation("Extracting repair bundle {BundleZipPath} to {InstallDirectory}.", request.BundleZipPath, stageDirectory);
+            return ExtractBundleToInstallDirectory(request.BundleZipPath, stageDirectory);
+          },
+          tryCount: 5,
+          retryDelay: TimeSpan.FromSeconds(1));
+
+        ValidateRepairedAppBundle(stagedAppBundlePath);
+
+        await _serviceControl.StopDesktopClientService(throwOnFailure: false);
+
+        if (_fileSystem.DirectoryExists(installedAppBundlePath))
+        {
+          _fileSystem.MoveDirectory(installedAppBundlePath, backupAppBundlePath);
+        }
+
+        _fileSystem.MoveDirectory(stagedAppBundlePath, installedAppBundlePath);
+
+        TryDeleteDirectory(backupAppBundlePath);
+      }
+      catch
+      {
+        if (!_fileSystem.DirectoryExists(installedAppBundlePath) && _fileSystem.DirectoryExists(backupAppBundlePath))
+        {
+          Directory.Move(backupAppBundlePath, installedAppBundlePath);
+        }
+
+        throw;
+      }
+      finally
+      {
+        TryDeleteDirectory(stageDirectory);
+      }
+
+      var desktopPlistPath = GetLaunchAgentFilePath();
+      var desktopPlistFile = (await GetLaunchAgentFile()).Trim();
+      await WriteFileIfChanged(desktopPlistPath, desktopPlistFile);
+      await WriteBundleHashFile(request.BundleSha256);
+      await _serviceControl.StartDesktopClientService(throwOnFailure: false);
+
+      _logger.LogInformation("Desktop repair completed.");
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while repairing the desktop client.");
+    }
+    finally
+    {
+      _installLock.Release();
+    }
+  }
+
   public async Task Uninstall()
   {
     if (!await _installLock.WaitAsync(0))
@@ -372,6 +453,11 @@ internal class AgentInstallerMac(
     return $"/Library/LaunchDaemons/app.controlr.agent.{_instanceOptions.Value.InstanceId}.plist";
   }
 
+  private string GetRepairStageDirectory()
+  {
+    return _fileSystem.JoinPaths('/', PathConstants.MacApplicationsDirectory, $".controlr-desktop-repair-{Guid.NewGuid():N}");
+  }
+
   private string GetSourceAgentPath(string sourceAppBundlePath)
   {
     var sourceAgentPath = _fileSystem.JoinPaths('/', sourceAppBundlePath, "Contents/Library/LaunchServices", AppConstants.GetAgentFileName(SystemPlatform.MacOs));
@@ -467,6 +553,35 @@ internal class AgentInstallerMac(
     catch
     {
       // The installer daemon may not already be loaded.
+    }
+  }
+
+  private void TryDeleteDirectory(string directoryPath)
+  {
+    try
+    {
+      if (_fileSystem.DirectoryExists(directoryPath))
+      {
+        _fileSystem.DeleteDirectory(directoryPath, true);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to delete temporary directory {DirectoryPath}.", directoryPath);
+    }
+  }
+
+  private void ValidateRepairedAppBundle(string stagedAppBundlePath)
+  {
+    if (!_fileSystem.DirectoryExists(stagedAppBundlePath))
+    {
+      throw new DirectoryNotFoundException($"The repair bundle app was not found at '{stagedAppBundlePath}'.");
+    }
+
+    var desktopExecutablePath = _fileSystem.JoinPaths('/', stagedAppBundlePath, PathConstants.MacDesktopExecutableRelativePath);
+    if (!_fileSystem.FileExists(desktopExecutablePath))
+    {
+      throw new FileNotFoundException("The repair bundle does not contain the desktop client executable.", desktopExecutablePath);
     }
   }
 

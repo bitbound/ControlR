@@ -10,12 +10,12 @@ internal class HubConnectionInitializer(
   IHubConnection<IAgentHub> hubConnection,
   IHostApplicationLifetime appLifetime,
   IOptionsAccessor optionsAccessor,
-  IAgentUpdater agentUpdater,
+  IAgentMaintenanceService agentUpdater,
   IAgentHeartbeatTimer agentHeartbeatTimer,
   ILogger<HubConnectionInitializer> logger) : IHostedService
 {
   private readonly IAgentHeartbeatTimer _agentHeartbeatTimer = agentHeartbeatTimer;
-  private readonly IAgentUpdater _agentUpdater = agentUpdater;
+  private readonly IAgentMaintenanceService _agentUpdater = agentUpdater;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IHubConnection<IAgentHub> _hubConnection = hubConnection;
   private readonly ILogger<HubConnectionInitializer> _logger = logger;

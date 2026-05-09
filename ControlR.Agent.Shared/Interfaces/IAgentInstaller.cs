@@ -6,5 +6,7 @@ public interface IAgentInstaller
 {
   Task Install(AgentInstallRequest request);
 
+  Task RepairDesktopClient(AgentInstallRequest request);
+
   Task Uninstall();
 }

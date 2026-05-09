@@ -97,21 +97,30 @@ internal sealed class DesktopClientLaunchTracker(
         continue;
       }
 
-      if (launchState.Process.SessionId != launchState.SessionId)
-      {
-        Remove(
-          launchState.SessionId,
-          $"Removing stale tracked launch for session {launchState.SessionId}. " +
-          $"Tracked PID: {launchState.ProcessId}, Process session: {launchState.Process.SessionId}");
-        continue;
-      }
-
       if (!IsProcessAlive(launchState.Process))
       {
         Remove(
           launchState.SessionId,
           $"Tracked desktop client exited before IPC registration completed. " +
           $"Session: {launchState.SessionId}, PID: {launchState.ProcessId}");
+        continue;
+      }
+
+      if (!TryGetProcessSessionId(launchState.Process, out var processSessionId))
+      {
+        Remove(
+          launchState.SessionId,
+          $"Removing tracked launch for session {launchState.SessionId} because the process session could not be determined. " +
+          $"Tracked PID: {launchState.ProcessId}");
+        continue;
+      }
+
+      if (processSessionId != launchState.SessionId)
+      {
+        Remove(
+          launchState.SessionId,
+          $"Removing stale tracked launch for session {launchState.SessionId}. " +
+          $"Tracked PID: {launchState.ProcessId}, Process session: {processSessionId}");
         continue;
       }
 
@@ -147,6 +156,7 @@ internal sealed class DesktopClientLaunchTracker(
           existing.ProcessId,
           process.Id);
 
+        TryStopProcess(existing.Process, existing.ProcessId, sessionId);
         existing.Dispose();
         return launchState;
       });
@@ -176,12 +186,47 @@ internal sealed class DesktopClientLaunchTracker(
     }
   }
 
+  private static bool TryGetProcessSessionId(IProcess process, out int sessionId)
+  {
+    try
+    {
+      sessionId = process.SessionId;
+      return true;
+    }
+    catch
+    {
+      sessionId = -1;
+      return false;
+    }
+  }
+
   private void Remove(int sessionId, string message)
   {
     if (_trackedLaunches.TryRemove(sessionId, out var removedState))
     {
       _logger.LogInformation(message);
       removedState.Dispose();
+    }
+  }
+
+  private void TryStopProcess(IProcess process, int processId, int sessionId)
+  {
+    if (!IsProcessAlive(process))
+    {
+      return;
+    }
+
+    try
+    {
+      process.Kill();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(
+        ex,
+        "Failed to stop stale tracked desktop client process. Session: {SessionId}, PID: {ProcessId}",
+        sessionId,
+        processId);
     }
   }
 }

@@ -22,8 +22,10 @@ using System.CommandLine.Parsing;
 
 const string RootDescription = "ControlR agent installer.";
 const string InstallCommandName = "install";
+const string RepairDesktopCommandName = "repair-desktop";
 const string UninstallCommandName = "uninstall";
 const string InstallCommandDescription = "Install the ControlR agent bundle.";
+const string RepairDesktopCommandDescription = "Repair the installed desktop client payload without modifying the agent service.";
 const string UninstallCommandDescription = "Uninstall the ControlR agent bundle.";
 const string ServerUriDescription = "The fully-qualified server URI to which the agent will connect (e.g. 'https://my.example.com' or 'https://my.example.com:8080').";
 const string InstanceIdDescription = "An instance ID for this agent installation, which allows multiple agent installations.  This is typically the server origin (e.g. 'example.controlr.app').";
@@ -52,6 +54,7 @@ const string TempBundleFileName = "ControlR.Agent.bundle.zip";
 var rootCommand = new RootCommand(RootDescription)
 {
   GetInstallCommand(),
+  GetRepairDesktopCommand(),
   GetUninstallCommand(),
 };
 
@@ -168,6 +171,25 @@ static Command GetUninstallCommand()
   return uninstallCommand;
 }
 
+static Command GetRepairDesktopCommand()
+{
+  var instanceIdOption = new Option<string?>(InstanceIdShortAlias, InstanceIdLongAlias)
+  {
+    Description = InstanceIdDescription
+  };
+
+  instanceIdOption.Validators.Add(ValidateInstanceId);
+
+  var repairCommand = new Command(RepairDesktopCommandName, RepairDesktopCommandDescription)
+  {
+    instanceIdOption,
+  };
+
+  repairCommand.SetAction(async parseResult => await RunRepairDesktop(parseResult.GetValue(instanceIdOption)));
+
+  return repairCommand;
+}
+
 static async Task<int> RunInstall(AgentInstallRequest request, string? instanceId)
 {
   using var host = CreateInstallerHost(instanceId, request.ServerUri);
@@ -257,6 +279,76 @@ static async Task<int> RunUninstall(string? instanceId)
   {
     logger.LogError(ex, "Uninstall failed.");
     return 1;
+  }
+}
+
+static async Task<int> RunRepairDesktop(string? instanceId)
+{
+  using var host = CreateInstallerHost(instanceId, serverUri: null);
+  var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent.Installer");
+  using var logScope = logger.BeginScope("RunRepairDesktop. InstanceId: {InstanceId}", instanceId);
+  var fileSystem = host.Services.GetRequiredService<IFileSystem>();
+  var tempDir = Path.Combine(Path.GetTempPath(), $"{TempDirectoryPrefix}{Guid.NewGuid():N}");
+  var tempBundlePath = Path.Combine(tempDir, TempBundleFileName);
+
+  try
+  {
+    var api = host.Services.GetRequiredService<IControlrApi>();
+    var downloader = host.Services.GetRequiredService<IBundleDownloader>();
+    var installer = host.Services.GetRequiredService<IAgentInstaller>();
+    var systemEnvironment = host.Services.GetRequiredService<ISystemEnvironment>();
+    var optionsAccessor = host.Services.GetRequiredService<IOptionsAccessor>();
+
+    logger.LogInformation("ControlR desktop repair started.");
+
+    var runtime = systemEnvironment.Runtime;
+    logger.LogInformation("Detected runtime: {Runtime}", runtime);
+
+    var metadataResult = await api.AgentUpdate.GetBundleMetadata(runtime);
+    if (!metadataResult.IsSuccess || metadataResult.Value is null)
+    {
+      logger.LogError("Failed to fetch bundle metadata. Reason: {Reason}", metadataResult.Reason);
+      return 1;
+    }
+
+    var metadata = metadataResult.Value;
+    logger.LogInformation("Bundle version: {Version}", metadata.Version);
+
+    logger.LogInformation("Downloading bundle to temp file: {TempBundlePath}", tempBundlePath);
+    await downloader.DownloadBundle(metadata.BundleDownloadUrl, metadata.BundleSha256, tempBundlePath);
+
+    var repairRequest = new AgentInstallRequest
+    {
+      BundleSha256 = metadata.BundleSha256,
+      BundleZipPath = tempBundlePath,
+      ServerUri = optionsAccessor.ServerUri,
+      TenantId = optionsAccessor.GetRequiredTenantId(),
+      DeviceId = optionsAccessor.DeviceId,
+    };
+
+    await installer.RepairDesktopClient(repairRequest);
+
+    logger.LogInformation("Desktop repair completed successfully.");
+    return 0;
+  }
+  catch (Exception ex)
+  {
+    logger.LogError(ex, "Desktop repair failed.");
+    return 1;
+  }
+  finally
+  {
+    if (fileSystem.DirectoryExists(tempDir))
+    {
+      try
+      {
+        fileSystem.DeleteDirectory(tempDir, true);
+      }
+      catch (Exception ex)
+      {
+        logger.LogWarning(ex, "Failed to delete temporary directory {TempDir}.", tempDir);
+      }
+    }
   }
 }
 

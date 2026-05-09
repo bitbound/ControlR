@@ -1,10 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
-using ControlR.Agent.Shared.Interfaces;
 using ControlR.Agent.Shared.Models;
 using ControlR.Agent.Shared.Options;
-using ControlR.Agent.Shared.Services.Base;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +29,9 @@ internal class AgentInstallerWindows(
   ILogger<AgentInstallerWindows> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processes, systemEnvironment, appOptions, logger), IAgentInstaller
 {
+  private const string DesktopClientDirectoryName = "DesktopClient";
+
+  private static readonly TimeSpan _desktopProcessExitTimeout = TimeSpan.FromSeconds(15);
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 
   private readonly IElevationChecker _elevationChecker = elevationChecker;
@@ -142,6 +143,54 @@ internal class AgentInstallerWindows(
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while installing the ControlR service.");
+    }
+    finally
+    {
+      _installLock.Release();
+    }
+  }
+
+  public async Task RepairDesktopClient(AgentInstallRequest request)
+  {
+    if (!await _installLock.WaitAsync(0))
+    {
+      Logger.LogWarning("Installer lock already acquired.  Aborting desktop repair.");
+      return;
+    }
+
+    try
+    {
+      Logger.LogInformation("Desktop repair started.");
+
+      if (!_systemEnvironment.IsDebug && !_elevationChecker.IsElevated())
+      {
+        Logger.LogError("Desktop repair command must be run as administrator.");
+        return;
+      }
+
+      if (IsRunningFromAppDir())
+      {
+        return;
+      }
+
+      var installDir = GetInstallDirectory();
+      var desktopClientPath = Path.Combine(installDir, DesktopClientDirectoryName, AppConstants.DesktopClientFileName);
+      var stopResult = await StopDesktopClientProcesses(desktopClientPath);
+      if (!stopResult.IsSuccess)
+      {
+        Logger.LogError("Failed to stop desktop client processes. Aborting desktop repair.");
+        return;
+      }
+
+      var stageDirectory = await PrepareRepairStage(request.BundleZipPath, installDir);
+      ReplaceDesktopClientDirectory(stageDirectory, installDir);
+      await WriteBundleHashFile(request.BundleSha256);
+
+      Logger.LogInformation("Desktop repair completed.");
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while repairing the desktop client.");
     }
     finally
     {
@@ -325,6 +374,78 @@ internal class AgentInstallerWindows(
     return true;
   }
 
+  private async Task<string> PrepareRepairStage(string bundleZipPath, string installDir)
+  {
+    var parentDirectory = Path.GetDirectoryName(installDir)
+      ?? throw new DirectoryNotFoundException("Unable to determine the install directory parent.");
+    var stageDirectory = Path.Combine(parentDirectory, $".controlr-desktop-repair-{Guid.NewGuid():N}");
+
+    try
+    {
+      await retryer.Retry(
+        () =>
+        {
+          if (FileSystem.DirectoryExists(stageDirectory))
+          {
+            FileSystem.DeleteDirectory(stageDirectory, true);
+          }
+
+          FileSystem.CreateDirectory(stageDirectory);
+          Logger.LogInformation("Extracting repair bundle {BundleZipPath} to {InstallDirectory}.", bundleZipPath, stageDirectory);
+          return ExtractBundleToInstallDirectory(bundleZipPath, stageDirectory);
+        },
+        5,
+        TimeSpan.FromSeconds(3));
+
+      var stagedDesktopClientPath = Path.Combine(stageDirectory, DesktopClientDirectoryName, AppConstants.DesktopClientFileName);
+      if (!FileSystem.FileExists(stagedDesktopClientPath))
+      {
+        throw new FileNotFoundException("The repair bundle does not contain the desktop client executable.", stagedDesktopClientPath);
+      }
+
+      return stageDirectory;
+    }
+    catch
+    {
+      TryDeleteDirectory(stageDirectory);
+      throw;
+    }
+  }
+
+  private void ReplaceDesktopClientDirectory(string stageDirectory, string installDir)
+  {
+    var destinationDirectory = Path.Combine(installDir, DesktopClientDirectoryName);
+    var stagedDirectory = Path.Combine(stageDirectory, DesktopClientDirectoryName);
+    var backupDirectory = $"{destinationDirectory}.backup-{Guid.NewGuid():N}";
+
+    try
+    {
+      FileSystem.CreateDirectory(installDir);
+
+      if (FileSystem.DirectoryExists(destinationDirectory))
+      {
+        FileSystem.MoveDirectory(destinationDirectory, backupDirectory);
+      }
+
+      FileSystem.MoveDirectory(stagedDirectory, destinationDirectory);
+
+      TryDeleteDirectory(backupDirectory);
+    }
+    catch
+    {
+      if (!FileSystem.DirectoryExists(destinationDirectory) && FileSystem.DirectoryExists(backupDirectory))
+      {
+        FileSystem.MoveDirectory(backupDirectory, destinationDirectory);
+      }
+
+      throw;
+    }
+    finally
+    {
+      TryDeleteDirectory(stageDirectory);
+    }
+  }
+
   private async Task StartService()
   {
     Logger.LogInformation("Starting service.");
@@ -361,6 +482,76 @@ internal class AgentInstallerWindows(
     {
       Logger.LogError(ex, "Error while stopping agent service.");
       return Result.Fail(ex);
+    }
+  }
+
+  private async Task<Result> StopDesktopClientProcesses(string targetDesktopClientPath)
+  {
+    var failures = new List<Exception>();
+
+    try
+    {
+      var comparison = StringComparison.OrdinalIgnoreCase;
+      var procs = ProcessManager
+        .GetProcessesByName("ControlR.DesktopClient")
+        .Where(x => string.Equals(x.FilePath, targetDesktopClientPath, comparison));
+
+      foreach (var proc in procs)
+      {
+        try
+        {
+          proc.Kill();
+          await WaitForProcessExit(proc);
+        }
+        catch (Exception ex)
+        {
+          failures.Add(ex);
+          Logger.LogError(ex, "Failed to kill desktop client process with ID {DesktopClientProcessId}.", proc.Id);
+        }
+      }
+
+      return failures.Count == 0 ? Result.Ok() : Result.Fail(new AggregateException(failures));
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while stopping desktop client processes.");
+      return Result.Fail(ex);
+    }
+  }
+
+  private void TryDeleteDirectory(string directoryPath)
+  {
+    try
+    {
+      if (FileSystem.DirectoryExists(directoryPath))
+      {
+        FileSystem.DeleteDirectory(directoryPath, true);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to delete temporary directory {DirectoryPath}.", directoryPath);
+    }
+  }
+
+  private async Task WaitForProcessExit(IProcess process)
+  {
+    using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.ApplicationStopping);
+    timeoutCts.CancelAfter(_desktopProcessExitTimeout);
+
+    try
+    {
+      await process.WaitForExitAsync(timeoutCts.Token);
+    }
+    catch (OperationCanceledException) when (_lifetime.ApplicationStopping.IsCancellationRequested)
+    {
+      throw;
+    }
+    catch (OperationCanceledException ex)
+    {
+      throw new System.TimeoutException(
+        $"Desktop client process {process.Id} did not exit within {_desktopProcessExitTimeout}.",
+        ex);
     }
   }
 }

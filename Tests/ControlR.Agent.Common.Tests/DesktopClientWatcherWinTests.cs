@@ -82,6 +82,47 @@ public class DesktopClientWatcherWinTests
   }
 
   [Fact]
+  public void Reconcile_WhenTrackedProcessSessionIdThrows_RemovesTrackedLaunch()
+  {
+    HashSet<int> activeSessionIds = [5];
+    var tracker = new DesktopClientLaunchTracker(_timeProvider, _launchTrackerLogger);
+    var process = CreateProcessWithThrowingSessionId(processId: 101, hasExited: false);
+
+    tracker.TrackLaunch(5, process.Object);
+
+    tracker.Reconcile(activeSessionIds, []);
+
+    Assert.Equal(0, tracker.Count);
+    Assert.False(tracker.IsSessionCovered(5, []));
+  }
+
+  [Fact]
+  public async Task RunIteration_WhenInstallationVerificationSucceeds_ClearsInstallationFailureState()
+  {
+    IProcess? startedProcess = null;
+    var repairCoordinator = new Mock<IDesktopClientRepairCoordinator>();
+    var watcher = CreateWatcher(repairCoordinator: repairCoordinator.Object);
+
+    _desktopSessionProvider
+      .Setup(x => x.GetActiveDesktopClients())
+      .ReturnsAsync([]);
+    _win32Interop
+      .Setup(x => x.CreateInteractiveSystemProcess(
+        It.IsAny<string>(),
+        5,
+        true,
+        out startedProcess))
+      .Returns(false);
+
+    await watcher.RunIteration(
+      [new DesktopSession { SystemSessionId = 5 }],
+      [],
+      CancellationToken.None);
+
+    repairCoordinator.Verify(x => x.ReportHealthy("desktop-installation"), Times.Once);
+  }
+
+  [Fact]
   public async Task RunIteration_WhenInstanceIdIsMissing_OmitsInstanceIdArgument()
   {
     using var mutationLock = Mock.Of<IDisposable>();
@@ -109,6 +150,38 @@ public class DesktopClientWatcherWinTests
     Assert.Equal("\"C:\\ControlR\\DesktopClient\\ControlR.DesktopClient.exe\"", launchedCommand);
   }
 
+  [Fact]
+  public async Task RunIteration_WhenLaunchedProcessExitsBeforeRegistration_RemovesTrackedLaunchImmediately()
+  {
+    IProcess? startedProcess = CreateProcess(101, 5, hasExited: true).Object;
+    var repairCoordinator = new Mock<IDesktopClientRepairCoordinator>();
+    var tracker = new DesktopClientLaunchTracker(_timeProvider, _launchTrackerLogger);
+    var watcher = CreateWatcher(repairCoordinator: repairCoordinator.Object, launchTracker: tracker);
+
+    _desktopSessionProvider
+      .Setup(x => x.GetActiveDesktopClients())
+      .ReturnsAsync([]);
+    _win32Interop
+      .Setup(x => x.CreateInteractiveSystemProcess(
+        It.IsAny<string>(),
+        5,
+        true,
+        out startedProcess))
+      .Returns(true);
+
+    await watcher.RunIteration(
+      [new DesktopSession { SystemSessionId = 5 }],
+      [],
+      CancellationToken.None);
+
+    Assert.Equal(0, tracker.Count);
+    repairCoordinator.Verify(
+      x => x.ReportFailure(
+        "windows-session-5",
+        "Failed to launch desktop client in session 5.",
+        false),
+      Times.Once);
+  }
 
   [Fact]
   public void TrackLaunch_MarksSessionCoveredBeforeRegistration()
@@ -118,6 +191,21 @@ public class DesktopClientWatcherWinTests
 
     tracker.TrackLaunch(5, process.Object);
 
+    Assert.True(tracker.IsSessionCovered(5, []));
+  }
+
+  [Fact]
+  public void TrackLaunch_WhenReplacingExistingLaunch_StopsExistingProcess()
+  {
+    var tracker = new DesktopClientLaunchTracker(_timeProvider, _launchTrackerLogger);
+    var existingProcess = CreateProcess(processId: 101, sessionId: 5, hasExited: false);
+    var replacementProcess = CreateProcess(processId: 102, sessionId: 5, hasExited: false);
+
+    tracker.TrackLaunch(5, existingProcess.Object);
+    tracker.TrackLaunch(5, replacementProcess.Object);
+
+    existingProcess.Verify(x => x.Kill(), Times.Once);
+    Assert.Equal(1, tracker.Count);
     Assert.True(tracker.IsSessionCovered(5, []));
   }
 
@@ -141,9 +229,21 @@ public class DesktopClientWatcherWinTests
     return process;
   }
 
-  private DesktopClientWatcherWin CreateWatcher(string instanceId = "instance-1")
+  private static Mock<IProcess> CreateProcessWithThrowingSessionId(int processId, bool hasExited)
   {
-    var launchTracker = new DesktopClientLaunchTracker(
+    var process = new Mock<IProcess>();
+    process.SetupGet(x => x.Id).Returns(processId);
+    process.SetupGet(x => x.HasExited).Returns(hasExited);
+    process.SetupGet(x => x.SessionId).Throws<InvalidOperationException>();
+    return process;
+  }
+
+  private DesktopClientWatcherWin CreateWatcher(
+    string instanceId = "instance-1",
+    IDesktopClientRepairCoordinator? repairCoordinator = null,
+    IDesktopClientLaunchTracker? launchTracker = null)
+  {
+    launchTracker ??= new DesktopClientLaunchTracker(
       _timeProvider,
       _launchTrackerLogger);
 
@@ -171,6 +271,7 @@ public class DesktopClientWatcherWinTests
       _win32Interop.Object,
       _processManager.Object,
       _ipcServerStore.Object,
+      repairCoordinator ?? Mock.Of<IDesktopClientRepairCoordinator>(),
       _environment.Object,
       _fileSystem.Object,
       _settingsProvider.Object,

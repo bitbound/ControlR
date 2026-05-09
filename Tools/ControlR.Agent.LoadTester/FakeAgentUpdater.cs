@@ -3,7 +3,7 @@ using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Agent.LoadTester;
-internal class FakeAgentUpdater : IHostedService, IAgentUpdater
+internal class FakeAgentMaintenanceService : IHostedService, IAgentMaintenanceService
 {
   public ManualResetEventAsync UpdateCheckCompletedSignal { get; } = new();
 
@@ -15,6 +15,11 @@ internal class FakeAgentUpdater : IHostedService, IAgentUpdater
   public Task CheckForUpdate(bool force = false, CancellationToken cancellationToken = default)
   {
     UpdateCheckCompletedSignal.Set();
+    return Task.CompletedTask;
+  }
+
+  public Task RepairDesktopClient(string reason, CancellationToken cancellationToken = default)
+  {
     return Task.CompletedTask;
   }
 

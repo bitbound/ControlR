@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using ControlR.Agent.Shared.Interfaces;
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Options;

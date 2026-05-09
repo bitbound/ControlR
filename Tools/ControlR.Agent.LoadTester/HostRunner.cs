@@ -63,7 +63,7 @@ public static class HostRunner
           { "Serilog:MinimumLevel:Default", "Warning" }
         });
 
-      builder.Services.ReplaceService<IAgentUpdater, FakeAgentUpdater>(ServiceLifetime.Singleton);
+      builder.Services.ReplaceService<IAgentMaintenanceService, FakeAgentMaintenanceService>(ServiceLifetime.Singleton);
       builder.Services.ReplaceService<ICpuUtilizationSampler, FakeCpuUtilizationSampler>(ServiceLifetime.Singleton);
       builder.Services.ReplaceService<IOptionsAccessor, FakeSettingsProvider>(ServiceLifetime.Singleton, new FakeSettingsProvider(deviceId, serverUri));
       builder.Services.RemoveImplementation<IpcServerWatcher>();

@@ -38,15 +38,17 @@ internal class AgentHubClient(
   IFileSystem fileSystem,
   IFileSystemPathProvider fileSystemPathProvider,
   IDeviceInfoProvider deviceDataGenerator,
-  IAgentUpdater agentUpdater,
+  IDesktopClientRepairCoordinator desktopClientRepairCoordinator,
+  IAgentMaintenanceService agentUpdater,
   IWakeOnLanService wakeOnLan,
   IAgentHeartbeatTimer heartbeatTimer,
   IRetryer retryer,
   ILogger<AgentHubClient> logger) : IAgentHubClient
 {
-  private readonly IAgentUpdater _agentUpdater = agentUpdater;
+  private readonly IAgentMaintenanceService _agentUpdater = agentUpdater;
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IDesktopClientFileVerifier _desktopClientFileVerifier = desktopClientFileVerifier;
+  private readonly IDesktopClientRepairCoordinator _desktopClientRepairCoordinator = desktopClientRepairCoordinator;
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
   private readonly IDeviceInfoProvider _deviceDataGenerator = deviceDataGenerator;
   private readonly IFileManager _fileManager = fileManager;
@@ -1014,9 +1016,19 @@ internal class AgentHubClient(
 
     if (!_fileSystem.FileExists(desktopExecutablePath))
     {
-      return Result.Fail($"Desktop client executable was not found at '{desktopExecutablePath}'.");
+      var result = Result.Fail($"Desktop client executable was not found at '{desktopExecutablePath}'.");
+      _desktopClientRepairCoordinator.ReportFailure("desktop-installation", result.Reason ?? "Desktop client executable is missing.", immediate: true);
+      return result;
     }
 
-    return _desktopClientFileVerifier.VerifyFile(desktopExecutablePath);
+    var verificationResult = _desktopClientFileVerifier.VerifyFile(desktopExecutablePath);
+    if (verificationResult.IsSuccess)
+    {
+      _desktopClientRepairCoordinator.ReportHealthy("desktop-installation");
+      return verificationResult;
+    }
+
+    _desktopClientRepairCoordinator.ReportFailure("desktop-installation", verificationResult.Reason ?? "Desktop client verification failed.", immediate: true);
+    return verificationResult;
   }
 }

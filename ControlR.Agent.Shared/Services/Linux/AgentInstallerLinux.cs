@@ -29,6 +29,8 @@ internal class AgentInstallerLinux(
   ILogger<AgentInstallerLinux> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAcccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
 {
+  private const string DesktopClientDirectoryName = "DesktopClient";
+
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 
   private readonly IElevationChecker _elevationChecker = elevationChecker;
@@ -133,6 +135,66 @@ internal class AgentInstallerLinux(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while installing the ControlR service.");
+    }
+    finally
+    {
+      _installLock.Release();
+    }
+  }
+
+  public async Task RepairDesktopClient(AgentInstallRequest request)
+  {
+    if (!await _installLock.WaitAsync(0))
+    {
+      _logger.LogWarning("Installer lock already acquired.  Aborting desktop repair.");
+      return;
+    }
+
+    try
+    {
+      _logger.LogInformation("Desktop repair started.");
+
+      if (!_elevationChecker.IsElevated())
+      {
+        _logger.LogError("Desktop repair command must be run with sudo.");
+        return;
+      }
+
+      var installDir = GetInstallDirectory();
+      var desktopServiceName = GetDesktopServiceName();
+      var stageDirectory = await PrepareRepairStage(request.BundleZipPath, installDir);
+
+      await _serviceControl.StopDesktopClientService(throwOnFailure: false);
+      ReplaceDesktopClientDirectory(stageDirectory, installDir);
+
+      var desktopServiceFile = (await GetDesktopServiceFile()).Trim();
+      _fileSystem.CreateDirectory(Path.GetDirectoryName(GetDesktopServiceFilePath())!);
+      await WriteFileIfChanged(GetDesktopServiceFilePath(), desktopServiceFile);
+      await WriteBundleHashFile(request.BundleSha256);
+
+      var psi = new ProcessStartInfo
+      {
+        FileName = "sudo",
+        WorkingDirectory = "/tmp",
+        UseShellExecute = true
+      };
+
+      _logger.LogInformation("Reloading systemd daemon for desktop repair.");
+      psi.Arguments = "systemctl daemon-reload";
+      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+
+      _logger.LogInformation("Enabling desktop user service.");
+      psi.Arguments = $"systemctl --global enable {desktopServiceName}";
+      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+
+      _logger.LogInformation("Starting desktop user services for logged-in users.");
+      await _serviceControl.StartDesktopClientService(throwOnFailure: false);
+
+      _logger.LogInformation("Desktop repair completed.");
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while repairing the desktop client.");
     }
     finally
     {
@@ -273,6 +335,78 @@ internal class AgentInstallerLinux(
     return Path.GetFileName(GetServiceFilePath());
   }
 
+  private async Task<string> PrepareRepairStage(string bundleZipPath, string installDir)
+  {
+    var parentDirectory = Path.GetDirectoryName(installDir)
+      ?? throw new DirectoryNotFoundException("Unable to determine the install directory parent.");
+    var stageDirectory = Path.Combine(parentDirectory, $".controlr-desktop-repair-{Guid.NewGuid():N}");
+
+    try
+    {
+      await retryer.Retry(
+        () =>
+        {
+          if (_fileSystem.DirectoryExists(stageDirectory))
+          {
+            _fileSystem.DeleteDirectory(stageDirectory, true);
+          }
+
+          _fileSystem.CreateDirectory(stageDirectory);
+          _logger.LogInformation("Extracting repair bundle {BundleZipPath} to {InstallDirectory}.", bundleZipPath, stageDirectory);
+          return ExtractBundleToInstallDirectory(bundleZipPath, stageDirectory);
+        },
+        5,
+        TimeSpan.FromSeconds(1));
+
+      var stagedDesktopClientPath = Path.Combine(stageDirectory, DesktopClientDirectoryName, AppConstants.DesktopClientFileName);
+      if (!_fileSystem.FileExists(stagedDesktopClientPath))
+      {
+        throw new FileNotFoundException("The repair bundle does not contain the desktop client executable.", stagedDesktopClientPath);
+      }
+
+      return stageDirectory;
+    }
+    catch
+    {
+      TryDeleteDirectory(stageDirectory);
+      throw;
+    }
+  }
+
+  private void ReplaceDesktopClientDirectory(string stageDirectory, string installDir)
+  {
+    var destinationDirectory = Path.Combine(installDir, DesktopClientDirectoryName);
+    var stagedDirectory = Path.Combine(stageDirectory, DesktopClientDirectoryName);
+    var backupDirectory = $"{destinationDirectory}.backup-{Guid.NewGuid():N}";
+
+    try
+    {
+      _fileSystem.CreateDirectory(installDir);
+
+      if (_fileSystem.DirectoryExists(destinationDirectory))
+      {
+        _fileSystem.MoveDirectory(destinationDirectory, backupDirectory);
+      }
+
+      _fileSystem.MoveDirectory(stagedDirectory, destinationDirectory);
+
+      TryDeleteDirectory(backupDirectory);
+    }
+    catch
+    {
+      if (!_fileSystem.DirectoryExists(destinationDirectory) && _fileSystem.DirectoryExists(backupDirectory))
+      {
+        Directory.Move(backupDirectory, destinationDirectory);
+      }
+
+      throw;
+    }
+    finally
+    {
+      TryDeleteDirectory(stageDirectory);
+    }
+  }
+
   private void SetExecutablePermissions(string installDirectory)
   {
     var executableFileMode =
@@ -297,6 +431,21 @@ internal class AgentInstallerLinux(
 
       _fileSystem.SetUnixFileMode(executablePath, executableFileMode);
       _logger.LogDebug("Set executable permissions on {FilePath}", executablePath);
+    }
+  }
+
+  private void TryDeleteDirectory(string directoryPath)
+  {
+    try
+    {
+      if (_fileSystem.DirectoryExists(directoryPath))
+      {
+        _fileSystem.DeleteDirectory(directoryPath, true);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to delete temporary directory {DirectoryPath}.", directoryPath);
     }
   }
 

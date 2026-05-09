@@ -111,7 +111,8 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IWaiter, Waiter>();
     services.AddSingleton<IRetryer, Retryer>();
     services.AddSingleton<IEmbeddedResourceAccessor, EmbeddedResourceAccessor>();
-    services.AddSingleton<IAgentUpdater, AgentUpdater>();
+    services.AddSingleton<IAgentMaintenanceService, AgentMaintenanceService>();
+    services.AddSingleton<IDesktopClientRepairCoordinator, DesktopClientRepairCoordinator>();
     services.AddSingleton<ITerminalSessionFactory, TerminalSessionFactory>();
     services.AddSingleton<ITerminalStore, TerminalStore>();
     services.AddSingleton<IIpcServerStore, IpcServerStore>();
@@ -160,7 +161,7 @@ internal static class HostApplicationBuilderExtensions
     if (startupMode == StartupMode.Run)
     {
       services.AddHostedService<DotnetExtractDirectoryCleanupHostedService>();
-      services.AddHostedService(s => s.GetRequiredService<IAgentUpdater>());
+      services.AddHostedService(s => s.GetRequiredService<IAgentMaintenanceService>());
       services.AddHostedService<IpcServerWatcher>();
       services.AddHostedService<HubConnectionInitializer>();
       services.AddHostedService(x => x.GetRequiredService<IAgentHeartbeatTimer>());

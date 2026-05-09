@@ -1,6 +1,8 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Services.Processes;
 
 namespace ControlR.Agent.Common.Services.Windows;
 
@@ -22,20 +24,43 @@ internal class DesktopSessionProviderWindows(
     // from a previous DesktopClient PID or multiple installs), prefer:
     // 1) Connected servers over disconnected
     // 2) Highest PID (assumed most recent)
-    var serversByWinSession = _ipcStore.Servers
-      .Values
-      .GroupBy(s => s.Process.SessionId)
-      .Select(g => g
-        .OrderByDescending(s => s.Server.IsConnected)
-        .ThenByDescending(s => s.Process.Id)
-        .First())
-      .ToArray();
+    var serversByWinSession = new Dictionary<int, IpcServerRecord>();
 
-    var uiSessions = new List<DesktopSession>(serversByWinSession.Length);
-
-    foreach (var server in serversByWinSession)
+    foreach (var serverRecord in _ipcStore.Servers.Values)
     {
-      if (!windowsSessions.TryGetValue(server.Process.SessionId, out var winSession))
+      if (!TryGetProcessSessionId(serverRecord.Process, out var sessionId))
+      {
+        if (_ipcStore.TryRemove(serverRecord.Process.Id, out var removedRecord) && removedRecord is not null)
+        {
+          Disposer.DisposeAll(removedRecord.Process, removedRecord.Server);
+        }
+
+        continue;
+      }
+
+      if (!serversByWinSession.TryGetValue(sessionId, out var existingRecord) ||
+          serverRecord.Server.IsConnected && !existingRecord.Server.IsConnected ||
+          serverRecord.Server.IsConnected == existingRecord.Server.IsConnected && serverRecord.Process.Id > existingRecord.Process.Id)
+      {
+        serversByWinSession[sessionId] = serverRecord;
+      }
+    }
+
+    var uiSessions = new List<DesktopSession>(serversByWinSession.Count);
+
+    foreach (var server in serversByWinSession.Values)
+    {
+      if (!TryGetProcessSessionId(server.Process, out var sessionId))
+      {
+        if (_ipcStore.TryRemove(server.Process.Id, out var removedRecord) && removedRecord is not null)
+        {
+          Disposer.DisposeAll(removedRecord.Process, removedRecord.Server);
+        }
+
+        continue;
+      }
+
+      if (!windowsSessions.TryGetValue(sessionId, out var winSession))
       {
         continue;
       }
@@ -44,7 +69,7 @@ internal class DesktopSessionProviderWindows(
       {
         AreRemoteControlPermissionsGranted = true, // Windows doesn't require special permissions
         ProcessId = server.Process.Id,
-        SystemSessionId = server.Process.SessionId,
+        SystemSessionId = sessionId,
         Name = winSession.Name,
         Username = winSession.Username,
         Type = winSession.Type,
@@ -64,5 +89,19 @@ internal class DesktopSessionProviderWindows(
       .ToArray();
 
     return Task.FromResult(loggedInUsers);
+  }
+
+  private static bool TryGetProcessSessionId(IProcess process, out int sessionId)
+  {
+    try
+    {
+      sessionId = process.SessionId;
+      return true;
+    }
+    catch
+    {
+      sessionId = -1;
+      return false;
+    }
   }
 }

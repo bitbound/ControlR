@@ -10,9 +10,9 @@ using System.Security.Cryptography;
 namespace ControlR.Agent.Common.Services;
 
 /// <summary>
-/// Responsible for updating the main ControlR agent.
+/// Coordinates installer-based maintenance operations for the agent, including update checks and desktop client repair.
 /// </summary>
-internal interface IAgentUpdater : IHostedService
+internal interface IAgentMaintenanceService : IHostedService
 {
   /// <summary>
   /// Checks for updates to the ControlR agent.
@@ -21,9 +21,20 @@ internal interface IAgentUpdater : IHostedService
   /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
   Task CheckForUpdate(bool force = false, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Downloads and launches the platform installer to repair the installed desktop client payload.
+  /// </summary>
+  /// <param name="reason">The health or runtime reason that triggered the repair request.</param>
+  /// <param name="cancellationToken">A cancellation token to cancel the repair operation.</param>
+  /// <returns>A task representing the asynchronous operation.</returns>
+  Task RepairDesktopClient(string reason, CancellationToken cancellationToken = default);
 }
 
-internal class AgentUpdater(
+/// <summary>
+/// Coordinates installer-based maintenance operations for the agent, including update checks and desktop client repair.
+/// </summary>
+internal class AgentMaintenanceService(
   TimeProvider timeProvider,
   IControlrApi controlrApi,
   IDownloadsApi downloadsApi,
@@ -34,7 +45,7 @@ internal class AgentUpdater(
   IOptionsAccessor optionsAccessor,
   IHostApplicationLifetime appLifetime,
   IOptions<InstanceOptions> instanceOptions,
-  ILogger<AgentUpdater> logger) : BackgroundService, IAgentUpdater
+  ILogger<AgentMaintenanceService> logger) : BackgroundService, IAgentMaintenanceService
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IControlrApi _controlrApi = controlrApi;
@@ -42,7 +53,7 @@ internal class AgentUpdater(
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
-  private readonly ILogger<AgentUpdater> _logger = logger;
+  private readonly ILogger<AgentMaintenanceService> _logger = logger;
   private readonly IOptionsAccessor _optionsAccessor = optionsAccessor;
   private readonly IProcessManager _processManager = proessManager;
   private readonly ISystemEnvironment _systemEnvironment = environmentHelper;
@@ -114,6 +125,48 @@ internal class AgentUpdater(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while checking for updates.");
+    }
+  }
+
+  public async Task RepairDesktopClient(string reason, CancellationToken cancellationToken = default)
+  {
+    using var logScope = _logger.BeginMemberScope();
+    using var repairCts = new CancellationTokenSource(TimeSpan.FromMinutes(15));
+    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+      cancellationToken,
+      _appLifetime.ApplicationStopping,
+      repairCts.Token);
+
+    try
+    {
+      _logger.LogWarning("Desktop client repair requested. Reason: {Reason}", reason);
+
+      var metadataResult = await _controlrApi.AgentUpdate.GetBundleMetadata(_systemEnvironment.Runtime, linkedCts.Token);
+      if (!metadataResult.IsSuccess || metadataResult.Value is null)
+      {
+        _logger.LogError(
+          "Failed to retrieve bundle metadata for desktop repair. Reason: {Reason}, StatusCode: {StatusCode}",
+          metadataResult.Reason,
+          metadataResult.StatusCode);
+        return;
+      }
+
+      var installerPath = await DownloadInstaller(metadataResult.Value, linkedCts.Token);
+      if (installerPath is null)
+      {
+        return;
+      }
+
+      var repairCommand = BuildCommandString(BuildRepairDesktopArguments());
+      await LaunchInstaller(installerPath, repairCommand, linkedCts.Token);
+    }
+    catch (OperationCanceledException ex)
+    {
+      _logger.LogInformation(ex, "Timed out during the desktop repair process.");
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while repairing the desktop client.");
     }
   }
 
@@ -203,6 +256,22 @@ internal class AgentUpdater(
       _optionsAccessor.ServerUri.ToString(),
       "--tenant-id",
       _optionsAccessor.GetRequiredTenantId().ToString()
+    };
+
+    if (!string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    {
+      arguments.Add("--instance-id");
+      arguments.Add(_instanceOptions.Value.InstanceId);
+    }
+
+    return arguments;
+  }
+
+  private List<string> BuildRepairDesktopArguments()
+  {
+    var arguments = new List<string>
+    {
+      "repair-desktop"
     };
 
     if (!string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
