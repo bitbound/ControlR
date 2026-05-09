@@ -1,3 +1,4 @@
+using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ControlR.Agent.Shared.Options;
@@ -22,12 +23,14 @@ public interface IOptionsAccessor
 internal class OptionsAccessor(
   IFileSystem fileSystem,
   IFileSystemPathProvider fileSystemPathProvider,
+  IFileAccessPermissions fileAccessPermissions,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptionsMonitor<DeveloperOptions> developerOptions,
   IOptions<InstanceOptions> instanceOptions) : IOptionsAccessor
 {
   private readonly IOptionsMonitor<AgentAppOptions> _appOptions = appOptions;
   private readonly IOptionsMonitor<DeveloperOptions> _developerOptions = developerOptions;
+  private readonly IFileAccessPermissions _fileAccessPermissions = fileAccessPermissions;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
@@ -66,6 +69,7 @@ internal class OptionsAccessor(
       if (!_fileSystem.FileExists(path))
       {
         await _fileSystem.WriteAllTextAsync(path, "{}");
+        RestrictAccess(path);
       }
 
       var contents = await _fileSystem.ReadAllTextAsync(path);
@@ -75,6 +79,7 @@ internal class OptionsAccessor(
       json[AgentAppOptions.SectionKey] = JsonSerializer.SerializeToNode(options);
       contents = JsonSerializer.Serialize(json, _jsonOptions);
       await _fileSystem.WriteAllTextAsync(path, contents);
+      RestrictAccess(path);
     }
     finally
     {
@@ -86,5 +91,26 @@ internal class OptionsAccessor(
   {
     _appOptions.CurrentValue.DeviceId = uid;
     await UpdateAppOptions(_appOptions.CurrentValue);
+  }
+
+  private void RestrictAccess(string path)
+  {
+    if (OperatingSystem.IsWindows())
+    {
+      _fileAccessPermissions.Set(
+        filePath: path, 
+        includeCurrentUser: true, 
+        isProtected: true, 
+        preserveInheritance: false, 
+        sids: [WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid]);
+    }
+    else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+    {
+      _fileAccessPermissions.Set(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+    }
+    else
+    {
+      throw new PlatformNotSupportedException("Unsupported operating system for setting file permissions.");
+    }
   }
 }

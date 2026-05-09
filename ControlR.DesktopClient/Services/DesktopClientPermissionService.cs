@@ -21,7 +21,7 @@ public class DesktopClientPermissionService(
 
     var platformState = await GetPlatformPermissionState(cancellationToken);
 
-    #if IS_MACOS
+#if IS_MACOS
       if (scope == DesktopClientPermissionScope.DesktopPreview)
       {
         if (platformState.IsScreenCaptureGranted == false)
@@ -63,14 +63,14 @@ public class DesktopClientPermissionService(
         ArePermissionsGranted = true,
         Reason = null
       };
-    #else
-      return platformState;
-    #endif
+#else
+    return platformState;
+#endif
   }
 
   public async Task<DesktopClientPermissionState> GetPlatformPermissionState(CancellationToken cancellationToken = default)
   {
-    #if IS_MACOS
+#if IS_MACOS
       var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
       var isAccessibilityGranted = macInterop.IsMacAccessibilityPermissionGranted();
       var isScreenCaptureGranted = macInterop.IsMacScreenCapturePermissionGranted();
@@ -89,54 +89,54 @@ public class DesktopClientPermissionService(
           : "Screen capture permission is not granted on this Mac desktop client.",
         IsAccessibilityGranted: isAccessibilityGranted,
         IsScreenCaptureGranted: isScreenCaptureGranted);
-    #elif IS_LINUX
-      var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
-      if (!detector.IsWayland())
-      {
-        return new DesktopClientPermissionState(true);
-      }
-
-      var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-      var isWaylandRemoteControlGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
-
-      _logger.LogInformation(
-        "Wayland desktop client permission state: RemoteControl={RemoteControl}",
-        isWaylandRemoteControlGranted);
-
-      return new DesktopClientPermissionState(
-        ArePermissionsGranted: isWaylandRemoteControlGranted,
-        Reason: isWaylandRemoteControlGranted
-          ? null
-          : "Wayland remote control permission is not granted on the desktop client.",
-        IsWaylandRemoteControlGranted: isWaylandRemoteControlGranted);
-    #else
+#elif IS_LINUX
+    var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+    if (!detector.IsWayland())
+    {
       return new DesktopClientPermissionState(true);
-    #endif
+    }
+
+    var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
+    var isWaylandRemoteControlGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
+
+    _logger.LogInformation(
+      "Wayland desktop client permission state: RemoteControl={RemoteControl}",
+      isWaylandRemoteControlGranted);
+
+    return new DesktopClientPermissionState(
+      ArePermissionsGranted: isWaylandRemoteControlGranted,
+      Reason: isWaylandRemoteControlGranted
+        ? null
+        : "Wayland remote control permission is not granted on the desktop client.",
+      IsWaylandRemoteControlGranted: isWaylandRemoteControlGranted);
+#else
+      return new DesktopClientPermissionState(true);
+#endif
   }
 
   public async Task<DesktopClientPermissionState> RequestPermission(
     DesktopClientPermissionScope scope,
     CancellationToken cancellationToken = default)
   {
-    #if IS_LINUX
-      var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
-      if (detector.IsWayland())
-      {
-        var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-        var isGranted = await waylandPermissions.RequestRemoteControlPermission(bypassRestoreToken: true, cancellationToken: cancellationToken);
+#if IS_LINUX
+    var detector = _serviceProvider.GetRequiredService<IDesktopEnvironmentDetector>();
+    if (detector.IsWayland())
+    {
+      var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
+      var isGranted = await waylandPermissions.RequestRemoteControlPermission(bypassRestoreToken: true, cancellationToken: cancellationToken);
 
-        _logger.LogInformation(
-          "Wayland remote control permission request result: Granted={Granted}",
-          isGranted);
+      _logger.LogInformation(
+        "Wayland remote control permission request result: Granted={Granted}",
+        isGranted);
 
-        return new DesktopClientPermissionState(
-          ArePermissionsGranted: isGranted,
-          Reason: isGranted ? null : "Wayland remote control permission request was denied or failed.",
-          IsWaylandRemoteControlGranted: isGranted);
-      }
+      return new DesktopClientPermissionState(
+        ArePermissionsGranted: isGranted,
+        Reason: isGranted ? null : "Wayland remote control permission request was denied or failed.",
+        IsWaylandRemoteControlGranted: isGranted);
+    }
 
-      return new DesktopClientPermissionState(true);
-    #elif IS_MACOS
+    return new DesktopClientPermissionState(true);
+#elif IS_MACOS
       var macInterop = _serviceProvider.GetRequiredService<IMacInterop>();
       var isScreenCaptureGranted = macInterop.RequestScreenCapturePermission();
       var isAccessibilityGranted = macInterop.RequestAccessibilityPermission();
@@ -155,8 +155,8 @@ public class DesktopClientPermissionService(
           : "Screen capture permission is not granted.",
         IsAccessibilityGranted: isAccessibilityGranted,
         IsScreenCaptureGranted: isScreenCaptureGranted);
-    #else
+#else
       return new DesktopClientPermissionState(true);
-    #endif
+#endif
   }
 }

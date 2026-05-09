@@ -4,13 +4,13 @@ using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
 
 namespace ControlR.DesktopClient.Linux.Services;
 
 public interface IWaylandPermissionProvider
 {
   void DeleteRestoreToken();
+  bool HasRestoreToken();
   Task<bool> IsRemoteControlPermissionGranted();
   Task<bool> RequestRemoteControlPermission(bool bypassRestoreToken = false, CancellationToken cancellationToken = default);
 }
@@ -44,13 +44,21 @@ internal class WaylandPermissionProvider(
         _fileSystem.DeleteFile(tokenPath);
         _logger.LogInformation("Deleted stale restore token");
       }
-
-      InvalidateCache();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error deleting restore token");
+      _logger.LogError(ex, "Error deleting restore token.");
     }
+    finally
+    {
+      InvalidateCache();
+    }
+  }
+
+  public bool HasRestoreToken()
+  {
+    var tokenPath = PathConstants.GetWaylandRemoteDesktopRestoreTokenPath(_options.CurrentValue.InstanceId);
+    return _fileSystem.FileExists(tokenPath);
   }
 
   public async Task<bool> IsRemoteControlPermissionGranted()

@@ -96,6 +96,7 @@ public static class AgentSharedBuilderExtensions
     builder.Services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddSingleton<IFileSystem, FileSystem>();
+    builder.Services.AddSingleton<IFileAccessPermissions, FileAccessPermissions>();
     builder.Services.AddSingleton<IProcessManager, ProcessManager>();
     builder.Services.AddSingleton<IRetryer, Retryer>();
     builder.Services.AddSingleton<IEmbeddedResourceAccessor, EmbeddedResourceAccessor>();

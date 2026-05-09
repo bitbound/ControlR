@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(MacTargetFramework)</TargetFramework>
-    <TargetPlatformVersion>$(MacTargetPlatformVersion)</TargetPlatformVersion>
+    <TargetFramework Condition="'$(IsMacOS)' == 'true'">$(MacTargetFramework)</TargetFramework>
+    <TargetFramework Condition="'$(IsMacOS)' != 'true'">net10.0</TargetFramework>
+    <TargetPlatformVersion Condition="'$(IsMacOS)' == 'true'">$(MacTargetPlatformVersion)</TargetPlatformVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -25,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../ControlR.DesktopClient.Mac/ControlR.DesktopClient.Mac.csproj" />
+    <ProjectReference Include="../../ControlR.DesktopClient.Mac/ControlR.DesktopClient.Mac.csproj" Condition="'$(IsMacOS)' == 'true'" />
     <ProjectReference
       Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
   </ItemGroup>
@@ -35,11 +36,13 @@
     <IsTestProject>false</IsTestProject>
     <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
     <SkipCopyBuildProduct>true</SkipCopyBuildProduct>
+    <IsBuildable>false</IsBuildable>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsMacOS)' != 'true'">
     <ProjectCapability Remove="TestContainer" />
     <ProjectCapability Remove="TestExecutable" />
+    <Compile Remove="@(Compile)" />
   </ItemGroup>
 
 </Project>

@@ -3,7 +3,6 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.ViewModelInterfaces;
 using ControlR.DesktopClient.ViewModels.Linux;
-using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -11,11 +10,11 @@ namespace ControlR.DesktopClient.Linux.Services;
 
 public class RemoteControlPermissionMonitorWayland(
   TimeProvider timeProvider,
-  IToaster toaster,
-  IDesktopClientPermissionService desktopClientPermissionService,
   IDesktopEnvironmentDetector desktopEnvironmentDetector,
   INavigationProvider navigationProvider,
+  IToaster toaster,
   IUiThread uiThread,
+  IWaylandPermissionProvider waylandPermissionProvider,
   ILogger<RemoteControlPermissionMonitorWayland> logger)
   : PeriodicBackgroundService(
       period: TimeSpan.FromMinutes(10),
@@ -23,11 +22,11 @@ public class RemoteControlPermissionMonitorWayland(
       timeProvider,
       logger)
 {
-  private readonly IDesktopClientPermissionService _desktopClientPermissionService = desktopClientPermissionService;
   private readonly IDesktopEnvironmentDetector _desktopEnvironmentDetector = desktopEnvironmentDetector;
   private readonly INavigationProvider _navigationProvider = navigationProvider;
   private readonly IToaster _toaster = toaster;
   private readonly IUiThread _uiThread = uiThread;
+  private readonly IWaylandPermissionProvider _waylandPermissionProvider = waylandPermissionProvider;
 
   protected override async Task HandleElapsed()
   {
@@ -55,22 +54,17 @@ public class RemoteControlPermissionMonitorWayland(
   {
     try
     {
-      DedupeLogger.LogInformationDeduped("Checking Wayland remote control permissions");
+      DedupeLogger.LogInformationDeduped("Checking Wayland restore token");
 
-      var permissionState = await _desktopClientPermissionService.GetPermissionState(DesktopClientPermissionScope.RemoteControl);
-      var arePermissionsGranted = permissionState.ArePermissionsGranted;
+      var hasToken = _waylandPermissionProvider.HasRestoreToken();
 
-      DedupeLogger.LogInformationDeduped(
-        "Wayland permissions: RemoteControl={RemoteControl}",
-        args: [arePermissionsGranted]);
-
-      if (arePermissionsGranted)
+      if (hasToken)
       {
-        DedupeLogger.LogInformationDeduped("All required permissions are granted");
+        DedupeLogger.LogInformationDeduped("Wayland restore token exists");
         return;
       }
 
-      DedupeLogger.LogWarningDeduped("Required permissions are missing");
+      DedupeLogger.LogWarningDeduped("Wayland restore token is missing");
       await ShowPermissionsMissingToast<IPermissionsViewModelWayland>();
     }
     catch (Exception ex)

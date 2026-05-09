@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <TargetFramework>$(MacTargetFramework)</TargetFramework>
-		<TargetPlatformVersion>$(MacTargetPlatformVersion)</TargetPlatformVersion>
+    <TargetPlatformVersion Condition="'$(IsMacOS)' == 'true'">$(MacTargetPlatformVersion)</TargetPlatformVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />

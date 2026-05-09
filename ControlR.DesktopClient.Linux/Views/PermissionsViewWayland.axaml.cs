@@ -15,7 +15,6 @@ public partial class PermissionsViewWayland : UserControl
   {
     InitializeComponent();
   }
-
   public PermissionsViewWayland(IPermissionsViewModelWayland viewModel)
   {
     DataContext = viewModel;
@@ -29,6 +28,16 @@ public partial class PermissionsViewWayland : UserControl
 
     _mainWindow.Activated += MainWindowActivated;
     Unloaded += ViewUnloaded;
+  }
+
+  protected override void OnLoaded(RoutedEventArgs e)
+  {
+    base.OnLoaded(e);
+
+    if (DataContext is IPermissionsViewModelWayland viewModel)
+    {
+      viewModel.SetPermissionValues().Forget();
+    }
   }
 
   private void MainWindowActivated(object? sender, EventArgs e)

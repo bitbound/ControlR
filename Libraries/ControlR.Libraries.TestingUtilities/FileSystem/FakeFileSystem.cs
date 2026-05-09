@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Runtime.Versioning;
+using System.Security.Principal;
+using System.Security.AccessControl;
 using System.Text;
 using System.Text.RegularExpressions;
 using ControlR.Libraries.Shared.Primitives;
@@ -7,7 +10,7 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 
 namespace ControlR.Libraries.TestingUtilities.FileSystem;
 
-public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive = false) : IFileSystem
+public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive = false) : IFileSystem, IFileAccessPermissions
 {
 	private readonly Dictionary<string, FakeDirectoryEntry> _directories = new(GetComparer(isCaseSensitive));
 	private readonly Dictionary<string, FakeDriveEntry> _drives = new(GetComparer(isCaseSensitive));
@@ -601,20 +604,71 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
 		return Task.CompletedTask;
 	}
 
-	public Task<Result<string>> ResolveFilePath(string fileName)
-	{
-		lock (_syncRoot)
-		{
-			if (_resolvedFilePaths.TryGetValue(fileName, out var resolvedPath))
-			{
-				return Task.FromResult(Result.Ok(resolvedPath));
-			}
+  public Task<Result<string>> ResolveFilePath(string fileName)
+  {
+    lock (_syncRoot)
+    {
+      if (_resolvedFilePaths.TryGetValue(fileName, out var resolvedPath))
+      {
+        return Task.FromResult(Result.Ok(resolvedPath));
+      }
 
-			return Task.FromResult(Result.Fail<string>($"File '{fileName}' not found."));
-		}
-	}
+      return Task.FromResult(Result.Fail<string>($"File '{fileName}' not found."));
+    }
+  }
 
-	public void SetResolvedFilePath(string fileName, string resolvedPath)
+  public void Set(string filePath, WellKnownSidType sid)
+  {
+    lock (_syncRoot)
+    {
+      var normalizedPath = NormalizePath(filePath);
+      if (!_files.ContainsKey(normalizedPath))
+      {
+        throw new FileNotFoundException($"Could not find file '{filePath}'.", filePath);
+      }
+    }
+  }
+
+  [SupportedOSPlatform("windows")]
+  public void Set(string filePath, bool includeCurrentUser, bool isProtected, bool preserveInheritance, params WellKnownSidType[] sids)
+  {
+    lock (_syncRoot)
+    {
+      var normalizedPath = NormalizePath(filePath);
+      if (!_files.ContainsKey(normalizedPath))
+      {
+        throw new FileNotFoundException($"Could not find file '{filePath}'.", filePath);
+      }
+    }
+  }
+
+  [SupportedOSPlatform("linux")]
+  [SupportedOSPlatform("macos")]
+  public void Set(string filePath, UnixFileMode mode)
+  {
+    lock (_syncRoot)
+    {
+      var normalizedPath = NormalizePath(filePath);
+      var file = _files.TryGetValue(normalizedPath, out var f) ? f : null;
+      var directory = _directories.TryGetValue(normalizedPath, out var d) ? d : null;
+
+      if (file is null && directory is null)
+      {
+        throw new FileNotFoundException($"Could not find file or directory '{filePath}'.", filePath);
+      }
+
+      if (file is not null)
+      {
+        file.UnixFileMode = mode;
+      }
+      else
+      {
+        directory!.UnixFileMode = mode;
+      }
+    }
+  }
+
+  public void SetResolvedFilePath(string fileName, string resolvedPath)
 	{
 		lock (_syncRoot)
 		{
@@ -622,28 +676,28 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
 		}
 	}
 
-	public void SetUnixFileMode(string filePath, UnixFileMode fileMode)
-	{
-		lock (_syncRoot)
-		{
-			var normalizedPath = NormalizePath(filePath);
-			if (_files.TryGetValue(normalizedPath, out var file))
-			{
-				file.UnixFileMode = fileMode;
-				return;
-			}
+  public void SetUnixFileMode(string filePath, UnixFileMode fileMode)
+  {
+    lock (_syncRoot)
+    {
+      var normalizedPath = NormalizePath(filePath);
+      if (_files.TryGetValue(normalizedPath, out var file))
+      {
+        file.UnixFileMode = fileMode;
+        return;
+      }
 
-			if (_directories.TryGetValue(normalizedPath, out var directory))
-			{
-				directory.UnixFileMode = fileMode;
-				return;
-			}
+      if (_directories.TryGetValue(normalizedPath, out var directory))
+      {
+        directory.UnixFileMode = fileMode;
+        return;
+      }
 
-			throw new FileNotFoundException($"Could not find file '{filePath}'.", filePath);
-		}
-	}
+      throw new FileNotFoundException($"Could not find file '{filePath}'.", filePath);
+    }
+  }
 
-	public void SetVersionInfoSource(string filePath, string sourceFilePath)
+  public void SetVersionInfoSource(string filePath, string sourceFilePath)
 	{
 		lock (_syncRoot)
 		{

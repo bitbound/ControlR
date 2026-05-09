@@ -101,6 +101,7 @@ internal static class HostApplicationBuilderExtensions
     services.AddSingleton<IProcessManager, ProcessManager>();
     services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);
     services.AddSingleton<IFileSystem, FileSystem>();
+    services.AddSingleton<IFileAccessPermissions, FileAccessPermissions>();
     services.AddSingleton<IFileManager, FileManager>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
     services.AddSingleton<ILocalSocketProxy, LocalSocketProxy>();

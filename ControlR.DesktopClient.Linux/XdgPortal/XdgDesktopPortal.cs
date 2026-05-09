@@ -30,6 +30,7 @@ public interface IXdgDesktopPortal : IDisposable
 
 public sealed class XdgDesktopPortal(
   IFileSystem fileSystem,
+  IFileAccessPermissions fileAccessPermissions,
   IOptionsMonitor<DesktopClientOptions> options,
   ILogger<XdgDesktopPortal> logger) : IXdgDesktopPortal, IDisposable
 {
@@ -38,6 +39,7 @@ public sealed class XdgDesktopPortal(
 
   private static readonly TimeSpan _defaultProbeTimeout = Debugger.IsAttached ? TimeSpan.FromSeconds(120) : TimeSpan.FromSeconds(5);
 
+  private readonly IFileAccessPermissions _fileAccessPermissions = fileAccessPermissions;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly SemaphoreSlim _initLock = new(1, 1);
   private readonly ILogger<XdgDesktopPortal> _logger = logger;
@@ -457,6 +459,7 @@ public sealed class XdgDesktopPortal(
       var instanceId = _options.CurrentValue.InstanceId;
       var tokenPath = PathConstants.GetWaylandRemoteDesktopRestoreTokenPath(instanceId);
       _fileSystem.WriteAllText(tokenPath, token);
+      _fileAccessPermissions.Set(tokenPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
     }
     catch (Exception ex)
     {

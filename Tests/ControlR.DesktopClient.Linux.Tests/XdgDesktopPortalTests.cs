@@ -26,16 +26,16 @@ public class XdgDesktopPortalTests
     _logger = loggerFactory.CreateLogger<XdgDesktopPortal>();
     _fileSystem = new FakeFileSystem();
     _options = new OptionsMonitorWrapper<DesktopClientOptions>(new DesktopClientOptions());
-    _desktopPortal = new XdgDesktopPortal(_fileSystem, _options, _logger);
+    _desktopPortal = new XdgDesktopPortal(_fileSystem, _fileSystem, _options, _logger);
   }
 
   [WaylandOnlyFact]
   public async Task CanCallPortalDirectly()
   {
-    var address = Address.Session;
+    var address = DBusAddress.Session;
     Assert.False(string.IsNullOrEmpty(address), "Session bus address should be available");
     
-    var connection = new Connection(address);
+    var connection = new DBusConnection(address);
     await connection.ConnectAsync();
     
     _logger.LogInformation("Connected as {UniqueName}", connection.UniqueName);

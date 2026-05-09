@@ -55,4 +55,54 @@ public class WaylandPermissionProviderTests
     Assert.Equal(1, fakePortal.RequestRemoteDesktopPermissionCallCount);
     Assert.Equal(0, fakePortal.InitializeCallCount);
   }
+
+  [Fact]
+  public void HasRestoreToken_ReturnsTrue_WhenTokenFileExists()
+  {
+    var timeProvider = new FakeTimeProvider();
+    var fileSystem = new Mock<IFileSystem>();
+    var options = new Mock<IOptionsMonitor<DesktopClientOptions>>();
+    options
+      .SetupGet(x => x.CurrentValue)
+      .Returns(new DesktopClientOptions { InstanceId = "instance-id" });
+    fileSystem
+      .Setup(x => x.FileExists(It.IsAny<string>()))
+      .Returns(true);
+
+    var sut = new WaylandPermissionProvider(
+      timeProvider,
+      fileSystem.Object,
+      Mock.Of<IXdgDesktopPortalFactory>(),
+      options.Object,
+      NullLogger<WaylandPermissionProvider>.Instance);
+
+    var result = sut.HasRestoreToken();
+
+    Assert.True(result);
+  }
+
+  [Fact]
+  public void HasRestoreToken_ReturnsFalse_WhenTokenFileDoesNotExist()
+  {
+    var timeProvider = new FakeTimeProvider();
+    var fileSystem = new Mock<IFileSystem>();
+    var options = new Mock<IOptionsMonitor<DesktopClientOptions>>();
+    options
+      .SetupGet(x => x.CurrentValue)
+      .Returns(new DesktopClientOptions { InstanceId = "instance-id" });
+    fileSystem
+      .Setup(x => x.FileExists(It.IsAny<string>()))
+      .Returns(false);
+
+    var sut = new WaylandPermissionProvider(
+      timeProvider,
+      fileSystem.Object,
+      Mock.Of<IXdgDesktopPortalFactory>(),
+      options.Object,
+      NullLogger<WaylandPermissionProvider>.Instance);
+
+    var result = sut.HasRestoreToken();
+
+    Assert.False(result);
+  }
 }

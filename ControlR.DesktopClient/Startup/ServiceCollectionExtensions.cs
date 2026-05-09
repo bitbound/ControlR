@@ -29,6 +29,7 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<IMessenger>(new WeakReferenceMessenger())
       .AddSingleton<IProcessManager, ProcessManager>()
       .AddSingleton<IFileSystem, FileSystem>()
+      .AddSingleton<IFileAccessPermissions, FileAccessPermissions>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<INavigationProvider, NavigationProvider>()
       .AddSingleton<IMainWindowProvider, MainWindowProvider>()
