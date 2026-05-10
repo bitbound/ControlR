@@ -42,7 +42,8 @@ public static class ServiceRegistrationExtensions
       .AddSingleton(provider => provider.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
       .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
-      .AddSingleton<IAeroPeekProvider, AeroPeekProvider>();
+      .AddSingleton<IAeroPeekProvider, AeroPeekProvider>()
+      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceWindows>();
   }
 
   private static IServiceCollection AddInputSimulator(IServiceCollection services)

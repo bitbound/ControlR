@@ -85,6 +85,11 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 - Central package management via `Directory.Packages.props`.
 - Add packages with `dotnet add <project> package <name>` — never add `Version` attributes to `<PackageReference>` elements.
 
+## Agent Hints
+
+- `semantic_search` is available for searching the codebase. It runs locally and can be used liberally.
+- `brave-search_brave_web_search` is available for web searches. It is metered and should be used sparingly, only when external data is needed.
+
 ## Planning
 
 - Planning documents and implementation notes go in `/.plans/` (not committed).

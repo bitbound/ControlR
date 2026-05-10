@@ -43,7 +43,8 @@ public static class ServiceRegistrationExtensions
       .AddSingleton(provider => provider.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IClipboardManager, ClipboardManagerMac>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsMac>()
-      .AddSingleton<IFileSystemUnix, FileSystemUnix>();
+      .AddSingleton<IFileSystemUnix, FileSystemUnix>()
+      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceMac>();
   }
 
   private static IServiceCollection AddInputSimulator(IServiceCollection services)
