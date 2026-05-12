@@ -169,7 +169,7 @@ public class InputSimulatorWayland(
             var clampedX = Math.Clamp(coordinates.NormalizedX, 0, 1);
             var clampedY = Math.Clamp(coordinates.NormalizedY, 0, 1);
             var maxX = Math.Max(0, coordinates.Display.LayoutBounds.Width - 1);
-            var maxY = Math.Max(0, coordinates.Display.LayoutBounds .Height - 1);
+            var maxY = Math.Max(0, coordinates.Display.LayoutBounds.Height - 1);
             var logicalX = maxX * clampedX;
             var logicalY = maxY * clampedY;
 
@@ -287,38 +287,42 @@ public class InputSimulatorWayland(
       await _keyboardLock.WaitAsync();
       try
       {
-      foreach (var ch in text)
-      {
-        if (TryGetKeysym(ch.ToString(), out var keysym))
+        const int delayMs = 10;
+        const int shiftKeycode = 42;
+
+        foreach (var ch in text)
         {
-          await SendKeysymAsync(_sessionHandle, keysym, true);
-          await Task.Delay(1);
-          await SendKeysymAsync(_sessionHandle, keysym, false);
-          continue;
+          if (TryGetKeysym(ch.ToString(), out var keysym))
+          {
+            await SendKeysymAsync(_sessionHandle, keysym, true);
+            await Task.Delay(delayMs);
+            await SendKeysymAsync(_sessionHandle, keysym, false);
+            continue;
+          }
+
+          if (!LinuxKeycodeMapper.TryMapCharacterToLinuxKeycode(ch, out var keycode, out var needsShift))
+          {
+            _logger.LogDebug("No keycode mapping for character: {Char}", ch);
+            continue;
+          }
+
+          if (needsShift)
+          {
+            await SendKeycodeAsync(_sessionHandle, shiftKeycode, true);
+            await Task.Delay(delayMs);
+          }
+
+          await SendKeycodeAsync(_sessionHandle, keycode, true);
+          await Task.Delay(delayMs);
+          await SendKeycodeAsync(_sessionHandle, keycode, false);
+          await Task.Delay(delayMs);
+
+          if (needsShift)
+          {
+            await SendKeycodeAsync(_sessionHandle, shiftKeycode, false);
+            await Task.Delay(delayMs);
+          }
         }
-
-        if (!LinuxKeycodeMapper.TryMapCharacterToLinuxKeycode(ch, out var keycode, out var needsShift))
-        {
-          _logger.LogDebug("No keycode mapping for character: {Char}", ch);
-          continue;
-        }
-
-        if (needsShift)
-        {
-          await SendKeycodeAsync(_sessionHandle, 42, true);
-        }
-
-        await SendKeycodeAsync(_sessionHandle, keycode, true);
-        await Task.Delay(1);
-        await SendKeycodeAsync(_sessionHandle, keycode, false);
-
-        if (needsShift)
-        {
-          await SendKeycodeAsync(_sessionHandle, 42, false);
-        }
-
-        await Task.Delay(1);
-      }
       }
       finally
       {
