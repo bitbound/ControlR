@@ -24,12 +24,17 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
   {
   }
 
+  public Task<string?> GetClipboardText(CancellationToken cancellationToken)
+  {
+    return Task.FromResult<string?>(null);
+  }
+
   public Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection()
   {
     return Task.FromResult(PipeWireConnectionResult);
   }
 
-  public Task<string?> GetRemoteDesktopSessionHandle()
+  public Task<string?> GetRemoteDesktopSessionHandle(CancellationToken cancellationToken = default)
   {
     return Task.FromResult(SessionHandle);
   }
@@ -39,7 +44,7 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
     return Task.FromResult<List<PipeWireStreamInfo>>([]);
   }
 
-  public Task Initialize(bool bypassRestoreToken = false)
+  public Task Initialize(bool bypassRestoreToken = false, CancellationToken cancellationToken = default)
   {
     InitializeCallCount++;
     return Task.CompletedTask;
@@ -91,5 +96,10 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
   {
     RequestRemoteDesktopPermissionCallCount++;
     return Task.FromResult(RequestRemoteDesktopPermissionResult);
+  }
+
+  public Task SetClipboardText(string text, CancellationToken cancellationToken)
+  {
+    return Task.CompletedTask;
   }
 }

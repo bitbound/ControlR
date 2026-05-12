@@ -13,10 +13,11 @@ namespace ControlR.DesktopClient.Linux.XdgPortal;
 public interface IXdgDesktopPortal : IDisposable
 {
   void DeleteRestoreToken();
+  Task<string?> GetClipboardText(CancellationToken cancellationToken);
   Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection();
-  Task<string?> GetRemoteDesktopSessionHandle();
+  Task<string?> GetRemoteDesktopSessionHandle(CancellationToken cancellationToken = default);
   Task<List<PipeWireStreamInfo>> GetScreenCastStreams();
-  Task Initialize(bool bypassRestoreToken = false);
+  Task Initialize(bool bypassRestoreToken = false, CancellationToken cancellationToken = default);
   Task NotifyKeyboardKeycode(string sessionHandle, int keycode, bool pressed);
   Task NotifyKeyboardKeysym(string sessionHandle, int keysym, bool pressed);
   Task NotifyPointerAxis(string sessionHandle, double dx, double dy, bool finish = true);
@@ -26,6 +27,7 @@ public interface IXdgDesktopPortal : IDisposable
   Task NotifyPointerMotionAbsolute(string sessionHandle, uint stream, double x, double y);
   Task<bool> ProbeRestoreToken(string restoreToken, CancellationToken cancellationToken = default);
   Task<bool> RequestRemoteDesktopPermission(bool bypassRestoreToken = false, CancellationToken cancellationToken = default);
+  Task SetClipboardText(string text, CancellationToken cancellationToken);
 }
 
 public sealed class XdgDesktopPortal(
@@ -37,6 +39,7 @@ public sealed class XdgDesktopPortal(
   private const string PortalBusName = "org.freedesktop.portal.Desktop";
   private const string PortalObjectPath = "/org/freedesktop/portal/desktop";
 
+  private static readonly string[] _clipboardMimeTypes = ["text/plain;charset=utf-8"];
   private static readonly TimeSpan _defaultProbeTimeout = Debugger.IsAttached ? TimeSpan.FromSeconds(120) : TimeSpan.FromSeconds(5);
 
   private readonly IFileAccessPermissions _fileAccessPermissions = fileAccessPermissions;
@@ -46,12 +49,17 @@ public sealed class XdgDesktopPortal(
   private readonly IOptionsMonitor<DesktopClientOptions> _options = options;
   private readonly TimeSpan _userInteractionTimeout = TimeSpan.FromSeconds(90);
 
+  private bool _clipboardEnabled;
   private Connection? _connection;
   private ConnectionInfo? _connectionInfo;
   private bool _disposed;
   private bool _initialized;
+  private volatile string? _ownedClipboardText;
   private SafeFileHandle? _pipewireFd;
+  private IDisposable? _selectionOwnerChangedSubscription;
+  private IDisposable? _selectionTransferSubscription;
   private string? _sessionHandle;
+  private volatile bool _sessionOwnsClipboard;
   private List<PipeWireStreamInfo>? _streams;
 
   private Connection Connection => _connection
@@ -80,12 +88,62 @@ public sealed class XdgDesktopPortal(
   public void Dispose()
   {
     if (_disposed) return;
+
+    _disposed = true;
+
+    _selectionOwnerChangedSubscription?.Dispose();
+    _selectionTransferSubscription?.Dispose();
+
     _pipewireFd?.Dispose();
     _connection?.Dispose();
     _initLock?.Dispose();
+
+    _clipboardEnabled = false;
+    _ownedClipboardText = null;
     _pipewireFd = null;
     _connection = null;
-    _disposed = true;
+    _connectionInfo = null;
+    _selectionOwnerChangedSubscription = null;
+    _selectionTransferSubscription = null;
+    _sessionOwnsClipboard = false;
+    _sessionHandle = null;
+    _streams = null;
+  }
+
+  public async Task<string?> GetClipboardText(CancellationToken cancellationToken)
+  {
+    try
+    {
+      await EnsureInitializedAsync(cancellationToken: cancellationToken);
+
+      if (!_clipboardEnabled || _sessionHandle is null)
+      {
+        return null;
+      }
+
+      if (_sessionOwnsClipboard)
+      {
+        return _ownedClipboardText;
+      }
+
+      var proxy = Connection.CreateProxy<IClipboard>(PortalBusName, PortalObjectPath);
+      var fd = await proxy.SelectionReadAsync(
+        new ObjectPath(_sessionHandle),
+        "text/plain;charset=utf-8")
+        .WithCancellation(cancellationToken)
+        ;
+
+      using var stream = new FileStream(fd, FileAccess.Read);
+      using var reader = new StreamReader(stream, System.Text.Encoding.UTF8);
+      return await reader
+        .ReadToEndAsync(cancellationToken)
+        ;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error reading clipboard text via portal");
+      return null;
+    }
   }
 
   public async Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection()
@@ -96,9 +154,9 @@ public sealed class XdgDesktopPortal(
     : throw new InvalidOperationException("PipeWire connection is not initialized.");
   }
 
-  public async Task<string?> GetRemoteDesktopSessionHandle()
+  public async Task<string?> GetRemoteDesktopSessionHandle(CancellationToken cancellationToken = default)
   {
-    await EnsureInitializedAsync();
+    await EnsureInitializedAsync(cancellationToken: cancellationToken);
     return _sessionHandle;
   }
 
@@ -108,7 +166,7 @@ public sealed class XdgDesktopPortal(
     return _streams ?? throw new InvalidOperationException("ScreenCast streams are not initialized.");
   }
 
-  public async Task Initialize(bool bypassRestoreToken = false)
+  public async Task Initialize(bool bypassRestoreToken = false, CancellationToken cancellationToken = default)
   {
     await EnsureInitializedAsync(bypassRestoreToken);
   }
@@ -119,7 +177,7 @@ public sealed class XdgDesktopPortal(
     {
       await EnsureInitializedAsync();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
-      await proxy.NotifyKeyboardKeycodeAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), keycode, pressed ? 1u : 0u).ConfigureAwait(false);
+      await proxy.NotifyKeyboardKeycodeAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), keycode, pressed ? 1u : 0u);
     }
     catch (Exception ex)
     {
@@ -133,7 +191,7 @@ public sealed class XdgDesktopPortal(
     {
       await EnsureInitializedAsync();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
-      await proxy.NotifyKeyboardKeysymAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), keysym, pressed ? 1u : 0u).ConfigureAwait(false);
+      await proxy.NotifyKeyboardKeysymAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), keysym, pressed ? 1u : 0u);
     }
     catch (Exception ex)
     {
@@ -148,7 +206,7 @@ public sealed class XdgDesktopPortal(
       await EnsureInitializedAsync();
       var options = new Dictionary<string, object> { ["finish"] = finish };
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
-      await proxy.NotifyPointerAxisAsync(new ObjectPath(sessionHandle), options, dx, dy).ConfigureAwait(false);
+      await proxy.NotifyPointerAxisAsync(new ObjectPath(sessionHandle), options, dx, dy);
     }
     catch (Exception ex)
     {
@@ -162,7 +220,7 @@ public sealed class XdgDesktopPortal(
     {
       await EnsureInitializedAsync();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
-      await proxy.NotifyPointerAxisDiscreteAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), axis, steps).ConfigureAwait(false);
+      await proxy.NotifyPointerAxisDiscreteAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), axis, steps);
     }
     catch (Exception ex)
     {
@@ -176,7 +234,7 @@ public sealed class XdgDesktopPortal(
     {
       await EnsureInitializedAsync();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
-      await proxy.NotifyPointerButtonAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), button, pressed ? 1u : 0u).ConfigureAwait(false);
+      await proxy.NotifyPointerButtonAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), button, pressed ? 1u : 0u);
     }
     catch (Exception ex)
     {
@@ -194,7 +252,7 @@ public sealed class XdgDesktopPortal(
         new ObjectPath(sessionHandle),
         new Dictionary<string, object>(),
         dx,
-        dy).ConfigureAwait(false);
+        dy);
     }
     catch (Exception ex)
     {
@@ -213,7 +271,7 @@ public sealed class XdgDesktopPortal(
         new Dictionary<string, object>(),
         stream,
         x,
-        y).ConfigureAwait(false);
+        y);
     }
     catch (Exception ex)
     {
@@ -236,10 +294,10 @@ public sealed class XdgDesktopPortal(
       using var cts = new CancellationTokenSource(_defaultProbeTimeout);
       using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
 
-      var result = await StartRemoteDesktopSessionAsync(
+      var result = await StartRemoteDesktopSession(
         restoreToken,
         openPipeWireRemote: false,
-        cancellationToken: combinedCts.Token).ConfigureAwait(false);
+        cancellationToken: combinedCts.Token);
 
       if (!result.IsSuccess)
       {
@@ -271,10 +329,10 @@ public sealed class XdgDesktopPortal(
         bypassRestoreToken);
 
       var restoreToken = GetRestoreTokenForSession(bypassRestoreToken);
-      var result = await StartRemoteDesktopSessionAsync(
+      var result = await StartRemoteDesktopSession(
         restoreToken,
         openPipeWireRemote: false,
-        cancellationToken: cancellationToken).ConfigureAwait(false);
+        cancellationToken: cancellationToken);
 
       if (!result.IsSuccess)
       {
@@ -292,14 +350,109 @@ public sealed class XdgDesktopPortal(
     }
   }
 
+  public async Task SetClipboardText(string text, CancellationToken cancellationToken)
+  {
+    var previousClipboardText = _ownedClipboardText;
+    var previousSessionOwnsClipboard = _sessionOwnsClipboard;
+
+    try
+    {
+      await EnsureInitializedAsync(cancellationToken: cancellationToken);
+
+      if (!_clipboardEnabled || _sessionHandle is null)
+      {
+        _logger.LogWarning(
+          "Cannot set clipboard text. Clipboard Enabled: {ClipboardEnabled}, Session Handle Available: {SessionHandle}",
+          _clipboardEnabled,
+          _sessionHandle is not null);
+
+        return;
+      }
+
+      _ownedClipboardText = text;
+
+      _logger.LogDebug(
+        "Advertising clipboard selection for session {SessionHandle}. TextLength={TextLength}",
+        _sessionHandle,
+        text.Length);
+
+      var proxy = Connection.CreateProxy<IClipboard>(PortalBusName, PortalObjectPath);
+
+      await proxy.SetSelectionAsync(
+        new ObjectPath(_sessionHandle),
+        new Dictionary<string, object>
+        {
+          ["mime_types"] = _clipboardMimeTypes
+        })
+        .WithCancellation(cancellationToken);
+
+      _logger.LogDebug(
+        "Clipboard selection advertisement completed for session {SessionHandle}",
+        _sessionHandle);
+
+    }
+    catch (OperationCanceledException ex)
+    {
+      if (!_sessionOwnsClipboard)
+      {
+        _ownedClipboardText = previousClipboardText;
+        _sessionOwnsClipboard = previousSessionOwnsClipboard;
+      }
+
+      _logger.LogError(ex, "Error setting clipboard text via portal");
+    }
+    catch (Exception ex)
+    {
+      if (!_sessionOwnsClipboard)
+      {
+        _ownedClipboardText = previousClipboardText;
+        _sessionOwnsClipboard = previousSessionOwnsClipboard;
+      }
+
+      _logger.LogError(ex, "Error setting clipboard text via portal");
+    }
+  }
+
+  private async Task CompleteSelectionTransfer(ObjectPath sessionHandle, uint serial, bool success)
+  {
+    if (_disposed || _connection is null)
+    {
+      return;
+    }
+
+    try
+    {
+      var proxy = Connection.CreateProxy<IClipboard>(PortalBusName, PortalObjectPath);
+      await proxy.SelectionWriteDoneAsync(sessionHandle, serial, success);
+
+      _logger.LogDebug(
+        "Completed clipboard SelectionTransfer. Serial={Serial}, Success={Success}",
+        serial,
+        success);
+    }
+    catch (ObjectDisposedException)
+    {
+      _logger.LogDebug(
+        "Skipping clipboard SelectionTransfer completion because the DBus connection is disposed. Serial={Serial}",
+        serial);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(
+        ex,
+        "Failed to complete clipboard SelectionTransfer. Serial={Serial}, Success={Success}",
+        serial,
+        success);
+    }
+  }
+
   private async Task ConnectAsync(CancellationToken cancellationToken = default)
   {
     try
     {
       _connection = new Connection(Address.Session);
       _connectionInfo = await _connection.ConnectAsync()
-        .WithCancellation(cancellationToken)
-        .ConfigureAwait(false);
+        .WithCancellation(cancellationToken);
 
       _logger.LogDebug("Connected to DBus session bus");
     }
@@ -310,7 +463,7 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task<Result<string>> CreateRemoteDesktopSessionAsync(CancellationToken cancellationToken = default)
+  private async Task<Result<string>> CreateRemoteDesktopSession(CancellationToken cancellationToken = default)
   {
     try
     {
@@ -326,12 +479,12 @@ public sealed class XdgDesktopPortal(
 
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
 
-      var (response, results) = await WaitForResponseAsync(
+      var (response, results) = await WaitForResponse(
           expectedRequestPath,
           () => proxy.CreateSessionAsync(options),
           cancellationToken
         )
-        .ConfigureAwait(false);
+        ;
 
       if (response != 0)
       {
@@ -353,14 +506,14 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task EnsureInitializedAsync(bool bypassRestoreToken = false)
+  private async Task EnsureInitializedAsync(bool bypassRestoreToken = false, CancellationToken cancellationToken = default)
   {
     if (_initialized)
     {
       return;
     }
 
-    await _initLock.WaitAsync();
+    await _initLock.WaitAsync(cancellationToken);
     try
     {
       if (_initialized)
@@ -373,9 +526,10 @@ public sealed class XdgDesktopPortal(
         bypassRestoreToken);
 
       var restoreToken = GetRestoreTokenForSession(bypassRestoreToken);
-      var result = await StartRemoteDesktopSessionAsync(
+      var result = await StartRemoteDesktopSession(
         restoreToken,
-        openPipeWireRemote: true);
+        openPipeWireRemote: true,
+        cancellationToken: cancellationToken);
 
       if (!result.IsSuccess || result.Value is null)
       {
@@ -386,7 +540,14 @@ public sealed class XdgDesktopPortal(
       _sessionHandle = result.Value.SessionHandle;
       _streams = result.Value.Streams;
       _pipewireFd = result.Value.PipeWireFd;
+      _clipboardEnabled = result.Value.ClipboardEnabled;
       _initialized = true;
+
+      if (_clipboardEnabled && _sessionHandle is not null)
+      {
+        await SetupClipboardSignalHandlers();
+      }
+
       _logger.LogInformation("Wayland desktop portal initialization completed successfully.");
     }
     finally
@@ -417,6 +578,94 @@ public sealed class XdgDesktopPortal(
     return restoreToken;
   }
 
+  private void HandleSelectionOwnerChanged((ObjectPath SessionHandle, IDictionary<string, object> Options) data)
+  {
+    try
+    {
+      if (_disposed)
+      {
+        return;
+      }
+
+      if (_sessionHandle is null || data.SessionHandle != new ObjectPath(_sessionHandle))
+      {
+        return;
+      }
+
+      if (!data.Options.TryGetValue("session_is_owner", out var ownerObj) || ownerObj is not bool sessionIsOwner)
+      {
+        _logger.LogDebug("Clipboard SelectionOwnerChanged did not include session_is_owner.");
+        return;
+      }
+
+      _sessionOwnsClipboard = sessionIsOwner;
+
+      if (!sessionIsOwner)
+      {
+        _ownedClipboardText = null;
+      }
+
+      _logger.LogDebug(
+        "Clipboard ownership changed. SessionOwnsClipboard={SessionOwnsClipboard}",
+        sessionIsOwner);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error handling SelectionOwnerChanged signal");
+    }
+  }
+
+  private async Task HandleSelectionTransfer((ObjectPath SessionHandle, string MimeType, uint Serial) data)
+  {
+    var success = false;
+
+    try
+    {
+      if (_disposed)
+      {
+        return;
+      }
+
+      var proxy = Connection.CreateProxy<IClipboard>(PortalBusName, PortalObjectPath);
+      var sessionPath = data.SessionHandle;
+
+      if (data.MimeType is not ("text/plain;charset=utf-8" or "text/plain"))
+      {
+        _logger.LogDebug(
+          "Rejecting clipboard SelectionTransfer for unsupported mime type {MimeType}. Serial={Serial}",
+          data.MimeType,
+          data.Serial);
+        return;
+      }
+
+      var text = _ownedClipboardText;
+      if (text is null)
+      {
+        _logger.LogDebug(
+          "Rejecting clipboard SelectionTransfer because no owned clipboard text is available. Serial={Serial}",
+          data.Serial);
+        return;
+      }
+
+      var fd = await proxy.SelectionWriteAsync(sessionPath, data.Serial);
+
+      using var stream = new FileStream(fd, FileAccess.Write);
+      using var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+      await writer.WriteAsync(text);
+      await writer.FlushAsync();
+
+      success = true;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error handling SelectionTransfer signal");
+    }
+    finally
+    {
+      await CompleteSelectionTransfer(data.SessionHandle, data.Serial, success);
+    }
+  }
+
   private string? LoadRestoreToken()
   {
     try
@@ -435,12 +684,12 @@ public sealed class XdgDesktopPortal(
     return null;
   }
 
-  private async Task<Result<SafeFileHandle>> OpenPipeWireRemoteAsync(string sessionHandle)
+  private async Task<Result<SafeFileHandle>> OpenPipeWireRemote(string sessionHandle)
   {
     try
     {
       var proxy = Connection.CreateProxy<IScreenCast>(PortalBusName, PortalObjectPath);
-      var fd = await proxy.OpenPipeWireRemoteAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>()).ConfigureAwait(false);
+      var fd = await proxy.OpenPipeWireRemoteAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>());
 
       _logger.LogInformation("Opened PipeWire remote with FD");
       return Result.Ok(fd);
@@ -467,7 +716,7 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task<Result> SelectRemoteDesktopDevicesAsync(
+  private async Task<Result> SelectRemoteDesktopDevices(
     string sessionHandle,
     uint deviceTypes = 3,
     Dictionary<string, object>? additionalOptions = null,
@@ -494,11 +743,11 @@ public sealed class XdgDesktopPortal(
       var expectedRequestPath = GetExpectedRequestPath(requestToken);
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
 
-      var (response, _) = await WaitForResponseAsync(
+      var (response, _) = await WaitForResponse(
           expectedRequestPath,
           () => proxy.SelectDevicesAsync(new ObjectPath(sessionHandle), options),
           cancellationToken: cancellationToken)
-        .ConfigureAwait(false);
+        ;
 
       if (response != 0)
       {
@@ -515,7 +764,7 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task<Result> SelectScreenCastSourcesAsync(
+  private async Task<Result> SelectScreenCastSources(
     string sessionHandle,
     uint sourceTypes = 1,
     bool multipleSources = true,
@@ -546,11 +795,11 @@ public sealed class XdgDesktopPortal(
       var expectedRequestPath = GetExpectedRequestPath(requestToken);
       var proxy = Connection.CreateProxy<IScreenCast>(PortalBusName, PortalObjectPath);
 
-      var (response, _) = await WaitForResponseAsync(
+      var (response, _) = await WaitForResponse(
           expectedRequestPath,
           () => proxy.SelectSourcesAsync(new ObjectPath(sessionHandle), options),
           cancellationToken: cancellationToken)
-        .ConfigureAwait(false);
+        ;
 
       if (response != 0)
       {
@@ -572,7 +821,35 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task<Result<RemoteDesktopStartResult>> StartRemoteDesktopAsync(
+  private async Task SetupClipboardSignalHandlers()
+  {
+    try
+    {
+      var proxy = Connection.CreateProxy<IClipboard>(PortalBusName, PortalObjectPath);
+
+      _selectionOwnerChangedSubscription = await proxy.WatchSelectionOwnerChangedAsync(
+        HandleSelectionOwnerChanged,
+        ex =>
+        {
+          _logger.LogError(ex, "Error in SelectionOwnerChanged signal watcher");
+        });
+
+      _selectionTransferSubscription = await proxy.WatchSelectionTransferAsync(
+        data => HandleSelectionTransfer(data).Forget(),
+        ex =>
+        {
+          _logger.LogError(ex, "Error in SelectionTransfer signal watcher");
+        });
+
+      _logger.LogInformation("Clipboard signal handlers registered for session {Session}", _sessionHandle);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to set up clipboard signal handlers. Clipboard write may not work.");
+    }
+  }
+
+  private async Task<Result<RemoteDesktopStartResult>> StartRemoteDesktop(
     string sessionHandle,
     string parentWindow = "",
     CancellationToken cancellationToken = default)
@@ -589,11 +866,11 @@ public sealed class XdgDesktopPortal(
       var expectedRequestPath = GetExpectedRequestPath(requestToken);
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
 
-      var (response, results) = await WaitForResponseAsync(
+      var (response, results) = await WaitForResponse(
           expectedRequestPath,
           () => proxy.StartAsync(new ObjectPath(sessionHandle), parentWindow, options),
           cancellationToken)
-        .ConfigureAwait(false);
+        ;
 
       if (response != 0)
       {
@@ -610,6 +887,13 @@ public sealed class XdgDesktopPortal(
       if (results.TryGetValue("devices", out var devicesObj) && devicesObj is uint devices)
       {
         _logger.LogInformation("RemoteDesktop granted devices: {Devices}", devices);
+      }
+
+      var clipboardEnabled = false;
+      if (results.TryGetValue("clipboard_enabled", out var clipboardObj) && clipboardObj is bool enabled)
+      {
+        clipboardEnabled = enabled;
+        _logger.LogInformation("RemoteDesktop clipboard_enabled: {ClipboardEnabled}", clipboardEnabled);
       }
 
       var streams = new List<PipeWireStreamInfo>();
@@ -669,8 +953,14 @@ public sealed class XdgDesktopPortal(
           }
         }
       }
+      var startResult = new RemoteDesktopStartResult()
+      {
+        Streams = streams,
+        RestoreToken = restoreToken,
+        ClipboardEnabled = clipboardEnabled
+      };
 
-      return Result.Ok(new RemoteDesktopStartResult { Streams = streams, RestoreToken = restoreToken });
+      return Result.Ok(startResult);
     }
     catch (Exception ex)
     {
@@ -679,14 +969,14 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task<Result<PortalSessionState>> StartRemoteDesktopSessionAsync(
+  private async Task<Result<PortalSessionState>> StartRemoteDesktopSession(
     string? restoreToken,
     bool openPipeWireRemote,
     CancellationToken cancellationToken = default)
   {
-    await ConnectAsync(cancellationToken).ConfigureAwait(false);
+    await ConnectAsync(cancellationToken);
 
-    var sessionResult = await CreateRemoteDesktopSessionAsync(cancellationToken).ConfigureAwait(false);
+    var sessionResult = await CreateRemoteDesktopSession(cancellationToken);
     if (!sessionResult.IsSuccess || sessionResult.Value is null)
     {
       return Result.Fail<PortalSessionState>(sessionResult.Reason ?? "Failed to create Wayland remote desktop session.");
@@ -700,11 +990,12 @@ public sealed class XdgDesktopPortal(
       remoteDesktopOptions["restore_token"] = restoreToken;
     }
 
-    var selectResult = await SelectRemoteDesktopDevicesAsync(
+    var selectResult = await SelectRemoteDesktopDevices(
       sessionHandle,
       deviceTypes: 3,
       additionalOptions: remoteDesktopOptions,
-      cancellationToken: cancellationToken).ConfigureAwait(false);
+      cancellationToken: cancellationToken)
+      ;
 
     if (!selectResult.IsSuccess)
     {
@@ -713,12 +1004,12 @@ public sealed class XdgDesktopPortal(
 
     _logger.LogInformation("Wayland desktop portal selected remote desktop devices.");
 
-    var selectSourcesResult = await SelectScreenCastSourcesAsync(
+    var selectSourcesResult = await SelectScreenCastSources(
       sessionHandle,
       sourceTypes: 1,
       multipleSources: true,
       cursorMode: AvailableCursorModes.Embedded,
-      cancellationToken: cancellationToken).ConfigureAwait(false);
+      cancellationToken: cancellationToken);
 
     if (!selectSourcesResult.IsSuccess)
     {
@@ -727,7 +1018,20 @@ public sealed class XdgDesktopPortal(
 
     _logger.LogInformation("Wayland desktop portal selected screen cast sources.");
 
-    var startResult = await StartRemoteDesktopAsync(sessionHandle, cancellationToken: cancellationToken).ConfigureAwait(false);
+    try
+    {
+      var clipboardProxy = Connection.CreateProxy<IClipboard>(PortalBusName, PortalObjectPath);
+      await clipboardProxy.RequestClipboardAsync(
+        new ObjectPath(sessionHandle),
+        new Dictionary<string, object>());
+      _logger.LogInformation("Requested clipboard access for Wayland desktop portal session.");
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to request clipboard access. Clipboard will not be available.");
+    }
+
+    var startResult = await StartRemoteDesktop(sessionHandle, cancellationToken: cancellationToken);
     if (!startResult.IsSuccess || startResult.Value is null)
     {
       return Result.Fail<PortalSessionState>(startResult.Reason ?? "Failed to start Wayland remote desktop session.");
@@ -744,7 +1048,7 @@ public sealed class XdgDesktopPortal(
     SafeFileHandle? pipeWireFd = null;
     if (openPipeWireRemote)
     {
-      var fdResult = await OpenPipeWireRemoteAsync(sessionHandle);
+      var fdResult = await OpenPipeWireRemote(sessionHandle);
       if (!fdResult.IsSuccess || fdResult.Value is null)
       {
         return Result.Fail<PortalSessionState>(fdResult.Reason ?? "Failed to open PipeWire remote.");
@@ -754,17 +1058,17 @@ public sealed class XdgDesktopPortal(
       _logger.LogInformation("Wayland desktop portal opened PipeWire remote successfully.");
     }
 
-    return Result.Ok(new PortalSessionState(sessionHandle, startResult.Value.Streams, pipeWireFd));
+    return Result.Ok(new PortalSessionState(sessionHandle, startResult.Value.Streams, pipeWireFd, startResult.Value.ClipboardEnabled));
   }
 
-  private async Task<(uint response, IDictionary<string, object> results)> WaitForResponseAsync(
+  private async Task<(uint response, IDictionary<string, object> results)> WaitForResponse(
     string expectedRequestPath,
     Func<Task> trigger,
     CancellationToken cancellationToken = default)
   {
     var tcs = new TaskCompletionSource<(uint, IDictionary<string, object>)>(TaskCreationOptions.RunContinuationsAsynchronously);
     var requestProxy = Connection.CreateProxy<IRequest>(PortalBusName, new ObjectPath(expectedRequestPath));
-    
+
     using var signalSubscription = await requestProxy.WatchResponseAsync(
       data =>
       {
@@ -775,16 +1079,16 @@ public sealed class XdgDesktopPortal(
       {
         _logger.LogError(ex, "Error in Response signal handler for {Path}", expectedRequestPath);
         tcs.TrySetException(ex);
-      }).ConfigureAwait(false);
+      });
 
-    await trigger().ConfigureAwait(false);
+    await trigger();
 
     using var defaultTimeout = new CancellationTokenSource(_userInteractionTimeout);
     using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, defaultTimeout.Token);
     var sw = Stopwatch.StartNew();
     try
     {
-      return await tcs.Task.WaitAsync(combinedCts.Token).ConfigureAwait(false);
+      return await tcs.Task.WaitAsync(combinedCts.Token);
     }
     catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
     {
@@ -795,5 +1099,6 @@ public sealed class XdgDesktopPortal(
   private sealed record PortalSessionState(
     string SessionHandle,
     List<PipeWireStreamInfo> Streams,
-    SafeFileHandle? PipeWireFd);
+    SafeFileHandle? PipeWireFd,
+    bool ClipboardEnabled);
 }

@@ -61,7 +61,7 @@ public static class ServiceRegistrationExtensions
           .AddSingleton<IDisplayManagerWayland>(provider => provider.GetRequiredService<DisplayManagerWayland>())
           .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWayland>>()
           .AddSingleton(provider => provider.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
-          .AddSingleton<IClipboardManager, ClipboardManagerGtk>()
+          .AddSingleton<IClipboardManager, ClipboardManagerWayland>()
           .AddSingleton<IWaylandPermissionProvider, WaylandPermissionProvider>()
           .AddSingleton<IPipeWireStreamFactory, PipeWireStreamFactory>();
         break;
