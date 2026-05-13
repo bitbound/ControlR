@@ -18,7 +18,7 @@
       <MudTooltip Text="Highest JPEG quality auto mode will use while outbound bandwidth stays below the lower threshold.">
         <MudNumericField T="int"
                          Value="RemoteControlState.AutoQualityMaximum"
-                         ValueChanged="@((int value) => HandleAutoQualityMaximumChanged(value))"
+                         ValueChanged="@(HandleAutoQualityMaximumChanged)"
                          Label="Auto Quality Maximum"
                          Min="2"
                          Max="100"
@@ -29,7 +29,7 @@
       <MudTooltip Text="Lowest JPEG quality auto mode will use once outbound bandwidth reaches the upper threshold.">
         <MudNumericField T="int"
                          Value="RemoteControlState.AutoQualityMinimum"
-                         ValueChanged="@((int value) => HandleAutoQualityMinimumChanged(value))"
+                         ValueChanged="@(HandleAutoQualityMinimumChanged)"
                          Label="Auto Quality Minimum"
                          Min="1"
                          Max="99"
@@ -40,7 +40,7 @@
       <MudTooltip Text="Quality starts dropping after outbound bandwidth rises above this value.">
         <MudNumericField T="double"
                          Value="RemoteControlState.AutoQualityLowerThresholdMbps"
-                         ValueChanged="@((double value) => HandleAutoQualityLowerThresholdChanged(value))"
+                         ValueChanged="@(HandleAutoQualityLowerThresholdChanged)"
                          Label="Auto Quality Lower Threshold"
                          Min="1"
                          Step="1"
@@ -52,7 +52,7 @@
       <MudTooltip Text="Quality reaches the minimum auto value once outbound bandwidth reaches this point.">
         <MudNumericField T="double"
                          Value="RemoteControlState.AutoQualityUpperThresholdMbps"
-                         ValueChanged="@((double value) => HandleAutoQualityUpperThresholdChanged(value))"
+                         ValueChanged="@(HandleAutoQualityUpperThresholdChanged)"
                          Label="Auto Quality Upper Threshold"
                          Min="2"
                          Step="1"
@@ -68,7 +68,7 @@
       <MudTooltip Text="Set a fixed image quality for screen captures sent during the session.">
         <MudNumericField T="int"
                          Value="RemoteControlState.ManualQuality"
-                         ValueChanged="@((int value) => HandleManualQualityChanged(value))"
+                         ValueChanged="@(HandleManualQualityChanged)"
                          Label="Manual Quality"
                          Min="1"
                          Max="100"
@@ -79,7 +79,7 @@
       <MudTooltip Text="Set a fixed image quality for screen captures sent during the session.">
         <MudSlider T="int"
                    Value="RemoteControlState.ManualQuality"
-                   ValueChanged="@((int value) => HandleManualQualityChanged(value))"
+                   ValueChanged="@(HandleManualQualityChanged)"
                    Min="1"
                    Max="100"
                    Step="1"
@@ -90,8 +90,9 @@
 
   <div class="mt-3 d-flex flex-column gap-3">
     <MudTooltip Text="Throttle capturing on the remote end whenever outbound bandwidth rises above this cap.">
-      <MudSwitch Value="RemoteControlState.IsMaxBandwidthEnabled"
-                 ValueChanged="@((bool value) => HandleMaxBandwidthToggled(value))"
+      <MudSwitch T="bool" 
+                 Value="RemoteControlState.IsMaxBandwidthEnabled"
+                 ValueChanged="@(HandleMaxBandwidthToggled)"
                  Color="Color.Secondary"
                  Label="Enable Max Mbps"
                  ThumbIcon="@(Icons.Material.Filled.Speed)" />
@@ -102,7 +103,7 @@
       <MudTooltip Text="Hard outbound bandwidth cap that pauses remote capture while usage is above this value.">
         <MudNumericField T="double"
                          Value="RemoteControlState.MaxBandwidthMbps"
-                         ValueChanged="@((double value) => HandleMaxBandwidthChanged(value))"
+                         ValueChanged="@(HandleMaxBandwidthChanged)"
                          Label="Max Mbps"
                          Min="1"
                          Step="1"

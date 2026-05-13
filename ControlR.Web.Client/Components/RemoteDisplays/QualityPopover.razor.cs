@@ -11,52 +11,52 @@ public class QualityPopoverBase : DisposableComponent
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  protected void HandleAutoQualityLowerThresholdChanged(double value)
+  protected async Task HandleAutoQualityLowerThresholdChanged(double value)
   {
     RemoteControlState.AutoQualityLowerThresholdMbps = value;
-    _ = SendCaptureSettings();
+    await SendCaptureSettings();
   }
 
-  protected void HandleAutoQualityMaximumChanged(int value)
+  protected async Task HandleAutoQualityMaximumChanged(int value)
   {
     RemoteControlState.AutoQualityMaximum = value;
-    _ = SendCaptureSettings();
+    await SendCaptureSettings();
   }
 
-  protected void HandleAutoQualityMinimumChanged(int value)
+  protected async Task HandleAutoQualityMinimumChanged(int value)
   {
     RemoteControlState.AutoQualityMinimum = value;
-    _ = SendCaptureSettings();
+    await SendCaptureSettings();
   }
 
-  protected void HandleAutoQualityToggled(bool value)
+  protected async Task HandleAutoQualityToggled(bool value)
   {
     RemoteControlState.IsAutoQualityEnabled = value;
-    _ = SendCaptureSettings();
+    await SendCaptureSettings();
   }
 
-  protected void HandleAutoQualityUpperThresholdChanged(double value)
+  protected async Task HandleAutoQualityUpperThresholdChanged(double value)
   {
     RemoteControlState.AutoQualityUpperThresholdMbps = value;
-    _ = SendCaptureSettings();
+    await SendCaptureSettings();
   }
 
-  protected void HandleManualQualityChanged(int value)
+  protected async Task HandleManualQualityChanged(int value)
   {
     RemoteControlState.ManualQuality = value;
-    _ = SendCaptureSettings();
+    await SendCaptureSettings();
   }
 
-  protected void HandleMaxBandwidthChanged(double value)
+  protected async Task HandleMaxBandwidthChanged(double value)
   {
     RemoteControlState.MaxBandwidthMbps = value;
-    _ = SendCaptureSettings();
+    await SendCaptureSettings();
   }
 
-  protected void HandleMaxBandwidthToggled(bool value)
+  protected async Task HandleMaxBandwidthToggled(bool value)
   {
     RemoteControlState.IsMaxBandwidthEnabled = value;
-    _ = SendCaptureSettings();
+    await SendCaptureSettings();
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
