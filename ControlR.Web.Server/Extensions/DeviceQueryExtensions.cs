@@ -122,16 +122,18 @@ public static class DeviceQueryExtensions
       return query.Where(d =>
           EF.Functions.ILike(d.Name ?? "", $"%{searchText}%") ||
           EF.Functions.ILike(d.Alias ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.OsDescription ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.ConnectionId ?? "", $"%{searchText}%") ||
+          // Maybe add these back when surfaced in the UI.
+          //EF.Functions.ILike(d.OsDescription ?? "", $"%{searchText}%") ||
+          //EF.Functions.ILike(d.ConnectionId ?? "", $"%{searchText}%") ||
           EF.Functions.ILike(string.Join("", d.CurrentUsers) ?? "", $"%{searchText}%"));
     }
 
     return query.Where(d =>
       d.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
       d.Alias.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-      d.OsDescription.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-      d.ConnectionId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+      // Maybe add these back when surfaced in the UI.
+      //d.OsDescription.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+      //d.ConnectionId.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
       string.Join("", d.CurrentUsers).Contains(searchText, StringComparison.OrdinalIgnoreCase));
   }
 
