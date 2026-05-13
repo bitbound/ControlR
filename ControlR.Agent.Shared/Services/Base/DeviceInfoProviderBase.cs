@@ -7,7 +7,7 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 
 namespace ControlR.Agent.Shared.Services.Base;
 
-public class DeviceInfoProviderBase(
+public abstract class DeviceInfoProviderBase(
   IFileSystem fileSystem,
   ISystemEnvironment systemEnvironment,
   ICpuUtilizationSampler cpuSampler,
@@ -21,36 +21,40 @@ public class DeviceInfoProviderBase(
   private readonly IOptionsAccessor _optionsAccessor = optionsAccessor;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
-  protected DeviceUpdateRequestDto CreateDeviceBase(
-    string[] currentUsers,
-    IReadOnlyList<Drive> drives,
-    double usedStorage,
-    double totalStorage,
-    double usedMemory,
-    double totalMemory,
-    string agentVersion)
+  public async Task<DeviceUpdateRequestDto> GetDeviceInfo()
   {
-    return new DeviceUpdateRequestDto(
-      Id: _optionsAccessor.DeviceId,
-      TenantId: _optionsAccessor.TenantId,
-      Name: _systemEnvironment.MachineName,
-      AgentVersion: agentVersion,
-      Is64Bit: _systemEnvironment.Is64Bit,
-      OsArchitecture: RuntimeInformation.OSArchitecture,
-      Platform: _systemEnvironment.Platform,
-      OsDescription: RuntimeInformation.OSDescription,
-      ProcessorCount: _systemEnvironment.ProcessorCount,
-      CpuUtilization: _cpuSampler.CurrentUtilization,
-      TotalMemory: totalMemory,
-      TotalStorage: totalStorage,
-      UsedMemory: usedMemory,
-      UsedStorage: usedStorage,
-      CurrentUsers: currentUsers,
-      MacAddresses: [.. GetMacAddresses()],
-      LocalIpV4: GetLocalIpV4(),
-      LocalIpV6: GetLocalIpV6(),
-      Drives: drives
-    );
+    try
+    {
+      var systemDriveInfo = GetSystemDriveInfo();
+      var memoryInfo = await GetMemoryInGb();
+
+      return new DeviceUpdateRequestDto(
+        Id: _optionsAccessor.DeviceId,
+        TenantId: _optionsAccessor.TenantId,
+        Name: _systemEnvironment.MachineName,
+        AgentVersion: GetAgentVersion(),
+        Is64Bit: _systemEnvironment.Is64Bit,
+        OsArchitecture: RuntimeInformation.OSArchitecture,
+        Platform: _systemEnvironment.Platform,
+        OsDescription: RuntimeInformation.OSDescription,
+        ProcessorCount: _systemEnvironment.ProcessorCount,
+        CpuUtilization: _cpuSampler.CurrentUtilization,
+        TotalMemory: memoryInfo.TotalMemory,
+        TotalStorage: systemDriveInfo.TotalStorage,
+        UsedMemory: memoryInfo.UsedMemory,
+        UsedStorage: systemDriveInfo.UsedStorage,
+        CurrentUsers: await GetCurrentUsers(),
+        MacAddresses: [.. GetMacAddresses()],
+        LocalIpV4: GetLocalIpV4(),
+        LocalIpV6: GetLocalIpV6(),
+        Drives: GetAllDrives()
+      );
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error getting device info.");
+      throw;
+    }
   }
 
   protected string GetAgentVersion()
@@ -102,7 +106,11 @@ public class DeviceInfoProviderBase(
     }
   }
 
-  protected (double usedStorage, double totalStorage) GetSystemDriveInfo()
+  protected abstract Task<string[]> GetCurrentUsers();
+
+  protected abstract Task<MemoryInfo> GetMemoryInGb();
+
+  protected StorageInfo GetSystemDriveInfo()
   {
     try
     {
@@ -131,7 +139,7 @@ public class DeviceInfoProviderBase(
         var usedStorage =
           Math.Round(((double)systemDrive.TotalSize - systemDrive.TotalFreeSpace) / 1024 / 1024 / 1024, 2);
 
-        return (usedStorage, totalStorage);
+        return new StorageInfo(usedStorage, totalStorage);
       }
     }
     catch (Exception ex)
@@ -139,7 +147,7 @@ public class DeviceInfoProviderBase(
       _logger.LogError(ex, "Error getting system drive info.");
     }
 
-    return (0, 0);
+    return new StorageInfo(0, 0);
   }
 
   private string GetLocalIpV4()
@@ -242,4 +250,7 @@ public class DeviceInfoProviderBase(
 
     return macAddress;
   }
+
+  protected record MemoryInfo(double UsedMemory, double TotalMemory);
+  protected record StorageInfo(double UsedStorage, double TotalStorage);
 }

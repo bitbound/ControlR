@@ -4,7 +4,7 @@ using ControlR.Libraries.Shared.Services.Processes;
 namespace ControlR.Agent.Shared.Services.Mac;
 
 public class DeviceInfoProviderMac(
-  IProcessManager processInvoker,
+  IProcessManager processManager,
   IFileSystem fileSystem,
   ISystemEnvironment environmentHelper,
   ICpuUtilizationSampler cpuUtilizationSampler,
@@ -13,54 +13,43 @@ public class DeviceInfoProviderMac(
   : DeviceInfoProviderBase(fileSystem, environmentHelper, cpuUtilizationSampler, optionsAccessor, logger), IDeviceInfoProvider
 {
   private readonly ILogger<DeviceInfoProviderMac> _logger = logger;
-  private readonly IProcessManager _processService = processInvoker;
+  private readonly IProcessManager _processManager = processManager;
 
-  public async Task<DeviceUpdateRequestDto> GetDeviceInfo()
+  protected override async Task<string[]> GetCurrentUsers()
   {
-    try
+    var result = await _processManager.GetProcessOutput("users", "");
+    if (result.IsSuccess)
     {
-      var (usedStorage, totalStorage) = GetSystemDriveInfo();
-      var (usedMemory, totalMemory) = await GetMemoryInGb();
-
-      var currentUsers = await GetCurrentUser();
-      var drives = GetAllDrives();
-      var agentVersion = GetAgentVersion();
-
-      return CreateDeviceBase(
-        currentUsers,
-        drives,
-        usedStorage,
-        totalStorage,
-        usedMemory,
-        totalMemory,
-        agentVersion);
+      return [.. result.Value
+        .Split()
+        .Select(x => x.Trim())
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct()];
     }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error getting device info.");
-      throw;
-    }
+
+    _logger.LogResult(result);
+    return [];
   }
 
-  public async Task<(double usedGB, double totalGB)> GetMemoryInGb()
+  protected override async Task<MemoryInfo> GetMemoryInGb()
   {
     try
     {
       double totalGb = default;
 
-      var memTotalResult = await _processService.GetProcessOutput("zsh", "-c \"sysctl -n hw.memsize\"");
-      var memPercentResult = await _processService.GetProcessOutput("zsh", "-c \"ps -A -o %mem\"");
+      var memTotalResult = await _processManager.GetProcessOutput("zsh", "-c \"sysctl -n hw.memsize\"");
+      var memPercentResult = await _processManager.GetProcessOutput("zsh", "-c \"ps -A -o %mem\"");
 
       if (!memTotalResult.IsSuccess)
       {
         _logger.LogResult(memTotalResult);
-        return (0, 0);
+        return new MemoryInfo(0, 0);
       }
 
       if (!memPercentResult.IsSuccess)
       {
         _logger.LogResult(memPercentResult);
-        return (0, 0);
+        return new MemoryInfo(0, 0);
       }
 
       if (double.TryParse(memTotalResult.Value, out var totalMemory))
@@ -86,27 +75,12 @@ public class DeviceInfoProviderMac(
       usedMemPercent = usedMemPercent / 4 / 100;
       usedGb = usedMemPercent * totalGb;
 
-      return (usedGb, totalGb);
+      return new MemoryInfo(usedGb, totalGb);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting memory.");
-      return (0, 0);
+      return new MemoryInfo(0, 0);
     }
-  }
-  private async Task<string[]> GetCurrentUser()
-  {
-    var result = await _processService.GetProcessOutput("users", "");
-    if (result.IsSuccess)
-    {
-      return [.. result.Value
-        .Split()
-        .Select(x => x.Trim())
-        .Where(x => !string.IsNullOrWhiteSpace(x))
-        .Distinct()];
-    }
-
-    _logger.LogResult(result);
-    return [];
   }
 }

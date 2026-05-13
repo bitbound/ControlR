@@ -16,38 +16,16 @@ public class DeviceInfoProviderWin(
 {
   private readonly ILogger<DeviceInfoProviderWin> _logger = logger;
 
-  public async Task<DeviceUpdateRequestDto> GetDeviceInfo()
+  protected override Task<string[]> GetCurrentUsers()
   {
-    try
-    {
-      var (usedStorage, totalStorage) = GetSystemDriveInfo();
-      var (usedMemory, totalMemory) = await GetMemoryInGb();
-
-      var currentUsers = win32Interop.GetActiveSessions()
+    return win32Interop.GetActiveSessions()
         .Select(x => x.Username)
         .Where(x => !string.IsNullOrWhiteSpace(x))
-        .ToArray();
-
-      var drives = GetAllDrives();
-      var agentVersion = GetAgentVersion();
-
-      return CreateDeviceBase(
-        currentUsers,
-        drives,
-        usedStorage,
-        totalStorage,
-        usedMemory,
-        totalMemory,
-        agentVersion);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error getting device info.");
-      throw;
-    }
+        .ToArray()
+        .AsTaskResult();
   }
 
-  public Task<(double usedGB, double totalGB)> GetMemoryInGb()
+  protected override Task<MemoryInfo> GetMemoryInGb()
   {
     double totalGb = 0;
     double freeGb = 0;
@@ -67,6 +45,7 @@ public class DeviceInfoProviderWin(
       _logger.LogError(ex, "Error while getting device memory.");
     }
 
-    return Task.FromResult((totalGb - freeGb, totalGB: totalGb));
+    var memoryInfo = new MemoryInfo(totalGb - freeGb, totalGb);
+    return Task.FromResult(memoryInfo);
   }
 }

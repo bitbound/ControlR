@@ -15,34 +15,23 @@ public class DeviceInfoProviderLinux(
   private readonly ILogger<DeviceInfoProviderLinux> _logger = logger;
   private readonly IProcessManager _processInvoker = processInvoker;
 
-  public async Task<DeviceUpdateRequestDto> GetDeviceInfo()
+  protected override async Task<string[]> GetCurrentUsers()
   {
-    try
+    var result = await _processInvoker.GetProcessOutput("users", "");
+    if (result.IsSuccess)
     {
-      var (usedStorage, totalStorage) = GetSystemDriveInfo();
-      var (usedMemory, totalMemory) = await GetMemoryInGb();
-
-      var currentUsers = await GetCurrentUsers();
-      var drives = GetAllDrives();
-      var agentVersion = GetAgentVersion();
-
-      return CreateDeviceBase(
-          currentUsers,
-        drives,
-        usedStorage,
-        totalStorage,
-        usedMemory,
-        totalMemory,
-        agentVersion);
+      return [.. result.Value
+        .Split()
+        .Select(x => x.Trim())
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct()];
     }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error getting device data.");
-      throw;
-    }
+
+    _logger.LogResult(result);
+    return [];
   }
 
-  public async Task<(double usedGB, double totalGB)> GetMemoryInGb()
+  protected override async Task<MemoryInfo> GetMemoryInGb()
   {
     try
     {
@@ -51,7 +40,7 @@ public class DeviceInfoProviderLinux(
       if (!result.IsSuccess)
       {
         _logger.LogResult(result);
-        return (0, 0);
+        return new MemoryInfo(0, 0);
       }
 
       var resultsArr = result.Value.Split("\n".ToCharArray());
@@ -79,31 +68,15 @@ public class DeviceInfoProviderLinux(
         var freeGb = Math.Round(freeKbDouble / 1024 / 1024, 2);
         var totalGb = Math.Round(totalKbDouble / 1024 / 1024, 2);
 
-        return (totalGb - freeGb, totalGb);
+        return new MemoryInfo(totalGb - freeGb, totalGb);
       }
 
-      return (0, 0);
+      return new MemoryInfo(0, 0);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting device memory.");
-      return (0, 0);
+      return new MemoryInfo(0, 0);
     }
-  }
-
-  private async Task<string[]> GetCurrentUsers()
-  {
-    var result = await _processInvoker.GetProcessOutput("users", "");
-    if (result.IsSuccess)
-    {
-      return [.. result.Value
-        .Split()
-        .Select(x => x.Trim())
-        .Where(x => !string.IsNullOrWhiteSpace(x))
-        .Distinct()];
-    }
-
-    _logger.LogResult(result);
-    return [];
   }
 }

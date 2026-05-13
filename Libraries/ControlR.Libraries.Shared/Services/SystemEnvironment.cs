@@ -1,3 +1,4 @@
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using ControlR.Libraries.Api.Contracts.Enums;
@@ -49,7 +50,22 @@ public class SystemEnvironment : ISystemEnvironment
 #endif
     }
   }
-  public string MachineName => Environment.MachineName;
+  
+  public string MachineName
+  {
+    get
+    {
+      try
+      {
+        return Dns.GetHostName();
+      }
+      catch
+      {
+        return Environment.MachineName;
+      }
+    }
+  }
+
   public SystemPlatform Platform
   {
     get
