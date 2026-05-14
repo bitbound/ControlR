@@ -26,24 +26,24 @@ public interface IRemoteControlHostManager
 
 public class RemoteControlHostManager : IRemoteControlHostManager
 {
-  private readonly IAppLifetimeNotifier _appLifetimeNotifier;
-  private readonly IOptions<DesktopClientOptions> _desktopClientOptions;
-  private readonly IRemoteControlHostBuilderFactory _hostBuilderFactory;
-  private readonly ILogger<RemoteControlHostManager> _logger;
-  private readonly HandlerCollection<ICollection<RemoteControlSession>> _sessionChangedHandlers;
-  private readonly ConcurrentDictionary<Guid, RemoteControlSession> _sessions = new();
-  private readonly ISystemEnvironment _systemEnvironment;
-  private readonly TimeProvider _timeProvider;
+   private readonly IHostApplicationLifetime _appLifetime;
+   private readonly IOptions<DesktopClientOptions> _desktopClientOptions;
+   private readonly IRemoteControlHostBuilderFactory _hostBuilderFactory;
+   private readonly ILogger<RemoteControlHostManager> _logger;
+   private readonly HandlerCollection<ICollection<RemoteControlSession>> _sessionChangedHandlers;
+   private readonly ConcurrentDictionary<Guid, RemoteControlSession> _sessions = new();
+   private readonly ISystemEnvironment _systemEnvironment;
+   private readonly TimeProvider _timeProvider;
 
-  public RemoteControlHostManager(
-    TimeProvider timeProvider,
-    IAppLifetimeNotifier appLifetimeNotifier,
-    IOptions<DesktopClientOptions> desktopClientOptions,
-    IRemoteControlHostBuilderFactory hostBuilderFactory,
-    ISystemEnvironment systemEnvironment,
-    ILogger<RemoteControlHostManager> logger)
-  {
-    _appLifetimeNotifier = appLifetimeNotifier;
+   public RemoteControlHostManager(
+     TimeProvider timeProvider,
+     IHostApplicationLifetime appLifetime,
+     IOptions<DesktopClientOptions> desktopClientOptions,
+     IRemoteControlHostBuilderFactory hostBuilderFactory,
+     ISystemEnvironment systemEnvironment,
+     ILogger<RemoteControlHostManager> logger)
+   {
+     _appLifetime = appLifetime;
     _desktopClientOptions = desktopClientOptions;
     _hostBuilderFactory = hostBuilderFactory;
     _logger = logger;
@@ -56,7 +56,7 @@ public class RemoteControlHostManager : IRemoteControlHostManager
       return Task.CompletedTask;
     });
 
-    appLifetimeNotifier.ApplicationStopping.Register(HandleParentApplicationStopping);
+    appLifetime.ApplicationStopping.Register(HandleParentApplicationStopping);
   }
 
   public ICollection<RemoteControlSession> GetAllSessions() => _sessions.Values;
@@ -161,7 +161,7 @@ public class RemoteControlHostManager : IRemoteControlHostManager
     });
 
     _sessionChangedHandlers
-      .InvokeHandlers(_sessions.Values, _appLifetimeNotifier.ApplicationStopping)
+      .InvokeHandlers(_sessions.Values, _appLifetime.ApplicationStopping)
       .Forget();
 
     return sessionResult;
@@ -187,7 +187,7 @@ public class RemoteControlHostManager : IRemoteControlHostManager
         if (_sessions.TryRemove(requestDto.SessionId, out var session))
         {
           await session.DisposeAsync();
-          await _sessionChangedHandlers.InvokeHandlers(_sessions.Values, _appLifetimeNotifier.ApplicationStopping);
+          await _sessionChangedHandlers.InvokeHandlers(_sessions.Values, _appLifetime.ApplicationStopping);
         }
 
         _logger.LogInformation(

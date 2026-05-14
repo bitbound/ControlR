@@ -7,6 +7,7 @@ using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
+using Microsoft.Extensions.Hosting;
 
 namespace ControlR.DesktopClient.Startup;
 
@@ -50,7 +51,8 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<IToaster, Toaster>()
       .AddSingleton<IUiThread, UiThread>()
       .AddSingleton<IImageUtility, ImageUtility>()
-      .AddSingleton<IAppLifetimeNotifier, AppLifetimeNotifier>()
+      .AddSingleton<DesktopApplicationLifetime>()
+      .AddSingleton<IHostApplicationLifetime>(sp => sp.GetRequiredService<DesktopApplicationLifetime>())
       .AddSingleton<IViewModelFactory, ViewModelFactory>()
       .AddSingleton<IUrlLauncher, UrlLauncher>()
       .AddSingleton<IWaiter, Waiter>()
@@ -65,7 +67,7 @@ internal static class ServiceCollectionExtensions
       .AddTransient<ToastWindow>()
       .AddTransient<IToastWindowViewModel, ToastWindowViewModel>()
       .AddHostedService(sp => sp.GetRequiredService<IpcClientManager>())
-      .AddHostedService(sp => sp.GetRequiredService<IAppLifetimeNotifier>());
+      .AddHostedService(sp => sp.GetRequiredService<DesktopApplicationLifetime>());
 
     return services;
   }
