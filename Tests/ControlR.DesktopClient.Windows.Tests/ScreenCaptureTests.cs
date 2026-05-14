@@ -9,6 +9,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.DesktopClient.Common.State;
+
 
 #if IS_WINDOWS
 using Devolutions.Cadeau;
@@ -35,6 +37,7 @@ public class ScreenCaptureTests
       .AddSingleton<ICaptureMetrics, CaptureMetricsWindows>()
       .AddSingleton<IClipboardManager, ClipboardManagerWindows>()
       .AddSingleton<IDisplayManager, DisplayManagerWindows>()
+      .AddSingleton<IRemoteControlSessionState, RemoteControlSessionState>()
       .AddSingleton<IScreenGrabber, ScreenGrabberWindows>()
       .AddSingleton<IDisplayManagerWindows, DisplayManagerWindows>()
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>();

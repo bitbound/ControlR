@@ -46,9 +46,23 @@ public class RemoteControlHostDependencyTests
     {
       var desktopClientApp = BuildDesktopClientAppHost(environment);
       var factory = desktopClientApp.Services.GetRequiredService<IRemoteControlHostBuilderFactory>();
-      using var remoteControlHost = factory.CreateHostBuilder(requestDto).Build();
+      var builder = factory.CreateHostBuilder(requestDto);
+      var serviceDescriptors = builder.Services.ToList();
+      using var remoteControlHost = builder.Build();
 
       Assert.NotNull(remoteControlHost);
+
+      foreach (var descriptor in serviceDescriptors)
+      {
+        if (descriptor.ServiceType.IsGenericType)
+        {
+          // Skip open generic types as they cannot be resolved directly.
+          continue;
+        }
+
+       var service = remoteControlHost.Services.GetService(descriptor.ServiceType);
+        Assert.NotNull(service);
+      }
     }
     finally
     {
