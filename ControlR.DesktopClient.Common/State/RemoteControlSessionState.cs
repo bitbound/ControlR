@@ -4,13 +4,14 @@ using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Common.State;
 
-internal interface IRemoteControlSessionState : IStateBase
+public interface IRemoteControlSessionState : IStateBase
 {
   double AutoQualityLowerThresholdMbps { get; set; }
   int AutoQualityMaximum { get; set; }
   int AutoQualityMinimum { get; set; }
   double AutoQualityUpperThresholdMbps { get; set; }
   bool CaptureCursor { get; set; }
+  bool EnableDirectX { get; set; }
   int ImageQuality { get; set; }
   bool IsAutoQualityEnabled { get; set; }
   bool IsMaxBandwidthEnabled { get; set; }
@@ -61,6 +62,11 @@ internal class RemoteControlSessionState(ILogger<RemoteControlSessionState> logg
   public bool CaptureCursor
   {
     get => Get(defaultValue: AppConstants.DefaultRemoteControlCaptureCursor);
+    set => Set(value);
+  }
+  public bool EnableDirectX
+  {
+    get => Get(defaultValue: true);
     set => Set(value);
   }
   public int ImageQuality

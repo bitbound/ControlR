@@ -162,6 +162,13 @@
                  ValueChanged="@((bool value) => SetCaptureCursor(value))"
                  Label="Capture cursor" />
   </MudTooltip>
+
+  <MudTooltip Text="Use DirectX capture for better performance on Windows systems.  Disabling this can improve compatibility in some situations.">
+    <MudCheckBox T="bool"
+                 Value="_enableDirectX"
+                 ValueChanged="@((bool value) => SetEnableDirectX(value))"
+                 Label="Enable DirectX" />
+  </MudTooltip>
 </div>
 
 <div class="mt-10">

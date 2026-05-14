@@ -12,6 +12,7 @@ public interface IRemoteControlState : IStateBase
   IDisposable? ConnectionClosedRegistration { get; set; }
   RemoteControlSession? CurrentSession { get; set; }
   DisplayDto[]? DisplayData { get; set; }
+  bool EnableDirectX { get; set; }
   bool IsAutoPanEnabled { get; set; }
   bool IsAutoQualityEnabled { get; set; }
   bool IsBlockUserInputEnabled { get; set; }
@@ -91,6 +92,11 @@ public class RemoteControlState(ILogger<ObservableState> logger) : ObservableSta
   public DisplayDto[]? DisplayData
   {
     get => Get<DisplayDto[]?>();
+    set => Set(value);
+  }
+  public bool EnableDirectX
+  {
+    get => Get(defaultValue: true);
     set => Set(value);
   }
   public bool IsAutoPanEnabled

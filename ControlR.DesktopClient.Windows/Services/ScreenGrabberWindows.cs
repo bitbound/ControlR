@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.State;
 using ControlR.DesktopClient.Windows.Extensions;
 using ControlR.DesktopClient.Windows.Models;
 using ControlR.Libraries.NativeInterop.Windows;
@@ -29,24 +30,36 @@ namespace ControlR.DesktopClient.Windows.Services;
 /// Windows-specific screen grabber utilizing DirectX Desktop Duplication 
 /// and GDI BitBlt as a fallback.
 /// </summary>
-internal sealed class ScreenGrabberWindows(
-  IDxOutputDuplicator dxOutputGenerator,
-  IWin32Interop win32Interop,
-  IDisplayManager displayManager,
-  ILogger<ScreenGrabberWindows> logger) : IScreenGrabber
+internal sealed class ScreenGrabberWindows : IScreenGrabber
 {
   private const string DirectXCaptureMode = "DirectX";
   private const string GdiCaptureMode = "GDI";
 
-  private readonly LogDeduplicationContext<ScreenGrabberWindows> _dedupeLogger = logger.EnterDedupeScope();
-  private readonly IDisplayManager _displayManager = displayManager;
-  private readonly IDxOutputDuplicator _dxOutputGenerator = dxOutputGenerator;
-  private readonly ILogger<ScreenGrabberWindows> _logger = logger;
-  private readonly IWin32Interop _win32Interop = win32Interop;
+  private readonly LogDeduplicationContext<ScreenGrabberWindows> _dedupeLogger;
+  private readonly IDisplayManager _displayManager;
+  private readonly IDxOutputDuplicator _dxOutputGenerator;
+  private readonly ILogger<ScreenGrabberWindows> _logger;
+  private readonly IRemoteControlSessionState _sessionState;
+  private readonly IWin32Interop _win32Interop;
 
   private IntPtr _cachedCursorHandle = IntPtr.Zero;
   private SKBitmap? _cachedCursorSkBitmap;
   private bool _inputDesktopSwitchResult = true;
+
+  public ScreenGrabberWindows(
+    IRemoteControlSessionState sessionState,
+    IDxOutputDuplicator dxOutputGenerator,
+    IWin32Interop win32Interop,
+    IDisplayManager displayManager,
+    ILogger<ScreenGrabberWindows> logger)
+  {
+    _sessionState = sessionState;
+    _dxOutputGenerator = dxOutputGenerator;
+    _win32Interop = win32Interop;
+    _displayManager = displayManager;
+    _logger = logger;
+    _dedupeLogger = logger.EnterDedupeScope();
+  }
 
   /// <summary>
   /// Captures the entire virtual desktop as a single composite image.
@@ -77,10 +90,13 @@ internal sealed class ScreenGrabberWindows(
     {
       SwitchToInputDesktop();
 
-      var dxResult = GetDirectXCapture(targetDisplay, captureCursor);
-      if (dxResult.IsSuccess || (dxResult.HadNoChanges && !forceKeyFrame))
+      if (_sessionState.EnableDirectX)
       {
-        return dxResult;
+        var dxResult = GetDirectXCapture(targetDisplay, captureCursor);
+        if (dxResult.IsSuccess || (dxResult.HadNoChanges && !forceKeyFrame))
+        {
+          return dxResult;
+        }
       }
 
       return GetBitBltCapture(targetDisplay.LayoutBounds, captureCursor);

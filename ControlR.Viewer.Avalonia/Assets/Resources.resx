@@ -639,6 +639,9 @@ Details: {0}</value>
   <data name="FileSystem_AddressLabel" xml:space="preserve">
     <value>Path</value>
   </data>
+  <data name="DirectX" xml:space="preserve">
+    <value>DirectX</value>
+  </data>
   <data name="FileSystem_GoButtonText" xml:space="preserve">
     <value>Go</value>
   </data>

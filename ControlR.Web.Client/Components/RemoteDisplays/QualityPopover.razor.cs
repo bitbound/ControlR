@@ -81,6 +81,7 @@ public class QualityPopoverBase : DisposableComponent
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       var dto = new UpdateCaptureSettingsDto(
         RemoteControlState.CaptureCursor,
+        RemoteControlState.EnableDirectX,
         RemoteControlState.IsAutoQualityEnabled,
         RemoteControlState.ManualQuality,
         RemoteControlState.AutoQualityLowerThresholdMbps,

@@ -5,6 +5,7 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 [MessagePackObject(keyAsPropertyName: true)]
 public record UpdateCaptureSettingsDto(
   bool CaptureCursor,
+  bool EnableDirectX,
   bool IsAutoQualityEnabled,
   int ManualQuality,
   double AutoQualityLowerThresholdMbps,

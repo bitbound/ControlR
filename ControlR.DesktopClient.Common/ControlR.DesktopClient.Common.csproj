@@ -15,11 +15,12 @@
 		</PackageReference>
 	</ItemGroup>
   <ItemGroup>
- 		<ProjectReference Include="../Libraries/ControlR.Libraries.Ipc/ControlR.Libraries.Ipc.csproj" />
- 		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
- 		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
-     <ProjectReference Include="..\Libraries\ControlR.Libraries.Hosting\ControlR.Libraries.Hosting.csproj" />
- 	</ItemGroup>
+  		<ProjectReference Include="../Libraries/ControlR.Libraries.Ipc/ControlR.Libraries.Ipc.csproj" />
+  		<ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
+  		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
+      <ProjectReference Include="..\Libraries\ControlR.Libraries.Hosting\ControlR.Libraries.Hosting.csproj" />
+      <ProjectReference Include="..\Libraries\ControlR.Libraries.Messenger.Extensions\ControlR.Libraries.Messenger.Extensions.csproj" />
+  	</ItemGroup>
  	<ItemGroup>
  		<EmbeddedResource Include="Resources\Strings\en-US.json" />
  	</ItemGroup>

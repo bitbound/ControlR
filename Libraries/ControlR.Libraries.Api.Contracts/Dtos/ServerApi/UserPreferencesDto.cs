@@ -8,6 +8,7 @@ public sealed record UserPreferencesDto(
   int AutoQualityMinimum,
   double AutoQualityUpperThresholdMbps,
   bool CaptureCursor,
+  bool EnableDirectX,
   bool HideOfflineDevices,
   bool IncludeUntaggedDevices,
   bool IsAutoQualityEnabled,

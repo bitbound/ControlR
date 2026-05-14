@@ -1,4 +1,4 @@
-using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Client.DataValidation;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -11,6 +11,7 @@ public partial class Settings
   private int _autoQualityMinimum = AppConstants.DefaultRemoteControlAutoQualityMinimum;
   private double _autoQualityUpperThresholdMbps = AppConstants.DefaultRemoteControlAutoQualityUpperThresholdMbps;
   private bool _captureCursor = AppConstants.DefaultRemoteControlCaptureCursor;
+  private bool _enableDirectX = UserPreferenceDefinitions.DefaultEnableDirectX;
   private bool _isAutoQualityEnabled = AppConstants.DefaultRemoteControlIsAutoQualityEnabled;
   private bool _isMaxBandwidthEnabled = AppConstants.DefaultRemoteControlIsMaxBandwidthEnabled;
   private bool _isNotifyUserEnforced;
@@ -63,6 +64,7 @@ public partial class Settings
     _keyboardInputMode = preferences.KeyboardInputMode;
     _viewMode = preferences.ViewMode;
     _captureCursor = preferences.CaptureCursor;
+    _enableDirectX = preferences.EnableDirectX;
     _isAutoQualityEnabled = preferences.IsAutoQualityEnabled;
     _manualQuality = Math.Clamp(preferences.ManualQuality, 1, 100);
     _autoQualityLowerThresholdMbps = Math.Max(0.1d, preferences.AutoQualityLowerThresholdMbps);
@@ -196,6 +198,13 @@ public partial class Settings
     _captureCursor = value;
     await UserPreferences.SetPreference(UserPreferenceNames.CaptureCursor, value);
     Snackbar.Add("Default capture cursor updated", Severity.Success);
+  }
+
+  private async Task SetEnableDirectX(bool value)
+  {
+    _enableDirectX = value;
+    await UserPreferences.SetPreference(UserPreferenceNames.EnableDirectX, value);
+    Snackbar.Add("Default DirectX capture updated", Severity.Success);
   }
 
   private async Task SetIsAutoQualityEnabled(bool value)

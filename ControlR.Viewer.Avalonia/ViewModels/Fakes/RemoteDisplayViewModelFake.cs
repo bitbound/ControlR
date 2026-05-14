@@ -79,6 +79,7 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
       LayoutHeight = 140,
     }
   ];
+  public bool EnableDirectX { get; set; } = true;
   public bool HasMetricsData => true;
   public bool HasMultipleDisplays => true;
   public bool IsAutoPanEnabled { get; set; } = true;

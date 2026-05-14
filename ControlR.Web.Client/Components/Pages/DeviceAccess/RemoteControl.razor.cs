@@ -256,6 +256,7 @@ public partial class RemoteControl : ViewportAwareComponent
   {
     var preferences = await UserPreferences.GetPreferences();
     RemoteControlState.CaptureCursor = preferences.CaptureCursor;
+    RemoteControlState.EnableDirectX = preferences.EnableDirectX;
     RemoteControlState.IsAutoQualityEnabled = preferences.IsAutoQualityEnabled;
     RemoteControlState.ManualQuality = preferences.ManualQuality;
     RemoteControlState.AutoQualityLowerThresholdMbps = preferences.AutoQualityLowerThresholdMbps;
@@ -379,6 +380,7 @@ public partial class RemoteControl : ViewportAwareComponent
     await RemoteControlStream.SendCaptureSettings(
       new UpdateCaptureSettingsDto(
         RemoteControlState.CaptureCursor,
+        RemoteControlState.EnableDirectX,
         RemoteControlState.IsAutoQualityEnabled,
         RemoteControlState.ManualQuality,
         RemoteControlState.AutoQualityLowerThresholdMbps,

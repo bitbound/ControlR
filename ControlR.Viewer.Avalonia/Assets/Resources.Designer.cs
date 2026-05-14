@@ -369,6 +369,15 @@ namespace ControlR.Viewer.Avalonia.Assets {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to DirectX.
+        /// </summary>
+        public static string DirectX {
+            get {
+                return ResourceManager.GetString("DirectX", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Extras.
         /// </summary>
         public static string Extras {

@@ -391,15 +391,23 @@
             <Flyout Placement="BottomEdgeAlignedLeft">
               <Border MinWidth="240"
                       Padding="8">
-                <StackPanel Spacing="10">
-                  <TextBlock Text="{x:Static assets:Resources.Metrics}"
-                             FontSize="10" />
+                  <StackPanel Spacing="10">
+                    <TextBlock Text="{x:Static assets:Resources.Metrics}"
+                               FontSize="10" />
 
-                  <ToggleSwitch IsChecked="{Binding IsMetricsEnabled}"
-                                OnContent="{x:Static assets:Resources.ToggleOnText}"
-                                OffContent="{x:Static assets:Resources.ToggleOffText}"
-                                HorizontalAlignment="Left" />
-                </StackPanel>
+                    <ToggleSwitch IsChecked="{Binding IsMetricsEnabled}"
+                                  OnContent="{x:Static assets:Resources.ToggleOnText}"
+                                  OffContent="{x:Static assets:Resources.ToggleOffText}"
+                                  HorizontalAlignment="Left" />
+
+                    <TextBlock Text="{x:Static assets:Resources.DirectX}"
+                               FontSize="10" />
+
+                    <ToggleSwitch IsChecked="{Binding EnableDirectX}"
+                                  OffContent="{x:Static assets:Resources.DirectX}"
+                                  OnContent="{x:Static assets:Resources.DirectX}"
+                                  HorizontalAlignment="Left" />
+                  </StackPanel>
               </Border>
             </Flyout>
           </cavac:IconButton.Flyout>

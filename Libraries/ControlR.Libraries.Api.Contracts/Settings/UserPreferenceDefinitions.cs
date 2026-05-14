@@ -14,6 +14,7 @@ public static class UserPreferenceDefinitions
   public const int DefaultAutoQualityMinimum = 20;
   public const double DefaultAutoQualityUpperThresholdMbps = 15d;
   public const bool DefaultCaptureCursor = false;
+  public const bool DefaultEnableDirectX = true;
   public const bool DefaultHideOfflineDevices = true;
   public const bool DefaultIncludeUntaggedDevices = false;
   public const bool DefaultIsAutoQualityEnabled = false;
@@ -33,6 +34,8 @@ public static class UserPreferenceDefinitions
     SettingDefinition.CreateDouble(UserPreferenceNames.AutoQualityUpperThresholdMbps, DefaultAutoQualityUpperThresholdMbps, 0.1d);
   public static SettingDefinition<bool> CaptureCursor { get; } =
     SettingDefinition.CreateBoolean(UserPreferenceNames.CaptureCursor, DefaultCaptureCursor);
+  public static SettingDefinition<bool> EnableDirectX { get; } =
+    SettingDefinition.CreateBoolean(UserPreferenceNames.EnableDirectX, DefaultEnableDirectX);
   public static SettingDefinition<bool> HideOfflineDevices { get; } =
     SettingDefinition.CreateBoolean(UserPreferenceNames.HideOfflineDevices, DefaultHideOfflineDevices);
   public static SettingDefinition<bool> IncludeUntaggedDevices { get; } =

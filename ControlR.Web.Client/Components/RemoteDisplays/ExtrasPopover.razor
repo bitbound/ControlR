@@ -11,5 +11,17 @@
     </MudTooltip>
   </div>
 
-
+  @if (IsWindows)
+  {
+    <div>
+      <MudTooltip Text="Use DirectX capture for better performance">
+        <MudSwitch T="bool" 
+                   Value="RemoteControlState.EnableDirectX"
+                   ValueChanged="@(HandleDirectXChanged)"
+                   Color="Color.Secondary"
+                   Label="DirectX"
+                   ThumbIcon="@Icons.Material.Filled.Dashboard" />
+      </MudTooltip>
+    </div>
+  }
 </div>

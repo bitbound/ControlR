@@ -22,6 +22,7 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   bool CaptureCursor { get; set; }
   IAsyncRelayCommand DisconnectCommand { get; }
   ObservableCollection<DisplayLayoutItem> DisplayItems { get; }
+  bool EnableDirectX { get; set; }
   bool HasMetricsData { get; }
   bool HasMultipleDisplays { get; }
   bool IsAutoPanEnabled { get; set; }
@@ -225,6 +226,21 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     }
   }
   public ObservableCollection<DisplayLayoutItem> DisplayItems { get; } = [];
+  public bool EnableDirectX
+  {
+    get => _remoteControlState.EnableDirectX;
+    set
+    {
+      if (_remoteControlState.EnableDirectX == value)
+      {
+        return;
+      }
+
+      _remoteControlState.EnableDirectX = value;
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
   public bool HasMetricsData => _metricsState.CurrentMetrics is not null;
   public bool HasMultipleDisplays => DisplayItems.Count > 1;
   public bool IsAutoPanEnabled
@@ -572,6 +588,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       var dto = new UpdateCaptureSettingsDto(
         _remoteControlState.CaptureCursor,
+        _remoteControlState.EnableDirectX,
         _remoteControlState.IsAutoQualityEnabled,
         _remoteControlState.ManualQuality,
         _remoteControlState.AutoQualityLowerThresholdMbps,

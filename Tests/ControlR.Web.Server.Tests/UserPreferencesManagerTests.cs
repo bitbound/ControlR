@@ -123,6 +123,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         25,
         16.5,
         true,
+        true,
         false,
         true,
         true,
@@ -158,31 +159,32 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
       var result = await _userPreferencesManager.SetPreferences(
         user.Id,
-        new UserPreferencesDto(
-          6.5,
-          85,
-          25,
-          16.5,
-          true,
-          false,
-            true,
-          true,
-          true,
-          KeyboardInputMode.Physical,
-          70,
-          20.5,
-          false,
-          false,
-          ThemeMode.Light,
-          string.Empty,
-          ViewMode.Stretch),
-        cancellationToken);
+      new UserPreferencesDto(
+        6.5,
+        85,
+        25,
+        16.5,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        KeyboardInputMode.Physical,
+        70,
+        20.5,
+        false,
+        false,
+        ThemeMode.Light,
+        string.Empty,
+        ViewMode.Stretch),
+      cancellationToken);
 
-      Assert.True(result.IsSuccess);
+    Assert.True(result.IsSuccess);
 
-      await using var assertScope = _testApp.Services.CreateAsyncScope();
-      var assertDb = assertScope.ServiceProvider.GetRequiredService<AppDb>();
-      var lowerThresholdPreference = await assertDb.UserPreferences
+    await using var assertScope = _testApp.Services.CreateAsyncScope();
+    var assertDb = assertScope.ServiceProvider.GetRequiredService<AppDb>();
+    var lowerThresholdPreference = await assertDb.UserPreferences
         .FirstAsync(x => x.UserId == user.Id && x.Name == UserPreferenceNames.AutoQualityLowerThresholdMbps, cancellationToken);
       var upperThresholdPreference = await assertDb.UserPreferences
         .FirstAsync(x => x.UserId == user.Id && x.Name == UserPreferenceNames.AutoQualityUpperThresholdMbps, cancellationToken);
@@ -219,6 +221,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         25,
         16.5,
         true,
+        true,
         false,
         true,
         true,
@@ -240,6 +243,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
     Assert.Equal(25, result.Value.AutoQualityMinimum);
     Assert.Equal(16.5, result.Value.AutoQualityUpperThresholdMbps);
     Assert.True(result.Value.CaptureCursor);
+    Assert.True(result.Value.EnableDirectX);
     Assert.False(result.Value.HideOfflineDevices);
     Assert.True(result.Value.IncludeUntaggedDevices);
     Assert.True(result.Value.IsAutoQualityEnabled);
