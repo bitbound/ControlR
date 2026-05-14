@@ -17,7 +17,12 @@ public class DependencyResolutionTests
       EnvironmentName = Environments.Development
     });
 
-    builder.AddControlRAgent(startupMode, instanceId: null, serverUri: null, loadAppSettings: false);
+    builder.AddControlRAgent(
+      startupMode,
+      instanceId: "test",
+      serverUri: new Uri("http://localhost"),
+      loadAppSettings: false);
+
     var serviceDescriptors = builder.Services.ToList();
 
     // Act & Assert - In Development, Build() validates the entire dependency graph
@@ -48,7 +53,12 @@ public class DependencyResolutionTests
       EnvironmentName = Environments.Production
     });
 
-    builder.AddControlRAgent(startupMode, instanceId: null, serverUri: null, loadAppSettings: false);
+    builder.AddControlRAgent(
+      startupMode, 
+      instanceId: null, 
+      serverUri: new Uri("http://localhost"),
+      loadAppSettings: false);
+
     var serviceDescriptors = builder.Services.ToList();
 
     // Act & Assert
