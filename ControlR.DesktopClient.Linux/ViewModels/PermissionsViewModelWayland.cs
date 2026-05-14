@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Linux.Services;
 using ControlR.DesktopClient.Views.Linux;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;

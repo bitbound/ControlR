@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Styling;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Services;
 
 namespace ControlR.DesktopClient.ViewModels;

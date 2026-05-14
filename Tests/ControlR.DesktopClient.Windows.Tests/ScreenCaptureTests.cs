@@ -57,7 +57,7 @@ public class ScreenCaptureTests
   }
 
 #if IS_WINDOWS
-  [InteractiveWindowsFact]
+  [InteractiveWindowsFact(Skip = "Remove to test.")]
   public async Task ScreenGrabber_EncodeViaCadeau()
   {
     // Get initial capture to determine frame dimensions
@@ -137,7 +137,7 @@ public class ScreenCaptureTests
 
 #endif
 
-  [InteractiveWindowsFact]
+  [InteractiveWindowsFact(Skip = "Remove to test.")]
   public async Task ScreenGrabber_EncodeViaFfmpeg()
   {
     // Get initial capture to determine frame dimensions

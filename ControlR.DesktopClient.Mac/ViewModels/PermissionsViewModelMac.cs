@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Mac.Services;
 using ControlR.DesktopClient.Views.Mac;
 using ControlR.Libraries.Api.Contracts.Enums;

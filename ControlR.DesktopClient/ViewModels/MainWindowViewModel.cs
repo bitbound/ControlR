@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Services;
 
 namespace ControlR.DesktopClient.ViewModels;

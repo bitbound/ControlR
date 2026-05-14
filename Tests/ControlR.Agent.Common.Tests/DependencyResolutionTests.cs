@@ -18,10 +18,23 @@ public class DependencyResolutionTests
     });
 
     builder.AddControlRAgent(startupMode, instanceId: null, serverUri: null, loadAppSettings: false);
+    var serviceDescriptors = builder.Services.ToList();
 
     // Act & Assert - In Development, Build() validates the entire dependency graph
     // and throws if any registered services have unresolved dependencies.
     using var host = builder.Build();
+
+    foreach (var descriptor in serviceDescriptors)
+    {
+      if (descriptor.ServiceType.IsGenericType)
+      {
+        // Skip open generic types as they cannot be resolved directly.
+        continue;
+      }
+
+      var service = host.Services.GetService(descriptor.ServiceType);
+      Assert.NotNull(service);
+    }
   }
 
   [Theory]
@@ -36,9 +49,22 @@ public class DependencyResolutionTests
     });
 
     builder.AddControlRAgent(startupMode, instanceId: null, serverUri: null, loadAppSettings: false);
+    var serviceDescriptors = builder.Services.ToList();
 
-    // Act & Assert - In Production, Build() does not validate the dependency graph,
-    // but we still verify it builds successfully.
+    // Act & Assert
     using var host = builder.Build();
+    Assert.NotNull(host);
+
+    foreach (var descriptor in serviceDescriptors)
+    {
+      if (descriptor.ServiceType.IsGenericType)
+      {
+        // Skip open generic types as they cannot be resolved directly.
+        continue;
+      }
+
+      var service = host.Services.GetService(descriptor.ServiceType);
+      Assert.NotNull(service);
+    }
   }
 }

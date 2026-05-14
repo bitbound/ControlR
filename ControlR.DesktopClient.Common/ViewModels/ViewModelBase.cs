@@ -3,7 +3,7 @@ using ControlR.DesktopClient.Common.ViewModelInterfaces;
 using ControlR.Libraries.Shared.Collections;
 using ControlR.Libraries.Shared.Extensions;
 
-namespace ControlR.DesktopClient.ViewModels;
+namespace ControlR.DesktopClient.Common.ViewModels;
 
 public abstract class ViewModelBase<TView> : ObservableObject, IViewModelBase
 {

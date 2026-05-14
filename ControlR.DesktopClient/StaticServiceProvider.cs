@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Shared.Services;
+using System.Collections.Immutable;
 
 namespace ControlR.DesktopClient;
 
@@ -12,6 +13,7 @@ internal static class StaticServiceProvider
 {
   private static ServiceProvider? _designTimeProvider;
   private static ServiceProvider? _provider;
+  private static ImmutableList<ServiceDescriptor>? _serviceDescriptors;
 
   public static IServiceProvider Instance => _provider ?? GetDesignTimeProvider();
 
@@ -27,10 +29,14 @@ internal static class StaticServiceProvider
     var services = new ServiceCollection();
     services.AddSingleton(lifetime);
     services.AddControlrDesktop(instanceId);
+    _serviceDescriptors = [.. services];
     _provider = services.BuildServiceProvider();
   }
 
-  internal static IServiceCollection AddControlrDesktop(
+  internal static ImmutableList<ServiceDescriptor> GetServiceDescriptors() => 
+    _serviceDescriptors ?? throw new InvalidOperationException("Service provider has not been built yet.");
+
+  private static IServiceCollection AddControlrDesktop(
     this IServiceCollection services,
     string? instanceId = null)
   {

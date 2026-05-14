@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Controls.Dialogs;
 using System.Windows.Input;
 

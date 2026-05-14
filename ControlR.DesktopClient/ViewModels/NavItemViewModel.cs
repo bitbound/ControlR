@@ -1,3 +1,4 @@
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.DesktopClient.ViewModels;

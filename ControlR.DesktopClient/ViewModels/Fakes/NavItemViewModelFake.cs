@@ -1,4 +1,6 @@
-﻿namespace ControlR.DesktopClient.ViewModels.Fakes;
+﻿using ControlR.DesktopClient.Common.ViewModels;
+
+namespace ControlR.DesktopClient.ViewModels.Fakes;
 
 internal class NavItemViewModelFake : ViewModelBase<NavItem>, INavItemViewModel
 {

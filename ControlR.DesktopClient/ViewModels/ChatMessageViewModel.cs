@@ -1,3 +1,4 @@
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
 namespace ControlR.DesktopClient.ViewModels;

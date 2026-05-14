@@ -1,5 +1,6 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.State;
 using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.Windows.Services;
 using ControlR.Libraries.NativeInterop.Windows;
@@ -38,6 +39,7 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<DisplayManagerWindows>()
       .AddSingleton<IDisplayManager>(provider => provider.GetRequiredService<DisplayManagerWindows>())
       .AddSingleton<IDisplayManagerWindows>(provider => provider.GetRequiredService<DisplayManagerWindows>())
+      .AddTransient<IRemoteControlSessionState, RemoteControlSessionState>()
       .AddSingleton<IScreenGrabberFactory, ScreenGrabberFactory<ScreenGrabberWindows>>()
       .AddSingleton(provider => provider.GetRequiredService<IScreenGrabberFactory>().GetOrCreateDefault())
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()

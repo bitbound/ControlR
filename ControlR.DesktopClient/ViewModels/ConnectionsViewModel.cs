@@ -1,5 +1,6 @@
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Messages;
 using ControlR.DesktopClient.Models;
 using ControlR.DesktopClient.Services;

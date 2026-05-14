@@ -18,7 +18,7 @@ public interface IRemoteControlSessionState : IStateBase
   double MaxBandwidthMbps { get; set; }
 }
 
-internal class RemoteControlSessionState(ILogger<RemoteControlSessionState> logger)
+public class RemoteControlSessionState(ILogger<RemoteControlSessionState> logger)
   : ObservableState(logger), IRemoteControlSessionState
 {
   public double AutoQualityLowerThresholdMbps

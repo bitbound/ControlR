@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Models;
 using Microsoft.Extensions.Logging;
 
