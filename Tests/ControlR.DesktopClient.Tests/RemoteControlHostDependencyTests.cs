@@ -44,8 +44,8 @@ public class RemoteControlHostDependencyTests
 
     try
     {
-      var desktopClientApp = BuildDesktopClientAppHost(environment);
-      var factory = desktopClientApp.Services.GetRequiredService<IRemoteControlHostBuilderFactory>();
+      var desktopClientApp = BuildDesktopClientServiceProvider(environment);
+      var factory = desktopClientApp.GetRequiredService<IRemoteControlHostBuilderFactory>();
       var builder = factory.CreateHostBuilder(requestDto);
       var serviceDescriptors = builder.Services.ToList();
       using var remoteControlHost = builder.Build();
@@ -70,22 +70,18 @@ public class RemoteControlHostDependencyTests
     }
   }
 
-  private static IHost BuildDesktopClientAppHost(string environment)
+  private static IServiceProvider BuildDesktopClientServiceProvider(string environment)
   {
     Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", environment);
-    var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
-    {
-      EnvironmentName = environment
-    });
-
+    var serviceCollection = new ServiceCollection();
     var instanceId = $"test-{Guid.NewGuid()}";
     var mockLifetime = new Mock<IControlledApplicationLifetime>();
 
-    builder.Services.AddSingleton(mockLifetime.Object);
-    builder.Services
+    serviceCollection.AddSingleton(mockLifetime.Object);
+    serviceCollection
       .AddDesktopShellServices(instanceId)
       .AddDesktopAppPlatformServices();
 
-    return builder.Build();
+    return serviceCollection.BuildServiceProvider();
   }
 }
