@@ -24,5 +24,6 @@ public record DeviceUpdateRequestDto(
     string[] MacAddresses,
     string LocalIpV4,
     string LocalIpV6,
-    IReadOnlyList<Drive> Drives
+    IReadOnlyList<Drive> Drives,
+    string DnsHostName = ""
 );

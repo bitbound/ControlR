@@ -1,4 +1,3 @@
-using System.Net;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using ControlR.Libraries.Api.Contracts.Enums;
@@ -10,7 +9,6 @@ public interface ISystemEnvironment
   int CurrentThreadId { get; }
   bool Is64Bit { get; }
   bool IsDebug { get; }
-  string MachineName { get; }
   SystemPlatform Platform { get; }
   int ProcessId { get; }
   int ProcessorCount { get; }
@@ -48,21 +46,6 @@ public class SystemEnvironment : ISystemEnvironment
 #else
       return false;
 #endif
-    }
-  }
-  
-  public string MachineName
-  {
-    get
-    {
-      try
-      {
-        return Dns.GetHostName();
-      }
-      catch
-      {
-        return Environment.MachineName;
-      }
     }
   }
 

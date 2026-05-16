@@ -375,3 +375,6 @@ FodyWeavers.xsd
 .idea/.idea.ControlR/.idea/copilot.data.migration.agent.xml
 .idea/.idea.ControlR/.idea/copilot.data.migration.edit.xml
 /Tests/ControlR.DesktopClient.Common.Tests/Resources/*
+
+# Language servive cache files
+*.lscache

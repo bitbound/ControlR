@@ -1,6 +1,9 @@
-﻿using System.Runtime.Versioning;
+﻿using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.NativeInterop.Windows;
+using Windows.Win32;
+using COMPUTER_NAME_FORMAT = Windows.Win32.System.SystemInformation.COMPUTER_NAME_FORMAT;
 
 namespace ControlR.Agent.Shared.Services.Windows;
 
@@ -25,6 +28,28 @@ public class DeviceInfoProviderWin(
         .AsTaskResult();
   }
 
+  protected override string GetDeviceName()
+  {
+    var physicalDnsHostName = TryGetWindowsComputerName(COMPUTER_NAME_FORMAT.ComputerNamePhysicalDnsHostname);
+    if (!string.IsNullOrWhiteSpace(physicalDnsHostName))
+    {
+      return physicalDnsHostName;
+    }
+
+    return GetDnsHostName();
+  }
+
+  protected override string GetDnsHostName()
+  {
+    var dnsHostName = TryGetWindowsComputerName(COMPUTER_NAME_FORMAT.ComputerNameDnsHostname);
+    if (!string.IsNullOrWhiteSpace(dnsHostName))
+    {
+      return dnsHostName;
+    }
+
+    return base.GetDnsHostName();
+  }
+
   protected override Task<MemoryInfo> GetMemoryInGb()
   {
     double totalGb = 0;
@@ -47,5 +72,31 @@ public class DeviceInfoProviderWin(
 
     var memoryInfo = new MemoryInfo(totalGb - freeGb, totalGb);
     return Task.FromResult(memoryInfo);
+  }
+
+  private static string? TryGetWindowsComputerName(COMPUTER_NAME_FORMAT format)
+  {
+    try
+    {
+      uint size = 0;
+      _ = PInvoke.GetComputerNameEx(format, null, ref size);
+      if (size == 0)
+      {
+        return null;
+      }
+
+      var buffer = new char[size];
+
+      if (!PInvoke.GetComputerNameEx(format, buffer.AsSpan(), ref size))
+      {
+        return null;
+      }
+
+      return new string(buffer, 0, (int)size).TrimEnd('\0');
+    }
+    catch
+    {
+      return null;
+    }
   }
 }

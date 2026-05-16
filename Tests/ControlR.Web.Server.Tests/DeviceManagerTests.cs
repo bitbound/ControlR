@@ -62,7 +62,8 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       MacAddresses: ["00:00:00:00:00:01"],
       LocalIpV4: "10.0.0.1",
       LocalIpV6: "fe80::1",
-      Drives: [new Drive { Name = "C:", VolumeLabel = "Local Disk", TotalSize = 1024000, FreeSpace = 512000 }]);
+      Drives: [new Drive { Name = "C:", VolumeLabel = "Local Disk", TotalSize = 1024000, FreeSpace = 512000 }],
+      DnsHostName: "test-device.contoso.local");
 
     var connectionContext = new DeviceConnectionContext(
       ConnectionId: "test-connection-id",
@@ -93,6 +94,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     Assert.Equal(512000, result.UsedStorage);
     Assert.Equal(new[] { "User1", "User2" }, result.CurrentUsers);
     Assert.Equal(new[] { "00:00:00:00:00:01" }, result.MacAddresses);
+    Assert.Equal("test-device.contoso.local", result.DnsHostName);
     Assert.Equal("127.0.0.1", result.PublicIpV4);
     Assert.Equal(string.Empty, result.PublicIpV6);
     Assert.Single(result.Drives);
@@ -265,7 +267,8 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
       MacAddresses: ["00:00:00:00:00:02"],
       LocalIpV4: "192.168.0.1",
       LocalIpV6: "fe80::1",
-      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 2048000, FreeSpace = 1024000 }]);
+      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 2048000, FreeSpace = 1024000 }],
+      DnsHostName: "updated-device.contoso.local");
 
     var connectionContext = new DeviceConnectionContext(
       ConnectionId: "test-connection-id",
@@ -293,6 +296,7 @@ public class DeviceManagerTests(ITestOutputHelper testOutput)
     Assert.Equal("test-connection-id", updatedDevice.ConnectionId);
     Assert.Equal("Windows 11", updatedDevice.OsDescription);
     Assert.Equal(tenantId, updatedDevice.TenantId);
+    Assert.Equal("updated-device.contoso.local", updatedDevice.DnsHostName);
 
     // Verify tags are associated
     Assert.NotNull(updatedDevice.Tags);

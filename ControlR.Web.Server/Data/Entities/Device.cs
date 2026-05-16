@@ -19,6 +19,9 @@ public class Device : TenantEntityBase
   public string[] CurrentUsers { get; set; } = [];
   public Guid? DeviceGroupId { get; set; }
 
+  [StringLength(255)]
+  public string DnsHostName { get; set; } = string.Empty;
+
   public List<Drive> Drives { get; set; } = [];
   public bool Is64Bit { get; set; }
   public bool IsOnline { get; set; }

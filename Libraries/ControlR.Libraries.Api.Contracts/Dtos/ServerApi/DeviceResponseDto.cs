@@ -33,7 +33,8 @@ public record DeviceResponseDto(
    string LocalIpV4,
    string LocalIpV6,
    IReadOnlyList<Drive> Drives,
-   bool IsOutdated)
+  bool IsOutdated,
+  string DnsHostName = "")
 {
   public ImmutableArray<Guid>? TagIds { get; set; }
 

@@ -3464,6 +3464,10 @@
           "isOutdated": {
             "type": "boolean"
           },
+          "dnsHostName": {
+            "type": "string",
+            "default": ""
+          },
           "tagIds": {
             "type": [
               "null",
@@ -3712,6 +3716,10 @@
             "items": {
               "$ref": "#/components/schemas/Drive"
             }
+          },
+          "dnsHostName": {
+            "type": "string",
+            "default": ""
           }
         }
       },

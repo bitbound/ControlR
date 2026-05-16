@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -31,7 +32,7 @@ public abstract class DeviceInfoProviderBase(
       return new DeviceUpdateRequestDto(
         Id: _optionsAccessor.DeviceId,
         TenantId: _optionsAccessor.TenantId,
-        Name: _systemEnvironment.MachineName,
+        Name: GetDeviceName(),
         AgentVersion: GetAgentVersion(),
         Is64Bit: _systemEnvironment.Is64Bit,
         OsArchitecture: RuntimeInformation.OSArchitecture,
@@ -47,7 +48,8 @@ public abstract class DeviceInfoProviderBase(
         MacAddresses: [.. GetMacAddresses()],
         LocalIpV4: GetLocalIpV4(),
         LocalIpV6: GetLocalIpV6(),
-        Drives: GetAllDrives()
+        Drives: GetAllDrives(),
+        DnsHostName: GetDnsHostName()
       );
     }
     catch (Exception ex)
@@ -107,6 +109,23 @@ public abstract class DeviceInfoProviderBase(
   }
 
   protected abstract Task<string[]> GetCurrentUsers();
+
+  protected virtual string GetDeviceName()
+  {
+      return Environment.MachineName;
+  }
+
+  protected virtual string GetDnsHostName()
+  {
+    try
+    {
+      return Dns.GetHostName();
+    }
+    catch
+    {
+      return Environment.MachineName;
+    }
+  }
 
   protected abstract Task<MemoryInfo> GetMemoryInGb();
 

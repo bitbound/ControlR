@@ -43,7 +43,8 @@ public static class EntityToDtoExtensions
       device.LocalIpV4,
       device.LocalIpV6,
       device.Drives,
-      isOutdated)
+      isOutdated,
+      device.DnsHostName)
     {
       Alias = device.Alias,
       TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray()

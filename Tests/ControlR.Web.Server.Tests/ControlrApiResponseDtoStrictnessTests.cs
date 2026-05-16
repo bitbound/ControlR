@@ -215,8 +215,9 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       PublicIpV6: "::1",
       LocalIpV4: "192.168.1.1",
       LocalIpV6: "::1",
-        Drives: [new Drive { Name = "C:\\", VolumeLabel = "System", TotalSize = 512000, FreeSpace = 256000 }],
-      IsOutdated: false);
+      Drives: [new Drive { Name = "C:\\", VolumeLabel = "System", TotalSize = 512000, FreeSpace = 256000 }],
+      IsOutdated: false,
+      DnsHostName: $"device-{index}.contoso.local");
   }
 
   private sealed class StaticJsonMessageHandler(string jsonResponse) : HttpMessageHandler
