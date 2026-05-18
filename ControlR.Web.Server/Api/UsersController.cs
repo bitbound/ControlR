@@ -13,34 +13,25 @@ public class UsersController : ControllerBase
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
     [FromRoute] Guid id,
-    [FromServices] UserManager<AppUser> userManager,
-    [FromServices] AppDb appDb)
+    [FromServices] IPasswordManager passwordManager)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
       return BadRequest("User tenant not found");
     }
 
-    var targetUser = await appDb.Users
-      .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
-
-    if (targetUser is null)
+    var result = await passwordManager.AdminResetPassword(tenantId, id);
+    if (!result.IsSuccess)
     {
-      return NotFound();
+      if (string.Equals(result.Reason, "User not found", StringComparison.Ordinal))
+      {
+        return NotFound();
+      }
+
+      return BadRequest(result.Reason);
     }
 
-    var tempPassword = RandomGenerator.CreateAccessToken()[..16];
-    var resetCode = await userManager.GeneratePasswordResetTokenAsync(targetUser);
-    var resetResult = await userManager.ResetPasswordAsync(targetUser, resetCode, tempPassword);
-    if (!resetResult.Succeeded)
-    {
-      return BadRequest(resetResult.Errors.Select(e => e.Description));
-    }
-
-    targetUser.RequirePasswordChange = true;
-    await userManager.UpdateAsync(targetUser);
-
-    return Ok(new AdminResetPasswordResponseDto(tempPassword));
+    return Ok(result.Value);
   }
 
   [HttpPost]
@@ -56,12 +47,13 @@ public class UsersController : ControllerBase
       return BadRequest("User tenant not found");
     }
 
-    // If roles include ServerAdministrator, ensure caller is server admin
-    if (request.RoleIds?.Any() == true)
+    var requestRoleIds = request.RoleIds?.ToArray();
+    // If roles include ServerAdministrator, ensure caller is also server admin.
+    if (requestRoleIds is { Length: > 0 } roleIds)
     {
-      var roles = await appDb.Roles.Where(r => request.RoleIds.Contains(r.Id)).ToListAsync();
+      var roles = await appDb.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
       var foundRoleIds = roles.Select(r => r.Id).ToHashSet();
-      var missingRoleIds = request.RoleIds.Except(foundRoleIds).ToList();
+      var missingRoleIds = roleIds.Except(foundRoleIds).ToList();
       if (missingRoleIds.Count != 0)
       {
         return BadRequest($"Roles not found: {string.Join(',', missingRoleIds)}");
@@ -69,7 +61,7 @@ public class UsersController : ControllerBase
 
       if (roles.Any(r => r.Name == RoleNames.ServerAdministrator))
       {
-        // Resolve caller's user and check role via UserManager to avoid relying on ClaimsPrincipal state
+        // Resolve caller's user and check role via UserManager to avoid relying on ClaimsPrincipal state.
         if (!User.TryGetUserId(out var callerUserId))
         {
           return BadRequest("Caller user id not found");
@@ -88,12 +80,11 @@ public class UsersController : ControllerBase
       }
     }
 
-    // Delegate creation (including optional role/tag assignment) to IUserCreator
     var createResult = await userCreator.CreateUser(
       string.IsNullOrWhiteSpace(request.Email) ? request.UserName : request.Email,
       request.Password ?? string.Empty,
       tenantId,
-      request.RoleIds,
+      requestRoleIds,
       request.TagIds);
 
     if (!createResult.Succeeded)

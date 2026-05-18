@@ -11,7 +11,10 @@ public interface IAgentUpdateApi
 
 public interface IAuthApi
 {
+  Task<ApiResult> ChangePassword(ChangePasswordRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult> ForgotPassword(ForgotPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> LogOut(CancellationToken cancellationToken = default);
+  Task<ApiResult> ResetPassword(ResetPasswordRequestDto request, CancellationToken cancellationToken = default);
 }
 
 public interface IDesktopPreviewApi
@@ -166,9 +169,14 @@ public interface IUserTagsApi
 
 public interface IUsersApi
 {
+  Task<ApiResult<AdminResetPasswordResponseDto>> AdminResetPassword(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto>> CreateUser(CreateUserRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(Guid userId, CreatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUser(Guid userId, CancellationToken cancellationToken = default);
+  Task<ApiResult> DeleteUserPersonalAccessToken(Guid userId, Guid tokenId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto[]>> GetAllUsers(CancellationToken cancellationToken = default);
+  Task<ApiResult<PersonalAccessTokenDto[]>> GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken = default);
+  Task<ApiResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
 }
 
 public interface IAgentVersionApi
