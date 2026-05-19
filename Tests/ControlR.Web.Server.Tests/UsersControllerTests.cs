@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace ControlR.Web.Server.Tests;
@@ -37,7 +38,8 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
     var dto = Assert.IsType<AdminResetPasswordResponseDto>(okResult.Value);
 
-    Assert.Equal(16, dto.TemporaryPassword.Length);
+    var identityOptions = services.GetRequiredService<IOptions<IdentityOptions>>();
+    Assert.Equal(identityOptions.Value.Password.RequiredLength, dto.TemporaryPassword.Length);
 
     using var verificationScope = testApp.CreateScope();
     var verificationUserManager = verificationScope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
