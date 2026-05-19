@@ -4,13 +4,13 @@ namespace ControlR.Web.Server.Middleware;
 
 public class RequirePasswordChangeMiddleware(RequestDelegate next)
 {
-  private static readonly HashSet<string> AllowedApiPaths =
+  private static readonly HashSet<string> _allowedApiPaths =
   [
     $"{ControlR.Libraries.Api.Contracts.Constants.HttpConstants.AuthEndpoint}/change-password",
     $"{ControlR.Libraries.Api.Contracts.Constants.HttpConstants.AuthEndpoint}/logout"
   ];
-  private static readonly PathString ChangePasswordPath = new("/Account/Manage/ChangePassword");
-  private static readonly PathString SetPasswordPath = new("/Account/Manage/SetPassword");
+  private static readonly PathString _changePasswordPath = new("/Account/Manage/ChangePassword");
+  private static readonly PathString _setPasswordPath = new("/Account/Manage/SetPassword");
 
   private readonly RequestDelegate _next = next;
 
@@ -53,13 +53,13 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
       return;
     }
 
-    context.Response.Redirect(ChangePasswordPath);
+    context.Response.Redirect(_changePasswordPath);
   }
 
   private static bool ShouldBypass(PathString requestPath)
   {
-    if (requestPath.StartsWithSegments(ChangePasswordPath) ||
-        requestPath.StartsWithSegments(SetPasswordPath) ||
+    if (requestPath.StartsWithSegments(_changePasswordPath) ||
+        requestPath.StartsWithSegments(_setPasswordPath) ||
         requestPath.StartsWithSegments("/Account/Logout") ||
         requestPath.StartsWithSegments("/_framework") ||
         requestPath.StartsWithSegments("/_content") ||
@@ -70,6 +70,6 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
       return true;
     }
 
-    return requestPath.StartsWithSegments("/api") && AllowedApiPaths.Contains(requestPath.Value ?? string.Empty);
+    return requestPath.StartsWithSegments("/api") && _allowedApiPaths.Contains(requestPath.Value ?? string.Empty);
   }
 }

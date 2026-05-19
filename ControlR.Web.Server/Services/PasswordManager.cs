@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace ControlR.Web.Server.Services;
@@ -16,11 +17,13 @@ public class PasswordManager(
   AppDb appDb,
   UserManager<AppUser> userManager,
   IEmailSender<AppUser> emailSender,
+  IOptions<IdentityOptions> identityOptions,
   IOptionsMonitor<AppOptions> appOptions) : IPasswordManager
 {
   private readonly AppDb _appDb = appDb;
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
+  private readonly IOptions<IdentityOptions> _identityOptions = identityOptions;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   public async Task<Result<AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId)
@@ -39,8 +42,14 @@ public class PasswordManager(
     {
       return Result.Fail<AdminResetPasswordResponseDto>("User not found");
     }
+    var passwordOptions = _identityOptions.Value.Password;
+    var temporaryPassword = RandomGenerator.GeneratePassword(
+      length: passwordOptions.RequiredLength,
+      includeUppercase: passwordOptions.RequireUppercase, 
+      includeLowercase: passwordOptions.RequireLowercase, 
+      includeDigits: passwordOptions.RequireDigit, 
+      includeSpecialChars: passwordOptions.RequireNonAlphanumeric);
 
-    var temporaryPassword = ControlR.Libraries.Shared.Helpers.RandomGenerator.CreateAccessToken()[..16];
     var resetToken = await _userManager.GeneratePasswordResetTokenAsync(targetUser);
     var resetResult = await _userManager.ResetPasswordAsync(targetUser, resetToken, temporaryPassword);
     if (!resetResult.Succeeded)
