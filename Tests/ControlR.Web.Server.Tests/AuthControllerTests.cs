@@ -1,3 +1,4 @@
+using System.Text;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data.Entities;
@@ -5,8 +6,8 @@ using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -62,5 +63,32 @@ public class AuthControllerTests(ITestOutputHelper testOutput)
     Assert.NotNull(refreshedUser);
     Assert.False(refreshedUser.RequirePasswordChange);
     Assert.True(await verificationUserManager.CheckPasswordAsync(refreshedUser, request.NewPassword));
+  }
+
+  [Fact]
+  public async Task ResetPassword_Fails_WhenEncodedTokenFromForgotPasswordLink()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<AuthController>();
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, "encoded-reset@t.local");
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+
+    user = await userManager.FindByIdAsync(user.Id.ToString()) ?? throw new InvalidOperationException("User not found.");
+    Assert.NotNull(user.Email);
+
+    var rawToken = await userManager.GeneratePasswordResetTokenAsync(user);
+    var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(rawToken));
+
+    var request = new ResetPasswordRequestDto(user.Email, encodedToken, "N3wP@ssw0rd!");
+
+    var result = await controller.ResetPassword(
+      services.GetRequiredService<IPasswordManager>(),
+      request);
+
+    Assert.IsType<OkResult>(result);
   }
 }

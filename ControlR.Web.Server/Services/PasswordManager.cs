@@ -105,7 +105,8 @@ public class PasswordManager(
       return Result.Ok();
     }
 
-    var resetResult = await _userManager.ResetPasswordAsync(user, request.ResetCode, request.NewPassword);
+    var resetCode = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.ResetCode));
+    var resetResult = await _userManager.ResetPasswordAsync(user, resetCode, request.NewPassword);
     if (!resetResult.Succeeded)
     {
       return Result.Fail(JoinErrors(resetResult.Errors));
