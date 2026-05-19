@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Shared.Helpers;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ControlR.Web.Server.Services.Users;
 
 namespace ControlR.Web.Server.Api;
@@ -9,31 +8,6 @@ namespace ControlR.Web.Server.Api;
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class UsersController : ControllerBase
 {
-  [HttpPost("{id:guid}/admin-reset-password")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
-    [FromRoute] Guid id,
-    [FromServices] IPasswordManager passwordManager)
-  {
-    if (!User.TryGetTenantId(out var tenantId))
-    {
-      return BadRequest("User tenant not found");
-    }
-
-    var result = await passwordManager.AdminResetPassword(tenantId, id);
-    if (!result.IsSuccess)
-    {
-      if (string.Equals(result.Reason, "User not found", StringComparison.Ordinal))
-      {
-        return NotFound();
-      }
-
-      return BadRequest(result.Reason);
-    }
-
-    return Ok(result.Value);
-  }
-
   [HttpPost]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<UserResponseDto>> Create(
@@ -219,6 +193,31 @@ public class UsersController : ControllerBase
 
     var tokens = await personalAccessTokenManager.GetForUser(userId);
     return Ok(tokens);
+  }
+
+  [HttpPost("{id:guid}/reset-password")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<AdminResetPasswordResponseDto>> ResetPassword(
+    [FromRoute] Guid id,
+    [FromServices] IPasswordManager passwordManager)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found");
+    }
+
+    var result = await passwordManager.ResetPassword(tenantId, id);
+    if (!result.IsSuccess)
+    {
+      if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
+      {
+        return NotFound();
+      }
+
+      return BadRequest(result.Reason);
+    }
+
+    return Ok(result.Value);
   }
 
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]

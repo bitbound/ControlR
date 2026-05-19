@@ -1,17 +1,15 @@
 using System.Text;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests;
 
-public class AuthControllerTests(ITestOutputHelper testOutput)
+public class PasswordManagerTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutputHelper = testOutput;
 
@@ -22,13 +20,13 @@ public class AuthControllerTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<AuthController>();
+    var passwordManager = services.GetRequiredService<IPasswordManager>();
 
-    var result = await controller.ForgotPassword(
-      services.GetRequiredService<IPasswordManager>(),
-      new ForgotPasswordRequestDto("missing@example.com"));
+    var result = await passwordManager.ForgotPassword(
+      new ForgotPasswordRequestDto("missing@example.com"),
+      "https://controlr.test/Account/ResetPassword");
 
-    Assert.IsType<OkResult>(result);
+    Assert.True(result.IsSuccess);
   }
 
   [Fact]
@@ -38,7 +36,7 @@ public class AuthControllerTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<AuthController>();
+    var passwordManager = services.GetRequiredService<IPasswordManager>();
     var tenant = await services.CreateTestTenant();
     var user = await services.CreateTestUser(tenant.Id, "reset-user@t.local");
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
@@ -51,11 +49,9 @@ public class AuthControllerTests(ITestOutputHelper testOutput)
     var resetCode = await userManager.GeneratePasswordResetTokenAsync(user);
     var request = new ResetPasswordRequestDto(user.Email!, resetCode, "N3wP@ssw0rd!");
 
-    var result = await controller.ResetPassword(
-      services.GetRequiredService<IPasswordManager>(),
-      request);
+    var result = await passwordManager.ResetPassword(request);
 
-    Assert.IsType<OkResult>(result);
+    Assert.True(result.IsSuccess, result.Reason);
 
     using var verificationScope = testApp.CreateScope();
     var verificationUserManager = verificationScope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
@@ -72,7 +68,7 @@ public class AuthControllerTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<AuthController>();
+    var passwordManager = services.GetRequiredService<IPasswordManager>();
     var tenant = await services.CreateTestTenant();
     var user = await services.CreateTestUser(tenant.Id, "encoded-reset@t.local");
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
@@ -85,10 +81,8 @@ public class AuthControllerTests(ITestOutputHelper testOutput)
 
     var request = new ResetPasswordRequestDto(user.Email, encodedToken, "N3wP@ssw0rd!");
 
-    var result = await controller.ResetPassword(
-      services.GetRequiredService<IPasswordManager>(),
-      request);
+    var result = await passwordManager.ResetPassword(request);
 
-    Assert.IsType<OkResult>(result);
+    Assert.True(result.IsSuccess, result.Reason);
   }
 }

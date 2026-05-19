@@ -7,6 +7,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
   private static readonly HashSet<string> _allowedApiPaths =
   [
     $"{ControlR.Libraries.Api.Contracts.Constants.HttpConstants.AuthEndpoint}/change-password",
+    $"{ControlR.Libraries.Api.Contracts.Constants.HttpConstants.AuthEndpoint}/manage/info",
     $"{ControlR.Libraries.Api.Contracts.Constants.HttpConstants.AuthEndpoint}/logout"
   ];
   private static readonly PathString _changePasswordPath = new("/Account/Manage/ChangePassword");

@@ -7,9 +7,9 @@ namespace ControlR.Web.Server.Services;
 
 public interface IPasswordManager
 {
-  Task<Result<AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId);
   Task<Result> ChangePassword(AppUser user, ChangePasswordRequestDto request);
   Task<Result> ForgotPassword(ForgotPasswordRequestDto request, string resetPasswordUrl);
+  Task<Result<AdminResetPasswordResponseDto>> ResetPassword(Guid tenantId, Guid targetUserId);
   Task<Result> ResetPassword(ResetPasswordRequestDto request);
 }
 
@@ -25,42 +25,6 @@ public class PasswordManager(
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
   private readonly IOptions<IdentityOptions> _identityOptions = identityOptions;
   private readonly UserManager<AppUser> _userManager = userManager;
-
-  public async Task<Result<AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId)
-  {
-    var targetExists = await _appDb.Users
-      .AsNoTracking()
-      .AnyAsync(user => user.Id == targetUserId && user.TenantId == tenantId);
-
-    if (!targetExists)
-    {
-      return Result.Fail<AdminResetPasswordResponseDto>("User not found");
-    }
-
-    var targetUser = await _userManager.FindByIdAsync(targetUserId.ToString());
-    if (targetUser is null)
-    {
-      return Result.Fail<AdminResetPasswordResponseDto>("User not found");
-    }
-    var passwordOptions = _identityOptions.Value.Password;
-    var temporaryPassword = RandomGenerator.GeneratePassword(
-      length: passwordOptions.RequiredLength,
-      includeUppercase: passwordOptions.RequireUppercase, 
-      includeLowercase: passwordOptions.RequireLowercase, 
-      includeDigits: passwordOptions.RequireDigit, 
-      includeSpecialChars: passwordOptions.RequireNonAlphanumeric);
-
-    var resetToken = await _userManager.GeneratePasswordResetTokenAsync(targetUser);
-    var resetResult = await _userManager.ResetPasswordAsync(targetUser, resetToken, temporaryPassword);
-    if (!resetResult.Succeeded)
-    {
-      return Result.Fail<AdminResetPasswordResponseDto>(JoinErrors(resetResult.Errors));
-    }
-
-    await SetRequirePasswordChange(targetUser.Id, true);
-
-    return Result.Ok(new AdminResetPasswordResponseDto(temporaryPassword));
-  }
 
   public async Task<Result> ChangePassword(AppUser user, ChangePasswordRequestDto request)
   {
@@ -97,6 +61,42 @@ public class PasswordManager(
     return Result.Ok();
   }
 
+  public async Task<Result<AdminResetPasswordResponseDto>> ResetPassword(Guid tenantId, Guid targetUserId)
+  {
+    var targetExists = await _appDb.Users
+      .AsNoTracking()
+      .AnyAsync(user => user.Id == targetUserId && user.TenantId == tenantId);
+
+    if (!targetExists)
+    {
+      return Result.Fail<AdminResetPasswordResponseDto>("User not found");
+    }
+
+    var targetUser = await _userManager.FindByIdAsync(targetUserId.ToString());
+    if (targetUser is null)
+    {
+      return Result.Fail<AdminResetPasswordResponseDto>("User not found");
+    }
+    var passwordOptions = _identityOptions.Value.Password;
+    var temporaryPassword = RandomGenerator.GeneratePassword(
+      length: passwordOptions.RequiredLength,
+      includeUppercase: passwordOptions.RequireUppercase, 
+      includeLowercase: passwordOptions.RequireLowercase, 
+      includeDigits: passwordOptions.RequireDigit, 
+      includeSpecialChars: passwordOptions.RequireNonAlphanumeric);
+
+    var resetToken = await _userManager.GeneratePasswordResetTokenAsync(targetUser);
+    var resetResult = await _userManager.ResetPasswordAsync(targetUser, resetToken, temporaryPassword);
+    if (!resetResult.Succeeded)
+    {
+      return Result.Fail<AdminResetPasswordResponseDto>(JoinErrors(resetResult.Errors));
+    }
+
+    await SetRequirePasswordChange(targetUser.Id, true);
+
+    return Result.Ok(new AdminResetPasswordResponseDto(temporaryPassword));
+  }
+
   public async Task<Result> ResetPassword(ResetPasswordRequestDto request)
   {
     var user = await _userManager.FindByEmailAsync(request.Email);
@@ -105,8 +105,19 @@ public class PasswordManager(
       return Result.Ok();
     }
 
-    var resetCode = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.ResetCode));
+    var resetCode = request.ResetCode;
+    if (TryDecodeResetCode(request.ResetCode, out var decodedResetCode))
+    {
+      resetCode = decodedResetCode;
+    }
+
     var resetResult = await _userManager.ResetPasswordAsync(user, resetCode, request.NewPassword);
+    if (!resetResult.Succeeded &&
+        !string.Equals(resetCode, request.ResetCode, StringComparison.Ordinal))
+    {
+      resetResult = await _userManager.ResetPasswordAsync(user, request.ResetCode, request.NewPassword);
+    }
+
     if (!resetResult.Succeeded)
     {
       return Result.Fail(JoinErrors(resetResult.Errors));
@@ -120,6 +131,20 @@ public class PasswordManager(
   private static string JoinErrors(IEnumerable<IdentityError> errors)
   {
     return string.Join(", ", errors.Select(error => error.Description));
+  }
+
+  private static bool TryDecodeResetCode(string resetCode, out string decodedResetCode)
+  {
+    try
+    {
+      decodedResetCode = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(resetCode));
+      return true;
+    }
+    catch (FormatException)
+    {
+      decodedResetCode = string.Empty;
+      return false;
+    }
   }
 
   private async Task SetRequirePasswordChange(Guid userId, bool requirePasswordChange)

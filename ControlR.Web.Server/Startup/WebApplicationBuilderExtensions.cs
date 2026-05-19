@@ -23,6 +23,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -144,6 +145,74 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IdentityRedirectManager>();
     builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
+    builder.Services.ConfigureApplicationCookie(options =>
+    {
+      options.Events.OnRedirectToLogin = context =>
+      {
+        // For API requests, return 401 instead of redirecting
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+          context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+          return Task.CompletedTask;
+        }
+
+        // For UI requests, redirect to the login page
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+      };
+
+      options.Events.OnRedirectToAccessDenied = context =>
+      {
+        // For API requests, return 403 instead of redirecting  
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+          context.Response.StatusCode = StatusCodes.Status403Forbidden;
+          return Task.CompletedTask;
+        }
+
+        // For UI requests, redirect to the access-denied page
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+      };
+    });
+
+    builder.Services
+      .AddAuthorizationBuilder()
+      .SetDefaultPolicy(new AuthorizationPolicyBuilder()
+        .AddAuthenticationSchemes(CustomSchemes.Dynamic)
+        .RequireAuthenticatedUser()
+        .Build())
+      .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
+      .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
+
+    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
+    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequirementHandler>();
+    builder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
+
+    // Add Identity services.
+    builder.Services
+      .AddIdentityApiEndpoints<AppUser>(options =>
+      {
+        options.User.RequireUniqueEmail = true;
+        options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
+      })
+      .AddRoles<AppRole>()
+      .AddEntityFrameworkStores<AppDb>()
+      .AddSignInManager()
+      .AddDefaultTokenProviders();
+
+    if (appOptions.EnableDesktopBearerLogin)
+    {
+      builder.Services.Configure<BearerTokenOptions>(IdentityConstants.BearerScheme, options =>
+      {
+        options.BearerTokenExpiration = TimeSpan.FromMinutes(appOptions.DesktopBearerTokenExpirationMinutes);
+        options.RefreshTokenExpiration = TimeSpan.FromDays(appOptions.DesktopRefreshTokenExpirationDays);
+      });
+    }
+
     var authBuilder = builder.Services
       .AddAuthentication(options =>
       {
@@ -159,6 +228,12 @@ public static class WebApplicationBuilderExtensions
               context.Request.Query.ContainsKey("logonToken"))
           {
             return LogonTokenAuthenticationSchemeOptions.DefaultScheme;
+          }
+
+          if (appOptions.EnableDesktopBearerLogin &&
+              context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+          {
+            return IdentityConstants.BearerScheme;
           }
 
           // If the request has a Personal Access Token header, use PAT authentication
@@ -192,76 +267,15 @@ public static class WebApplicationBuilderExtensions
       });
     }
 
-    authBuilder.AddIdentityCookies();
-
-    builder.Services.ConfigureApplicationCookie(options =>
-    {
-      options.Events.OnRedirectToLogin = context =>
-      {
-        // For API requests, return 401 instead of redirecting
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-          context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-          return Task.CompletedTask;
-        }
-
-        // For UI requests, redirect to the login page
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-      };
-
-      options.Events.OnRedirectToAccessDenied = context =>
-      {
-        // For API requests, return 403 instead of redirecting  
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-          context.Response.StatusCode = StatusCodes.Status403Forbidden;
-          return Task.CompletedTask;
-        }
-
-        // For UI requests, redirect to the access-denied page
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-      };
-    });
-
-    // Add personal access token authentication
+    // Add personal access token authentication.
     authBuilder.AddScheme<PersonalAccessTokenAuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,
       _ => { });
 
-    // Add logon token authentication
+    // Add logon token authentication.
     authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
       LogonTokenAuthenticationSchemeOptions.DefaultScheme,
       _ => { });
-
-    builder.Services
-      .AddAuthorizationBuilder()
-      .SetDefaultPolicy(new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(CustomSchemes.Dynamic)
-        .RequireAuthenticatedUser()
-        .Build())
-      .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
-      .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
-
-    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
-    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequirementHandler>();
-    builder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
-
-    // Add Identity services.
-    builder.Services
-      .AddIdentityCore<AppUser>(options =>
-      {
-        options.User.RequireUniqueEmail = true;
-        options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
-        options.Password.RequiredLength = 8;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-      })
-      .AddRoles<AppRole>()
-      .AddEntityFrameworkStores<AppDb>()
-      .AddSignInManager()
-      .AddDefaultTokenProviders();
 
     builder.Services
       .AddScoped<PasskeySignInManager>()

@@ -31,7 +31,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
     var patResult = await patManager.CreateToken(new CreatePersonalAccessTokenRequestDto("Credential Test PAT"), user.Id);
     var personalAccessToken = patResult.Value!.PlainTextToken;
 
-    var resetResult = await passwordManager.AdminResetPassword(tenant.Id, user.Id);
+    var resetResult = await passwordManager.ResetPassword(tenant.Id, user.Id);
     Assert.True(resetResult.IsSuccess);
     var temporaryPassword = resetResult.Value!.TemporaryPassword;
 

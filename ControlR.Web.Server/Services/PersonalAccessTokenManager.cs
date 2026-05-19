@@ -42,8 +42,8 @@ public class PersonalAccessTokenManager(
       _appDb.PersonalAccessTokens.Add(personalAccessToken);
       await _appDb.SaveChangesAsync();
 
-      var hexKey = Convert.ToHexString(personalAccessToken.Id.ToByteArray());
-      var combinedKey = $"{hexKey}:{plainTextKey}";
+      var hexId = Convert.ToHexString(personalAccessToken.Id.ToByteArray());
+      var combinedKey = $"{hexId}:{plainTextKey}";
       var response = new CreatePersonalAccessTokenResponseDto(MapToDto(personalAccessToken), combinedKey);
       return Result.Ok(response);
     }
@@ -58,6 +58,7 @@ public class PersonalAccessTokenManager(
     try
     {
       var personalAccessToken = await _appDb.PersonalAccessTokens
+        .IgnoreQueryFilters()
         .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
 
       if (personalAccessToken is null)
@@ -79,6 +80,7 @@ public class PersonalAccessTokenManager(
   public async Task<IEnumerable<PersonalAccessTokenDto>> GetForUser(Guid userId)
   {
     var personalAccessTokens = await _appDb.PersonalAccessTokens
+      .IgnoreQueryFilters()
       .Where(x => x.UserId == userId)
       .OrderByDescending(x => x.CreatedAt)
       .ToListAsync();
@@ -91,6 +93,7 @@ public class PersonalAccessTokenManager(
     try
     {
       var personalAccessToken = await _appDb.PersonalAccessTokens
+        .IgnoreQueryFilters()
         .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
 
       if (personalAccessToken is null)

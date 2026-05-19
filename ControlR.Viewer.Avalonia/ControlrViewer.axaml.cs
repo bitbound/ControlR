@@ -131,7 +131,7 @@ public partial class ControlrViewer : UserControl
       return;
     }
 
-    if (string.IsNullOrWhiteSpace(Options.PersonalAccessToken))
+    if (!Options.Auth.HasAuthConfigured)
     {
       SetErrorContent(Assets.Resources.ControlrViewer_PatRequired);
       return;

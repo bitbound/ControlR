@@ -79,6 +79,9 @@ public class ViewerHubConnector(
 
   private void ConfigureHttpOptions(HttpConnectionOptions options)
   {
-    options.Headers.Add("x-personal-token", _options.PersonalAccessToken);
+    if (_options.Auth.TryGetAuthHeader(out var headerName, out var headerValue))
+    {
+      options.Headers.Add(headerName, headerValue);
+    }
   }
 }

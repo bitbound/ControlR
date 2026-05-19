@@ -46,11 +46,13 @@ public static class ViewerServiceBuilder
       {
         opts.DeviceId = viewerOptions.DeviceId;
         opts.BaseUrl = viewerOptions.BaseUrl;
+        opts.Auth = viewerOptions.Auth;
         opts.PersonalAccessToken = viewerOptions.PersonalAccessToken;
+        opts.BearerToken = viewerOptions.BearerToken;
       })
      .Validate(options => options.DeviceId != Guid.Empty, "DeviceId is required.")
      .Validate(options => options.BaseUrl is not null, "BaseUrl is required.")
-     .Validate(options => !string.IsNullOrWhiteSpace(options.PersonalAccessToken), "PersonalAccessToken is required.")
+     .Validate(options => options.Auth.HasAuthConfigured, "Authentication is required.")
      .ValidateOnStart();
 
     // Register logging.
@@ -81,7 +83,9 @@ public static class ViewerServiceBuilder
     services.AddControlrApiClient(options =>
     {
       options.BaseUrl = viewerOptions.BaseUrl;
+      options.Auth = viewerOptions.Auth;
       options.PersonalAccessToken = viewerOptions.PersonalAccessToken;
+      options.BearerToken = viewerOptions.BearerToken;
     });
 
     // Register state services.

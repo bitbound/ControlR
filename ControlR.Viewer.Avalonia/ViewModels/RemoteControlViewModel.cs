@@ -504,7 +504,10 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
         viewerRelayUri,
         wsOptions =>
         {
-          wsOptions.SetRequestHeader(ControlrViewerOptions.PersonalAccessTokenHeaderName, _viewerOptions.Value.PersonalAccessToken);
+          if (_viewerOptions.Value.Auth.TryGetAuthHeader(out var headerName, out var headerValue))
+          {
+            wsOptions.SetRequestHeader(headerName, headerValue);
+          }
         },
         cts.Token);
 

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Headers;
 
 namespace ControlR.ApiClient;
 
@@ -46,10 +47,7 @@ public static class ServiceCollectionExtensions
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
         client.BaseAddress = options.BaseUrl;
-        if (!string.IsNullOrWhiteSpace(options.PersonalAccessToken))
-        {
-          client.DefaultRequestHeaders.Add(ControlrApiClientOptions.PersonalAccessTokenHeader, options.PersonalAccessToken);
-        }
+        ApplyAuthHeader(client, options);
       });
     return services;
   }
@@ -100,10 +98,7 @@ public static class ServiceCollectionExtensions
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
         client.BaseAddress = options.BaseUrl;
-        if (!string.IsNullOrWhiteSpace(options.PersonalAccessToken))
-        {
-          client.DefaultRequestHeaders.Add(ControlrApiClientOptions.PersonalAccessTokenHeader, options.PersonalAccessToken);
-        }
+        ApplyAuthHeader(client, options);
       });
 
     return services;
@@ -139,5 +134,25 @@ public static class ServiceCollectionExtensions
   {
     builder.Services.AddControlrApiClient(builder.Configuration, configurationSectionName);
     return builder;
+  }
+
+  private static void ApplyAuthHeader(HttpClient client, ControlrApiClientOptions options)
+  {
+    client.DefaultRequestHeaders.Remove(ControlrApiClientOptions.PersonalAccessTokenHeader);
+    client.DefaultRequestHeaders.Remove(ControlrApiClientAuthOptions.AuthorizationHeader);
+    client.DefaultRequestHeaders.Authorization = null;
+
+    if (!options.Auth.TryGetAuthHeader(out var headerName, out var headerValue))
+    {
+      return;
+    }
+
+    if (headerName == ControlrApiClientAuthOptions.AuthorizationHeader)
+    {
+      client.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(headerValue);
+      return;
+    }
+
+    client.DefaultRequestHeaders.Add(headerName, headerValue);
   }
 }

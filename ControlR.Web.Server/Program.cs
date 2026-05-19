@@ -5,6 +5,7 @@ using ControlR.Web.Server.Components.Account;
 using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.ServiceDefaults;
+using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.Extensions.FileProviders;
 using Scalar.AspNetCore;
 using System.Reflection;
@@ -74,6 +75,11 @@ app.MapWebSocketRelay();
 app.UseOutputCache();
 
 app.MapControllers();
+
+if (appOptions.EnableDesktopBearerLogin)
+{
+  app.MapGroup(HttpConstants.AuthEndpoint).MapIdentityApi<AppUser>();
+}
 
 app.UseWhen(
   ctx => !ctx.Request.Path.StartsWithSegments("/api"),

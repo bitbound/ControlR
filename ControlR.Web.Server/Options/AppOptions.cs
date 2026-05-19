@@ -28,6 +28,14 @@ public class AppOptions
   /// </summary>
   public string? AuthenticatorIssuerName { get; init; }
   /// <summary>
+  /// Lifetime of desktop bearer access tokens issued by ASP.NET Core Identity.
+  /// </summary>
+  public int DesktopBearerTokenExpirationMinutes { get; init; } = 60;
+  /// <summary>
+  /// Lifetime of desktop refresh tokens issued by ASP.NET Core Identity.
+  /// </summary>
+  public int DesktopRefreshTokenExpirationDays { get; init; } = 30;
+  /// <summary>
   /// Disables all email sending from the application.
   /// When enabled, no emails will be sent for account confirmation, password reset, etc.
   /// </summary>
@@ -48,6 +56,10 @@ public class AppOptions
   /// Enabling this incurs a small performance cost.
   /// </summary>
   public bool EnableDatabaseDetailedErrors { get; init; }
+  /// <summary>
+  /// Enables the desktop bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
+  /// </summary>
+  public bool EnableDesktopBearerLogin { get; init; } = true;
   /// <summary>
   /// Whether to enable the configuration provider for Docker Secrets.
   /// When enabled, the application will read secrets from Docker's secret management system.

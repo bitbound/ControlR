@@ -31,7 +31,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
     var targetUser = await services.CreateTestUser(tenant.Id, "target@t.local");
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var result = await controller.AdminResetPassword(
+    var result = await controller.ResetPassword(
       targetUser.Id,
       services.GetRequiredService<IPasswordManager>());
 
