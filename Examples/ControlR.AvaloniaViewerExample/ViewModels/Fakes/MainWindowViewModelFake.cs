@@ -35,9 +35,14 @@ public partial class MainWindowViewModelFake : ObservableObject, IMainWindowView
   public IRelayCommand SignOutCommand { get; } = new RelayCommand(() => { });
   public ControlrViewerOptions ViewerOptions { get; } = new()
   {
+    AuthenticationMethod = ViewerAuthenticationMethod.InteractiveBearer,
     BaseUrl = new Uri("https://controlr.example.com"),
     DeviceId = Guid.NewGuid()
   };
+
+  public void AttachViewer(Guid viewerInstanceId)
+  {
+  }
 
   public void Dispose()
   {

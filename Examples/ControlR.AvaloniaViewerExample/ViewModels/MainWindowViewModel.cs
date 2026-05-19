@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using ControlR.ApiClient;
 using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Viewer.Common.Options;
+using ControlR.Viewer.Avalonia.Services;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 
 namespace ControlR.AvaloniaViewerExample.ViewModels;
@@ -26,21 +27,22 @@ public interface IMainWindowViewModel : INotifyPropertyChanged, IDisposable
   string StatusMessage { get; }
   string TwoFactorCode { get; set; }
   ControlrViewerOptions ViewerOptions { get; }
+
+  void AttachViewer(Guid viewerInstanceId);
 }
 
 public partial class MainWindowViewModel : ObservableObject, IMainWindowViewModel
 {
-  private readonly IControlrAuthSession _authSession;
+  private IControlrAuthSession? _authSession;
+  private Guid? _viewerInstanceId;
 
-  public MainWindowViewModel(IControlrAuthSession authSession, ControlrViewerOptions viewerOptions)
+  public MainWindowViewModel(ControlrViewerOptions viewerOptions)
   {
-    _authSession = authSession;
     ActivePage = ViewerPage.RemoteControl;
     DeviceIdText = viewerOptions.DeviceId.ToString();
     IsDarkMode = true;
     ServerUrl = viewerOptions.BaseUrl.ToString();
     ViewerOptions = viewerOptions;
-    _authSession.StateChanged += HandleSessionStateChanged;
   }
 
   [ObservableProperty]
@@ -69,9 +71,37 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   public partial string TwoFactorCode { get; set; } = string.Empty;
   public ControlrViewerOptions ViewerOptions { get; }
 
+  public void AttachViewer(Guid viewerInstanceId)
+  {
+    if (_viewerInstanceId == viewerInstanceId && _authSession is not null)
+    {
+      return;
+    }
+
+    if (_authSession is not null)
+    {
+      _authSession.StateChanged -= HandleSessionStateChanged;
+    }
+
+    var authSession = ViewerRegistry.GetService<IControlrAuthSession>(viewerInstanceId);
+    if (authSession is null)
+    {
+      return;
+    }
+
+    _viewerInstanceId = viewerInstanceId;
+    _authSession = authSession;
+    _authSession.SetBaseUrl(ViewerOptions.BaseUrl);
+    _authSession.StateChanged += HandleSessionStateChanged;
+  }
+
   public void Dispose()
   {
-    _authSession.StateChanged -= HandleSessionStateChanged;
+    if (_authSession is not null)
+    {
+      _authSession.StateChanged -= HandleSessionStateChanged;
+    }
+
     GC.SuppressFinalize(this);
   }
 
@@ -120,6 +150,12 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
       return;
     }
 
+    if (_authSession is null)
+    {
+      StatusMessage = "Viewer services are not initialized yet.";
+      return;
+    }
+
     IsBusy = true;
     StatusMessage = string.Empty;
 
@@ -148,6 +184,12 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   [RelayCommand]
   private void SignOut()
   {
+    if (_authSession is null)
+    {
+      StatusMessage = "Viewer services are not initialized yet.";
+      return;
+    }
+
     _ = _authSession.SignOut();
     StatusMessage = "Signed out.";
   }
@@ -168,7 +210,7 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
 
     ViewerOptions.BaseUrl = baseUrl;
     ViewerOptions.DeviceId = deviceId;
-    _authSession.SetBaseUrl(baseUrl);
+    _authSession?.SetBaseUrl(baseUrl);
     validationError = string.Empty;
     return true;
   }

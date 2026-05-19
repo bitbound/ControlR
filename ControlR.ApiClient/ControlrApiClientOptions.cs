@@ -22,12 +22,7 @@ public class ControlrApiClientOptions
   /// The base URI where the ControlR server is hosted (e.g. https://controlr.example.com).
   /// </summary>
   public required Uri BaseUrl { get; set; }
-  [ProtectedDataClassification]
-  public string? BearerToken
-  {
-    get => Auth.BearerToken;
-    set => Auth.BearerToken = value;
-  }
+
   /// <summary>
   /// When <c>false</c> (default), response DTOs are validated for nullability/required-member contract violations
   /// and invalid responses are returned as failed <c>ApiResult</c> values.

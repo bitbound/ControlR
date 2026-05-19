@@ -5,7 +5,6 @@ using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
-using ControlR.Libraries.WebSocketRelay.Client;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 using ControlR.Viewer.Avalonia.ViewModels.Dialogs;
 using ControlR.Viewer.Avalonia.Views.Dialogs;
@@ -38,21 +37,25 @@ public static class ViewerServiceBuilder
     ArgumentNullException.ThrowIfNull(viewerOptions);
 
     var services = new ServiceCollection();
+    var runtimeAuth = CreateRuntimeAuth(viewerOptions);
 
     // Register options.
     services
      .AddOptions<ControlrViewerOptions>()
       .Configure(opts =>
       {
+        opts.AuthenticationMethod = viewerOptions.AuthenticationMethod;
         opts.DeviceId = viewerOptions.DeviceId;
         opts.BaseUrl = viewerOptions.BaseUrl;
-        opts.Auth = viewerOptions.Auth;
         opts.PersonalAccessToken = viewerOptions.PersonalAccessToken;
-        opts.BearerToken = viewerOptions.BearerToken;
       })
      .Validate(options => options.DeviceId != Guid.Empty, "DeviceId is required.")
      .Validate(options => options.BaseUrl is not null, "BaseUrl is required.")
-     .Validate(options => options.Auth.HasAuthConfigured, "Authentication is required.")
+     .Validate(
+       options =>
+         options.AuthenticationMethod != ViewerAuthenticationMethod.PersonalAccessToken ||
+         !string.IsNullOrWhiteSpace(options.PersonalAccessToken),
+       "A personal access token is required when AuthenticationMethod is PersonalAccessToken.")
      .ValidateOnStart();
 
     // Register logging.
@@ -78,14 +81,13 @@ public static class ViewerServiceBuilder
     services.AddSingleton(TimeProvider.System);
     services.AddSingleton(clipboard);
     services.AddSingleton<IInstanceIdProvider>(new InstanceIdProvider(instanceId));
+    services.AddSingleton(runtimeAuth);
 
     // Add API client.
     services.AddControlrApiClient(options =>
     {
       options.BaseUrl = viewerOptions.BaseUrl;
-      options.Auth = viewerOptions.Auth;
-      options.PersonalAccessToken = viewerOptions.PersonalAccessToken;
-      options.BearerToken = viewerOptions.BearerToken;
+      options.Auth = runtimeAuth;
     });
 
     // Register state services.
@@ -131,5 +133,18 @@ public static class ViewerServiceBuilder
     services.AddSingleton<IDesktopPreviewDialogViewModelFactory, DesktopPreviewDialogViewModelFactory>();
 
     return services.BuildServiceProvider();
+  }
+
+  private static ControlrApiClientAuthOptions CreateRuntimeAuth(ControlrViewerOptions viewerOptions)
+  {
+    return viewerOptions.AuthenticationMethod switch
+    {
+      ViewerAuthenticationMethod.PersonalAccessToken => new ControlrApiClientAuthOptions
+      {
+        PersonalAccessToken = viewerOptions.PersonalAccessToken
+      },
+      ViewerAuthenticationMethod.InteractiveBearer => new ControlrApiClientAuthOptions(),
+      _ => throw new InvalidOperationException($"Unsupported viewer authentication method: {viewerOptions.AuthenticationMethod}.")
+    };
   }
 }

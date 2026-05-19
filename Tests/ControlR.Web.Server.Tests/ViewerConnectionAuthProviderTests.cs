@@ -19,7 +19,7 @@ public class ViewerConnectionAuthProviderTests
 
     var options = Microsoft.Extensions.Options.Options.Create(new ControlrViewerOptions
     {
-      Auth = new ControlrApiClientAuthOptions(),
+      AuthenticationMethod = ViewerAuthenticationMethod.InteractiveBearer,
       BaseUrl = new Uri("https://controlr.example.com"),
       DeviceId = Guid.NewGuid()
     });
@@ -42,12 +42,10 @@ public class ViewerConnectionAuthProviderTests
   {
     var options = Microsoft.Extensions.Options.Options.Create(new ControlrViewerOptions
     {
-      Auth = new ControlrApiClientAuthOptions
-      {
-        PersonalAccessToken = "pat-token"
-      },
+      AuthenticationMethod = ViewerAuthenticationMethod.PersonalAccessToken,
       BaseUrl = new Uri("https://controlr.example.com"),
-      DeviceId = Guid.NewGuid()
+      DeviceId = Guid.NewGuid(),
+      PersonalAccessToken = "pat-token"
     });
 
     var provider = new ViewerConnectionAuthProvider(new StubAuthSession(), options);
@@ -64,12 +62,10 @@ public class ViewerConnectionAuthProviderTests
   {
     var options = Microsoft.Extensions.Options.Options.Create(new ControlrViewerOptions
     {
-      Auth = new ControlrApiClientAuthOptions
-      {
-        PersonalAccessToken = "pat-token"
-      },
+      AuthenticationMethod = ViewerAuthenticationMethod.PersonalAccessToken,
       BaseUrl = new Uri("https://controlr.example.com"),
-      DeviceId = Guid.NewGuid()
+      DeviceId = Guid.NewGuid(),
+      PersonalAccessToken = "pat-token"
     });
 
     var provider = new ViewerConnectionAuthProvider(new StubAuthSession(), options);

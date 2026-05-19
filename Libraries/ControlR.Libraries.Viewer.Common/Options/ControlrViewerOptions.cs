@@ -1,6 +1,4 @@
-﻿using ControlR.ApiClient;
-
-namespace ControlR.Libraries.Viewer.Common.Options;
+﻿namespace ControlR.Libraries.Viewer.Common.Options;
 
 /// <summary>
 ///   Required options for configuring a ControlrViewer instance.
@@ -8,25 +6,19 @@ namespace ControlR.Libraries.Viewer.Common.Options;
 public class ControlrViewerOptions
 {
   /// <summary>
-  ///   Authentication settings for the current user.
+  ///   Determines how the viewer authenticates against the ControlR server.
   /// </summary>
-  public ControlrApiClientAuthOptions Auth { get; set; } = new();
+  public required ViewerAuthenticationMethod AuthenticationMethod { get; set; }
   /// <summary>
   ///   The base URL of the ControlR server to which the viewer will connect (e.g. "https://controlr.example.com").
   /// </summary>
   public required Uri BaseUrl { get; set; }
-  public string? BearerToken
-  {
-    get => Auth.BearerToken;
-    set => Auth.BearerToken = value;
-  }
   /// <summary>
   ///   The device ID that the viewer will be accessing.
   /// </summary>
   public required Guid DeviceId { get; set; }
-  public string? PersonalAccessToken
-  {
-    get => Auth.PersonalAccessToken;
-    set => Auth.PersonalAccessToken = value;
-  }
+  /// <summary>
+  ///   A static personal access token used when <see cref="AuthenticationMethod"/> is <see cref="ViewerAuthenticationMethod.PersonalAccessToken"/>.
+  /// </summary>
+  public string? PersonalAccessToken { get; set; }
 }

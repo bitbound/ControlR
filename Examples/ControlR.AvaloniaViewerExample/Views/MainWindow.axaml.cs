@@ -15,6 +15,7 @@ public partial class MainWindow : Window
   {
     InitializeComponent();
     DataContextChanged += HandleDataContextChanged;
+    Opened += HandleOpened;
   }
   
   protected override void OnClosed(EventArgs e)
@@ -49,9 +50,15 @@ public partial class MainWindow : Window
     }
 
     ApplyTheme(_viewModel.IsDarkMode);
+    TryAttachViewer();
 
     _viewModel.PropertyChanged += HandleViewModelPropertyChanged;
     SyncSidebarSelection(_viewModel.ActivePage);
+  }
+
+  private void HandleOpened(object? sender, EventArgs e)
+  {
+    TryAttachViewer();
   }
 
   private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -103,5 +110,10 @@ public partial class MainWindow : Window
     }
 
     SidebarNavList.SelectedItem = null;
+  }
+
+  private void TryAttachViewer()
+  {
+    _viewModel?.AttachViewer(Viewer.InstanceId);
   }
 }

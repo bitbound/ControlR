@@ -6,18 +6,14 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using ControlR.AvaloniaViewerExample.ViewModels;
 using ControlR.AvaloniaViewerExample.ViewModels.Fakes;
-using ControlR.ApiClient;
 using ControlR.AvaloniaViewerExample.Views;
 using ControlR.Libraries.Viewer.Common.Options;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.AvaloniaViewerExample;
 
 public partial class App : Application
 {
-  private ServiceProvider? _serviceProvider;
-
   public override void Initialize()
   {
     AvaloniaXamlLoader.Load(this);
@@ -30,7 +26,6 @@ public partial class App : Application
     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
     {
       DisableAvaloniaDataAnnotationValidation();
-      desktop.Exit += (_, _) => _serviceProvider?.Dispose();
 
       IMainWindowViewModel viewModel = Design.IsDesignMode
         ? GetFakeViewModel()
@@ -72,6 +67,9 @@ public partial class App : Application
     // for getting these options into the ControlrViewer component.
     var viewerOptions = new ControlrViewerOptions
     {
+      AuthenticationMethod = Enum.TryParse<ViewerAuthenticationMethod>(configuration["ControlrViewerOptions:AuthenticationMethod"], out var authMethod)
+        ? authMethod
+        : throw new InvalidOperationException("ControlrViewerOptions:AuthenticationMethod not configured or invalid. Use: dotnet user-secrets set \"ControlrViewerOptions:AuthenticationMethod\" \"PersonalAccessToken\""),
       BaseUrl = Uri.TryCreate(configuration["ControlrViewerOptions:BaseUrl"], UriKind.Absolute, out var baseUrl)
         ? baseUrl
         : throw new InvalidOperationException("ControlrViewerOptions:BaseUrl not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:BaseUrl\" \"https://controlr.example.com\""),
@@ -79,18 +77,7 @@ public partial class App : Application
         ?? throw new InvalidOperationException("ControlrViewerOptions:DeviceId not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:DeviceId\" \"your-device-guid\""))
     };
 
-    var services = new ServiceCollection();
-    services.AddControlrApiClient(options =>
-    {
-      options.Auth = viewerOptions.Auth;
-      options.BaseUrl = viewerOptions.BaseUrl;
-    });
-
-    _serviceProvider = services.BuildServiceProvider();
-
-    return new MainWindowViewModel(
-      _serviceProvider.GetRequiredService<IControlrAuthSession>(),
-      viewerOptions);
+    return new MainWindowViewModel(viewerOptions);
   }
 
   private MainWindowViewModelFake GetFakeViewModel()

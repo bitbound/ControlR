@@ -1,7 +1,7 @@
 using ControlR.ApiClient;
-using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.Extensions.Options;
+using ControlR.Libraries.Viewer.Common.Options;
 
 namespace ControlR.Libraries.Viewer.Common.Services;
 
@@ -20,9 +20,13 @@ public class ViewerConnectionAuthProvider(
 
   public void ConfigureSignalr(HttpConnectionOptions options)
   {
-    if (!string.IsNullOrWhiteSpace(_options.Auth.PersonalAccessToken))
+    if (_options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken)
     {
-      options.Headers[ControlrApiClientOptions.PersonalAccessTokenHeader] = _options.Auth.PersonalAccessToken;
+      if (!string.IsNullOrWhiteSpace(_options.PersonalAccessToken))
+      {
+        options.Headers[ControlrApiClientOptions.PersonalAccessTokenHeader] = _options.PersonalAccessToken;
+      }
+
       return;
     }
 
@@ -31,11 +35,16 @@ public class ViewerConnectionAuthProvider(
 
   public async Task<IReadOnlyDictionary<string, string>> GetWebSocketHeaders(CancellationToken cancellationToken = default)
   {
-    if (!string.IsNullOrWhiteSpace(_options.Auth.PersonalAccessToken))
+    if (_options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken)
     {
+      if (string.IsNullOrWhiteSpace(_options.PersonalAccessToken))
+      {
+        return new Dictionary<string, string>();
+      }
+
       return new Dictionary<string, string>
       {
-        [ControlrApiClientOptions.PersonalAccessTokenHeader] = _options.Auth.PersonalAccessToken
+        [ControlrApiClientOptions.PersonalAccessTokenHeader] = _options.PersonalAccessToken
       };
     }
 

@@ -2,13 +2,13 @@ using System.Net;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.ApiClient;
+using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using ControlR.Libraries.Messenger.Extensions.Messages;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Threading;
 
 namespace ControlR.Viewer.Avalonia.ViewModels;
@@ -31,6 +31,7 @@ public interface IViewerShellViewModel : IViewModelBase, INotifyPropertyChanged
 public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerShellViewModel
 {
   private readonly IControlrApi _apiClient;
+  private readonly IControlrAuthSession _authSession;
   private readonly IChatState _chatState;
   private readonly IDeviceState _deviceState;
   private readonly IViewerHubConnector _hubConnector;
@@ -57,6 +58,7 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
 
   public ViewerShellViewModel(
     IControlrApi apiClient,
+    IControlrAuthSession authSession,
     IViewerHubConnector hubConnector,
     IMessenger messenger,
     INavigationProvider navigationProvider,
@@ -67,6 +69,7 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     ILogger<ViewerShellViewModel> logger)
   {
     _apiClient = apiClient;
+    _authSession = authSession;
     _hubConnector = hubConnector;
     _messenger = messenger;
     _navigationProvider = navigationProvider;
@@ -77,9 +80,11 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     _logger = logger;
 
     _navigationProvider.NavigationOccurred += OnNavigationOccurred;
+    _authSession.StateChanged += HandleAuthSessionStateChanged;
 
     Disposables.AddRange(
       new CallbackDisposable(() => _navigationProvider.NavigationOccurred -= OnNavigationOccurred),
+      new CallbackDisposable(() => _authSession.StateChanged -= HandleAuthSessionStateChanged),
       _deviceState.OnStateChanged(HandleDeviceStateChanged),
       _messenger.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage),
       _messenger.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived),
@@ -120,7 +125,23 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
   protected override async Task OnInitializeAsync()
   {
     await base.OnInitializeAsync();
-    await InitializeViewer();
+
+    if (_options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken)
+    {
+      await InitializeViewer();
+      return;
+    }
+
+    if (_authSession.IsAuthenticated)
+    {
+      await InitializeViewer();
+      return;
+    }
+
+    ConnectionState = HubConnectionState.Disconnected;
+    OnPropertyChanged(nameof(ConnectionStatus));
+    AlertMessage = null;
+    AlertSeverity = SnackbarSeverity.Info;
   }
 
   private async Task Connect()
@@ -137,6 +158,25 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     AlertMessage = null;
   }
 
+  private async Task DisconnectForUnauthenticated(string? message)
+  {
+    try
+    {
+      await _hubConnector.Disconnect();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogDebug(ex, "Viewer hub disconnect during auth state transition failed.");
+    }
+
+    ConnectionState = HubConnectionState.Disconnected;
+    OnPropertyChanged(nameof(ConnectionStatus));
+    AlertMessage = message;
+    AlertSeverity = string.IsNullOrWhiteSpace(message)
+      ? SnackbarSeverity.Info
+      : SnackbarSeverity.Warning;
+  }
+
   private async Task<bool> GetDeviceInfo()
   {
     var apiResult = await _apiClient.Devices.GetDevice(_options.DeviceId);
@@ -149,9 +189,14 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
 
     if (apiResult.StatusCode == HttpStatusCode.Unauthorized)
     {
-      AlertMessage = Resources.UnauthorizedAccessPat;
+      AlertMessage = _options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken
+        ? Resources.UnauthorizedAccessPat
+        : Resources.UnauthorizedAccess;
       AlertSeverity = SnackbarSeverity.Error;
-      _logger.LogWarning("Unauthorized access when retrieving device info. Check the provided Personal Access Token.");
+      _logger.LogWarning(
+        _options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken
+          ? "Unauthorized access when retrieving device info. Check the provided Personal Access Token."
+          : "Unauthorized access when retrieving device info. Check the current interactive login session.");
 
       _snackbar.Add(Resources.UnauthorizedAccess, SnackbarSeverity.Error);
       return false;
@@ -163,6 +208,34 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     _logger.LogWarning("Failed to retrieve device info. Details: {ApiResult}", apiResult);
     _snackbar.Add(Resources.DeviceInfo_RetrievalFailed, SnackbarSeverity.Error);
     return false;
+  }
+
+  private async void HandleAuthSessionStateChanged(object? sender, ControlrAuthSessionStateChangedEventArgs e)
+  {
+    try
+    {
+      if (_options.AuthenticationMethod != ViewerAuthenticationMethod.InteractiveBearer)
+      {
+        return;
+      }
+
+      switch (e.State)
+      {
+        case ControlrAuthSessionState.Authenticated:
+          await Dispatcher.UIThread.InvokeAsync(async () => await InitializeViewer());
+          break;
+        case ControlrAuthSessionState.Expired:
+          await Dispatcher.UIThread.InvokeAsync(async () => await DisconnectForUnauthenticated(e.Message));
+          break;
+        case ControlrAuthSessionState.SignedOut:
+          await Dispatcher.UIThread.InvokeAsync(async () => await DisconnectForUnauthenticated(null));
+          break;
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error handling auth session state changes for viewer shell.");
+    }
   }
 
   private async Task HandleChatResponseReceived(object subscriber, DtoReceivedMessage<ChatResponseHubDto> message)
@@ -252,6 +325,14 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
   {
     try
     {
+      if (_options.AuthenticationMethod == ViewerAuthenticationMethod.InteractiveBearer && !_authSession.IsAuthenticated)
+      {
+        ConnectionState = HubConnectionState.Disconnected;
+        AlertMessage = null;
+        AlertSeverity = SnackbarSeverity.Info;
+        return;
+      }
+
       ConnectionState = HubConnectionState.Connecting;
       OnPropertyChanged(nameof(ConnectionStatus));
       AlertMessage = null;
