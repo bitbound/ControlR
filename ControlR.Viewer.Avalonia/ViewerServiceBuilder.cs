@@ -98,6 +98,7 @@ public static class ViewerServiceBuilder
     
     // Register SignalR hub client.
     services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Singleton);
+    services.AddSingleton<IViewerConnectionAuthProvider, ViewerConnectionAuthProvider>();
     services.AddSingleton<IViewerHubConnector, ViewerHubConnector>();
 
     // Register navigation service.

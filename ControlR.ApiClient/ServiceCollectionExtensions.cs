@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -32,6 +33,8 @@ public static class ServiceCollectionExtensions
     this IServiceCollection services,
     Action<ControlrApiClientOptions> configureOptions)
   {
+    services.TryAddSingleton(TimeProvider.System);
+
     // Register and validate options using the options pattern
     services
       .AddOptions<ControlrApiClientOptions>()
@@ -56,6 +59,8 @@ public static class ServiceCollectionExtensions
         client.BaseAddress = options.BaseUrl;
         ControlrApiHttpClientAuth.ApplyAuthHeader(client, options);
       });
+
+    services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
     return services;
   }
 
@@ -91,6 +96,8 @@ public static class ServiceCollectionExtensions
     IConfiguration configuration,
     string configurationSectionName)
   {
+    services.TryAddSingleton(TimeProvider.System);
+
     // Register and validate options using the options pattern.
     services
       .AddOptions<ControlrApiClientOptions>()
@@ -115,6 +122,8 @@ public static class ServiceCollectionExtensions
         client.BaseAddress = options.BaseUrl;
         ControlrApiHttpClientAuth.ApplyAuthHeader(client, options);
       });
+
+    services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
 
     return services;
   }

@@ -17,12 +17,12 @@ using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
-public class DesktopLoginApiTests(ITestOutputHelper testOutput)
+public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutputHelper = testOutput;
 
   [Fact]
-  public async Task DesktopLogin_WhenIdentityRequiresTwoFactor_ReturnsRequiresTwoFactor()
+  public async Task InteractiveLogin_WhenIdentityRequiresTwoFactor_ReturnsRequiresTwoFactor()
   {
     var user = new AppUser
     {
@@ -63,7 +63,7 @@ public class DesktopLoginApiTests(ITestOutputHelper testOutput)
     var bearerTokenOptions = new Mock<IOptionsMonitor<BearerTokenOptions>>();
     var controller = new AuthController();
 
-    var result = await controller.DesktopLogin(
+    var result = await controller.InteractiveLogin(
       signInManager.Object,
       userManager.Object,
       bearerTokenOptions.Object,
@@ -71,18 +71,18 @@ public class DesktopLoginApiTests(ITestOutputHelper testOutput)
       new LoginRequestDto(user.Email, "T3stP@ssw0rd!"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var payload = Assert.IsType<DesktopLoginResponseDto>(okResult.Value);
+    var payload = Assert.IsType<InteractiveLoginResponseDto>(okResult.Value);
     Assert.True(payload.RequiresTwoFactor);
     Assert.Null(payload.Tokens);
   }
 
   [Fact]
-  public async Task DesktopLogin_WithValidCredentials_ReturnsBearerTokens()
+  public async Task InteractiveLogin_WithValidCredentials_ReturnsBearerTokens()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutputHelper);
 
     var tenant = await testServer.Services.CreateTestTenant();
-    var user = await testServer.Services.CreateTestUser(tenant.Id, "desktop-login@t.local");
+    var user = await testServer.Services.CreateTestUser(tenant.Id, "interactive-login@t.local");
 
     using (var scope = testServer.Services.CreateScope())
     {
@@ -95,13 +95,13 @@ public class DesktopLoginApiTests(ITestOutputHelper testOutput)
 
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
-      "/api/auth/desktop-login",
+      "/api/auth/interactive-login",
       new LoginRequestDto(user.Email!, "T3stP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    var payload = await response.Content.ReadFromJsonAsync<DesktopLoginResponseDto>(TestContext.Current.CancellationToken);
+    var payload = await response.Content.ReadFromJsonAsync<InteractiveLoginResponseDto>(TestContext.Current.CancellationToken);
     Assert.NotNull(payload);
     Assert.False(payload.RequiresTwoFactor);
     Assert.NotNull(payload.Tokens);

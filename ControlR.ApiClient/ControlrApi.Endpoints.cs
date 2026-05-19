@@ -16,7 +16,7 @@ public interface IAuthApi
   Task<ApiResult> ForgotPassword(ForgotPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<ManageInfoResponseDto>> GetManageInfo(CancellationToken cancellationToken = default);
   Task<ApiResult<AccessTokenResponseDto>> LogIn(LoginRequestDto request, CancellationToken cancellationToken = default);
-  Task<ApiResult<DesktopLoginResponseDto>> LogInDesktop(LoginRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<InteractiveLoginResponseDto>> LogInInteractive(LoginRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> LogOut(CancellationToken cancellationToken = default);
   Task<ApiResult<TwoFactorResponseDto>> ManageTwoFactor(TwoFactorRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<AccessTokenResponseDto>> Refresh(RefreshTokenRequestDto request, CancellationToken cancellationToken = default);

@@ -9,8 +9,8 @@ public partial class ControlrApi
 {
   private const string ChangePasswordEndpoint = $"{HttpConstants.AuthEndpoint}/change-password";
   private const string ConfirmEmailEndpoint = $"{HttpConstants.AuthEndpoint}/confirmEmail";
-  private const string DesktopLoginEndpoint = $"{HttpConstants.AuthEndpoint}/desktop-login";
   private const string ForgotPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/forgotPassword";
+  private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
   private const string ManageInfoEndpoint = $"{HttpConstants.AuthEndpoint}/manage/info";
   private const string RegisterEndpoint = $"{HttpConstants.AuthEndpoint}/register";
   private const string ResendConfirmationEmailEndpoint = $"{HttpConstants.AuthEndpoint}/resendConfirmationEmail";
@@ -71,13 +71,13 @@ public partial class ControlrApi
     }, allowAutoRefresh: false);
   }
 
-  async Task<ApiResult<DesktopLoginResponseDto>> IAuthApi.LogInDesktop(LoginRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<InteractiveLoginResponseDto>> IAuthApi.LogInInteractive(LoginRequestDto request, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.PostAsJsonAsync(DesktopLoginEndpoint, request, cancellationToken);
+      using var response = await _client.PostAsJsonAsync(InteractiveLoginEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<DesktopLoginResponseDto>(cancellationToken);
+      return await response.Content.ReadFromJsonAsync<InteractiveLoginResponseDto>(cancellationToken);
     }, allowAutoRefresh: false);
   }
 

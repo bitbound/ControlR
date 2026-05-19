@@ -1,5 +1,5 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 
-public record DesktopLoginResponseDto(
+public record InteractiveLoginResponseDto(
   bool RequiresTwoFactor,
   AccessTokenResponseDto? Tokens = null);

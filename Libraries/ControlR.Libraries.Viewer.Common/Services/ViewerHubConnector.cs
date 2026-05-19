@@ -12,10 +12,12 @@ public interface IViewerHubConnector
 
 public class ViewerHubConnector(
   IHubConnection<IViewerHub> viewerHub,
+  IViewerConnectionAuthProvider connectionAuthProvider,
   IMessenger messenger,
   IOptions<ControlrViewerOptions> options,
   ILogger<ViewerHubConnector> logger) : IViewerHubConnector
 {
+  private readonly IViewerConnectionAuthProvider _connectionAuthProvider = connectionAuthProvider;
   private readonly ILogger<ViewerHubConnector> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly ControlrViewerOptions _options = options.Value;
@@ -79,9 +81,6 @@ public class ViewerHubConnector(
 
   private void ConfigureHttpOptions(HttpConnectionOptions options)
   {
-    if (_options.Auth.TryGetAuthHeader(out var headerName, out var headerValue))
-    {
-      options.Headers.Add(headerName, headerValue);
-    }
+    _connectionAuthProvider.ConfigureSignalr(options);
   }
 }

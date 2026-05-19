@@ -35,8 +35,8 @@ public class AuthController : ControllerBase
   }
 
   [AllowAnonymous]
-  [HttpPost("desktop-login")]
-  public async Task<ActionResult<DesktopLoginResponseDto>> DesktopLogin(
+  [HttpPost("interactive-login")]
+  public async Task<ActionResult<InteractiveLoginResponseDto>> InteractiveLogin(
     [FromServices] SignInManager<AppUser> signInManager,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] IOptionsMonitor<BearerTokenOptions> bearerTokenOptions,
@@ -58,7 +58,7 @@ public class AuthController : ControllerBase
         string.IsNullOrWhiteSpace(request.TwoFactorCode) &&
         string.IsNullOrWhiteSpace(request.TwoFactorRecoveryCode))
     {
-      return Ok(new DesktopLoginResponseDto(RequiresTwoFactor: true));
+      return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: true));
     }
 
     if (result.RequiresTwoFactor)
@@ -98,12 +98,12 @@ public class AuthController : ControllerBase
     }
 
     var principal = await signInManager.CreateUserPrincipalAsync(user);
-    var tokens = CreateDesktopLoginTokens(
+    var tokens = CreateInteractiveLoginTokens(
       principal,
       bearerTokenOptions.Get(IdentityConstants.BearerScheme),
       timeProvider);
 
-    return Ok(new DesktopLoginResponseDto(RequiresTwoFactor: false, Tokens: tokens));
+    return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, Tokens: tokens));
   }
 
   [Authorize]
@@ -115,7 +115,7 @@ public class AuthController : ControllerBase
     return NoContent();
   }
 
-  private static AccessTokenResponseDto CreateDesktopLoginTokens(
+  private static AccessTokenResponseDto CreateInteractiveLoginTokens(
     ClaimsPrincipal principal,
     BearerTokenOptions options,
     TimeProvider timeProvider)
