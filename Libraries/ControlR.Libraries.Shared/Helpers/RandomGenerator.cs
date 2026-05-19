@@ -22,10 +22,10 @@ public class RandomGenerator
 
   public static string GeneratePassword(int length = 12, bool includeUppercase = true, bool includeLowercase = true, bool includeDigits = true, bool includeSpecialChars = true)
   {
-    const string upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const string lower = "abcdefghijklmnopqrstuvwxyz";
-    const string digits = "0123456789";
-    const string special = "!@#$%^&*()-_=+[]{}|;:,.<>?";
+    const string upper = "ABCDEFGHIJKLMNPQRSTUVWXYZ";
+    const string lower = "abcdefghijklmnpqrstuvwxyz";
+    const string digits = "123456789";
+    const string special = "!@#$%&*-=+.?";
 
     if (length < 1)
       throw new ArgumentOutOfRangeException(nameof(length), "Length must be at least 1.");
