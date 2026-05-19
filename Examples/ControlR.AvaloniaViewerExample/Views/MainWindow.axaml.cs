@@ -20,6 +20,7 @@ public partial class MainWindow : Window
   protected override void OnClosed(EventArgs e)
   {
     _viewModel?.PropertyChanged -= HandleViewModelPropertyChanged;
+    _viewModel?.Dispose();
     base.OnClosed(e);
   }
 
@@ -35,12 +36,6 @@ public partial class MainWindow : Window
     {
       Application.Current.RequestedThemeVariant = themeVariant;
     }
-  }
-
-  private void ConnectButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-  {
-    ConnectPanel.IsVisible  = false;
-    Viewer.IsVisible = true;
   }
 
   private void HandleDataContextChanged(object? sender, EventArgs e)

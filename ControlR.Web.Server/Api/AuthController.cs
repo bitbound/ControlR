@@ -1,4 +1,9 @@
-﻿using ControlR.Libraries.Api.Contracts.Constants;
+﻿using System.Security.Claims;
+using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api;
 
@@ -29,6 +34,78 @@ public class AuthController : ControllerBase
     return Ok();
   }
 
+  [AllowAnonymous]
+  [HttpPost("desktop-login")]
+  public async Task<ActionResult<DesktopLoginResponseDto>> DesktopLogin(
+    [FromServices] SignInManager<AppUser> signInManager,
+    [FromServices] UserManager<AppUser> userManager,
+    [FromServices] IOptionsMonitor<BearerTokenOptions> bearerTokenOptions,
+    [FromServices] TimeProvider timeProvider,
+    [FromBody] LoginRequestDto request)
+  {
+    var user = await userManager.FindByEmailAsync(request.Email);
+    if (user is null)
+    {
+      return Unauthorized();
+    }
+
+    var result = await signInManager.CheckPasswordSignInAsync(
+      user,
+      request.Password,
+      lockoutOnFailure: true);
+
+    if (result.RequiresTwoFactor &&
+        string.IsNullOrWhiteSpace(request.TwoFactorCode) &&
+        string.IsNullOrWhiteSpace(request.TwoFactorRecoveryCode))
+    {
+      return Ok(new DesktopLoginResponseDto(RequiresTwoFactor: true));
+    }
+
+    if (result.RequiresTwoFactor)
+    {
+      if (!string.IsNullOrWhiteSpace(request.TwoFactorRecoveryCode))
+      {
+        var recoveryCodeResult = await userManager.RedeemTwoFactorRecoveryCodeAsync(
+          user,
+          request.TwoFactorRecoveryCode.Replace(" ", string.Empty));
+
+        result = recoveryCodeResult.Succeeded
+          ? Microsoft.AspNetCore.Identity.SignInResult.Success
+          : Microsoft.AspNetCore.Identity.SignInResult.Failed;
+      }
+      else if (!string.IsNullOrWhiteSpace(request.TwoFactorCode))
+      {
+        var normalizedCode = request.TwoFactorCode.Replace(" ", string.Empty).Replace("-", string.Empty);
+        var isValid = await userManager.VerifyTwoFactorTokenAsync(
+          user,
+          userManager.Options.Tokens.AuthenticatorTokenProvider,
+          normalizedCode);
+
+        result = isValid
+          ? Microsoft.AspNetCore.Identity.SignInResult.Success
+          : Microsoft.AspNetCore.Identity.SignInResult.Failed;
+      }
+
+      if (result.Succeeded)
+      {
+        await userManager.ResetAccessFailedCountAsync(user);
+      }
+    }
+
+    if (!result.Succeeded)
+    {
+      return Unauthorized();
+    }
+
+    var principal = await signInManager.CreateUserPrincipalAsync(user);
+    var tokens = CreateDesktopLoginTokens(
+      principal,
+      bearerTokenOptions.Get(IdentityConstants.BearerScheme),
+      timeProvider);
+
+    return Ok(new DesktopLoginResponseDto(RequiresTwoFactor: false, Tokens: tokens));
+  }
+
   [Authorize]
   [HttpPost("logout")]
   public async Task<IActionResult> Logout(
@@ -36,5 +113,34 @@ public class AuthController : ControllerBase
   {
     await signInManager.SignOutAsync();
     return NoContent();
+  }
+
+  private static AccessTokenResponseDto CreateDesktopLoginTokens(
+    ClaimsPrincipal principal,
+    BearerTokenOptions options,
+    TimeProvider timeProvider)
+  {
+    var utcNow = timeProvider.GetUtcNow();
+    var bearerTicket = new AuthenticationTicket(
+      principal,
+      new AuthenticationProperties
+      {
+        ExpiresUtc = utcNow + options.BearerTokenExpiration
+      },
+      $"{IdentityConstants.BearerScheme}:AccessToken");
+
+    var refreshTicket = new AuthenticationTicket(
+      principal,
+      new AuthenticationProperties
+      {
+        ExpiresUtc = utcNow + options.RefreshTokenExpiration
+      },
+      $"{IdentityConstants.BearerScheme}:RefreshToken");
+
+    return new AccessTokenResponseDto(
+      TokenType: "Bearer",
+      AccessToken: options.BearerTokenProtector.Protect(bearerTicket),
+      ExpiresIn: (int)options.BearerTokenExpiration.TotalSeconds,
+      RefreshToken: options.RefreshTokenProtector.Protect(refreshTicket));
   }
 }

@@ -133,7 +133,7 @@ public partial class ControlrViewer : UserControl
 
     if (!Options.Auth.HasAuthConfigured)
     {
-      SetErrorContent(Assets.Resources.ControlrViewer_PatRequired);
+      SetErrorContent(Assets.Resources.ControlrViewer_AuthRequired);
       return;
     }
 

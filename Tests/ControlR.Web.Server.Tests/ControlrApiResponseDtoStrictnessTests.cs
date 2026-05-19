@@ -186,7 +186,12 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       DisableStreamingResponseDtoStrictness = disableStreamingResponseDtoStrictness
     });
 
-    return new ControlrApi(httpClient, NullLogger<ControlrApi>.Instance, options);
+    return new ControlrApi(
+      httpClient,
+      new StaticHttpClientFactory(httpClient),
+      NullLogger<ControlrApi>.Instance,
+      options,
+      TimeProvider.System);
   }
 
   private static DeviceResponseDto CreateDeviceResponseDto(int index)
@@ -219,6 +224,13 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       IsOutdated: false,
       DnsHostName: $"device-{index}.contoso.local");
   }
+  
+  private sealed class StaticHttpClientFactory(HttpClient httpClient) : IHttpClientFactory
+  {
+    private readonly HttpClient _httpClient = httpClient;
+
+    public HttpClient CreateClient(string name) => _httpClient;
+  }
 
   private sealed class StaticJsonMessageHandler(string jsonResponse) : HttpMessageHandler
   {
@@ -234,4 +246,5 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       return Task.FromResult(response);
     }
   }
+
 }

@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using System.Net.Http.Headers;
 
 namespace ControlR.ApiClient;
 
@@ -41,13 +40,21 @@ public static class ServiceCollectionExtensions
       .ValidateOnStart();
 
     // Register the factory for the ControlR API client.
+    services.AddHttpClient(
+      ControlrApiClientNames.UnauthenticatedClient,
+      (sp, client) =>
+      {
+        var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+        client.BaseAddress = options.BaseUrl;
+      });
+
     services
       .AddHttpClient<IControlrApi, ControlrApi>(
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
         client.BaseAddress = options.BaseUrl;
-        ApplyAuthHeader(client, options);
+        ControlrApiHttpClientAuth.ApplyAuthHeader(client, options);
       });
     return services;
   }
@@ -92,13 +99,21 @@ public static class ServiceCollectionExtensions
       .ValidateOnStart();
 
     // Register the factory for the ControlR API client.
+    services.AddHttpClient(
+      ControlrApiClientNames.UnauthenticatedClient,
+      (sp, client) =>
+      {
+        var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+        client.BaseAddress = options.BaseUrl;
+      });
+
     services
       .AddHttpClient<IControlrApi, ControlrApi>(
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
         client.BaseAddress = options.BaseUrl;
-        ApplyAuthHeader(client, options);
+        ControlrApiHttpClientAuth.ApplyAuthHeader(client, options);
       });
 
     return services;
@@ -134,25 +149,5 @@ public static class ServiceCollectionExtensions
   {
     builder.Services.AddControlrApiClient(builder.Configuration, configurationSectionName);
     return builder;
-  }
-
-  private static void ApplyAuthHeader(HttpClient client, ControlrApiClientOptions options)
-  {
-    client.DefaultRequestHeaders.Remove(ControlrApiClientOptions.PersonalAccessTokenHeader);
-    client.DefaultRequestHeaders.Remove(ControlrApiClientAuthOptions.AuthorizationHeader);
-    client.DefaultRequestHeaders.Authorization = null;
-
-    if (!options.Auth.TryGetAuthHeader(out var headerName, out var headerValue))
-    {
-      return;
-    }
-
-    if (headerName == ControlrApiClientAuthOptions.AuthorizationHeader)
-    {
-      client.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(headerValue);
-      return;
-    }
-
-    client.DefaultRequestHeaders.Add(headerName, headerValue);
   }
 }

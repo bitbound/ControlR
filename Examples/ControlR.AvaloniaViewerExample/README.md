@@ -1,49 +1,22 @@
 # ControlR Avalonia Viewer Example
 
-This example demonstrates how to use the ControlR Avalonia Viewer in a local dev environment.
+This example hosts `ControlrViewer` in a standalone Avalonia desktop application and signs in with the same email and password used in the web app.
 
 ## Configuration
 
-For local dev, use `User Secrets` to supply the configuration. To set up:
+Supply the server URL and target device ID with user secrets:
 
-### Using .NET User Secrets (Recommended)
-
-```bash
-cd Examples/ControlR.AvaloniaViewerExample
-
-# Set your server URL
-dotnet user-secrets set "ViewerOptions:BaseUrl" "https://localhost:7033"
-
-# Set the device ID you want to connect to
-dotnet user-secrets set "ViewerOptions:DeviceId" "f9ae6af7-e397-4a68-8b78-492f822dd7eb"
-
-# Set your Personal Access Token
-dotnet user-secrets set "ViewerOptions:PersonalAccessToken" "your-pat-here"
+```powershell
+dotnet user-secrets set "ControlrViewerOptions:BaseUrl" "https://localhost:7033" --project Examples/ControlR.AvaloniaViewerExample/ControlR.AvaloniaViewerExample.csproj
+dotnet user-secrets set "ControlrViewerOptions:DeviceId" "f9ae6af7-e397-4a68-8b78-492f822dd7eb" --project Examples/ControlR.AvaloniaViewerExample/ControlR.AvaloniaViewerExample.csproj
 ```
 
-### Using appsettings.json
-Alternatively, create an `appsettings.json` file (gitignored):
+The sample prompts for the account email and password at runtime. If the account has two-factor authentication enabled, the app asks for the authenticator code after the initial sign-in attempt.
 
-```json
-{
-  "ControlrViewerOptions": {
-    "BaseUrl": "https://localhost:7033",
-    "DeviceId": "f9ae6af7-e397-4a68-8b78-492f822dd7eb",
-    "PersonalAccessToken": "your-pat-here"
-  }
-}
+## Run
+
+```powershell
+dotnet run --project Examples/ControlR.AvaloniaViewerExample/ControlR.AvaloniaViewerExample.csproj
 ```
 
-**WARNING**: Never commit `appsettings.json` with real credentials.
-
-### Injecting Options into ControlrViewer
-
-See [App.axaml.cs](./App.axaml.cs), [MainWindow.axaml](./Views/MainWindow.axaml), and [MainWindowViewModel.cs](./ViewModels/MainWindowViewModel.cs) for an example of how to realize the options and pass them into the `ControlrViewer` control via data binding.
-
-## Running the Application
-
-Once configured, simply run:
-
-```bash
-dotnet run
-```
+The sample keeps the issued bearer and refresh tokens in memory only and refreshes them automatically while the app remains open.

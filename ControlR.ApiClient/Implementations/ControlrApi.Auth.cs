@@ -9,6 +9,7 @@ public partial class ControlrApi
 {
   private const string ChangePasswordEndpoint = $"{HttpConstants.AuthEndpoint}/change-password";
   private const string ConfirmEmailEndpoint = $"{HttpConstants.AuthEndpoint}/confirmEmail";
+  private const string DesktopLoginEndpoint = $"{HttpConstants.AuthEndpoint}/desktop-login";
   private const string ForgotPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/forgotPassword";
   private const string ManageInfoEndpoint = $"{HttpConstants.AuthEndpoint}/manage/info";
   private const string RegisterEndpoint = $"{HttpConstants.AuthEndpoint}/register";
@@ -67,7 +68,17 @@ public partial class ControlrApi
       using var response = await _client.PostAsJsonAsync($"{HttpConstants.AuthEndpoint}/login?useCookies=false", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(cancellationToken);
-    });
+    }, allowAutoRefresh: false);
+  }
+
+  async Task<ApiResult<DesktopLoginResponseDto>> IAuthApi.LogInDesktop(LoginRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(DesktopLoginEndpoint, request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<DesktopLoginResponseDto>(cancellationToken);
+    }, allowAutoRefresh: false);
   }
 
   async Task<ApiResult> IAuthApi.LogOut(CancellationToken cancellationToken)
@@ -96,7 +107,7 @@ public partial class ControlrApi
       using var response = await _client.PostAsJsonAsync($"{HttpConstants.AuthEndpoint}/refresh", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(cancellationToken);
-    });
+    }, allowAutoRefresh: false);
   }
 
   async Task<ApiResult> IAuthApi.Register(RegisterRequestDto request, CancellationToken cancellationToken)

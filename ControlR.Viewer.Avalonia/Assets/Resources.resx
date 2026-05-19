@@ -522,8 +522,8 @@ Details: {0}</value>
   <data name="ControlrViewer_DeviceIdRequired" xml:space="preserve">
     <value>DeviceId is required. Set the DeviceId property in the Options.</value>
   </data>
-  <data name="ControlrViewer_PatRequired" xml:space="preserve">
-    <value>PersonalAccessToken is required. Set the PersonalAccessToken property in the Options.</value>
+  <data name="ControlrViewer_AuthRequired" xml:space="preserve">
+    <value>Authentication is required. Set either PersonalAccessToken or BearerToken in the Options.</value>
   </data>
   <data name="ControlrViewer_OptionsNotSet" xml:space="preserve">
     <value>Options have not been set.</value>

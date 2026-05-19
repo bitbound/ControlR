@@ -16,6 +16,7 @@ public interface IAuthApi
   Task<ApiResult> ForgotPassword(ForgotPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<ManageInfoResponseDto>> GetManageInfo(CancellationToken cancellationToken = default);
   Task<ApiResult<AccessTokenResponseDto>> LogIn(LoginRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<DesktopLoginResponseDto>> LogInDesktop(LoginRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> LogOut(CancellationToken cancellationToken = default);
   Task<ApiResult<TwoFactorResponseDto>> ManageTwoFactor(TwoFactorRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<AccessTokenResponseDto>> Refresh(RefreshTokenRequestDto request, CancellationToken cancellationToken = default);
@@ -177,13 +178,13 @@ public interface IUserTagsApi
 
 public interface IUsersApi
 {
-  Task<ApiResult<AdminResetPasswordResponseDto>> ResetPassword(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto>> CreateUser(CreateUserRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(Guid userId, CreatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUser(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUserPersonalAccessToken(Guid userId, Guid tokenId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto[]>> GetAllUsers(CancellationToken cancellationToken = default);
   Task<ApiResult<PersonalAccessTokenDto[]>> GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken = default);
+  Task<ApiResult<AdminResetPasswordResponseDto>> ResetPassword(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
 }
 

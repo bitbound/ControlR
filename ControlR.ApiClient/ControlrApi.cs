@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Dtos;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -37,8 +39,10 @@ public interface IControlrApi
 
 public partial class ControlrApi(
   HttpClient httpClient,
+  IHttpClientFactory httpClientFactory,
   ILogger<ControlrApi> logger,
-  IOptions<ControlrApiClientOptions> options) :
+  IOptions<ControlrApiClientOptions> options,
+  TimeProvider timeProvider) :
   IControlrApi,
   IAgentUpdateApi,
   IAuthApi,
@@ -67,9 +71,13 @@ public partial class ControlrApi(
   IAgentVersionApi,
   IServerVersionApi
 {
+  private static readonly TimeSpan _bearerRefreshWindow = TimeSpan.FromMinutes(1);
+
   private readonly HttpClient _client = httpClient;
+  private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrApi> _logger = logger;
   private readonly IOptions<ControlrApiClientOptions> _options = options;
+  private readonly TimeProvider _timeProvider = timeProvider;
 
   public IAgentUpdateApi AgentUpdate => this;
   public IAgentVersionApi AgentVersion => this;
@@ -98,15 +106,31 @@ public partial class ControlrApi(
   public IUserServerSettingsApi UserServerSettings => this;
   public IUserTagsApi UserTags => this;
 
-  private async Task<ApiResult> ExecuteApiCall(Func<Task> func)
+  private async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
   {
     try
     {
+      await PrepareClientForRequest(allowAutoRefresh);
       await func.Invoke();
       return ApiResult.Ok();
     }
     catch (HttpRequestException ex)
     {
+      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex))
+      {
+        try
+        {
+          await PrepareClientForRequest(allowAutoRefresh: false);
+          await func.Invoke();
+          return ApiResult.Ok();
+        }
+        catch (HttpRequestException retryEx)
+        {
+          var retryResult = ApiResult.Fail(retryEx.Message, retryEx.StatusCode, retryEx.HttpRequestError);
+          return LogFailure(retryResult, retryEx);
+        }
+      }
+
       var apiResult = ApiResult.Fail(ex.Message, ex.StatusCode, ex.HttpRequestError);
       return LogFailure(apiResult, ex);
     }
@@ -130,10 +154,11 @@ public partial class ControlrApi(
     }
   }
 
-  private async Task<ApiResult<T>> ExecuteApiCall<T>(Func<Task<T?>> func)
+  private async Task<ApiResult<T>> ExecuteApiCall<T>(Func<Task<T?>> func, bool allowAutoRefresh = true)
   {
     try
     {
+      await PrepareClientForRequest(allowAutoRefresh);
       var resultValue = await func.Invoke() ??
         throw new HttpRequestException("The server response was empty.");
 
@@ -155,6 +180,37 @@ public partial class ControlrApi(
     }
     catch (HttpRequestException ex)
     {
+      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex))
+      {
+        try
+        {
+          await PrepareClientForRequest(allowAutoRefresh: false);
+          var retriedValue = await func.Invoke() ??
+            throw new HttpRequestException("The server response was empty.");
+
+          var validationErrors = DtoValidatorFactory.Validate(retriedValue);
+          if (validationErrors is not null)
+          {
+            if (_options.Value.DisableResponseDtoStrictness)
+            {
+              _logger.LogWarning("Response DTO validation failed but strictness is disabled: {Reason}", validationErrors);
+              return ApiResult.Ok(retriedValue);
+            }
+
+            var retryReason = $"DTO validation failed: {validationErrors}";
+            var retryResult = ApiResult.Fail<T>(retryReason, HttpStatusCode.InternalServerError);
+            return LogFailure(retryResult);
+          }
+
+          return ApiResult.Ok(retriedValue);
+        }
+        catch (HttpRequestException retryEx)
+        {
+          var retryResult = ApiResult.Fail<T>(retryEx.Message, retryEx.StatusCode, retryEx.HttpRequestError);
+          return LogFailure(retryResult, retryEx);
+        }
+      }
+
       var apiResult = ApiResult.Fail<T>(ex.Message, ex.StatusCode, ex.HttpRequestError);
       return LogFailure(apiResult, ex);
     }
@@ -200,5 +256,84 @@ public partial class ControlrApi(
 
     _logger.LogError(ex, "API request failed: {Reason}", result.Reason);
     return result;
+  }
+
+  private async Task PrepareClientForRequest(bool allowAutoRefresh)
+  {
+    if (allowAutoRefresh)
+    {
+      await RefreshBearerTokenIfNeeded(forceRefresh: false);
+    }
+
+    ControlrApiHttpClientAuth.ApplyAuthHeader(_client, _options.Value);
+  }
+
+  private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh)
+  {
+    var auth = _options.Value.Auth;
+    if (!auth.CanRefreshBearerToken)
+    {
+      return false;
+    }
+
+    if (!forceRefresh && !auth.ShouldRefreshBearerToken(_timeProvider, _bearerRefreshWindow))
+    {
+      return false;
+    }
+
+    await auth.BearerRefreshLock.WaitAsync();
+    try
+    {
+      if (!auth.CanRefreshBearerToken)
+      {
+        return false;
+      }
+
+      if (!forceRefresh && !auth.ShouldRefreshBearerToken(_timeProvider, _bearerRefreshWindow))
+      {
+        return false;
+      }
+
+      var refreshToken = auth.RefreshToken;
+      if (string.IsNullOrWhiteSpace(refreshToken))
+      {
+        return false;
+      }
+
+      var refreshClient = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
+      using var response = await refreshClient.PostAsJsonAsync(
+        "/api/auth/refresh",
+        new RefreshTokenRequestDto(refreshToken));
+
+      await response.EnsureSuccessStatusCodeWithDetails();
+
+      var refreshedTokens = await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>() ??
+        throw new HttpRequestException("The refresh response was empty.");
+
+      auth.SetBearerTokenResponse(refreshedTokens, _timeProvider);
+      return true;
+    }
+    finally
+    {
+      auth.BearerRefreshLock.Release();
+    }
+  }
+
+  private async Task<bool> TryRefreshAfterUnauthorized(HttpRequestException ex)
+  {
+    if (ex.StatusCode != HttpStatusCode.Unauthorized)
+    {
+      return false;
+    }
+
+    try
+    {
+      return await RefreshBearerTokenIfNeeded(forceRefresh: true);
+    }
+    catch (Exception refreshEx)
+    {
+      _logger.LogWarning(refreshEx, "Bearer token refresh failed after unauthorized response.");
+      return false;
+    }
   }
 }

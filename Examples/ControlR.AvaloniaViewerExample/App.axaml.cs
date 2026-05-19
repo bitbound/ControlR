@@ -71,9 +71,7 @@ public partial class App : Application
         ? baseUrl
         : throw new InvalidOperationException("ControlrViewerOptions:BaseUrl not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:BaseUrl\" \"https://controlr.example.com\""),
       DeviceId = Guid.Parse(configuration["ControlrViewerOptions:DeviceId"]
-        ?? throw new InvalidOperationException("ControlrViewerOptions:DeviceId not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:DeviceId\" \"your-device-guid\"")),
-      PersonalAccessToken = configuration["ControlrViewerOptions:PersonalAccessToken"]
-        ?? throw new InvalidOperationException("ControlrViewerOptions:PersonalAccessToken not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:PersonalAccessToken\" \"your-pat-token\"")
+        ?? throw new InvalidOperationException("ControlrViewerOptions:DeviceId not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:DeviceId\" \"your-device-guid\""))
     };
 
     return new MainWindowViewModel(viewerOptions);
