@@ -280,6 +280,12 @@ public partial class ControlrApi(
         HttpStatusCode.Unauthorized);
     }
 
+    if (refreshResult == BearerTokenRefreshResult.EndpointUnavailable)
+    {
+      _logger.LogWarning("Bearer token refresh endpoint is not available.");
+      return false;
+    }
+
     return refreshResult == BearerTokenRefreshResult.Refreshed;
   }
 

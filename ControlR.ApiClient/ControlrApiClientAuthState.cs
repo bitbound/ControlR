@@ -4,72 +4,163 @@ using ControlR.Libraries.DataRedaction;
 
 namespace ControlR.ApiClient;
 
-public class ControlrApiClientAuthState
+public class ControlrApiClientAuthState(string? personalAccessToken = null)
 {
   public const string AuthorizationHeader = "Authorization";
 
+  private readonly object _stateLock = new();
+
+  private AuthState _state = new(
+    BearerStateVersion: 0,
+    Snapshot: new AuthSnapshot(personalAccessToken, null, null, null));
+
   public SemaphoreSlim BearerRefreshLock { get; } = new(1, 1);
-
   [ProtectedDataClassification]
-  public string? BearerToken { get; set; }
-  public DateTimeOffset? BearerTokenExpiresAt { get; set; }
-
-  public bool CanRefreshBearerToken =>
-    !string.IsNullOrWhiteSpace(BearerToken) &&
-    !string.IsNullOrWhiteSpace(RefreshToken) &&
-    BearerTokenExpiresAt is not null;
-
-  public bool HasAuthConfigured =>
-    !string.IsNullOrWhiteSpace(PersonalAccessToken) ||
-    !string.IsNullOrWhiteSpace(BearerToken);
-
+  public string? BearerToken => GetSnapshot().BearerToken;
+  public DateTimeOffset? BearerTokenExpiresAt => GetSnapshot().BearerTokenExpiresAt;
+  public bool CanRefreshBearerToken
+  {
+    get
+    {
+      var snapshot = GetSnapshot();
+      return !string.IsNullOrWhiteSpace(snapshot.BearerToken) &&
+        !string.IsNullOrWhiteSpace(snapshot.RefreshToken) &&
+        snapshot.BearerTokenExpiresAt is not null;
+    }
+  }
+  public bool HasAuthConfigured
+  {
+    get
+    {
+      var snapshot = GetSnapshot();
+      return !string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken) ||
+        !string.IsNullOrWhiteSpace(snapshot.BearerToken);
+    }
+  }
   [ProtectedDataClassification]
-  public string? PersonalAccessToken { get; set; }
-
+  public string? PersonalAccessToken => GetSnapshot().PersonalAccessToken;
   [ProtectedDataClassification]
-  public string? RefreshToken { get; set; }
+  public string? RefreshToken => GetSnapshot().RefreshToken;
 
   public void ClearBearerTokens()
   {
-    BearerToken = null;
-    BearerTokenExpiresAt = null;
-    RefreshToken = null;
+    lock (_stateLock)
+    {
+      var state = _state;
+      _state = state with
+      {
+        BearerStateVersion = state.BearerStateVersion + 1,
+        Snapshot = state.Snapshot with
+        {
+          BearerToken = null,
+          BearerTokenExpiresAt = null,
+          RefreshToken = null
+        }
+      };
+    }
   }
+
+  public void ClearPersonalAccessToken()
+  {
+    SetPersonalAccessToken(null);
+  }
+
+  public AuthSnapshot GetSnapshot() => Volatile.Read(ref _state).Snapshot;
 
   public void SetBearerTokenResponse(AccessTokenResponseDto response, TimeProvider timeProvider)
   {
-    BearerToken = response.AccessToken;
-    BearerTokenExpiresAt = timeProvider.GetUtcNow().AddSeconds(response.ExpiresIn);
-    RefreshToken = response.RefreshToken;
+    SetBearerTokens(
+      response.AccessToken,
+      response.RefreshToken,
+      timeProvider.GetUtcNow().AddSeconds(Math.Max(response.ExpiresIn, 1)));
+  }
+
+  public void SetBearerTokens(string? bearerToken, string? refreshToken, DateTimeOffset? bearerTokenExpiresAt)
+  {
+    lock (_stateLock)
+    {
+      var state = _state;
+      _state = state with
+      {
+        BearerStateVersion = state.BearerStateVersion + 1,
+        Snapshot = state.Snapshot with
+        {
+          BearerToken = bearerToken,
+          RefreshToken = refreshToken,
+          BearerTokenExpiresAt = bearerTokenExpiresAt
+        }
+      };
+    }
+  }
+
+  public void SetPersonalAccessToken(string? personalAccessToken)
+  {
+    lock (_stateLock)
+    {
+      var state = _state;
+      _state = state with
+      {
+        Snapshot = state.Snapshot with
+        {
+          PersonalAccessToken = personalAccessToken
+        }
+      };
+    }
   }
 
   public bool ShouldRefreshBearerToken(TimeProvider timeProvider, TimeSpan refreshWindow)
   {
-    if (!CanRefreshBearerToken || BearerTokenExpiresAt is null)
+    var snapshot = GetSnapshot();
+    if (string.IsNullOrWhiteSpace(snapshot.BearerToken) ||
+        string.IsNullOrWhiteSpace(snapshot.RefreshToken) ||
+        snapshot.BearerTokenExpiresAt is null)
     {
       return false;
     }
 
-    return BearerTokenExpiresAt <= timeProvider.GetUtcNow() + refreshWindow;
+    return snapshot.BearerTokenExpiresAt <= timeProvider.GetUtcNow() + refreshWindow;
   }
 
   public override string ToString() => "[REDACTED]";
+
+  public BearerRefreshContext? TryCreateBearerRefreshContext(
+    TimeProvider timeProvider,
+    TimeSpan refreshWindow,
+    bool forceRefresh)
+  {
+    var state = Volatile.Read(ref _state);
+    var snapshot = state.Snapshot;
+    if (string.IsNullOrWhiteSpace(snapshot.BearerToken) ||
+        string.IsNullOrWhiteSpace(snapshot.RefreshToken) ||
+        snapshot.BearerTokenExpiresAt is null)
+    {
+      return null;
+    }
+
+    if (!forceRefresh && snapshot.BearerTokenExpiresAt > timeProvider.GetUtcNow() + refreshWindow)
+    {
+      return null;
+    }
+
+    return new BearerRefreshContext(state.BearerStateVersion, snapshot.RefreshToken);
+  }
 
   public bool TryGetAuthHeader(
     [NotNullWhen(true)] out string? headerName,
     [NotNullWhen(true)] out string? headerValue)
   {
-    if (!string.IsNullOrWhiteSpace(PersonalAccessToken))
+    var snapshot = GetSnapshot();
+    if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
     {
       headerName = ControlrApiClientOptions.PersonalAccessTokenHeader;
-      headerValue = PersonalAccessToken;
+      headerValue = snapshot.PersonalAccessToken;
       return true;
     }
 
-    if (!string.IsNullOrWhiteSpace(BearerToken))
+    if (!string.IsNullOrWhiteSpace(snapshot.BearerToken))
     {
       headerName = AuthorizationHeader;
-      headerValue = $"Bearer {BearerToken}";
+      headerValue = $"Bearer {snapshot.BearerToken}";
       return true;
     }
 
@@ -77,4 +168,43 @@ public class ControlrApiClientAuthState
     headerValue = null;
     return false;
   }
+
+  public bool TrySetBearerTokenResponse(
+    AccessTokenResponseDto response,
+    long expectedBearerStateVersion,
+    TimeProvider timeProvider)
+  {
+    lock (_stateLock)
+    {
+      var state = _state;
+      if (state.BearerStateVersion != expectedBearerStateVersion)
+      {
+        return false;
+      }
+
+      _state = state with
+      {
+        BearerStateVersion = state.BearerStateVersion + 1,
+        Snapshot = state.Snapshot with
+        {
+          BearerToken = response.AccessToken,
+          RefreshToken = response.RefreshToken,
+          BearerTokenExpiresAt = timeProvider.GetUtcNow().AddSeconds(Math.Max(response.ExpiresIn, 1))
+        }
+      };
+      return true;
+    }
+  }
+
+  public sealed record AuthSnapshot(
+    string? PersonalAccessToken,
+    string? BearerToken,
+    DateTimeOffset? BearerTokenExpiresAt,
+    string? RefreshToken);
+  public sealed record AuthState(
+    long BearerStateVersion,
+    AuthSnapshot Snapshot);
+  public sealed record BearerRefreshContext(
+    long ExpectedBearerStateVersion,
+    string RefreshToken);
 }

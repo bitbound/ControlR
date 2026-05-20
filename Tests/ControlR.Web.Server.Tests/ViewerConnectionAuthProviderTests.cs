@@ -96,7 +96,7 @@ public class ViewerConnectionAuthProviderTests
     {
     }
 
-    public Task<string?> GetAccessToken() => Task.FromResult(AccessToken);
+    public Task<string?> GetAccessToken(CancellationToken cancellationToken = default) => Task.FromResult(AccessToken);
 
     public void SetBaseUrl(Uri baseUrl)
     {

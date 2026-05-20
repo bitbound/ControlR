@@ -19,7 +19,7 @@ public interface IControlrAuthSession : IDisposable
   bool RequiresTwoFactor { get; }
   ControlrAuthSessionState State { get; }
 
-  Task<string?> GetAccessToken();
+  Task<string?> GetAccessToken(CancellationToken cancellationToken = default);
   void SetBaseUrl(Uri baseUrl);
   void SetPersonalAccessToken(string? personalAccessToken);
   Task<InteractiveLoginResult> SignIn(string email, string password, CancellationToken cancellationToken = default);
@@ -44,18 +44,19 @@ public sealed class ControlrAuthSession(
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrAuthSession> _logger = logger;
-  private readonly IOptionsMonitor<ControlrApiClientOptions> _optionsMonitor = optionsMonitor;
   private readonly TimeProvider _timeProvider = timeProvider;
 
+  private Uri _baseUrl = optionsMonitor.CurrentValue.BaseUrl;
   private string? _pendingEmail;
   private string? _pendingPassword;
   private CancellationTokenSource? _refreshLoopCts;
+  private long _refreshLoopGeneration;
   private ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
 
   public event EventHandler<ControlrAuthSessionStateChangedEventArgs>? StateChanged;
 
   public DateTimeOffset? AccessTokenExpiresAt => _authState.BearerTokenExpiresAt;
-  public Uri BaseUrl => _optionsMonitor.CurrentValue.BaseUrl;
+  public Uri BaseUrl => Volatile.Read(ref _baseUrl);
   public bool IsAuthenticated => State == ControlrAuthSessionState.Authenticated;
   public string? PersonalAccessToken => _authState.PersonalAccessToken;
   public bool RequiresTwoFactor => State == ControlrAuthSessionState.AwaitingTwoFactor;
@@ -66,7 +67,7 @@ public sealed class ControlrAuthSession(
     StopRefreshLoop();
   }
 
-  public async Task<string?> GetAccessToken()
+  public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default)
   {
     if (!string.IsNullOrWhiteSpace(_authState.PersonalAccessToken))
     {
@@ -75,7 +76,11 @@ public sealed class ControlrAuthSession(
 
     try
     {
-      await RefreshBearerTokenIfNeeded(forceRefresh: false, CancellationToken.None);
+      await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
+    }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+      throw;
     }
     catch (Exception ex)
     {
@@ -87,7 +92,7 @@ public sealed class ControlrAuthSession(
 
   public void SetBaseUrl(Uri baseUrl)
   {
-    _optionsMonitor.CurrentValue.BaseUrl = baseUrl;
+    Volatile.Write(ref _baseUrl, baseUrl);
   }
 
   public void SetPersonalAccessToken(string? personalAccessToken)
@@ -96,7 +101,7 @@ public sealed class ControlrAuthSession(
 
     if (!string.IsNullOrWhiteSpace(personalAccessToken))
     {
-      _authState.PersonalAccessToken = personalAccessToken;
+      _authState.SetPersonalAccessToken(personalAccessToken);
     }
 
     UpdateState(ControlrAuthSessionState.SignedOut);
@@ -178,6 +183,12 @@ public sealed class ControlrAuthSession(
       : result;
   }
 
+  private static void CancelRefreshLoop(CancellationTokenSource? cts)
+  {
+    cts?.Cancel();
+    cts?.Dispose();
+  }
+
   private void ClearPendingCredentials()
   {
     _pendingEmail = null;
@@ -189,7 +200,10 @@ public sealed class ControlrAuthSession(
     try
     {
       var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
-      using var response = await client.PostAsJsonAsync(InteractiveLoginEndpoint, request, cancellationToken);
+      using var response = await client.PostAsJsonAsync(
+        new Uri(BaseUrl, InteractiveLoginEndpoint),
+        request,
+        cancellationToken);
 
       if (response.StatusCode == HttpStatusCode.Unauthorized)
       {
@@ -223,11 +237,16 @@ public sealed class ControlrAuthSession(
     }
   }
 
-  private async Task HandleRefreshLoopFault(string message)
+  private Task HandleRefreshLoopFault(long generation, string message)
   {
+    if (generation != Volatile.Read(ref _refreshLoopGeneration))
+    {
+      return Task.CompletedTask;
+    }
+
     ResetSession(clearPersonalAccessToken: false);
     UpdateState(ControlrAuthSessionState.Expired, message);
-    await Task.CompletedTask;
+    return Task.CompletedTask;
   }
 
   private async Task RefreshBearerTokenIfNeeded(bool forceRefresh, CancellationToken cancellationToken)
@@ -235,11 +254,17 @@ public sealed class ControlrAuthSession(
     var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
       forceRefresh,
       _refreshLeadTime,
+      BaseUrl,
       cancellationToken);
 
     if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {
       throw new InvalidOperationException("The refresh token is no longer valid.");
+    }
+
+    if (refreshResult == BearerTokenRefreshResult.EndpointUnavailable)
+    {
+      throw new InvalidOperationException("The bearer token refresh endpoint is not available.");
     }
 
     if (refreshResult == BearerTokenRefreshResult.Refreshed &&
@@ -257,17 +282,22 @@ public sealed class ControlrAuthSession(
 
     if (clearPersonalAccessToken)
     {
-      _authState.PersonalAccessToken = null;
+      _authState.ClearPersonalAccessToken();
     }
   }
 
-  private async Task RunRefreshLoop(CancellationToken cancellationToken)
+  private async Task RunRefreshLoop(long generation, CancellationToken cancellationToken)
   {
     try
     {
       while (!cancellationToken.IsCancellationRequested)
       {
-        var expiresAt = _authState.BearerTokenExpiresAt;
+        if (generation != Volatile.Read(ref _refreshLoopGeneration))
+        {
+          return;
+        }
+
+        var expiresAt = _authState.GetSnapshot().BearerTokenExpiresAt;
         if (expiresAt is null)
         {
           return;
@@ -289,27 +319,30 @@ public sealed class ControlrAuthSession(
     catch (Exception ex)
     {
       _logger.LogWarning(ex, "Bearer token refresh failed in the background.");
-      await HandleRefreshLoopFault("The session expired. Sign in again.");
+      await HandleRefreshLoopFault(generation, "The session expired. Sign in again.");
     }
   }
 
   private void StartRefreshLoop()
   {
-    StopRefreshLoop();
     if (!_authState.CanRefreshBearerToken)
     {
+      StopRefreshLoop();
       return;
     }
 
-    _refreshLoopCts = new CancellationTokenSource();
-    _ = RunRefreshLoop(_refreshLoopCts.Token);
+    var cts = new CancellationTokenSource();
+    var generation = Interlocked.Increment(ref _refreshLoopGeneration);
+    var previousCts = Interlocked.Exchange(ref _refreshLoopCts, cts);
+    CancelRefreshLoop(previousCts);
+    _ = RunRefreshLoop(generation, cts.Token);
   }
 
   private void StopRefreshLoop()
   {
-    _refreshLoopCts?.Cancel();
-    _refreshLoopCts?.Dispose();
-    _refreshLoopCts = null;
+    Interlocked.Increment(ref _refreshLoopGeneration);
+    var cts = Interlocked.Exchange(ref _refreshLoopCts, null);
+    CancelRefreshLoop(cts);
   }
 
   private void UpdateState(ControlrAuthSessionState state, string? message = null)

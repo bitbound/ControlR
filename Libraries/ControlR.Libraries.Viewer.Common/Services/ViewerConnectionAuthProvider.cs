@@ -30,7 +30,7 @@ public class ViewerConnectionAuthProvider(
       return;
     }
 
-    options.AccessTokenProvider = _authSession.GetAccessToken;
+    options.AccessTokenProvider = () => _authSession.GetAccessToken();
   }
 
   public async Task<IReadOnlyDictionary<string, string>> GetWebSocketHeaders(CancellationToken cancellationToken = default)
@@ -48,7 +48,7 @@ public class ViewerConnectionAuthProvider(
       };
     }
 
-    var accessToken = await _authSession.GetAccessToken();
+    var accessToken = await _authSession.GetAccessToken(cancellationToken);
     if (string.IsNullOrWhiteSpace(accessToken))
     {
       return new Dictionary<string, string>();

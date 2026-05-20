@@ -9,7 +9,8 @@ public enum BearerTokenRefreshResult
 {
   NoRefreshNeeded,
   Refreshed,
-  Unauthorized
+  Unauthorized,
+  EndpointUnavailable
 }
 
 public interface IBearerTokenRefresher
@@ -17,6 +18,7 @@ public interface IBearerTokenRefresher
   Task<BearerTokenRefreshResult> RefreshIfNeeded(
     bool forceRefresh,
     TimeSpan refreshWindow,
+    Uri? baseUrl = null,
     CancellationToken cancellationToken = default);
 }
 
@@ -34,15 +36,12 @@ public sealed class BearerTokenRefresher(
   public async Task<BearerTokenRefreshResult> RefreshIfNeeded(
     bool forceRefresh,
     TimeSpan refreshWindow,
+    Uri? baseUrl = null,
     CancellationToken cancellationToken = default)
   {
     var auth = _authState;
-    if (!auth.CanRefreshBearerToken)
-    {
-      return BearerTokenRefreshResult.NoRefreshNeeded;
-    }
-
-    if (!forceRefresh && !auth.ShouldRefreshBearerToken(_timeProvider, refreshWindow))
+    var refreshContext = auth.TryCreateBearerRefreshContext(_timeProvider, refreshWindow, forceRefresh);
+    if (refreshContext is null)
     {
       return BearerTokenRefreshResult.NoRefreshNeeded;
     }
@@ -50,31 +49,31 @@ public sealed class BearerTokenRefresher(
     await auth.BearerRefreshLock.WaitAsync(cancellationToken);
     try
     {
-      if (!auth.CanRefreshBearerToken)
-      {
-        return BearerTokenRefreshResult.NoRefreshNeeded;
-      }
-
-      if (!forceRefresh && !auth.ShouldRefreshBearerToken(_timeProvider, refreshWindow))
-      {
-        return BearerTokenRefreshResult.NoRefreshNeeded;
-      }
-
-      var refreshToken = auth.RefreshToken;
-      if (string.IsNullOrWhiteSpace(refreshToken))
+      refreshContext = auth.TryCreateBearerRefreshContext(_timeProvider, refreshWindow, forceRefresh);
+      if (refreshContext is null)
       {
         return BearerTokenRefreshResult.NoRefreshNeeded;
       }
 
       var refreshClient = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
-      using var response = await refreshClient.PostAsJsonAsync(
-        RefreshEndpoint,
-        new RefreshTokenRequestDto(refreshToken),
-        cancellationToken);
+      using var response = baseUrl is null
+        ? await refreshClient.PostAsJsonAsync(
+          RefreshEndpoint,
+          new RefreshTokenRequestDto(refreshContext.RefreshToken),
+          cancellationToken)
+        : await refreshClient.PostAsJsonAsync(
+          new Uri(baseUrl, RefreshEndpoint),
+          new RefreshTokenRequestDto(refreshContext.RefreshToken),
+          cancellationToken);
 
       if (response.StatusCode == HttpStatusCode.Unauthorized)
       {
         return BearerTokenRefreshResult.Unauthorized;
+      }
+
+      if (response.StatusCode == HttpStatusCode.NotFound)
+      {
+        return BearerTokenRefreshResult.EndpointUnavailable;
       }
 
       await response.EnsureSuccessStatusCodeWithDetails();
@@ -82,7 +81,14 @@ public sealed class BearerTokenRefresher(
       var refreshedTokens = await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(cancellationToken) ??
         throw new HttpRequestException("The refresh response was empty.");
 
-      auth.SetBearerTokenResponse(refreshedTokens, _timeProvider);
+      if (!auth.TrySetBearerTokenResponse(
+        refreshedTokens,
+        refreshContext.ExpectedBearerStateVersion,
+        _timeProvider))
+      {
+        return BearerTokenRefreshResult.NoRefreshNeeded;
+      }
+
       return BearerTokenRefreshResult.Refreshed;
     }
     finally
