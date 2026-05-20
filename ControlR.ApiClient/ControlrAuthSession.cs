@@ -31,16 +31,17 @@ public interface IControlrAuthSession : IDisposable
 public sealed class ControlrAuthSession(
   IHttpClientFactory httpClientFactory,
   ControlrApiClientAuthState authState,
+  IBearerTokenRefresher bearerTokenRefresher,
   ILogger<ControlrAuthSession> logger,
   IOptionsMonitor<ControlrApiClientOptions> optionsMonitor,
   TimeProvider timeProvider) : IControlrAuthSession
 {
   private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
-  private const string RefreshEndpoint = $"{HttpConstants.AuthEndpoint}/refresh";
 
   private static readonly TimeSpan _refreshLeadTime = TimeSpan.FromMinutes(1);
 
   private readonly ControlrApiClientAuthState _authState = authState;
+  private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrAuthSession> _logger = logger;
   private readonly IOptionsMonitor<ControlrApiClientOptions> _optionsMonitor = optionsMonitor;
@@ -231,60 +232,20 @@ public sealed class ControlrAuthSession(
 
   private async Task RefreshBearerTokenIfNeeded(bool forceRefresh, CancellationToken cancellationToken)
   {
-    var auth = _authState;
-    if (!auth.CanRefreshBearerToken)
+    var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
+      forceRefresh,
+      _refreshLeadTime,
+      cancellationToken);
+
+    if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {
-      return;
+      throw new InvalidOperationException("The refresh token is no longer valid.");
     }
 
-    if (!forceRefresh && !auth.ShouldRefreshBearerToken(_timeProvider, _refreshLeadTime))
+    if (refreshResult == BearerTokenRefreshResult.Refreshed &&
+        State != ControlrAuthSessionState.Authenticated)
     {
-      return;
-    }
-
-    await auth.BearerRefreshLock.WaitAsync(cancellationToken);
-    try
-    {
-      if (!auth.CanRefreshBearerToken)
-      {
-        return;
-      }
-
-      if (!forceRefresh && !auth.ShouldRefreshBearerToken(_timeProvider, _refreshLeadTime))
-      {
-        return;
-      }
-
-      if (string.IsNullOrWhiteSpace(auth.RefreshToken))
-      {
-        return;
-      }
-
-      var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
-      using var response = await client.PostAsJsonAsync(
-        RefreshEndpoint,
-        new RefreshTokenRequestDto(auth.RefreshToken),
-        cancellationToken);
-
-      if (response.StatusCode == HttpStatusCode.Unauthorized)
-      {
-        throw new InvalidOperationException("The refresh token is no longer valid.");
-      }
-
-      await response.EnsureSuccessStatusCodeWithDetails();
-
-      var tokens = await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(cancellationToken) ??
-        throw new InvalidOperationException("The refresh response was empty.");
-
-      auth.SetBearerTokenResponse(tokens, _timeProvider);
-      if (State != ControlrAuthSessionState.Authenticated)
-      {
-        UpdateState(ControlrAuthSessionState.Authenticated);
-      }
-    }
-    finally
-    {
-      auth.BearerRefreshLock.Release();
+      UpdateState(ControlrAuthSessionState.Authenticated);
     }
   }
 

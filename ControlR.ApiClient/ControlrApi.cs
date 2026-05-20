@@ -1,7 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -40,8 +38,7 @@ public interface IControlrApi
 public partial class ControlrApi(
   HttpClient httpClient,
   ControlrApiClientAuthState authState,
-  TimeProvider timeProvider,
-  IHttpClientFactory httpClientFactory,
+  IBearerTokenRefresher bearerTokenRefresher,
   ILogger<ControlrApi> logger,
   IOptions<ControlrApiClientOptions> options) :
   IControlrApi,
@@ -75,11 +72,10 @@ public partial class ControlrApi(
   private static readonly TimeSpan _bearerRefreshWindow = TimeSpan.FromMinutes(1);
 
   private readonly ControlrApiClientAuthState _authState = authState;
+  private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly HttpClient _client = httpClient;
-  private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrApi> _logger = logger;
   private readonly IOptions<ControlrApiClientOptions> _options = options;
-  private readonly TimeProvider _timeProvider = timeProvider;
 
   public IAgentUpdateApi AgentUpdate => this;
   public IAgentVersionApi AgentVersion => this;
@@ -272,53 +268,19 @@ public partial class ControlrApi(
 
   private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh)
   {
-    var auth = _authState;
-    if (!auth.CanRefreshBearerToken)
+    var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
+      forceRefresh,
+      _bearerRefreshWindow);
+
+    if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {
-      return false;
+      throw new HttpRequestException(
+        "The refresh token is no longer valid.",
+        null,
+        HttpStatusCode.Unauthorized);
     }
 
-    if (!forceRefresh && !auth.ShouldRefreshBearerToken(_timeProvider, _bearerRefreshWindow))
-    {
-      return false;
-    }
-
-    await auth.BearerRefreshLock.WaitAsync();
-    try
-    {
-      if (!auth.CanRefreshBearerToken)
-      {
-        return false;
-      }
-
-      if (!forceRefresh && !auth.ShouldRefreshBearerToken(_timeProvider, _bearerRefreshWindow))
-      {
-        return false;
-      }
-
-      var refreshToken = auth.RefreshToken;
-      if (string.IsNullOrWhiteSpace(refreshToken))
-      {
-        return false;
-      }
-
-      var refreshClient = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
-      using var response = await refreshClient.PostAsJsonAsync(
-        "/api/auth/refresh",
-        new RefreshTokenRequestDto(refreshToken));
-
-      await response.EnsureSuccessStatusCodeWithDetails();
-
-      var refreshedTokens = await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>() ??
-        throw new HttpRequestException("The refresh response was empty.");
-
-      auth.SetBearerTokenResponse(refreshedTokens, _timeProvider);
-      return true;
-    }
-    finally
-    {
-      auth.BearerRefreshLock.Release();
-    }
+    return refreshResult == BearerTokenRefreshResult.Refreshed;
   }
 
   private async Task<bool> TryRefreshAfterUnauthorized(HttpRequestException ex)

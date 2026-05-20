@@ -51,6 +51,8 @@ public static class ServiceCollectionExtensions
       };
     });
 
+    services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
+
     // Register the factory for the ControlR API client.
     services.AddHttpClient(
       ControlrApiClientNames.UnauthenticatedClient,
@@ -123,6 +125,8 @@ public static class ServiceCollectionExtensions
         PersonalAccessToken = options.PersonalAccessToken
       };
     });
+
+    services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
 
     // Register the factory for the ControlR API client.
     services.AddHttpClient(

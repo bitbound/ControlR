@@ -138,9 +138,12 @@ public class ControlrAuthSessionTests
     HttpClient httpClient,
     FakeTimeProvider timeProvider)
   {
+    var httpClientFactory = new StaticHttpClientFactory(httpClient);
+
     return new ControlrAuthSession(
-      new StaticHttpClientFactory(httpClient),
+      httpClientFactory,
       authState,
+      new BearerTokenRefresher(authState, httpClientFactory, timeProvider),
       NullLogger<ControlrAuthSession>.Instance,
       new StaticOptionsMonitor<ControlrApiClientOptions>(options),
       timeProvider);

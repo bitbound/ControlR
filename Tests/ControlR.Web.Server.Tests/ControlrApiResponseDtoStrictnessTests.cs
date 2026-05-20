@@ -186,11 +186,13 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       DisableStreamingResponseDtoStrictness = disableStreamingResponseDtoStrictness
     });
 
+    var authState = new ControlrApiClientAuthState();
+    var httpClientFactory = new StaticHttpClientFactory(httpClient);
+
     return new ControlrApi(
       httpClient,
-      new ControlrApiClientAuthState(),
-      TimeProvider.System,
-      new StaticHttpClientFactory(httpClient),
+      authState,
+      new BearerTokenRefresher(authState, httpClientFactory, TimeProvider.System),
       NullLogger<ControlrApi>.Instance,
       options);
   }
