@@ -214,8 +214,17 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
   {
     try
     {
-      if (_options.AuthenticationMethod != ViewerAuthenticationMethod.InteractiveBearer)
+      if (_options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken)
       {
+        if (!string.IsNullOrWhiteSpace(_options.PersonalAccessToken))
+        {
+          await Dispatcher.UIThread.InvokeAsync(async () => await InitializeViewer());
+        }
+        else
+        {
+          await Dispatcher.UIThread.InvokeAsync(async () => await DisconnectForUnauthenticated(null));
+        }
+
         return;
       }
 

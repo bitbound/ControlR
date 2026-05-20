@@ -17,11 +17,17 @@ public interface IMainWindowViewModel : INotifyPropertyChanged, IDisposable
   string Email { get; set; }
   bool IsBusy { get; }
   bool IsDarkMode { get; set; }
+  bool IsInteractiveBearerAuth { get; set; }
   bool IsLoginVisible { get; }
   bool IsViewerVisible { get; }
+  string LoginDescription { get; }
+  string LoginTitle { get; }
   string Password { get; set; }
+  string PersonalAccessToken { get; set; }
   bool RequiresTwoFactor { get; }
   string ServerUrl { get; set; }
+  bool ShowPersonalAccessTokenInput { get; }
+  bool ShowUserPasswordInputs { get; }
   IAsyncRelayCommand SignInCommand { get; }
   IRelayCommand SignOutCommand { get; }
   string StatusMessage { get; }
@@ -41,6 +47,8 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
     ActivePage = ViewerPage.RemoteControl;
     DeviceIdText = viewerOptions.DeviceId.ToString();
     IsDarkMode = true;
+    IsInteractiveBearerAuth = viewerOptions.AuthenticationMethod == ViewerAuthenticationMethod.InteractiveBearer;
+    PersonalAccessToken = viewerOptions.PersonalAccessToken ?? string.Empty;
     ServerUrl = viewerOptions.BaseUrl.ToString();
     ViewerOptions = viewerOptions;
   }
@@ -55,16 +63,32 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   public partial bool IsBusy { get; set; }
   [ObservableProperty]
   public partial bool IsDarkMode { get; set; } = true;
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(ShowPersonalAccessTokenInput))]
+  [NotifyPropertyChangedFor(nameof(ShowUserPasswordInputs))]
+  [NotifyPropertyChangedFor(nameof(LoginDescription))]
+  [NotifyPropertyChangedFor(nameof(LoginTitle))]
+  public partial bool IsInteractiveBearerAuth { get; set; }
   public bool IsLoginVisible => !IsViewerVisible;
   [ObservableProperty]
   [NotifyPropertyChangedFor(nameof(IsLoginVisible))]
   public partial bool IsViewerVisible { get; set; }
+  public string LoginDescription => ShowPersonalAccessTokenInput
+    ? "Enter the ControlR server, device ID, and a personal access token generated from the web app."
+    : "Enter the ControlR server, device ID, and the same email and password you use in the web app. The OTP field only appears when the account requires two-factor authentication.";
+  public string LoginTitle => ShowPersonalAccessTokenInput
+    ? "Connect with a personal access token"
+    : "Sign in to the viewer";
   [ObservableProperty]
   public partial string Password { get; set; } = string.Empty;
+  [ObservableProperty]
+  public partial string PersonalAccessToken { get; set; } = string.Empty;
   [ObservableProperty]
   public partial bool RequiresTwoFactor { get; set; }
   [ObservableProperty]
   public partial string ServerUrl { get; set; }
+  public bool ShowPersonalAccessTokenInput => !IsInteractiveBearerAuth;
+  public bool ShowUserPasswordInputs => IsInteractiveBearerAuth;
   [ObservableProperty]
   public partial string StatusMessage { get; set; } = string.Empty;
   [ObservableProperty]
@@ -135,18 +159,31 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
     });
   }
 
+  partial void OnIsInteractiveBearerAuthChanged(bool value)
+  {
+    ViewerOptions.AuthenticationMethod = value
+      ? ViewerAuthenticationMethod.InteractiveBearer
+      : ViewerAuthenticationMethod.PersonalAccessToken;
+
+    RequiresTwoFactor = false;
+    TwoFactorCode = string.Empty;
+    StatusMessage = string.Empty;
+
+    if (_authSession is null)
+    {
+      return;
+    }
+
+    ViewerOptions.PersonalAccessToken = null;
+    _authSession.SignOut().GetAwaiter().GetResult();
+  }
+
   [RelayCommand]
   private async Task SignIn(CancellationToken cancellationToken)
   {
     if (!TryApplyViewerConnectionSettings(out var validationError))
     {
       StatusMessage = validationError;
-      return;
-    }
-
-    if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
-    {
-      StatusMessage = "Enter the account email and password.";
       return;
     }
 
@@ -161,6 +198,33 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
 
     try
     {
+      if (ShowPersonalAccessTokenInput)
+      {
+        var token = PersonalAccessToken.Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+          StatusMessage = "Enter a personal access token.";
+          return;
+        }
+
+        ViewerOptions.AuthenticationMethod = ViewerAuthenticationMethod.PersonalAccessToken;
+        ViewerOptions.PersonalAccessToken = token;
+        _authSession.SetPersonalAccessToken(token);
+        IsViewerVisible = true;
+        StatusMessage = "Connecting with personal access token.";
+        return;
+      }
+
+      ViewerOptions.AuthenticationMethod = ViewerAuthenticationMethod.InteractiveBearer;
+      ViewerOptions.PersonalAccessToken = null;
+      _authSession.SetPersonalAccessToken(null);
+
+      if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+      {
+        StatusMessage = "Enter the account email and password.";
+        return;
+      }
+
       var result = RequiresTwoFactor
         ? await _authSession.SubmitTwoFactorCode(TwoFactorCode.Replace(" ", string.Empty), cancellationToken)
         : await _authSession.SignIn(Email.Trim(), Password, cancellationToken);
@@ -190,7 +254,9 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
       return;
     }
 
+    ViewerOptions.PersonalAccessToken = null;
     _ = _authSession.SignOut();
+    IsViewerVisible = false;
     StatusMessage = "Signed out.";
   }
 

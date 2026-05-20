@@ -15,11 +15,13 @@ public interface IControlrAuthSession : IDisposable
   DateTimeOffset? AccessTokenExpiresAt { get; }
   Uri BaseUrl { get; }
   bool IsAuthenticated { get; }
+  string? PersonalAccessToken { get; }
   bool RequiresTwoFactor { get; }
   ControlrAuthSessionState State { get; }
 
   Task<string?> GetAccessToken();
   void SetBaseUrl(Uri baseUrl);
+  void SetPersonalAccessToken(string? personalAccessToken);
   Task<InteractiveLoginResult> SignIn(string email, string password, CancellationToken cancellationToken = default);
   Task SignOut();
   Task<InteractiveLoginResult> SubmitRecoveryCode(string recoveryCode, CancellationToken cancellationToken = default);
@@ -52,6 +54,7 @@ public sealed class ControlrAuthSession(
   public DateTimeOffset? AccessTokenExpiresAt => CurrentAuth.BearerTokenExpiresAt;
   public Uri BaseUrl => _optionsMonitor.CurrentValue.BaseUrl;
   public bool IsAuthenticated => State == ControlrAuthSessionState.Authenticated;
+  public string? PersonalAccessToken => CurrentAuth.PersonalAccessToken;
   public bool RequiresTwoFactor => State == ControlrAuthSessionState.AwaitingTwoFactor;
   public ControlrAuthSessionState State => _state;
 
@@ -86,6 +89,18 @@ public sealed class ControlrAuthSession(
     _optionsMonitor.CurrentValue.BaseUrl = baseUrl;
   }
 
+  public void SetPersonalAccessToken(string? personalAccessToken)
+  {
+    ResetSession(clearPersonalAccessToken: true);
+
+    if (!string.IsNullOrWhiteSpace(personalAccessToken))
+    {
+      CurrentAuth.PersonalAccessToken = personalAccessToken;
+    }
+
+    UpdateState(ControlrAuthSessionState.SignedOut);
+  }
+
   public async Task<InteractiveLoginResult> SignIn(string email, string password, CancellationToken cancellationToken = default)
   {
     var result = await ExecuteInteractiveLogin(
@@ -113,7 +128,7 @@ public sealed class ControlrAuthSession(
 
   public Task SignOut()
   {
-    ResetSession();
+    ResetSession(clearPersonalAccessToken: true);
     UpdateState(ControlrAuthSessionState.SignedOut);
     return Task.CompletedTask;
   }
@@ -209,7 +224,7 @@ public sealed class ControlrAuthSession(
 
   private async Task HandleRefreshLoopFault(string message)
   {
-    ResetSession();
+    ResetSession(clearPersonalAccessToken: false);
     UpdateState(ControlrAuthSessionState.Expired, message);
     await Task.CompletedTask;
   }
@@ -273,11 +288,16 @@ public sealed class ControlrAuthSession(
     }
   }
 
-  private void ResetSession()
+  private void ResetSession(bool clearPersonalAccessToken)
   {
     StopRefreshLoop();
     ClearPendingCredentials();
     CurrentAuth.ClearBearerTokens();
+
+    if (clearPersonalAccessToken)
+    {
+      CurrentAuth.PersonalAccessToken = null;
+    }
   }
 
   private async Task RunRefreshLoop(CancellationToken cancellationToken)

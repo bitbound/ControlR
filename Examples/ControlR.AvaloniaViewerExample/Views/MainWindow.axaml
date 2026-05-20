@@ -175,11 +175,16 @@
           <StackPanel Spacing="14">
             <TextBlock FontSize="24"
                        FontWeight="Bold"
-                       Text="Sign in to the viewer" />
+                       Text="{Binding LoginTitle}" />
 
             <TextBlock TextWrapping="Wrap"
                        Foreground="{DynamicResource TextSecondaryBrush}"
-                       Text="Enter the ControlR server, device ID, and the same email and password you use in the web app. The OTP field only appears when the account requires two-factor authentication." />
+                       Text="{Binding LoginDescription}" />
+
+            <TextBlock Text="Authentication mode" />
+            <ToggleSwitch OffContent="PAT"
+                          OnContent="Interactive"
+                          IsChecked="{Binding IsInteractiveBearerAuth}" />
 
             <TextBlock Text="Server URL" />
             <TextBox Text="{Binding ServerUrl}" />
@@ -187,12 +192,21 @@
             <TextBlock Text="Device ID" />
             <TextBox Text="{Binding DeviceIdText}" />
 
-            <TextBlock Text="Email" />
-            <TextBox Text="{Binding Email}" />
+            <StackPanel IsVisible="{Binding ShowUserPasswordInputs}"
+                        Spacing="14">
+              <TextBlock Text="Email" />
+              <TextBox Text="{Binding Email}" />
 
-            <TextBlock Text="Password" />
-            <TextBox Text="{Binding Password}"
-                     PasswordChar="*" />
+              <TextBlock Text="Password" />
+              <TextBox Text="{Binding Password}"
+                       PasswordChar="*" />
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding ShowPersonalAccessTokenInput}"
+                        Spacing="6">
+              <TextBlock Text="Personal access token" />
+              <TextBox Text="{Binding PersonalAccessToken}" />
+            </StackPanel>
 
             <StackPanel IsVisible="{Binding RequiresTwoFactor}"
                         Spacing="6">

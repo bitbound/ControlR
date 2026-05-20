@@ -18,9 +18,13 @@ public partial class MainWindowViewModelFake : ObservableObject, IMainWindowView
   [ObservableProperty]
   private bool _isDarkMode = true;
   [ObservableProperty]
+  private bool _isInteractiveBearerAuth = true;
+  [ObservableProperty]
   private bool _isViewerVisible;
   [ObservableProperty]
   private string _password = string.Empty;
+  [ObservableProperty]
+  private string _personalAccessToken = "pat-example-token";
   [ObservableProperty]
   private bool _requiresTwoFactor;
   [ObservableProperty]
@@ -31,6 +35,14 @@ public partial class MainWindowViewModelFake : ObservableObject, IMainWindowView
   private string _twoFactorCode = string.Empty;
 
   public bool IsLoginVisible => !IsViewerVisible;
+  public string LoginDescription => ShowPersonalAccessTokenInput
+    ? "Enter the ControlR server, device ID, and a personal access token generated from the web app."
+    : "Enter the ControlR server, device ID, and the same email and password you use in the web app. The OTP field only appears when the account requires two-factor authentication.";
+  public string LoginTitle => ShowPersonalAccessTokenInput
+    ? "Connect with a personal access token"
+    : "Sign in to the viewer";
+  public bool ShowPersonalAccessTokenInput => !IsInteractiveBearerAuth;
+  public bool ShowUserPasswordInputs => IsInteractiveBearerAuth;
   public IAsyncRelayCommand SignInCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
   public IRelayCommand SignOutCommand { get; } = new RelayCommand(() => { });
   public ControlrViewerOptions ViewerOptions { get; } = new()

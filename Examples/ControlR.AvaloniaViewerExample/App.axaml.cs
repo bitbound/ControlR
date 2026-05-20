@@ -76,6 +76,7 @@ public partial class App : Application
       DeviceId = Guid.Parse(configuration["ControlrViewerOptions:DeviceId"]
         ?? throw new InvalidOperationException("ControlrViewerOptions:DeviceId not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:DeviceId\" \"your-device-guid\""))
     };
+    viewerOptions.PersonalAccessToken = configuration["ControlrViewerOptions:PersonalAccessToken"];
 
     return new MainWindowViewModel(viewerOptions);
   }

@@ -88,6 +88,7 @@ public class ViewerConnectionAuthProviderTests
     public DateTimeOffset? AccessTokenExpiresAt => null;
     public Uri BaseUrl { get; private set; } = new("https://controlr.example.com");
     public bool IsAuthenticated => false;
+    public string? PersonalAccessToken { get; private set; }
     public bool RequiresTwoFactor => false;
     public ControlrAuthSessionState State => ControlrAuthSessionState.SignedOut;
 
@@ -100,6 +101,11 @@ public class ViewerConnectionAuthProviderTests
     public void SetBaseUrl(Uri baseUrl)
     {
       BaseUrl = baseUrl;
+    }
+
+    public void SetPersonalAccessToken(string? personalAccessToken)
+    {
+      PersonalAccessToken = personalAccessToken;
     }
 
     public Task<InteractiveLoginResult> SignIn(string email, string password, CancellationToken cancellationToken = default)
