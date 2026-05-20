@@ -56,7 +56,7 @@ public class ViewerConnectionAuthProvider(
 
     return new Dictionary<string, string>
     {
-      [ControlrApiClientAuthOptions.AuthorizationHeader] = $"Bearer {accessToken}"
+      [ControlrApiClientAuthState.AuthorizationHeader] = $"Bearer {accessToken}"
     };
   }
 }

@@ -39,7 +39,6 @@ public static class ViewerServiceBuilder
     ArgumentNullException.ThrowIfNull(viewerOptions);
 
     var services = new ServiceCollection();
-    var runtimeAuth = CreateRuntimeAuth(viewerOptions);
 
     ValidateViewerOptions(viewerOptions);
 
@@ -70,13 +69,12 @@ public static class ViewerServiceBuilder
     services.AddSingleton(TimeProvider.System);
     services.AddSingleton(clipboard);
     services.AddSingleton<IInstanceIdProvider>(new InstanceIdProvider(instanceId));
-    services.AddSingleton(runtimeAuth);
 
     // Add API client.
     services.AddControlrApiClient(options =>
     {
       options.BaseUrl = viewerOptions.BaseUrl;
-      options.Auth = runtimeAuth;
+      options.PersonalAccessToken = viewerOptions.PersonalAccessToken;
     });
 
     // Register state services.
@@ -122,19 +120,6 @@ public static class ViewerServiceBuilder
     services.AddSingleton<IDesktopPreviewDialogViewModelFactory, DesktopPreviewDialogViewModelFactory>();
 
     return services.BuildServiceProvider();
-  }
-
-  private static ControlrApiClientAuthOptions CreateRuntimeAuth(ControlrViewerOptions viewerOptions)
-  {
-    return viewerOptions.AuthenticationMethod switch
-    {
-      ViewerAuthenticationMethod.PersonalAccessToken => new ControlrApiClientAuthOptions
-      {
-        PersonalAccessToken = viewerOptions.PersonalAccessToken
-      },
-      ViewerAuthenticationMethod.InteractiveBearer => new ControlrApiClientAuthOptions(),
-      _ => throw new InvalidOperationException($"Unsupported viewer authentication method: {viewerOptions.AuthenticationMethod}.")
-    };
   }
 
   private static void ValidateViewerOptions(ControlrViewerOptions viewerOptions)

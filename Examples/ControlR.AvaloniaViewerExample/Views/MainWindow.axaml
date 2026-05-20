@@ -205,7 +205,7 @@
             <StackPanel IsVisible="{Binding ShowPersonalAccessTokenInput}"
                         Spacing="6">
               <TextBlock Text="Personal access token" />
-              <TextBox Text="{Binding PersonalAccessToken}" />
+              <TextBox Text="{Binding PersonalAccessToken}" PasswordChar="*" />
             </StackPanel>
 
             <StackPanel IsVisible="{Binding RequiresTwoFactor}"

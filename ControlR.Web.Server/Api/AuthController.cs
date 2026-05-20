@@ -1,9 +1,7 @@
 ﻿using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api;
 
@@ -54,14 +52,16 @@ public class AuthController : ControllerBase
       request.Password,
       lockoutOnFailure: true);
 
-    if (result.RequiresTwoFactor &&
+    var requiresTwoFactor = result.Succeeded && user.TwoFactorEnabled;
+
+    if (requiresTwoFactor &&
         string.IsNullOrWhiteSpace(request.TwoFactorCode) &&
         string.IsNullOrWhiteSpace(request.TwoFactorRecoveryCode))
     {
       return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: true));
     }
 
-    if (result.RequiresTwoFactor)
+    if (requiresTwoFactor)
     {
       if (!string.IsNullOrWhiteSpace(request.TwoFactorRecoveryCode))
       {

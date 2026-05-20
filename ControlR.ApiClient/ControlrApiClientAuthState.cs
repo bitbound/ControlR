@@ -4,12 +4,12 @@ using ControlR.Libraries.DataRedaction;
 
 namespace ControlR.ApiClient;
 
-public class ControlrApiClientAuthOptions
+public class ControlrApiClientAuthState
 {
   public const string AuthorizationHeader = "Authorization";
 
   public SemaphoreSlim BearerRefreshLock { get; } = new(1, 1);
-  
+
   [ProtectedDataClassification]
   public string? BearerToken { get; set; }
   public DateTimeOffset? BearerTokenExpiresAt { get; set; }

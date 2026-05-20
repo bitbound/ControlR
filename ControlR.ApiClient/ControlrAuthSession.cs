@@ -30,6 +30,7 @@ public interface IControlrAuthSession : IDisposable
 
 public sealed class ControlrAuthSession(
   IHttpClientFactory httpClientFactory,
+  ControlrApiClientAuthState authState,
   ILogger<ControlrAuthSession> logger,
   IOptionsMonitor<ControlrApiClientOptions> optionsMonitor,
   TimeProvider timeProvider) : IControlrAuthSession
@@ -39,6 +40,7 @@ public sealed class ControlrAuthSession(
 
   private static readonly TimeSpan _refreshLeadTime = TimeSpan.FromMinutes(1);
 
+  private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrAuthSession> _logger = logger;
   private readonly IOptionsMonitor<ControlrApiClientOptions> _optionsMonitor = optionsMonitor;
@@ -51,14 +53,12 @@ public sealed class ControlrAuthSession(
 
   public event EventHandler<ControlrAuthSessionStateChangedEventArgs>? StateChanged;
 
-  public DateTimeOffset? AccessTokenExpiresAt => CurrentAuth.BearerTokenExpiresAt;
+  public DateTimeOffset? AccessTokenExpiresAt => _authState.BearerTokenExpiresAt;
   public Uri BaseUrl => _optionsMonitor.CurrentValue.BaseUrl;
   public bool IsAuthenticated => State == ControlrAuthSessionState.Authenticated;
-  public string? PersonalAccessToken => CurrentAuth.PersonalAccessToken;
+  public string? PersonalAccessToken => _authState.PersonalAccessToken;
   public bool RequiresTwoFactor => State == ControlrAuthSessionState.AwaitingTwoFactor;
   public ControlrAuthSessionState State => _state;
-
-  private ControlrApiClientAuthOptions CurrentAuth => _optionsMonitor.CurrentValue.Auth;
 
   public void Dispose()
   {
@@ -67,7 +67,7 @@ public sealed class ControlrAuthSession(
 
   public async Task<string?> GetAccessToken()
   {
-    if (!string.IsNullOrWhiteSpace(CurrentAuth.PersonalAccessToken))
+    if (!string.IsNullOrWhiteSpace(_authState.PersonalAccessToken))
     {
       return null;
     }
@@ -81,7 +81,7 @@ public sealed class ControlrAuthSession(
       _logger.LogWarning(ex, "Failed to refresh bearer token before providing access token.");
     }
 
-    return CurrentAuth.BearerToken;
+    return _authState.BearerToken;
   }
 
   public void SetBaseUrl(Uri baseUrl)
@@ -95,7 +95,7 @@ public sealed class ControlrAuthSession(
 
     if (!string.IsNullOrWhiteSpace(personalAccessToken))
     {
-      CurrentAuth.PersonalAccessToken = personalAccessToken;
+      _authState.PersonalAccessToken = personalAccessToken;
     }
 
     UpdateState(ControlrAuthSessionState.SignedOut);
@@ -210,7 +210,7 @@ public sealed class ControlrAuthSession(
         throw new HttpRequestException("The interactive login response did not include tokens.");
       }
 
-      CurrentAuth.SetBearerTokenResponse(payload.Tokens, _timeProvider);
+      _authState.SetBearerTokenResponse(payload.Tokens, _timeProvider);
       UpdateState(ControlrAuthSessionState.Authenticated);
       StartRefreshLoop();
       return new InteractiveLoginResult(InteractiveLoginStatus.Authenticated);
@@ -231,7 +231,7 @@ public sealed class ControlrAuthSession(
 
   private async Task RefreshBearerTokenIfNeeded(bool forceRefresh, CancellationToken cancellationToken)
   {
-    var auth = CurrentAuth;
+    var auth = _authState;
     if (!auth.CanRefreshBearerToken)
     {
       return;
@@ -292,11 +292,11 @@ public sealed class ControlrAuthSession(
   {
     StopRefreshLoop();
     ClearPendingCredentials();
-    CurrentAuth.ClearBearerTokens();
+    _authState.ClearBearerTokens();
 
     if (clearPersonalAccessToken)
     {
-      CurrentAuth.PersonalAccessToken = null;
+      _authState.PersonalAccessToken = null;
     }
   }
 
@@ -306,7 +306,7 @@ public sealed class ControlrAuthSession(
     {
       while (!cancellationToken.IsCancellationRequested)
       {
-        var expiresAt = CurrentAuth.BearerTokenExpiresAt;
+        var expiresAt = _authState.BearerTokenExpiresAt;
         if (expiresAt is null)
         {
           return;
@@ -335,7 +335,7 @@ public sealed class ControlrAuthSession(
   private void StartRefreshLoop()
   {
     StopRefreshLoop();
-    if (!CurrentAuth.CanRefreshBearerToken)
+    if (!_authState.CanRefreshBearerToken)
     {
       return;
     }

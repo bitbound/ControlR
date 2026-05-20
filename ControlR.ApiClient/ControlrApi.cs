@@ -39,10 +39,11 @@ public interface IControlrApi
 
 public partial class ControlrApi(
   HttpClient httpClient,
+  ControlrApiClientAuthState authState,
+  TimeProvider timeProvider,
   IHttpClientFactory httpClientFactory,
   ILogger<ControlrApi> logger,
-  IOptions<ControlrApiClientOptions> options,
-  TimeProvider timeProvider) :
+  IOptions<ControlrApiClientOptions> options) :
   IControlrApi,
   IAgentUpdateApi,
   IAuthApi,
@@ -73,6 +74,7 @@ public partial class ControlrApi(
 {
   private static readonly TimeSpan _bearerRefreshWindow = TimeSpan.FromMinutes(1);
 
+  private readonly ControlrApiClientAuthState _authState = authState;
   private readonly HttpClient _client = httpClient;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrApi> _logger = logger;
@@ -265,12 +267,12 @@ public partial class ControlrApi(
       await RefreshBearerTokenIfNeeded(forceRefresh: false);
     }
 
-    ControlrApiHttpClientAuth.ApplyAuthHeader(_client, _options.Value);
+    ControlrApiHttpClientAuth.ApplyAuthHeader(_client, _authState);
   }
 
   private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh)
   {
-    var auth = _options.Value.Auth;
+    var auth = _authState;
     if (!auth.CanRefreshBearerToken)
     {
       return false;

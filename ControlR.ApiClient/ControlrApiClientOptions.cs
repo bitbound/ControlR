@@ -17,7 +17,6 @@ public class ControlrApiClientOptions
   /// </summary>
   public const string SectionKey = "ControlrApiClient";
 
-  public ControlrApiClientAuthOptions Auth { get; set; } = new();
   /// <summary>
   /// The base URI where the ControlR server is hosted (e.g. https://controlr.example.com).
   /// </summary>
@@ -40,11 +39,7 @@ public class ControlrApiClientOptions
   /// A PAT is generated in the ControlR UI and can be used to authenticate API requests.
   /// </summary>
   [ProtectedDataClassification]
-  public string? PersonalAccessToken
-  {
-    get => Auth.PersonalAccessToken;
-    set => Auth.PersonalAccessToken = value;
-  }
+  public string? PersonalAccessToken { get; set; }
 
-  public override string ToString() => $"BaseUrl: {BaseUrl}, Auth: [REDACTED]";
+  public override string ToString() => $"BaseUrl: {BaseUrl}, PersonalAccessToken: [REDACTED]";
 }

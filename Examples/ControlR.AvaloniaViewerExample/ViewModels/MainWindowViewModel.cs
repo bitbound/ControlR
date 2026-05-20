@@ -133,6 +133,20 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   {
     await Dispatcher.UIThread.InvokeAsync(() =>
     {
+      if (!IsInteractiveBearerAuth)
+      {
+        IsViewerVisible = !string.IsNullOrWhiteSpace(ViewerOptions.PersonalAccessToken);
+        RequiresTwoFactor = false;
+        TwoFactorCode = string.Empty;
+
+        if (!IsViewerVisible && !string.IsNullOrWhiteSpace(e.Message))
+        {
+          StatusMessage = e.Message;
+        }
+
+        return;
+      }
+
       switch (e.State)
       {
         case ControlrAuthSessionState.Authenticated:
@@ -216,8 +230,12 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
       }
 
       ViewerOptions.AuthenticationMethod = ViewerAuthenticationMethod.InteractiveBearer;
-      ViewerOptions.PersonalAccessToken = null;
-      _authSession.SetPersonalAccessToken(null);
+
+      if (!RequiresTwoFactor)
+      {
+        ViewerOptions.PersonalAccessToken = null;
+        _authSession.SetPersonalAccessToken(null);
+      }
 
       if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
       {

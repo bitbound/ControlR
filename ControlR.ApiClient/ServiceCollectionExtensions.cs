@@ -42,6 +42,15 @@ public static class ServiceCollectionExtensions
       .Validate(options => options.BaseUrl is not null, "BaseUrl is required.")
       .ValidateOnStart();
 
+    services.TryAddSingleton(sp =>
+    {
+      var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+      return new ControlrApiClientAuthState
+      {
+        PersonalAccessToken = options.PersonalAccessToken
+      };
+    });
+
     // Register the factory for the ControlR API client.
     services.AddHttpClient(
       ControlrApiClientNames.UnauthenticatedClient,
@@ -56,8 +65,9 @@ public static class ServiceCollectionExtensions
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+        var authState = sp.GetRequiredService<ControlrApiClientAuthState>();
         client.BaseAddress = options.BaseUrl;
-        ControlrApiHttpClientAuth.ApplyAuthHeader(client, options);
+        ControlrApiHttpClientAuth.ApplyAuthHeader(client, authState);
       });
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
@@ -105,6 +115,15 @@ public static class ServiceCollectionExtensions
       .Validate(options => options.BaseUrl is not null, "BaseUrl is required.")
       .ValidateOnStart();
 
+    services.TryAddSingleton(sp =>
+    {
+      var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+      return new ControlrApiClientAuthState
+      {
+        PersonalAccessToken = options.PersonalAccessToken
+      };
+    });
+
     // Register the factory for the ControlR API client.
     services.AddHttpClient(
       ControlrApiClientNames.UnauthenticatedClient,
@@ -119,8 +138,9 @@ public static class ServiceCollectionExtensions
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+        var authState = sp.GetRequiredService<ControlrApiClientAuthState>();
         client.BaseAddress = options.BaseUrl;
-        ControlrApiHttpClientAuth.ApplyAuthHeader(client, options);
+        ControlrApiHttpClientAuth.ApplyAuthHeader(client, authState);
       });
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();

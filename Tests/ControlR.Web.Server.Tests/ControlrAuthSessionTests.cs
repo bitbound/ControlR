@@ -16,9 +16,12 @@ public class ControlrAuthSessionTests
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
     var options = CreateOptions();
-    options.Auth.BearerToken = "stale-token";
-    options.Auth.RefreshToken = "refresh-token";
-    options.Auth.BearerTokenExpiresAt = timeProvider.GetUtcNow().AddSeconds(30);
+    var authState = new ControlrApiClientAuthState
+    {
+      BearerToken = "stale-token",
+      RefreshToken = "refresh-token",
+      BearerTokenExpiresAt = timeProvider.GetUtcNow().AddSeconds(30)
+    };
 
     var responseQueue = new Queue<HttpResponseMessage>([
       CreateJsonResponse(CreateTokenResponse("fresh-token", "fresh-refresh-token", expiresInSeconds: 600))
@@ -29,13 +32,13 @@ public class ControlrAuthSessionTests
       BaseAddress = options.BaseUrl
     };
 
-    var session = CreateSession(options, httpClient, timeProvider);
+    var session = CreateSession(options, authState, httpClient, timeProvider);
 
     var token = await session.GetAccessToken();
 
     Assert.Equal("fresh-token", token);
-    Assert.Equal("fresh-token", options.Auth.BearerToken);
-    Assert.Equal("fresh-refresh-token", options.Auth.RefreshToken);
+    Assert.Equal("fresh-token", authState.BearerToken);
+    Assert.Equal("fresh-refresh-token", authState.RefreshToken);
     Assert.True(session.IsAuthenticated);
     Assert.Equal(ControlrAuthSessionState.Authenticated, session.State);
   }
@@ -57,7 +60,8 @@ public class ControlrAuthSessionTests
       BaseAddress = options.BaseUrl
     };
 
-    var session = CreateSession(options, httpClient, timeProvider);
+    var authState = new ControlrApiClientAuthState();
+    var session = CreateSession(options, authState, httpClient, timeProvider);
     var observedStates = new List<ControlrAuthSessionState>();
     session.StateChanged += (_, args) => observedStates.Add(args.State);
 
@@ -77,8 +81,8 @@ public class ControlrAuthSessionTests
     Assert.Equal(InteractiveLoginStatus.Authenticated, twoFactorResult.Status);
     Assert.True(session.IsAuthenticated);
     Assert.Equal(ControlrAuthSessionState.Authenticated, session.State);
-    Assert.Equal("access-token", options.Auth.BearerToken);
-    Assert.Equal("refresh-token", options.Auth.RefreshToken);
+    Assert.Equal("access-token", authState.BearerToken);
+    Assert.Equal("refresh-token", authState.RefreshToken);
     Assert.Equal(
       [ControlrAuthSessionState.AwaitingTwoFactor, ControlrAuthSessionState.Authenticated],
       observedStates);
@@ -89,24 +93,27 @@ public class ControlrAuthSessionTests
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
     var options = CreateOptions();
-    options.Auth.BearerToken = "access-token";
-    options.Auth.RefreshToken = "refresh-token";
-    options.Auth.BearerTokenExpiresAt = timeProvider.GetUtcNow().AddMinutes(5);
+    var authState = new ControlrApiClientAuthState
+    {
+      BearerToken = "access-token",
+      RefreshToken = "refresh-token",
+      BearerTokenExpiresAt = timeProvider.GetUtcNow().AddMinutes(5)
+    };
 
     using var httpClient = new HttpClient(new QueueMessageHandler([]))
     {
       BaseAddress = options.BaseUrl
     };
 
-    var session = CreateSession(options, httpClient, timeProvider);
+    var session = CreateSession(options, authState, httpClient, timeProvider);
 
     await session.SignOut();
 
     Assert.False(session.IsAuthenticated);
     Assert.Equal(ControlrAuthSessionState.SignedOut, session.State);
-    Assert.Null(options.Auth.BearerToken);
-    Assert.Null(options.Auth.RefreshToken);
-    Assert.Null(options.Auth.BearerTokenExpiresAt);
+    Assert.Null(authState.BearerToken);
+    Assert.Null(authState.RefreshToken);
+    Assert.Null(authState.BearerTokenExpiresAt);
   }
 
   private static HttpResponseMessage CreateJsonResponse<T>(T payload)
@@ -125,10 +132,15 @@ public class ControlrAuthSessionTests
     };
   }
 
-  private static ControlrAuthSession CreateSession(ControlrApiClientOptions options, HttpClient httpClient, FakeTimeProvider timeProvider)
+  private static ControlrAuthSession CreateSession(
+    ControlrApiClientOptions options,
+    ControlrApiClientAuthState authState,
+    HttpClient httpClient,
+    FakeTimeProvider timeProvider)
   {
     return new ControlrAuthSession(
       new StaticHttpClientFactory(httpClient),
+      authState,
       NullLogger<ControlrAuthSession>.Instance,
       new StaticOptionsMonitor<ControlrApiClientOptions>(options),
       timeProvider);

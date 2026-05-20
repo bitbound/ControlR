@@ -188,10 +188,11 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
 
     return new ControlrApi(
       httpClient,
+      new ControlrApiClientAuthState(),
+      TimeProvider.System,
       new StaticHttpClientFactory(httpClient),
       NullLogger<ControlrApi>.Instance,
-      options,
-      TimeProvider.System);
+      options);
   }
 
   private static DeviceResponseDto CreateDeviceResponseDto(int index)

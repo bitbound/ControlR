@@ -27,7 +27,8 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     var user = new AppUser
     {
       Email = "desktop-2fa@t.local",
-      UserName = "desktop-2fa@t.local"
+      UserName = "desktop-2fa@t.local",
+      TwoFactorEnabled = true
     };
 
     var userStore = new Mock<IUserStore<AppUser>>();
@@ -58,7 +59,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 
     signInManager
       .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", true))
-      .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.TwoFactorRequired);
+      .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
 
     var bearerTokenOptions = new Mock<IOptionsMonitor<BearerTokenOptions>>();
     var controller = new AuthController();

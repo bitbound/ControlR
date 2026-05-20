@@ -34,7 +34,7 @@ public class ViewerConnectionAuthProviderTests
 
     var headers = await provider.GetWebSocketHeaders(TestContext.Current.CancellationToken);
     Assert.Single(headers);
-    Assert.Equal("Bearer bearer-token", headers[ControlrApiClientAuthOptions.AuthorizationHeader]);
+    Assert.Equal("Bearer bearer-token", headers[ControlrApiClientAuthState.AuthorizationHeader]);
   }
 
   [Fact]
