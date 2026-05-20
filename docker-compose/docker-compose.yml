@@ -69,6 +69,12 @@ services:
       # The name that appears in TOTP authenticator apps.
       ControlR_AppOptions__AuthenticatorIssuerName: "ControlR"
 
+      # Lifetime of interactive bearer access tokens issued by ASP.NET Core Identity.
+      ControlR_AppOptions__InteractiveBearerTokenExpirationMinutes: 60
+
+      # Lifetime of refresh tokens issued by ASP.NET Core Identity for interactive bearer logins.
+      ControlR_AppOptions__InteractiveRefreshTokenExpirationDays: 30
+
       # If enabled, signing in with a passkey will effectively add the "remember me" option.
       ControlR_AppOptions__PersistPasskeyLogin: false
 
@@ -80,6 +86,9 @@ services:
       # This can be helpful for debugging but may leak sensitive information, so it is disabled by default.
       # Enabling this incurs a small performance cost.
       ControlR_AppOptions__EnableDatabaseDetailedErrors: false
+
+      # Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
+      ControlR_AppOptions__EnableInteractiveBearerLogin: true
 
       # When enabled, bypasses KnownProxies/KnownIpNetworks checks and trusts all forwarded headers
       # from the reverse proxy.  Only enable this in secure environments where the reverse proxy
@@ -135,6 +144,14 @@ services:
 
       # The Gateway IP here must match the IP address used by the Docker gateway.
       ControlR_AppOptions__DockerGatewayIp: "::ffff:172.29.0.1"
+
+      # When enabled, uses an in-memory database instead of PostgreSQL.
+      # Primarily used for testing and development environments.
+      ControlR_AppOptions__UseInMemoryDatabase: false
+
+      # The name of the in-memory database to use when UseInMemoryDatabase is enabled.
+      # Primarily used for testing and development environments.
+      ControlR_AppOptions__InMemoryDatabaseName: ""
 
       # The maximum allowed file size for transfers in the remote File System component.
       # Set to 0 or less for no limit.  Default is 100MB.

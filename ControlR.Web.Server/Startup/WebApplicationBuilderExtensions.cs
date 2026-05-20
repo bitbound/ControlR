@@ -204,12 +204,12 @@ public static class WebApplicationBuilderExtensions
       .AddSignInManager()
       .AddDefaultTokenProviders();
 
-    if (appOptions.EnableDesktopBearerLogin)
+    if (appOptions.EnableInteractiveBearerLogin)
     {
       builder.Services.Configure<BearerTokenOptions>(IdentityConstants.BearerScheme, options =>
       {
-        options.BearerTokenExpiration = TimeSpan.FromMinutes(appOptions.DesktopBearerTokenExpirationMinutes);
-        options.RefreshTokenExpiration = TimeSpan.FromDays(appOptions.DesktopRefreshTokenExpirationDays);
+        options.BearerTokenExpiration = TimeSpan.FromMinutes(appOptions.InteractiveBearerTokenExpirationMinutes);
+        options.RefreshTokenExpiration = TimeSpan.FromDays(appOptions.InteractiveRefreshTokenExpirationDays);
       });
     }
 
@@ -230,7 +230,7 @@ public static class WebApplicationBuilderExtensions
             return LogonTokenAuthenticationSchemeOptions.DefaultScheme;
           }
 
-          if (appOptions.EnableDesktopBearerLogin &&
+          if (appOptions.EnableInteractiveBearerLogin &&
               context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
           {
             return IdentityConstants.BearerScheme;

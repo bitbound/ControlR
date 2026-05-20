@@ -76,7 +76,7 @@ app.UseOutputCache();
 
 app.MapControllers();
 
-if (appOptions.EnableDesktopBearerLogin)
+if (appOptions.EnableInteractiveBearerLogin)
 {
   app.MapGroup(HttpConstants.AuthEndpoint).MapIdentityApi<AppUser>();
 }
