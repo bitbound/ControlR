@@ -133,6 +133,7 @@ public class AuthController : ControllerBase
     return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, Tokens: tokens));
   }
 
+  // This is used by web frontend, which uses cookie authentication.
   [Authorize]
   [HttpPost("logout")]
   public async Task<IActionResult> Logout(

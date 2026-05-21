@@ -110,12 +110,11 @@ public sealed class ControlrAuthSession(
 {
   private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
 
-  private static readonly TimeSpan _refreshLeadTime = TimeSpan.FromMinutes(1);
-
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrAuthSession> _logger = logger;
+  private readonly IOptionsMonitor<ControlrApiClientOptions> _optionsMonitor = optionsMonitor;
   private readonly object _pendingCredentialsLock = new();
   private readonly TimeProvider _timeProvider = timeProvider;
 
@@ -299,7 +298,7 @@ public sealed class ControlrAuthSession(
   {
     var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
       forceRefresh,
-      _refreshLeadTime,
+      _optionsMonitor.CurrentValue.BearerRefreshLeadTime,
       BaseUrl,
       cancellationToken);
 
@@ -349,7 +348,7 @@ public sealed class ControlrAuthSession(
           return;
         }
 
-        var delay = expiresAt.Value - _timeProvider.GetUtcNow() - _refreshLeadTime;
+        var delay = expiresAt.Value - _timeProvider.GetUtcNow() - _optionsMonitor.CurrentValue.BearerRefreshLeadTime;
         if (delay < TimeSpan.Zero)
         {
           delay = TimeSpan.Zero;

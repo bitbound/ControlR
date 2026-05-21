@@ -322,26 +322,6 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     Assert.True(payload.Tokens.ExpiresIn > 0);
   }
 
-  private static Mock<SignInManager<AppUser>> CreateSignInManager(UserManager<AppUser> userManager)
-  {
-    var claimsFactory = new Mock<IUserClaimsPrincipalFactory<AppUser>>();
-    return new Mock<SignInManager<AppUser>>(
-      userManager,
-      Mock.Of<IHttpContextAccessor>(),
-      claimsFactory.Object,
-      Microsoft.Extensions.Options.Options.Create(new IdentityOptions()),
-      Mock.Of<ILogger<SignInManager<AppUser>>>(),
-      Mock.Of<IAuthenticationSchemeProvider>(),
-      Mock.Of<IUserConfirmation<AppUser>>());
-  }
-
-  private static ClaimsPrincipal CreatePrincipal(AppUser user)
-  {
-    return new ClaimsPrincipal(new ClaimsIdentity(
-      [new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())],
-      IdentityConstants.BearerScheme));
-  }
-
   private static IOptionsMonitor<BearerTokenOptions> CreateBearerTokenOptionsMonitor()
   {
     var dataProtectionProvider = new EphemeralDataProtectionProvider();
@@ -356,6 +336,26 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     var monitor = new Mock<IOptionsMonitor<BearerTokenOptions>>();
     monitor.Setup(x => x.Get(IdentityConstants.BearerScheme)).Returns(options);
     return monitor.Object;
+  }
+
+  private static ClaimsPrincipal CreatePrincipal(AppUser user)
+  {
+    return new ClaimsPrincipal(new ClaimsIdentity(
+      [new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())],
+      IdentityConstants.BearerScheme));
+  }
+
+  private static Mock<SignInManager<AppUser>> CreateSignInManager(UserManager<AppUser> userManager)
+  {
+    var claimsFactory = new Mock<IUserClaimsPrincipalFactory<AppUser>>();
+    return new Mock<SignInManager<AppUser>>(
+      userManager,
+      Mock.Of<IHttpContextAccessor>(),
+      claimsFactory.Object,
+      Microsoft.Extensions.Options.Options.Create(new IdentityOptions()),
+      Mock.Of<ILogger<SignInManager<AppUser>>>(),
+      Mock.Of<IAuthenticationSchemeProvider>(),
+      Mock.Of<IUserConfirmation<AppUser>>());
   }
 
   private static Mock<UserManager<AppUser>> CreateUserManager(AppUser user)

@@ -23,6 +23,12 @@ public class ControlrApiClientOptions
   public required Uri BaseUrl { get; set; }
 
   /// <summary>
+  /// The lead time before token expiration at which the client initiates a token refresh.
+  /// Defaults to 1 minute.
+  /// </summary>
+  public TimeSpan BearerRefreshLeadTime { get; set; } = TimeSpan.FromMinutes(1);
+
+  /// <summary>
   /// When <c>false</c> (default), response DTOs are validated for nullability/required-member contract violations
   /// and invalid responses are returned as failed <c>ApiResult</c> values.
   /// When <c>true</c>, response DTO validation failures are logged as warnings and successful responses are still returned.
