@@ -146,19 +146,7 @@ public sealed class ControlrAuthSession(
       return null;
     }
 
-    try
-    {
-      await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
-    }
-    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-    {
-      throw;
-    }
-    catch (Exception ex)
-    {
-      _logger.LogWarning(ex, "Failed to refresh bearer token before providing access token.");
-    }
-
+    await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
     return _authState.BearerToken;
   }
 
