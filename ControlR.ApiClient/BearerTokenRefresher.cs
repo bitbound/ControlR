@@ -13,8 +13,19 @@ public enum BearerTokenRefreshResult
   EndpointUnavailable
 }
 
+/// <summary>
+/// Refreshes interactive bearer tokens for a ControlR API client when they are near expiration.
+/// </summary>
 public interface IBearerTokenRefresher
 {
+  /// <summary>
+  /// Refreshes the current bearer token when required by the refresh window or when forced.
+  /// </summary>
+  /// <param name="forceRefresh">Indicates whether to refresh even when the token is not yet near expiration.</param>
+  /// <param name="refreshWindow">The lead time used to decide when a token should be refreshed.</param>
+  /// <param name="baseUrl">An optional base URL override for the refresh request.</param>
+  /// <param name="cancellationToken">Cancels the refresh operation.</param>
+  /// <returns>The outcome of the refresh attempt.</returns>
   Task<BearerTokenRefreshResult> RefreshIfNeeded(
     bool forceRefresh,
     TimeSpan refreshWindow,

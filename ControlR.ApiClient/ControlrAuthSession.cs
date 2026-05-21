@@ -8,23 +8,95 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.ApiClient;
 
+/// <summary>
+/// Manages interactive bearer-session authentication state for ControlR API clients.
+/// </summary>
 public interface IControlrAuthSession : IDisposable
 {
+  /// <summary>
+  /// Raised whenever the session state changes.
+  /// </summary>
   event EventHandler<ControlrAuthSessionStateChangedEventArgs>? StateChanged;
 
+  /// <summary>
+  /// Gets the access-token expiration for the current bearer session, if one exists.
+  /// </summary>
   DateTimeOffset? AccessTokenExpiresAt { get; }
+
+  /// <summary>
+  /// Gets the current server base URL used for interactive sign-in and token refresh calls.
+  /// </summary>
   Uri BaseUrl { get; }
+
+  /// <summary>
+  /// Gets a value indicating whether the session currently has an authenticated bearer token.
+  /// </summary>
   bool IsAuthenticated { get; }
+
+  /// <summary>
+  /// Gets the configured personal access token, if one is being used instead of interactive bearer auth.
+  /// </summary>
   string? PersonalAccessToken { get; }
+
+  /// <summary>
+  /// Gets a value indicating whether the current sign-in flow is waiting for a two-factor code.
+  /// </summary>
   bool RequiresTwoFactor { get; }
+
+  /// <summary>
+  /// Gets the current session state.
+  /// </summary>
   ControlrAuthSessionState State { get; }
 
+  /// <summary>
+  /// Gets a usable bearer access token, refreshing it first when needed.
+  /// </summary>
+  /// <param name="cancellationToken">Cancels the token retrieval operation.</param>
+  /// <returns>
+  /// The current bearer access token, or <see langword="null"/> when the session is using a personal access token.
+  /// </returns>
   Task<string?> GetAccessToken(CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Updates the server base URL used by the session.
+  /// </summary>
+  /// <param name="baseUrl">The ControlR server base URL.</param>
   void SetBaseUrl(Uri baseUrl);
+
+  /// <summary>
+  /// Configures a personal access token for the session and clears any interactive bearer state.
+  /// </summary>
+  /// <param name="personalAccessToken">The personal access token to use, or <see langword="null"/> to clear it.</param>
   void SetPersonalAccessToken(string? personalAccessToken);
+
+  /// <summary>
+  /// Starts an interactive sign-in using an email and password.
+  /// </summary>
+  /// <param name="email">The user email.</param>
+  /// <param name="password">The user password.</param>
+  /// <param name="cancellationToken">Cancels the sign-in operation.</param>
+  /// <returns>The result of the interactive login attempt.</returns>
   Task<InteractiveLoginResult> SignIn(string email, string password, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Signs out of the interactive bearer session and clears stored authentication state.
+  /// </summary>
   Task SignOut();
+
+  /// <summary>
+  /// Continues a pending two-factor sign-in using a recovery code.
+  /// </summary>
+  /// <param name="recoveryCode">The recovery code supplied by the user.</param>
+  /// <param name="cancellationToken">Cancels the sign-in operation.</param>
+  /// <returns>The result of the interactive login attempt.</returns>
   Task<InteractiveLoginResult> SubmitRecoveryCode(string recoveryCode, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Continues a pending two-factor sign-in using an authenticator code.
+  /// </summary>
+  /// <param name="twoFactorCode">The authenticator code supplied by the user.</param>
+  /// <param name="cancellationToken">Cancels the sign-in operation.</param>
+  /// <returns>The result of the interactive login attempt.</returns>
   Task<InteractiveLoginResult> SubmitTwoFactorCode(string twoFactorCode, CancellationToken cancellationToken = default);
 }
 
