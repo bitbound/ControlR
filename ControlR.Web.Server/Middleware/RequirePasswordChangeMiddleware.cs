@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication;
+using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Middleware;
 
@@ -6,18 +6,30 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
 {
   private static readonly HashSet<string> _allowedApiPaths =
   [
-    $"{ControlR.Libraries.Api.Contracts.Constants.HttpConstants.AuthEndpoint}/change-password",
-    $"{ControlR.Libraries.Api.Contracts.Constants.HttpConstants.AuthEndpoint}/manage/info",
-    $"{ControlR.Libraries.Api.Contracts.Constants.HttpConstants.AuthEndpoint}/logout"
+    $"{HttpConstants.AuthEndpoint}/change-password",
+    $"{HttpConstants.AuthEndpoint}/manage/info",
+    $"{HttpConstants.AuthEndpoint}/logout"
   ];
+  private static readonly HashSet<string> _allowedPathStartSegments =
+  [
+    "/Account/Manage/ChangePassword",
+    "/Account/Manage/SetPassword",
+    "/Account/Logout",
+    "/_framework",
+    "/_content",
+    "/css",
+    "/js",
+    "/health"
+  ];
+
   private static readonly PathString _changePasswordPath = new("/Account/Manage/ChangePassword");
-  private static readonly PathString _setPasswordPath = new("/Account/Manage/SetPassword");
 
   private readonly RequestDelegate _next = next;
 
   public async Task Invoke(HttpContext context, UserManager<AppUser> userManager)
   {
-    if (!context.User.Identity?.IsAuthenticated ?? true)
+    var identity = context.User.Identity;
+    if (identity is null || !identity.IsAuthenticated)
     {
       await _next(context);
       return;
@@ -59,18 +71,11 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
 
   private static bool ShouldBypass(PathString requestPath)
   {
-    if (requestPath.StartsWithSegments(_changePasswordPath) ||
-        requestPath.StartsWithSegments(_setPasswordPath) ||
-        requestPath.StartsWithSegments("/Account/Logout") ||
-        requestPath.StartsWithSegments("/_framework") ||
-        requestPath.StartsWithSegments("/_content") ||
-        requestPath.StartsWithSegments("/css") ||
-        requestPath.StartsWithSegments("/js") ||
-        requestPath.StartsWithSegments("/health"))
-    {
-      return true;
-    }
-
-    return requestPath.StartsWithSegments("/api") && _allowedApiPaths.Contains(requestPath.Value ?? string.Empty);
+    var path = requestPath.Value;
+    return path is not null && 
+      (
+        _allowedPathStartSegments.Any(p => path.StartsWith(p, StringComparison.Ordinal)) ||
+        _allowedApiPaths.Contains(path)
+      );
   }
 }
