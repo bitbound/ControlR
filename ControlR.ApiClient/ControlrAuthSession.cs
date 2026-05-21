@@ -44,11 +44,11 @@ public sealed class ControlrAuthSession(
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrAuthSession> _logger = logger;
+  private readonly object _pendingCredentialsLock = new();
   private readonly TimeProvider _timeProvider = timeProvider;
 
   private Uri _baseUrl = optionsMonitor.CurrentValue.BaseUrl;
-  private string? _pendingEmail;
-  private string? _pendingPassword;
+  private (string Email, string Password)? _pendingCredentials;
   private CancellationTokenSource? _refreshLoopCts;
   private long _refreshLoopGeneration;
   private ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
@@ -115,8 +115,11 @@ public sealed class ControlrAuthSession(
 
     if (result.Status == InteractiveLoginStatus.RequiresTwoFactor)
     {
-      _pendingEmail = email;
-      _pendingPassword = password;
+      lock (_pendingCredentialsLock)
+      {
+        _pendingCredentials = (email, password);
+      }
+
       UpdateState(ControlrAuthSessionState.AwaitingTwoFactor);
       return result with { Message = "Two-factor authentication is enabled. Enter your authenticator code to continue." };
     }
@@ -141,46 +144,20 @@ public sealed class ControlrAuthSession(
 
   public async Task<InteractiveLoginResult> SubmitRecoveryCode(string recoveryCode, CancellationToken cancellationToken = default)
   {
-    if (string.IsNullOrWhiteSpace(_pendingEmail) || string.IsNullOrWhiteSpace(_pendingPassword))
-    {
-      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "A login attempt is not waiting for two-factor authentication.");
-    }
-
-    var result = await ExecuteInteractiveLogin(
-      new LoginRequestDto(_pendingEmail, _pendingPassword, TwoFactorCode: null, TwoFactorRecoveryCode: recoveryCode),
+    return await SubmitPendingLogin(
+      twoFactorCode: null,
+      recoveryCode,
+      "The recovery code was rejected.",
       cancellationToken);
-
-    if (result.Status == InteractiveLoginStatus.Authenticated)
-    {
-      ClearPendingCredentials();
-      return result with { Message = "Connected." };
-    }
-
-    return result.Message is null
-      ? result with { Message = "The recovery code was rejected." }
-      : result;
   }
 
   public async Task<InteractiveLoginResult> SubmitTwoFactorCode(string twoFactorCode, CancellationToken cancellationToken = default)
   {
-    if (string.IsNullOrWhiteSpace(_pendingEmail) || string.IsNullOrWhiteSpace(_pendingPassword))
-    {
-      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "A login attempt is not waiting for two-factor authentication.");
-    }
-
-    var result = await ExecuteInteractiveLogin(
-      new LoginRequestDto(_pendingEmail, _pendingPassword, TwoFactorCode: twoFactorCode, TwoFactorRecoveryCode: null),
+    return await SubmitPendingLogin(
+      twoFactorCode,
+      recoveryCode: null,
+      "The two-factor code was rejected.",
       cancellationToken);
-
-    if (result.Status == InteractiveLoginStatus.Authenticated)
-    {
-      ClearPendingCredentials();
-      return result with { Message = "Connected." };
-    }
-
-    return result.Message is null
-      ? result with { Message = "The two-factor code was rejected." }
-      : result;
   }
 
   private static void CancelRefreshLoop(CancellationTokenSource? cts)
@@ -191,8 +168,10 @@ public sealed class ControlrAuthSession(
 
   private void ClearPendingCredentials()
   {
-    _pendingEmail = null;
-    _pendingPassword = null;
+    lock (_pendingCredentialsLock)
+    {
+      _pendingCredentials = null;
+    }
   }
 
   private async Task<InteractiveLoginResult> ExecuteInteractiveLogin(LoginRequestDto request, CancellationToken cancellationToken)
@@ -230,10 +209,17 @@ public sealed class ControlrAuthSession(
       StartRefreshLoop();
       return new InteractiveLoginResult(InteractiveLoginStatus.Authenticated);
     }
+    catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+    {
+      _logger.LogWarning(ex, "Interactive login endpoint is not available.");
+      return new InteractiveLoginResult(
+        InteractiveLoginStatus.Failed,
+        "Interactive login is not available on this server.");
+    }
     catch (Exception ex)
     {
       _logger.LogWarning(ex, "Interactive login failed.");
-      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, ex.Message);
+      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "Interactive login failed.");
     }
   }
 
@@ -343,6 +329,38 @@ public sealed class ControlrAuthSession(
     Interlocked.Increment(ref _refreshLoopGeneration);
     var cts = Interlocked.Exchange(ref _refreshLoopCts, null);
     CancelRefreshLoop(cts);
+  }
+
+  private async Task<InteractiveLoginResult> SubmitPendingLogin(
+    string? twoFactorCode,
+    string? recoveryCode,
+    string rejectedMessage,
+    CancellationToken cancellationToken)
+  {
+    LoginRequestDto? request;
+
+    lock (_pendingCredentialsLock)
+    {
+      request = _pendingCredentials is { } pendingCredentials
+        ? new LoginRequestDto(pendingCredentials.Email, pendingCredentials.Password, twoFactorCode, recoveryCode)
+        : null;
+    }
+
+    if (request is null)
+    {
+      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "A login attempt is not waiting for two-factor authentication.");
+    }
+
+    var result = await ExecuteInteractiveLogin(request, cancellationToken);
+    if (result.Status == InteractiveLoginStatus.Authenticated)
+    {
+      ClearPendingCredentials();
+      return result with { Message = "Connected." };
+    }
+
+    return result.Message is null
+      ? result with { Message = rejectedMessage }
+      : result;
   }
 
   private void UpdateState(ControlrAuthSessionState state, string? message = null)

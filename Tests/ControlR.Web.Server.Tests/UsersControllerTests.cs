@@ -50,6 +50,34 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task AdminResetPassword_UsesMinimumLengthRequiredByEnabledCharacterTypes()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var identityOptions = services.GetRequiredService<IOptions<IdentityOptions>>().Value;
+    identityOptions.Password.RequiredLength = 2;
+    identityOptions.Password.RequireUppercase = true;
+    identityOptions.Password.RequireLowercase = true;
+    identityOptions.Password.RequireDigit = true;
+    identityOptions.Password.RequireNonAlphanumeric = true;
+
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
+      roles: RoleNames.TenantAdministrator);
+    var targetUser = await services.CreateTestUser(tenant.Id, "short-policy@t.local");
+
+    var result = await controller.ResetPassword(
+      targetUser.Id,
+      services.GetRequiredService<IPasswordManager>());
+
+    var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    var dto = Assert.IsType<AdminResetPasswordResponseDto>(okResult.Value);
+
+    Assert.True(dto.TemporaryPassword.Length >= 4);
+  }
+
+  [Fact]
   public async Task CreateUserPersonalAccessToken_ReturnsNotFound_ForUserOutsideTenant()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);

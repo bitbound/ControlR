@@ -163,6 +163,66 @@ public class ControlrAuthSessionTests
   }
 
   [Fact]
+  public async Task SignIn_WhenInteractiveLoginEndpointIsUnavailable_ReturnsBoundedMessage()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+
+    var responseQueue = new Queue<HttpResponseMessage>([
+      new HttpResponseMessage(HttpStatusCode.NotFound)
+      {
+        Content = JsonContent.Create(new { detail = "server detail should not leak" })
+      }
+    ]);
+
+    using var httpClient = new HttpClient(new QueueMessageHandler(responseQueue))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var authState = new ControlrApiClientAuthState();
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var result = await session.SignIn(
+      "viewer@example.com",
+      "P@ssw0rd!",
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(InteractiveLoginStatus.Failed, result.Status);
+    Assert.Equal("Interactive login is not available on this server.", result.Message);
+  }
+
+  [Fact]
+  public async Task SignIn_WhenInteractiveLoginFails_DoesNotReturnRawServerMessage()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+
+    var responseQueue = new Queue<HttpResponseMessage>([
+      new HttpResponseMessage(HttpStatusCode.InternalServerError)
+      {
+        Content = JsonContent.Create(new { detail = "sensitive server detail" })
+      }
+    ]);
+
+    using var httpClient = new HttpClient(new QueueMessageHandler(responseQueue))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var authState = new ControlrApiClientAuthState();
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var result = await session.SignIn(
+      "viewer@example.com",
+      "P@ssw0rd!",
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(InteractiveLoginStatus.Failed, result.Status);
+    Assert.Equal("Interactive login failed.", result.Message);
+  }
+
+  [Fact]
   public async Task SignIn_WhenTwoFactorIsRequired_SetsAwaitingTwoFactorState()
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);

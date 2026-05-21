@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ControlR.Web.Server.Options;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -20,6 +21,48 @@ namespace ControlR.Web.Server.Tests;
 public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutputHelper = testOutput;
+
+  [Fact]
+  public async Task InteractiveLogin_WhenFeatureIsDisabled_ReturnsNotFound()
+  {
+    var userStore = new Mock<IUserStore<AppUser>>();
+    var userManager = new Mock<UserManager<AppUser>>(
+      userStore.Object,
+      null!,
+      null!,
+      null!,
+      null!,
+      null!,
+      null!,
+      null!,
+      null!);
+
+    var claimsFactory = new Mock<IUserClaimsPrincipalFactory<AppUser>>();
+    var signInManager = new Mock<SignInManager<AppUser>>(
+      userManager.Object,
+      Mock.Of<IHttpContextAccessor>(),
+      claimsFactory.Object,
+      Microsoft.Extensions.Options.Options.Create(new IdentityOptions()),
+      Mock.Of<ILogger<SignInManager<AppUser>>>(),
+      Mock.Of<IAuthenticationSchemeProvider>(),
+      Mock.Of<IUserConfirmation<AppUser>>());
+
+    var appOptions = new Mock<IOptionsMonitor<AppOptions>>();
+    appOptions.SetupGet(x => x.CurrentValue).Returns(new AppOptions { EnableInteractiveBearerLogin = false });
+
+    var bearerTokenOptions = new Mock<IOptionsMonitor<BearerTokenOptions>>();
+    var controller = new AuthController();
+
+    var result = await controller.InteractiveLogin(
+      signInManager.Object,
+      userManager.Object,
+      appOptions.Object,
+      bearerTokenOptions.Object,
+      TimeProvider.System,
+      new LoginRequestDto("user@example.com", "T3stP@ssw0rd!"));
+
+    Assert.IsType<NotFoundResult>(result.Result);
+  }
 
   [Fact]
   public async Task InteractiveLogin_WhenIdentityRequiresTwoFactor_ReturnsRequiresTwoFactor()
@@ -62,11 +105,14 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
 
     var bearerTokenOptions = new Mock<IOptionsMonitor<BearerTokenOptions>>();
+    var appOptions = new Mock<IOptionsMonitor<AppOptions>>();
+    appOptions.SetupGet(x => x.CurrentValue).Returns(new AppOptions { EnableInteractiveBearerLogin = true });
     var controller = new AuthController();
 
     var result = await controller.InteractiveLogin(
       signInManager.Object,
       userManager.Object,
+      appOptions.Object,
       bearerTokenOptions.Object,
       TimeProvider.System,
       new LoginRequestDto(user.Email, "T3stP@ssw0rd!"));

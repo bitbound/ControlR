@@ -77,11 +77,18 @@ public class PasswordManager(
     {
       return Result.Fail<AdminResetPasswordResponseDto>("User not found");
     }
+
     var passwordOptions = _identityOptions.Value.Password;
+    var minimumLength =
+      (passwordOptions.RequireUppercase ? 1 : 0) +
+      (passwordOptions.RequireLowercase ? 1 : 0) +
+      (passwordOptions.RequireDigit ? 1 : 0) +
+      (passwordOptions.RequireNonAlphanumeric ? 1 : 0);
+
     var temporaryPassword = RandomGenerator.GeneratePassword(
-      length: passwordOptions.RequiredLength,
-      includeUppercase: passwordOptions.RequireUppercase, 
-      includeLowercase: passwordOptions.RequireLowercase, 
+      length: Math.Max(passwordOptions.RequiredLength, minimumLength),
+      includeUppercase: passwordOptions.RequireUppercase,
+      includeLowercase: passwordOptions.RequireLowercase,
       includeDigits: passwordOptions.RequireDigit, 
       includeSpecialChars: passwordOptions.RequireNonAlphanumeric);
 

@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Mvc;
@@ -37,10 +38,16 @@ public class AuthController : ControllerBase
   public async Task<ActionResult<InteractiveLoginResponseDto>> InteractiveLogin(
     [FromServices] SignInManager<AppUser> signInManager,
     [FromServices] UserManager<AppUser> userManager,
+    [FromServices] IOptionsMonitor<AppOptions> appOptions,
     [FromServices] IOptionsMonitor<BearerTokenOptions> bearerTokenOptions,
     [FromServices] TimeProvider timeProvider,
     [FromBody] LoginRequestDto request)
   {
+    if (!appOptions.CurrentValue.EnableInteractiveBearerLogin)
+    {
+      return NotFound();
+    }
+
     var user = await userManager.FindByEmailAsync(request.Email);
     if (user is null)
     {
