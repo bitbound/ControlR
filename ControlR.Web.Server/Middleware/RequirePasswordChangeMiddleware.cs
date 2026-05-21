@@ -17,12 +17,30 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
     "/Account/Logout",
     "/_framework",
     "/_content",
-    "/css",
-    "/js",
+    "/lib",
+    "/images",
     "/health"
   ];
-
   private static readonly PathString _changePasswordPath = new("/Account/Manage/ChangePassword");
+  private static readonly HashSet<string> _staticAssetExtensions =
+  [
+    ".ico", 
+    ".css", 
+    ".js", 
+    ".png", 
+    ".jpg", 
+    ".jpeg", 
+    ".gif", 
+    ".svg", 
+    ".webp", 
+    ".avif", 
+    ".woff", 
+    ".woff2", 
+    ".ttf", 
+    ".eot", 
+    ".manifest", 
+    ".webmanifest"
+  ];
 
   private readonly RequestDelegate _next = next;
 
@@ -72,10 +90,11 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
   private static bool ShouldBypass(PathString requestPath)
   {
     var path = requestPath.Value;
-    return path is not null && 
+    return path is not null &&
       (
         _allowedPathStartSegments.Any(p => path.StartsWith(p, StringComparison.Ordinal)) ||
-        _allowedApiPaths.Contains(path)
+        _allowedApiPaths.Contains(path) ||
+        _staticAssetExtensions.Any(path.EndsWith)
       );
   }
 }

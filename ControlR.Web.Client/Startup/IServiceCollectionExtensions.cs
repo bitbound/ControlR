@@ -8,7 +8,7 @@ namespace ControlR.Web.Client.Startup;
 
 public static class ServiceCollectionExtensions
 {
-  internal static IServiceCollection AddControlrWebClient(this IServiceCollection services)
+  internal static IServiceCollection AddControlrWebClient(this IServiceCollection services, Uri baseUrl)
   {
     services.AddMudServices(config =>
     {
@@ -62,6 +62,9 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IInviteStore, InviteStore>();
 
     services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
+
+    services.AddControlrApiClient(options => options.BaseUrl = baseUrl);
+    services.AddScoped(_ => new HttpClient { BaseAddress = baseUrl });
 
     return services;
   }

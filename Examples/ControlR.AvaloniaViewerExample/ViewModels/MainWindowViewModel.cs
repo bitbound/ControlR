@@ -44,13 +44,13 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
 
   public MainWindowViewModel(ControlrViewerOptions viewerOptions)
   {
+    ViewerOptions = viewerOptions;
     ActivePage = ViewerPage.RemoteControl;
     DeviceIdText = viewerOptions.DeviceId.ToString();
     IsDarkMode = true;
     IsInteractiveBearerAuth = viewerOptions.AuthenticationMethod == ViewerAuthenticationMethod.InteractiveBearer;
     PersonalAccessToken = viewerOptions.PersonalAccessToken ?? string.Empty;
     ServerUrl = viewerOptions.BaseUrl.ToString();
-    ViewerOptions = viewerOptions;
   }
 
   [ObservableProperty]
@@ -175,6 +175,12 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
 
   partial void OnIsInteractiveBearerAuthChanged(bool value)
   {
+    // In case this fires in the constructor before ViewerOptions is set.
+    if (ViewerOptions is null)
+    {
+      return;
+    }
+
     ViewerOptions.AuthenticationMethod = value
       ? ViewerAuthenticationMethod.InteractiveBearer
       : ViewerAuthenticationMethod.PersonalAccessToken;

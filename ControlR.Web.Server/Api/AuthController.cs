@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Mvc;
@@ -76,21 +75,42 @@ public class AuthController : ControllerBase
           user,
           request.TwoFactorRecoveryCode.Replace(" ", string.Empty));
 
-        result = recoveryCodeResult.Succeeded
-          ? Microsoft.AspNetCore.Identity.SignInResult.Success
-          : Microsoft.AspNetCore.Identity.SignInResult.Failed;
+        if (!recoveryCodeResult.Succeeded)
+        {
+          await userManager.AccessFailedAsync(user);
+          if (user.LockoutEnd > timeProvider.GetUtcNow())
+          {
+            return Unauthorized();
+          }
+          result = Microsoft.AspNetCore.Identity.SignInResult.Failed;
+        }
+        else
+        {
+          result = Microsoft.AspNetCore.Identity.SignInResult.Success;
+        }
       }
       else if (!string.IsNullOrWhiteSpace(request.TwoFactorCode))
       {
         var normalizedCode = request.TwoFactorCode.Replace(" ", string.Empty).Replace("-", string.Empty);
+
         var isValid = await userManager.VerifyTwoFactorTokenAsync(
           user,
           userManager.Options.Tokens.AuthenticatorTokenProvider,
           normalizedCode);
 
-        result = isValid
-          ? Microsoft.AspNetCore.Identity.SignInResult.Success
-          : Microsoft.AspNetCore.Identity.SignInResult.Failed;
+        if (!isValid)
+        {
+          await userManager.AccessFailedAsync(user);
+          if (user.LockoutEnd > timeProvider.GetUtcNow())
+          {
+            return Unauthorized();
+          }
+          result = Microsoft.AspNetCore.Identity.SignInResult.Failed;
+        }
+        else
+        {
+          result = Microsoft.AspNetCore.Identity.SignInResult.Success;
+        }
       }
 
       if (result.Succeeded)

@@ -67,9 +67,7 @@ public partial class App : Application
     // for getting these options into the ControlrViewer component.
     var viewerOptions = new ControlrViewerOptions
     {
-      AuthenticationMethod = Enum.TryParse<ViewerAuthenticationMethod>(configuration["ControlrViewerOptions:AuthenticationMethod"], out var authMethod)
-        ? authMethod
-        : throw new InvalidOperationException("ControlrViewerOptions:AuthenticationMethod not configured or invalid. Use: dotnet user-secrets set \"ControlrViewerOptions:AuthenticationMethod\" \"PersonalAccessToken\""),
+      AuthenticationMethod = ViewerAuthenticationMethod.InteractiveBearer,
       BaseUrl = Uri.TryCreate(configuration["ControlrViewerOptions:BaseUrl"], UriKind.Absolute, out var baseUrl)
         ? baseUrl
         : throw new InvalidOperationException("ControlrViewerOptions:BaseUrl not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:BaseUrl\" \"https://controlr.example.com\""),

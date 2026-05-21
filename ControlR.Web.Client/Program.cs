@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using ControlR.ApiClient;
 using ControlR.Web.Client.Startup;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -10,8 +11,6 @@ if (builder.HostEnvironment.IsDevelopment())
   builder.Logging.AddFilter("Microsoft.AspNetCore.Components.RenderTree.Renderer", LogLevel.Warning);
   builder.Logging.AddFilter("Microsoft.Extensions.Localization.ResourceManagerStringLocalizer", LogLevel.Warning);
 }
-
-builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 builder.Services
   .AddAuthorizationCore(options =>
@@ -26,11 +25,7 @@ builder.Services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticat
 builder.Services.AddScoped<IUserPreferencesProvider, UserPreferencesProviderClient>();
 builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderClient>();
 
-builder.Services.AddControlrWebClient();
+var baseUrl = new Uri(builder.HostEnvironment.BaseAddress);
+builder.Services.AddControlrWebClient(baseUrl);
 
-builder.Services.AddHttpClient<IControlrApi, ControlrApi>((services, client) =>
-{
-  client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
-});
-    
 await builder.Build().RunAsync();
