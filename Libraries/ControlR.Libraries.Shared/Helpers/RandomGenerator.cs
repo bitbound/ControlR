@@ -22,10 +22,9 @@ public class RandomGenerator
 
   public static string GeneratePassword(int length = 12, bool includeUppercase = true, bool includeLowercase = true, bool includeDigits = true, bool includeSpecialChars = true)
   {
-    // The following characters were removed to avoid confusion: 0 (zero), O/o (letter o), I (capital i), l (lowercase L)
-    const string upper = "ABCDEFGHIJKLMNPQRSTUVWXYZ";
-    const string lower = "abcdefghijkmnpqrstuvwxyz";
-    const string digits = "23456789";
+    const string upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const string lower = "abcdefghijklmnopqrstuvwxyz";
+    const string digits = "0123456789";
     const string special = "!@#$%&*-=+.?";
 
     if (length < 1)
