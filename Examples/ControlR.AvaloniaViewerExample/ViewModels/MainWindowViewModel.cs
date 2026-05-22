@@ -102,10 +102,7 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
       return;
     }
 
-    if (_authSession is not null)
-    {
-      _authSession.StateChanged -= HandleSessionStateChanged;
-    }
+    _authSession?.StateChanged -= HandleSessionStateChanged;
 
     var authSession = ViewerRegistry.GetService<IControlrAuthSession>(viewerInstanceId);
     if (authSession is null)
@@ -121,11 +118,7 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
 
   public void Dispose()
   {
-    if (_authSession is not null)
-    {
-      _authSession.StateChanged -= HandleSessionStateChanged;
-    }
-
+    _authSession?.StateChanged -= HandleSessionStateChanged;
     GC.SuppressFinalize(this);
   }
 

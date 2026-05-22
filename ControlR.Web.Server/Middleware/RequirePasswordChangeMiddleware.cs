@@ -12,6 +12,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
   ];
   private static readonly HashSet<string> _allowedPathStartSegments =
   [
+    "/password-change-required",
     "/Account/Manage/ChangePassword",
     "/Account/Manage/SetPassword",
     "/Account/Logout",
@@ -21,7 +22,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
     "/images",
     "/health"
   ];
-  private static readonly PathString _changePasswordPath = new("/Account/Manage/ChangePassword");
+  private static readonly PathString _changePasswordPath = new("/password-change-required");
   private static readonly HashSet<string> _staticAssetExtensions =
   [
     ".ico", 

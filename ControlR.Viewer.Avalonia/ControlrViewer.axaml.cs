@@ -152,10 +152,7 @@ public partial class ControlrViewer : UserControl
       _instanceInfo = null;
       _pageSubscription.Dispose();
 
-      if (_shellViewModel is not null)
-      {
-        _shellViewModel.PropertyChanged -= HandleShellViewModelPropertyChanged;
-      }
+      _shellViewModel?.PropertyChanged -= HandleShellViewModelPropertyChanged;
 
       if (_serviceProvider is IAsyncDisposable asyncDisposable)
       {

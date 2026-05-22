@@ -14,15 +14,25 @@ public partial class MainWindow : Window
   public MainWindow()
   {
     InitializeComponent();
-    DataContextChanged += HandleDataContextChanged;
-    Opened += HandleOpened;
   }
-  
+
   protected override void OnClosed(EventArgs e)
   {
     _viewModel?.PropertyChanged -= HandleViewModelPropertyChanged;
     _viewModel?.Dispose();
     base.OnClosed(e);
+  }
+
+  protected override void OnDataContextChanged(EventArgs e)
+  {
+    base.OnDataContextChanged(e);
+    HandleDataContextChanged();
+  }
+
+  protected override void OnOpened(EventArgs e)
+  {
+    base.OnOpened(e);
+    AttachViewer();
   }
 
   private void ApplyTheme(bool isDarkMode)
@@ -32,14 +42,15 @@ public partial class MainWindow : Window
       : ThemeVariant.Light;
 
     RequestedThemeVariant = themeVariant;
-
-    if (Application.Current is not null)
-    {
-      Application.Current.RequestedThemeVariant = themeVariant;
-    }
+    Application.Current?.RequestedThemeVariant = themeVariant;
   }
 
-  private void HandleDataContextChanged(object? sender, EventArgs e)
+  private void AttachViewer()
+  {
+    _viewModel?.AttachViewer(Viewer.InstanceId);
+  }
+
+  private void HandleDataContextChanged()
   {
     _viewModel?.PropertyChanged -= HandleViewModelPropertyChanged;
 
@@ -50,15 +61,10 @@ public partial class MainWindow : Window
     }
 
     ApplyTheme(_viewModel.IsDarkMode);
-    TryAttachViewer();
+    AttachViewer();
 
     _viewModel.PropertyChanged += HandleViewModelPropertyChanged;
     SyncSidebarSelection(_viewModel.ActivePage);
-  }
-
-  private void HandleOpened(object? sender, EventArgs e)
-  {
-    TryAttachViewer();
   }
 
   private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -83,7 +89,8 @@ public partial class MainWindow : Window
 
   private void SidebarNavList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
   {
-    if (DataContext is not IMainWindowViewModel viewModel || SidebarNavList.SelectedItem is not ListBoxItem selectedItem)
+    if (DataContext is not IMainWindowViewModel viewModel ||
+        SidebarNavList.SelectedItem is not ListBoxItem selectedItem)
     {
       return;
     }
@@ -110,10 +117,5 @@ public partial class MainWindow : Window
     }
 
     SidebarNavList.SelectedItem = null;
-  }
-
-  private void TryAttachViewer()
-  {
-    _viewModel?.AttachViewer(Viewer.InstanceId);
   }
 }

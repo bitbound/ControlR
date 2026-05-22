@@ -17,6 +17,7 @@ public static class ClientRoutes
   public const string InviteConfirmation = InviteConfirmationBase + "/{activationCode?}";
   public const string InviteConfirmationBase = "/invite-confirmation";
   public const string NotFound = "/not-found";
+  public const string PasswordChangeRequired = "/password-change-required";
   public const string Permissions = "/permissions";
   public const string PersonalAccessTokens = "/personal-access-tokens";
   public const string ServerLogs = "/server-logs";

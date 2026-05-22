@@ -1,5 +1,3 @@
-using ControlR.Web.Client.Extensions;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
 namespace ControlR.Web.Client.Components.Pages;
