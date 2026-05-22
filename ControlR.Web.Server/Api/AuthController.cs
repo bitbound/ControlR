@@ -37,9 +37,9 @@ public class AuthController : ControllerBase
   public async Task<ActionResult<InteractiveLoginResponseDto>> InteractiveLogin(
     [FromServices] SignInManager<AppUser> signInManager,
     [FromServices] UserManager<AppUser> userManager,
+    [FromServices] TimeProvider timeProvider,
     [FromServices] IOptionsMonitor<AppOptions> appOptions,
     [FromServices] IOptionsMonitor<BearerTokenOptions> bearerTokenOptions,
-    [FromServices] TimeProvider timeProvider,
     [FromBody] LoginRequestDto request)
   {
     if (!appOptions.CurrentValue.EnableInteractiveBearerLogin)
@@ -57,6 +57,11 @@ public class AuthController : ControllerBase
       user,
       request.Password,
       lockoutOnFailure: true);
+
+    if (result.IsLockedOut)
+    {
+      return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));
+    }
 
     var requiresTwoFactor = result.Succeeded && user.TwoFactorEnabled;
 
@@ -78,10 +83,6 @@ public class AuthController : ControllerBase
         if (!recoveryCodeResult.Succeeded)
         {
           await userManager.AccessFailedAsync(user);
-          if (user.LockoutEnd > timeProvider.GetUtcNow())
-          {
-            return Unauthorized();
-          }
           result = Microsoft.AspNetCore.Identity.SignInResult.Failed;
         }
         else
@@ -101,10 +102,6 @@ public class AuthController : ControllerBase
         if (!isValid)
         {
           await userManager.AccessFailedAsync(user);
-          if (user.LockoutEnd > timeProvider.GetUtcNow())
-          {
-            return Unauthorized();
-          }
           result = Microsoft.AspNetCore.Identity.SignInResult.Failed;
         }
         else
@@ -121,6 +118,10 @@ public class AuthController : ControllerBase
 
     if (!result.Succeeded)
     {
+      if (result.IsLockedOut)
+      {
+        return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));
+      }
       return Unauthorized();
     }
 
@@ -168,7 +169,7 @@ public class AuthController : ControllerBase
     return new AccessTokenResponseDto(
       TokenType: "Bearer",
       AccessToken: options.BearerTokenProtector.Protect(bearerTicket),
-      ExpiresIn: (int)options.BearerTokenExpiration.TotalSeconds,
+      ExpiresInSeconds: (int)options.BearerTokenExpiration.TotalSeconds,
       RefreshToken: options.RefreshTokenProtector.Protect(refreshTicket));
   }
 }

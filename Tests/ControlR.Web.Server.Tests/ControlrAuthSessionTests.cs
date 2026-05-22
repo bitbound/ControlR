@@ -405,7 +405,7 @@ public class ControlrAuthSessionTests
     return new AccessTokenResponseDto(
       TokenType: "Bearer",
       AccessToken: accessToken,
-      ExpiresIn: expiresInSeconds,
+      ExpiresInSeconds: expiresInSeconds,
       RefreshToken: refreshToken);
   }
 

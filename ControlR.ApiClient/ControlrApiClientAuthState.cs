@@ -72,7 +72,7 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
     SetBearerTokens(
       response.AccessToken,
       response.RefreshToken,
-      timeProvider.GetUtcNow().AddSeconds(Math.Max(response.ExpiresIn, 1)));
+      timeProvider.GetUtcNow().AddSeconds(Math.Max(response.ExpiresInSeconds, 1)));
   }
 
   public void SetBearerTokens(string? bearerToken, string? refreshToken, DateTimeOffset? bearerTokenExpiresAt)
@@ -189,7 +189,7 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
         {
           BearerToken = response.AccessToken,
           RefreshToken = response.RefreshToken,
-          BearerTokenExpiresAt = timeProvider.GetUtcNow().AddSeconds(Math.Max(response.ExpiresIn, 1))
+          BearerTokenExpiresAt = timeProvider.GetUtcNow().AddSeconds(Math.Max(response.ExpiresInSeconds, 1))
         }
       };
       return true;

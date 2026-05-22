@@ -183,6 +183,11 @@ public sealed class ControlrAuthSession(
       return result with { Message = "Two-factor authentication is enabled. Enter your authenticator code to continue." };
     }
 
+    if (result.Status == InteractiveLoginStatus.LockedOut)
+    {
+      return result;
+    }
+
     if (result.Status == InteractiveLoginStatus.Authenticated)
     {
       ClearPendingCredentials();
@@ -256,6 +261,11 @@ public sealed class ControlrAuthSession(
       if (payload.RequiresTwoFactor)
       {
         return new InteractiveLoginResult(InteractiveLoginStatus.RequiresTwoFactor);
+      }
+
+      if (payload.IsLockedOut)
+      {
+        return new InteractiveLoginResult(InteractiveLoginStatus.LockedOut, "This account has been locked out. Please try again later.");
       }
 
       if (payload.Tokens is null)

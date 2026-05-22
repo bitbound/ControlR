@@ -58,9 +58,9 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     var result = await controller.InteractiveLogin(
       signInManager.Object,
       userManager.Object,
+      TimeProvider.System,
       appOptions.Object,
       bearerTokenOptions.Object,
-      TimeProvider.System,
       new LoginRequestDto("user@example.com", "T3stP@ssw0rd!"));
 
     Assert.IsType<NotFoundResult>(result.Result);
@@ -114,9 +114,9 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     var result = await controller.InteractiveLogin(
       signInManager.Object,
       userManager.Object,
+      TimeProvider.System,
       appOptions.Object,
       bearerTokenOptions.Object,
-      TimeProvider.System,
       new LoginRequestDto(user.Email, "T3stP@ssw0rd!"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -152,9 +152,9 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     var result = await controller.InteractiveLogin(
       signInManager.Object,
       userManager.Object,
+      TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      TimeProvider.System,
       new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorRecoveryCode: "recovery code"));
 
     Assert.IsType<UnauthorizedResult>(result.Result);
@@ -193,9 +193,9 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     var result = await controller.InteractiveLogin(
       signInManager.Object,
       userManager.Object,
+      TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      TimeProvider.System,
       new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorRecoveryCode: "recovery code"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -233,9 +233,9 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     var result = await controller.InteractiveLogin(
       signInManager.Object,
       userManager.Object,
+      TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      TimeProvider.System,
       new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorCode: "123-456"));
 
     Assert.IsType<UnauthorizedResult>(result.Result);
@@ -274,9 +274,9 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     var result = await controller.InteractiveLogin(
       signInManager.Object,
       userManager.Object,
+      TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      TimeProvider.System,
       new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorCode: "123-456"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -319,7 +319,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     Assert.Equal("Bearer", payload.Tokens.TokenType);
     Assert.False(string.IsNullOrWhiteSpace(payload.Tokens.AccessToken));
     Assert.False(string.IsNullOrWhiteSpace(payload.Tokens.RefreshToken));
-    Assert.True(payload.Tokens.ExpiresIn > 0);
+    Assert.True(payload.Tokens.ExpiresInSeconds > 0);
   }
 
   private static IOptionsMonitor<BearerTokenOptions> CreateBearerTokenOptionsMonitor()

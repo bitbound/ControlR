@@ -3665,7 +3665,7 @@
         "required": [
           "tokenType",
           "accessToken",
-          "expiresIn",
+          "expiresInSeconds",
           "refreshToken"
         ],
         "type": "object",
@@ -3676,7 +3676,7 @@
           "accessToken": {
             "type": "string"
           },
-          "expiresIn": {
+          "expiresInSeconds": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
@@ -4763,6 +4763,10 @@
         "properties": {
           "requiresTwoFactor": {
             "type": "boolean"
+          },
+          "isLockedOut": {
+            "type": "boolean",
+            "default": false
           },
           "tokens": {
             "oneOf": [

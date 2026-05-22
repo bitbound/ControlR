@@ -7,6 +7,6 @@ public record AccessTokenResponseDto(
   string TokenType,
   [Required]
   string AccessToken,
-  int ExpiresIn,
+  int ExpiresInSeconds,
   [Required]
   string RefreshToken);

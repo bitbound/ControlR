@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.DataRedaction;
-using Microsoft.Extensions.Compliance.Classification;
 
 namespace ControlR.ApiClient;
 
