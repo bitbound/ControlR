@@ -68,7 +68,7 @@ public class RequirePasswordChangeMiddlewareTests
 
     Assert.False(nextCalled);
     Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
-    Assert.Equal("/Account/Manage/ChangePassword", context.Response.Headers.Location.ToString());
+    Assert.Equal("/password-change-required", context.Response.Headers.Location.ToString());
   }
 
   [Fact]
