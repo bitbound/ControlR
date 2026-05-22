@@ -37,6 +37,8 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   protected bool DrawerOpen { get; set; } = true;
   protected bool IsAuthenticated { get; set; }
   protected bool IsDarkMode { get; set; } = true;
+  [CascadingParameter(Name = "AcceptsInteractiveRouting")]
+  protected bool IsInteractiveRoutingPage { get; set; }
   protected PersistingComponentStateSubscription PersistingSubscription { get; set; }
   protected string ThemeClass => IsDarkMode ? "dark-mode" : "light-mode";
 

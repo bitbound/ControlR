@@ -40,7 +40,8 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
     ".ttf", 
     ".eot", 
     ".manifest", 
-    ".webmanifest"
+    ".webmanifest",
+    ".json"
   ];
 
   private readonly RequestDelegate _next = next;
