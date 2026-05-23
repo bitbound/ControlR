@@ -51,14 +51,20 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 - Platform detection via `ISystemEnvironment.Platform` and `RuntimeInformation`.
 - macOS debug builds: disable app-bundle output; emit managed launch files (`.dll`, `.deps.json`, `.runtimeconfig.json`) so VS Code can launch via `dotnet`.
 
-## C# Coding Standards
+# General Coding Standards
+- Use 2 spaces for indentation.
 
-- 2-space indent. Braces on own lines. Prefer `var`. Use collection expressions (`[]`).
-- No null-forgiving operator (`!`) outside tests, except within EF Core queries that execute server-side. Use `required` where applicable.
+# C# Coding Standards
+- Braces on new lines.
+- Prefer var.
+- Use collection expressions (`[]`).
+- No null-forgiving operator (`!`) outside tests, except within EF Core queries that execute server-side.
+- Use required keyword where applicable.
 - No TODOs, placeholder code, or "in production you should..." comments. Every implementation must be complete.
 - No "Async" suffix on async methods unless distinguishing from a sync overload.
-- When an interface has only one implementation, place the interface in the same file as the implementation rather than a separate file.
-- Don't create extra public classes in files containing other classes. Use `Result<T>` from `ControlR.Libraries.Shared.Primitives` for result types.
+- Put public types in their own class file, with the below exceptions.
+  - If an interface has only one implementation, those types can go in the same file.  E.g. `ISecretProvider` and `SecretProvider` can both go in `SecretProvider.cs`.
+  - Enums that are tightly coupled to another class and only used there.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 
 ## Web UI
