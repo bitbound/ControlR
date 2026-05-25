@@ -214,7 +214,7 @@ public class UsersController : ControllerBase
     var result = await passwordManager.ResetPassword(tenantId, id);
     if (!result.IsSuccess)
     {
-      if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
+      if (string.Equals(result.Reason, "User not found", StringComparison.Ordinal))
       {
         return NotFound();
       }
