@@ -367,6 +367,44 @@ public class ControlrAuthSessionTests
     Assert.Equal("access-token", authState.BearerToken);
   }
 
+  [Fact]
+  public async Task SubmitTwoFactorCode_WhenPendingLoginExpires_ReturnsFailedAndSignsOut()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var responseQueue = new Queue<HttpResponseMessage>([
+      CreateJsonResponse(new InteractiveLoginResponseDto(RequiresTwoFactor: true))
+    ]);
+
+    using var httpClient = new HttpClient(new QueueMessageHandler(responseQueue))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var authState = new ControlrApiClientAuthState();
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var signInResult = await session.SignIn(
+      "viewer@example.com",
+      "P@ssw0rd!",
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(InteractiveLoginStatus.RequiresTwoFactor, signInResult.Status);
+
+    timeProvider.Advance(TimeSpan.FromMinutes(6));
+
+    var result = await session.SubmitTwoFactorCode(
+      "123456",
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(InteractiveLoginStatus.Failed, result.Status);
+    Assert.Equal("The login attempt expired. Sign in again.", result.Message);
+    Assert.Equal(ControlrAuthSessionState.SignedOut, session.State);
+    Assert.False(session.RequiresTwoFactor);
+    Assert.False(session.IsAuthenticated);
+    Assert.Null(authState.BearerToken);
+  }
+
   private static HttpResponseMessage CreateJsonResponse<T>(T payload)
   {
     return new HttpResponseMessage(HttpStatusCode.OK)

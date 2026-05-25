@@ -120,10 +120,11 @@ public class AuthController : ControllerBase
     {
       await userManager.AccessFailedAsync(user);
 
-      if (result.IsLockedOut)
+      if (await userManager.IsLockedOutAsync(user))
       {
         return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));
       }
+
       return Unauthorized();
     }
 

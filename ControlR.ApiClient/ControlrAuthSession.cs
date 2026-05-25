@@ -109,6 +109,7 @@ public sealed class ControlrAuthSession(
   TimeProvider timeProvider) : IControlrAuthSession
 {
   private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
+  private static readonly TimeSpan _pendingCredentialLifetime = TimeSpan.FromMinutes(5);
 
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
@@ -119,7 +120,7 @@ public sealed class ControlrAuthSession(
   private readonly TimeProvider _timeProvider = timeProvider;
 
   private Uri _baseUrl = optionsMonitor.CurrentValue.BaseUrl;
-  private (string Email, string Password)? _pendingCredentials;
+  private (string Email, string Password, DateTimeOffset ExpiresAt)? _pendingCredentials;
   private CancellationTokenSource? _refreshLoopCts;
   private long _refreshLoopGeneration;
   private ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
@@ -176,7 +177,7 @@ public sealed class ControlrAuthSession(
     {
       lock (_pendingCredentialsLock)
       {
-        _pendingCredentials = (email, password);
+        _pendingCredentials = (email, password, _timeProvider.GetUtcNow().Add(_pendingCredentialLifetime));
       }
 
       UpdateState(ControlrAuthSessionState.AwaitingTwoFactor);
@@ -407,12 +408,30 @@ public sealed class ControlrAuthSession(
     CancellationToken cancellationToken)
   {
     LoginRequestDto? request;
+    var expired = false;
 
     lock (_pendingCredentialsLock)
     {
-      request = _pendingCredentials is { } pendingCredentials
-        ? new LoginRequestDto(pendingCredentials.Email, pendingCredentials.Password, twoFactorCode, recoveryCode)
-        : null;
+      if (_pendingCredentials is not { } pendingCredentials)
+      {
+        request = null;
+      }
+      else if (pendingCredentials.ExpiresAt <= _timeProvider.GetUtcNow())
+      {
+        _pendingCredentials = null;
+        request = null;
+        expired = true;
+      }
+      else
+      {
+        request = new LoginRequestDto(pendingCredentials.Email, pendingCredentials.Password, twoFactorCode, recoveryCode);
+      }
+    }
+
+    if (expired)
+    {
+      UpdateState(ControlrAuthSessionState.SignedOut, "The login attempt expired. Sign in again.");
+      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "The login attempt expired. Sign in again.");
     }
 
     if (request is null)

@@ -262,8 +262,6 @@ public partial class ControlrApi(
     {
       await RefreshBearerTokenIfNeeded(forceRefresh: false);
     }
-
-    ControlrApiHttpClientAuth.ApplyAuthHeader(_client, _authState);
   }
 
   private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh)

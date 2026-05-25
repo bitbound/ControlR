@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
     });
 
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
+    services.TryAddTransient<ControlrApiAuthHeaderHandler>();
 
     // Register the factory for the ControlR API client.
     services.AddHttpClient(
@@ -64,10 +65,9 @@ public static class ServiceCollectionExtensions
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
-        var authState = sp.GetRequiredService<ControlrApiClientAuthState>();
         client.BaseAddress = options.BaseUrl;
-        ControlrApiHttpClientAuth.ApplyAuthHeader(client, authState);
-      });
+      })
+      .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
     return services;
@@ -121,6 +121,7 @@ public static class ServiceCollectionExtensions
     });
 
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
+    services.TryAddTransient<ControlrApiAuthHeaderHandler>();
 
     // Register the factory for the ControlR API client.
     services.AddHttpClient(
@@ -136,10 +137,9 @@ public static class ServiceCollectionExtensions
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
-        var authState = sp.GetRequiredService<ControlrApiClientAuthState>();
         client.BaseAddress = options.BaseUrl;
-        ControlrApiHttpClientAuth.ApplyAuthHeader(client, authState);
-      });
+      })
+      .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
 

@@ -56,7 +56,7 @@ public class AppOptions
   /// <summary>
   /// Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
   /// </summary>
-  public bool EnableInteractiveBearerLogin { get; init; } = true;
+  public bool EnableInteractiveBearerLogin { get; init; }
   /// <summary>
   /// When enabled, bypasses KnownProxies/KnownIpNetworks checks and trusts all forwarded headers
   /// from the reverse proxy. Only enable this in secure environments where the reverse proxy

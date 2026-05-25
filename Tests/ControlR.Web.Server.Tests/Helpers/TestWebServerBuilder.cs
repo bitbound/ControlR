@@ -17,7 +17,8 @@ internal static class TestWebServerBuilder
   public static async Task<TestWebServer> CreateTestServer(
     ITestOutputHelper testOutput,
     [CallerMemberName] string testDatabaseName = "",
-    bool useInMemoryDatabase = true)
+    bool useInMemoryDatabase = true,
+    IReadOnlyDictionary<string, string?>? settings = null)
   {
     WebApplicationFactory<Program>? factory;
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
@@ -31,6 +32,7 @@ internal static class TestWebServerBuilder
           builder.UseEnvironment("Testing");
           builder.UseSetting("AppOptions:UseInMemoryDatabase", $"{useInMemoryDatabase}");
           builder.UseSetting("AppOptions:InMemoryDatabaseName", uniqueDatabaseName);
+          ApplySettings(builder, settings);
 
           builder.ConfigureTestServices(timeProvider, testOutput);
         });
@@ -51,6 +53,7 @@ internal static class TestWebServerBuilder
           builder.UseSetting("POSTGRES_HOST", connectionInfo.Host);
           builder.UseSetting("POSTGRES_PORT", $"{connectionInfo.Port}");
           builder.UseSetting("POSTGRES_DB", databaseName);
+          ApplySettings(builder, settings);
 
           builder.ConfigureTestServices(timeProvider, testOutput);
         });
@@ -58,6 +61,19 @@ internal static class TestWebServerBuilder
 
 
     return new TestWebServer(timeProvider, factory);
+  }
+
+  private static void ApplySettings(IWebHostBuilder builder, IReadOnlyDictionary<string, string?>? settings)
+  {
+    if (settings is null)
+    {
+      return;
+    }
+
+    foreach (var (key, value) in settings)
+    {
+      builder.UseSetting(key, value);
+    }
   }
 
   private static IWebHostBuilder ConfigureTestServices(

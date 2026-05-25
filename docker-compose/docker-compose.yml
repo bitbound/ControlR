@@ -69,6 +69,10 @@ services:
       # The name that appears in TOTP authenticator apps.
       ControlR_AppOptions__AuthenticatorIssuerName: "ControlR"
 
+      # Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
+      # This is useful for logging in from desktop clients or other clients where cookies aren't ideal.
+      ControlR_AppOptions__EnableInteractiveBearerLogin: false
+
       # Lifetime of interactive bearer access tokens issued by ASP.NET Core Identity.
       ControlR_AppOptions__InteractiveBearerTokenExpirationMinutes: 60
 
@@ -87,8 +91,6 @@ services:
       # Enabling this incurs a small performance cost.
       ControlR_AppOptions__EnableDatabaseDetailedErrors: false
 
-      # Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
-      ControlR_AppOptions__EnableInteractiveBearerLogin: true
 
       # When enabled, bypasses KnownProxies/KnownIpNetworks checks and trusts all forwarded headers
       # from the reverse proxy.  Only enable this in secure environments where the reverse proxy

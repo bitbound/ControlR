@@ -25,6 +25,48 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
   private readonly ITestOutputHelper _testOutputHelper = testOutput;
 
   [Fact]
+  public async Task InteractiveLogin_WhenFailureTriggersLockout_ReturnsLockedOutPayload()
+  {
+    var user = new AppUser
+    {
+      Email = "desktop-lockout@t.local",
+      UserName = "desktop-lockout@t.local",
+      TwoFactorEnabled = false
+    };
+
+    var userManager = CreateUserManager(user);
+    userManager
+      .Setup(x => x.AccessFailedAsync(user))
+      .ReturnsAsync(IdentityResult.Success);
+    userManager
+      .Setup(x => x.IsLockedOutAsync(user))
+      .ReturnsAsync(true);
+
+    var signInManager = CreateSignInManager(userManager.Object);
+    signInManager
+      .Setup(x => x.CheckPasswordSignInAsync(user, "wrong-password", false))
+      .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
+
+    var appOptions = new Mock<IOptionsMonitor<AppOptions>>();
+    appOptions.SetupGet(x => x.CurrentValue).Returns(new AppOptions { EnableInteractiveBearerLogin = true });
+    var controller = new AuthController();
+
+    var result = await controller.InteractiveLogin(
+      signInManager.Object,
+      userManager.Object,
+      TimeProvider.System,
+      appOptions.Object,
+      CreateBearerTokenOptionsMonitor(),
+      new LoginRequestDto(user.Email, "wrong-password"));
+
+    var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    var payload = Assert.IsType<InteractiveLoginResponseDto>(okResult.Value);
+    Assert.False(payload.RequiresTwoFactor);
+    Assert.True(payload.IsLockedOut);
+    Assert.Null(payload.Tokens);
+  }
+
+  [Fact]
   public async Task InteractiveLogin_WhenFeatureIsDisabled_ReturnsNotFound()
   {
     var userStore = new Mock<IUserStore<AppUser>>();
@@ -290,7 +332,12 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task InteractiveLogin_WithValidCredentials_ReturnsBearerTokens()
   {
-    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutputHelper);
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      _testOutputHelper,
+      settings: new Dictionary<string, string?>
+      {
+        ["AppOptions:EnableInteractiveBearerLogin"] = "true"
+      });
 
     var tenant = await testServer.Services.CreateTestTenant();
     var user = await testServer.Services.CreateTestUser(tenant.Id, "interactive-login@t.local");
