@@ -55,11 +55,16 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 - Use 2 spaces for indentation.
 
 # C# Coding Standards
-- Braces on new lines.
-- Prefer var.
+- Braces go on new lines.
+- Prefer var over explicit types.
+  - Example: `var directories = _fileSystem.GetDirectories(path);`
 - Use collection expressions (`[]`).
+  - Example: `private readonly Dictionary<string, uint> _displayNodeIds = [];`
 - No null-forgiving operator (`!`) outside tests, except within EF Core queries that execute server-side.
-- Use required keyword where applicable.
+  - DON'T: `var result = myObject!.GetValue();`
+  - DO: `var result = myObject?.GetValue() ?? throw new InvalidOperationException("myObject is not initialized.");`
+  - OK: `var properties = await _dbContext.Users.Select(x => x.SomeNavigation!.SomeProperty).ToListAsync();`
+- Use `required` keyword where applicable.
 - No TODOs, placeholder code, or "in production you should..." comments. Every implementation must be complete.
 - No "Async" suffix on async methods unless distinguishing from a sync overload.
 - Put public types in their own class file, with the below exceptions.
@@ -83,13 +88,16 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 
 ## Testing
 
-- xUnit v3. Run tests with `dotnet run`, not `dotnet test`.
-- Server test helpers in `Tests\ControlR.Web.Server.Tests\Helpers\`.
+- xUnit v3. Run tests with `dotnet run`, not `dotnet test`.  Build the solution first if using `--no-build`.
+  - Syntax (whole test project): `dotnet run --no-build --project {project_path}}`
+  - Specifc class/method: `dotnet run --no-build --project {project_path} -- -filter /{namespace}/{class}/{method}`
+  - Example: `dotnet run --no-build --project .\Tests\ControlR.Web.Server.Tests\ControlR.Web.Server.Tests.csproj -- -filter /ControlR.Web.Server.Tests/ControlR.Web.Server.Tests/InteractiveLoginApiTests`
 
 ## Package Management
 
-- Central package management via `Directory.Packages.props`.
-- Add packages with `dotnet add <project> package <name>` — never add `Version` attributes to `<PackageReference>` elements.
+- Use central package management via `Directory.Packages.props`.
+- Don't add `Version` attributes to `<PackageReference>` elements in csproj files. `Version` attributes go in `Directory.Packages.props`.
+- Use `dotnet add <project> package <name>` to add packages.
 
 ## Agent Hints
 

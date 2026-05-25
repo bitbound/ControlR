@@ -103,7 +103,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       Mock.Of<IUserConfirmation<AppUser>>());
 
     signInManager
-      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", true))
+      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", false))
       .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
 
     var bearerTokenOptions = new Mock<IOptionsMonitor<BearerTokenOptions>>();
@@ -142,7 +142,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 
     var signInManager = CreateSignInManager(userManager.Object);
     signInManager
-      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", true))
+      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", false))
       .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
 
     var appOptions = new Mock<IOptionsMonitor<AppOptions>>();
@@ -180,7 +180,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 
     var signInManager = CreateSignInManager(userManager.Object);
     signInManager
-      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", true))
+      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", false))
       .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
     signInManager
       .Setup(x => x.CreateUserPrincipalAsync(user))
@@ -223,7 +223,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 
     var signInManager = CreateSignInManager(userManager.Object);
     signInManager
-      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", true))
+      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", false))
       .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
 
     var appOptions = new Mock<IOptionsMonitor<AppOptions>>();
@@ -261,7 +261,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 
     var signInManager = CreateSignInManager(userManager.Object);
     signInManager
-      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", true))
+      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", false))
       .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
     signInManager
       .Setup(x => x.CreateUserPrincipalAsync(user))
