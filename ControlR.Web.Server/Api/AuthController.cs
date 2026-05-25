@@ -134,7 +134,7 @@ public class AuthController : ControllerBase
       bearerTokenOptions.Get(IdentityConstants.BearerScheme),
       timeProvider);
 
-    return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, Tokens: tokens));
+    return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: user.RequirePasswordChange, Tokens: tokens));
   }
 
   // This is used by web frontend, which uses cookie authentication.
