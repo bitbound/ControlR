@@ -53,6 +53,11 @@ public class AuthController : ControllerBase
       return Unauthorized();
     }
 
+    if (user.RequirePasswordChange)
+    {
+      return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: true));
+    }
+
     var result = await signInManager.CheckPasswordSignInAsync(
       user,
       request.Password,

@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ControlR.Web.Server.Services.Users;
+using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/[controller]")]
+[Route(HttpConstants.UsersEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class UsersController : ControllerBase
@@ -106,10 +107,10 @@ public class UsersController : ControllerBase
     return Ok(result.Value);
   }
 
-  [HttpDelete("{id:guid}")]
+  [HttpDelete("{userId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<IActionResult> Delete(
-    [FromRoute] Guid id,
+    [FromRoute] Guid userId,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] AppDb appDb)
   {
@@ -120,7 +121,7 @@ public class UsersController : ControllerBase
 
     var user = await appDb.Users
       .Include(x => x.UserPreferences)
-      .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (user == null)
     {
@@ -200,10 +201,10 @@ public class UsersController : ControllerBase
     return Ok(tokens);
   }
 
-  [HttpPost("{id:guid}/reset-password")]
+  [HttpPost("{userId:guid}/reset-password")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<AdminResetPasswordResponseDto>> ResetPassword(
-    [FromRoute] Guid id,
+    [FromRoute] Guid userId,
     [FromServices] IPasswordManager passwordManager)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -211,7 +212,7 @@ public class UsersController : ControllerBase
       return BadRequest("User tenant not found.");
     }
 
-    var result = await passwordManager.ResetPassword(tenantId, id);
+    var result = await passwordManager.ResetPassword(tenantId, userId);
     if (!result.IsSuccess)
     {
       if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))

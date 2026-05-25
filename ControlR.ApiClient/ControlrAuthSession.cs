@@ -269,6 +269,11 @@ public sealed class ControlrAuthSession(
         return new InteractiveLoginResult(InteractiveLoginStatus.LockedOut, "This account has been locked out. Please try again later.");
       }
 
+      if (payload.RequiresPasswordChange)
+      {
+        return new InteractiveLoginResult(InteractiveLoginStatus.RequiresPasswordChange, "A password change is required.");
+      }
+
       if (payload.Tokens is null)
       {
         throw new HttpRequestException("The interactive login response did not include tokens.");

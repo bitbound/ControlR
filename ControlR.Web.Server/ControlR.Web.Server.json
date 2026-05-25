@@ -1951,7 +1951,7 @@
         }
       }
     },
-    "/api/Tags": {
+    "/api/tags": {
       "post": {
         "tags": [
           "Tags"
@@ -2093,7 +2093,7 @@
         }
       }
     },
-    "/api/Tags/{tagId}": {
+    "/api/tags/{tagId}": {
       "delete": {
         "tags": [
           "Tags"
@@ -2638,7 +2638,7 @@
         }
       }
     },
-    "/api/Users": {
+    "/api/users": {
       "post": {
         "tags": [
           "Users"
@@ -2723,7 +2723,7 @@
         }
       }
     },
-    "/api/Users/{userId}/personal-access-tokens": {
+    "/api/users/{userId}/personal-access-tokens": {
       "post": {
         "tags": [
           "Users"
@@ -2830,14 +2830,14 @@
         }
       }
     },
-    "/api/Users/{id}": {
+    "/api/users/{userId}": {
       "delete": {
         "tags": [
           "Users"
         ],
         "parameters": [
           {
-            "name": "id",
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
@@ -2853,7 +2853,7 @@
         }
       }
     },
-    "/api/Users/{userId}/personal-access-tokens/{tokenId}": {
+    "/api/users/{userId}/personal-access-tokens/{tokenId}": {
       "delete": {
         "tags": [
           "Users"
@@ -2952,14 +2952,14 @@
         }
       }
     },
-    "/api/Users/{id}/reset-password": {
+    "/api/users/{userId}/reset-password": {
       "post": {
         "tags": [
           "Users"
         ],
         "parameters": [
           {
-            "name": "id",
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
@@ -3187,7 +3187,7 @@
         }
       }
     },
-    "/api/Version/agent": {
+    "/api/version/agent": {
       "get": {
         "tags": [
           "Version"
@@ -3219,7 +3219,7 @@
         }
       }
     },
-    "/api/Version/server": {
+    "/api/version/server": {
       "get": {
         "tags": [
           "Version"

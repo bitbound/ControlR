@@ -5,5 +5,6 @@ public enum InteractiveLoginStatus
   Failed,
   LockedOut,
   RequiresTwoFactor,
-  Authenticated
+  Authenticated,
+  RequiresPasswordChange
 }

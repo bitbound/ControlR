@@ -1,8 +1,9 @@
+using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/[controller]")]
+[Route(HttpConstants.TagsEndpoint)]
 [ApiController]
 [Authorize]
 public class TagsController : ControllerBase
