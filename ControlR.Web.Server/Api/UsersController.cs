@@ -18,7 +18,7 @@ public class UsersController : ControllerBase
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      return BadRequest("User tenant not found");
+      return BadRequest("User tenant not found.");
     }
 
     var requestRoleIds = request.RoleIds?.ToArray();
@@ -86,7 +86,7 @@ public class UsersController : ControllerBase
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      return BadRequest("User tenant not found");
+      return BadRequest("User tenant not found.");
     }
 
     var targetExists = await appDb.Users
@@ -113,9 +113,14 @@ public class UsersController : ControllerBase
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] AppDb appDb)
   {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
     var user = await appDb.Users
       .Include(x => x.UserPreferences)
-      .FirstOrDefaultAsync(x => x.Id == id);
+      .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
 
     if (user == null)
     {
@@ -141,7 +146,7 @@ public class UsersController : ControllerBase
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      return BadRequest("User tenant not found");
+      return BadRequest("User tenant not found.");
     }
 
     var targetExists = await appDb.Users
@@ -180,7 +185,7 @@ public class UsersController : ControllerBase
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      return BadRequest("User tenant not found");
+      return BadRequest("User tenant not found.");
     }
 
     var targetExists = await appDb.Users
@@ -203,7 +208,7 @@ public class UsersController : ControllerBase
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      return BadRequest("User tenant not found");
+      return BadRequest("User tenant not found.");
     }
 
     var result = await passwordManager.ResetPassword(tenantId, id);
@@ -231,7 +236,7 @@ public class UsersController : ControllerBase
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      return BadRequest("User tenant not found");
+      return BadRequest("User tenant not found.");
     }
 
     var targetExists = await appDb.Users
