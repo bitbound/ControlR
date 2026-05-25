@@ -4302,6 +4302,10 @@
             "type": "boolean",
             "default": false
           },
+          "requiresPasswordChange": {
+            "type": "boolean",
+            "default": false
+          },
           "tokens": {
             "oneOf": [
               {

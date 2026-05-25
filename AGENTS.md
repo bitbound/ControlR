@@ -60,10 +60,15 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
   - Example: `var directories = _fileSystem.GetDirectories(path);`
 - Use collection expressions (`[]`).
   - Example: `private readonly Dictionary<string, uint> _displayNodeIds = [];`
-- No null-forgiving operator (`!`) outside tests, except within EF Core queries that execute server-side.
+- No null-forgiving operator (`!`) outside tests, except the following scenarios:
+  - In tests, where a null value would result in a test failure anyway.
+  - Within EF Core queries that execute server-side.
+  - Blazor framework-injected properties ([SupplyParameterFromForm], [CascadingParameter]) that cannot have a property initializer.
+- Null-forgiving examples:
   - DON'T: `var result = myObject!.GetValue();`
   - DO: `var result = myObject?.GetValue() ?? throw new InvalidOperationException("myObject is not initialized.");`
   - OK: `var properties = await _dbContext.Users.Select(x => x.SomeNavigation!.SomeProperty).ToListAsync();`
+  - OK: `[CascadingParameter] private HttpContext HttpContext { get; set; } = default!;`
 - Use `required` keyword where applicable.
 - No TODOs, placeholder code, or "in production you should..." comments. Every implementation must be complete.
 - No "Async" suffix on async methods unless distinguishing from a sync overload.

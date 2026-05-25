@@ -69,13 +69,13 @@ public class PasswordManager(
 
     if (!targetExists)
     {
-      return Result.Fail<AdminResetPasswordResponseDto>("User not found");
+      return Result.Fail<AdminResetPasswordResponseDto>("User not found.");
     }
 
     var targetUser = await _userManager.FindByIdAsync(targetUserId.ToString());
     if (targetUser is null)
     {
-      return Result.Fail<AdminResetPasswordResponseDto>("User not found");
+      return Result.Fail<AdminResetPasswordResponseDto>("User not found.");
     }
 
     var passwordOptions = _identityOptions.Value.Password;

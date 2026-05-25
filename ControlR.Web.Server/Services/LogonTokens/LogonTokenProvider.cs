@@ -199,7 +199,7 @@ public class LogonTokenProvider(
       _logger.LogWarning(
         "User {UserId} not found in tenant {TenantId} for logon token",
         logonToken.UserId, logonToken.TenantId);
-      return new TokenValidationResult(false, "User not found", logonToken, null);
+      return new TokenValidationResult(false, "User not found.", logonToken, null);
     }
 
     var userInfo = new UserInfo(user.Id, user.UserName, user.Email);

@@ -20,7 +20,7 @@ public class AuthController : ControllerBase
     var user = await userManager.GetUserAsync(User);
     if (user is null)
     {
-      return BadRequest("User not found");
+      return BadRequest("User not found.");
     }
 
     var result = await passwordManager.ChangePassword(user, request);
