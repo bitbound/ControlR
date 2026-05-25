@@ -56,7 +56,7 @@ public class AuthController : ControllerBase
     var result = await signInManager.CheckPasswordSignInAsync(
       user,
       request.Password,
-      lockoutOnFailure: true);
+      lockoutOnFailure: false);
 
     if (result.IsLockedOut)
     {
@@ -82,7 +82,6 @@ public class AuthController : ControllerBase
 
         if (!recoveryCodeResult.Succeeded)
         {
-          await userManager.AccessFailedAsync(user);
           result = Microsoft.AspNetCore.Identity.SignInResult.Failed;
         }
         else
@@ -92,7 +91,9 @@ public class AuthController : ControllerBase
       }
       else if (!string.IsNullOrWhiteSpace(request.TwoFactorCode))
       {
-        var normalizedCode = request.TwoFactorCode.Replace(" ", string.Empty).Replace("-", string.Empty);
+        var normalizedCode = request.TwoFactorCode
+          .Replace(" ", string.Empty)
+          .Replace("-", string.Empty);
 
         var isValid = await userManager.VerifyTwoFactorTokenAsync(
           user,
@@ -101,7 +102,6 @@ public class AuthController : ControllerBase
 
         if (!isValid)
         {
-          await userManager.AccessFailedAsync(user);
           result = Microsoft.AspNetCore.Identity.SignInResult.Failed;
         }
         else
@@ -118,6 +118,8 @@ public class AuthController : ControllerBase
 
     if (!result.Succeeded)
     {
+      await userManager.AccessFailedAsync(user);
+
       if (result.IsLockedOut)
       {
         return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));

@@ -55,14 +55,14 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
       return;
     }
 
-    var user = await userManager.GetUserAsync(context.User);
-    if (user is null || !user.RequirePasswordChange)
+    if (ShouldBypass(context.Request.Path))
     {
       await _next(context);
       return;
     }
 
-    if (ShouldBypass(context.Request.Path))
+    var user = await userManager.GetUserAsync(context.User);
+    if (user is null || !user.RequirePasswordChange)
     {
       await _next(context);
       return;
