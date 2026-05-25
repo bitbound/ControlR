@@ -7,8 +7,9 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
   private static readonly HashSet<string> _allowedApiPaths =
   [
     $"{HttpConstants.AuthEndpoint}/change-password",
-    $"{HttpConstants.AuthEndpoint}/manage/info",
-    $"{HttpConstants.AuthEndpoint}/logout"
+    $"{HttpConstants.AuthEndpoint}/logout",
+    $"{HttpConstants.AuthEndpoint}/refresh",
+    $"{HttpConstants.AuthEndpoint}/interactive-login",
   ];
   private static readonly HashSet<string> _allowedPathStartSegments =
   [

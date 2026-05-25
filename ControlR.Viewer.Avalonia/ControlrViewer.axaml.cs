@@ -137,6 +137,14 @@ public partial class ControlrViewer : UserControl
   protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
   {
     base.OnAttachedToVisualTree(e);
+
+    // Defer initialization until the control is actually visible.
+    // Pre-created but hidden controls should not trigger network calls or service registration.
+    if (!IsVisible)
+    {
+      return;
+    }
+
     InitializeServices();
   }
 
