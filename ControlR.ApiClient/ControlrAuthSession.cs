@@ -122,11 +122,11 @@ public sealed class ControlrAuthSession(
     {
       var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
       using var response = await client.PostAsJsonAsync(
-        new Uri(BaseUrl, $"{HttpConstants.AuthEndpoint}/reset-password"),
+        new Uri(BaseUrl, $"{HttpConstants.AuthEndpoint}/reset-password"),      
         new PasswordResetRequestDto(email, currentPassword, newPassword, twoFactorCode),
         cancellationToken);
 
-      if (response.StatusCode == HttpStatusCode.BadRequest)
+      if (response.StatusCode is >= HttpStatusCode.BadRequest and < HttpStatusCode.InternalServerError)
       {
         var error = await response.Content.ReadAsStringAsync(cancellationToken);
         return ApiResult.Fail(error, response.StatusCode);
@@ -135,10 +135,26 @@ public sealed class ControlrAuthSession(
       await response.EnsureSuccessStatusCodeWithDetails();
       return ApiResult.Ok();
     }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+      _logger.LogWarning("Password change canceled by the user.");
+      return ApiResult.Fail("The operation was canceled.", HttpStatusCode.RequestTimeout);
+    }
+    catch (TimeoutException ex)
+    {
+      _logger.LogWarning(ex, "Password change request timed out.");
+      return ApiResult.Fail("The request timed out.", HttpStatusCode.RequestTimeout);
+    }
+    catch (HttpRequestException ex)
+    {
+      _logger.LogWarning(ex, "Password change request failed.");
+      var statusCode = ex.StatusCode ?? HttpStatusCode.InternalServerError;
+      return ApiResult.Fail(ex.Message, statusCode);
+    }
     catch (Exception ex)
     {
       _logger.LogWarning(ex, "Password change failed.");
-      return ApiResult.Fail(ex.Message, HttpStatusCode.InternalServerError);
+      return ApiResult.Fail("Password change failed. Please try again.", HttpStatusCode.InternalServerError);
     }
   }
 
