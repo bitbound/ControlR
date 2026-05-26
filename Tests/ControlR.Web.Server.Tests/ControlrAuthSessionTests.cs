@@ -95,18 +95,24 @@ public class ControlrAuthSessionTests
     };
 
     var firstResult = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(InteractiveLoginStatus.Authenticated, firstResult.Status);
 
     await handler.RefreshStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
     var secondResult = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(InteractiveLoginStatus.Authenticated, secondResult.Status);
 
@@ -150,9 +156,12 @@ public class ControlrAuthSessionTests
     };
 
     var signInResult = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(InteractiveLoginStatus.Authenticated, signInResult.Status);
 
@@ -184,9 +193,12 @@ public class ControlrAuthSessionTests
     var session = CreateSession(options, authState, httpClient, timeProvider);
 
     var result = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(InteractiveLoginStatus.Failed, result.Status);
     Assert.Equal("Interactive login is not available on this server.", result.Message);
@@ -214,12 +226,107 @@ public class ControlrAuthSessionTests
     var session = CreateSession(options, authState, httpClient, timeProvider);
 
     var result = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(InteractiveLoginStatus.Failed, result.Status);
     Assert.Equal("Interactive login failed.", result.Message);
+  }
+
+  [Fact]
+  public async Task SignIn_WhenRecoveryCodeIsProvided_AuthenticatesSession()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var responseQueue = new Queue<HttpResponseMessage>([
+      CreateJsonResponse(new InteractiveLoginResponseDto(RequiresTwoFactor: true)),
+      CreateJsonResponse(new InteractiveLoginResponseDto(
+        RequiresTwoFactor: false,
+        Tokens: CreateTokenResponse("access-token", "refresh-token", expiresInSeconds: 300)))
+    ]);
+
+    using var httpClient = new HttpClient(new QueueMessageHandler(responseQueue))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var authState = new ControlrApiClientAuthState();
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var signInResult = await session.SignIn(
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(InteractiveLoginStatus.RequiresTwoFactor, signInResult.Status);
+
+    var recoveryResult = await session.SignIn(
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!",
+        RecoveryCode = "recovery-code"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(InteractiveLoginStatus.Authenticated, recoveryResult.Status);
+    Assert.True(session.IsAuthenticated);
+    Assert.Equal(ControlrAuthSessionState.Authenticated, session.State);
+    Assert.Equal("access-token", authState.BearerToken);
+  }
+
+  [Fact]
+  public async Task SignIn_WhenSecondAttemptProvidesTwoFactorCode_AuthenticatesWithoutStoredCredentials()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var responseQueue = new Queue<HttpResponseMessage>([
+      CreateJsonResponse(new InteractiveLoginResponseDto(RequiresTwoFactor: true)),
+      CreateJsonResponse(new InteractiveLoginResponseDto(
+        RequiresTwoFactor: false,
+        Tokens: CreateTokenResponse("access-token", "refresh-token", expiresInSeconds: 300)))
+    ]);
+
+    using var httpClient = new HttpClient(new QueueMessageHandler(responseQueue))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var authState = new ControlrApiClientAuthState();
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var signInResult = await session.SignIn(
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(InteractiveLoginStatus.RequiresTwoFactor, signInResult.Status);
+
+    var result = await session.SignIn(
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!",
+        TwoFactorCode = "123456"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(InteractiveLoginStatus.Authenticated, result.Status);
+    Assert.Equal("Connected.", result.Message);
+    Assert.Equal(ControlrAuthSessionState.Authenticated, session.State);
+    Assert.False(session.RequiresTwoFactor);
+    Assert.True(session.IsAuthenticated);
+    Assert.Equal("access-token", authState.BearerToken);
   }
 
   [Fact]
@@ -245,17 +352,25 @@ public class ControlrAuthSessionTests
     session.StateChanged += (_, args) => observedStates.Add(args.State);
 
     var signInResult = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(InteractiveLoginStatus.RequiresTwoFactor, signInResult.Status);
     Assert.True(session.RequiresTwoFactor);
     Assert.Equal(ControlrAuthSessionState.AwaitingTwoFactor, session.State);
 
-    var twoFactorResult = await session.SubmitTwoFactorCode(
-      "123456",
-      TestContext.Current.CancellationToken);
+    var twoFactorResult = await session.SignIn(
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!",
+        TwoFactorCode = "123456"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(InteractiveLoginStatus.Authenticated, twoFactorResult.Status);
     Assert.True(session.IsAuthenticated);
@@ -311,9 +426,12 @@ public class ControlrAuthSessionTests
     var session = CreateSession(options, authState, httpClient, timeProvider);
 
     var signInResult = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
+      new InteractiveSignInRequest
+      {
+        Email = "viewer@example.com",
+        Password = "P@ssw0rd!"
+      },
+      cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(InteractiveLoginStatus.Authenticated, signInResult.Status);
 
@@ -328,81 +446,6 @@ public class ControlrAuthSessionTests
     Assert.Null(authState.BearerToken);
     Assert.Null(authState.RefreshToken);
     Assert.Null(authState.BearerTokenExpiresAt);
-  }
-
-  [Fact]
-  public async Task SubmitRecoveryCode_WhenAccepted_AuthenticatesSession()
-  {
-    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
-    var options = CreateOptions();
-    var responseQueue = new Queue<HttpResponseMessage>([
-      CreateJsonResponse(new InteractiveLoginResponseDto(RequiresTwoFactor: true)),
-      CreateJsonResponse(new InteractiveLoginResponseDto(
-        RequiresTwoFactor: false,
-        Tokens: CreateTokenResponse("access-token", "refresh-token", expiresInSeconds: 300)))
-    ]);
-
-    using var httpClient = new HttpClient(new QueueMessageHandler(responseQueue))
-    {
-      BaseAddress = options.BaseUrl
-    };
-
-    var authState = new ControlrApiClientAuthState();
-    var session = CreateSession(options, authState, httpClient, timeProvider);
-
-    var signInResult = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
-
-    Assert.Equal(InteractiveLoginStatus.RequiresTwoFactor, signInResult.Status);
-
-    var recoveryResult = await session.SubmitRecoveryCode(
-      "recovery-code",
-      TestContext.Current.CancellationToken);
-
-    Assert.Equal(InteractiveLoginStatus.Authenticated, recoveryResult.Status);
-    Assert.True(session.IsAuthenticated);
-    Assert.Equal(ControlrAuthSessionState.Authenticated, session.State);
-    Assert.Equal("access-token", authState.BearerToken);
-  }
-
-  [Fact]
-  public async Task SubmitTwoFactorCode_WhenPendingLoginExpires_ReturnsFailedAndSignsOut()
-  {
-    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
-    var options = CreateOptions();
-    var responseQueue = new Queue<HttpResponseMessage>([
-      CreateJsonResponse(new InteractiveLoginResponseDto(RequiresTwoFactor: true))
-    ]);
-
-    using var httpClient = new HttpClient(new QueueMessageHandler(responseQueue))
-    {
-      BaseAddress = options.BaseUrl
-    };
-
-    var authState = new ControlrApiClientAuthState();
-    var session = CreateSession(options, authState, httpClient, timeProvider);
-
-    var signInResult = await session.SignIn(
-      "viewer@example.com",
-      "P@ssw0rd!",
-      TestContext.Current.CancellationToken);
-
-    Assert.Equal(InteractiveLoginStatus.RequiresTwoFactor, signInResult.Status);
-
-    timeProvider.Advance(TimeSpan.FromMinutes(6));
-
-    var result = await session.SubmitTwoFactorCode(
-      "123456",
-      TestContext.Current.CancellationToken);
-
-    Assert.Equal(InteractiveLoginStatus.Failed, result.Status);
-    Assert.Equal("The login attempt expired. Sign in again.", result.Message);
-    Assert.Equal(ControlrAuthSessionState.SignedOut, session.State);
-    Assert.False(session.RequiresTwoFactor);
-    Assert.False(session.IsAuthenticated);
-    Assert.Null(authState.BearerToken);
   }
 
   private static HttpResponseMessage CreateJsonResponse<T>(T payload)

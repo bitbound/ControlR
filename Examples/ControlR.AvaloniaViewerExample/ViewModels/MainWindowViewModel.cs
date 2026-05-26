@@ -22,8 +22,10 @@ public interface IMainWindowViewModel : INotifyPropertyChanged, IDisposable
   bool IsViewerVisible { get; }
   string LoginDescription { get; }
   string LoginTitle { get; }
+  string NewPassword { get; set; }
   string Password { get; set; }
   string PersonalAccessToken { get; set; }
+  bool RequiresPasswordChange { get; }
   bool RequiresTwoFactor { get; }
   string ServerUrl { get; set; }
   bool ShowPersonalAccessTokenInput { get; }
@@ -75,14 +77,22 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   public partial bool IsViewerVisible { get; set; }
   public string LoginDescription => ShowPersonalAccessTokenInput
     ? "Enter the ControlR server, device ID, and a personal access token generated from the web app."
-    : "Enter the ControlR server, device ID, and the same email and password you use in the web app. The OTP field only appears when the account requires two-factor authentication.";
+    : RequiresPasswordChange
+      ? "Enter your current password and a new password. The new password will be applied immediately."
+      : "Enter the ControlR server, device ID, and the same email and password you use in the web app. The OTP field only appears when the account requires two-factor authentication.";
   public string LoginTitle => ShowPersonalAccessTokenInput
     ? "Connect with a personal access token"
-    : "Sign in to the viewer";
+    : RequiresPasswordChange
+      ? "Change your password"
+      : "Sign in to the viewer";
+  [ObservableProperty]
+  public partial string NewPassword { get; set; } = string.Empty;
   [ObservableProperty]
   public partial string Password { get; set; } = string.Empty;
   [ObservableProperty]
   public partial string PersonalAccessToken { get; set; } = string.Empty;
+  [ObservableProperty]
+  public partial bool RequiresPasswordChange { get; set; }
   [ObservableProperty]
   public partial bool RequiresTwoFactor { get; set; }
   [ObservableProperty]
@@ -144,21 +154,33 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
       {
         case ControlrAuthSessionState.Authenticated:
           IsViewerVisible = true;
+          RequiresPasswordChange = false;
           RequiresTwoFactor = false;
           TwoFactorCode = string.Empty;
           break;
+        case ControlrAuthSessionState.AwaitingPasswordChange:
+          IsViewerVisible = false;
+          RequiresPasswordChange = true;
+          RequiresTwoFactor = false;
+          TwoFactorCode = string.Empty;
+          StatusMessage = e.Message ?? "A password change is required.";
+          break;
         case ControlrAuthSessionState.AwaitingTwoFactor:
           IsViewerVisible = false;
+          RequiresPasswordChange = false;
           RequiresTwoFactor = true;
+          StatusMessage = e.Message ?? "Two-factor authentication is enabled.";
           break;
         case ControlrAuthSessionState.Expired:
           IsViewerVisible = false;
+          RequiresPasswordChange = false;
           RequiresTwoFactor = false;
           TwoFactorCode = string.Empty;
           StatusMessage = e.Message ?? "The session expired. Sign in again.";
           break;
         default:
           IsViewerVisible = false;
+          RequiresPasswordChange = false;
           RequiresTwoFactor = false;
           TwoFactorCode = string.Empty;
           break;
@@ -178,7 +200,9 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
       ? ViewerAuthenticationMethod.InteractiveBearer
       : ViewerAuthenticationMethod.PersonalAccessToken;
 
+    RequiresPasswordChange = false;
     RequiresTwoFactor = false;
+    NewPassword = string.Empty;
     TwoFactorCode = string.Empty;
     StatusMessage = string.Empty;
 
@@ -230,6 +254,49 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
 
       ViewerOptions.AuthenticationMethod = ViewerAuthenticationMethod.InteractiveBearer;
 
+      if (RequiresPasswordChange)
+      {
+        if (string.IsNullOrWhiteSpace(NewPassword))
+        {
+          StatusMessage = "Enter a new password.";
+          return;
+        }
+
+        var newPassword = NewPassword;
+        var twoFactorCode = string.IsNullOrWhiteSpace(TwoFactorCode)
+          ? null
+          : TwoFactorCode;
+        var changeResult = await _authSession.ChangePassword(
+          Email.Trim(),
+          Password,
+          newPassword,
+          twoFactorCode,
+          cancellationToken);
+
+        if (!changeResult.IsSuccess)
+        {
+          StatusMessage = changeResult.Reason ?? "Password change failed.";
+          return;
+        }
+
+        NewPassword = string.Empty;
+        StatusMessage = "Password changed. Signing in...";
+
+        ViewerOptions.PersonalAccessToken = null;
+
+        var signInResult = await _authSession.SignIn(
+          new InteractiveSignInRequest
+          {
+            Email = Email.Trim(),
+            Password = newPassword,
+            TwoFactorCode = twoFactorCode
+          },
+          cancellationToken);
+        StatusMessage = signInResult.Message ?? string.Empty;
+
+        return;
+      }
+
       if (!RequiresTwoFactor)
       {
         ViewerOptions.PersonalAccessToken = null;
@@ -242,9 +309,14 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
         return;
       }
 
-      var result = RequiresTwoFactor
-        ? await _authSession.SubmitTwoFactorCode(TwoFactorCode.Replace(" ", string.Empty), cancellationToken)
-        : await _authSession.SignIn(Email.Trim(), Password, cancellationToken);
+      var result = await _authSession.SignIn(
+        new InteractiveSignInRequest
+        {
+          Email = Email.Trim(),
+          Password = Password,
+          TwoFactorCode = RequiresTwoFactor ? TwoFactorCode.Replace(" ", string.Empty) : null
+        },
+        cancellationToken);
 
       StatusMessage = result.Message ?? string.Empty;
     }

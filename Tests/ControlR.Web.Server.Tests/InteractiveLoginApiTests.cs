@@ -168,6 +168,81 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task InteractiveLogin_WhenPasswordChangeIsRequiredAndPasswordIsInvalid_ReturnsUnauthorized()
+  {
+    var user = new AppUser
+    {
+      Email = "desktop-reset-invalid@t.local",
+      UserName = "desktop-reset-invalid@t.local",
+      RequirePasswordChange = true
+    };
+
+    var userManager = CreateUserManager(user);
+
+    var signInManager = CreateSignInManager(userManager.Object);
+    signInManager
+      .Setup(x => x.CheckPasswordSignInAsync(user, "wrong-password", false))
+      .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
+
+    userManager
+      .Setup(x => x.AccessFailedAsync(user))
+      .ReturnsAsync(IdentityResult.Success);
+    userManager
+      .Setup(x => x.IsLockedOutAsync(user))
+      .ReturnsAsync(false);
+
+    var appOptions = new Mock<IOptionsMonitor<AppOptions>>();
+    appOptions.SetupGet(x => x.CurrentValue).Returns(new AppOptions { EnableInteractiveBearerLogin = true });
+    var controller = new AuthController();
+
+    var result = await controller.InteractiveLogin(
+      signInManager.Object,
+      userManager.Object,
+      TimeProvider.System,
+      appOptions.Object,
+      CreateBearerTokenOptionsMonitor(),
+      new LoginRequestDto(user.Email, "wrong-password"));
+
+    Assert.IsType<UnauthorizedResult>(result.Result);
+  }
+
+  [Fact]
+  public async Task InteractiveLogin_WhenPasswordChangeIsRequiredAndPasswordIsValid_ReturnsRequiresPasswordChange()
+  {
+    var user = new AppUser
+    {
+      Email = "desktop-reset-valid@t.local",
+      UserName = "desktop-reset-valid@t.local",
+      RequirePasswordChange = true
+    };
+
+    var userManager = CreateUserManager(user);
+
+    var signInManager = CreateSignInManager(userManager.Object);
+    signInManager
+      .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", false))
+      .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+
+    var appOptions = new Mock<IOptionsMonitor<AppOptions>>();
+    appOptions.SetupGet(x => x.CurrentValue).Returns(new AppOptions { EnableInteractiveBearerLogin = true });
+    var controller = new AuthController();
+
+    var result = await controller.InteractiveLogin(
+      signInManager.Object,
+      userManager.Object,
+      TimeProvider.System,
+      appOptions.Object,
+      CreateBearerTokenOptionsMonitor(),
+      new LoginRequestDto(user.Email, "T3stP@ssw0rd!"));
+
+    var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    var payload = Assert.IsType<InteractiveLoginResponseDto>(okResult.Value);
+    Assert.True(payload.RequiresPasswordChange);
+    Assert.False(payload.RequiresTwoFactor);
+    Assert.Null(payload.Tokens);
+  }
+
+  [Fact]
   public async Task InteractiveLogin_WhenRecoveryCodeIsInvalid_ReturnsUnauthorized()
   {
     var user = new AppUser

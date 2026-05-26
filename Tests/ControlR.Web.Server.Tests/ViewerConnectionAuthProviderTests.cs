@@ -92,6 +92,11 @@ public class ViewerConnectionAuthProviderTests
     public bool RequiresTwoFactor => false;
     public ControlrAuthSessionState State => ControlrAuthSessionState.SignedOut;
 
+    public Task<ControlR.Libraries.Api.Contracts.Dtos.ApiResult> ChangePassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
+    {
+      throw new NotSupportedException();
+    }
+
     public void Dispose()
     {
     }
@@ -108,22 +113,12 @@ public class ViewerConnectionAuthProviderTests
       PersonalAccessToken = personalAccessToken;
     }
 
-    public Task<InteractiveLoginResult> SignIn(string email, string password, CancellationToken cancellationToken = default)
+    public Task<InteractiveLoginResult> SignIn(InteractiveSignInRequest request, CancellationToken cancellationToken = default)
     {
       throw new NotSupportedException();
     }
 
     public Task SignOut()
-    {
-      throw new NotSupportedException();
-    }
-
-    public Task<InteractiveLoginResult> SubmitRecoveryCode(string recoveryCode, CancellationToken cancellationToken = default)
-    {
-      throw new NotSupportedException();
-    }
-
-    public Task<InteractiveLoginResult> SubmitTwoFactorCode(string twoFactorCode, CancellationToken cancellationToken = default)
     {
       throw new NotSupportedException();
     }

@@ -53,11 +53,6 @@ public class AuthController : ControllerBase
       return Unauthorized();
     }
 
-    if (user.RequirePasswordChange)
-    {
-      return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: true));
-    }
-
     var result = await signInManager.CheckPasswordSignInAsync(
       user,
       request.Password,
@@ -66,6 +61,11 @@ public class AuthController : ControllerBase
     if (result.IsLockedOut)
     {
       return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));
+    }
+
+    if (result.Succeeded && user.RequirePasswordChange)
+    {
+      return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: true));
     }
 
     var requiresTwoFactor = result.Succeeded && user.TwoFactorEnabled;
@@ -150,6 +150,77 @@ public class AuthController : ControllerBase
   {
     await signInManager.SignOutAsync();
     return NoContent();
+  }
+
+  [AllowAnonymous]
+  [HttpPost("reset-password")]
+  public async Task<IActionResult> ResetPassword(
+    [FromServices] UserManager<AppUser> userManager,
+    [FromServices] SignInManager<AppUser> signInManager,
+    [FromServices] IPasswordManager passwordManager,
+    [FromBody] PasswordResetRequestDto request)
+  {
+    if (string.IsNullOrWhiteSpace(request.Email) ||
+        string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+        string.IsNullOrWhiteSpace(request.NewPassword))
+    {
+      return BadRequest("Email, current password, and new password are required.");
+    }
+
+    var user = await userManager.FindByEmailAsync(request.Email);
+    if (user is null)
+    {
+      return BadRequest("User not found.");
+    }
+
+    var result = await signInManager.CheckPasswordSignInAsync(
+      user,
+      request.CurrentPassword,
+      lockoutOnFailure: false);
+
+    if (result.IsLockedOut)
+    {
+      return BadRequest("This account is locked. Please try again later.");
+    }
+
+    if (!result.Succeeded)
+    {
+      await userManager.AccessFailedAsync(user);
+      return BadRequest("Current password is incorrect.");
+    }
+
+    if (user.TwoFactorEnabled && string.IsNullOrWhiteSpace(request.TwoFactorCode))
+    {
+      return BadRequest("Two-factor code is required.");
+    }
+
+    if (user.TwoFactorEnabled && !string.IsNullOrWhiteSpace(request.TwoFactorCode))
+    {
+      var normalizedCode = request.TwoFactorCode.Replace(" ", string.Empty).Replace("-", string.Empty);
+      var isValid = await userManager.VerifyTwoFactorTokenAsync(
+        user,
+        userManager.Options.Tokens.AuthenticatorTokenProvider,
+        normalizedCode);
+
+      if (!isValid)
+      {
+        await userManager.AccessFailedAsync(user);
+        return BadRequest("Two-factor code is incorrect.");
+      }
+    }
+
+    await userManager.ResetAccessFailedCountAsync(user);
+
+    var resetResult = await passwordManager.ChangePassword(user, new ChangePasswordRequestDto(
+      request.CurrentPassword,
+      request.NewPassword));
+
+    if (!resetResult.IsSuccess)
+    {
+      return BadRequest(resetResult.Reason);
+    }
+
+    return Ok();
   }
 
   private static AccessTokenResponseDto CreateInteractiveLoginTokens(

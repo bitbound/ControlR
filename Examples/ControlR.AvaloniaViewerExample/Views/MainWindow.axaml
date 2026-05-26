@@ -163,16 +163,19 @@
       </Border>
 
       <Grid Grid.Column="1">
-        <Border IsVisible="{Binding IsLoginVisible}"
-                VerticalAlignment="Center"
-                HorizontalAlignment="Center"
-                MaxWidth="480"
-                Padding="28"
-                Background="{DynamicResource BackgroundGrayBrush}"
-                BorderBrush="{DynamicResource DividerBrush}"
-                BorderThickness="1"
-                CornerRadius="18">
-          <StackPanel Spacing="14">
+        <ScrollViewer IsVisible="{Binding IsLoginVisible}"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+          <Border VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            Margin="24"
+            MaxWidth="480"
+            Padding="28"
+            Background="{DynamicResource BackgroundGrayBrush}"
+            BorderBrush="{DynamicResource DividerBrush}"
+            BorderThickness="1"
+            CornerRadius="18">
+            <StackPanel Spacing="14">
             <TextBlock FontSize="24"
                        FontWeight="Bold"
                        Text="{Binding LoginTitle}" />
@@ -214,6 +217,15 @@
               <TextBox Text="{Binding TwoFactorCode}" />
             </StackPanel>
 
+            <StackPanel IsVisible="{Binding RequiresPasswordChange}"
+                        Spacing="6">
+              <TextBlock Text="New password" />
+              <TextBox Text="{Binding NewPassword}"
+                       PasswordChar="*" />
+              <TextBlock Text="Authenticator code" />
+              <TextBox Text="{Binding TwoFactorCode}" />
+            </StackPanel>
+
             <TextBlock TextWrapping="Wrap"
                        Foreground="{DynamicResource InfoColor}"
                        Text="{Binding StatusMessage}" />
@@ -227,8 +239,9 @@
                       MinWidth="100"
                       Command="{Binding SignOutCommand}" />
             </StackPanel>
-          </StackPanel>
-        </Border>
+            </StackPanel>
+          </Border>
+        </ScrollViewer>
 
         <ctrlr:ControlrViewer x:Name="Viewer"
                               Options="{Binding ViewerOptions}"

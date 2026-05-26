@@ -22,9 +22,13 @@ public partial class MainWindowViewModelFake : ObservableObject, IMainWindowView
   [ObservableProperty]
   private bool _isViewerVisible;
   [ObservableProperty]
+  private string _newPassword = string.Empty;
+  [ObservableProperty]
   private string _password = string.Empty;
   [ObservableProperty]
   private string _personalAccessToken = "pat-example-token";
+  [ObservableProperty]
+  private bool _requiresPasswordChange;
   [ObservableProperty]
   private bool _requiresTwoFactor;
   [ObservableProperty]

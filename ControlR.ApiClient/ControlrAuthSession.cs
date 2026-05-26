@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -22,32 +23,37 @@ public interface IControlrAuthSession : IDisposable
   /// Gets the access-token expiration for the current bearer session, if one exists.
   /// </summary>
   DateTimeOffset? AccessTokenExpiresAt { get; }
-
   /// <summary>
   /// Gets the current server base URL used for interactive sign-in and token refresh calls.
   /// </summary>
   Uri BaseUrl { get; }
-
   /// <summary>
   /// Gets a value indicating whether the session currently has an authenticated bearer token.
   /// </summary>
   bool IsAuthenticated { get; }
-
   /// <summary>
   /// Gets the configured personal access token, if one is being used instead of interactive bearer auth.
   /// </summary>
   string? PersonalAccessToken { get; }
-
   /// <summary>
   /// Gets a value indicating whether the current sign-in flow is waiting for a two-factor code.
   /// </summary>
   bool RequiresTwoFactor { get; }
-
   /// <summary>
   /// Gets the current session state.
   /// </summary>
   ControlrAuthSessionState State { get; }
 
+  /// <summary>
+  /// Changes the user's password when a password change is required.
+  /// </summary>
+  /// <param name="email">The user email.</param>
+  /// <param name="currentPassword">The current password.</param>
+  /// <param name="newPassword">The new password.</param>
+  /// <param name="twoFactorCode">Optional authenticator code if the account has 2FA enabled.</param>
+  /// <param name="cancellationToken">Cancels the operation.</param>
+  /// <returns>A result indicating success or failure of the password change.</returns>
+  Task<ApiResult> ChangePassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default);
   /// <summary>
   /// Gets a usable bearer access token, refreshing it first when needed.
   /// </summary>
@@ -56,48 +62,27 @@ public interface IControlrAuthSession : IDisposable
   /// The current bearer access token, or <see langword="null"/> when the session is using a personal access token.
   /// </returns>
   Task<string?> GetAccessToken(CancellationToken cancellationToken = default);
-
   /// <summary>
   /// Updates the server base URL used by the session.
   /// </summary>
   /// <param name="baseUrl">The ControlR server base URL.</param>
   void SetBaseUrl(Uri baseUrl);
-
   /// <summary>
   /// Configures a personal access token for the session and clears any interactive bearer state.
   /// </summary>
   /// <param name="personalAccessToken">The personal access token to use, or <see langword="null"/> to clear it.</param>
   void SetPersonalAccessToken(string? personalAccessToken);
-
   /// <summary>
-  /// Starts an interactive sign-in using an email and password.
+  /// Starts an interactive sign-in using an email and password, with optional two-factor credentials.
   /// </summary>
-  /// <param name="email">The user email.</param>
-  /// <param name="password">The user password.</param>
+  /// <param name="request">The sign-in request details.</param>
   /// <param name="cancellationToken">Cancels the sign-in operation.</param>
   /// <returns>The result of the interactive login attempt.</returns>
-  Task<InteractiveLoginResult> SignIn(string email, string password, CancellationToken cancellationToken = default);
-
+  Task<InteractiveLoginResult> SignIn(InteractiveSignInRequest request, CancellationToken cancellationToken = default);
   /// <summary>
   /// Signs out of the interactive bearer session and clears stored authentication state.
   /// </summary>
   Task SignOut();
-
-  /// <summary>
-  /// Continues a pending two-factor sign-in using a recovery code.
-  /// </summary>
-  /// <param name="recoveryCode">The recovery code supplied by the user.</param>
-  /// <param name="cancellationToken">Cancels the sign-in operation.</param>
-  /// <returns>The result of the interactive login attempt.</returns>
-  Task<InteractiveLoginResult> SubmitRecoveryCode(string recoveryCode, CancellationToken cancellationToken = default);
-
-  /// <summary>
-  /// Continues a pending two-factor sign-in using an authenticator code.
-  /// </summary>
-  /// <param name="twoFactorCode">The authenticator code supplied by the user.</param>
-  /// <param name="cancellationToken">Cancels the sign-in operation.</param>
-  /// <returns>The result of the interactive login attempt.</returns>
-  Task<InteractiveLoginResult> SubmitTwoFactorCode(string twoFactorCode, CancellationToken cancellationToken = default);
 }
 
 public sealed class ControlrAuthSession(
@@ -109,18 +94,15 @@ public sealed class ControlrAuthSession(
   TimeProvider timeProvider) : IControlrAuthSession
 {
   private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
-  private static readonly TimeSpan _pendingCredentialLifetime = TimeSpan.FromMinutes(5);
 
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly ILogger<ControlrAuthSession> _logger = logger;
   private readonly IOptionsMonitor<ControlrApiClientOptions> _optionsMonitor = optionsMonitor;
-  private readonly object _pendingCredentialsLock = new();
   private readonly TimeProvider _timeProvider = timeProvider;
 
   private Uri _baseUrl = optionsMonitor.CurrentValue.BaseUrl;
-  private (string Email, string Password, DateTimeOffset ExpiresAt)? _pendingCredentials;
   private CancellationTokenSource? _refreshLoopCts;
   private long _refreshLoopGeneration;
   private ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
@@ -133,6 +115,32 @@ public sealed class ControlrAuthSession(
   public string? PersonalAccessToken => _authState.PersonalAccessToken;
   public bool RequiresTwoFactor => State == ControlrAuthSessionState.AwaitingTwoFactor;
   public ControlrAuthSessionState State => _state;
+
+  public async Task<ApiResult> ChangePassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
+  {
+    try
+    {
+      var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
+      using var response = await client.PostAsJsonAsync(
+        new Uri(BaseUrl, $"{HttpConstants.AuthEndpoint}/reset-password"),
+        new PasswordResetRequestDto(email, currentPassword, newPassword, twoFactorCode),
+        cancellationToken);
+
+      if (response.StatusCode == HttpStatusCode.BadRequest)
+      {
+        var error = await response.Content.ReadAsStringAsync(cancellationToken);
+        return ApiResult.Fail(error, response.StatusCode);
+      }
+
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return ApiResult.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Password change failed.");
+      return ApiResult.Fail(ex.Message, HttpStatusCode.InternalServerError);
+    }
+  }
 
   public void Dispose()
   {
@@ -167,19 +175,24 @@ public sealed class ControlrAuthSession(
     UpdateState(ControlrAuthSessionState.SignedOut);
   }
 
-  public async Task<InteractiveLoginResult> SignIn(string email, string password, CancellationToken cancellationToken = default)
+  public async Task<InteractiveLoginResult> SignIn(InteractiveSignInRequest request, CancellationToken cancellationToken = default)
   {
     var result = await ExecuteInteractiveLogin(
-      new LoginRequestDto(email, password),
+      new LoginRequestDto(
+        request.Email,
+        request.Password,
+        string.IsNullOrWhiteSpace(request.TwoFactorCode) ? null : request.TwoFactorCode,
+        string.IsNullOrWhiteSpace(request.RecoveryCode) ? null : request.RecoveryCode),
       cancellationToken);
+
+    if (result.Status == InteractiveLoginStatus.RequiresPasswordChange)
+    {
+      UpdateState(ControlrAuthSessionState.AwaitingPasswordChange);
+      return result with { Message = "A password change is required. Enter your current and a new password to continue." };
+    }
 
     if (result.Status == InteractiveLoginStatus.RequiresTwoFactor)
     {
-      lock (_pendingCredentialsLock)
-      {
-        _pendingCredentials = (email, password, _timeProvider.GetUtcNow().Add(_pendingCredentialLifetime));
-      }
-
       UpdateState(ControlrAuthSessionState.AwaitingTwoFactor);
       return result with { Message = "Two-factor authentication is enabled. Enter your authenticator code to continue." };
     }
@@ -191,7 +204,6 @@ public sealed class ControlrAuthSession(
 
     if (result.Status == InteractiveLoginStatus.Authenticated)
     {
-      ClearPendingCredentials();
       return result with { Message = "Connected." };
     }
 
@@ -207,36 +219,10 @@ public sealed class ControlrAuthSession(
     return Task.CompletedTask;
   }
 
-  public async Task<InteractiveLoginResult> SubmitRecoveryCode(string recoveryCode, CancellationToken cancellationToken = default)
-  {
-    return await SubmitPendingLogin(
-      twoFactorCode: null,
-      recoveryCode,
-      "The recovery code was rejected.",
-      cancellationToken);
-  }
-
-  public async Task<InteractiveLoginResult> SubmitTwoFactorCode(string twoFactorCode, CancellationToken cancellationToken = default)
-  {
-    return await SubmitPendingLogin(
-      twoFactorCode,
-      recoveryCode: null,
-      "The two-factor code was rejected.",
-      cancellationToken);
-  }
-
   private static void CancelRefreshLoop(CancellationTokenSource? cts)
   {
     cts?.Cancel();
     cts?.Dispose();
-  }
-
-  private void ClearPendingCredentials()
-  {
-    lock (_pendingCredentialsLock)
-    {
-      _pendingCredentials = null;
-    }
   }
 
   private async Task<InteractiveLoginResult> ExecuteInteractiveLogin(LoginRequestDto request, CancellationToken cancellationToken)
@@ -338,7 +324,6 @@ public sealed class ControlrAuthSession(
   private void ResetSession(bool clearPersonalAccessToken)
   {
     StopRefreshLoop();
-    ClearPendingCredentials();
     _authState.ClearBearerTokens();
 
     if (clearPersonalAccessToken)
@@ -404,56 +389,6 @@ public sealed class ControlrAuthSession(
     Interlocked.Increment(ref _refreshLoopGeneration);
     var cts = Interlocked.Exchange(ref _refreshLoopCts, null);
     CancelRefreshLoop(cts);
-  }
-
-  private async Task<InteractiveLoginResult> SubmitPendingLogin(
-    string? twoFactorCode,
-    string? recoveryCode,
-    string rejectedMessage,
-    CancellationToken cancellationToken)
-  {
-    LoginRequestDto? request;
-    var expired = false;
-
-    lock (_pendingCredentialsLock)
-    {
-      if (_pendingCredentials is not { } pendingCredentials)
-      {
-        request = null;
-      }
-      else if (pendingCredentials.ExpiresAt <= _timeProvider.GetUtcNow())
-      {
-        _pendingCredentials = null;
-        request = null;
-        expired = true;
-      }
-      else
-      {
-        request = new LoginRequestDto(pendingCredentials.Email, pendingCredentials.Password, twoFactorCode, recoveryCode);
-      }
-    }
-
-    if (expired)
-    {
-      UpdateState(ControlrAuthSessionState.SignedOut, "The login attempt expired. Sign in again.");
-      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "The login attempt expired. Sign in again.");
-    }
-
-    if (request is null)
-    {
-      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "A login attempt is not waiting for two-factor authentication.");
-    }
-
-    var result = await ExecuteInteractiveLogin(request, cancellationToken);
-    if (result.Status == InteractiveLoginStatus.Authenticated)
-    {
-      ClearPendingCredentials();
-      return result with { Message = "Connected." };
-    }
-
-    return result.Message is null
-      ? result with { Message = rejectedMessage }
-      : result;
   }
 
   private void UpdateState(ControlrAuthSessionState state, string? message = null)
