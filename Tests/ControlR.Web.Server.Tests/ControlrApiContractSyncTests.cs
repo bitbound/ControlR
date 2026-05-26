@@ -190,6 +190,7 @@ public partial class ControlrApiContractSyncTests
   {
     return new Dictionary<string, string>(StringComparer.Ordinal)
     {
+      ["VersionEndpoint"] = "AgentVersion",
     };
   }
 

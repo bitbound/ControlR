@@ -14,7 +14,7 @@ public partial class ControlrApi
   private const string ManageInfoEndpoint = $"{HttpConstants.AuthEndpoint}/manage/info";
   private const string RegisterEndpoint = $"{HttpConstants.AuthEndpoint}/register";
   private const string ResendConfirmationEmailEndpoint = $"{HttpConstants.AuthEndpoint}/resendConfirmationEmail";
-  private const string ResetPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/resetPassword";
+  private const string ResetPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/reset-password";
   private const string TwoFactorEndpoint = $"{HttpConstants.AuthEndpoint}/manage/2fa";
 
   async Task<ApiResult> IAuthApi.ChangePassword(ChangePasswordRequestDto request, CancellationToken cancellationToken)
