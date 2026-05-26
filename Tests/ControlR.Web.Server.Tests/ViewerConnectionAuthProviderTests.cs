@@ -92,7 +92,7 @@ public class ViewerConnectionAuthProviderTests
     public bool RequiresTwoFactor => false;
     public ControlrAuthSessionState State => ControlrAuthSessionState.SignedOut;
 
-    public Task<ControlR.Libraries.Api.Contracts.Dtos.ApiResult> ChangePassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
+    public Task<ControlR.Libraries.Api.Contracts.Dtos.ApiResult> ResetPassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
     {
       throw new NotSupportedException();
     }

@@ -8,7 +8,7 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
 {
   public const string AuthorizationHeader = "Authorization";
 
-  private readonly object _stateLock = new();
+  private readonly Lock _stateLock = new();
 
   private AuthState _state = new(
     BearerStateVersion: 0,

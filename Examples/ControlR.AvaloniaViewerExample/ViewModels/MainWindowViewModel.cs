@@ -266,7 +266,7 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
         var twoFactorCode = string.IsNullOrWhiteSpace(TwoFactorCode)
           ? null
           : TwoFactorCode;
-        var changeResult = await _authSession.ChangePassword(
+        var changeResult = await _authSession.ResetPassword(
           Email.Trim(),
           Password,
           newPassword,

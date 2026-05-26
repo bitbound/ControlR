@@ -45,6 +45,14 @@ public interface IControlrAuthSession : IDisposable
   ControlrAuthSessionState State { get; }
 
   /// <summary>
+  /// Gets a usable bearer access token, refreshing it first when needed.
+  /// </summary>
+  /// <param name="cancellationToken">Cancels the token retrieval operation.</param>
+  /// <returns>
+  /// The current bearer access token, or <see langword="null"/> when the session is using a personal access token.
+  /// </returns>
+  Task<string?> GetAccessToken(CancellationToken cancellationToken = default);
+  /// <summary>
   /// Changes the user's password when a password change is required.
   /// </summary>
   /// <param name="email">The user email.</param>
@@ -53,15 +61,7 @@ public interface IControlrAuthSession : IDisposable
   /// <param name="twoFactorCode">Optional authenticator code if the account has 2FA enabled.</param>
   /// <param name="cancellationToken">Cancels the operation.</param>
   /// <returns>A result indicating success or failure of the password change.</returns>
-  Task<ApiResult> ChangePassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default);
-  /// <summary>
-  /// Gets a usable bearer access token, refreshing it first when needed.
-  /// </summary>
-  /// <param name="cancellationToken">Cancels the token retrieval operation.</param>
-  /// <returns>
-  /// The current bearer access token, or <see langword="null"/> when the session is using a personal access token.
-  /// </returns>
-  Task<string?> GetAccessToken(CancellationToken cancellationToken = default);
+  Task<ApiResult> ResetPassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default);
   /// <summary>
   /// Updates the server base URL used by the session.
   /// </summary>
@@ -116,7 +116,23 @@ public sealed class ControlrAuthSession(
   public bool RequiresTwoFactor => State == ControlrAuthSessionState.AwaitingTwoFactor;
   public ControlrAuthSessionState State => _state;
 
-  public async Task<ApiResult> ChangePassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
+  public void Dispose()
+  {
+    StopRefreshLoop();
+  }
+
+  public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default)
+  {
+    if (!string.IsNullOrWhiteSpace(_authState.PersonalAccessToken))
+    {
+      return null;
+    }
+
+    await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
+    return _authState.BearerToken;
+  }
+
+  public async Task<ApiResult> ResetPassword(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
   {
     try
     {
@@ -156,22 +172,6 @@ public sealed class ControlrAuthSession(
       _logger.LogWarning(ex, "Password change failed.");
       return ApiResult.Fail("Password change failed. Please try again.", HttpStatusCode.InternalServerError);
     }
-  }
-
-  public void Dispose()
-  {
-    StopRefreshLoop();
-  }
-
-  public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default)
-  {
-    if (!string.IsNullOrWhiteSpace(_authState.PersonalAccessToken))
-    {
-      return null;
-    }
-
-    await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
-    return _authState.BearerToken;
   }
 
   public void SetBaseUrl(Uri baseUrl)
