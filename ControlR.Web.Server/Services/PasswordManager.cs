@@ -7,9 +7,35 @@ namespace ControlR.Web.Server.Services;
 
 public interface IPasswordManager
 {
+  /// <summary>
+  /// Changes the password for a currently authenticated user who knows their existing password.
+  /// This is the in-session self-service flow used after the caller has already identified the target user.
+  /// </summary>
+  /// <param name="user">The user whose password is being changed.</param>
+  /// <param name="request">The current-password and new-password payload.</param>
+  /// <returns>A result indicating whether the password change succeeded.</returns>
   Task<Result> ChangePassword(AppUser user, ChangePasswordRequestDto request);
+
   Task<Result> ForgotPassword(ForgotPasswordRequestDto request, string resetPasswordUrl);
+
+  /// <summary>
+  /// Resets another user's password from an administrator-managed flow and returns a newly generated temporary password.
+  /// This is used by tenant administrators from user management screens, not by the end user performing a self-service reset.
+  /// </summary>
+  /// <param name="tenantId">The tenant that must own the target user.</param>
+  /// <param name="targetUserId">The user whose password should be reset.</param>
+  /// <returns>
+  /// A result containing the generated temporary password when the reset succeeds.
+  /// The target user is marked as requiring a password change on next sign-in.
+  /// </returns>
   Task<Result<AdminResetPasswordResponseDto>> ResetPassword(Guid tenantId, Guid targetUserId);
+
+  /// <summary>
+  /// Completes an end-user password reset by applying a reset token or reset-link code that was issued earlier.
+  /// This is the self-service "forgot password" completion flow reached from the email link, not the admin reset flow.
+  /// </summary>
+  /// <param name="request">The email, reset code, and new password payload.</param>
+  /// <returns>A result indicating whether the reset token was accepted and the new password was applied.</returns>
   Task<Result> ResetPassword(ResetPasswordRequestDto request);
 }
 
