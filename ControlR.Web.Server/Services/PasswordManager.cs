@@ -16,6 +16,12 @@ public interface IPasswordManager
   /// <returns>A result indicating whether the password change succeeded.</returns>
   Task<Result> ChangePassword(AppUser user, ChangePasswordRequestDto request);
 
+  /// <summary>
+  /// Initiates a forgot-password flow for an end user who cannot sign in and needs to reset their password via email.
+  /// This is the start of the self-service flow reached from the login screen, not the administrator reset flow.
+  /// </summary> <param name="request">The email address payload.</param>
+  /// <param name="resetPasswordUrl">The URL to include in the password reset email that the user can click to reach the password reset page. The reset code will be appended as a query parameter.</param>
+  /// <returns>A result indicating whether the forgot-password email was sent. Always returns success to avoid leaking user existence information, but may fail if email sending is enabled and an error occurs during sending.</returns>
   Task<Result> ForgotPassword(ForgotPasswordRequestDto request, string resetPasswordUrl);
 
   /// <summary>
