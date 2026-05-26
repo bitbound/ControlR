@@ -7,6 +7,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
   private static readonly HashSet<string> _allowedApiPaths =
   [
     $"{HttpConstants.AuthEndpoint}/change-password",
+    $"{HttpConstants.AuthEndpoint}/reset-password",
     $"{HttpConstants.AuthEndpoint}/interactive-login",
     $"{HttpConstants.AuthEndpoint}/logout",
   ];
@@ -83,6 +84,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
     if (!isCookieAuthenticated)
     {
       context.Response.StatusCode = StatusCodes.Status403Forbidden;
+      await context.Response.WriteAsJsonAsync(new { error = "Password change required." });
       return;
     }
 
@@ -96,7 +98,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
       (
         _allowedPathStartSegments.Any(p => path.StartsWith(p, StringComparison.Ordinal)) ||
         _allowedApiPaths.Contains(path) ||
-        _staticAssetExtensions.Any(path.EndsWith)
+        _staticAssetExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
       );
   }
 }
