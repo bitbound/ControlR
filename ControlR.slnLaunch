@@ -50,7 +50,7 @@
     ]
   },
   {
-    "Name": "Avalonia Viewer",
+    "Name": "Viewer Full Stack",
     "Projects": [
       {
         "Path": "docker-compose\\docker-compose.dcproj",

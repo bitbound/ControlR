@@ -106,12 +106,19 @@ services:
       # Set the minimum level for logs sent to OTLP exporter and/or Azure Monitor.
       ControlR_Logging__LogLevel__Default: Information
 
+      # The log level for ASP.NET Core framework logs.  Setting this to Warning or higher can help reduce noise in logs.
+      ControlR_Logging__LogLevel__Microsoft.AspNetCore: Warning
+
       # The log level to use for HttpLogging middleware (when it's enabled).
       ControlR_Logging__LogLevel__Microsoft.AspNetCore.HttpLogging: Information
 
       # The log level for ForwardedHeadersMiddleware, among others. When set to debug,
       # this will log when a reverse proxy isn't trusted, which can help troubleshoot misconfigurations.
       ControlR_Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides: Debug
+
+      # The log level for Entity Framework Core database operations.
+      # Setting this to Information or Debug can help troubleshoot database issues, but can spam logs.
+      ControlR_Logging__LogLevel__Microsoft.EntityFrameworkCore.Database: Warning
 
       # For debugging.  When enabled, extra logs will be written for all HTTP requests and responses.
       # https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging
