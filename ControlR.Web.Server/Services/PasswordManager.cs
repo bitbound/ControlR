@@ -66,7 +66,7 @@ public class PasswordManager(
       return Result.Fail(JoinErrors(changeResult.Errors));
     }
 
-    await SetRequirePasswordChange(user.Id, false);
+    await SetRequirePasswordChange(user, false);
 
     return Result.Ok();
   }
@@ -131,7 +131,7 @@ public class PasswordManager(
       return Result.Fail<AdminResetPasswordResponseDto>(JoinErrors(resetResult.Errors));
     }
 
-    await SetRequirePasswordChange(targetUser.Id, true);
+    await SetRequirePasswordChange(targetUser, true);
 
     return Result.Ok(new AdminResetPasswordResponseDto(temporaryPassword));
   }
@@ -162,7 +162,7 @@ public class PasswordManager(
       return Result.Fail(JoinErrors(resetResult.Errors));
     }
 
-    await SetRequirePasswordChange(user.Id, false);
+    await SetRequirePasswordChange(user, false);
 
     return Result.Ok();
   }
@@ -186,10 +186,9 @@ public class PasswordManager(
     }
   }
 
-  private async Task SetRequirePasswordChange(Guid userId, bool requirePasswordChange)
+  private async Task SetRequirePasswordChange(AppUser user, bool requirePasswordChange)
   {
-    var user = await _appDb.Users.FirstOrDefaultAsync(appUser => appUser.Id == userId);
-    if (user is null || user.RequirePasswordChange == requirePasswordChange)
+    if (user.RequirePasswordChange == requirePasswordChange)
     {
       return;
     }

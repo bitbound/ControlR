@@ -170,7 +170,7 @@ public class AuthController : ControllerBase
     var user = await userManager.FindByEmailAsync(request.Email);
     if (user is null)
     {
-      return BadRequest("User not found.");
+      return BadRequest("Email and current password are invalid.");
     }
 
     var result = await signInManager.CheckPasswordSignInAsync(
@@ -186,7 +186,7 @@ public class AuthController : ControllerBase
     if (!result.Succeeded)
     {
       await userManager.AccessFailedAsync(user);
-      return BadRequest("Current password is incorrect.");
+      return BadRequest("Email and current password are invalid.");
     }
 
     if (user.TwoFactorEnabled && string.IsNullOrWhiteSpace(request.TwoFactorCode))
