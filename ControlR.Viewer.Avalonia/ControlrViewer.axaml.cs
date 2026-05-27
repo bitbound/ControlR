@@ -20,7 +20,7 @@ public partial class ControlrViewer : UserControl
   public static readonly StyledProperty<ViewerPage> PageProperty =
     AvaloniaProperty.Register<ControlrViewer, ViewerPage>(nameof(Page), ViewerPage.None);
 
-  private readonly Lock _intializeLock = new();
+  private readonly Lock _initializeLock = new();
   private readonly IDisposable _pageSubscription;
 
   private ViewerInstanceInfo? _instanceInfo;
@@ -226,7 +226,7 @@ public partial class ControlrViewer : UserControl
 
   private void InitializeServices()
   {
-    using var locker = _intializeLock.EnterScope();
+    using var locker = _initializeLock.EnterScope();
 
     if (_isInitialized)
     {
