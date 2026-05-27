@@ -60,10 +60,9 @@ public class PasswordManager(
 
   public async Task<Result<AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId)
   {
-    var targetUser = await _appDb.Users.FirstOrDefaultAsync(user => 
-      user.Id == targetUserId && user.TenantId == tenantId);
+    var targetUser =await _userManager.FindByIdAsync(targetUserId.ToString());
 
-    if (targetUser is null)
+    if (targetUser?.TenantId != tenantId)
     {
       return Result.Fail<AdminResetPasswordResponseDto>("User not found.");
     }
