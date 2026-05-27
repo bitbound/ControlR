@@ -5,7 +5,7 @@
 
 
 <div class="h-100 @(ThemeClass)">
-  <link rel="stylesheet" href="/device-access.css" />
+  <link rel="stylesheet" href="/static/device-access.css" />
   <ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
     <MudLayout>
       <MudAppBar Elevation="1">
@@ -53,7 +53,7 @@
       <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudDrawerHeader Class="pa-4">
           <MudLink Href="/" Underline="Underline.None" Class="d-flex">
-            <MudImage Src=@Assets["appicon-192.png"] Height="30" Class="me-2" />
+            <MudImage Src=@Assets["static/appicon-192.png"] Height="30" Class="me-2" />
             <MudText Typo="Typo.h6" Color="Color.Primary">
               ControlR
             </MudText>

@@ -22,29 +22,16 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
     "/_content",
     "/lib",
     "/images",
+    "/static",
     "/health"
   ];
-  private static readonly PathString _changePasswordPath = new("/password-change-required");
-  private static readonly HashSet<string> _staticAssetExtensions =
+  private static readonly HashSet<string> _allowedStaticPaths =
   [
-    ".ico", 
-    ".css", 
-    ".js", 
-    ".png", 
-    ".jpg", 
-    ".jpeg", 
-    ".gif", 
-    ".svg", 
-    ".webp", 
-    ".avif", 
-    ".woff", 
-    ".woff2", 
-    ".ttf", 
-    ".eot", 
-    ".manifest", 
-    ".webmanifest",
-    ".json"
+    "/appsettings.json",
+    "/appsettings.Development.json",
+    "/ControlR.Web.Client.lib.module.js"
   ];
+  private static readonly PathString _changePasswordPath = new("/password-change-required");
 
   private readonly RequestDelegate _next = next;
 
@@ -99,7 +86,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
       (
         _allowedPathStartSegments.Any(p => path.StartsWith(p, StringComparison.Ordinal)) ||
         _allowedApiPaths.Contains(path) ||
-        _staticAssetExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+        _allowedStaticPaths.Contains(path)
       );
   }
 }

@@ -69,8 +69,6 @@ public partial class ControlrApi(
   IAgentVersionApi,
   IServerVersionApi
 {
-  private static readonly TimeSpan _bearerRefreshWindow = TimeSpan.FromMinutes(1);
-
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly HttpClient _client = httpClient;
@@ -268,7 +266,7 @@ public partial class ControlrApi(
   {
     var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
       forceRefresh,
-      _bearerRefreshWindow);
+      _options.Value.BearerRefreshLeadTime);
 
     if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {

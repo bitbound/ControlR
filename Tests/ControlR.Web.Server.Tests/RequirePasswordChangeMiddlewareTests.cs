@@ -71,6 +71,62 @@ public class RequirePasswordChangeMiddlewareTests
   }
 
   [Fact]
+  public async Task Invoke_WhenStaticAssetPath_ReachesNextMiddleware()
+  {
+    var nextCalled = false;
+    var middleware = new RequirePasswordChangeMiddleware(_ =>
+    {
+      nextCalled = true;
+      return Task.CompletedTask;
+    });
+
+    var context = CreateContext("/static/app.css", IdentityConstants.ApplicationScheme);
+    var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
+
+    await middleware.Invoke(context, userManager.Object);
+
+    Assert.True(nextCalled);
+  }
+
+  [Fact]
+  public async Task Invoke_WhenClientModulePath_ReachesNextMiddleware()
+  {
+    var nextCalled = false;
+    var middleware = new RequirePasswordChangeMiddleware(_ =>
+    {
+      nextCalled = true;
+      return Task.CompletedTask;
+    });
+
+    var context = CreateContext("/ControlR.Web.Client.lib.module.js", IdentityConstants.ApplicationScheme);
+    var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
+
+    await middleware.Invoke(context, userManager.Object);
+
+    Assert.True(nextCalled);
+  }
+
+  [Fact]
+  public async Task Invoke_WhenArbitraryCssPath_DoesNotBypassPasswordChangeRequirement()
+  {
+    var nextCalled = false;
+    var middleware = new RequirePasswordChangeMiddleware(_ =>
+    {
+      nextCalled = true;
+      return Task.CompletedTask;
+    });
+
+    var context = CreateContext("/dashboard/custom.css", IdentityConstants.ApplicationScheme);
+    var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
+
+    await middleware.Invoke(context, userManager.Object);
+
+    Assert.False(nextCalled);
+    Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+    Assert.Equal("/password-change-required", context.Response.Headers.Location.ToString());
+  }
+
+  [Fact]
   public async Task Invoke_WhenCookieAuthenticatedAndPasswordChangeRequired_RedirectsToChangePassword()
   {
     var nextCalled = false;
