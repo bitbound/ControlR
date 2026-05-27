@@ -62,7 +62,7 @@ public class PasswordManagerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ResetPassword_Fails_WhenEncodedTokenFromForgotPasswordLink()
+  public async Task ResetPassword_Succeeds_WhenEncodedTokenFromForgotPasswordLink()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
 

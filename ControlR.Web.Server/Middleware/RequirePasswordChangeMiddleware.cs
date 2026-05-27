@@ -82,7 +82,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
       IdentityConstants.ApplicationScheme,
       StringComparison.Ordinal);
 
-    if (!isCookieAuthenticated)
+    if (!isCookieAuthenticated || context.WebSockets.IsWebSocketRequest)
     {
       context.Response.StatusCode = StatusCodes.Status403Forbidden;
       await context.Response.WriteAsJsonAsync(new { error = "Password change required." });

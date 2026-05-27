@@ -3,6 +3,7 @@ using System.Text;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Middleware;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 
@@ -105,6 +106,32 @@ public class RequirePasswordChangeMiddlewareTests
     Assert.False(nextCalled);
     Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
     Assert.Equal("/password-change-required", context.Response.Headers.Location.ToString());
+  }
+
+  [Fact]
+  public async Task Invoke_WhenWebSocketRequestAndPasswordChangeRequired_ReturnsForbidden()
+  {
+    var nextCalled = false;
+    var middleware = new RequirePasswordChangeMiddleware(_ =>
+    {
+      nextCalled = true;
+      return Task.CompletedTask;
+    });
+
+    var context = CreateContext("/hubs/viewer", IdentityConstants.ApplicationScheme);
+    context.Response.Body = new MemoryStream();
+    var wsFeature = new Mock<IHttpWebSocketFeature>();
+    wsFeature.Setup(f => f.IsWebSocketRequest).Returns(true);
+    context.Features.Set(wsFeature.Object);
+    var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
+
+    await middleware.Invoke(context, userManager.Object);
+
+    Assert.False(nextCalled);
+    Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
+    context.Response.Body.Position = 0;
+    var payload = Encoding.UTF8.GetString(((MemoryStream)context.Response.Body).ToArray());
+    Assert.Contains("Password change required", payload, StringComparison.Ordinal);
   }
 
   [Fact]
