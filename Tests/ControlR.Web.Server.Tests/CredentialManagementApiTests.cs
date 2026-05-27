@@ -17,6 +17,76 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
   private readonly ITestOutputHelper _testOutputHelper = testOutput;
 
   [Fact]
+  public async Task ChangePasswordWithCredentials_ChangesPassword_AndClearsRequirePasswordChange()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutputHelper);
+
+    var services = testServer.Services;
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, "credential-change@t.local");
+
+    using (var scope = services.CreateScope())
+    {
+      var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+      var trackedUser = await userManager.FindByIdAsync(user.Id.ToString());
+      Assert.NotNull(trackedUser);
+      trackedUser.RequirePasswordChange = true;
+      await userManager.UpdateAsync(trackedUser);
+    }
+
+    using var client = testServer.Factory.CreateClient();
+    using var response = await client.PostAsJsonAsync(
+      "/api/auth/change-password-with-credentials",
+      new CredentialPasswordChangeRequestDto(user.Email!, "T3stP@ssw0rd!", "B3tt3rP@ssw0rd!"),
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    using var verificationScope = services.CreateScope();
+    var verificationUserManager = verificationScope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var refreshedUser = await verificationUserManager.FindByIdAsync(user.Id.ToString());
+    Assert.NotNull(refreshedUser);
+    Assert.False(refreshedUser.RequirePasswordChange);
+    Assert.True(await verificationUserManager.CheckPasswordAsync(refreshedUser, "B3tt3rP@ssw0rd!"));
+  }
+
+  [Fact]
+  public async Task CompletePasswordReset_ChangesPassword_AndClearsRequirePasswordChange()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutputHelper);
+
+    var services = testServer.Services;
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, "token-reset@t.local");
+    string resetCode;
+
+    using (var scope = services.CreateScope())
+    {
+      var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+      var trackedUser = await userManager.FindByIdAsync(user.Id.ToString());
+      Assert.NotNull(trackedUser);
+      trackedUser.RequirePasswordChange = true;
+      await userManager.UpdateAsync(trackedUser);
+      resetCode = await userManager.GeneratePasswordResetTokenAsync(trackedUser);
+    }
+
+    using var client = testServer.Factory.CreateClient();
+    using var response = await client.PostAsJsonAsync(
+      "/api/auth/complete-password-reset",
+      new ResetPasswordRequestDto(user.Email!, resetCode, "B3tt3rP@ssw0rd!"),
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    using var verificationScope = services.CreateScope();
+    var verificationUserManager = verificationScope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var refreshedUser = await verificationUserManager.FindByIdAsync(user.Id.ToString());
+    Assert.NotNull(refreshedUser);
+    Assert.False(refreshedUser.RequirePasswordChange);
+    Assert.True(await verificationUserManager.CheckPasswordAsync(refreshedUser, "B3tt3rP@ssw0rd!"));
+  }
+
+  [Fact]
   public async Task RequirePasswordChange_BlocksPatAccess_UntilPasswordIsChanged()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutputHelper);
@@ -31,7 +101,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
     var patResult = await patManager.CreateToken(new CreatePersonalAccessTokenRequestDto("Credential Test PAT"), user.Id);
     var personalAccessToken = patResult.Value!.PlainTextToken;
 
-    var resetResult = await passwordManager.ResetPassword(tenant.Id, user.Id);
+    var resetResult = await passwordManager.AdminResetPassword(tenant.Id, user.Id);
     Assert.True(resetResult.IsSuccess);
     var temporaryPassword = resetResult.Value!.TemporaryPassword;
 

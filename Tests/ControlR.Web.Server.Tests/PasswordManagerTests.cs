@@ -49,7 +49,7 @@ public class PasswordManagerTests(ITestOutputHelper testOutput)
     var resetCode = await userManager.GeneratePasswordResetTokenAsync(user);
     var request = new ResetPasswordRequestDto(user.Email!, resetCode, "N3wP@ssw0rd!");
 
-    var result = await passwordManager.ResetPassword(request);
+    var result = await passwordManager.CompletePasswordReset(request);
 
     Assert.True(result.IsSuccess, result.Reason);
 
@@ -81,7 +81,7 @@ public class PasswordManagerTests(ITestOutputHelper testOutput)
 
     var request = new ResetPasswordRequestDto(user.Email, encodedToken, "N3wP@ssw0rd!");
 
-    var result = await passwordManager.ResetPassword(request);
+    var result = await passwordManager.CompletePasswordReset(request);
 
     Assert.True(result.IsSuccess, result.Reason);
   }

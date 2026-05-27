@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using IPNetwork = System.Net.IPNetwork;
 using ControlR.Web.ServiceDefaults;
+using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
 using ControlR.Libraries.Shared.Services.Buffers;
@@ -24,6 +25,8 @@ using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Authentication.BearerToken;
+using System.Globalization;
+using System.Threading.RateLimiting;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -139,6 +142,26 @@ public static class WebApplicationBuilderExtensions
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddCors();
+    builder.Services.AddRateLimiter(options =>
+    {
+      options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+      options.OnRejected = (context, cancellationToken) =>
+      {
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfterValue)
+          ? Math.Ceiling(retryAfterValue.TotalSeconds).ToString(CultureInfo.InvariantCulture)
+          : null;
+
+        if (!string.IsNullOrWhiteSpace(retryAfter))
+        {
+          context.HttpContext.Response.Headers.RetryAfter = retryAfter;
+        }
+
+        return ValueTask.CompletedTask;
+      };
+      options.AddPolicy<string>(
+        AnonymousAuthRateLimitPolicy.PolicyName,
+        AnonymousAuthRateLimitPolicy.Create());
+    });
 
     // Add authn/authz services.
     builder.Services.AddCascadingAuthenticationState();

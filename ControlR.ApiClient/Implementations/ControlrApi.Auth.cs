@@ -8,13 +8,14 @@ namespace ControlR.ApiClient;
 public partial class ControlrApi
 {
   private const string ChangePasswordEndpoint = $"{HttpConstants.AuthEndpoint}/change-password";
+  private const string ChangePasswordWithCredentialsEndpoint = $"{HttpConstants.AuthEndpoint}/change-password-with-credentials";
+  private const string CompletePasswordResetEndpoint = $"{HttpConstants.AuthEndpoint}/complete-password-reset";
   private const string ConfirmEmailEndpoint = $"{HttpConstants.AuthEndpoint}/confirmEmail";
   private const string ForgotPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/forgotPassword";
   private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
   private const string ManageInfoEndpoint = $"{HttpConstants.AuthEndpoint}/manage/info";
   private const string RegisterEndpoint = $"{HttpConstants.AuthEndpoint}/register";
   private const string ResendConfirmationEmailEndpoint = $"{HttpConstants.AuthEndpoint}/resendConfirmationEmail";
-  private const string ResetPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/reset-password";
   private const string TwoFactorEndpoint = $"{HttpConstants.AuthEndpoint}/manage/2fa";
 
   async Task<ApiResult> IAuthApi.ChangePassword(ChangePasswordRequestDto request, CancellationToken cancellationToken)
@@ -22,6 +23,24 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsJsonAsync(ChangePasswordEndpoint, request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
+  async Task<ApiResult> IAuthApi.ChangePasswordWithCredentials(CredentialPasswordChangeRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(ChangePasswordWithCredentialsEndpoint, request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
+  async Task<ApiResult> IAuthApi.CompletePasswordReset(ResetPasswordRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(CompletePasswordResetEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -124,15 +143,6 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsJsonAsync(ResendConfirmationEmailEndpoint, request, cancellationToken);
-      await response.EnsureSuccessStatusCodeWithDetails();
-    });
-  }
-
-  async Task<ApiResult> IAuthApi.ResetPassword(ResetPasswordRequestDto request, CancellationToken cancellationToken)
-  {
-    return await ExecuteApiCall(async () =>
-    {
-      using var response = await _client.PostAsJsonAsync(ResetPasswordEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }

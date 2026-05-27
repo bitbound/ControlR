@@ -7,6 +7,16 @@ namespace ControlR.ApiClient;
 
 public partial class ControlrApi
 {
+  async Task<ApiResult<AdminResetPasswordResponseDto>> IUsersApi.AdminResetPassword(Guid userId, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UsersEndpoint}/{userId}/reset-password", new { }, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<AdminResetPasswordResponseDto>(cancellationToken);
+    });
+  }
+
   async Task<ApiResult<UserResponseDto>> IUsersApi.CreateUser(CreateUserRequestDto request, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
@@ -55,16 +65,6 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
       await _client.GetFromJsonAsync<PersonalAccessTokenDto[]>($"{HttpConstants.UsersEndpoint}/{userId}/personal-access-tokens", cancellationToken));
-  }
-
-  async Task<ApiResult<AdminResetPasswordResponseDto>> IUsersApi.ResetPassword(Guid userId, CancellationToken cancellationToken)
-  {
-    return await ExecuteApiCall(async () =>
-    {
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UsersEndpoint}/{userId}/reset-password", new { }, cancellationToken);
-      await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<AdminResetPasswordResponseDto>(cancellationToken);
-    });
   }
 
   async Task<ApiResult<PersonalAccessTokenDto>> IUsersApi.UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken)

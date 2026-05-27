@@ -444,6 +444,46 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     Assert.True(payload.Tokens.ExpiresInSeconds > 0);
   }
 
+  [Fact]
+  public async Task InteractiveLogin_WhenRateLimitExceeded_ReturnsTooManyRequests()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      _testOutputHelper,
+      settings: new Dictionary<string, string?>
+      {
+        ["AppOptions:EnableInteractiveBearerLogin"] = "true"
+      });
+
+    var tenant = await testServer.Services.CreateTestTenant();
+    var user = await testServer.Services.CreateTestUser(tenant.Id, "interactive-login-ratelimit@t.local");
+
+    using (var scope = testServer.Services.CreateScope())
+    {
+      var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+      var trackedUser = await userManager.FindByIdAsync(user.Id.ToString());
+      Assert.NotNull(trackedUser);
+      trackedUser.EmailConfirmed = true;
+      await userManager.UpdateAsync(trackedUser);
+    }
+
+    using var client = testServer.Factory.CreateClient();
+    HttpResponseMessage? lastResponse = null;
+
+    for (var attempt = 0; attempt < 21; attempt++)
+    {
+      lastResponse?.Dispose();
+      lastResponse = await client.PostAsJsonAsync(
+        "/api/auth/interactive-login",
+        new LoginRequestDto(user.Email!, "wrong-password"),
+        TestContext.Current.CancellationToken);
+    }
+
+    Assert.NotNull(lastResponse);
+    Assert.Equal(HttpStatusCode.TooManyRequests, lastResponse.StatusCode);
+    Assert.True(lastResponse.Headers.TryGetValues("Retry-After", out var retryAfterValues));
+    Assert.False(string.IsNullOrWhiteSpace(retryAfterValues.Single()));
+  }
+
   private static IOptionsMonitor<BearerTokenOptions> CreateBearerTokenOptionsMonitor()
   {
     var dataProtectionProvider = new EphemeralDataProtectionProvider();

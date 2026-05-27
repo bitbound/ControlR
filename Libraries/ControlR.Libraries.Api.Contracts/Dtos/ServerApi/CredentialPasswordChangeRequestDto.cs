@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 
-public record PasswordResetRequestDto(
+public record CredentialPasswordChangeRequestDto(
   [Required]
   [EmailAddress]
   string Email,

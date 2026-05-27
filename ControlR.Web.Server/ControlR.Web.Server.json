@@ -268,6 +268,70 @@
         }
       }
     },
+    "/api/auth/change-password-with-credentials": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialPasswordChangeRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialPasswordChangeRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialPasswordChangeRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/auth/complete-password-reset": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/auth/interactive-login": {
       "post": {
         "tags": [
@@ -322,38 +386,6 @@
         "tags": [
           "Auth"
         ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/auth/reset-password": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PasswordResetRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PasswordResetRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/PasswordResetRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK"
@@ -2670,6 +2702,46 @@
         }
       }
     },
+    "/api/users/{userId}/reset-password": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/users": {
       "post": {
         "tags": [
@@ -2977,46 +3049,6 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PersonalAccessTokenDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/users/{userId}/reset-password": {
-      "post": {
-        "tags": [
-          "Users"
-        ],
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
                 }
               }
             }
@@ -3700,6 +3732,31 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "CredentialPasswordChangeRequestDto": {
+        "required": [
+          "email",
+          "currentPassword",
+          "newPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "currentPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string"
+          },
+          "twoFactorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4421,31 +4478,6 @@
       "MessageSeverity": {
         "type": "integer"
       },
-      "PasswordResetRequestDto": {
-        "required": [
-          "email",
-          "currentPassword",
-          "newPassword"
-        ],
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string"
-          },
-          "currentPassword": {
-            "type": "string"
-          },
-          "newPassword": {
-            "type": "string"
-          },
-          "twoFactorCode": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "PersonalAccessTokenDto": {
         "required": [
           "id",
@@ -4498,6 +4530,25 @@
             "format": "uuid"
           },
           "friendlyName": {
+            "type": "string"
+          }
+        }
+      },
+      "ResetPasswordRequestDto": {
+        "required": [
+          "email",
+          "resetCode",
+          "newPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "resetCode": {
+            "type": "string"
+          },
+          "newPassword": {
             "type": "string"
           }
         }

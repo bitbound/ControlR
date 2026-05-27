@@ -12,6 +12,8 @@ public interface IAgentUpdateApi
 public interface IAuthApi
 {
   Task<ApiResult> ChangePassword(ChangePasswordRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult> ChangePasswordWithCredentials(CredentialPasswordChangeRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult> CompletePasswordReset(ResetPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<string>> ConfirmEmail(Guid userId, string code, string? changedEmail = null, CancellationToken cancellationToken = default);
   Task<ApiResult> ForgotPassword(ForgotPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<ManageInfoResponseDto>> GetManageInfo(CancellationToken cancellationToken = default);
@@ -22,7 +24,6 @@ public interface IAuthApi
   Task<ApiResult<AccessTokenResponseDto>> Refresh(RefreshTokenRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> Register(RegisterRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> ResendConfirmationEmail(ResendConfirmationEmailRequestDto request, CancellationToken cancellationToken = default);
-  Task<ApiResult> ResetPassword(ResetPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<ManageInfoResponseDto>> UpdateManageInfo(ManageInfoRequestDto request, CancellationToken cancellationToken = default);
 }
 
@@ -178,13 +179,13 @@ public interface IUserTagsApi
 
 public interface IUsersApi
 {
+  Task<ApiResult<AdminResetPasswordResponseDto>> AdminResetPassword(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto>> CreateUser(CreateUserRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(Guid userId, CreatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUser(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUserPersonalAccessToken(Guid userId, Guid tokenId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto[]>> GetAllUsers(CancellationToken cancellationToken = default);
   Task<ApiResult<PersonalAccessTokenDto[]>> GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken = default);
-  Task<ApiResult<AdminResetPasswordResponseDto>> ResetPassword(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
 }
 

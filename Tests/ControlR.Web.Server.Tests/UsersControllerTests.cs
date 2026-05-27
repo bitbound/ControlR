@@ -31,7 +31,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
     var targetUser = await services.CreateTestUser(tenant.Id, "target@t.local");
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var result = await controller.ResetPassword(
+    var result = await controller.AdminResetPassword(
       targetUser.Id,
       services.GetRequiredService<IPasswordManager>());
 
@@ -67,7 +67,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
       roles: RoleNames.TenantAdministrator);
     var targetUser = await services.CreateTestUser(tenant.Id, "short-policy@t.local");
 
-    var result = await controller.ResetPassword(
+    var result = await controller.AdminResetPassword(
       targetUser.Id,
       services.GetRequiredService<IPasswordManager>());
 

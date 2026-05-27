@@ -64,6 +64,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.MapHub<AgentHub>(AppConstants.AgentHubPath);
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<RequirePasswordChangeMiddleware>();
 app.UseAuthorization();

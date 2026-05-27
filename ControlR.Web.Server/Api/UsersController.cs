@@ -9,6 +9,31 @@ namespace ControlR.Web.Server.Api;
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class UsersController : ControllerBase
 {
+  [HttpPost("{userId:guid}/reset-password")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
+    [FromRoute] Guid userId,
+    [FromServices] IPasswordManager passwordManager)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
+    var result = await passwordManager.AdminResetPassword(tenantId, userId);
+    if (!result.IsSuccess)
+    {
+      if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
+      {
+        return NotFound();
+      }
+
+      return BadRequest(result.Reason);
+    }
+
+    return Ok(result.Value);
+  }
+
   [HttpPost]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<UserResponseDto>> Create(
@@ -199,31 +224,6 @@ public class UsersController : ControllerBase
 
     var tokens = await personalAccessTokenManager.GetForUser(userId);
     return Ok(tokens);
-  }
-
-  [HttpPost("{userId:guid}/reset-password")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<AdminResetPasswordResponseDto>> ResetPassword(
-    [FromRoute] Guid userId,
-    [FromServices] IPasswordManager passwordManager)
-  {
-    if (!User.TryGetTenantId(out var tenantId))
-    {
-      return BadRequest("User tenant not found.");
-    }
-
-    var result = await passwordManager.ResetPassword(tenantId, userId);
-    if (!result.IsSuccess)
-    {
-      if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
-      {
-        return NotFound();
-      }
-
-      return BadRequest(result.Reason);
-    }
-
-    return Ok(result.Value);
   }
 
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]

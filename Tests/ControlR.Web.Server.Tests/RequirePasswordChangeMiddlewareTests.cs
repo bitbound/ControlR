@@ -29,6 +29,42 @@ public class RequirePasswordChangeMiddlewareTests
   }
 
   [Fact]
+  public async Task Invoke_WhenCredentialChangeApiPath_ReachesNextMiddleware()
+  {
+    var nextCalled = false;
+    var middleware = new RequirePasswordChangeMiddleware(_ =>
+    {
+      nextCalled = true;
+      return Task.CompletedTask;
+    });
+
+    var context = CreateContext("/api/auth/change-password-with-credentials", IdentityConstants.ApplicationScheme);
+    var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
+
+    await middleware.Invoke(context, userManager.Object);
+
+    Assert.True(nextCalled);
+  }
+
+  [Fact]
+  public async Task Invoke_WhenCompleteResetApiPath_ReachesNextMiddleware()
+  {
+    var nextCalled = false;
+    var middleware = new RequirePasswordChangeMiddleware(_ =>
+    {
+      nextCalled = true;
+      return Task.CompletedTask;
+    });
+
+    var context = CreateContext("/api/auth/complete-password-reset", IdentityConstants.ApplicationScheme);
+    var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
+
+    await middleware.Invoke(context, userManager.Object);
+
+    Assert.True(nextCalled);
+  }
+
+  [Fact]
   public async Task Invoke_WhenApiRequestRequiresPasswordChange_ReturnsForbiddenJson()
   {
     var nextCalled = false;
