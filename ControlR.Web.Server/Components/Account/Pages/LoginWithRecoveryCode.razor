@@ -58,7 +58,7 @@
 
   private async Task OnValidSubmitAsync()
   {
-    var recoveryCode = Input.RecoveryCode.Replace(" ", string.Empty);
+    var recoveryCode = Input.RecoveryCode.Replace(" ", string.Empty).Replace("-", string.Empty);
 
     var result = await SignInManager.TwoFactorRecoveryCodeSignInAsync(recoveryCode);
 

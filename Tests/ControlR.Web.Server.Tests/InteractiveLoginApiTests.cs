@@ -222,6 +222,9 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     signInManager
       .Setup(x => x.CheckPasswordSignInAsync(user, "T3stP@ssw0rd!", false))
       .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+    userManager
+      .Setup(x => x.ResetAccessFailedCountAsync(user))
+      .ReturnsAsync(IdentityResult.Success);
 
     var appOptions = new Mock<IOptionsMonitor<AppOptions>>();
     appOptions.SetupGet(x => x.CurrentValue).Returns(new AppOptions { EnableInteractiveBearerLogin = true });
@@ -240,6 +243,47 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     Assert.True(payload.RequiresPasswordChange);
     Assert.False(payload.RequiresTwoFactor);
     Assert.Null(payload.Tokens);
+    userManager.Verify(x => x.ResetAccessFailedCountAsync(user), Times.Once);
+  }
+
+  [Fact]
+  public async Task InteractiveLogin_WhenRateLimitExceeded_ReturnsTooManyRequests()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      _testOutputHelper,
+      settings: new Dictionary<string, string?>
+      {
+        ["AppOptions:EnableInteractiveBearerLogin"] = "true"
+      });
+
+    var tenant = await testServer.Services.CreateTestTenant();
+    var user = await testServer.Services.CreateTestUser(tenant.Id, "interactive-login-ratelimit@t.local");
+
+    using (var scope = testServer.Services.CreateScope())
+    {
+      var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+      var trackedUser = await userManager.FindByIdAsync(user.Id.ToString());
+      Assert.NotNull(trackedUser);
+      trackedUser.EmailConfirmed = true;
+      await userManager.UpdateAsync(trackedUser);
+    }
+
+    using var client = testServer.Factory.CreateClient();
+    HttpResponseMessage? lastResponse = null;
+
+    for (var attempt = 0; attempt < 21; attempt++)
+    {
+      lastResponse?.Dispose();
+      lastResponse = await client.PostAsJsonAsync(
+        "/api/auth/interactive-login",
+        new LoginRequestDto(user.Email!, "wrong-password"),
+        TestContext.Current.CancellationToken);
+    }
+
+    Assert.NotNull(lastResponse);
+    Assert.Equal(HttpStatusCode.TooManyRequests, lastResponse.StatusCode);
+    Assert.True(lastResponse.Headers.TryGetValues("Retry-After", out var retryAfterValues));
+    Assert.False(string.IsNullOrWhiteSpace(retryAfterValues.Single()));
   }
 
   [Fact]
@@ -272,7 +316,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorRecoveryCode: "recovery code"));
+      new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorRecoveryCode: "recovery-code"));
 
     Assert.IsType<UnauthorizedResult>(result.Result);
   }
@@ -442,46 +486,6 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     Assert.False(string.IsNullOrWhiteSpace(payload.Tokens.AccessToken));
     Assert.False(string.IsNullOrWhiteSpace(payload.Tokens.RefreshToken));
     Assert.True(payload.Tokens.ExpiresInSeconds > 0);
-  }
-
-  [Fact]
-  public async Task InteractiveLogin_WhenRateLimitExceeded_ReturnsTooManyRequests()
-  {
-    using var testServer = await TestWebServerBuilder.CreateTestServer(
-      _testOutputHelper,
-      settings: new Dictionary<string, string?>
-      {
-        ["AppOptions:EnableInteractiveBearerLogin"] = "true"
-      });
-
-    var tenant = await testServer.Services.CreateTestTenant();
-    var user = await testServer.Services.CreateTestUser(tenant.Id, "interactive-login-ratelimit@t.local");
-
-    using (var scope = testServer.Services.CreateScope())
-    {
-      var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
-      var trackedUser = await userManager.FindByIdAsync(user.Id.ToString());
-      Assert.NotNull(trackedUser);
-      trackedUser.EmailConfirmed = true;
-      await userManager.UpdateAsync(trackedUser);
-    }
-
-    using var client = testServer.Factory.CreateClient();
-    HttpResponseMessage? lastResponse = null;
-
-    for (var attempt = 0; attempt < 21; attempt++)
-    {
-      lastResponse?.Dispose();
-      lastResponse = await client.PostAsJsonAsync(
-        "/api/auth/interactive-login",
-        new LoginRequestDto(user.Email!, "wrong-password"),
-        TestContext.Current.CancellationToken);
-    }
-
-    Assert.NotNull(lastResponse);
-    Assert.Equal(HttpStatusCode.TooManyRequests, lastResponse.StatusCode);
-    Assert.True(lastResponse.Headers.TryGetValues("Retry-After", out var retryAfterValues));
-    Assert.False(string.IsNullOrWhiteSpace(retryAfterValues.Single()));
   }
 
   private static IOptionsMonitor<BearerTokenOptions> CreateBearerTokenOptionsMonitor()

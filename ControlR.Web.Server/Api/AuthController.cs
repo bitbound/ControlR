@@ -155,6 +155,7 @@ public class AuthController : ControllerBase
 
     if (result.Succeeded && user.RequirePasswordChange)
     {
+      await userManager.ResetAccessFailedCountAsync(user);
       return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: true));
     }
 
@@ -173,7 +174,7 @@ public class AuthController : ControllerBase
       {
         var recoveryCodeResult = await userManager.RedeemTwoFactorRecoveryCodeAsync(
           user,
-          request.TwoFactorRecoveryCode.Replace(" ", string.Empty));
+          request.TwoFactorRecoveryCode.Replace(" ", string.Empty).Replace("-", string.Empty));
 
         if (!recoveryCodeResult.Succeeded)
         {
