@@ -270,6 +270,7 @@ public partial class ControlrApi(
 
     if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {
+      _authState.ClearBearerTokens();
       throw new HttpRequestException(
         "The refresh token is no longer valid.",
         null,

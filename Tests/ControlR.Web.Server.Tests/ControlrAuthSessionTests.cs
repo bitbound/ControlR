@@ -63,6 +63,42 @@ public class ControlrAuthSessionTests
   }
 
   [Fact]
+  public async Task GetAccessToken_WhenRefreshIsUnauthorized_ExpiresSessionAndClearsTokens()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var authState = new ControlrApiClientAuthState();
+    authState.SetBearerTokens("stale-token", "refresh-token", timeProvider.GetUtcNow().AddSeconds(30));
+
+    using var httpClient = new HttpClient(new QueueMessageHandler(new Queue<HttpResponseMessage>([
+      new HttpResponseMessage(HttpStatusCode.Unauthorized)
+    ])))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+    var expiredMessage = default(string?);
+    session.StateChanged += (_, args) =>
+    {
+      if (args.State == ControlrAuthSessionState.Expired)
+      {
+        expiredMessage = args.Message;
+      }
+    };
+
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => session.GetAccessToken(TestContext.Current.CancellationToken));
+
+    Assert.Equal("The refresh token is no longer valid.", ex.Message);
+    Assert.Equal(ControlrAuthSessionState.Expired, session.State);
+    Assert.False(session.IsAuthenticated);
+    Assert.Null(authState.BearerToken);
+    Assert.Null(authState.RefreshToken);
+    Assert.Null(authState.BearerTokenExpiresAt);
+    Assert.Equal("The session expired. Sign in again.", expiredMessage);
+  }
+
+  [Fact]
   public async Task PreviousRefreshLoopFault_DoesNotExpireNewSession()
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);

@@ -302,6 +302,12 @@ public sealed class ControlrAuthSession(
     }
   }
 
+  private void ExpireSession(string message)
+  {
+    ResetSession(clearPersonalAccessToken: false);
+    UpdateState(ControlrAuthSessionState.Expired, message);
+  }
+
   private Task HandleRefreshLoopFault(long generation, string message)
   {
     if (generation != Volatile.Read(ref _refreshLoopGeneration))
@@ -309,8 +315,7 @@ public sealed class ControlrAuthSession(
       return Task.CompletedTask;
     }
 
-    ResetSession(clearPersonalAccessToken: false);
-    UpdateState(ControlrAuthSessionState.Expired, message);
+    ExpireSession(message);
     return Task.CompletedTask;
   }
 
@@ -324,6 +329,7 @@ public sealed class ControlrAuthSession(
 
     if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {
+      ExpireSession("The session expired. Sign in again.");
       throw new InvalidOperationException("The refresh token is no longer valid.");
     }
 
