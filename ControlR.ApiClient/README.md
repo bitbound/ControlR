@@ -9,6 +9,9 @@ A .NET client library for interacting with the ControlR API. This library provid
 - Static builder pattern for scenarios where dependency injection is not available
 - Efficient HTTP connection management via `IHttpClientFactory`
 - Automatic request/response serialization
+- Two authentication modes: Personal Access Token (stateless) and Interactive Bearer (email/password with automatic token refresh)
+- Interactive bearer session supports two-factor authentication and password-change flows
+- Session snapshot/restore for persisting tokens (e.g., caching in a secure keychain for automatic re-auth across app restarts)
 
 ## Installation
 
@@ -140,7 +143,50 @@ foreach (var device in devices)
 | Property                     | Type     | Required | Description                                       |
 |------------------------------|----------|----------|---------------------------------------------------|
 | `BaseUrl`                   | `Uri`    | Yes      | The base URL of your ControlR server             |
-| `PersonalAccessToken`       | `string` | Yes      | Your personal access token for authentication     |
+| `PersonalAccessToken`       | `string` | No       | A personal access token for stateless auth (omit or leave null for interactive bearer auth) |
+| `AuthenticationMethod`      | `ViewerAuthenticationMethod` | No | `PersonalAccessToken` (default) or `InteractiveBearer` |
+
+### Authentication
+
+The client supports two authentication modes:
+
+#### Personal Access Token (PAT)
+
+Stateless — set `PersonalAccessToken` in options or call `SetPersonalAccessToken()` on the session. Works without any sign-in flow.
+
+#### Interactive Bearer
+
+Stateful session backed by email/password sign-in. Resolve `IControlrAuthSession` to manage the session lifecycle:
+
+```csharp
+var result = await authSession.SignIn(
+  new InteractiveSignInRequest
+  {
+    Email = "user@example.com",
+    Password = "password",
+    TwoFactorCode = twoFactorCode    // only needed if 2FA is enabled for the account
+  });
+
+if (result.Status == InteractiveLoginStatus.Authenticated)
+{
+  // Session is ready. Tokens refresh automatically in the background.
+}
+```
+
+For automatic re-auth across app restarts, cache the session snapshot and restore it:
+
+```csharp
+// Persist after sign-in
+var snapshot = authSession.GetAuthSnapshot();
+// Store snapshot.BearerToken, snapshot.RefreshToken, snapshot.BearerTokenExpiresAt
+// in a secure keychain.
+
+// Restore on next launch
+await authSession.RestoreAuthSnapshot(snapshot);
+// Session resumes with the background refresh loop.
+```
+
+For two-factor or password-change flows, check `RequiresTwoFactor` and `RequiresPasswordChange` on `IControlrAuthSession` and re-call `SignIn` with the additional fields.
 
 ### Obtaining a Personal Access Token
 
