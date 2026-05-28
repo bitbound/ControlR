@@ -11,6 +11,7 @@ public class RequirePasswordChangeMiddleware(RequestDelegate next)
     $"{HttpConstants.AuthEndpoint}/complete-password-reset",
     $"{HttpConstants.AuthEndpoint}/interactive-login",
     $"{HttpConstants.AuthEndpoint}/logout",
+    $"{HttpConstants.AuthEndpoint}/refresh",
   ];
   private static readonly HashSet<string> _allowedPathStartSegments =
   [
