@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using ControlR.ApiClient;
+using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
@@ -228,13 +229,6 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       DnsHostName: $"device-{index}.contoso.local");
   }
   
-  private sealed class StaticHttpClientFactory(HttpClient httpClient) : IHttpClientFactory
-  {
-    private readonly HttpClient _httpClient = httpClient;
-
-    public HttpClient CreateClient(string name) => _httpClient;
-  }
-
   private sealed class StaticJsonMessageHandler(string jsonResponse) : HttpMessageHandler
   {
     private readonly string _jsonResponse = jsonResponse;

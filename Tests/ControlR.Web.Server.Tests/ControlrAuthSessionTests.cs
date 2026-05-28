@@ -2,9 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using ControlR.ApiClient;
 using ControlR.ApiClient.Auth;
+using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace ControlR.Web.Server.Tests;
@@ -698,7 +699,7 @@ public class ControlrAuthSessionTests
       authState,
       new BearerTokenRefresher(authState, httpClientFactory, timeProvider),
       NullLogger<ControlrAuthSession>.Instance,
-      new StaticOptionsMonitor<ControlrApiClientOptions>(options),
+      new OptionsMonitorWrapper<ControlrApiClientOptions>(options),
       timeProvider);
   }
 
@@ -759,21 +760,5 @@ public class ControlrAuthSessionTests
 
       return Task.FromResult(_responses.Dequeue());
     }
-  }
-  private sealed class StaticHttpClientFactory(HttpClient httpClient) : IHttpClientFactory
-  {
-    private readonly HttpClient _httpClient = httpClient;
-
-    public HttpClient CreateClient(string name) => _httpClient;
-  }
-  private sealed class StaticOptionsMonitor<TOptions>(TOptions currentValue) : IOptionsMonitor<TOptions>
-  {
-    private readonly TOptions _currentValue = currentValue;
-
-    public TOptions CurrentValue => _currentValue;
-
-    public TOptions Get(string? name) => _currentValue;
-
-    public IDisposable? OnChange(Action<TOptions, string?> listener) => null;
   }
 }
