@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using IPNetwork = System.Net.IPNetwork;
 using ControlR.Web.ServiceDefaults;
+using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
 using ControlR.Libraries.Shared.Services.Buffers;
@@ -23,6 +24,9 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
+using Microsoft.AspNetCore.Authentication.BearerToken;
+using System.Globalization;
+using System.Threading.RateLimiting;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -138,11 +142,99 @@ public static class WebApplicationBuilderExtensions
     });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddCors();
+    builder.Services.AddRateLimiter(options =>
+    {
+      options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+      options.OnRejected = (context, cancellationToken) =>
+      {
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfterValue)
+          ? Math.Ceiling(retryAfterValue.TotalSeconds).ToString(CultureInfo.InvariantCulture)
+          : null;
+
+        if (!string.IsNullOrWhiteSpace(retryAfter))
+        {
+          context.HttpContext.Response.Headers.RetryAfter = retryAfter;
+        }
+
+        return ValueTask.CompletedTask;
+      };
+      options.AddPolicy<string>(
+        AnonymousAuthRateLimitPolicy.PolicyName,
+        AnonymousAuthRateLimitPolicy.Create());
+    });
 
     // Add authn/authz services.
     builder.Services.AddCascadingAuthenticationState();
     builder.Services.AddScoped<IdentityRedirectManager>();
     builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+
+    builder.Services.ConfigureApplicationCookie(options =>
+    {
+      options.Events.OnRedirectToLogin = context =>
+      {
+        // For API requests, return 401 instead of redirecting
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+          context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+          return Task.CompletedTask;
+        }
+
+        // For UI requests, redirect to the login page
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+      };
+
+      options.Events.OnRedirectToAccessDenied = context =>
+      {
+        // For API requests, return 403 instead of redirecting  
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+          context.Response.StatusCode = StatusCodes.Status403Forbidden;
+          return Task.CompletedTask;
+        }
+
+        // For UI requests, redirect to the access-denied page
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+      };
+    });
+
+    builder.Services
+      .AddAuthorizationBuilder()
+      .SetDefaultPolicy(new AuthorizationPolicyBuilder()
+        .AddAuthenticationSchemes(CustomSchemes.Dynamic)
+        .RequireAuthenticatedUser()
+        .Build())
+      .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
+      .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
+
+    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
+    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequirementHandler>();
+    builder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
+
+    // Add Identity services.
+    builder.Services
+      .AddIdentityApiEndpoints<AppUser>(options =>
+      {
+        options.User.RequireUniqueEmail = true;
+        options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
+      })
+      .AddRoles<AppRole>()
+      .AddEntityFrameworkStores<AppDb>()
+      .AddSignInManager()
+      .AddDefaultTokenProviders();
+
+    if (appOptions.EnableInteractiveBearerLogin)
+    {
+      builder.Services.Configure<BearerTokenOptions>(IdentityConstants.BearerScheme, options =>
+      {
+        options.BearerTokenExpiration = TimeSpan.FromMinutes(appOptions.InteractiveBearerTokenExpirationMinutes);
+        options.RefreshTokenExpiration = TimeSpan.FromDays(appOptions.InteractiveRefreshTokenExpirationDays);
+      });
+    }
 
     var authBuilder = builder.Services
       .AddAuthentication(options =>
@@ -159,6 +251,12 @@ public static class WebApplicationBuilderExtensions
               context.Request.Query.ContainsKey("logonToken"))
           {
             return LogonTokenAuthenticationSchemeOptions.DefaultScheme;
+          }
+
+          if (appOptions.EnableInteractiveBearerLogin &&
+              context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+          {
+            return IdentityConstants.BearerScheme;
           }
 
           // If the request has a Personal Access Token header, use PAT authentication
@@ -192,76 +290,15 @@ public static class WebApplicationBuilderExtensions
       });
     }
 
-    authBuilder.AddIdentityCookies();
-
-    builder.Services.ConfigureApplicationCookie(options =>
-    {
-      options.Events.OnRedirectToLogin = context =>
-      {
-        // For API requests, return 401 instead of redirecting
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-          context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-          return Task.CompletedTask;
-        }
-
-        // For UI requests, redirect to the login page
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-      };
-
-      options.Events.OnRedirectToAccessDenied = context =>
-      {
-        // For API requests, return 403 instead of redirecting  
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-          context.Response.StatusCode = StatusCodes.Status403Forbidden;
-          return Task.CompletedTask;
-        }
-
-        // For UI requests, redirect to the access-denied page
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-      };
-    });
-
-    // Add personal access token authentication
+    // Add personal access token authentication.
     authBuilder.AddScheme<PersonalAccessTokenAuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,
       _ => { });
 
-    // Add logon token authentication
+    // Add logon token authentication.
     authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
       LogonTokenAuthenticationSchemeOptions.DefaultScheme,
       _ => { });
-
-    builder.Services
-      .AddAuthorizationBuilder()
-      .SetDefaultPolicy(new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(CustomSchemes.Dynamic)
-        .RequireAuthenticatedUser()
-        .Build())
-      .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
-      .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
-
-    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
-    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequirementHandler>();
-    builder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
-
-    // Add Identity services.
-    builder.Services
-      .AddIdentityCore<AppUser>(options =>
-      {
-        options.User.RequireUniqueEmail = true;
-        options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
-        options.Password.RequiredLength = 8;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-      })
-      .AddRoles<AppRole>()
-      .AddEntityFrameworkStores<AppDb>()
-      .AddSignInManager()
-      .AddDefaultTokenProviders();
 
     builder.Services
       .AddScoped<PasskeySignInManager>()
@@ -337,6 +374,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddHostedService<AgentInstallerKeyUsageCleanupBackgroundService>();
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IAgentVersionProvider, AgentVersionProvider>();
+    builder.Services.AddScoped<IPasswordManager, PasswordManager>();
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();

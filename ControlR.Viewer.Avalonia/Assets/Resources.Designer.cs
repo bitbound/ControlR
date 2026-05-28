@@ -270,9 +270,9 @@ namespace ControlR.Viewer.Avalonia.Assets {
         /// <summary>
         ///   Looks up a localized string similar to PersonalAccessToken is required. Set the PersonalAccessToken property in the Options..
         /// </summary>
-        public static string ControlrViewer_PatRequired {
+        public static string ControlrViewer_AuthRequired {
             get {
-                return ResourceManager.GetString("ControlrViewer_PatRequired", resourceCulture);
+                return ResourceManager.GetString("ControlrViewer_AuthRequired", resourceCulture);
             }
         }
         

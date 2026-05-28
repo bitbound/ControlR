@@ -54,6 +54,10 @@ public class AppOptions
   /// </summary>
   public bool EnableDockerSecrets { get; init; }
   /// <summary>
+  /// Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
+  /// </summary>
+  public bool EnableInteractiveBearerLogin { get; init; }
+  /// <summary>
   /// When enabled, bypasses KnownProxies/KnownIpNetworks checks and trusts all forwarded headers
   /// from the reverse proxy. Only enable this in secure environments where the reverse proxy
   /// is guaranteed to be the only source of incoming traffic.
@@ -91,6 +95,14 @@ public class AppOptions
   /// Primarily used for testing and development environments.
   /// </summary>
   public string? InMemoryDatabaseName { get; init; }
+  /// <summary>
+  /// Lifetime of interactive bearer access tokens issued by ASP.NET Core Identity.
+  /// </summary>
+  public int InteractiveBearerTokenExpirationMinutes { get; init; } = 60;
+  /// <summary>
+  /// Lifetime of refresh tokens issued by ASP.NET Core Identity for interactive bearer logins.
+  /// </summary>
+  public int InteractiveRefreshTokenExpirationDays { get; init; } = 30;
   /// <summary>
   /// Array of known network CIDR ranges that are trusted for forwarded headers.
   /// Used by the ForwardedHeadersMiddleware to validate proxy requests.

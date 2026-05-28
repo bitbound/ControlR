@@ -6,7 +6,6 @@ using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Layout;
 using ControlR.Viewer.Avalonia.ViewModels.Fakes;
-using ControlR.Viewer.Avalonia.Services;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 using System.ComponentModel;
 
@@ -21,8 +20,7 @@ public partial class ControlrViewer : UserControl
   public static readonly StyledProperty<ViewerPage> PageProperty =
     AvaloniaProperty.Register<ControlrViewer, ViewerPage>(nameof(Page), ViewerPage.None);
 
-  private readonly Lock _intializeLock = new();
-  private readonly IDisposable _isVisibleSubscription;
+  private readonly Lock _initializeLock = new();
   private readonly IDisposable _pageSubscription;
 
   private ViewerInstanceInfo? _instanceInfo;
@@ -40,9 +38,6 @@ public partial class ControlrViewer : UserControl
     InstanceId = Guid.NewGuid();
     _pendingPage = Page;
 
-    _isVisibleSubscription = this
-      .GetObservable(IsVisibleProperty)
-      .Subscribe(HandleIsVisibleChanged);
     _pageSubscription = this
       .GetObservable(PageProperty)
       .Subscribe(HandlePageChanged);
@@ -131,16 +126,19 @@ public partial class ControlrViewer : UserControl
       return;
     }
 
-    if (string.IsNullOrWhiteSpace(Options.PersonalAccessToken))
+    if (Options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken &&
+        string.IsNullOrWhiteSpace(Options.PersonalAccessToken))
     {
-      SetErrorContent(Assets.Resources.ControlrViewer_PatRequired);
+      SetErrorContent(Assets.Resources.ControlrViewer_AuthRequired);
       return;
     }
+  }
 
-    if (IsVisible)
-    {
-      InitializeServices();
-    }
+  protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+  {
+    base.OnAttachedToVisualTree(e);
+
+    InitializeServices();
   }
 
   protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -154,12 +152,8 @@ public partial class ControlrViewer : UserControl
     {
       _instanceInfo = null;
       _pageSubscription.Dispose();
-      _isVisibleSubscription.Dispose();
 
-      if (_shellViewModel is not null)
-      {
-        _shellViewModel.PropertyChanged -= HandleShellViewModelPropertyChanged;
-      }
+      _shellViewModel?.PropertyChanged -= HandleShellViewModelPropertyChanged;
 
       if (_serviceProvider is IAsyncDisposable asyncDisposable)
       {
@@ -213,14 +207,6 @@ public partial class ControlrViewer : UserControl
     }
   }
 
-  private void HandleIsVisibleChanged(bool obj)
-  {
-    if (obj && IsLoaded && !_isInitialized)
-    {
-      InitializeServices();
-    }
-  }
-
   private void HandlePageChanged(ViewerPage page)
   {
     _pendingPage = page;
@@ -240,7 +226,7 @@ public partial class ControlrViewer : UserControl
 
   private void InitializeServices()
   {
-    using var locker = _intializeLock.EnterScope();
+    using var locker = _initializeLock.EnterScope();
 
     if (_isInitialized)
     {

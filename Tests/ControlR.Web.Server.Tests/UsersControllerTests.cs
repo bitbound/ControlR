@@ -4,11 +4,13 @@ using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Users;
+using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace ControlR.Web.Server.Tests;
@@ -16,6 +18,85 @@ namespace ControlR.Web.Server.Tests;
 public class UsersControllerTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutputHelper = testOutput;
+
+  [Fact]
+  public async Task AdminResetPassword_ReturnsTemporaryPassword_AndRequiresPasswordChange()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
+      roles: RoleNames.TenantAdministrator);
+    var targetUser = await services.CreateTestUser(tenant.Id, "target@t.local");
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+
+    var result = await controller.AdminResetPassword(
+      targetUser.Id,
+      services.GetRequiredService<IPasswordManager>());
+
+    var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    var dto = Assert.IsType<AdminResetPasswordResponseDto>(okResult.Value);
+
+    var identityOptions = services.GetRequiredService<IOptions<IdentityOptions>>();
+    Assert.Equal(identityOptions.Value.Password.RequiredLength, dto.TemporaryPassword.Length);
+
+    using var verificationScope = testApp.CreateScope();
+    var verificationUserManager = verificationScope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var refreshedUser = await verificationUserManager.FindByIdAsync(targetUser.Id.ToString());
+    Assert.NotNull(refreshedUser);
+    Assert.True(refreshedUser.RequirePasswordChange);
+    Assert.True(await verificationUserManager.CheckPasswordAsync(refreshedUser, dto.TemporaryPassword));
+  }
+
+  [Fact]
+  public async Task AdminResetPassword_UsesMinimumLengthRequiredByEnabledCharacterTypes()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var identityOptions = services.GetRequiredService<IOptions<IdentityOptions>>().Value;
+    identityOptions.Password.RequiredLength = 2;
+    identityOptions.Password.RequireUppercase = true;
+    identityOptions.Password.RequireLowercase = true;
+    identityOptions.Password.RequireDigit = true;
+    identityOptions.Password.RequireNonAlphanumeric = true;
+
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
+      roles: RoleNames.TenantAdministrator);
+    var targetUser = await services.CreateTestUser(tenant.Id, "short-policy@t.local");
+
+    var result = await controller.AdminResetPassword(
+      targetUser.Id,
+      services.GetRequiredService<IPasswordManager>());
+
+    var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    var dto = Assert.IsType<AdminResetPasswordResponseDto>(okResult.Value);
+
+    Assert.True(dto.TemporaryPassword.Length >= 4);
+  }
+
+  [Fact]
+  public async Task CreateUserPersonalAccessToken_ReturnsNotFound_ForUserOutsideTenant()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
+      roles: RoleNames.TenantAdministrator);
+    var otherTenant = await services.CreateTestTenant("Other Tenant");
+    var otherUser = await services.CreateTestUser(otherTenant.Id, "other@t.local");
+
+    var result = await controller.CreateUserPersonalAccessToken(
+      otherUser.Id,
+      services.GetRequiredService<IPersonalAccessTokenManager>(),
+      services.GetRequiredService<AppDb>(),
+      new CreatePersonalAccessTokenRequestDto("Should Fail"));
+
+    Assert.IsType<NotFoundResult>(result.Result);
+  }
 
   [Fact]
   public async Task Create_CreatesUser_WithRolesAndTags()
@@ -129,5 +210,64 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
       request);
 
     Assert.IsType<BadRequestObjectResult>(result.Result);
+  }
+
+  [Fact]
+  public async Task PersonalAccessTokenCrud_ManagesTokens_ForTargetUserInTenant()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
+      roles: RoleNames.TenantAdministrator);
+    var targetUser = await services.CreateTestUser(tenant.Id, "pat-target@t.local");
+
+    var createResult = await controller.CreateUserPersonalAccessToken(
+      targetUser.Id,
+      services.GetRequiredService<IPersonalAccessTokenManager>(),
+      services.GetRequiredService<AppDb>(),
+      new CreatePersonalAccessTokenRequestDto("Admin Created PAT"));
+
+    var createOk = Assert.IsType<OkObjectResult>(createResult.Result);
+    var createDto = Assert.IsType<CreatePersonalAccessTokenResponseDto>(createOk.Value);
+
+    var getResult = await controller.GetUserPersonalAccessTokens(
+      targetUser.Id,
+      services.GetRequiredService<IPersonalAccessTokenManager>(),
+      services.GetRequiredService<AppDb>());
+
+    var getOk = Assert.IsType<OkObjectResult>(getResult.Result);
+    var tokens = Assert.IsAssignableFrom<IEnumerable<PersonalAccessTokenDto>>(getOk.Value);
+    var createdToken = Assert.Single(tokens);
+    Assert.Equal(createDto.PersonalAccessToken.Id, createdToken.Id);
+
+    var updateResult = await controller.UpdateUserPersonalAccessToken(
+      targetUser.Id,
+      createdToken.Id,
+      services.GetRequiredService<IPersonalAccessTokenManager>(),
+      services.GetRequiredService<AppDb>(),
+      new UpdatePersonalAccessTokenRequestDto("Renamed PAT"));
+
+    var updateOk = Assert.IsType<OkObjectResult>(updateResult.Result);
+    var updatedToken = Assert.IsType<PersonalAccessTokenDto>(updateOk.Value);
+    Assert.Equal("Renamed PAT", updatedToken.Name);
+
+    var deleteResult = await controller.DeleteUserPersonalAccessToken(
+      targetUser.Id,
+      createdToken.Id,
+      services.GetRequiredService<IPersonalAccessTokenManager>(),
+      services.GetRequiredService<AppDb>());
+
+    Assert.IsType<NoContentResult>(deleteResult);
+
+    var finalGetResult = await controller.GetUserPersonalAccessTokens(
+      targetUser.Id,
+      services.GetRequiredService<IPersonalAccessTokenManager>(),
+      services.GetRequiredService<AppDb>());
+
+    var finalGetOk = Assert.IsType<OkObjectResult>(finalGetResult.Result);
+    var finalTokens = Assert.IsAssignableFrom<IEnumerable<PersonalAccessTokenDto>>(finalGetOk.Value);
+    Assert.Empty(finalTokens);
   }
 }

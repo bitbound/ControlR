@@ -2,8 +2,10 @@ using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Client.Components.Layout;
 using ControlR.Web.Server.Components;
 using ControlR.Web.Server.Components.Account;
+using ControlR.Web.Server.Middleware;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.ServiceDefaults;
+using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.Extensions.FileProviders;
 using Scalar.AspNetCore;
 using System.Reflection;
@@ -62,7 +64,9 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.MapHub<AgentHub>(AppConstants.AgentHubPath);
 
+app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<RequirePasswordChangeMiddleware>();
 app.UseAuthorization();
 app.UseAntiforgery();
 
@@ -72,6 +76,11 @@ app.MapWebSocketRelay();
 app.UseOutputCache();
 
 app.MapControllers();
+
+if (appOptions.EnableInteractiveBearerLogin)
+{
+  app.MapGroup(HttpConstants.AuthEndpoint).MapIdentityApi<AppUser>();
+}
 
 app.UseWhen(
   ctx => !ctx.Request.Path.StartsWithSegments("/api"),

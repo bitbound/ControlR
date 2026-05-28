@@ -32,6 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ControlR.Libraries.DataRedaction\ControlR.Libraries.DataRedaction.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Update="Bitbound.Analyzers.MemberOrder">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

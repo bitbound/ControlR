@@ -5,11 +5,12 @@ using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
-using ControlR.Libraries.WebSocketRelay.Client;
+using ControlR.Libraries.Viewer.Common.Options;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 using ControlR.Viewer.Avalonia.ViewModels.Dialogs;
 using ControlR.Viewer.Avalonia.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.Viewer.Avalonia;
 
@@ -39,19 +40,11 @@ public static class ViewerServiceBuilder
 
     var services = new ServiceCollection();
 
-    // Register options.
-    services
-     .AddOptions<ControlrViewerOptions>()
-      .Configure(opts =>
-      {
-        opts.DeviceId = viewerOptions.DeviceId;
-        opts.BaseUrl = viewerOptions.BaseUrl;
-        opts.PersonalAccessToken = viewerOptions.PersonalAccessToken;
-      })
-     .Validate(options => options.DeviceId != Guid.Empty, "DeviceId is required.")
-     .Validate(options => options.BaseUrl is not null, "BaseUrl is required.")
-     .Validate(options => !string.IsNullOrWhiteSpace(options.PersonalAccessToken), "PersonalAccessToken is required.")
-     .ValidateOnStart();
+    ValidateViewerOptions(viewerOptions);
+
+    // Register options by reference so the host app can switch auth modes before reconnecting.
+    services.AddSingleton(viewerOptions);
+    services.AddSingleton<IOptions<ControlrViewerOptions>>(_ => Options.Create(viewerOptions));
 
     // Register logging.
     services.AddLogging(builder =>
@@ -94,6 +87,7 @@ public static class ViewerServiceBuilder
     
     // Register SignalR hub client.
     services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Singleton);
+    services.AddSingleton<IViewerConnectionAuthProvider, ViewerConnectionAuthProvider>();
     services.AddSingleton<IViewerHubConnector, ViewerHubConnector>();
 
     // Register navigation service.
@@ -126,5 +120,24 @@ public static class ViewerServiceBuilder
     services.AddSingleton<IDesktopPreviewDialogViewModelFactory, DesktopPreviewDialogViewModelFactory>();
 
     return services.BuildServiceProvider();
+  }
+
+  private static void ValidateViewerOptions(ControlrViewerOptions viewerOptions)
+  {
+    if (viewerOptions.DeviceId == Guid.Empty)
+    {
+      throw new InvalidOperationException("DeviceId is required.");
+    }
+
+    if (viewerOptions.BaseUrl is null)
+    {
+      throw new InvalidOperationException("BaseUrl is required.");
+    }
+
+    if (viewerOptions.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken &&
+        string.IsNullOrWhiteSpace(viewerOptions.PersonalAccessToken))
+    {
+      throw new InvalidOperationException("A personal access token is required when AuthenticationMethod is PersonalAccessToken.");
+    }
   }
 }

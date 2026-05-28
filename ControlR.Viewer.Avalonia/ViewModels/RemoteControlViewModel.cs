@@ -32,6 +32,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
 {
   private const uint CommandTimeoutSeconds = 30;
 
+  private readonly IViewerConnectionAuthProvider _connectionAuthProvider;
   private readonly IControlrApi _controlrApi;
   private readonly IDeviceState _deviceState;
   private readonly IDialogProvider _dialogProvider;
@@ -68,6 +69,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     IViewerRemoteControlStream streamingClient,
     IRemoteControlState remoteControlState,
     IHubConnection<IViewerHub> hubConnection,
+    IViewerConnectionAuthProvider connectionAuthProvider,
     IDialogProvider dialogProvider,
     IDesktopPreviewDialogViewModelFactory desktopPreviewDialogViewModelFactory,
     ISnackbar snackbar,
@@ -77,6 +79,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     IRemoteDisplayViewModel remoteDisplayViewModel)
   {
     _controlrApi = controlrApi;
+    _connectionAuthProvider = connectionAuthProvider;
     _deviceState = deviceState;
     _dialogProvider = dialogProvider;
     _hubConnection = hubConnection;
@@ -499,12 +502,16 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
         CommandTimeoutSeconds);
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(CommandTimeoutSeconds));
+      var authHeaders = await _connectionAuthProvider.GetWebSocketHeaders(cts.Token);
 
       await _remoteControlStream.Connect(
         viewerRelayUri,
         wsOptions =>
         {
-          wsOptions.SetRequestHeader(ControlrViewerOptions.PersonalAccessTokenHeaderName, _viewerOptions.Value.PersonalAccessToken);
+          foreach (var header in authHeaders)
+          {
+            wsOptions.SetRequestHeader(header.Key, header.Value);
+          }
         },
         cts.Token);
 

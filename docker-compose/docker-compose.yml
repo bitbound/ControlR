@@ -69,6 +69,16 @@ services:
       # The name that appears in TOTP authenticator apps.
       ControlR_AppOptions__AuthenticatorIssuerName: "ControlR"
 
+      # Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
+      # This is useful for logging in from desktop clients or other clients where cookies aren't ideal.
+      ControlR_AppOptions__EnableInteractiveBearerLogin: false
+
+      # Lifetime of interactive bearer access tokens issued by ASP.NET Core Identity.
+      ControlR_AppOptions__InteractiveBearerTokenExpirationMinutes: 60
+
+      # Lifetime of refresh tokens issued by ASP.NET Core Identity for interactive bearer logins.
+      ControlR_AppOptions__InteractiveRefreshTokenExpirationDays: 30
+
       # If enabled, signing in with a passkey will effectively add the "remember me" option.
       ControlR_AppOptions__PersistPasskeyLogin: false
 
@@ -80,6 +90,7 @@ services:
       # This can be helpful for debugging but may leak sensitive information, so it is disabled by default.
       # Enabling this incurs a small performance cost.
       ControlR_AppOptions__EnableDatabaseDetailedErrors: false
+
 
       # When enabled, bypasses KnownProxies/KnownIpNetworks checks and trusts all forwarded headers
       # from the reverse proxy.  Only enable this in secure environments where the reverse proxy
@@ -95,12 +106,19 @@ services:
       # Set the minimum level for logs sent to OTLP exporter and/or Azure Monitor.
       ControlR_Logging__LogLevel__Default: Information
 
+      # The log level for ASP.NET Core framework logs.  Setting this to Warning or higher can help reduce noise in logs.
+      ControlR_Logging__LogLevel__Microsoft.AspNetCore: Warning
+
       # The log level to use for HttpLogging middleware (when it's enabled).
       ControlR_Logging__LogLevel__Microsoft.AspNetCore.HttpLogging: Information
 
       # The log level for ForwardedHeadersMiddleware, among others. When set to debug,
       # this will log when a reverse proxy isn't trusted, which can help troubleshoot misconfigurations.
       ControlR_Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides: Debug
+
+      # The log level for Entity Framework Core database operations.
+      # Setting this to Information or Debug can help troubleshoot database issues, but can spam logs.
+      ControlR_Logging__LogLevel__Microsoft.EntityFrameworkCore.Database: Warning
 
       # For debugging.  When enabled, extra logs will be written for all HTTP requests and responses.
       # https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-logging
@@ -135,6 +153,14 @@ services:
 
       # The Gateway IP here must match the IP address used by the Docker gateway.
       ControlR_AppOptions__DockerGatewayIp: "::ffff:172.29.0.1"
+
+      # When enabled, uses an in-memory database instead of PostgreSQL.
+      # Primarily used for testing and development environments.
+      ControlR_AppOptions__UseInMemoryDatabase: false
+
+      # The name of the in-memory database to use when UseInMemoryDatabase is enabled.
+      # Primarily used for testing and development environments.
+      ControlR_AppOptions__InMemoryDatabaseName: ""
 
       # The maximum allowed file size for transfers in the remote File System component.
       # Set to 0 or less for no limit.  Default is 100MB.

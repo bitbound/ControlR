@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using ControlR.ApiClient;
+using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
@@ -186,7 +187,15 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       DisableStreamingResponseDtoStrictness = disableStreamingResponseDtoStrictness
     });
 
-    return new ControlrApi(httpClient, NullLogger<ControlrApi>.Instance, options);
+    var authState = new ControlrApiClientAuthState();
+    var httpClientFactory = new StaticHttpClientFactory(httpClient);
+
+    return new ControlrApi(
+      httpClient,
+      authState,
+      new BearerTokenRefresher(authState, httpClientFactory, TimeProvider.System),
+      NullLogger<ControlrApi>.Instance,
+      options);
   }
 
   private static DeviceResponseDto CreateDeviceResponseDto(int index)
@@ -219,7 +228,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       IsOutdated: false,
       DnsHostName: $"device-{index}.contoso.local");
   }
-
+  
   private sealed class StaticJsonMessageHandler(string jsonResponse) : HttpMessageHandler
   {
     private readonly string _jsonResponse = jsonResponse;
@@ -234,4 +243,5 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       return Task.FromResult(response);
     }
   }
+
 }

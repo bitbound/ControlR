@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ControlR.Libraries.Api.Contracts.Constants;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/[controller]")]
+[Route(HttpConstants.VersionEndpoint)]
 [ApiController]
 [OutputCache(Duration = 60)]
 public class VersionController(IAgentVersionProvider agentVersionProvider) : ControllerBase

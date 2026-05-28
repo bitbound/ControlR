@@ -51,14 +51,30 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 - Platform detection via `ISystemEnvironment.Platform` and `RuntimeInformation`.
 - macOS debug builds: disable app-bundle output; emit managed launch files (`.dll`, `.deps.json`, `.runtimeconfig.json`) so VS Code can launch via `dotnet`.
 
-## C# Coding Standards
+# General Coding Standards
+- Use 2 spaces for indentation.
 
-- 2-space indent. Braces on own lines. Prefer `var`. Use collection expressions (`[]`).
-- No null-forgiving operator (`!`) outside tests, except within EF Core queries that execute server-side. Use `required` where applicable.
+# C# Coding Standards
+- Braces go on new lines.
+- Prefer var over explicit types.
+  - Example: `var directories = _fileSystem.GetDirectories(path);`
+- Use collection expressions (`[]`).
+  - Example: `private readonly Dictionary<string, uint> _displayNodeIds = [];`
+- No null-forgiving operator (`!`) outside tests, except the following scenarios:
+  - In tests, where a null value would result in a test failure anyway.
+  - Within EF Core queries that execute server-side.
+  - Blazor framework-injected properties ([SupplyParameterFromForm], [CascadingParameter]) that cannot have a property initializer.
+- Null-forgiving examples:
+  - DON'T: `var result = myObject!.GetValue();`
+  - DO: `var result = myObject?.GetValue() ?? throw new InvalidOperationException("myObject is not initialized.");`
+  - OK: `var properties = await _dbContext.Users.Select(x => x.SomeNavigation!.SomeProperty).ToListAsync();`
+  - OK: `[CascadingParameter] private HttpContext HttpContext { get; set; } = default!;`
+- Use `required` keyword where applicable.
 - No TODOs, placeholder code, or "in production you should..." comments. Every implementation must be complete.
 - No "Async" suffix on async methods unless distinguishing from a sync overload.
-- When an interface has only one implementation, place the interface in the same file as the implementation rather than a separate file.
-- Don't create extra public classes in files containing other classes. Use `Result<T>` from `ControlR.Libraries.Shared.Primitives` for result types.
+- Put public types in their own class file, with the below exceptions.
+  - If an interface has only one implementation, those types can go in the same file.  E.g. `ISecretProvider` and `SecretProvider` can both go in `SecretProvider.cs`.
+  - Enums that are tightly coupled to another class and only used there.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 
 ## Web UI
@@ -77,13 +93,16 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 
 ## Testing
 
-- xUnit v3. Run tests with `dotnet run`, not `dotnet test`.
-- Server test helpers in `Tests\ControlR.Web.Server.Tests\Helpers\`.
+- xUnit v3. Run tests with `dotnet run`, not `dotnet test`.  Build the solution first if using `--no-build`.
+  - Syntax (whole test project): `dotnet run --no-build --project {project_path}}`
+  - Specifc class/method: `dotnet run --no-build --project {project_path} -- -filter /{namespace}/{class}/{method}`
+  - Example: `dotnet run --no-build --project .\Tests\ControlR.Web.Server.Tests\ControlR.Web.Server.Tests.csproj -- -filter /ControlR.Web.Server.Tests/ControlR.Web.Server.Tests/InteractiveLoginApiTests`
 
 ## Package Management
 
-- Central package management via `Directory.Packages.props`.
-- Add packages with `dotnet add <project> package <name>` — never add `Version` attributes to `<PackageReference>` elements.
+- Use central package management via `Directory.Packages.props`.
+- Don't add `Version` attributes to `<PackageReference>` elements in csproj files. `Version` attributes go in `Directory.Packages.props`.
+- Use `dotnet add <project> package <name>` to add packages.
 
 ## Agent Hints
 

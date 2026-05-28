@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -32,6 +33,8 @@ public static class ServiceCollectionExtensions
     this IServiceCollection services,
     Action<ControlrApiClientOptions> configureOptions)
   {
+    services.TryAddSingleton(TimeProvider.System);
+
     // Register and validate options using the options pattern
     services
       .AddOptions<ControlrApiClientOptions>()
@@ -39,18 +42,34 @@ public static class ServiceCollectionExtensions
       .Validate(options => options.BaseUrl is not null, "BaseUrl is required.")
       .ValidateOnStart();
 
+    services.TryAddSingleton(sp =>
+    {
+      var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+      return new ControlrApiClientAuthState(options.PersonalAccessToken);
+    });
+
+    services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
+    services.TryAddTransient<ControlrApiAuthHeaderHandler>();
+
     // Register the factory for the ControlR API client.
+    services.AddHttpClient(
+      ControlrApiClientNames.UnauthenticatedClient,
+      (sp, client) =>
+      {
+        var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+        client.BaseAddress = options.BaseUrl;
+      });
+
     services
       .AddHttpClient<IControlrApi, ControlrApi>(
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
         client.BaseAddress = options.BaseUrl;
-        if (!string.IsNullOrWhiteSpace(options.PersonalAccessToken))
-        {
-          client.DefaultRequestHeaders.Add(ControlrApiClientOptions.PersonalAccessTokenHeader, options.PersonalAccessToken);
-        }
-      });
+      })
+      .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
+
+    services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
     return services;
   }
 
@@ -86,6 +105,8 @@ public static class ServiceCollectionExtensions
     IConfiguration configuration,
     string configurationSectionName)
   {
+    services.TryAddSingleton(TimeProvider.System);
+
     // Register and validate options using the options pattern.
     services
       .AddOptions<ControlrApiClientOptions>()
@@ -93,18 +114,34 @@ public static class ServiceCollectionExtensions
       .Validate(options => options.BaseUrl is not null, "BaseUrl is required.")
       .ValidateOnStart();
 
+    services.TryAddSingleton(sp =>
+    {
+      var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+      return new ControlrApiClientAuthState(options.PersonalAccessToken);
+    });
+
+    services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
+    services.TryAddTransient<ControlrApiAuthHeaderHandler>();
+
     // Register the factory for the ControlR API client.
+    services.AddHttpClient(
+      ControlrApiClientNames.UnauthenticatedClient,
+      (sp, client) =>
+      {
+        var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
+        client.BaseAddress = options.BaseUrl;
+      });
+
     services
       .AddHttpClient<IControlrApi, ControlrApi>(
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
         client.BaseAddress = options.BaseUrl;
-        if (!string.IsNullOrWhiteSpace(options.PersonalAccessToken))
-        {
-          client.DefaultRequestHeaders.Add(ControlrApiClientOptions.PersonalAccessTokenHeader, options.PersonalAccessToken);
-        }
-      });
+      })
+      .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
+
+    services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
 
     return services;
   }

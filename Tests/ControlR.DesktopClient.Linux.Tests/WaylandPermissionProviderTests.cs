@@ -2,6 +2,7 @@ using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Linux.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -13,7 +14,7 @@ namespace ControlR.DesktopClient.Linux.Tests;
 
 public class WaylandPermissionProviderTests
 {
-  [Fact]
+  [LinuxOnlyFact]
   public void HasRestoreToken_ReturnsFalse_WhenTokenFileDoesNotExist()
   {
     var timeProvider = new FakeTimeProvider();
@@ -38,7 +39,7 @@ public class WaylandPermissionProviderTests
     Assert.False(result);
   }
 
-  [Fact]
+  [LinuxOnlyFact]
   public void HasRestoreToken_ReturnsTrue_WhenTokenFileExists()
   {
     var timeProvider = new FakeTimeProvider();
@@ -63,7 +64,7 @@ public class WaylandPermissionProviderTests
     Assert.True(result);
   }
 
-  [Fact]
+  [LinuxOnlyFact]
   public async Task RequestRemoteControlPermission_UsesInteractivePortalRequestWithoutInitializingCapture()
   {
     var timeProvider = new FakeTimeProvider();

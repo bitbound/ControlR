@@ -33,7 +33,5 @@
   <ItemGroup>
     <ProjectReference
       Include="..\Libraries\ControlR.Libraries.Api.Contracts\ControlR.Libraries.Api.Contracts.csproj" />
-    <ProjectReference
-      Include="..\Libraries\ControlR.Libraries.DataRedaction\ControlR.Libraries.DataRedaction.csproj" />
   </ItemGroup>
 </Project>

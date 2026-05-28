@@ -14,13 +14,25 @@ public partial class MainWindow : Window
   public MainWindow()
   {
     InitializeComponent();
-    DataContextChanged += HandleDataContextChanged;
   }
-  
+
   protected override void OnClosed(EventArgs e)
   {
     _viewModel?.PropertyChanged -= HandleViewModelPropertyChanged;
+    _viewModel?.Dispose();
     base.OnClosed(e);
+  }
+
+  protected override void OnDataContextChanged(EventArgs e)
+  {
+    base.OnDataContextChanged(e);
+    HandleDataContextChanged();
+  }
+
+  protected override void OnOpened(EventArgs e)
+  {
+    base.OnOpened(e);
+    AttachViewer();
   }
 
   private void ApplyTheme(bool isDarkMode)
@@ -30,20 +42,15 @@ public partial class MainWindow : Window
       : ThemeVariant.Light;
 
     RequestedThemeVariant = themeVariant;
-
-    if (Application.Current is not null)
-    {
-      Application.Current.RequestedThemeVariant = themeVariant;
-    }
+    Application.Current?.RequestedThemeVariant = themeVariant;
   }
 
-  private void ConnectButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+  private void AttachViewer()
   {
-    ConnectPanel.IsVisible  = false;
-    Viewer.IsVisible = true;
+    _viewModel?.AttachViewer(Viewer.InstanceId);
   }
 
-  private void HandleDataContextChanged(object? sender, EventArgs e)
+  private void HandleDataContextChanged()
   {
     _viewModel?.PropertyChanged -= HandleViewModelPropertyChanged;
 
@@ -54,6 +61,7 @@ public partial class MainWindow : Window
     }
 
     ApplyTheme(_viewModel.IsDarkMode);
+    AttachViewer();
 
     _viewModel.PropertyChanged += HandleViewModelPropertyChanged;
     SyncSidebarSelection(_viewModel.ActivePage);
@@ -81,7 +89,8 @@ public partial class MainWindow : Window
 
   private void SidebarNavList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
   {
-    if (DataContext is not IMainWindowViewModel viewModel || SidebarNavList.SelectedItem is not ListBoxItem selectedItem)
+    if (DataContext is not IMainWindowViewModel viewModel ||
+        SidebarNavList.SelectedItem is not ListBoxItem selectedItem)
     {
       return;
     }

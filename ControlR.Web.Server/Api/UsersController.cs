@@ -1,13 +1,39 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ControlR.Web.Server.Services.Users;
+using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/[controller]")]
+[Route(HttpConstants.UsersEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class UsersController : ControllerBase
 {
+  [HttpPost("{userId:guid}/reset-password")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
+    [FromRoute] Guid userId,
+    [FromServices] IPasswordManager passwordManager)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
+    var result = await passwordManager.AdminResetPassword(tenantId, userId);
+    if (!result.IsSuccess)
+    {
+      if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
+      {
+        return NotFound();
+      }
+
+      return BadRequest(result.Reason);
+    }
+
+    return Ok(result.Value);
+  }
+
   [HttpPost]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<UserResponseDto>> Create(
@@ -18,15 +44,16 @@ public class UsersController : ControllerBase
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      return BadRequest("User tenant not found");
+      return BadRequest("User tenant not found.");
     }
 
-    // If roles include ServerAdministrator, ensure caller is server admin
-    if (request.RoleIds?.Any() == true)
+    var requestRoleIds = request.RoleIds?.ToArray();
+    // If roles include ServerAdministrator, ensure caller is also server admin.
+    if (requestRoleIds is { Length: > 0 } roleIds)
     {
-      var roles = await appDb.Roles.Where(r => request.RoleIds.Contains(r.Id)).ToListAsync();
+      var roles = await appDb.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
       var foundRoleIds = roles.Select(r => r.Id).ToHashSet();
-      var missingRoleIds = request.RoleIds.Except(foundRoleIds).ToList();
+      var missingRoleIds = roleIds.Except(foundRoleIds).ToList();
       if (missingRoleIds.Count != 0)
       {
         return BadRequest($"Roles not found: {string.Join(',', missingRoleIds)}");
@@ -34,7 +61,7 @@ public class UsersController : ControllerBase
 
       if (roles.Any(r => r.Name == RoleNames.ServerAdministrator))
       {
-        // Resolve caller's user and check role via UserManager to avoid relying on ClaimsPrincipal state
+        // Resolve caller's user and check role via UserManager to avoid relying on ClaimsPrincipal state.
         if (!User.TryGetUserId(out var callerUserId))
         {
           return BadRequest("Caller user id not found");
@@ -53,12 +80,11 @@ public class UsersController : ControllerBase
       }
     }
 
-    // Delegate creation (including optional role/tag assignment) to IUserCreator
     var createResult = await userCreator.CreateUser(
       string.IsNullOrWhiteSpace(request.Email) ? request.UserName : request.Email,
       request.Password ?? string.Empty,
       tenantId,
-      request.RoleIds,
+      requestRoleIds,
       request.TagIds);
 
     if (!createResult.Succeeded)
@@ -76,16 +102,51 @@ public class UsersController : ControllerBase
     return CreatedAtAction(nameof(GetAll), new { id = user.Id }, response);
   }
 
-  [HttpDelete("{id:guid}")]
+  [HttpPost("{userId:guid}/personal-access-tokens")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
+    [FromRoute] Guid userId,
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] AppDb appDb,
+    [FromBody] CreatePersonalAccessTokenRequestDto request)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
+    var targetExists = await appDb.Users
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+
+    if (!targetExists)
+    {
+      return NotFound();
+    }
+
+    var result = await personalAccessTokenManager.CreateToken(request, userId);
+    if (!result.IsSuccess)
+    {
+      return BadRequest(result.Reason);
+    }
+
+    return Ok(result.Value);
+  }
+
+  [HttpDelete("{userId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<IActionResult> Delete(
-    [FromRoute] Guid id,
+    [FromRoute] Guid userId,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] AppDb appDb)
   {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
     var user = await appDb.Users
       .Include(x => x.UserPreferences)
-      .FirstOrDefaultAsync(x => x.Id == id);
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (user == null)
     {
@@ -100,6 +161,37 @@ public class UsersController : ControllerBase
 
     return NoContent();
   }
+
+  [HttpDelete("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<IActionResult> DeleteUserPersonalAccessToken(
+    [FromRoute] Guid userId,
+    [FromRoute] Guid tokenId,
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] AppDb appDb)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
+    var targetExists = await appDb.Users
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+
+    if (!targetExists)
+    {
+      return NotFound();
+    }
+
+    var result = await personalAccessTokenManager.Delete(tokenId, userId);
+    if (!result.IsSuccess)
+    {
+      return BadRequest(result.Reason);
+    }
+
+    return NoContent();
+  }
+
   [HttpGet]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<List<UserResponseDto>>> GetAll(
@@ -108,5 +200,60 @@ public class UsersController : ControllerBase
     return await appDb.Users
       .Select(x => new UserResponseDto(x.Id, x.UserName, x.Email))
       .ToListAsync();
+  }
+
+  [HttpGet("{userId:guid}/personal-access-tokens")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetUserPersonalAccessTokens(
+    [FromRoute] Guid userId,
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] AppDb appDb)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
+    var targetExists = await appDb.Users
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+
+    if (!targetExists)
+    {
+      return NotFound();
+    }
+
+    var tokens = await personalAccessTokenManager.GetForUser(userId);
+    return Ok(tokens);
+  }
+
+  [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  public async Task<ActionResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(
+    [FromRoute] Guid userId,
+    [FromRoute] Guid tokenId,
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] AppDb appDb,
+    [FromBody] UpdatePersonalAccessTokenRequestDto request)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
+    var targetExists = await appDb.Users
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+
+    if (!targetExists)
+    {
+      return NotFound();
+    }
+
+    var result = await personalAccessTokenManager.Update(tokenId, request, userId);
+    if (!result.IsSuccess)
+    {
+      return BadRequest(result.Reason);
+    }
+
+    return Ok(result.Value);
   }
 }

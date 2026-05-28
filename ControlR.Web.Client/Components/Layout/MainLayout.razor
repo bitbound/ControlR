@@ -22,7 +22,7 @@
 				}
 
 				<MudLink Href="/" Underline="Underline.None" Class="d-flex">
-				  <MudImage Src=@Assets["appicon-192.png"] Height="30" Class="mx-2" />
+				  <MudImage Src=@Assets["static/appicon-192.png"] Height="30" Class="mx-2" />
 					<MudText Typo="Typo.h6" Color="Color.Primary">
             @(BrandingConstants.BrandName)
           </MudText>
@@ -52,7 +52,7 @@
 					<ServerAlertDisplay Class="mb-4" />
 				}
 
-				@if (!RendererInfo.IsInteractive && !_isIdentityPage)
+				@if (!RendererInfo.IsInteractive && IsInteractiveRoutingPage)
 				{
 					<div class="w-100 text-center mt-8">
 						<div class="loading-progress-container">
@@ -84,15 +84,9 @@
 </div>
 
 @code {
-	private bool _isIdentityPage;
-
 	protected override async Task OnInitializedAsync()
 	{
 		await base.OnInitializedAsync();
-
-		_isIdentityPage =
-			Uri.TryCreate(NavManager.Uri, UriKind.Absolute, out var currentUri) &&
-			currentUri.PathAndQuery.StartsWith("/Account");
 
 		if (RendererInfo.IsInteractive)
 		{

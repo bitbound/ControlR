@@ -28,4 +28,5 @@ public static class HttpConstants
   public const string UsersEndpoint = "/api/users";
   public const string UserServerSettingsEndpoint = "/api/user-server-settings";
   public const string UserTagsEndpoint = "/api/user-tags";
+  public const string VersionEndpoint = "/api/version";
 }

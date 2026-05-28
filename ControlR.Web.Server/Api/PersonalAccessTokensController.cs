@@ -39,7 +39,7 @@ public class PersonalAccessTokensController : ControllerBase
     var user = await userManager.GetUserAsync(User);
     if (user is null)
     {
-      return BadRequest("User not found");
+      return BadRequest("User not found.");
     }
 
     var result = await personalAccessTokenManager.Delete(id, user.Id);
@@ -59,7 +59,7 @@ public class PersonalAccessTokensController : ControllerBase
     var user = await userManager.GetUserAsync(User);
     if (user is null)
     {
-      return BadRequest("User not found");
+      return BadRequest("User not found.");
     }
 
     var personalAccessTokens = await personalAccessTokenManager.GetForUser(user.Id);
@@ -76,7 +76,7 @@ public class PersonalAccessTokensController : ControllerBase
     var user = await userManager.GetUserAsync(User);
     if (user is null)
     {
-      return BadRequest("User not found");
+      return BadRequest("User not found.");
     }
 
     var result = await personalAccessTokenManager.Update(id, request, user.Id);

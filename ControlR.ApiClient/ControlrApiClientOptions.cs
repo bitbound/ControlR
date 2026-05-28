@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.DataRedaction;
-using Microsoft.Extensions.Compliance.Classification;
 
 namespace ControlR.ApiClient;
 
@@ -21,21 +20,25 @@ public class ControlrApiClientOptions
   /// The base URI where the ControlR server is hosted (e.g. https://controlr.example.com).
   /// </summary>
   public required Uri BaseUrl { get; set; }
-  
+
+  /// <summary>
+  /// The lead time before token expiration at which the client initiates a token refresh.
+  /// Defaults to 1 minute.
+  /// </summary>
+  public TimeSpan BearerRefreshLeadTime { get; set; } = TimeSpan.FromMinutes(1);
+
   /// <summary>
   /// When <c>false</c> (default), response DTOs are validated for nullability/required-member contract violations
   /// and invalid responses are returned as failed <c>ApiResult</c> values.
   /// When <c>true</c>, response DTO validation failures are logged as warnings and successful responses are still returned.
   /// </summary>
   public bool DisableResponseDtoStrictness { get; set; }
-
   /// <summary>
   /// When <c>false</c> (default), streamed response DTOs (for example from async enumerable endpoints)
   /// are validated item-by-item using the same DTO strictness rules.
   /// When <c>true</c>, streamed response DTO validation is disabled.
   /// </summary>
   public bool DisableStreamingResponseDtoStrictness { get; set; }
-  
   /// <summary>
   /// If supplied, the client will include the personal access token (PAT) in the "x-personal-token" header of each request.
   /// A PAT is generated in the ControlR UI and can be used to authenticate API requests.
