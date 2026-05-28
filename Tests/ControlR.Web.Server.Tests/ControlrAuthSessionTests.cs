@@ -30,7 +30,7 @@ public class ControlrAuthSessionTests
 
     var session = CreateSession(options, authState, httpClient, timeProvider);
 
-    var token = await session.GetAccessToken(TestContext.Current.CancellationToken);
+    var token = await session.GetBearerToken(TestContext.Current.CancellationToken);
 
     Assert.Equal("fresh-token", token);
     Assert.Equal("fresh-token", authState.BearerToken);
@@ -56,7 +56,7 @@ public class ControlrAuthSessionTests
     using var cts = new CancellationTokenSource();
     cts.Cancel();
 
-    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => session.GetAccessToken(cts.Token));
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => session.GetBearerToken(cts.Token));
 
     Assert.Equal("stale-token", authState.BearerToken);
     Assert.Equal("refresh-token", authState.RefreshToken);
@@ -87,7 +87,7 @@ public class ControlrAuthSessionTests
       }
     };
 
-    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => session.GetAccessToken(TestContext.Current.CancellationToken));
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => session.GetBearerToken(TestContext.Current.CancellationToken));
 
     Assert.Equal("The refresh token is no longer valid.", ex.Message);
     Assert.Equal(ControlrAuthSessionState.Expired, session.State);
@@ -482,6 +482,134 @@ public class ControlrAuthSessionTests
     Assert.Null(authState.BearerToken);
     Assert.Null(authState.RefreshToken);
     Assert.Null(authState.BearerTokenExpiresAt);
+  }
+
+  [Fact]
+  public async Task RestoreAuthSnapshot_WhenSnapshotHasPersonalAccessToken_RestoresPatAndSignedOutState()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var authState = new ControlrApiClientAuthState();
+
+    using var httpClient = new HttpClient(new QueueMessageHandler([]))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var snapshot = new AuthSnapshot("pat-value", null, null, null);
+    await session.RestoreAuthSnapshot(snapshot);
+
+    Assert.Equal("pat-value", authState.PersonalAccessToken);
+    Assert.Equal(ControlrAuthSessionState.SignedOut, session.State);
+    Assert.Null(authState.BearerToken);
+    Assert.Null(authState.RefreshToken);
+  }
+
+  [Fact]
+  public async Task RestoreAuthSnapshot_WhenBearerTokenIsEmpty_ThrowsArgumentException()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var authState = new ControlrApiClientAuthState();
+
+    using var httpClient = new HttpClient(new QueueMessageHandler([]))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var snapshot = new AuthSnapshot(null, " ", DateTimeOffset.UtcNow.AddMinutes(5), "refresh-token");
+
+    var ex = await Assert.ThrowsAsync<ArgumentException>(() => session.RestoreAuthSnapshot(snapshot));
+    Assert.Contains("bearer and refresh tokens", ex.Message);
+  }
+
+  [Fact]
+  public async Task RestoreAuthSnapshot_WhenRefreshTokenIsEmpty_ThrowsArgumentException()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var authState = new ControlrApiClientAuthState();
+
+    using var httpClient = new HttpClient(new QueueMessageHandler([]))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var snapshot = new AuthSnapshot(null, "bearer-token", DateTimeOffset.UtcNow.AddMinutes(5), " ");
+
+    var ex = await Assert.ThrowsAsync<ArgumentException>(() => session.RestoreAuthSnapshot(snapshot));
+    Assert.Contains("bearer and refresh tokens", ex.Message);
+  }
+
+  [Fact]
+  public async Task RestoreAuthSnapshot_WhenBearerTokenExpiresAtIsNull_ThrowsArgumentException()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var authState = new ControlrApiClientAuthState();
+
+    using var httpClient = new HttpClient(new QueueMessageHandler([]))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var snapshot = new AuthSnapshot(null, "bearer-token", null, "refresh-token");
+
+    var ex = await Assert.ThrowsAsync<ArgumentException>(() => session.RestoreAuthSnapshot(snapshot));
+    Assert.Contains("bearer and refresh tokens", ex.Message);
+  }
+
+  [Fact]
+  public async Task RestoreAuthSnapshot_WhenAllTokensNull_ThrowsArgumentException()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var authState = new ControlrApiClientAuthState();
+
+    using var httpClient = new HttpClient(new QueueMessageHandler([]))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var snapshot = new AuthSnapshot(null, null, null, null);
+
+    var ex = await Assert.ThrowsAsync<ArgumentException>(() => session.RestoreAuthSnapshot(snapshot));
+    Assert.Contains("bearer and refresh tokens", ex.Message);
+  }
+
+  [Fact]
+  public async Task RestoreAuthSnapshot_WhenValidBearerSnapshot_RestoresTokensAndSetsAuthenticatedState()
+  {
+    var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var options = CreateOptions();
+    var authState = new ControlrApiClientAuthState();
+    var expiresAt = timeProvider.GetUtcNow().AddMinutes(5);
+
+    using var httpClient = new HttpClient(new QueueMessageHandler([]))
+    {
+      BaseAddress = options.BaseUrl
+    };
+
+    var session = CreateSession(options, authState, httpClient, timeProvider);
+
+    var snapshot = new AuthSnapshot(null, "bearer-token", expiresAt, "refresh-token");
+    await session.RestoreAuthSnapshot(snapshot);
+
+    Assert.Equal("bearer-token", authState.BearerToken);
+    Assert.Equal("refresh-token", authState.RefreshToken);
+    Assert.Equal(expiresAt, authState.BearerTokenExpiresAt);
+    Assert.Equal(ControlrAuthSessionState.Authenticated, session.State);
+    Assert.True(session.IsAuthenticated);
   }
 
   private static HttpResponseMessage CreateJsonResponse<T>(T payload)

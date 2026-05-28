@@ -14,7 +14,7 @@ public class ViewerConnectionAuthProviderTests
   {
     var authSession = new StubAuthSession
     {
-      AccessToken = "bearer-token"
+      BearerToken = "bearer-token"
     };
 
     var options = Microsoft.Extensions.Options.Options.Create(new ControlrViewerOptions
@@ -84,9 +84,9 @@ public class ViewerConnectionAuthProviderTests
       remove { }
     }
 
-    public string? AccessToken { get; set; }
-    public DateTimeOffset? AccessTokenExpiresAt => null;
     public Uri BaseUrl { get; private set; } = new("https://controlr.example.com");
+    public string? BearerToken { get; set; }
+    public DateTimeOffset? BearerTokenExpiresAt => null;
     public bool IsAuthenticated => false;
     public string? PersonalAccessToken { get; private set; }
     public bool RequiresTwoFactor => false;
@@ -101,7 +101,19 @@ public class ViewerConnectionAuthProviderTests
     {
     }
 
-    public Task<string?> GetAccessToken(CancellationToken cancellationToken = default) => Task.FromResult(AccessToken);
+    public Task<string?> GetBearerToken(CancellationToken cancellationToken = default) => Task.FromResult(BearerToken);
+
+    public AuthSnapshot GetAuthSnapshot()
+    {
+      return new AuthSnapshot(PersonalAccessToken, BearerToken, null, null);
+    }
+
+    public Task RestoreAuthSnapshot(AuthSnapshot snapshot)
+    {
+      BearerToken = snapshot.BearerToken;
+      PersonalAccessToken = snapshot.PersonalAccessToken;
+      return Task.CompletedTask;
+    }
 
     public void SetBaseUrl(Uri baseUrl)
     {

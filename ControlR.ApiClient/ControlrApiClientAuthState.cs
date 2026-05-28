@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.DataRedaction;
 
@@ -196,15 +197,4 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
     }
   }
 
-  public sealed record AuthSnapshot(
-    string? PersonalAccessToken,
-    string? BearerToken,
-    DateTimeOffset? BearerTokenExpiresAt,
-    string? RefreshToken);
-  public sealed record AuthState(
-    long BearerStateVersion,
-    AuthSnapshot Snapshot);
-  public sealed record BearerRefreshContext(
-    long ExpectedBearerStateVersion,
-    string RefreshToken);
 }

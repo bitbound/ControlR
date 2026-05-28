@@ -20,13 +20,13 @@ public interface IControlrAuthSession : IDisposable
   event EventHandler<ControlrAuthSessionStateChangedEventArgs>? StateChanged;
 
   /// <summary>
-  /// Gets the access-token expiration for the current bearer session, if one exists.
-  /// </summary>
-  DateTimeOffset? AccessTokenExpiresAt { get; }
-  /// <summary>
   /// Gets the current server base URL used for interactive sign-in and token refresh calls.
   /// </summary>
   Uri BaseUrl { get; }
+  /// <summary>
+  /// Gets the access-token expiration for the current bearer session, if one exists.
+  /// </summary>
+  DateTimeOffset? BearerTokenExpiresAt { get; }
   /// <summary>
   /// Gets a value indicating whether the session currently has an authenticated bearer token.
   /// </summary>
@@ -57,13 +57,26 @@ public interface IControlrAuthSession : IDisposable
   /// </returns>
   Task<ApiResult> ChangePasswordWithCredentials(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default);
   /// <summary>
+  /// Gets a snapshot of the current authentication state, including bearer and refresh tokens.
+  /// Use this for persistence (e.g. caching tokens in a secure keychain for automatic re-auth).
+  /// </summary>
+  /// <returns>The current auth snapshot.</returns>
+  AuthSnapshot GetAuthSnapshot();
+  /// <summary>
   /// Gets a usable bearer access token, refreshing it first when needed.
   /// </summary>
   /// <param name="cancellationToken">Cancels the token retrieval operation.</param>
   /// <returns>
   /// The current bearer access token, or <see langword="null"/> when the session is using a personal access token.
   /// </returns>
-  Task<string?> GetAccessToken(CancellationToken cancellationToken = default);
+  Task<string?> GetBearerToken(CancellationToken cancellationToken = default);
+  /// <summary>
+  /// Restores a previously captured <see cref="AuthSnapshot"/>.
+  /// If the snapshot contains a personal access token it is restored as a PAT session (state: <see cref="ControlrAuthSessionState.SignedOut"/>).
+  /// Otherwise bearer tokens are restored and the background token-refresh loop is started (state: <see cref="ControlrAuthSessionState.Authenticated"/>).
+  /// </summary>
+  /// <param name="snapshot">The previously captured auth snapshot.</param>
+  Task RestoreAuthSnapshot(AuthSnapshot snapshot);
   /// <summary>
   /// Updates the server base URL used by the session.
   /// </summary>
@@ -111,8 +124,8 @@ public sealed class ControlrAuthSession(
 
   public event EventHandler<ControlrAuthSessionStateChangedEventArgs>? StateChanged;
 
-  public DateTimeOffset? AccessTokenExpiresAt => _authState.BearerTokenExpiresAt;
   public Uri BaseUrl => Volatile.Read(ref _baseUrl);
+  public DateTimeOffset? BearerTokenExpiresAt => _authState.BearerTokenExpiresAt;
   public bool IsAuthenticated => State == ControlrAuthSessionState.Authenticated;
   public string? PersonalAccessToken => _authState.PersonalAccessToken;
   public bool RequiresTwoFactor => State == ControlrAuthSessionState.AwaitingTwoFactor;
@@ -165,7 +178,12 @@ public sealed class ControlrAuthSession(
     StopRefreshLoop();
   }
 
-  public async Task<string?> GetAccessToken(CancellationToken cancellationToken = default)
+  public AuthSnapshot GetAuthSnapshot()
+  {
+    return _authState.GetSnapshot();
+  }
+
+  public async Task<string?> GetBearerToken(CancellationToken cancellationToken = default)
   {
     if (!string.IsNullOrWhiteSpace(_authState.PersonalAccessToken))
     {
@@ -174,6 +192,30 @@ public sealed class ControlrAuthSession(
 
     await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
     return _authState.BearerToken;
+  }
+
+  public Task RestoreAuthSnapshot(AuthSnapshot snapshot)
+  {
+    if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
+    {
+      SetPersonalAccessToken(snapshot.PersonalAccessToken);
+      return Task.CompletedTask;
+    }
+
+    if (string.IsNullOrWhiteSpace(snapshot.BearerToken) ||
+        string.IsNullOrWhiteSpace(snapshot.RefreshToken) ||
+        snapshot.BearerTokenExpiresAt is null)
+    {
+      throw new ArgumentException(
+        "Snapshot must contain a personal access token or valid bearer and refresh tokens with an expiration.",
+        nameof(snapshot));
+    }
+
+    ResetSession(clearPersonalAccessToken: true);
+    _authState.SetBearerTokens(snapshot.BearerToken, snapshot.RefreshToken, snapshot.BearerTokenExpiresAt);
+    StartRefreshLoop();
+    UpdateState(ControlrAuthSessionState.Authenticated);
+    return Task.CompletedTask;
   }
 
   public void SetBaseUrl(Uri baseUrl)
