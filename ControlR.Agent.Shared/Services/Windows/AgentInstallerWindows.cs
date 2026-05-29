@@ -133,7 +133,8 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      _registryAccessor.SetServiceEnvironmentVariable(serviceName, "DOTNET_BUNDLE_EXTRACT_BASE_DIR", installDir);
+      var bundleExtractDir = Path.Combine(installDir, ".net");
+      _registryAccessor.SetServiceEnvironmentVariable(serviceName, "DOTNET_BUNDLE_EXTRACT_BASE_DIR", bundleExtractDir);
       _registryAccessor.SetSoftwareSasGeneration(true);
 
       Logger.LogInformation("Creating uninstall registry key.");

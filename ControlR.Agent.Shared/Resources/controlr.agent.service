@@ -8,7 +8,7 @@ Restart=always
 KillMode=process
 StartLimitIntervalSec=0
 Environment=DOTNET_ENVIRONMENT=Production
-Environment=DOTNET_BUNDLE_EXTRACT_BASE_DIR={{INSTALL_DIRECTORY}}
+Environment=DOTNET_BUNDLE_EXTRACT_BASE_DIR={{BUNDLE_EXTRACT_DIR}}
 RestartSec=10
 
 [Install]

@@ -269,6 +269,7 @@ internal class AgentInstallerLinux(
       "controlr.desktop.service");
 
     var installDir = GetInstallDirectory();
+    var bundleExtractDir = Path.Combine(installDir, ".net");
 
     var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
       ? ""
@@ -276,6 +277,7 @@ internal class AgentInstallerLinux(
 
     template = template
       .Replace("{{INSTALL_DIRECTORY}}", installDir)
+      .Replace("{{BUNDLE_EXTRACT_DIR}}", bundleExtractDir)
       .Replace("{{INSTANCE_ARGS}}", instanceArgs);
 
     return template;
@@ -288,6 +290,7 @@ internal class AgentInstallerLinux(
       "controlr.agent.service");
 
     var installDir = GetInstallDirectory();
+    var bundleExtractDir = Path.Combine(installDir, ".net");
 
     var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
       ? ""
@@ -295,6 +298,7 @@ internal class AgentInstallerLinux(
 
     template = template
       .Replace("{{INSTALL_DIRECTORY}}", installDir)
+      .Replace("{{BUNDLE_EXTRACT_DIR}}", bundleExtractDir)
       .Replace("{{INSTANCE_ARGS}}", instanceArgs);
 
     return template;
