@@ -21,6 +21,11 @@
 			<string>--instance-id</string>
 			<string>{{INSTANCE_ID}}</string>
 		</array>
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DOTNET_BUNDLE_EXTRACT_BASE_DIR</key>
+			<string>{{DOTNET_BUNDLE_EXTRACT_BASE_DIR}}</string>
+		</dict>
 		<key>ExitTimeOut</key>
 		<integer>10</integer>
 		<key>EnableTransactions</key>

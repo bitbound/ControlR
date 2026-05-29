@@ -307,9 +307,12 @@ internal class AgentInstallerMac(
       typeof(AgentInstallerMac).Assembly,
       "LaunchAgent.plist");
 
+    var installDir = GetInstanceInstallDirectory(MacAgentInstallDirectory, _instanceOptions.Value.InstanceId);
+
     template = template
       .Replace("{{SERVICE_NAME}}", serviceName)
-      .Replace("{{DESKTOP_EXECUTABLE_PATH}}", GetDesktopExecutablePath());
+      .Replace("{{DESKTOP_EXECUTABLE_PATH}}", GetDesktopExecutablePath())
+      .Replace("{{DOTNET_BUNDLE_EXTRACT_BASE_DIR}}", installDir);
 
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
@@ -422,9 +425,12 @@ internal class AgentInstallerMac(
       typeof(AgentInstallerMac).Assembly,
       "LaunchDaemon.plist");
 
+    var installDir = GetInstanceInstallDirectory(MacAgentInstallDirectory, _instanceOptions.Value.InstanceId);
+
     template = template
       .Replace("{{SERVICE_NAME}}", GetAgentServiceName())
-      .Replace("{{AGENT_PATH}}", GetInstalledAgentPath());
+      .Replace("{{AGENT_PATH}}", GetInstalledAgentPath())
+      .Replace("{{DOTNET_BUNDLE_EXTRACT_BASE_DIR}}", installDir);
 
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
