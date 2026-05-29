@@ -51,11 +51,13 @@ public abstract class ManagedRelayStream(
   private readonly IWaiter _waiter = waiter;
 
   private ClientWebSocket? _client;
+  private Task? _readFromStreamTask;
   private volatile int _sendBufferLength;
 
   public TimeSpan CurrentLatency => _streamMetrics.GetCurrentLatency();
   public bool IsConnected => State == WebSocketState.Open;
   public WebSocketState State => _client?.State ?? WebSocketState.Closed;
+
   protected bool IsDisposed { get; private set; }
 
   public async Task<Result> Close()
@@ -70,24 +72,24 @@ public abstract class ManagedRelayStream(
 
   public async Task Connect(Uri websocketUri, CancellationToken cancellationToken)
   {
+    await StopReadLoop(cancellationToken);
     _logger.LogInformation("Connecting to {WebSocketOrigin}.", $"{websocketUri.Scheme}://{websocketUri.Authority}");
-    _client?.Dispose();
     _client = new ClientWebSocket();
     await _client.ConnectAsync(websocketUri, cancellationToken);
     _logger.LogInformation("Connection successful.");
-    ReadFromStream(_client, cancellationToken).Forget();
+    _readFromStreamTask = ReadFromStream(_client, cancellationToken);
   }
 
   public async Task Connect(Uri websocketUri, Action<ClientWebSocketOptions> configureOptions, CancellationToken cancellationToken)
   {
+    await StopReadLoop(cancellationToken);
     _logger.LogInformation("Connecting to {WebSocketOrigin} with custom options.", $"{websocketUri.Scheme}://{websocketUri.Authority}");
-    _client?.Dispose();
     _client = new ClientWebSocket();
     configureOptions(_client.Options);
 
     await _client.ConnectAsync(websocketUri, cancellationToken);
     _logger.LogInformation("Connection successful.");
-    ReadFromStream(_client, cancellationToken).Forget();
+    _readFromStreamTask = ReadFromStream(_client, cancellationToken);
   }
 
   public async ValueTask DisposeAsync()
@@ -182,6 +184,7 @@ public abstract class ManagedRelayStream(
 
     try
     {
+      await StopReadLoop(cts.Token);
       await Close();
     }
     catch (Exception ex)
@@ -191,8 +194,6 @@ public abstract class ManagedRelayStream(
     finally
     {
       IsDisposed = true;
-      _client?.Dispose();
-      _client = null;
       _onCloseHandlers.Clear();
     }
   }
@@ -325,6 +326,24 @@ public abstract class ManagedRelayStream(
       WebSocketMessageType.Binary,
       true,
       cancellationToken);
+  }
+
+  private async Task StopReadLoop(CancellationToken cancellationToken)
+  {
+    var task = Interlocked.Exchange(ref _readFromStreamTask, null);
+    using var client = Interlocked.Exchange(ref _client, null);
+
+    if (task is not null)
+    {
+      try
+      {
+        await task.WaitAsync(cancellationToken);
+      }
+      catch
+      {
+        // Task may have exited due to disposal or other error. Ignore.
+      }
+    }
   }
 
   private async Task WaitForSendBuffer(CancellationToken cancellationToken)
