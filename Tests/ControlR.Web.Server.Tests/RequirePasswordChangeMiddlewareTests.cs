@@ -53,7 +53,7 @@ public class RequirePasswordChangeMiddlewareTests
   }
 
   [Fact]
-  public async Task Invoke_WhenCompleteResetApiPath_ReachesNextMiddleware()
+  public async Task Invoke_WhenArbitraryCssPath_DoesNotBypassPasswordChangeRequirement()
   {
     var nextCalled = false;
     var middleware = new RequirePasswordChangeMiddleware(_ =>
@@ -62,30 +62,14 @@ public class RequirePasswordChangeMiddlewareTests
       return Task.CompletedTask;
     });
 
-    var context = CreateContext("/api/auth/complete-password-reset", IdentityConstants.ApplicationScheme);
+    var context = CreateContext("/dashboard/custom.css", IdentityConstants.ApplicationScheme);
     var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
 
     await middleware.Invoke(context, userManager.Object);
 
-    Assert.True(nextCalled);
-  }
-
-  [Fact]
-  public async Task Invoke_WhenStaticAssetPath_ReachesNextMiddleware()
-  {
-    var nextCalled = false;
-    var middleware = new RequirePasswordChangeMiddleware(_ =>
-    {
-      nextCalled = true;
-      return Task.CompletedTask;
-    });
-
-    var context = CreateContext("/static/app.css", IdentityConstants.ApplicationScheme);
-    var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
-
-    await middleware.Invoke(context, userManager.Object);
-
-    Assert.True(nextCalled);
+    Assert.False(nextCalled);
+    Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+    Assert.Equal("/password-change-required", context.Response.Headers.Location.ToString());
   }
 
   [Fact]
@@ -107,7 +91,7 @@ public class RequirePasswordChangeMiddlewareTests
   }
 
   [Fact]
-  public async Task Invoke_WhenArbitraryCssPath_DoesNotBypassPasswordChangeRequirement()
+  public async Task Invoke_WhenCompleteResetApiPath_ReachesNextMiddleware()
   {
     var nextCalled = false;
     var middleware = new RequirePasswordChangeMiddleware(_ =>
@@ -116,14 +100,12 @@ public class RequirePasswordChangeMiddlewareTests
       return Task.CompletedTask;
     });
 
-    var context = CreateContext("/dashboard/custom.css", IdentityConstants.ApplicationScheme);
+    var context = CreateContext("/api/auth/complete-password-reset", IdentityConstants.ApplicationScheme);
     var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
 
     await middleware.Invoke(context, userManager.Object);
 
-    Assert.False(nextCalled);
-    Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
-    Assert.Equal("/password-change-required", context.Response.Headers.Location.ToString());
+    Assert.True(nextCalled);
   }
 
   [Fact]
@@ -181,6 +163,24 @@ public class RequirePasswordChangeMiddlewareTests
 
     Assert.False(nextCalled);
     Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
+  }
+
+  [Fact]
+  public async Task Invoke_WhenStaticAssetPath_ReachesNextMiddleware()
+  {
+    var nextCalled = false;
+    var middleware = new RequirePasswordChangeMiddleware(_ =>
+    {
+      nextCalled = true;
+      return Task.CompletedTask;
+    });
+
+    var context = CreateContext("/static/app.css", IdentityConstants.ApplicationScheme);
+    var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
+
+    await middleware.Invoke(context, userManager.Object);
+
+    Assert.True(nextCalled);
   }
 
   [Fact]

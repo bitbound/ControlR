@@ -9,11 +9,13 @@ public class DotnetExtractDirectoryCleanupHostedService(
   IProcessManager processManager,
   IElevationChecker elevationChecker,
   ISystemEnvironment systemEnvironment,
+  IFileSystemPathProvider fileSystemPathProvider,
   ILogger<DotnetExtractDirectoryCleanupHostedService> logger)
   : IHostedService
 {
   private readonly IElevationChecker _elevationChecker = elevationChecker;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly ILogger<DotnetExtractDirectoryCleanupHostedService> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
@@ -28,7 +30,7 @@ public class DotnetExtractDirectoryCleanupHostedService(
         return Task.CompletedTask;
       }
 
-      var extractBaseDir = GetAgentDotnetExtractDir();
+      var extractBaseDir = _fileSystemPathProvider.GetDotnetExtractDirectory();
       if (string.IsNullOrWhiteSpace(extractBaseDir))
       {
         _logger.LogDebug("Dotnet extract path is not set for platform {Platform}. Skipping cleanup.", _systemEnvironment.Platform);
@@ -47,17 +49,6 @@ public class DotnetExtractDirectoryCleanupHostedService(
 
   public Task StopAsync(CancellationToken cancellationToken)
     => Task.CompletedTask;
-
-  private string? GetAgentDotnetExtractDir()
-  {
-    return _systemEnvironment.Platform switch
-    {
-      SystemPlatform.Windows => "C:\\Windows\\SystemTemp\\.net\\ControlR.Agent",
-      SystemPlatform.Linux => "/root/.net/ControlR.Agent",
-      SystemPlatform.MacOs => "/var/root/.net/ControlR.Agent",
-      _ => null
-    };
-  }
 
   private void TryClearDotnetExtractDir(string agentTempDirBase)
   {

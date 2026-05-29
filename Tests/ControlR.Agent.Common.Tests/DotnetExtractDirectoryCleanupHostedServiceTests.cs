@@ -1,5 +1,6 @@
 using ControlR.Agent.Common.Services;
 using ControlR.Agent.Shared.Interfaces;
+using ControlR.Agent.Shared.Services;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.FileSystem;
@@ -12,7 +13,7 @@ namespace ControlR.Agent.Common.Tests;
 
 public class DotnetExtractDirectoryCleanupHostedServiceTests
 {
-  private const string WindowsExtractDirectory = @"C:\Windows\SystemTemp\.net\ControlR.Agent";
+  private const string WindowsExtractDirectory = @"C:\Windows\SystemTemp\.net";
 
   [Fact]
   public async Task StartAsync_Elevated_ContinuesWhenDirectoryDeleteFails()
@@ -120,11 +121,15 @@ public class DotnetExtractDirectoryCleanupHostedServiceTests
     IElevationChecker elevationChecker,
     ISystemEnvironment systemEnvironment)
   {
+    var pathProvider = new Mock<IFileSystemPathProvider>(MockBehavior.Strict);
+    pathProvider.Setup(x => x.GetDotnetExtractDirectory()).Returns(WindowsExtractDirectory);
+
     return new DotnetExtractDirectoryCleanupHostedService(
       fileSystem,
       processManager,
       elevationChecker,
       systemEnvironment,
+      pathProvider.Object,
       NullLogger<DotnetExtractDirectoryCleanupHostedService>.Instance);
   }
 

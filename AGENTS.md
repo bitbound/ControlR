@@ -70,8 +70,13 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
   - OK: `var properties = await _dbContext.Users.Select(x => x.SomeNavigation!.SomeProperty).ToListAsync();`
   - OK: `[CascadingParameter] private HttpContext HttpContext { get; set; } = default!;`
 - Use `required` keyword where applicable.
+- Use `using` statements for `IDisposable` resources, and `await using` for `IAsyncDisposable`.
+  - Example: `using var stream = new FileStream(path, FileMode.Open);`
+  - Example: `await using var connection = new DatabaseConnection();`
 - No TODOs, placeholder code, or "in production you should..." comments. Every implementation must be complete.
-- No "Async" suffix on async methods unless distinguishing from a sync overload.
+- Don't add "Async" suffix on async methods unless distinguishing from a sync overload.
+  - Example: `public async Task Connect()` if there's no `public void Connect()`.
+  - Example: If `public void Connect()` exists, then `public async Task ConnectAsync()`.
 - Put public types in their own class file, with the below exceptions.
   - If an interface has only one implementation, those types can go in the same file.  E.g. `ISecretProvider` and `SecretProvider` can both go in `SecretProvider.cs`.
   - Enums that are tightly coupled to another class and only used there.

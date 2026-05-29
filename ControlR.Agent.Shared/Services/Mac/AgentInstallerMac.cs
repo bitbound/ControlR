@@ -27,8 +27,6 @@ internal class AgentInstallerMac(
   ILogger<AgentInstallerMac> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
 {
-  private const string MacAgentInstallDirectory = "/Library/Application Support/ControlR";
-  private const string MacBundleStateDirectory = "/Library/Application Support/ControlR";
   private const string MacInstallerTempDirectory = "/tmp/ControlR_Update";
 
   private static readonly SemaphoreSlim _installLock = new(1, 1);
@@ -299,20 +297,18 @@ internal class AgentInstallerMac(
 
   internal async Task<string> GetLaunchAgentFile()
   {
-    var serviceName = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? "app.controlr.desktop"
-      : $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
+    var serviceName = GetDesktopServiceName();
 
     var template = await _embeddedResourceAccessor.GetResourceAsString(
       typeof(AgentInstallerMac).Assembly,
       "LaunchAgent.plist");
 
-    var installDir = GetInstanceInstallDirectory(MacAgentInstallDirectory, _instanceOptions.Value.InstanceId);
-    var bundleExtractDir = Path.Combine(installDir, ".net");
+    var installDir = FilesystemPathProvider.GetAgentInstallDirectory();
+    var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
 
     template = template
       .Replace("{{SERVICE_NAME}}", serviceName)
-      .Replace("{{DESKTOP_EXECUTABLE_PATH}}", GetDesktopExecutablePath())
+      .Replace("{{DESKTOP_EXECUTABLE_PATH}}", FilesystemPathProvider.GetDesktopExecutablePath())
       .Replace("{{DOTNET_BUNDLE_EXTRACT_BASE_DIR}}", bundleExtractDir);
 
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
@@ -334,31 +330,35 @@ internal class AgentInstallerMac(
 
   private string GetAgentServiceName()
   {
-    return string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? "app.controlr.agent"
-      : $"app.controlr.agent.{_instanceOptions.Value.InstanceId}";
+    var instanceId = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      ? ""
+      : _instanceOptions.Value.InstanceId;
+
+    return $"app.controlr.agent.{instanceId}";
   }
 
   private string GetBundleStateDirectory()
   {
-    return GetInstanceInstallDirectory(MacBundleStateDirectory, _instanceOptions.Value.InstanceId);
+    return FilesystemPathProvider.GetBundleStateDirectory();
   }
 
-  private string GetDesktopExecutablePath()
+  private string GetDesktopServiceName()
   {
-    return _fileSystem.JoinPaths('/', GetInstalledAppBundlePath(), PathConstants.MacDesktopExecutableRelativePath);
+    var instanceId = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      ? ""
+      : _instanceOptions.Value.InstanceId;
+
+    return $"app.controlr.desktop.{instanceId}";
   }
 
   private string GetInstalledAgentPath()
   {
-    var installDirectory = GetInstanceInstallDirectory(MacAgentInstallDirectory, _instanceOptions.Value.InstanceId);
-
-    return _fileSystem.JoinPaths('/', installDirectory, AppConstants.GetAgentFileName(SystemPlatform.MacOs));
+    return FilesystemPathProvider.GetAgentExecutablePath();
   }
 
   private string GetInstalledAppBundlePath()
   {
-    return PathConstants.GetMacInstalledAppPath(_instanceOptions.Value.InstanceId);
+    return FilesystemPathProvider.GetMacAppBundlePath();
   }
 
   private async Task<string> GetInstallerDaemonFile(AgentInstallRequest request)
@@ -426,12 +426,11 @@ internal class AgentInstallerMac(
       typeof(AgentInstallerMac).Assembly,
       "LaunchDaemon.plist");
 
-    var installDir = GetInstanceInstallDirectory(MacAgentInstallDirectory, _instanceOptions.Value.InstanceId);
-    var bundleExtractDir = Path.Combine(installDir, ".net");
+    var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
 
     template = template
       .Replace("{{SERVICE_NAME}}", GetAgentServiceName())
-      .Replace("{{AGENT_PATH}}", GetInstalledAgentPath())
+      .Replace("{{AGENT_PATH}}", FilesystemPathProvider.GetAgentExecutablePath())
       .Replace("{{DOTNET_BUNDLE_EXTRACT_BASE_DIR}}", bundleExtractDir);
 
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
@@ -468,13 +467,7 @@ internal class AgentInstallerMac(
 
   private string GetSourceAgentPath(string sourceAppBundlePath)
   {
-    var sourceAgentPath = _fileSystem.JoinPaths('/', sourceAppBundlePath, "Contents/Library/LaunchServices", AppConstants.GetAgentFileName(SystemPlatform.MacOs));
-    if (!_fileSystem.FileExists(sourceAgentPath))
-    {
-      throw new FileNotFoundException("The extracted app bundle does not contain the agent executable.", sourceAgentPath);
-    }
-
-    return sourceAgentPath;
+    return FilesystemPathProvider.GetSourceAgentPath(sourceAppBundlePath);
   }
 
   private string GetTempExtractDirectory()

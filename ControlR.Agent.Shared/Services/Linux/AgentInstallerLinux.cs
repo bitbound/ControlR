@@ -268,8 +268,8 @@ internal class AgentInstallerLinux(
       typeof(AgentInstallerLinux).Assembly,
       "controlr.desktop.service");
 
-    var installDir = GetInstallDirectory();
-    var bundleExtractDir = Path.Combine(installDir, ".net");
+    var installDir = FilesystemPathProvider.GetAgentInstallDirectory();
+    var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
 
     var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
       ? ""
@@ -289,8 +289,8 @@ internal class AgentInstallerLinux(
       typeof(AgentInstallerLinux).Assembly,
       "controlr.agent.service");
 
-    var installDir = GetInstallDirectory();
-    var bundleExtractDir = Path.Combine(installDir, ".net");
+    var installDir = FilesystemPathProvider.GetAgentInstallDirectory();
+    var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
 
     var instanceArgs = string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId)
       ? ""
@@ -321,22 +321,22 @@ internal class AgentInstallerLinux(
 
   private string GetInstallDirectory()
   {
-    return GetInstanceInstallDirectory("/usr/local/bin/ControlR", instanceOptions.Value.InstanceId);
+    return FilesystemPathProvider.GetAgentInstallDirectory();
   }
 
   private string GetServiceFilePath()
   {
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
-    {
-      return "/etc/systemd/system/controlr.agent.service";
-    }
-
-    return $"/etc/systemd/system/controlr.agent-{instanceOptions.Value.InstanceId}.service";
+    return FilesystemPathProvider.GetServiceFilePath();
   }
 
   private string GetServiceName()
   {
-    return Path.GetFileName(GetServiceFilePath());
+    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
+    {
+      return "controlr.agent.service";
+    }
+
+    return $"controlr.agent-{instanceOptions.Value.InstanceId}.service";
   }
 
   private async Task<string> PrepareRepairStage(string bundleZipPath, string installDir)
@@ -424,8 +424,8 @@ internal class AgentInstallerLinux(
 
     foreach (var executablePath in new[]
     {
-      Path.Combine(installDirectory, "ControlR.Agent"),
-      Path.Combine(installDirectory, "DesktopClient", "ControlR.DesktopClient")
+      FilesystemPathProvider.GetAgentExecutablePath(),
+      Path.Combine(installDirectory, "DesktopClient", AppConstants.DesktopClientFileName)
     })
     {
       if (!_fileSystem.FileExists(executablePath))

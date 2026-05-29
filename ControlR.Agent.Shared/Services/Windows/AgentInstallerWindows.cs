@@ -66,7 +66,7 @@ internal class AgentInstallerWindows(
       await using var callback = new CallbackDisposableAsync(StartService);
 
       var installDir = GetInstallDirectory();
-      var targetAgentPath = GetAgentPath(installDir, _systemEnvironment.Platform);
+      var targetAgentPath = FilesystemPathProvider.GetAgentExecutablePath();
       var targetDesktopClientPath = Path.Combine(installDir, "DesktopClient", AppConstants.DesktopClientFileName);
 
       var stopResult = StopAgentService();
@@ -224,7 +224,7 @@ internal class AgentInstallerWindows(
       }
 
       var installDir = GetInstallDirectory();
-      var targetAgentPath = GetAgentPath(installDir, _systemEnvironment.Platform);
+      var targetAgentPath = FilesystemPathProvider.GetAgentExecutablePath();
       var targetDesktopClientPath = Path.Combine(installDir, "DesktopClient", AppConstants.DesktopClientFileName);
 
       var stopResult = StopProcesses(targetAgentPath, targetDesktopClientPath);
@@ -291,7 +291,7 @@ internal class AgentInstallerWindows(
     var installDir = GetInstallDirectory();
 
     var displayName = "ControlR Agent";
-    var exePath = Path.Combine(installDir, AppConstants.GetAgentFileName(_systemEnvironment.Platform));
+    var exePath = FilesystemPathProvider.GetAgentExecutablePath();
     var fileName = Path.GetFileName(exePath);
     var version = FileVersionInfo.GetVersionInfo(exePath);
     var uninstallCommand = Path.Combine(installDir, $"{fileName} uninstall");
@@ -318,11 +318,12 @@ internal class AgentInstallerWindows(
 
   private string GetInstallDirectory()
   {
-    var rootDirectory = _systemEnvironment.IsDebug
-      ? Path.Combine(Path.GetTempPath(), "ControlR", "Install")
-      : Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR");
+    if (_systemEnvironment.IsDebug)
+    {
+      return Path.Combine(Path.GetTempPath(), "ControlR", "Install");
+    }
 
-    return GetInstanceInstallDirectory(rootDirectory, instanceOptions.Value.InstanceId);
+    return FilesystemPathProvider.GetAgentInstallDirectory();
   }
 
   private string GetServiceName()
@@ -337,12 +338,7 @@ internal class AgentInstallerWindows(
 
   private string GetUninstallKeyPath()
   {
-    if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
-    {
-      return @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR";
-    }
-
-    return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR ({instanceOptions.Value.InstanceId})";
+    return FilesystemPathProvider.GetUninstallKeyPath();
   }
 
   private bool IsRunningFromAppDir()
