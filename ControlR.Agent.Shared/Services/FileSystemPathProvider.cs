@@ -79,18 +79,18 @@ public class FileSystemPathProvider(
 
   public string GetAgentInstallDirectory()
   {
-    if (_systemEnvironment.IsDebug)
-    {
-      return Path.Combine(Path.GetTempPath(), "ControlR", "Install");
-    }
+    var baseDir = _systemEnvironment.IsDebug
+      ? Path.Combine(Path.GetTempPath(), "ControlR", "Install")
+      : _systemEnvironment.Platform switch
+      {
+        SystemPlatform.Windows => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR"),
+        SystemPlatform.Linux => "/usr/local/bin/ControlR",
+        SystemPlatform.MacOs => "/Library/Application Support/ControlR",
+        _ => throw new PlatformNotSupportedException()
+      };
 
-    return _systemEnvironment.Platform switch
-    {
-      SystemPlatform.Windows => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR"),
-      SystemPlatform.Linux => "/usr/local/bin/ControlR",
-      SystemPlatform.MacOs => "/Library/Application Support/ControlR",
-      _ => throw new PlatformNotSupportedException()
-    };
+    var instanceId = GetInstanceId() ?? AppConstants.DefaultInstallDirectoryName;
+    return Path.Combine(baseDir, instanceId);
   }
 
   public string GetAgentLogFilePath()
