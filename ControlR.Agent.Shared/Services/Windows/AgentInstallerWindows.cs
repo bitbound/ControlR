@@ -318,11 +318,6 @@ internal class AgentInstallerWindows(
 
   private string GetInstallDirectory()
   {
-    if (_systemEnvironment.IsDebug)
-    {
-      return Path.Combine(Path.GetTempPath(), "ControlR", "Install");
-    }
-
     return FilesystemPathProvider.GetAgentInstallDirectory();
   }
 

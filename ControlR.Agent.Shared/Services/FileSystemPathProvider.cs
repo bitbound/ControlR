@@ -133,6 +133,11 @@ public class FileSystemPathProvider(
 
   public string GetBundleRootDirectory()
   {
+    if (_systemEnvironment.IsMacOS())
+    {
+      return GetMacAppBundlePath();
+    }
+
     return GetAgentInstallDirectory();
   }
 
