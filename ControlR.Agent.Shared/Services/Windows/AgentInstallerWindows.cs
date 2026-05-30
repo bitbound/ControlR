@@ -133,7 +133,7 @@ internal class AgentInstallerWindows(
         return;
       }
 
-      var bundleExtractDir = Path.Combine(installDir, ".net");
+      var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
       _registryAccessor.SetServiceEnvironmentVariable(serviceName, "DOTNET_BUNDLE_EXTRACT_BASE_DIR", bundleExtractDir);
       _registryAccessor.SetSoftwareSasGeneration(true);
 
