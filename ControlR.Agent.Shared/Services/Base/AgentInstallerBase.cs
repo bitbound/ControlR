@@ -19,12 +19,12 @@ internal abstract class AgentInstallerBase(
 {
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDeviceInfoProvider _deviceDataGenerator = deviceDataGenerator;
-  private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly IOptionsAccessor _optionsAccessor = optionsAccessor;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
   protected IOptionsMonitor<AgentAppOptions> AppOptions { get; } = appOptions;
   protected IFileSystem FileSystem { get; } = fileSystem;
+  protected IFileSystemPathProvider FilesystemPathProvider { get; } = fileSystemPathProvider;
   protected ILogger<AgentInstallerBase> Logger { get; } = logger;
   protected IProcessManager ProcessManager { get; } = processManager;
 
@@ -198,7 +198,7 @@ internal abstract class AgentInstallerBase(
       return;
     }
 
-    var bundleHashPath = _fileSystemPathProvider.GetBundleHashFilePath();
+    var bundleHashPath = FilesystemPathProvider.GetBundleHashFilePath();
     var settingsDirectory = Path.GetDirectoryName(bundleHashPath)
       ?? throw new DirectoryNotFoundException("Unable to determine the bundle hash directory.");
 

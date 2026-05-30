@@ -1,15 +1,44 @@
 using System.Runtime.Versioning;
-using ControlR.Agent.Shared.Interfaces;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Win32;
 
 namespace ControlR.Agent.Shared.Services.Windows;
 
+/// <summary>
+/// Reads and writes Windows registry settings used by the agent service.
+/// </summary>
 public interface IRegistryAccessor
 {
+  /// <summary>
+  /// Gets the <c>PromptOnSecureDesktop</c> policy value.
+  /// </summary>
+  /// <returns><c>true</c> if prompting on the secure desktop is enabled; otherwise, <c>false</c>.</returns>
   bool GetPromptOnSecureDesktop();
+
+  /// <summary>
+  /// Gets the RDP port number from the registry.
+  /// </summary>
+  /// <returns>A <see cref="Result{T}"/> containing the port number on success, or a failure message if the value cannot be read.</returns>
   Result<int> GetRdpPort();
+
+  /// <summary>
+  /// Sets the <c>PromptOnSecureDesktop</c> policy value.
+  /// </summary>
+  /// <param name="enabled"><c>true</c> to enable prompting on the secure desktop; <c>false</c> to disable it.</param>
   void SetPromptOnSecureDesktop(bool enabled);
+
+  /// <summary>
+  /// Sets an environment variable for a Windows service via its registry <c>Environment</c> multi-string value.
+  /// </summary>
+  /// <param name="serviceName">The name of the Windows service.</param>
+  /// <param name="variableName">The environment variable name.</param>
+  /// <param name="value">The environment variable value.</param>
+  void SetServiceEnvironmentVariable(string serviceName, string variableName, string value);
+
+  /// <summary>
+  /// Enables or disables <c>SoftwareSASGeneration</c> so the app can simulate the Ctrl+Alt+Del secure attention sequence.
+  /// </summary>
+  /// <param name="isEnabled"><c>true</c> to enable; <c>false</c> to revert to the default.</param>
   void SetSoftwareSasGeneration(bool isEnabled);
 }
 
@@ -73,6 +102,34 @@ internal class RegistryAccessor(
     catch (Exception ex)
     {
       logger.LogError(ex, "Error while setting PromptOnSecureDesktop.");
+    }
+  }
+
+  [SupportedOSPlatform("windows")]
+  public void SetServiceEnvironmentVariable(string serviceName, string variableName, string value)
+  {
+    try
+    {
+      using var baseKey =
+        Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{serviceName}", true);
+
+      if (baseKey is null)
+      {
+        logger.LogWarning("Service registry key not found: {ServiceName}", serviceName);
+        return;
+      }
+
+      var existing = (string[]?)baseKey.GetValue("Environment");
+      var entry = $"{variableName}={value}";
+      var newValues = existing is null
+        ? new[] { entry }
+        : [.. existing.Where(v => !v.StartsWith($"{variableName}=", StringComparison.OrdinalIgnoreCase)), entry];
+
+      baseKey.SetValue("Environment", newValues, RegistryValueKind.MultiString);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while setting service environment variable.");
     }
   }
 

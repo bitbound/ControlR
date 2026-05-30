@@ -13,5 +13,10 @@
         <string>-i</string>
         <string>{{INSTANCE_ID}}</string>
     </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>DOTNET_BUNDLE_EXTRACT_BASE_DIR</key>
+        <string>{{DOTNET_BUNDLE_EXTRACT_BASE_DIR}}</string>
+    </dict>
 </dict>
 </plist>

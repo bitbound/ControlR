@@ -101,12 +101,12 @@ public class ViewerConnectionAuthProviderTests
     {
     }
 
-    public Task<string?> GetBearerToken(CancellationToken cancellationToken = default) => Task.FromResult(BearerToken);
-
     public AuthSnapshot GetAuthSnapshot()
     {
       return new AuthSnapshot(PersonalAccessToken, BearerToken, null, null);
     }
+
+    public Task<string?> GetBearerToken(CancellationToken cancellationToken = default) => Task.FromResult(BearerToken);
 
     public Task RestoreAuthSnapshot(AuthSnapshot snapshot)
     {

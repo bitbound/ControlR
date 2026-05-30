@@ -65,6 +65,9 @@ public class AgentInstallerWindowsRepairTests
       .Returns<Func<Task>, int, TimeSpan>((func, _, _) => func());
 
     pathProvider
+      .Setup(x => x.GetAgentInstallDirectory())
+      .Returns(installDir);
+    pathProvider
       .Setup(x => x.GetBundleHashFilePath())
       .Returns(@"C:\ProgramData\ControlR\bundle.hash");
 
@@ -118,6 +121,9 @@ public class AgentInstallerWindowsRepairTests
       .Setup(x => x.Retry(It.IsAny<Func<Task>>(), It.IsAny<int>(), It.IsAny<TimeSpan>()))
       .Returns<Func<Task>, int, TimeSpan>((func, _, _) => func());
 
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectory())
+      .Returns(installDir);
     pathProvider
       .Setup(x => x.GetBundleHashFilePath())
       .Returns(@"C:\ProgramData\ControlR\bundle.hash");

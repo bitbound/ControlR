@@ -7,6 +7,7 @@ WorkingDirectory={{INSTALL_DIRECTORY}}/DesktopClient
 ExecStart={{INSTALL_DIRECTORY}}/DesktopClient/ControlR.DesktopClient{{INSTANCE_ARGS}}
 Type=simple
 Environment=DOTNET_ENVIRONMENT=Production
+Environment=DOTNET_BUNDLE_EXTRACT_BASE_DIR={{BUNDLE_EXTRACT_DIR}}
 TimeoutStopSec=15
 KillSignal=SIGTERM
 KillMode=process

@@ -1,6 +1,5 @@
 using ControlR.Agent.Shared.Constants;
 using ControlR.Agent.Shared.Options;
-using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Options;
 
@@ -9,6 +8,11 @@ namespace ControlR.Agent.Shared.Services;
 public interface IFileSystemPathProvider
 {
   string GetAgentAppSettingsPath();
+  string GetAgentExecutablePath();
+  /// <summary>
+  /// Returns the directory where the agent is installed.
+  /// </summary>
+  string GetAgentInstallDirectory();
   string GetAgentLogFilePath();
   string GetAgentLogsDirectoryPath();
   /// <summary>
@@ -22,10 +26,31 @@ public interface IFileSystemPathProvider
   /// Currently returns the startup directory; used for centralizing assumptions about where the bundle is installed.
   /// </summary>
   string GetBundleRootDirectory();
+  /// <summary>
+  /// Returns the directory where macOS bundle state (plist files) is stored.
+  /// </summary>
+  string GetBundleStateDirectory();
   string GetDesktopClientDirectory();
   string GetDesktopExecutablePath();
+  /// <summary>
+  /// Returns the base directory for .NET single-file bundle extraction, used by DOTNET_BUNDLE_EXTRACT_BASE_DIR.
+  /// </summary>
+  string GetDotnetExtractDirectory();
   string GetInstallerLogFilePath();
   string GetInstallerLogsDirectoryPath();
+  /// <summary>
+  /// Returns the macOS app bundle path (e.g., /Applications/ControlR.app).
+  /// </summary>
+  string GetMacAppBundlePath();
+  /// <summary>
+  /// Returns the service file path for the agent systemd/LaunchDaemon service.
+  /// </summary>
+  string GetServiceFilePath();
+  /// <summary>
+  /// Returns the path to the agent executable inside a macOS app bundle (for copying out during install).
+  /// </summary>
+  string GetSourceAgentPath(string appBundlePath);
+  string GetUninstallKeyPath();
   string GetUnixDesktopClientLogsDirectory(string username);
   string GetUnixDesktopClientLogsDirectoryForRoot();
   string GetWindowsDesktopClientLogsDirectory();
@@ -45,6 +70,27 @@ public class FileSystemPathProvider(
   {
     var dir = GetSettingsDirectory();
     return _fileSystem.JoinPaths(GetPathSeparator(), dir, "appsettings.json");
+  }
+
+  public string GetAgentExecutablePath()
+  {
+    return Path.Combine(GetAgentInstallDirectory(), AppConstants.GetAgentFileName(_systemEnvironment.Platform));
+  }
+
+  public string GetAgentInstallDirectory()
+  {
+    var baseDir = _systemEnvironment.IsDebug
+      ? Path.Combine(Path.GetTempPath(), "ControlR", "Install")
+      : _systemEnvironment.Platform switch
+      {
+        SystemPlatform.Windows => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR"),
+        SystemPlatform.Linux => "/usr/local/bin/ControlR",
+        SystemPlatform.MacOs => "/Library/Application Support/ControlR",
+        _ => throw new PlatformNotSupportedException()
+      };
+
+    var instanceId = GetInstanceId() ?? AppConstants.DefaultInstallDirectoryName;
+    return Path.Combine(baseDir, instanceId);
   }
 
   public string GetAgentLogFilePath()
@@ -89,10 +135,15 @@ public class FileSystemPathProvider(
   {
     if (_systemEnvironment.IsMacOS())
     {
-      return GetMacInstalledAppPath();
+      return GetMacAppBundlePath();
     }
 
-    return _systemEnvironment.StartupDirectory;
+    return GetAgentInstallDirectory();
+  }
+
+  public string GetBundleStateDirectory()
+  {
+    return GetAgentInstallDirectory();
   }
 
   public string GetDesktopClientDirectory()
@@ -115,6 +166,11 @@ public class FileSystemPathProvider(
       SystemPlatform.MacOs => _fileSystem.JoinPaths('/', desktopDir, PathConstants.MacDesktopExecutableRelativePath),
       _ => Path.Combine(desktopDir, AppConstants.DesktopClientFileName)
     };
+  }
+
+  public string GetDotnetExtractDirectory()
+  {
+    return Path.Combine(GetAgentInstallDirectory(), ".net");
   }
 
   public string GetInstallerLogFilePath()
@@ -147,6 +203,43 @@ public class FileSystemPathProvider(
     }
 
     throw new PlatformNotSupportedException();
+  }
+
+  public string GetMacAppBundlePath()
+  {
+    return _fileSystem.JoinPaths('/', PathConstants.MacApplicationsDirectory, PathConstants.GetMacAppBundleName(GetInstanceId()));
+  }
+
+  public string GetServiceFilePath()
+  {
+    var instanceId = GetInstanceId();
+    return _systemEnvironment.Platform switch
+    {
+      SystemPlatform.Linux => instanceId is null or ""
+        ? "/etc/systemd/system/controlr.agent.service"
+        : $"/etc/systemd/system/controlr.agent-{instanceId}.service",
+      SystemPlatform.MacOs => instanceId is null or ""
+        ? "/Library/LaunchDaemons/app.controlr.agent.plist"
+        : $"/Library/LaunchDaemons/app.controlr.agent.{instanceId}.plist",
+      _ => throw new PlatformNotSupportedException()
+    };
+  }
+
+  public string GetSourceAgentPath(string appBundlePath)
+  {
+    return _fileSystem.JoinPaths('/', appBundlePath, "Contents", "Library", "LaunchServices", AppConstants.GetAgentFileName(SystemPlatform.MacOs));
+  }
+
+  public string GetUninstallKeyPath()
+  {
+    var instanceId = GetInstanceId();
+    return _systemEnvironment.Platform switch
+    {
+      SystemPlatform.Windows => instanceId is null or ""
+        ? @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR"
+        : $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR ({instanceId})",
+      _ => throw new PlatformNotSupportedException()
+    };
   }
 
   public string GetUnixDesktopClientLogsDirectory(string username)
@@ -240,6 +333,13 @@ public class FileSystemPathProvider(
     return string.IsNullOrWhiteSpace(_instanceOptions.CurrentValue.InstanceId)
       ? AppConstants.DefaultInstallDirectoryName
       : _instanceOptions.CurrentValue.InstanceId!;
+  }
+
+  private string? GetInstanceId()
+  {
+    return string.IsNullOrWhiteSpace(_instanceOptions.CurrentValue.InstanceId)
+      ? null
+      : _instanceOptions.CurrentValue.InstanceId;
   }
 
   private string GetMacInstalledAppPath()
