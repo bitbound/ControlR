@@ -331,7 +331,12 @@ public abstract class ManagedRelayStream(
   private async Task StopReadLoop(CancellationToken cancellationToken)
   {
     var task = Interlocked.Exchange(ref _readFromStreamTask, null);
-    using var client = Interlocked.Exchange(ref _client, null);
+    var client = Interlocked.Exchange(ref _client, null);
+
+    if (client is not null)
+    {
+      client.Dispose();
+    }
 
     if (task is not null)
     {

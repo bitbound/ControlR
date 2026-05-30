@@ -303,7 +303,6 @@ internal class AgentInstallerMac(
       typeof(AgentInstallerMac).Assembly,
       "LaunchAgent.plist");
 
-    var installDir = FilesystemPathProvider.GetAgentInstallDirectory();
     var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
 
     template = template
@@ -330,11 +329,9 @@ internal class AgentInstallerMac(
 
   private string GetAgentServiceName()
   {
-    var instanceId = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? ""
-      : _instanceOptions.Value.InstanceId;
-
-    return $"app.controlr.agent.{instanceId}";
+    return string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      ? "app.controlr.agent"
+      : $"app.controlr.agent.{_instanceOptions.Value.InstanceId}";
   }
 
   private string GetBundleStateDirectory()
@@ -344,11 +341,9 @@ internal class AgentInstallerMac(
 
   private string GetDesktopServiceName()
   {
-    var instanceId = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? ""
-      : _instanceOptions.Value.InstanceId;
-
-    return $"app.controlr.desktop.{instanceId}";
+    return string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      ? "app.controlr.desktop"
+      : $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
   }
 
   private string GetInstalledAgentPath()
