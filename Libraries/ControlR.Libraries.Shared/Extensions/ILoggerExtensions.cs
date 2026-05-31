@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.Shared.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -12,23 +11,6 @@ public static class LoggerExtensions
     [CallerMemberName] string callerMemberName = "")
   {
     return logger.BeginScope(callerMemberName);
-  }
-
-  [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Helps make it discoverable.")]
-  /// <summary>
-  /// Enters a logging scope that deduplicates log messages.  Messages that are the same and occur within the deduplication window will only be logged once.
-  /// </summary>
-  /// <typeparam name="T">The type of the logger.</typeparam>
-  /// <param name="logger">The logger.</param>
-  /// <param name="cacheDuration">
-  /// The duration for which duplicate messages are suppressed.
-  /// Defaults to 1 hour in Release configuration and 10 seconds in Debug configuration.
-  /// </param>
-  public static LogDeduplicationContext<T> EnterDedupeScope<T>(
-    this ILogger<T> logger,
-    TimeSpan? cacheDuration = null)
-  {
-    return new LogDeduplicationContext<T>(logger, cacheDuration);
   }
 
   public static Result<TResultT> LogResult<T, TResultT>(

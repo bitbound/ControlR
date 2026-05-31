@@ -21,7 +21,6 @@ using Windows.Win32.Graphics.Dxgi.Common;
 using Windows.Win32.Graphics.Gdi;
 using Windows.Win32.UI.WindowsAndMessaging;
 using ControlR.DesktopClient.Windows.Helpers;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Logging;
 
 namespace ControlR.DesktopClient.Windows.Services;
@@ -35,7 +34,6 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
   private const string DirectXCaptureMode = "DirectX";
   private const string GdiCaptureMode = "GDI";
 
-  private readonly LogDeduplicationContext<ScreenGrabberWindows> _dedupeLogger;
   private readonly IDisplayManager _displayManager;
   private readonly IDxOutputDuplicator _dxOutputGenerator;
   private readonly ILogger<ScreenGrabberWindows> _logger;
@@ -58,7 +56,6 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
     _win32Interop = win32Interop;
     _displayManager = displayManager;
     _logger = logger;
-    _dedupeLogger = logger.EnterDedupeScope();
   }
 
   /// <summary>
@@ -103,7 +100,7 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
     }
     catch (Exception ex)
     {
-      _dedupeLogger.LogErrorDeduped("Error grabbing screen.", exception: ex);
+      _logger.LogErrorDeduped("Error grabbing screen.", exception: ex);
       return CaptureResult.Fail(ex);
     }
   }
@@ -115,7 +112,6 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
   {
     _cachedCursorSkBitmap?.Dispose();
     _dxOutputGenerator.Dispose();
-    _dedupeLogger.Dispose();
     return ValueTask.CompletedTask;
   }
 
@@ -265,7 +261,7 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
     }
     catch (Exception ex)
     {
-      _dedupeLogger.LogErrorDeduped(
+      _logger.LogErrorDeduped(
         "Error getting capture with BitBlt. Capture Area: {@CaptureArea}",
         exception: ex,
         args: captureArea);
@@ -343,7 +339,7 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
     catch (COMException ex)
     {
       _dxOutputGenerator.SetCurrentOutputFaulted();
-      _dedupeLogger.LogWarningDeduped(
+      _logger.LogWarningDeduped(
         "Failed to capture with DirectX, falling back to BitBlt. Display: {DisplayId}",
         exception: ex,
         args: display.DeviceName);
@@ -352,7 +348,7 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
     catch (Exception ex)
     {
       _dxOutputGenerator.SetCurrentOutputFaulted();
-      _dedupeLogger.LogErrorDeduped(
+      _logger.LogErrorDeduped(
         "Failed to capture with DirectX, falling back to BitBlt. Display: {DisplayId}",
         exception: ex,
         args: display.DeviceName);
@@ -468,7 +464,7 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
     var inputDesktopSwitchResult = _win32Interop.SwitchToInputDesktop();
     if (!inputDesktopSwitchResult && _inputDesktopSwitchResult)
     {
-      _dedupeLogger.LogWarningDeduped("Failed to switch to input desktop. This may be caused by hooks in the current desktop.");
+      _logger.LogWarningDeduped("Failed to switch to input desktop. This may be caused by hooks in the current desktop.");
     }
     _inputDesktopSwitchResult = inputDesktopSwitchResult;
   }
@@ -519,7 +515,7 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
       var localBounds = new Rectangle(0, 0, captureArea.Width, captureArea.Height);
       if (!localBounds.IntersectsWith(targetArea))
       {
-        _dedupeLogger.LogDebugDeduped("Cursor is outside of capture area. Skipping.");
+        _logger.LogDebugDeduped("Cursor is outside of capture area. Skipping.");
         return Rectangle.Empty;
       }
 
@@ -530,7 +526,7 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
     }
     catch (Exception ex)
     {
-      _dedupeLogger.LogDebugDeduped(
+      _logger.LogDebugDeduped(
         "Failed to draw cursor on capture.",
         exception: ex);
       return Rectangle.Empty;

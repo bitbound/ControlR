@@ -1,3 +1,4 @@
+using ControlR.Libraries.Shared.Logging;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
@@ -41,29 +42,29 @@ public class RemoteControlPermissionMonitorMac(
   {
     try
     {
-      DedupeLogger.LogInformationDeduped("Checking macOS remote control permissions");
+      Logger.LogInformationDeduped("Checking macOS remote control permissions");
 
       var platformState = await _desktopClientPermissionService.GetPlatformPermissionState();
       var isAccessibilityGranted = platformState.IsAccessibilityGranted == true;
       var isScreenCaptureGranted = platformState.IsScreenCaptureGranted == true;
       var arePermissionsGranted = isAccessibilityGranted && isScreenCaptureGranted;
 
-      DedupeLogger.LogInformationDeduped(
+      Logger.LogInformationDeduped(
         "macOS permissions: Accessibility={Accessibility}, ScreenCapture={ScreenCapture}",
         args: [isAccessibilityGranted, isScreenCaptureGranted]);
 
       if (arePermissionsGranted)
       {
-        DedupeLogger.LogInformationDeduped("All required permissions are granted");
+        Logger.LogInformationDeduped("All required permissions are granted");
         return;
       }
 
-      DedupeLogger.LogWarningDeduped("Required permissions are missing");
+      Logger.LogWarningDeduped("Required permissions are missing");
       await ShowPermissionsMissingToast<IPermissionsViewModelMac>();
     }
     catch (Exception ex)
     {
-      DedupeLogger.LogErrorDeduped("Error while checking permissions", exception: ex);
+      Logger.LogErrorDeduped("Error while checking permissions", exception: ex);
     }
   }
 
@@ -86,7 +87,7 @@ public class RemoteControlPermissionMonitorMac(
     }
     catch (Exception ex)
     {
-      DedupeLogger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
+      Logger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
     }
   }
 }

@@ -28,7 +28,6 @@ internal class DesktopClientWatcherWin(
   IFileSystemPathProvider pathProvider,
   ILogger<DesktopClientWatcherWin> logger) : BackgroundService
 {
-  private readonly LogDeduplicationContext<DesktopClientWatcherWin> _dedupeLogger = logger.EnterDedupeScope();
   private readonly IDesktopClientFileVerifier _desktopClientFileVerifier = desktopClientFileVerifier;
   private readonly IDesktopClientRepairCoordinator _desktopClientRepairCoordinator = desktopClientRepairCoordinator;
   private readonly IDesktopSessionProvider _desktopSessionProvider = desktopSessionProvider;
@@ -94,8 +93,8 @@ internal class DesktopClientWatcherWin(
       var installationVerificationResult = VerifyDesktopClientInstallation();
       if (!installationVerificationResult.IsSuccess)
       {
-        _dedupeLogger.LogErrorDeduped(
-          template: "Desktop client launch skipped because the installed desktop client is invalid. Reason: {Reason}",
+        _logger.LogErrorDeduped(
+          "Desktop client launch skipped because the installed desktop client is invalid. Reason: {Reason}",
           args: installationVerificationResult.Reason);
         _desktopClientRepairCoordinator.ReportFailure(
           "desktop-installation",
@@ -143,13 +142,13 @@ internal class DesktopClientWatcherWin(
         }
         catch (Exception ex)
         {
-          _dedupeLogger.LogErrorDeduped("Error while checking for desktop client processes.", exception: ex);
+          _logger.LogErrorDeduped("Error while checking for desktop client processes.", exception: ex);
         }
       }
     }
     finally
     {
-      _dedupeLogger.TryDispose();
+      
       _launchTracker.Clear();
     }
   }
@@ -349,8 +348,8 @@ internal class DesktopClientWatcherWin(
         removedState.Dispose();
       }
 
-      _dedupeLogger.LogErrorDeduped(
-        template: "Error while launching desktop client in session {SessionId}. This error has been seen before.",
+      _logger.LogErrorDeduped(
+        "Error while launching desktop client in session {SessionId}. This error has been seen before.",
         args: sessionId,
         exception: ex);
       return false;
@@ -363,8 +362,8 @@ internal class DesktopClientWatcherWin(
 
     if (!solutionDirResult.IsSuccess)
     {
-      _dedupeLogger.LogErrorDeduped(
-        template: "Failed to find solution directory. Desktop client cannot be launched in debug mode. Reason: {Reason}", 
+      _logger.LogErrorDeduped(
+        "Failed to find solution directory. Desktop client cannot be launched in debug mode. Reason: {Reason}",
         args: solutionDirResult.Reason);
       return;
     }
@@ -405,8 +404,8 @@ internal class DesktopClientWatcherWin(
 
     if (!waitResult)
     {
-      _dedupeLogger.LogErrorDeduped(
-        template: "Launched desktop client process in debug mode but it failed to register with IPC within the expected time. PID: {ProcessId}",
+      _logger.LogErrorDeduped(
+        "Launched desktop client process in debug mode but it failed to register with IPC within the expected time. PID: {ProcessId}",
         args: process.Id);
     }
   }

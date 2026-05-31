@@ -13,15 +13,8 @@ public abstract class PeriodicBackgroundService(
 {
   protected readonly ILogger<PeriodicBackgroundService> Logger = logger;
 
-  private LogDeduplicationContext<PeriodicBackgroundService>? _dedupeLogger;
-
-  protected LogDeduplicationContext<PeriodicBackgroundService> DedupeLogger =>
-    _dedupeLogger ?? throw new InvalidOperationException("Deduplication context is not active.");
-
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
-    using var dedupeScope = Logger.EnterDedupeScope();
-    _dedupeLogger = dedupeScope;
     using var timer = new PeriodicTimer(period, timeProvider);
 
     try 
@@ -57,7 +50,6 @@ public abstract class PeriodicBackgroundService(
     }
 
     Logger.LogInformation("Stopping background service. Application is stopping.");
-    _dedupeLogger = null;
   }
 
   protected abstract Task HandleElapsed();

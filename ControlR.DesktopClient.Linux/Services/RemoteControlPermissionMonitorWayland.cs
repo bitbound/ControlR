@@ -1,3 +1,4 @@
+using ControlR.Libraries.Shared.Logging;
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
@@ -54,22 +55,22 @@ public class RemoteControlPermissionMonitorWayland(
   {
     try
     {
-      DedupeLogger.LogInformationDeduped("Checking Wayland restore token");
+      Logger.LogInformationDeduped("Checking Wayland restore token");
 
       var hasToken = _waylandPermissionProvider.HasRestoreToken();
 
       if (hasToken)
       {
-        DedupeLogger.LogInformationDeduped("Wayland restore token exists");
+        Logger.LogInformationDeduped("Wayland restore token exists");
         return;
       }
 
-      DedupeLogger.LogWarningDeduped("Wayland restore token is missing");
+      Logger.LogWarningDeduped("Wayland restore token is missing");
       await ShowPermissionsMissingToast<IPermissionsViewModelWayland>();
     }
     catch (Exception ex)
     {
-      DedupeLogger.LogErrorDeduped("Error while checking permissions", exception: ex);
+      Logger.LogErrorDeduped("Error while checking permissions", exception: ex);
     }
   }
 
@@ -92,7 +93,7 @@ public class RemoteControlPermissionMonitorWayland(
     }
     catch (Exception ex)
     {
-      DedupeLogger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
+      Logger.LogErrorDeduped("Error while showing permissions missing toast", exception: ex);
     }
   }
 }

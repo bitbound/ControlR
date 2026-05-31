@@ -6,8 +6,9 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.DesktopClient.Common.State;
 using ControlR.Libraries.Shared.Collections;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Logging;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.WebSocketRelay.Client;
 using Microsoft.Extensions.Logging;
@@ -543,8 +544,6 @@ internal class FrameBasedCapturer : IDesktopCapturer
   {
     SKBitmap? previousCapture = null;
 
-    using var dedupeScope = _logger.EnterDedupeScope(cacheDuration: TimeSpan.FromSeconds(5));
-
     while (!cancellationToken.IsCancellationRequested)
     {
       try
@@ -564,7 +563,9 @@ internal class FrameBasedCapturer : IDesktopCapturer
           var primaryDisplay = await _displayManager.GetPrimaryDisplay();
           if (primaryDisplay is null)
           {
-            dedupeScope.LogWarningDeduped("Selected display is null.  Unable to capture latest frame.");
+            _logger.LogWarningDeduped(
+              "Selected display is null.  Unable to capture latest frame.",
+              cacheDuration: TimeSpan.FromSeconds(10));
             await Task.Delay(_afterFailureDelay, _timeProvider, cancellationToken);
             continue;
           }
@@ -618,9 +619,10 @@ internal class FrameBasedCapturer : IDesktopCapturer
             continue;
           }
 
-          dedupeScope.LogWarningDeduped(
-            template: "Failed to capture latest frame.  Reason: {ResultReason}",
+          _logger.LogWarningDeduped(
+            "Failed to capture latest frame.  Reason: {ResultReason}",
             exception: currentCapture.Exception,
+            cacheDuration: TimeSpan.FromSeconds(10),
             args: currentCapture.FailureReason);
 
           if (currentCapture.HadException)
@@ -683,7 +685,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
       }
       catch (Exception ex)
       {
-        dedupeScope.LogErrorDeduped("Error encoding screen captures.", exception: ex);
+        _logger.LogErrorDeduped("Error encoding screen captures.", cacheDuration: TimeSpan.FromSeconds(5), exception: ex);
       }
       finally
       {

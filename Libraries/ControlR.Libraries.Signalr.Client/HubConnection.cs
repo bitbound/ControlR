@@ -147,7 +147,6 @@ internal sealed class HubConnection<THub, TClient>(
 
   private readonly SemaphoreSlim _connectLock = new(1, 1);
 
-  private readonly LogDeduplicationContext<HubConnection<THub, TClient>> _dedupeLogger = logger.EnterDedupeScope();
   private readonly ConcurrentBag<IDisposable> _handlerRegistrations = [];
   private readonly ILogger<HubConnection<THub, TClient>> _logger = logger;
   private readonly TimeSpan _maxReconnectDelay = TimeSpan.FromSeconds(30);
@@ -234,7 +233,7 @@ internal sealed class HubConnection<THub, TClient>(
       }
       catch (Exception ex)
       {
-        _dedupeLogger.LogErrorDeduped("Failed to initialize hub connection.", exception: ex);
+        _logger.LogErrorDeduped("Failed to initialize hub connection.", exception: ex);
         try
         {
           ConnectThrew?.Invoke(ex);
@@ -279,7 +278,7 @@ internal sealed class HubConnection<THub, TClient>(
       await _connection.DisposeAsync();
     }
 
-    _dedupeLogger.Dispose();
+    
   }
 
   public async Task Send(

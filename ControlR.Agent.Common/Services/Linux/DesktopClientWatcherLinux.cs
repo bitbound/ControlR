@@ -25,7 +25,6 @@ internal class DesktopClientWatcherLinux(
 {
   private const int ProcessCommandTimeoutMs = 5_000;
 
-  private readonly LogDeduplicationContext<DesktopClientWatcherLinux> _dedupeLogger = logger.EnterDedupeScope();
   private readonly IDesktopClientFileVerifier _desktopClientFileVerifier = desktopClientFileVerifier;
   private readonly IDesktopClientRepairCoordinator _desktopClientRepairCoordinator = desktopClientRepairCoordinator;
   private readonly IDesktopEnvironmentDetectorAgent _desktopEnvironmentDetector = desktopEnvironmentDetector;
@@ -57,7 +56,7 @@ internal class DesktopClientWatcherLinux(
         var isHeadless = await _headlessServerDetector.IsHeadlessServer();
         if (isHeadless)
         {
-          _dedupeLogger.LogDeduped(LogLevel.Information, "Running on headless Linux server. Desktop client services are not applicable.");
+          _logger.LogInformationDeduped( "Running on headless Linux server. Desktop client services are not applicable.");
           await Task.Delay(TimeSpan.FromMinutes(1), _timeProvider, stoppingToken);
           continue;
         }
@@ -70,7 +69,7 @@ internal class DesktopClientWatcherLinux(
       }
     }
 
-    _dedupeLogger.TryDispose();
+    
     await _serviceControl.StopDesktopClientService(throwOnFailure: false);
   }
 
@@ -90,11 +89,11 @@ internal class DesktopClientWatcherLinux(
       var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
       if (loggedInUsers.Count == 0)
       {
-        _dedupeLogger.LogDeduped(LogLevel.Information, "No logged-in users found.");
+        _logger.LogInformationDeduped( "No logged-in users found.");
         return;
       }
 
-      _dedupeLogger.LogDeduped(LogLevel.Information, "Found {UserCount} logged-in users.", args: loggedInUsers.Count);
+      _logger.LogInformationDeduped("Found {UserCount} logged-in users.", args: loggedInUsers.Count);
 
       foreach (var uid in loggedInUsers)
       {
@@ -103,7 +102,7 @@ internal class DesktopClientWatcherLinux(
     }
     catch (Exception ex)
     {
-      _dedupeLogger.LogDeduped(LogLevel.Error, "Error checking desktop client services.", exception: ex);
+      _logger.LogErrorDeduped("Error checking desktop client services.", exception: ex);
     }
   }
 
@@ -129,27 +128,27 @@ internal class DesktopClientWatcherLinux(
 
       if (!isRunning)
       {
-        _dedupeLogger.LogDeduped(LogLevel.Information, "Desktop client service not running for user {UID}. Starting service.", args: uid);
+        _logger.LogInformationDeduped("Desktop client service not running for user {UID}. Starting service.", args: uid);
         await StartDesktopClientServiceForUser(uid, serviceName, cancellationToken);
         return;
       }
 
       if (await HasDeletedDesktopClientExecutable(uid, serviceName))
       {
-        _dedupeLogger.LogDeduped(LogLevel.Warning, "Desktop client service for user {UID} is running from a deleted executable. Restarting service.", args: uid);
+        _logger.LogWarningDeduped("Desktop client service for user {UID} is running from a deleted executable. Restarting service.", args: uid);
         await RestartDesktopClientServiceForUser(uid, serviceName, cancellationToken);
         return;
       }
 
       _desktopClientRepairCoordinator.ReportHealthy(repairKey);
-      _dedupeLogger.LogDeduped(LogLevel.Information, "Desktop client service is running for user {UID}.", args: uid);
+      _logger.LogInformationDeduped("Desktop client service is running for user {UID}.", args: uid);
     }
     catch (Exception ex)
     {
       _desktopClientRepairCoordinator.ReportFailure(
         GetRepairKey(uid),
         $"Failed to check or start the desktop client for user {uid}: {ex.Message}");
-      _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to check/start desktop client service for user {UID}.", args: uid, exception: ex);
+      _logger.LogWarningDeduped("Failed to check/start desktop client service for user {UID}.", args: uid, exception: ex);
     }
   }
 
@@ -159,8 +158,7 @@ internal class DesktopClientWatcherLinux(
 
     if (displayInfo.IsWayland)
     {
-      _dedupeLogger.LogDeduped(
-        LogLevel.Information,
+      _logger.LogInformationDeduped(
         "Wayland login screen detected. Desktop client launch is not supported in the greeter session. Display: {WaylandDisplay}, DM: {DisplayManager}",
         args: [displayInfo.WaylandDisplay ?? "wayland-0", displayInfo.DisplayManager ?? "unknown"]);
 
@@ -175,16 +173,14 @@ internal class DesktopClientWatcherLinux(
       return;
     }
 
-      _dedupeLogger.LogDeduped(
-        LogLevel.Information,
-        "Login screen detected. Type: X11, Display: {Display}, XAuth: {XAuth}, DM: {DisplayManager}",
-        args: [displayInfo.Display, displayInfo.XAuthPath ?? "none", displayInfo.DisplayManager ?? "unknown"]);
-        
+    _logger.LogInformationDeduped(
+      "Login screen detected. Type: X11, Display: {Display}, XAuth: {XAuth}, DM: {DisplayManager}",
+      args: [displayInfo.Display, displayInfo.XAuthPath ?? "none", displayInfo.DisplayManager ?? "unknown"]);
+
     var isLoginScreenRunning = await IsLoginScreenDesktopClientRunning();
     if (isLoginScreenRunning && await HasDeletedLoginScreenDesktopClientExecutable())
     {
-      _dedupeLogger.LogDeduped(
-        LogLevel.Warning,
+      _logger.LogWarningDeduped(
         "Login screen desktop client is running from a deleted executable. Restarting it.");
 
       await StopLoginScreenDesktopClient();
@@ -212,7 +208,7 @@ internal class DesktopClientWatcherLinux(
 
       if (!result.IsSuccess)
       {
-        _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to resolve main PID for desktop service {ServiceName} and user {UID}: {Reason}", args: [serviceName, uid, result.Reason]);
+        _logger.LogWarningDeduped( "Failed to resolve main PID for desktop service {ServiceName} and user {UID}: {Reason}", args: [serviceName, uid, result.Reason]);
         return null;
       }
 
@@ -226,7 +222,7 @@ internal class DesktopClientWatcherLinux(
     }
     catch (Exception ex)
     {
-      _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to read main PID for desktop service {ServiceName} and user {UID}.", args: [serviceName, uid], exception: ex);
+      _logger.LogWarningDeduped( "Failed to read main PID for desktop service {ServiceName} and user {UID}.", args: [serviceName, uid], exception: ex);
       return null;
     }
   }
@@ -280,7 +276,7 @@ internal class DesktopClientWatcherLinux(
     }
     catch (Exception ex)
     {
-      _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to inspect executable path for PID {PID}.", args: processId, exception: ex);
+      _logger.LogWarningDeduped( "Failed to inspect executable path for PID {PID}.", args: processId, exception: ex);
       return false;
     }
   }
@@ -295,7 +291,7 @@ internal class DesktopClientWatcherLinux(
 
       if (!result.IsSuccess)
       {
-        _dedupeLogger.LogDeduped(LogLevel.Warning, "Service {ServiceName} not found for user {UID}: {Reason}", args: [serviceName, uid, result.Reason]);
+        _logger.LogWarningDeduped("Service {ServiceName} not found for user {UID}: {Reason}", args: [serviceName, uid, result.Reason]);
         return false;
       }
 
@@ -303,13 +299,13 @@ internal class DesktopClientWatcherLinux(
       var output = result.Value?.Trim();
       var isRunning = string.Equals(output, "active", StringComparison.OrdinalIgnoreCase);
 
-      _dedupeLogger.LogDeduped(LogLevel.Information, "Service {ServiceName} status for user {UID}: {Status}", args: [serviceName, uid, isRunning ? "Running" : "Not running"]);
+      _logger.LogInformationDeduped("Service {ServiceName} status for user {UID}: {Status}", args: [serviceName, uid, isRunning ? "Running" : "Not running"]);
 
       return isRunning;
     }
     catch (Exception ex)
     {
-      _dedupeLogger.LogDeduped(LogLevel.Warning, "Failed to check service status for user {UID}.", args: uid, exception: ex);
+      _logger.LogWarningDeduped("Failed to check service status for user {UID}.", args: uid, exception: ex);
       return false;
     }
   }

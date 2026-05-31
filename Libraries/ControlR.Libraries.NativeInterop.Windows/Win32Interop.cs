@@ -103,7 +103,6 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     "MSCTFIME UI" // Input method editor
   ];
 
-  private readonly LogDeduplicationContext<Win32Interop> _dedupeLogger = logger.EnterDedupeScope(cacheDuration: TimeSpan.FromMinutes(1));
   private readonly ILogger<Win32Interop> _logger = logger;
   private readonly Lock _windowClassLock = new();
 
@@ -520,8 +519,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
       if (!PInvoke.GetCursorInfo(ref cursorInfo) || cursorInfo.hCursor == default)
       {
-        _dedupeLogger.LogDebugDeduped(
+        _logger.LogDebugDeduped(
           template: "Failed to get cursor info.  Last p/invoke error: {LastError}",
+          cacheDuration: TimeSpan.FromMinutes(1),
           args: [Marshal.GetLastPInvokeErrorMessage()]);
           
         return PointerCursor.Unknown;
@@ -534,8 +534,9 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
     catch (Exception ex)
     {
-      _dedupeLogger.LogErrorDeduped(
+      _logger.LogErrorDeduped(
         template: "Error while getting current cursor.",
+        cacheDuration: TimeSpan.FromMinutes(1),
         exception: ex);
     }
 
