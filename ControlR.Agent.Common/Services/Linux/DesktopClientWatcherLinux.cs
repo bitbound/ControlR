@@ -1,10 +1,10 @@
 using ControlR.Agent.Common.Interfaces;
+using ControlR.Agent.Shared.Services;
 using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
 namespace ControlR.Agent.Common.Services.Linux;
@@ -20,7 +20,7 @@ internal class DesktopClientWatcherLinux(
   IDesktopClientFileVerifier desktopClientFileVerifier,
   ILoggedInUserProvider loggedInUserProvider,
   IProcessManager processManager,
-  IOptions<InstanceOptions> instanceOptions,
+  IFileSystemPathProvider fileSystemPathProvider,
   ILogger<DesktopClientWatcherLinux> logger) : BackgroundService
 {
   private const int ProcessCommandTimeoutMs = 5_000;
@@ -30,8 +30,8 @@ internal class DesktopClientWatcherLinux(
   private readonly IDesktopClientRepairCoordinator _desktopClientRepairCoordinator = desktopClientRepairCoordinator;
   private readonly IDesktopEnvironmentDetectorAgent _desktopEnvironmentDetector = desktopEnvironmentDetector;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
-  private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILoggedInUserProvider _loggedInUserProvider = loggedInUserProvider;
   private readonly ILogger<DesktopClientWatcherLinux> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
@@ -233,24 +233,15 @@ internal class DesktopClientWatcherLinux(
 
   private string GetDesktopClientServiceName()
   {
-    // This should match the service name from the ServiceControlLinux
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      return "controlr.desktop.service";
-    }
-
-    return $"controlr.desktop-{_instanceOptions.Value.InstanceId}.service";
+    var instanceId = _fileSystemPathProvider.GetEffectiveInstanceId();
+    return string.Equals(instanceId, AppConstants.DefaultInstallDirectoryName, StringComparison.Ordinal)
+      ? "controlr.desktop.service"
+      : $"controlr.desktop-{instanceId}.service";
   }
 
   private string GetInstallDirectory()
   {
-    var dir = "/usr/local/bin/ControlR";
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      return dir;
-    }
-
-    return Path.Combine(dir, _instanceOptions.Value.InstanceId);
+    return _fileSystemPathProvider.GetAgentInstallDirectory();
   }
 
   private async Task<bool> HasDeletedDesktopClientExecutable(string uid, string serviceName)
@@ -353,9 +344,10 @@ internal class DesktopClientWatcherLinux(
         return;
       }
 
-      var instanceArgs = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
+      var instanceId = _fileSystemPathProvider.GetEffectiveInstanceId();
+      var instanceArgs = string.Equals(instanceId, AppConstants.DefaultInstallDirectoryName, StringComparison.Ordinal)
         ? ""
-        : $" --instance-id {_instanceOptions.Value.InstanceId}";
+        : $" --instance-id {instanceId}";
 
       if (displayInfo.IsWayland)
       {

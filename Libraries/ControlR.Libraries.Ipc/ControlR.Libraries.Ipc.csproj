@@ -1,14 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<ItemGroup>
-		<PackageReference Include="MessagePack" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-		<PackageReference Include="Microsoft.Extensions.Logging" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-		<PackageReference Update="Bitbound.Analyzers.MemberOrder">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="StreamJsonRpc" />
+    <PackageReference Include="MessagePack" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <!-- 
+      This direct reference to Nerdbank.MessagePack can be removed when StreamJsonRpc updates
+      their dependency, which currently has a vulnerability (5/30/26).
+    -->
+    <PackageReference Include="Nerdbank.MessagePack" />
+    <PackageReference Include="StreamJsonRpc" />
 	</ItemGroup>
 	<ItemGroup>
 	  <ProjectReference Include="..\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />

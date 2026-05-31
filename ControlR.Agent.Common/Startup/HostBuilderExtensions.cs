@@ -24,6 +24,7 @@ using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Hosting;
 using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Agent.Shared.Services;
 
 namespace ControlR.Agent.Common.Startup;
 

@@ -7,13 +7,25 @@ namespace ControlR.Agent.Shared.Services;
 
 public interface IFileSystemPathProvider
 {
+  /// <summary>
+  /// Returns the path to the agent's appsettings.json file.
+  /// </summary>
   string GetAgentAppSettingsPath();
+  /// <summary>
+  /// Returns the path to the agent executable, which is the install directory combined with the platform-specific agent file name.
+  /// </summary>
   string GetAgentExecutablePath();
   /// <summary>
   /// Returns the directory where the agent is installed.
   /// </summary>
   string GetAgentInstallDirectory();
+  /// <summary>
+  /// Returns the path to the agent's current log file.
+  /// </summary>
   string GetAgentLogFilePath();
+  /// <summary>
+  /// Returns the directory where agent logs are stored. On Windows this is under CommonApplicationData; on Linux/macOS it is under /var/log/controlr for elevated processes or ~/.controlr/logs for user processes.
+  /// </summary>
   string GetAgentLogsDirectoryPath();
   /// <summary>
   /// Returns the path where the bundle hash file is stored.
@@ -30,13 +42,30 @@ public interface IFileSystemPathProvider
   /// Returns the directory where macOS bundle state (plist files) is stored.
   /// </summary>
   string GetBundleStateDirectory();
+  /// <summary>
+  /// Returns the directory where the desktop client is installed. On macOS, this is the app bundle path; on other platforms, it's a "DesktopClient" subdirectory under the agent's startup directory.
+  /// </summary>
   string GetDesktopClientDirectory();
+  /// <summary>
+  /// Returns the path to the desktop client executable. On macOS, this is a specific path inside the app bundle; on other platforms, it's the "DesktopClient" subdirectory under the agent's startup directory combined with the desktop client file name.
+  /// </summary>
+  /// <returns></returns>
   string GetDesktopExecutablePath();
   /// <summary>
   /// Returns the base directory for .NET single-file bundle extraction, used by DOTNET_BUNDLE_EXTRACT_BASE_DIR.
   /// </summary>
   string GetDotnetExtractDirectory();
+  /// <summary>
+  /// Returns the effective instance ID, defaulting to "default" if not configured.
+  /// </summary>
+  string GetEffectiveInstanceId();
+  /// <summary>
+  /// Returns the log file path for the installer.
+  /// </summary>
   string GetInstallerLogFilePath();
+  /// <summary>
+  /// Returns the directory path for installer logs.
+  /// </summary>
   string GetInstallerLogsDirectoryPath();
   /// <summary>
   /// Returns the macOS app bundle path (e.g., /Applications/ControlR.app).
@@ -50,9 +79,21 @@ public interface IFileSystemPathProvider
   /// Returns the path to the agent executable inside a macOS app bundle (for copying out during install).
   /// </summary>
   string GetSourceAgentPath(string appBundlePath);
+  /// <summary>
+  /// Returns the Windows registry uninstall key path for ControlR, varied by instance ID.
+  /// </summary>
   string GetUninstallKeyPath();
+  /// <summary>
+  /// Returns the log directory for the desktop client running under the specified user on Linux/macOS (e.g. /home/{username}/.controlr/{instanceId}/logs/ControlR.DesktopClient).
+  /// </summary>
   string GetUnixDesktopClientLogsDirectory(string username);
+  /// <summary>
+  /// Returns the log directory for the desktop client running as root on Linux/macOS (e.g. /var/log/controlr/{instanceId}/ControlR.DesktopClient).
+  /// </summary>
   string GetUnixDesktopClientLogsDirectoryForRoot();
+  /// <summary>
+  /// Returns the log directory for the desktop client on Windows, under CommonApplicationData with debug and instance subdirectories.
+  /// </summary>
   string GetWindowsDesktopClientLogsDirectory();
 }
 public class FileSystemPathProvider(
@@ -171,6 +212,13 @@ public class FileSystemPathProvider(
   public string GetDotnetExtractDirectory()
   {
     return Path.Combine(GetAgentInstallDirectory(), ".net");
+  }
+
+  public string GetEffectiveInstanceId()
+  {
+    return string.IsNullOrWhiteSpace(_instanceOptions.CurrentValue.InstanceId)
+      ? AppConstants.DefaultInstallDirectoryName
+      : _instanceOptions.CurrentValue.InstanceId!;
   }
 
   public string GetInstallerLogFilePath()
@@ -326,13 +374,6 @@ public class FileSystemPathProvider(
     }
 
     throw new PlatformNotSupportedException();
-  }
-
-  private string GetEffectiveInstanceId()
-  {
-    return string.IsNullOrWhiteSpace(_instanceOptions.CurrentValue.InstanceId)
-      ? AppConstants.DefaultInstallDirectoryName
-      : _instanceOptions.CurrentValue.InstanceId!;
   }
 
   private string? GetInstanceId()
