@@ -445,10 +445,11 @@ jobs:
         shell: pwsh
         run: |
           # Create staging directory
-          New-Item -Path ".build\staging-desktop\${{ matrix.arch }}" -ItemType Directory -Force | Out-Null
+          $stagingDir = Join-Path $env:RUNNER_TEMP "staging-desktop/${{ matrix.arch }}"
+          New-Item -Path $stagingDir -ItemType Directory -Force | Out-Null
 
           # Create ZIP
-          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" -DestinationPath ".build\staging-desktop\${{ matrix.arch }}\ControlR.DesktopClient.zip" -Force
+          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" -DestinationPath (Join-Path $stagingDir "ControlR.DesktopClient.zip") -Force
 
       - name: Azure Login For Agent Publish (${{ matrix.arch }})
         uses: azure/login@v3
@@ -517,7 +518,7 @@ jobs:
         shell: pwsh
         run: |
           $agentPublishDir = "ControlR.Agent\bin\publish\${{ matrix.arch }}\"
-          $bundleDir = ".build\bundle\${{ matrix.arch }}"
+          $bundleDir = Join-Path $env:RUNNER_TEMP "bundle/${{ matrix.arch }}"
           $desktopDir = Join-Path $bundleDir "DesktopClient"
           Remove-Item -Path $bundleDir -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -Path $desktopDir -ItemType Directory -Force | Out-Null
@@ -559,11 +560,11 @@ jobs:
           dotnet publish ./ControlR.DesktopClient/ -c Release -f net10.0 -r linux-x64 --self-contained -o ./ControlR.DesktopClient/bin/publish/linux-x64/ -p:Version=$VERSION -p:FileVersion=$VERSION
 
           # Create staging directory
-          mkdir -p ".build/staging-desktop/linux-x64"
+          mkdir -p "$RUNNER_TEMP/staging-desktop/linux-x64"
 
           # Create ZIP
           cd ./ControlR.DesktopClient/bin/publish/linux-x64
-          zip -r "${{ github.workspace}}/.build/staging-desktop/linux-x64/ControlR.DesktopClient.zip" .
+          zip -r "$RUNNER_TEMP/staging-desktop/linux-x64/ControlR.DesktopClient.zip" .
           cd ${{ github.workspace}}
 
       - name: Build Agent (linux-x64)
@@ -578,12 +579,12 @@ jobs:
 
       - name: Create Bundle ZIP (linux-x64)
         run: |
-          rm -rf ".build/bundle/linux-x64"
-          mkdir -p ".build/bundle/linux-x64/DesktopClient"
-          cp "./ControlR.Agent/bin/publish/linux-x64/ControlR.Agent" ".build/bundle/linux-x64/ControlR.Agent"
-          cp -R ./ControlR.DesktopClient/bin/publish/linux-x64/. ".build/bundle/linux-x64/DesktopClient/"
+          rm -rf "$RUNNER_TEMP/bundle/linux-x64"
+          mkdir -p "$RUNNER_TEMP/bundle/linux-x64/DesktopClient"
+          cp "./ControlR.Agent/bin/publish/linux-x64/ControlR.Agent" "$RUNNER_TEMP/bundle/linux-x64/ControlR.Agent"
+          cp -R ./ControlR.DesktopClient/bin/publish/linux-x64/. "$RUNNER_TEMP/bundle/linux-x64/DesktopClient/"
 
-          cd .build/bundle/linux-x64
+          cd "$RUNNER_TEMP/bundle/linux-x64"
           zip -r "${{ github.workspace }}/ControlR.Web.Server/wwwroot/downloads/linux-x64/ControlR.Agent.bundle.zip" .
           cd "${{ github.workspace }}"
 

@@ -15,6 +15,15 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
+  <!-- BrandPrefix is replaced by customize.ps1 for whitelabel builds. -->
+  <PropertyGroup>
+    <BrandPrefix>ControlR</BrandPrefix>
+    <_BrandSuffix Condition="$(MSBuildProjectName.StartsWith('ControlR'))">
+      $(MSBuildProjectName.Substring(8))</_BrandSuffix>
+    <RootNamespace Condition="'$(_BrandSuffix)' != ''">$(BrandPrefix)$(_BrandSuffix.Trim())</RootNamespace>
+    <AssemblyName Condition="'$(_BrandSuffix)' != ''">$(BrandPrefix)$(_BrandSuffix.Trim())</AssemblyName>
+  </PropertyGroup>
+
   <PropertyGroup>
     <WindowsTargetFramework>net10.0-windows8.0</WindowsTargetFramework>
     <MacTargetFramework>net10.0-macos</MacTargetFramework>
@@ -34,14 +43,16 @@
     <IsWindows>true</IsWindows>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
+  <PropertyGroup
+    Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsMacOS()))">
     <XplatTarget>$(MacTargetFramework)</XplatTarget>
     <DefineConstants>$(DefineConstants);IS_MACOS;IS_UNIX</DefineConstants>
     <IsMacOS>true</IsMacOS>
     <IsUnix>true</IsUnix>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('linux')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsLinux()))">
+  <PropertyGroup
+    Condition="$(RuntimeIdentifier.StartsWith('linux')) OR ('$(RuntimeIdentifier)' == '' AND $([System.OperatingSystem]::IsLinux()))">
     <XplatTarget>$(LinuxTargetFramework)</XplatTarget>
     <DefineConstants>$(DefineConstants);IS_LINUX;IS_UNIX</DefineConstants>
     <IsLinux>true</IsLinux>
@@ -58,4 +69,5 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
+
 </Project>

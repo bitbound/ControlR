@@ -1,5 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Logging;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Libraries.Shared.Services.Processes;
@@ -212,17 +213,17 @@ internal class AgentMaintenanceService(
   {
     if (string.IsNullOrWhiteSpace(instanceId))
     {
-      return "app.controlr.agent.installer";
+      return $"{BrandingConstants.MacServicePrefix}.agent.installer";
     }
 
-    return $"app.controlr.agent.installer.{instanceId}";
+    return $"{BrandingConstants.MacServicePrefix}.agent.installer.{instanceId}";
   }
 
   private static string GetMacInstallerDaemonPlistPath(string? instanceId)
   {
     return string.IsNullOrWhiteSpace(instanceId)
-      ? "/Library/LaunchDaemons/app.controlr.agent.installer.plist"
-      : $"/Library/LaunchDaemons/app.controlr.agent.installer.{instanceId}.plist";
+      ? $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.installer.plist"
+      : $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.installer.{instanceId}.plist";
   }
 
   private static ProcessStartInfo GetMacLaunchctlStartInfo(params string[] arguments)
@@ -286,8 +287,8 @@ internal class AgentMaintenanceService(
   private async Task<string?> DownloadInstaller(BundleMetadataDto metadata, CancellationToken cancellationToken)
   {
     var tempDirPath = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? Path.Combine(Path.GetTempPath(), "ControlR_Update")
-      : Path.Combine(Path.GetTempPath(), "ControlR_Update", _instanceOptions.Value.InstanceId);
+      ? Path.Combine(Path.GetTempPath(), BrandingConstants.UpdaterTempDirectoryName)
+      : Path.Combine(Path.GetTempPath(), BrandingConstants.UpdaterTempDirectoryName, _instanceOptions.Value.InstanceId);
 
     _ = _fileSystem.CreateDirectory(tempDirPath);
 
@@ -355,7 +356,7 @@ internal class AgentMaintenanceService(
     return _fileSystem.JoinPaths(
       Path.DirectorySeparatorChar,
       Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-      "ControlR_Update",
+      BrandingConstants.UpdaterTempDirectoryName,
       instanceSegment,
       AppConstants.GetInstallerFileName(SystemPlatform.MacOs));
   }

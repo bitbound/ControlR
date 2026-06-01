@@ -2,6 +2,12 @@ namespace ControlR.Libraries.Shared.Helpers;
 
 public static class IoHelper
 {
+  public static Result<string> GetSolutionDir()
+  {
+    var currentDir = Directory.GetCurrentDirectory();
+    return GetSolutionDir(currentDir);
+  }
+  
   public static Result<string> GetSolutionDir(string currentDir)
   {
     var dirInfo = new DirectoryInfo(currentDir);

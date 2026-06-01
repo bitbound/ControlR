@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ControlR.Agent.Shared.Options;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Options;
 
@@ -168,40 +169,40 @@ internal class ServiceControlMac(
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "/Library/LaunchDaemons/app.controlr.agent.plist";
+      return $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.plist";
     }
 
-    return $"/Library/LaunchDaemons/app.controlr.agent.{_instanceOptions.Value.InstanceId}.plist";
+    return $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.{_instanceOptions.Value.InstanceId}.plist";
   }
 
   private string GetAgentServiceName()
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "app.controlr.agent";
+      return $"{BrandingConstants.MacServicePrefix}.agent";
     }
 
-    return $"app.controlr.agent.{_instanceOptions.Value.InstanceId}";
+    return $"{BrandingConstants.MacServicePrefix}.agent.{_instanceOptions.Value.InstanceId}";
   }
 
   private string GetDesktopClientPlistPath()
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "/Library/LaunchAgents/app.controlr.desktop.plist";
+      return $"/Library/LaunchAgents/{BrandingConstants.MacServicePrefix}.desktop.plist";
     }
 
-    return $"/Library/LaunchAgents/app.controlr.desktop.{_instanceOptions.Value.InstanceId}.plist";
+    return $"/Library/LaunchAgents/{BrandingConstants.MacServicePrefix}.desktop.{_instanceOptions.Value.InstanceId}.plist";
   }
 
   private string GetDesktopClientServiceName()
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "app.controlr.desktop";
+      return $"{BrandingConstants.MacServicePrefix}.desktop";
     }
 
-    return $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
+    return $"{BrandingConstants.MacServicePrefix}.desktop.{_instanceOptions.Value.InstanceId}";
   }
 
   private async Task<List<string>> GetLoggedInUsers()

@@ -6,6 +6,7 @@ using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
+using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
 
@@ -144,7 +145,7 @@ internal class AgentInstallerWindows(
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while installing the ControlR service.");
+      Logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
     }
     finally
     {
@@ -269,7 +270,7 @@ internal class AgentInstallerWindows(
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while uninstalling the ControlR service.");
+      Logger.LogError(ex, $"Error while uninstalling the {BrandingConstants.BrandName} service.");
     }
     finally
     {
@@ -290,7 +291,7 @@ internal class AgentInstallerWindows(
   {
     var installDir = GetInstallDirectory();
 
-    var displayName = "ControlR Agent";
+    var displayName = $"{BrandingConstants.BrandName} Agent";
     var exePath = FilesystemPathProvider.GetAgentExecutablePath();
     var fileName = Path.GetFileName(exePath);
     var version = FileVersionInfo.GetVersionInfo(exePath);
@@ -309,7 +310,7 @@ internal class AgentInstallerWindows(
     controlrKey.SetValue("DisplayName", displayName);
     controlrKey.SetValue("DisplayVersion", version.FileVersion ?? "0.0.0");
     controlrKey.SetValue("InstallDate", DateTime.Now.ToString("yyyyMMdd"));
-    controlrKey.SetValue("Publisher", "Bitbound");
+    controlrKey.SetValue("Publisher", BrandingConstants.Publisher);
     controlrKey.SetValue("VersionMajor", $"{version.FileMajorPart}", RegistryValueKind.DWord);
     controlrKey.SetValue("VersionMinor", $"{version.FileMinorPart}", RegistryValueKind.DWord);
     controlrKey.SetValue("UninstallString", uninstallCommand);
@@ -325,10 +326,10 @@ internal class AgentInstallerWindows(
   {
     if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
-      return "ControlR.Agent";
+      return BrandingConstants.WindowsServiceBaseName;
     }
 
-    return $"ControlR.Agent ({instanceOptions.Value.InstanceId})";
+    return $"{BrandingConstants.WindowsServiceBaseName} ({instanceOptions.Value.InstanceId})";
   }
 
   private string GetUninstallKeyPath()
@@ -353,7 +354,7 @@ internal class AgentInstallerWindows(
       "Copying to temp directory and relaunching with args: {args}.",
       args);
 
-    var dest = Path.Combine(Path.GetTempPath(), $"ControlR_{Guid.NewGuid()}.exe");
+    var dest = Path.Combine(Path.GetTempPath(), $"{BrandingConstants.BrandName}_{Guid.NewGuid()}.exe");
 
     FileSystem.CopyFile(exePath, dest, true);
 
@@ -371,7 +372,7 @@ internal class AgentInstallerWindows(
   {
     var parentDirectory = Path.GetDirectoryName(installDir)
       ?? throw new DirectoryNotFoundException("Unable to determine the install directory parent.");
-    var stageDirectory = Path.Combine(parentDirectory, $".controlr-desktop-repair-{Guid.NewGuid():N}");
+    var stageDirectory = Path.Combine(parentDirectory, $"{BrandingConstants.RepairStageDirectoryPrefix}{Guid.NewGuid():N}");
 
     try
     {
@@ -523,7 +524,7 @@ internal class AgentInstallerWindows(
     }
     catch (Exception ex)
     {
-      Logger.LogWarning(ex, "Failed to delete temporary directory {DirectoryPath}.", directoryPath);
+      Logger.LogWarning(ex, "Failed to delete directory {DirectoryPath}.", directoryPath);
     }
   }
 

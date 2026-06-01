@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using ControlR.Agent.Shared.Models;
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.NativeInterop.Unix;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
@@ -134,7 +135,7 @@ internal class AgentInstallerLinux(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while installing the ControlR service.");
+      _logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
     }
     finally
     {
@@ -254,7 +255,7 @@ internal class AgentInstallerLinux(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while uninstalling the ControlR service.");
+      _logger.LogError(ex, $"Error while uninstalling the {BrandingConstants.BrandName} service.");
     }
     finally
     {
@@ -308,10 +309,10 @@ internal class AgentInstallerLinux(
   {
     if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
-      return "/etc/systemd/user/controlr.desktop.service";
+      return $"/etc/systemd/user/{BrandingConstants.LinuxDesktopServiceName}";
     }
 
-    return $"/etc/systemd/user/controlr.desktop-{instanceOptions.Value.InstanceId}.service";
+    return $"/etc/systemd/user/{BrandingConstants.LinuxDesktopServiceName.Replace(".service", "")}-{instanceOptions.Value.InstanceId}.service";
   }
 
   private string GetDesktopServiceName()
@@ -333,17 +334,17 @@ internal class AgentInstallerLinux(
   {
     if (string.IsNullOrWhiteSpace(instanceOptions.Value.InstanceId))
     {
-      return "controlr.agent.service";
+      return BrandingConstants.LinuxAgentServiceName;
     }
 
-    return $"controlr.agent-{instanceOptions.Value.InstanceId}.service";
+    return $"{BrandingConstants.LinuxAgentServiceName.Replace(".service", "")}-{instanceOptions.Value.InstanceId}.service";
   }
 
   private async Task<string> PrepareRepairStage(string bundleZipPath, string installDir)
   {
     var parentDirectory = Path.GetDirectoryName(installDir)
       ?? throw new DirectoryNotFoundException("Unable to determine the install directory parent.");
-    var stageDirectory = Path.Combine(parentDirectory, $".controlr-desktop-repair-{Guid.NewGuid():N}");
+    var stageDirectory = Path.Combine(parentDirectory, $"{BrandingConstants.RepairStageDirectoryPrefix}{Guid.NewGuid():N}");
 
     try
     {
@@ -422,11 +423,13 @@ internal class AgentInstallerLinux(
       UnixFileMode.OtherRead |
       UnixFileMode.OtherExecute;
 
-    foreach (var executablePath in new[]
+    var executablePaths = new[]
     {
       FilesystemPathProvider.GetAgentExecutablePath(),
       Path.Combine(installDirectory, "DesktopClient", AppConstants.DesktopClientFileName)
-    })
+    };
+
+    foreach (var executablePath in executablePaths)
     {
       if (!_fileSystem.FileExists(executablePath))
       {

@@ -1,5 +1,6 @@
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Options;
@@ -107,7 +108,7 @@ internal abstract class AgentInstallerBase(
         : StringComparison.Ordinal;
 
       var procs = ProcessManager
-        .GetProcessesByName("ControlR.Agent")
+        .GetProcessesByName(BrandingConstants.AgentBaseName)
         .Where(x =>
           x.Id != _systemEnvironment.ProcessId &&
           string.Equals(x.FilePath, targetAgentPath, comparison));
@@ -125,7 +126,7 @@ internal abstract class AgentInstallerBase(
       }
 
       procs = ProcessManager
-        .GetProcessesByName("ControlR.DesktopClient")
+        .GetProcessesByName(BrandingConstants.DesktopClientBaseName)
         .Where(x =>
           targetDesktopClientPath is not null &&
           string.Equals(x.FilePath, targetDesktopClientPath, comparison));

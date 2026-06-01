@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.Libraries.Shared.Constants;
@@ -25,8 +26,8 @@ public static class AppConstants
   public static string DesktopClientFileName =>
     SystemEnvironment.Instance.Platform switch
     {
-      SystemPlatform.Windows => "ControlR.DesktopClient.exe",
-      SystemPlatform.Linux or SystemPlatform.MacOs => "ControlR.DesktopClient",
+      SystemPlatform.Windows => $"{BrandingConstants.DesktopClientBaseName}.exe",
+      SystemPlatform.Linux or SystemPlatform.MacOs => BrandingConstants.DesktopClientBaseName,
       _ => throw new PlatformNotSupportedException()
     };
   public static string FfmpegFileName =>
@@ -56,10 +57,10 @@ public static class AppConstants
   {
     return platform switch
     {
-      SystemPlatform.Windows => "ControlR.Agent.exe",
-      SystemPlatform.Android => "ControlR.Agent.exe",
-      SystemPlatform.Linux => "ControlR.Agent",
-      SystemPlatform.MacOs => "ControlR.Agent",
+      SystemPlatform.Windows => $"{BrandingConstants.AgentBaseName}.exe",
+      SystemPlatform.Android => $"{BrandingConstants.AgentBaseName}.exe",
+      SystemPlatform.Linux => BrandingConstants.AgentBaseName,
+      SystemPlatform.MacOs => BrandingConstants.AgentBaseName,
       _ => throw new PlatformNotSupportedException()
     };
   }
@@ -71,11 +72,11 @@ public static class AppConstants
   {
     return runtime switch
     {
-      RuntimeId.WinX64 => "/downloads/win-x64/ControlR.Agent.bundle.zip",
-      RuntimeId.WinX86 => "/downloads/win-x86/ControlR.Agent.bundle.zip",
-      RuntimeId.LinuxX64 => "/downloads/linux-x64/ControlR.Agent.bundle.zip",
-      RuntimeId.MacOsX64 => "/downloads/osx-x64/ControlR.Agent.bundle.zip",
-      RuntimeId.MacOsArm64 => "/downloads/osx-arm64/ControlR.Agent.bundle.zip",
+      RuntimeId.WinX64 => $"/downloads/win-x64/{BrandingConstants.BundleZipBaseName}.zip",
+      RuntimeId.WinX86 => $"/downloads/win-x86/{BrandingConstants.BundleZipBaseName}.zip",
+      RuntimeId.LinuxX64 => $"/downloads/linux-x64/{BrandingConstants.BundleZipBaseName}.zip",
+      RuntimeId.MacOsX64 => $"/downloads/osx-x64/{BrandingConstants.BundleZipBaseName}.zip",
+      RuntimeId.MacOsArm64 => $"/downloads/osx-arm64/{BrandingConstants.BundleZipBaseName}.zip",
       _ => throw new PlatformNotSupportedException()
     };
   }
@@ -85,25 +86,27 @@ public static class AppConstants
   /// </summary>
   public static string GetInstallerDownloadPath(RuntimeId runtime)
   {
+    var installerBase = BrandingConstants.InstallerBaseName;
     return runtime switch
     {
-      RuntimeId.WinX64 => "/downloads/win-x64/ControlR.Agent.Installer.exe",
-      RuntimeId.WinX86 => "/downloads/win-x86/ControlR.Agent.Installer.exe",
-      RuntimeId.LinuxX64 => "/downloads/linux-x64/ControlR.Agent.Installer",
-      RuntimeId.MacOsX64 => "/downloads/osx-x64/ControlR.Agent.Installer",
-      RuntimeId.MacOsArm64 => "/downloads/osx-arm64/ControlR.Agent.Installer",
+      RuntimeId.WinX64 => $"/downloads/win-x64/{installerBase}.exe",
+      RuntimeId.WinX86 => $"/downloads/win-x86/{installerBase}.exe",
+      RuntimeId.LinuxX64 => $"/downloads/linux-x64/{installerBase}",
+      RuntimeId.MacOsX64 => $"/downloads/osx-x64/{installerBase}",
+      RuntimeId.MacOsArm64 => $"/downloads/osx-arm64/{installerBase}",
       _ => throw new PlatformNotSupportedException()
     };
   }
 
   public static string GetInstallerFileName(SystemPlatform platform)
   {
+    var installerBase = BrandingConstants.InstallerBaseName;
     return platform switch
     {
-      SystemPlatform.Windows => "ControlR.Agent.Installer.exe",
-      SystemPlatform.Android => "ControlR.Agent.Installer.exe",
-      SystemPlatform.Linux => "ControlR.Agent.Installer",
-      SystemPlatform.MacOs => "ControlR.Agent.Installer",
+      SystemPlatform.Windows => $"{installerBase}.exe",
+      SystemPlatform.Android => $"{installerBase}.exe",
+      SystemPlatform.Linux => installerBase,
+      SystemPlatform.MacOs => installerBase,
       _ => throw new PlatformNotSupportedException()
     };
   }

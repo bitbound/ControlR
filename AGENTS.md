@@ -56,6 +56,8 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 
 # C# Coding Standards
 - Braces go on new lines.
+- Prefix private fields (including static) with `_` and use camelCase. E.g. `private readonly IFileSystem _fileSystem;`
+- Constants: `PascalCase` with `const` modifier. E.g. `private const int MaxRetries = 5;`
 - Prefer var over explicit types.
   - Example: `var directories = _fileSystem.GetDirectories(path);`
 - Use collection expressions (`[]`).

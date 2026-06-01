@@ -1,5 +1,6 @@
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Shared.Services;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.FileSystem;

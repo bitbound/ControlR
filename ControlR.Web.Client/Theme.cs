@@ -1,16 +1,18 @@
+using ControlR.Libraries.Branding;
+
 namespace ControlR.Web.Client;
 
 public static class Theme
 {
   public static PaletteDark DarkPalette { get; } = new PaletteDark
   {
-    Primary = "#2196F3",
-    Secondary = "#1ddbd2",
-    Tertiary = "#7b21f3",
-    Info = "#89b4f8",
-    Success = "#2cb67d",
-    Warning = "#facc15",
-    Error = "#f87171",
+    Primary = $"#{BrandingConstants.PrimaryColorDark}",
+    Secondary = $"#{BrandingConstants.SecondaryColorDark}",
+    Tertiary = $"#{BrandingConstants.TertiaryColorDark}",
+    Info = $"#{BrandingConstants.InfoColorDark}",
+    Success = $"#{BrandingConstants.SuccessColorDark}",
+    Warning = $"#{BrandingConstants.WarningColorDark}",
+    Error = $"#{BrandingConstants.ErrorColorDark}",
     Dark = "#212121",
 
     TextPrimary = "rgba(255, 255, 255, 0.87)",
@@ -46,13 +48,13 @@ public static class Theme
 
   public static PaletteLight LightPalette { get; } = new PaletteLight
   {
-    Primary = "#2196F3",
-    Secondary = "#008c7a",
-    Tertiary = "#7b21f3",
-    Info = "#0d6efd",
-    Success = "#28a745",
-    Warning = "#ffc107",
-    Error = "#dc3545",
+    Primary = $"#{BrandingConstants.PrimaryColorLight}",
+    Secondary = $"#{BrandingConstants.SecondaryColorLight}",
+    Tertiary = $"#{BrandingConstants.TertiaryColorLight}",
+    Info = $"#{BrandingConstants.InfoColorLight}",
+    Success = $"#{BrandingConstants.SuccessColorLight}",
+    Warning = $"#{BrandingConstants.WarningColorLight}",
+    Error = $"#{BrandingConstants.ErrorColorLight}",
     Dark = "#424242",
 
     TextPrimary = "rgba(0, 0, 0, 0.87)",

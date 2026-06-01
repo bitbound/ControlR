@@ -17,13 +17,13 @@
 else if (_isConfigured == false)
 {
   <MudAlert Severity="Severity.Warning">
-    The Aspire Dashboard values are not properly configured in the ControlR server settings.
+    The Aspire Dashboard values are not properly configured in the @(BrandingConstants.BrandName) server settings.
   </MudAlert>
 }
 else if (_aspireUrl is not null)
 {
   <MudText Class="mt-6">
-    The Aspire Dashboard is configured for this ControlR server. You can access it by clicking the link below:
+    The Aspire Dashboard is configured for this @(BrandingConstants.BrandName) server. You can access it by clicking the link below:
   </MudText>
   <MudText Class="mt-4">
     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@_aspireUrl.ToString()" Target="_blank"

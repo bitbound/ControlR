@@ -1,4 +1,5 @@
 using ControlR.Agent.Common.Interfaces;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
@@ -133,10 +134,10 @@ internal class DesktopClientWatcherMac(
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "/Library/LaunchAgents/app.controlr.desktop.plist";
+      return $"/Library/LaunchAgents/{BrandingConstants.MacServicePrefix}.desktop.plist";
     }
 
-    return $"/Library/LaunchAgents/app.controlr.desktop.{_instanceOptions.Value.InstanceId}.plist";
+    return $"/Library/LaunchAgents/{BrandingConstants.MacServicePrefix}.desktop.{_instanceOptions.Value.InstanceId}.plist";
   }
 
   private string GetDesktopClientServiceName()
@@ -145,10 +146,10 @@ internal class DesktopClientWatcherMac(
     // Based on ServiceControlMac implementation
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "app.controlr.desktop";
+      return $"{BrandingConstants.MacServicePrefix}.desktop";
     }
 
-    return $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
+    return $"{BrandingConstants.MacServicePrefix}.desktop.{_instanceOptions.Value.InstanceId}";
   }
 
   private async Task<List<string>> GetLoggedInUsersAsync()

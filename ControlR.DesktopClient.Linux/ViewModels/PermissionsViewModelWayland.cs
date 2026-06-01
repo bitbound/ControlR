@@ -37,12 +37,6 @@ public partial class PermissionsViewModelWayland(
     _logger.LogInformation("Wayland permission view state refreshed. Granted={Granted}", isGranted);
   }
 
-  protected override async Task OnInitializeAsync()
-  {
-    await base.OnInitializeAsync();
-    await SetPermissionValues();
-  }
-
   [RelayCommand]
   private async Task GrantRemoteControlPermission()
   {

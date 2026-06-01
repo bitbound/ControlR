@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Constants;
+﻿using ControlR.Libraries.Branding;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.NativeInterop.Unix;
 
 namespace ControlR.DesktopClient.Linux;
@@ -9,12 +10,12 @@ public static class PathConstants
   {
     var isRoot = Libc.Geteuid() == 0;
     var rootDir = isRoot
-       ? "/var/log/controlr"
-       : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr");
+       ? $"/var/log/{BrandingConstants.UnixLogDirectoryName}"
+       : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), BrandingConstants.UnixHiddenDirectoryName);
 
     rootDir = AppendInstanceId(rootDir, instanceId);
     var logsDir = isRoot ? rootDir : Path.Combine(rootDir, "logs");
-    return Path.Combine(logsDir, "ControlR.DesktopClient", "LogFile.log");
+    return Path.Combine(logsDir, BrandingConstants.DesktopClientBaseName, "LogFile.log");
   }
   public static string GetWaylandRemoteDesktopRestoreTokenPath(string? instanceId)
   {
@@ -38,8 +39,8 @@ public static class PathConstants
   private static string GetSettingsDirectory(string? instanceId)
   {
     var rootDir = Libc.Geteuid() == 0
-      ? "/etc/controlr"
-      : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".controlr");
+      ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
+      : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), BrandingConstants.UnixHiddenDirectoryName);
 
     return AppendInstanceId(rootDir, instanceId);
   }

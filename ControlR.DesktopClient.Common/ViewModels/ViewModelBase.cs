@@ -62,6 +62,16 @@ public abstract class ViewModelBase<TView> : ObservableObject, IViewModelBase
     return ValueTask.CompletedTask;
   }
 
+  /// <summary>
+  /// <para>
+  ///   Override this method to perform initialization logic. 
+  ///   This method will be called only once when the view model is first initialized.
+  ///   If the view model is already initialized, subsequent calls to Initialize() will not invoke this method again.
+  /// </para>
+  /// <para>
+  ///   View models that are registered as singleton will only have this method called once, even if the view is disposed and recreated.
+  /// </para>
+  /// </summary> 
   protected virtual Task OnInitializeAsync()
   {
     return Task.CompletedTask;

@@ -32,9 +32,6 @@
     <File Path="Directory.Packages.props" />
     <File Path="README.md" />
   </Folder>
-  <Folder Name="/Solution Items/.build/">
-    <File Path=".build/Build.ps1" />
-  </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj" />
     <Project Path="Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj" />
@@ -43,6 +40,7 @@
     <Project Path="Tests/ControlR.DesktopClient.Mac.Tests/ControlR.DesktopClient.Mac.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj" />
+    <Project Path="Tests/ControlR.Libraries.Branding.Tests/ControlR.Libraries.Branding.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.CaptureRecording.Tests/ControlR.Libraries.CaptureRecording.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Configuration.InMemory.Tests/ControlR.Libraries.Configuration.InMemory.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
@@ -50,6 +48,7 @@
     <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />
     <Project Path="Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj" />
     <Project Path="Tests/ControlR.Web.Server.UITests/ControlR.Web.Server.UITests.csproj" />
+    <Project Path="Tests/ControlR.Solution.Tests/ControlR.Solution.Tests.csproj" />
   </Folder>
   <Folder Name="/Tools/">
     <Project Path="Tools/ControlR.Agent.LoadTester/ControlR.Agent.LoadTester.csproj" />

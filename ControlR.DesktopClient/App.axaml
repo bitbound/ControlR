@@ -42,7 +42,7 @@
 
 	<TrayIcon.Icons>
 		<TrayIcons>
-			<TrayIcon Icon="/Assets/appicon.ico" ToolTipText="ControlR" Command="{Binding ShowMainWindowCommand}">
+			<TrayIcon Icon="/Assets/appicon.ico" ToolTipText="{x:Static brand:BrandingConstants.BrandName}" Command="{Binding ShowMainWindowCommand}">
 				<TrayIcon.Menu>
 					<NativeMenu>
 						<NativeMenuItem Header="{x:Static common:Localization.TrayShow}" Command="{Binding ShowMainWindowCommand}" />

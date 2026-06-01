@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using System.ServiceProcess;
 using ControlR.Agent.Shared.Interfaces;
 using ControlR.Agent.Shared.Options;
+using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.Agent.Shared.Services.Windows;
@@ -106,9 +107,9 @@ internal class ServiceControlWindows(
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "ControlR.Agent";
+      return BrandingConstants.WindowsServiceBaseName;
     }
 
-    return $"ControlR.Agent ({_instanceOptions.Value.InstanceId})";
+    return $"{BrandingConstants.WindowsServiceBaseName} ({_instanceOptions.Value.InstanceId})";
   }
 }

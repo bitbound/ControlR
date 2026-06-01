@@ -1,4 +1,5 @@
 using ControlR.Agent.Shared.Options;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Options;
 
@@ -160,19 +161,19 @@ internal class ServiceControlLinux(
     {
         if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
         {
-            return "controlr.agent.service";
+            return BrandingConstants.LinuxAgentServiceName;
         }
 
-        return $"controlr.agent-{_instanceOptions.Value.InstanceId}.service";
+        return $"{BrandingConstants.LinuxAgentServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
     }
     private string GetDesktopClientServiceName()
     {
         if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
         {
-            return "controlr.desktop.service";
+            return BrandingConstants.LinuxDesktopServiceName;
         }
 
-        return $"controlr.desktop-{_instanceOptions.Value.InstanceId}.service";
+        return $"{BrandingConstants.LinuxDesktopServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
     }
     private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
     {

@@ -1,5 +1,7 @@
 using ControlR.Agent.Shared.Constants;
 using ControlR.Agent.Shared.Options;
+using ControlR.Libraries.Branding;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Options;
 
@@ -121,12 +123,12 @@ public class FileSystemPathProvider(
   public string GetAgentInstallDirectory()
   {
     var baseDir = _systemEnvironment.IsDebug
-      ? Path.Combine(Path.GetTempPath(), "ControlR", "Install")
+      ? Path.Combine(Path.GetTempPath(), BrandingConstants.WindowsInstallDirectoryName, "Install")
       : _systemEnvironment.Platform switch
       {
-        SystemPlatform.Windows => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", "ControlR"),
-        SystemPlatform.Linux => "/usr/local/bin/ControlR",
-        SystemPlatform.MacOs => "/Library/Application Support/ControlR",
+        SystemPlatform.Windows => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", BrandingConstants.WindowsInstallDirectoryName),
+        SystemPlatform.Linux => $"/usr/local/bin/{BrandingConstants.LinuxInstallDirectoryName}",
+        SystemPlatform.MacOs => $"/Library/Application Support/{BrandingConstants.MacInstallDirectoryName}",
         _ => throw new PlatformNotSupportedException()
       };
 
@@ -145,22 +147,22 @@ public class FileSystemPathProvider(
     {
       var logsDir = _fileSystem.JoinPaths(GetPathSeparator(),
         _systemEnvironment.GetCommonApplicationDataDirectory(),
-        "ControlR");
+        BrandingConstants.WindowsLogDirectoryName);
 
       logsDir = AppendSubDirectories(logsDir);
-      return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", "ControlR.Agent");
+      return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", BrandingConstants.AgentBaseName);
     }
 
     if (_systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS())
     {
       var isElevated = _elevationChecker.IsElevated();
       var rootDir = isElevated
-        ? "/var/log/controlr"
-        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), ".controlr");
+        ? $"/var/log/{BrandingConstants.UnixLogDirectoryName}"
+        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), BrandingConstants.UnixHiddenDirectoryName);
 
       rootDir = AppendSubDirectories(rootDir);
       var logsDir = isElevated ? rootDir : _fileSystem.JoinPaths(GetPathSeparator(), rootDir, "logs");
-      return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "ControlR.Agent");
+      return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, BrandingConstants.AgentBaseName);
     }
 
     throw new PlatformNotSupportedException();
@@ -169,7 +171,7 @@ public class FileSystemPathProvider(
   public string GetBundleHashFilePath()
   {
     var settingsDirectory = GetSettingsDirectory();
-    return _fileSystem.JoinPaths(GetPathSeparator(), settingsDirectory, ".controlr-bundle.sha256");
+    return _fileSystem.JoinPaths(GetPathSeparator(), settingsDirectory, BrandingConstants.BundleHashFileName);
   }
 
   public string GetBundleRootDirectory()
@@ -195,7 +197,7 @@ public class FileSystemPathProvider(
     }
 
     var startupDir = _systemEnvironment.StartupDirectory;
-    return Path.Combine(startupDir, "DesktopClient");
+    return Path.Combine(startupDir, BrandingConstants.DesktopClientDirectoryName);
   }
 
   public string GetDesktopExecutablePath()
@@ -232,22 +234,22 @@ public class FileSystemPathProvider(
     {
       var logsDir = _fileSystem.JoinPaths(GetPathSeparator(),
         _systemEnvironment.GetCommonApplicationDataDirectory(),
-        "ControlR");
+        BrandingConstants.WindowsLogDirectoryName);
 
       logsDir = AppendSubDirectories(logsDir);
-      return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", "ControlR.Agent.Installer");
+      return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", BrandingConstants.InstallerBaseName);
     }
 
     if (_systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS())
     {
       var isElevated = _elevationChecker.IsElevated();
       var rootDir = isElevated
-        ? "/var/log/controlr"
-        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), ".controlr");
+        ? $"/var/log/{BrandingConstants.UnixLogDirectoryName}"
+        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), BrandingConstants.UnixHiddenDirectoryName);
 
       rootDir = AppendSubDirectories(rootDir);
       var logsDir = isElevated ? rootDir : _fileSystem.JoinPaths(GetPathSeparator(), rootDir, "logs");
-      return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "ControlR.Agent.Installer");
+      return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, BrandingConstants.InstallerBaseName);
     }
 
     throw new PlatformNotSupportedException();
@@ -264,11 +266,11 @@ public class FileSystemPathProvider(
     return _systemEnvironment.Platform switch
     {
       SystemPlatform.Linux => instanceId is null or ""
-        ? "/etc/systemd/system/controlr.agent.service"
-        : $"/etc/systemd/system/controlr.agent-{instanceId}.service",
+        ? $"/etc/systemd/system/{BrandingConstants.LinuxAgentServiceName}"
+        : $"/etc/systemd/system/{BrandingConstants.LinuxAgentServiceName.Replace(".service", "")}-{instanceId}.service",
       SystemPlatform.MacOs => instanceId is null or ""
-        ? "/Library/LaunchDaemons/app.controlr.agent.plist"
-        : $"/Library/LaunchDaemons/app.controlr.agent.{instanceId}.plist",
+        ? $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.plist"
+        : $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.{instanceId}.plist",
       _ => throw new PlatformNotSupportedException()
     };
   }
@@ -284,8 +286,8 @@ public class FileSystemPathProvider(
     return _systemEnvironment.Platform switch
     {
       SystemPlatform.Windows => instanceId is null or ""
-        ? @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR"
-        : $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ControlR ({instanceId})",
+        ? $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{BrandingConstants.WindowsUninstallRegistryKeyName}"
+        : $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{BrandingConstants.WindowsUninstallRegistryKeyName} ({instanceId})",
       _ => throw new PlatformNotSupportedException()
     };
   }
@@ -305,7 +307,7 @@ public class FileSystemPathProvider(
     var instanceId = GetEffectiveInstanceId();
     var homeRoot = _systemEnvironment.IsMacOS() ? "/Users" : "/home";
 
-    return _fileSystem.JoinPaths(GetPathSeparator(), homeRoot, username, ".controlr", instanceId, "logs", "ControlR.DesktopClient");
+    return _fileSystem.JoinPaths(GetPathSeparator(), homeRoot, username, BrandingConstants.UnixHiddenDirectoryName, instanceId, "logs", BrandingConstants.DesktopClientBaseName);
   }
 
   public string GetUnixDesktopClientLogsDirectoryForRoot()
@@ -316,11 +318,11 @@ public class FileSystemPathProvider(
     }
 
     var instanceId = GetEffectiveInstanceId();
-    var logsDir = "/var/log/controlr";
+    var logsDir = $"/var/log/{BrandingConstants.UnixLogDirectoryName}";
 
     logsDir = _fileSystem.JoinPaths(GetPathSeparator(), logsDir, instanceId);
 
-    return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "ControlR.DesktopClient");
+    return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, BrandingConstants.DesktopClientBaseName);
   }
 
   public string GetWindowsDesktopClientLogsDirectory()
@@ -334,7 +336,7 @@ public class FileSystemPathProvider(
 
     var logsDir = _fileSystem.JoinPaths(GetPathSeparator(),
          _systemEnvironment.GetCommonApplicationDataDirectory(),
-         "ControlR");
+         BrandingConstants.WindowsLogDirectoryName);
 
     if (isDebug)
     {
@@ -343,7 +345,7 @@ public class FileSystemPathProvider(
 
     logsDir = _fileSystem.JoinPaths(GetPathSeparator(), logsDir, GetEffectiveInstanceId());
 
-    return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", "ControlR.DesktopClient");
+    return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", BrandingConstants.DesktopClientBaseName);
 
   }
 
@@ -400,7 +402,7 @@ public class FileSystemPathProvider(
       var rootDir = _fileSystem.JoinPaths(
         GetPathSeparator(),
         _systemEnvironment.GetCommonApplicationDataDirectory(),
-        "ControlR");
+        BrandingConstants.WindowsInstallDirectoryName);
 
       return AppendSubDirectories(rootDir);
     }
@@ -409,8 +411,8 @@ public class FileSystemPathProvider(
     if (_systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS())
     {
       var rootDir = _elevationChecker.IsElevated()
-        ? "/etc/controlr"
-        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), ".controlr");
+        ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
+        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), BrandingConstants.UnixHiddenDirectoryName);
 
       return AppendSubDirectories(rootDir);
     }

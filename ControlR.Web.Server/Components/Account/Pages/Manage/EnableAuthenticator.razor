@@ -1,4 +1,5 @@
 ﻿@page "/Account/Manage/EnableAuthenticator"
+@using ControlR.Libraries.Branding
 
 @inject UserManager<AppUser> UserManager
 @inject UrlEncoder UrlEncoder
@@ -175,7 +176,7 @@ else
   {
     var totpIssuerName = AppOptions.CurrentValue.AuthenticatorIssuerName is { Length: > 0 } issuerName
       ? issuerName
-      : "ControlR";
+      : BrandingConstants.AuthenticatorIssuerName;
     
     return string.Format(
       CultureInfo.InvariantCulture,

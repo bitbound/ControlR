@@ -4,6 +4,7 @@ using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
+using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Runtime.Versioning;
@@ -27,9 +28,8 @@ internal class AgentInstallerMac(
   ILogger<AgentInstallerMac> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
 {
-  private const string MacInstallerTempDirectory = "/tmp/ControlR_Update";
-
   private static readonly SemaphoreSlim _installLock = new(1, 1);
+  private static readonly string _macInstallerTempDirectory = $"/tmp/{BrandingConstants.UpdaterTempDirectoryName}";
 
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
   private readonly IFileSystem _fileSystem = fileSystem;
@@ -81,7 +81,7 @@ internal class AgentInstallerMac(
 
       try
       {
-        var tempAppBundlePath = Path.Combine(tempExtractDirectory, "ControlR.app");
+        var tempAppBundlePath = Path.Combine(tempExtractDirectory, $"{BrandingConstants.MacAppBundleBaseName}.app");
         await retryer.Retry(
           async () => {
             await ExtractBundleToInstallDirectory(request.BundleZipPath, tempExtractDirectory);
@@ -135,7 +135,7 @@ internal class AgentInstallerMac(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while installing the ControlR service.");
+      _logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
     }
     finally
     {
@@ -287,7 +287,7 @@ internal class AgentInstallerMac(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while uninstalling the ControlR service.");
+      _logger.LogError(ex, $"Error while uninstalling the {BrandingConstants.BrandName} service.");
     }
     finally
     {
@@ -330,8 +330,8 @@ internal class AgentInstallerMac(
   private string GetAgentServiceName()
   {
     return string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? "app.controlr.agent"
-      : $"app.controlr.agent.{_instanceOptions.Value.InstanceId}";
+      ? $"{BrandingConstants.MacServicePrefix}.agent"
+      : $"{BrandingConstants.MacServicePrefix}.agent.{_instanceOptions.Value.InstanceId}";
   }
 
   private string GetBundleStateDirectory()
@@ -342,8 +342,8 @@ internal class AgentInstallerMac(
   private string GetDesktopServiceName()
   {
     return string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? "app.controlr.desktop"
-      : $"app.controlr.desktop.{_instanceOptions.Value.InstanceId}";
+      ? $"{BrandingConstants.MacServicePrefix}.desktop"
+      : $"{BrandingConstants.MacServicePrefix}.desktop.{_instanceOptions.Value.InstanceId}";
   }
 
   private string GetInstalledAgentPath()
@@ -389,30 +389,30 @@ internal class AgentInstallerMac(
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "/Library/LaunchDaemons/app.controlr.agent.installer.plist";
+      return $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.installer.plist";
     }
 
-    return $"/Library/LaunchDaemons/app.controlr.agent.installer.{_instanceOptions.Value.InstanceId}.plist";
+    return $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.installer.{_instanceOptions.Value.InstanceId}.plist";
   }
 
   private string GetInstallerDaemonServiceName()
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "app.controlr.agent.installer";
+      return $"{BrandingConstants.MacServicePrefix}.agent.installer";
     }
 
-    return $"app.controlr.agent.installer.{_instanceOptions.Value.InstanceId}";
+    return $"{BrandingConstants.MacServicePrefix}.agent.installer.{_instanceOptions.Value.InstanceId}";
   }
 
   private string GetLaunchAgentFilePath()
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "/Library/LaunchAgents/app.controlr.desktop.plist";
+      return $"/Library/LaunchAgents/{BrandingConstants.MacServicePrefix}.desktop.plist";
     }
 
-    return $"/Library/LaunchAgents/app.controlr.desktop.{_instanceOptions.Value.InstanceId}.plist";
+    return $"/Library/LaunchAgents/{BrandingConstants.MacServicePrefix}.desktop.{_instanceOptions.Value.InstanceId}.plist";
   }
 
   private async Task<string> GetLaunchDaemonFile()
@@ -449,15 +449,15 @@ internal class AgentInstallerMac(
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
     {
-      return "/Library/LaunchDaemons/app.controlr.agent.plist";
+      return $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.plist";
     }
 
-    return $"/Library/LaunchDaemons/app.controlr.agent.{_instanceOptions.Value.InstanceId}.plist";
+    return $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.{_instanceOptions.Value.InstanceId}.plist";
   }
 
   private string GetRepairStageDirectory()
   {
-    return _fileSystem.JoinPaths('/', PathConstants.MacApplicationsDirectory, $".controlr-desktop-repair-{Guid.NewGuid():N}");
+    return _fileSystem.JoinPaths('/', PathConstants.MacApplicationsDirectory, $"{BrandingConstants.RepairStageDirectoryPrefix}{Guid.NewGuid():N}");
   }
 
   private string GetSourceAgentPath(string sourceAppBundlePath)
@@ -471,7 +471,7 @@ internal class AgentInstallerMac(
       ? AppConstants.DefaultInstallDirectoryName
       : _instanceOptions.Value.InstanceId;
 
-    return Path.Combine(MacInstallerTempDirectory, instanceSegment, "bundle");
+    return Path.Combine(_macInstallerTempDirectory, instanceSegment, "bundle");
   }
 
   private string GetUpdaterInstallerPath()
@@ -482,7 +482,7 @@ internal class AgentInstallerMac(
 
     return _fileSystem.JoinPaths(
       '/',
-      MacInstallerTempDirectory,
+      _macInstallerTempDirectory,
       instanceSegment,
       AppConstants.GetInstallerFileName(SystemPlatform.MacOs));
   }
@@ -518,8 +518,8 @@ internal class AgentInstallerMac(
 
     foreach (var executablePath in new[]
     {
-      Path.Combine(appBundlePath, "Contents", "MacOS", "ControlR.DesktopClient"),
-      Path.Combine(appBundlePath, "Contents", "Library", "LaunchServices", "ControlR.Agent")
+      Path.Combine(appBundlePath, "Contents", "MacOS", BrandingConstants.DesktopClientBaseName),
+      Path.Combine(appBundlePath, "Contents", "Library", "LaunchServices", BrandingConstants.AgentBaseName)
     })
     {
       if (!_fileSystem.FileExists(executablePath))

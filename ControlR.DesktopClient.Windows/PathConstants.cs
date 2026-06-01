@@ -1,4 +1,5 @@
-﻿using ControlR.Libraries.Shared.Constants;
+﻿using ControlR.Libraries.Branding;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.DesktopClient.Windows;
@@ -9,9 +10,9 @@ public static class PathConstants
   {
     var logsDir = Path.Combine(
           Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-          "ControlR");
+          BrandingConstants.WindowsInstallDirectoryName);
     logsDir = AppendSubDirectories(logsDir, instanceId);
-    return Path.Combine(logsDir, "Logs", "ControlR.DesktopClient", "LogFile.log");
+    return Path.Combine(logsDir, "Logs", BrandingConstants.DesktopClientBaseName, "LogFile.log");
   }
 
   private static string AppendSubDirectories(string rootDir, string? instanceId)
