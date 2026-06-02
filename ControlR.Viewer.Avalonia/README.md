@@ -112,6 +112,8 @@ if (!result.IsSuccess)
 
 You can also get `INavigator` through `ViewerRegistry` or `ViewerInstanceInfo` if you are operating from outside the control tree.
 
+If you need to access viewer-scoped services from outside the control itself, subscribe through `ViewerRegistry.OnServicesReady(viewerInstanceId, ...)`. If the viewer is already registered, the handler is invoked immediately; otherwise it runs when that viewer instance is registered.
+
 ## ViewerRegistry
 
 The library exposes a global `ViewerRegistry` helper (in `ControlR.Viewer.Avalonia.Services`) that stores information about the `ControlrViewer` and `IServiceProvider` instances that are currently active. This allows you to interact with the viewers and their services from anywhere in your application, as long as you have the viewer's instance ID (which is a `Guid`).
@@ -122,6 +124,7 @@ Important APIs:
 
 - `ViewerRegistry.Register(Guid instanceId, ControlrViewer viewer, IServiceProvider serviceProvider)` — registers a viewer instance (the control registers itself automatically).
 - `ViewerRegistry.Unregister(Guid instanceId)` — removes a registered instance (the control unregisters itself on disposal).
+- `ViewerRegistry.OnServicesReady(Guid instanceId, Func<ViewerInstanceInfo, Task>)` — subscribes to service-ready notifications for a single viewer instance.
 - `ViewerRegistry.GetRequiredService<T>(Guid instanceId)` — resolves a required service from a specific viewer's scope and throws if not found.
 - `ViewerRegistry.GetService<T>(Guid instanceId)` — attempts to resolve a service and returns null if not found.
 - `ViewerRegistry.GetService(Guid instanceId, Type serviceType)` — non-generic service resolution.

@@ -7,6 +7,7 @@ using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Viewer.Common.Options;
 using ControlR.Viewer.Avalonia.Services;
 using ControlR.Viewer.Avalonia.Services.Navigation;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.AvaloniaViewerExample.ViewModels;
 
@@ -36,7 +37,7 @@ public interface IMainWindowViewModel : INotifyPropertyChanged, IDisposable
   string TwoFactorCode { get; set; }
   ControlrViewerOptions ViewerOptions { get; }
 
-  void AttachViewer(Guid viewerInstanceId);
+  void RegisterAuthChangeHandler(Guid viewerInstanceId);
 }
 
 public partial class MainWindowViewModel : ObservableObject, IMainWindowViewModel
@@ -105,31 +106,29 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   public partial string TwoFactorCode { get; set; } = string.Empty;
   public ControlrViewerOptions ViewerOptions { get; }
 
-  public void AttachViewer(Guid viewerInstanceId)
-  {
-    if (_viewerInstanceId == viewerInstanceId && _authSession is not null)
-    {
-      return;
-    }
-
-    _authSession?.StateChanged -= HandleSessionStateChanged;
-
-    var authSession = ViewerRegistry.GetService<IControlrAuthSession>(viewerInstanceId);
-    if (authSession is null)
-    {
-      return;
-    }
-
-    _viewerInstanceId = viewerInstanceId;
-    _authSession = authSession;
-    _authSession.SetBaseUrl(ViewerOptions.BaseUrl);
-    _authSession.StateChanged += HandleSessionStateChanged;
-  }
-
   public void Dispose()
   {
     _authSession?.StateChanged -= HandleSessionStateChanged;
     GC.SuppressFinalize(this);
+  }
+
+  public void RegisterAuthChangeHandler(Guid viewerInstanceId)
+  {
+    if (_viewerInstanceId == viewerInstanceId && _authSession is not null)
+    {
+      var logger = ViewerRegistry.GetService<ILogger<MainWindowViewModel>>(viewerInstanceId);
+      logger?.LogWarning("Attempted to register auth change handler for viewer instance {InstanceId}, but a handler is already registered.", viewerInstanceId);
+      return;
+    }
+
+    _authSession?.StateChanged -= HandleSessionStateChanged;
+
+    var authSession = ViewerRegistry.GetAuthSession(viewerInstanceId);
+    
+    _viewerInstanceId = viewerInstanceId;
+    _authSession = authSession;
+    _authSession.SetBaseUrl(ViewerOptions.BaseUrl);
+    _authSession.StateChanged += HandleSessionStateChanged;
   }
 
   private async void HandleSessionStateChanged(object? sender, ControlrAuthSessionStateChangedEventArgs e)

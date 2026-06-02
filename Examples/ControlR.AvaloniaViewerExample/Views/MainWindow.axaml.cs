@@ -3,12 +3,14 @@ using Avalonia.Controls;
 using Avalonia.Styling;
 using System.ComponentModel;
 using ControlR.AvaloniaViewerExample.ViewModels;
+using ControlR.Viewer.Avalonia.Services;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 
 namespace ControlR.AvaloniaViewerExample.Views;
 
 public partial class MainWindow : Window
 {
+  private IDisposable? _viewerServicesReadyRegistration;
   private IMainWindowViewModel? _viewModel;
 
   public MainWindow()
@@ -18,6 +20,7 @@ public partial class MainWindow : Window
 
   protected override void OnClosed(EventArgs e)
   {
+    _viewerServicesReadyRegistration?.Dispose();
     _viewModel?.PropertyChanged -= HandleViewModelPropertyChanged;
     _viewModel?.Dispose();
     base.OnClosed(e);
@@ -27,12 +30,6 @@ public partial class MainWindow : Window
   {
     base.OnDataContextChanged(e);
     HandleDataContextChanged();
-  }
-
-  protected override void OnOpened(EventArgs e)
-  {
-    base.OnOpened(e);
-    AttachViewer();
   }
 
   private void ApplyTheme(bool isDarkMode)
@@ -45,13 +42,9 @@ public partial class MainWindow : Window
     Application.Current?.RequestedThemeVariant = themeVariant;
   }
 
-  private void AttachViewer()
-  {
-    _viewModel?.AttachViewer(Viewer.InstanceId);
-  }
-
   private void HandleDataContextChanged()
   {
+    _viewerServicesReadyRegistration?.Dispose();
     _viewModel?.PropertyChanged -= HandleViewModelPropertyChanged;
 
     _viewModel = DataContext as IMainWindowViewModel;
@@ -61,10 +54,16 @@ public partial class MainWindow : Window
     }
 
     ApplyTheme(_viewModel.IsDarkMode);
-    AttachViewer();
+    _viewerServicesReadyRegistration = ViewerRegistry.OnServicesReady(Viewer.InstanceId, HandleViewerServicesReady);
 
     _viewModel.PropertyChanged += HandleViewModelPropertyChanged;
     SyncSidebarSelection(_viewModel.ActivePage);
+  }
+
+  private Task HandleViewerServicesReady(ViewerInstanceInfo instanceInfo)
+  {
+    _viewModel?.RegisterAuthChangeHandler(instanceInfo.InstanceId);
+    return Task.CompletedTask;
   }
 
   private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

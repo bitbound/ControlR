@@ -56,11 +56,11 @@ public partial class MainWindowViewModelFake : ObservableObject, IMainWindowView
     DeviceId = Guid.NewGuid()
   };
 
-  public void AttachViewer(Guid viewerInstanceId)
+  public void Dispose()
   {
   }
 
-  public void Dispose()
+  public void RegisterAuthChangeHandler(Guid viewerInstanceId)
   {
   }
 }
