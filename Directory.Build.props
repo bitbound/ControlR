@@ -20,7 +20,6 @@
     <BrandPrefix>ControlR</BrandPrefix>
     <_BrandSuffix Condition="$(MSBuildProjectName.StartsWith('ControlR'))">
       $(MSBuildProjectName.Substring(8))</_BrandSuffix>
-    <RootNamespace Condition="'$(_BrandSuffix)' != ''">$(BrandPrefix)$(_BrandSuffix.Trim())</RootNamespace>
     <AssemblyName Condition="'$(_BrandSuffix)' != ''">$(BrandPrefix)$(_BrandSuffix.Trim())</AssemblyName>
   </PropertyGroup>
 

@@ -44,6 +44,7 @@ public static partial class BrandingConstants
   public static string AgentBaseName => $"{BrandKey}.Agent";
   public static string DesktopClientBaseName => $"{BrandKey}.DesktopClient";
   public static string InstallerBaseName => $"{BrandKey}.Agent.Installer";
+  public static string WebServerAssemblyName => $"{BrandKey}.Web.Server";
   public static string BundleZipBaseName => $"{BrandKey}.Agent.bundle";
   public static string DesktopClientDirectoryName => "DesktopClient";
 

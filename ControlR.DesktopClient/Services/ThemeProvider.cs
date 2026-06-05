@@ -14,15 +14,15 @@ public interface IThemeProvider
 
 public class ThemeProvider : IThemeProvider
 {
-  private AvaloniaThemeMode _currentThemeMode = Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark;
+  private AvaloniaThemeMode _currentThemeMode = AvaloniaThemeMode.Dark;
 
   public event EventHandler? ThemeChanged;
 
   public ThemeVariant CurrentTheme =>
     _currentThemeMode switch
     {
-      Libraries.Avalonia.Theming.AvaloniaThemeMode.Light => ThemeVariant.Light,
-      Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark => ThemeVariant.Dark,
+      AvaloniaThemeMode.Light => ThemeVariant.Light,
+      AvaloniaThemeMode.Dark => ThemeVariant.Dark,
       _ => ThemeVariant.Default
     };
 
@@ -48,9 +48,9 @@ public class ThemeProvider : IThemeProvider
   {
     CurrentThemeMode = _currentThemeMode switch
     {
-      Libraries.Avalonia.Theming.AvaloniaThemeMode.Light => Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark,
-      Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark => Libraries.Avalonia.Theming.AvaloniaThemeMode.Light,
-      _ => Libraries.Avalonia.Theming.AvaloniaThemeMode.Dark
+      AvaloniaThemeMode.Light => AvaloniaThemeMode.Dark,
+      AvaloniaThemeMode.Dark => AvaloniaThemeMode.Light,
+      _ => AvaloniaThemeMode.Dark
     };
   }
 

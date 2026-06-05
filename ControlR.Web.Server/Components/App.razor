@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using ControlR.Libraries.Branding
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -13,7 +15,7 @@
   <link rel="apple-touch-icon" sizes="512x512" href="@Assets["static/appicon-512.png"]" />
   <link rel="apple-touch-icon" sizes="192x192" href="@Assets["static/appicon-192.png"]" />
   <link rel="stylesheet" href="@Assets["static/app.css"]" />
-  <link rel="stylesheet" href="@Assets["ControlR.Web.Server.styles.css"]" />
+  <link rel="stylesheet" href="@Assets[$"{BrandingConstants.WebServerAssemblyName}.styles.css"]" />
   <link rel="stylesheet" href="@Assets["lib/prismjs/themes/prism-tomorrow.min.css"]" />
   <link rel="stylesheet" href="@Assets["lib/prismjs/plugins/line-numbers/prism-line-numbers.min.css"]" />
   <ImportMap />

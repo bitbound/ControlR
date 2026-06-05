@@ -55,7 +55,7 @@
       <SolidColorBrush x:Key="BorderBrush" Color="#1A000000"/>
 
       <!-- Chat-specific colors -->
-      <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#1e3a5f"/>
+      <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#163A55"/>
 
       <SolidColorBrush x:Key="ChatViewerMessageBrush" Color="#2d2d2d"/>
 
@@ -72,49 +72,49 @@
 
       <!-- Disabled Brushes (used for disabled filled buttons similar to Material UI) -->
       <SolidColorBrush x:Key="PrimaryDisabledBrush" Color="#1F2196F3"/>
-      <SolidColorBrush x:Key="SecondaryDisabledBrush" Color="#1F21F3E9"/>
-      <SolidColorBrush x:Key="TertiaryDisabledBrush" Color="#1F7B21F3"/>
-      <SolidColorBrush x:Key="InfoDisabledBrush" Color="#1F89B4F8"/>
-      <SolidColorBrush x:Key="SuccessDisabledBrush" Color="#1F2CB67D"/>
-      <SolidColorBrush x:Key="WarningDisabledBrush" Color="#1FFACC15"/>
-      <SolidColorBrush x:Key="ErrorDisabledBrush" Color="#1FF87171"/>
+      <SolidColorBrush x:Key="SecondaryDisabledBrush" Color="#1F21f3e9"/>
+      <SolidColorBrush x:Key="TertiaryDisabledBrush" Color="#1F7b21f3"/>
+      <SolidColorBrush x:Key="InfoDisabledBrush" Color="#1F89b4f8"/>
+      <SolidColorBrush x:Key="SuccessDisabledBrush" Color="#1F2cb67d"/>
+      <SolidColorBrush x:Key="WarningDisabledBrush" Color="#1Ffacc15"/>
+      <SolidColorBrush x:Key="ErrorDisabledBrush" Color="#1Ff87171"/>
       <SolidColorBrush x:Key="DarkDisabledBrush" Color="#1F212121"/>
 
-      <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#3321F3E9"/>
-      <SolidColorBrush x:Key="SecondaryPressedBrush" Color="#5521F3E9"/>
+      <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#3321f3e9"/>
+      <SolidColorBrush x:Key="SecondaryPressedBrush" Color="#5521f3e9"/>
 
       <SolidColorBrush x:Key="SecondaryFilledHoverBrush" Color="#3CF4EC"/>
-      <SolidColorBrush x:Key="SecondaryFilledPressedBrush" Color="#4DF5EE"/>
+      <SolidColorBrush x:Key="SecondaryFilledPressedBrush" Color="#4DF5ED"/>
 
-      <SolidColorBrush x:Key="TertiaryHoverBrush" Color="#337B21F3"/>
-      <SolidColorBrush x:Key="TertiaryPressedBrush" Color="#557B21F3"/>
+      <SolidColorBrush x:Key="TertiaryHoverBrush" Color="#337b21f3"/>
+      <SolidColorBrush x:Key="TertiaryPressedBrush" Color="#557b21f3"/>
 
       <SolidColorBrush x:Key="TertiaryFilledHoverBrush" Color="#8B3CF4"/>
-      <SolidColorBrush x:Key="TertiaryFilledPressedBrush" Color="#9550F5"/>
+      <SolidColorBrush x:Key="TertiaryFilledPressedBrush" Color="#954DF5"/>
 
-      <SolidColorBrush x:Key="InfoHoverBrush" Color="#3389B4F8"/>
-      <SolidColorBrush x:Key="InfoPressedBrush" Color="#5589B4F8"/>
+      <SolidColorBrush x:Key="InfoHoverBrush" Color="#3389b4f8"/>
+      <SolidColorBrush x:Key="InfoPressedBrush" Color="#5589b4f8"/>
 
-      <SolidColorBrush x:Key="InfoFilledHoverBrush" Color="#9DC2F9"/>
-      <SolidColorBrush x:Key="InfoFilledPressedBrush" Color="#A8C9FA"/>
+      <SolidColorBrush x:Key="InfoFilledHoverBrush" Color="#97BDF9"/>
+      <SolidColorBrush x:Key="InfoFilledPressedBrush" Color="#A1C3F9"/>
 
-      <SolidColorBrush x:Key="SuccessHoverBrush" Color="#332CB67D"/>
-      <SolidColorBrush x:Key="SuccessPressedBrush" Color="#552CB67D"/>
+      <SolidColorBrush x:Key="SuccessHoverBrush" Color="#332cb67d"/>
+      <SolidColorBrush x:Key="SuccessPressedBrush" Color="#552cb67d"/>
 
-      <SolidColorBrush x:Key="SuccessFilledHoverBrush" Color="#46BF8D"/>
-      <SolidColorBrush x:Key="SuccessFilledPressedBrush" Color="#58C697"/>
+      <SolidColorBrush x:Key="SuccessFilledHoverBrush" Color="#45BF8D"/>
+      <SolidColorBrush x:Key="SuccessFilledPressedBrush" Color="#56C597"/>
 
-      <SolidColorBrush x:Key="WarningHoverBrush" Color="#33FACC15"/>
-      <SolidColorBrush x:Key="WarningPressedBrush" Color="#55FACC15"/>
+      <SolidColorBrush x:Key="WarningHoverBrush" Color="#33facc15"/>
+      <SolidColorBrush x:Key="WarningPressedBrush" Color="#55facc15"/>
 
-      <SolidColorBrush x:Key="WarningFilledHoverBrush" Color="#FBD53C"/>
-      <SolidColorBrush x:Key="WarningFilledPressedBrush" Color="#FCDA50"/>
+      <SolidColorBrush x:Key="WarningFilledHoverBrush" Color="#FBD231"/>
+      <SolidColorBrush x:Key="WarningFilledPressedBrush" Color="#FBD644"/>
 
-      <SolidColorBrush x:Key="ErrorHoverBrush" Color="#33F87171"/>
-      <SolidColorBrush x:Key="ErrorPressedBrush" Color="#55F87171"/>
+      <SolidColorBrush x:Key="ErrorHoverBrush" Color="#33f87171"/>
+      <SolidColorBrush x:Key="ErrorPressedBrush" Color="#55f87171"/>
 
-      <SolidColorBrush x:Key="ErrorFilledHoverBrush" Color="#F98585"/>
-      <SolidColorBrush x:Key="ErrorFilledPressedBrush" Color="#FA9393"/>
+      <SolidColorBrush x:Key="ErrorFilledHoverBrush" Color="#F98282"/>
+      <SolidColorBrush x:Key="ErrorFilledPressedBrush" Color="#F98D8D"/>
 
       <SolidColorBrush x:Key="DarkHoverBrush" Color="#33212121"/>
       <SolidColorBrush x:Key="DarkPressedBrush" Color="#55212121"/>
@@ -177,7 +177,7 @@
       <SolidColorBrush x:Key="BorderBrush" Color="#1A000000"/>
 
       <!-- Chat-specific colors -->
-      <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#bbdefb"/>
+      <SolidColorBrush x:Key="ChatUserMessageBrush" Color="#B1DAFB"/>
 
       <SolidColorBrush x:Key="ChatViewerMessageBrush" Color="#E0E0E0"/>
 
@@ -194,49 +194,49 @@
 
       <!-- Disabled Brushes (used for disabled filled buttons similar to Material UI) -->
       <SolidColorBrush x:Key="PrimaryDisabledBrush" Color="#1F2196F3"/>
-      <SolidColorBrush x:Key="SecondaryDisabledBrush" Color="#1F008C7A"/>
-      <SolidColorBrush x:Key="TertiaryDisabledBrush" Color="#1F7B21F3"/>
-      <SolidColorBrush x:Key="InfoDisabledBrush" Color="#1F0D6EFD"/>
-      <SolidColorBrush x:Key="SuccessDisabledBrush" Color="#1F28A745"/>
-      <SolidColorBrush x:Key="WarningDisabledBrush" Color="#1FFFC107"/>
-      <SolidColorBrush x:Key="ErrorDisabledBrush" Color="#1FDC3545"/>
+      <SolidColorBrush x:Key="SecondaryDisabledBrush" Color="#1F008c7a"/>
+      <SolidColorBrush x:Key="TertiaryDisabledBrush" Color="#1F7b21f3"/>
+      <SolidColorBrush x:Key="InfoDisabledBrush" Color="#1F0d6efd"/>
+      <SolidColorBrush x:Key="SuccessDisabledBrush" Color="#1F28a745"/>
+      <SolidColorBrush x:Key="WarningDisabledBrush" Color="#1Fffc107"/>
+      <SolidColorBrush x:Key="ErrorDisabledBrush" Color="#1Fdc3545"/>
       <SolidColorBrush x:Key="DarkDisabledBrush" Color="#1F424242"/>
 
-      <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#33008C7A"/>
-      <SolidColorBrush x:Key="SecondaryPressedBrush" Color="#55008C7A"/>
+      <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#33008c7a"/>
+      <SolidColorBrush x:Key="SecondaryPressedBrush" Color="#55008c7a"/>
 
-      <SolidColorBrush x:Key="SecondaryFilledHoverBrush" Color="#008169"/>
-      <SolidColorBrush x:Key="SecondaryFilledPressedBrush" Color="#00755F"/>
+      <SolidColorBrush x:Key="SecondaryFilledHoverBrush" Color="#008170"/>
+      <SolidColorBrush x:Key="SecondaryFilledPressedBrush" Color="#007666"/>
 
-      <SolidColorBrush x:Key="TertiaryHoverBrush" Color="#337B21F3"/>
-      <SolidColorBrush x:Key="TertiaryPressedBrush" Color="#557B21F3"/>
+      <SolidColorBrush x:Key="TertiaryHoverBrush" Color="#337b21f3"/>
+      <SolidColorBrush x:Key="TertiaryPressedBrush" Color="#557b21f3"/>
 
       <SolidColorBrush x:Key="TertiaryFilledHoverBrush" Color="#711EE0"/>
-      <SolidColorBrush x:Key="TertiaryFilledPressedBrush" Color="#661CCC"/>
+      <SolidColorBrush x:Key="TertiaryFilledPressedBrush" Color="#671CCC"/>
 
-      <SolidColorBrush x:Key="InfoHoverBrush" Color="#330D6EFD"/>
-      <SolidColorBrush x:Key="InfoPressedBrush" Color="#550D6EFD"/>
+      <SolidColorBrush x:Key="InfoHoverBrush" Color="#330d6efd"/>
+      <SolidColorBrush x:Key="InfoPressedBrush" Color="#550d6efd"/>
 
       <SolidColorBrush x:Key="InfoFilledHoverBrush" Color="#0C65E9"/>
-      <SolidColorBrush x:Key="InfoFilledPressedBrush" Color="#0B5BD5"/>
+      <SolidColorBrush x:Key="InfoFilledPressedBrush" Color="#0B5CD5"/>
 
-      <SolidColorBrush x:Key="SuccessHoverBrush" Color="#3328A745"/>
-      <SolidColorBrush x:Key="SuccessPressedBrush" Color="#5528A745"/>
+      <SolidColorBrush x:Key="SuccessHoverBrush" Color="#3328a745"/>
+      <SolidColorBrush x:Key="SuccessPressedBrush" Color="#5528a745"/>
 
-      <SolidColorBrush x:Key="SuccessFilledHoverBrush" Color="#24963E"/>
-      <SolidColorBrush x:Key="SuccessFilledPressedBrush" Color="#208639"/>
+      <SolidColorBrush x:Key="SuccessFilledHoverBrush" Color="#259A3F"/>
+      <SolidColorBrush x:Key="SuccessFilledPressedBrush" Color="#228C3A"/>
 
-      <SolidColorBrush x:Key="WarningHoverBrush" Color="#33FFC107"/>
-      <SolidColorBrush x:Key="WarningPressedBrush" Color="#55FFC107"/>
+      <SolidColorBrush x:Key="WarningHoverBrush" Color="#33ffc107"/>
+      <SolidColorBrush x:Key="WarningPressedBrush" Color="#55ffc107"/>
 
-      <SolidColorBrush x:Key="WarningFilledHoverBrush" Color="#EBB106"/>
-      <SolidColorBrush x:Key="WarningFilledPressedBrush" Color="#D7A106"/>
+      <SolidColorBrush x:Key="WarningFilledHoverBrush" Color="#EBB206"/>
+      <SolidColorBrush x:Key="WarningFilledPressedBrush" Color="#D6A206"/>
 
-      <SolidColorBrush x:Key="ErrorHoverBrush" Color="#33DC3545"/>
-      <SolidColorBrush x:Key="ErrorPressedBrush" Color="#55DC3545"/>
+      <SolidColorBrush x:Key="ErrorHoverBrush" Color="#33dc3545"/>
+      <SolidColorBrush x:Key="ErrorPressedBrush" Color="#55dc3545"/>
 
       <SolidColorBrush x:Key="ErrorFilledHoverBrush" Color="#CA313F"/>
-      <SolidColorBrush x:Key="ErrorFilledPressedBrush" Color="#B52C38"/>
+      <SolidColorBrush x:Key="ErrorFilledPressedBrush" Color="#B92D3A"/>
 
       <SolidColorBrush x:Key="DarkHoverBrush" Color="#33424242"/>
       <SolidColorBrush x:Key="DarkPressedBrush" Color="#55424242"/>

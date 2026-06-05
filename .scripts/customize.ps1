@@ -6,47 +6,47 @@ param(
   [Parameter(HelpMessage = "Publisher name for ARP entry, etc.")]
   [string] $Publisher = "Bitbound",
 
-  [Parameter(HelpMessage = "Primary color hex (without #) for dark theme")]
-  [string] $PrimaryColorDark = "2196F3",
+  [Parameter(HelpMessage = "Primary color hex for dark theme")]
+  [string] $PrimaryColorDark = "#2196F3",
 
-  [Parameter(HelpMessage = "Secondary color hex (without #) for dark theme")]
-  [string] $SecondaryColorDark = "21f3e9",
+  [Parameter(HelpMessage = "Secondary color hex for dark theme")]
+  [string] $SecondaryColorDark = "#21f3e9",
 
-  [Parameter(HelpMessage = "Tertiary color hex (without #) for dark theme")]
-  [string] $TertiaryColorDark = "7b21f3",
+  [Parameter(HelpMessage = "Tertiary color hex for dark theme")]
+  [string] $TertiaryColorDark = "#7b21f3",
 
-  [Parameter(HelpMessage = "Info color hex (without #) for dark theme")]
-  [string] $InfoColorDark = "89b4f8",
+  [Parameter(HelpMessage = "Info color hex for dark theme")]
+  [string] $InfoColorDark = "#89b4f8",
 
-  [Parameter(HelpMessage = "Success color hex (without #) for dark theme")]
-  [string] $SuccessColorDark = "2cb67d",
+  [Parameter(HelpMessage = "Success color hex for dark theme")]
+  [string] $SuccessColorDark = "#2cb67d",
 
-  [Parameter(HelpMessage = "Warning color hex (without #) for dark theme")]
-  [string] $WarningColorDark = "facc15",
+  [Parameter(HelpMessage = "Warning color hex for dark theme")]
+  [string] $WarningColorDark = "#facc15",
 
-  [Parameter(HelpMessage = "Error color hex (without #) for dark theme")]
-  [string] $ErrorColorDark = "f87171",
+  [Parameter(HelpMessage = "Error color hex for dark theme")]
+  [string] $ErrorColorDark = "#f87171",
 
-  [Parameter(HelpMessage = "Primary color hex (without #) for light theme")]
-  [string] $PrimaryColorLight = "2196F3",
+  [Parameter(HelpMessage = "Primary color hex for light theme")]
+  [string] $PrimaryColorLight = "#2196F3",
 
-  [Parameter(HelpMessage = "Secondary color hex (without #) for light theme")]
-  [string] $SecondaryColorLight = "008c7a",
+  [Parameter(HelpMessage = "Secondary color hex for light theme")]
+  [string] $SecondaryColorLight = "#008c7a",
 
-  [Parameter(HelpMessage = "Tertiary color hex (without #) for light theme")]
-  [string] $TertiaryColorLight = "7b21f3",
+  [Parameter(HelpMessage = "Tertiary color hex for light theme")]
+  [string] $TertiaryColorLight = "#7b21f3",
 
-  [Parameter(HelpMessage = "Info color hex (without #) for light theme")]
-  [string] $InfoColorLight = "0d6efd",
+  [Parameter(HelpMessage = "Info color hex for light theme")]
+  [string] $InfoColorLight = "#0d6efd",
 
-  [Parameter(HelpMessage = "Success color hex (without #) for light theme")]
-  [string] $SuccessColorLight = "28a745",
+  [Parameter(HelpMessage = "Success color hex for light theme")]
+  [string] $SuccessColorLight = "#28a745",
 
-  [Parameter(HelpMessage = "Warning color hex (without #) for light theme")]
-  [string] $WarningColorLight = "ffc107",
+  [Parameter(HelpMessage = "Warning color hex for light theme")]
+  [string] $WarningColorLight = "#ffc107",
 
-  [Parameter(HelpMessage = "Error color hex (without #) for light theme")]
-  [string] $ErrorColorLight = "dc3545",
+  [Parameter(HelpMessage = "Error color hex for light theme")]
+  [string] $ErrorColorLight = "#dc3545",
 
   [Parameter(HelpMessage = "Path or URL to master PNG icon (512px+)")]
   [string] $IconPng = "",
@@ -68,6 +68,21 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$PrimaryColorDark = $PrimaryColorDark.TrimStart('#')
+$SecondaryColorDark = $SecondaryColorDark.TrimStart('#')
+$TertiaryColorDark = $TertiaryColorDark.TrimStart('#')
+$InfoColorDark = $InfoColorDark.TrimStart('#')
+$SuccessColorDark = $SuccessColorDark.TrimStart('#')
+$WarningColorDark = $WarningColorDark.TrimStart('#')
+$ErrorColorDark = $ErrorColorDark.TrimStart('#')
+$PrimaryColorLight = $PrimaryColorLight.TrimStart('#')
+$SecondaryColorLight = $SecondaryColorLight.TrimStart('#')
+$TertiaryColorLight = $TertiaryColorLight.TrimStart('#')
+$InfoColorLight = $InfoColorLight.TrimStart('#')
+$SuccessColorLight = $SuccessColorLight.TrimStart('#')
+$WarningColorLight = $WarningColorLight.TrimStart('#')
+$ErrorColorLight = $ErrorColorLight.TrimStart('#')
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $tempBuildRoot = Join-Path -Path ([System.IO.Path]::GetTempPath()) "ControlR-customize"
 
@@ -85,19 +100,19 @@ function Get-SourceFile {
   $dest = Join-Path $StagingDir $FileName
 
   if ($Source -match "^https?://") {
-    Write-Host "  Downloading $Source -> $dest"
+    Write-Host "Downloading $Source -> $dest"
     Invoke-WebRequest -Uri $Source -OutFile $dest -UseBasicParsing
     return $dest
   }
 
   if ($Source -match "^\\\\") {
-    Write-Host "  Copying (UNC) $Source -> $dest"
+    Write-Host "Copying (UNC) $Source -> $dest"
     Copy-Item -LiteralPath $Source -Destination $dest -Force
     return $dest
   }
 
   if (Test-Path -LiteralPath $Source) {
-    Write-Host "  Copying $Source -> $dest"
+    Write-Host "Copying $Source -> $dest"
     Copy-Item -LiteralPath $Source -Destination $dest -Force
     return $dest
   }
@@ -135,7 +150,7 @@ function Resize-Image {
     $gfx.Dispose()
     $bmp.Dispose()
     $srcImage.Dispose()
-    Write-Host "  Resized -> $OutputPath (${Width}x${Height})"
+    Write-Host "Resized -> $OutputPath (${Width}x${Height})"
   }
   catch {
     Write-Warning "Failed to resize image to ${Width}x${Height}: $_"
@@ -176,7 +191,7 @@ function Write-FileContent {
   $hasBom = $rawBytes.Length -ge 3 -and $rawBytes[0] -eq 0xEF -and $rawBytes[1] -eq 0xBB -and $rawBytes[2] -eq 0xBF
   $encoding = New-Object System.Text.UTF8Encoding($hasBom)
   [System.IO.File]::WriteAllText($Path, $Content, $encoding)
-  Write-Host "  Updated: $Path"
+  Write-Host "Updated: $Path"
 }
 
 function Write-WhatIfDiff {
@@ -207,12 +222,12 @@ function Write-WhatIfDiff {
       $oldTrimmed = $c.Old.Trim().TrimEnd()
       $newTrimmed = $c.New.Trim().TrimEnd()
       if ($oldTrimmed -and $newTrimmed) {
-        Write-Host "    [$($c.Line)] - '$oldTrimmed'" -ForegroundColor DarkGray
-        Write-Host "    [$($c.Line)] + '$newTrimmed'" -ForegroundColor Green
+        Write-Host "  [$($c.Line)] - '$oldTrimmed'" -ForegroundColor DarkGray
+        Write-Host "  [$($c.Line)] + '$newTrimmed'" -ForegroundColor Green
       } elseif ($newTrimmed) {
-        Write-Host "    [$($c.Line)] + '$newTrimmed'" -ForegroundColor Green
+        Write-Host "  [$($c.Line)] + '$newTrimmed'" -ForegroundColor Green
       } else {
-        Write-Host "    [$($c.Line)] - '$oldTrimmed'" -ForegroundColor DarkGray
+        Write-Host "  [$($c.Line)] - '$oldTrimmed'" -ForegroundColor DarkGray
       }
     }
     Write-Host ""
@@ -240,6 +255,67 @@ function Get-BlendedColor {
   return "{0:X2}{1:X2}{2:X2}" -f $r, $g, $b
 }
 
+function Get-LighterColor {
+  param(
+    [string] $HexColor,
+    [double] $Amount
+  )
+
+  $r = [int]::Parse($HexColor.Substring(0, 2), "HexNumber")
+  $g = [int]::Parse($HexColor.Substring(2, 2), "HexNumber")
+  $b = [int]::Parse($HexColor.Substring(4, 2), "HexNumber")
+
+  $r = [int]([Math]::Round($r + (255 - $r) * $Amount))
+  $g = [int]([Math]::Round($g + (255 - $g) * $Amount))
+  $b = [int]([Math]::Round($b + (255 - $b) * $Amount))
+
+  return "{0:X2}{1:X2}{2:X2}" -f $r, $g, $b
+}
+
+function Get-DarkerColor {
+  param(
+    [string] $HexColor,
+    [double] $Amount
+  )
+
+  $r = [int]::Parse($HexColor.Substring(0, 2), "HexNumber")
+  $g = [int]::Parse($HexColor.Substring(2, 2), "HexNumber")
+  $b = [int]::Parse($HexColor.Substring(4, 2), "HexNumber")
+
+  $r = [int]([Math]::Round($r * (1 - $Amount)))
+  $g = [int]([Math]::Round($g * (1 - $Amount)))
+  $b = [int]([Math]::Round($b * (1 - $Amount)))
+
+  return "{0:X2}{1:X2}{2:X2}" -f $r, $g, $b
+}
+
+function Get-ContrastTextColor {
+  param([string] $HexColor)
+
+  $r = [int]::Parse($HexColor.Substring(0, 2), "HexNumber")
+  $g = [int]::Parse($HexColor.Substring(2, 2), "HexNumber")
+  $b = [int]::Parse($HexColor.Substring(4, 2), "HexNumber")
+
+  $luminance = 0.299 * $r + 0.587 * $g + 0.114 * $b
+
+  if ($luminance -gt 160) {
+    return "000000"
+  }
+  return "FFFFFF"
+}
+
+function Set-ThemeBrush {
+  param(
+    [string] $Content,
+    [string] $Key,
+    [string] $Color
+  )
+
+  $pattern = '(<SolidColorBrush x:Key="' + [regex]::Escape($Key) + '" Color=")#[0-9A-Fa-f]+(")'
+  $replacement = '${1}#' + $Color + '${2}'
+  return $Content -replace $pattern, $replacement
+}
+
 #endregion
 
 #region Validate Inputs
@@ -264,7 +340,7 @@ $colorParams = @{
 
 foreach ($kv in $colorParams.GetEnumerator()) {
   if ($kv.Value -notmatch $hexPattern) {
-    throw "Invalid hex color for $($kv.Key): '$($kv.Value)'. Expected 6-character hex without #."
+    throw "Invalid hex color for $($kv.Key): '$($kv.Value)'. Expected 6-character hex (e.g. FF1122 or #FF1122)."
   }
 }
 
@@ -284,16 +360,14 @@ Write-Host " Customizing: $BrandName" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-#region Phase 5.5: Update BrandPrefix in Directory.Build.props
+#region Update BrandPrefix in Directory.Build.props
 
 $brandKey = $BrandName -replace '[^A-Za-z0-9]', '_'
-$brandKeyLen = $brandKey.Length
-Write-Host "[Phase 5.5] Updating BrandPrefix in Directory.Build.props" -ForegroundColor Yellow
+Write-Host "Updating BrandPrefix in Directory.Build.props" -ForegroundColor Yellow
 
 $propsFile = Join-Path $repoRoot "Directory.Build.props"
 $propsContent = Get-Content -LiteralPath $propsFile -Raw -Encoding UTF8
 $propsNew = $propsContent -replace '<BrandPrefix>.*?</BrandPrefix>', "<BrandPrefix>$brandKey</BrandPrefix>"
-$propsNew = $propsNew -replace 'Substring\(8\)', "Substring($brandKeyLen)"
 
 if ($propsNew -ne $propsContent) {
   Write-WhatIfDiff -OldContent $propsContent -NewContent $propsNew -FilePath $propsFile
@@ -302,9 +376,9 @@ if ($propsNew -ne $propsContent) {
 
 #endregion
 
-#region Phase 6: Update BrandingConstants.cs
+#region Update BrandingConstants.cs
 
-Write-Host "[Phase 6] Updating BrandingConstants.cs" -ForegroundColor Yellow
+Write-Host "Updating BrandingConstants.cs" -ForegroundColor Yellow
 
 $brandingFile = Join-Path $repoRoot "Libraries/ControlR.Libraries.Branding/BrandingConstants.cs"
 $original = Get-Content -LiteralPath $brandingFile -Raw -Encoding UTF8
@@ -332,9 +406,9 @@ if ($content -ne $original) {
 
 #endregion
 
-#region Phase 7: Icons
+#region Process Icons
 
-Write-Host "[Phase 7] Processing icons" -ForegroundColor Yellow
+Write-Host "Processing icons" -ForegroundColor Yellow
 
 if ($WhatIf) {
   if ($IconPng) { Write-Host "[What-If] Would download/copy icon from: $IconPng and distribute to all icon locations" -ForegroundColor Gray }
@@ -358,7 +432,7 @@ if ($IconIco) {
 }
 
 if ($masterPng) {
-  Write-Host "  Distributing PNG icon to all locations"
+  Write-Host "Distributing PNG icon to all locations"
 
   $pngLocations = @(
     ".assets/appicon.png"
@@ -368,7 +442,7 @@ if ($masterPng) {
   foreach ($loc in $pngLocations) {
     $dest = Join-Path $repoRoot $loc
     Copy-Item -LiteralPath $masterPng -Destination $dest -Force
-    Write-Host "    -> $loc"
+    Write-Host "  -> $loc"
   }
 
   $macSizes = @(16, 32, 64, 128, 256, 512, 1024)
@@ -383,7 +457,7 @@ if ($masterPng) {
 }
 
 if ($masterIco) {
-  Write-Host "  Distributing ICO icon to all locations"
+  Write-Host "Distributing ICO icon to all locations"
 
   $icoLocations = @(
     ".assets/appicon.ico"
@@ -394,23 +468,23 @@ if ($masterIco) {
   foreach ($loc in $icoLocations) {
     $dest = Join-Path $repoRoot $loc
     Copy-Item -LiteralPath $masterIco -Destination $dest -Force
-    Write-Host "    -> $loc"
+    Write-Host "  -> $loc"
   }
 }
 
 if ($masterPng -and -not $masterIco) {
-  Write-Host "  WARNING: No ICO provided. favicon.ico and appicon.ico locations not updated."
+  Write-Host "WARNING: No ICO provided. favicon.ico and appicon.ico locations not updated."
 }
 if ($masterIco -and -not $masterPng) {
-  Write-Host "  WARNING: No PNG provided. PNG-only locations not updated."
+  Write-Host "WARNING: No PNG provided. PNG-only locations not updated."
 }
 }
 
 #endregion
 
-#region Phase 7b: Info.plist macOS Bundle
+#region Update Info.plist macOS Bundle
 
-Write-Host "[Phase 7b] Updating Info.plist" -ForegroundColor Yellow
+Write-Host "Updating Info.plist" -ForegroundColor Yellow
 
 $infoPlistFile = Join-Path $repoRoot "ControlR.DesktopClient/Info.plist"
 if (Test-Path -LiteralPath $infoPlistFile) {
@@ -419,11 +493,12 @@ if (Test-Path -LiteralPath $infoPlistFile) {
 
   $brandKey = $BrandName -replace '[^A-Za-z0-9]', '_'
   $unixBrandKey = $BrandName.ToLowerInvariant() -replace '[^a-z0-9]', '_'
+  $nl = [System.Environment]::NewLine
 
   $infoPlistContent = $infoPlistContent -replace '<string>ControlR</string>', "<string>$BrandName</string>"
-  $infoPlistContent = $infoPlistContent -replace '<key>CFBundleExecutable</key>\s*<string>.*?</string>', "<key>CFBundleExecutable</key>`n    <string>$brandKey.DesktopClient</string>"
-  $infoPlistContent = $infoPlistContent -replace '<key>CFBundleIdentifier</key>\s*<string>.*?</string>', "<key>CFBundleIdentifier</key>`n    <string>app.$unixBrandKey.desktop</string>"
-  $infoPlistContent = $infoPlistContent -replace '<key>NSHumanReadableCopyright</key>\s*<string>.*?</string>', "<key>NSHumanReadableCopyright</key>`n    <string>Copyright © $((Get-Date).Year) $Publisher. All rights reserved.</string>"
+  $infoPlistContent = $infoPlistContent -replace '<key>CFBundleExecutable</key>\s*<string>.*?</string>', "<key>CFBundleExecutable</key>$nl    <string>$brandKey.DesktopClient</string>"
+  $infoPlistContent = $infoPlistContent -replace '<key>CFBundleIdentifier</key>\s*<string>.*?</string>', "<key>CFBundleIdentifier</key>$nl    <string>app.$unixBrandKey.desktop</string>"
+  $infoPlistContent = $infoPlistContent -replace '<key>NSHumanReadableCopyright</key>\s*<string>.*?</string>', "<key>NSHumanReadableCopyright</key>$nl    <string>Copyright © $((Get-Date).Year) $Publisher. All rights reserved.</string>"
   $infoPlistContent = $infoPlistContent -replace '<string>ControlR uses notifications.*?</string>', "<string>$BrandName uses notifications to inform you about remote control sessions and system events.</string>"
 
   if ($infoPlistContent -ne $infoOriginal) {
@@ -434,11 +509,35 @@ if (Test-Path -LiteralPath $infoPlistFile) {
 
 #endregion
 
-#region Phase 8: Config / JSON Text Replacements
+#region Config / JSON Text Replacements
 
-Write-Host "[Phase 8] Updating config files" -ForegroundColor Yellow
+Write-Host "Updating config files" -ForegroundColor Yellow
 
 $brandKey = $BrandName -replace '[^A-Za-z0-9]', '_'
+
+Write-Host "Updating InternalsVisibleTo in AssemblyInfo.cs files" -ForegroundColor Yellow
+
+$assemblyInfoFiles = Get-ChildItem -LiteralPath $repoRoot -Recurse -Filter "AssemblyInfo.cs"
+foreach ($aiFile in $assemblyInfoFiles) {
+  $aiContent = Get-Content -LiteralPath $aiFile.FullName -Raw -Encoding UTF8
+  $aiNew = $aiContent -replace '(InternalsVisibleTo\(")ControlR', "`${1}$brandKey"
+  if ($aiNew -ne $aiContent) {
+    Write-WhatIfDiff -OldContent $aiContent -NewContent $aiNew -FilePath $aiFile.FullName
+    Write-FileContent -Path $aiFile.FullName -Content $aiNew
+  }
+}
+
+Write-Host "Updating avares:// URIs in AXAML files" -ForegroundColor Yellow
+
+$axamlFiles = Get-ChildItem -LiteralPath $repoRoot -Recurse -Filter "*.axaml"
+foreach ($axamlFile in $axamlFiles) {
+  $axamlContent = Get-Content -LiteralPath $axamlFile.FullName -Raw -Encoding UTF8
+  $axamlNew = $axamlContent -replace 'avares://ControlR\.', "avares://$brandKey."
+  if ($axamlNew -ne $axamlContent) {
+    Write-WhatIfDiff -OldContent $axamlContent -NewContent $axamlNew -FilePath $axamlFile.FullName
+    Write-FileContent -Path $axamlFile.FullName -Content $axamlNew
+  }
+}
 
 $configReplacements = @{
   '"AuthenticatorIssuerName": "ControlR"' = "`"AuthenticatorIssuerName`": `"$BrandName`""
@@ -546,9 +645,9 @@ if (Test-Path -LiteralPath $installerProgramFile) {
 
 #endregion
 
-#region Phase 9: CSS Color Replacements
+#region CSS Color Replacements
 
-Write-Host "[Phase 9] Updating CSS colors" -ForegroundColor Yellow
+Write-Host "Updating CSS colors" -ForegroundColor Yellow
 
 $welcomeCss = Join-Path $repoRoot "ControlR.Web.Client/Components/Welcome.razor.css"
 if (Test-Path -LiteralPath $welcomeCss) {
@@ -581,9 +680,9 @@ if (Test-Path -LiteralPath $chatCss) {
 
 #endregion
 
-#region Phase 10: AXAML Theme Replacements
+#region AXAML Theme Replacements
 
-Write-Host "[Phase 10] Updating AXAML theme colors" -ForegroundColor Yellow
+Write-Host "Updating AXAML theme colors" -ForegroundColor Yellow
 
 $themeAxaml = Join-Path $repoRoot "Libraries/ControlR.Libraries.Avalonia/Resources/Theme.axaml"
 if (Test-Path -LiteralPath $themeAxaml) {
@@ -610,32 +709,60 @@ if (Test-Path -LiteralPath $themeAxaml) {
     $lightSection = $axamlContent.Substring($lightStart, $lightEnd - $lightStart)
     $postamble = $axamlContent.Substring($lightEnd)
 
-    $darkColorMap = @{
-      "#2196F3" = "#$PrimaryColorDark"
-      "#21f3e9" = "#$SecondaryColorDark"
-      "#7b21f3" = "#$TertiaryColorDark"
-      "#89b4f8" = "#$InfoColorDark"
-      "#2cb67d" = "#$SuccessColorDark"
-      "#facc15" = "#$WarningColorDark"
-      "#f87171" = "#$ErrorColorDark"
+    $darkSemanticColors = @(
+      @{ Name = "Primary"; Hex = $PrimaryColorDark }
+      @{ Name = "Secondary"; Hex = $SecondaryColorDark }
+      @{ Name = "Tertiary"; Hex = $TertiaryColorDark }
+      @{ Name = "Info"; Hex = $InfoColorDark }
+      @{ Name = "Success"; Hex = $SuccessColorDark }
+      @{ Name = "Warning"; Hex = $WarningColorDark }
+      @{ Name = "Error"; Hex = $ErrorColorDark }
+    )
+
+    $lightSemanticColors = @(
+      @{ Name = "Primary"; Hex = $PrimaryColorLight }
+      @{ Name = "Secondary"; Hex = $SecondaryColorLight }
+      @{ Name = "Tertiary"; Hex = $TertiaryColorLight }
+      @{ Name = "Info"; Hex = $InfoColorLight }
+      @{ Name = "Success"; Hex = $SuccessColorLight }
+      @{ Name = "Warning"; Hex = $WarningColorLight }
+      @{ Name = "Error"; Hex = $ErrorColorLight }
+    )
+
+    foreach ($sc in $darkSemanticColors) {
+      $base = $sc.Hex
+      $contrastText = Get-ContrastTextColor -HexColor $base
+      $filledHover = Get-LighterColor -HexColor $base -Amount 0.12
+      $filledPressed = Get-LighterColor -HexColor $base -Amount 0.20
+
+      $darkSection = Set-ThemeBrush -Content $darkSection -Key "$($sc.Name)Color" -Color $base
+      $darkSection = Set-ThemeBrush -Content $darkSection -Key "$($sc.Name)ContrastText" -Color $contrastText
+      $darkSection = Set-ThemeBrush -Content $darkSection -Key "$($sc.Name)HoverBrush" -Color "33$base"
+      $darkSection = Set-ThemeBrush -Content $darkSection -Key "$($sc.Name)PressedBrush" -Color "55$base"
+      $darkSection = Set-ThemeBrush -Content $darkSection -Key "$($sc.Name)FilledHoverBrush" -Color $filledHover
+      $darkSection = Set-ThemeBrush -Content $darkSection -Key "$($sc.Name)FilledPressedBrush" -Color $filledPressed
+      $darkSection = Set-ThemeBrush -Content $darkSection -Key "$($sc.Name)DisabledBrush" -Color "1F$base"
     }
 
-    $lightColorMap = @{
-      "#2196F3" = "#$PrimaryColorLight"
-      "#008c7a" = "#$SecondaryColorLight"
-      "#7b21f3" = "#$TertiaryColorLight"
-      "#0d6efd" = "#$InfoColorLight"
-      "#28a745" = "#$SuccessColorLight"
-      "#ffc107" = "#$WarningColorLight"
-      "#dc3545" = "#$ErrorColorLight"
+    foreach ($sc in $lightSemanticColors) {
+      $base = $sc.Hex
+      $contrastText = Get-ContrastTextColor -HexColor $base
+      $filledHover = Get-DarkerColor -HexColor $base -Amount 0.08
+      $filledPressed = Get-DarkerColor -HexColor $base -Amount 0.16
+
+      $lightSection = Set-ThemeBrush -Content $lightSection -Key "$($sc.Name)Color" -Color $base
+      $lightSection = Set-ThemeBrush -Content $lightSection -Key "$($sc.Name)ContrastText" -Color $contrastText
+      $lightSection = Set-ThemeBrush -Content $lightSection -Key "$($sc.Name)HoverBrush" -Color "33$base"
+      $lightSection = Set-ThemeBrush -Content $lightSection -Key "$($sc.Name)PressedBrush" -Color "55$base"
+      $lightSection = Set-ThemeBrush -Content $lightSection -Key "$($sc.Name)FilledHoverBrush" -Color $filledHover
+      $lightSection = Set-ThemeBrush -Content $lightSection -Key "$($sc.Name)FilledPressedBrush" -Color $filledPressed
+      $lightSection = Set-ThemeBrush -Content $lightSection -Key "$($sc.Name)DisabledBrush" -Color "1F$base"
     }
 
-    foreach ($kv in $darkColorMap.GetEnumerator()) {
-      $darkSection = $darkSection.Replace($kv.Key, $kv.Value)
-    }
-    foreach ($kv in $lightColorMap.GetEnumerator()) {
-      $lightSection = $lightSection.Replace($kv.Key, $kv.Value)
-    }
+    $darkChatUser = Get-BlendedColor -Foreground $PrimaryColorDark -Background "121212" -Opacity 0.3
+    $lightChatUser = Get-BlendedColor -Foreground $PrimaryColorLight -Background "FFFFFF" -Opacity 0.35
+    $darkSection = Set-ThemeBrush -Content $darkSection -Key "ChatUserMessageBrush" -Color $darkChatUser
+    $lightSection = Set-ThemeBrush -Content $lightSection -Key "ChatUserMessageBrush" -Color $lightChatUser
 
     $axamlContent = $preamble + $darkSection + $between + $lightSection + $postamble
   }
@@ -674,9 +801,9 @@ if ($SkipBuild) {
   exit 0
 }
 
-#region Phase 11: Build
+#region Build
 
-Write-Host "[Phase 11] Building solution" -ForegroundColor Yellow
+Write-Host "Building solution" -ForegroundColor Yellow
 
 if ($WhatIf) {
   Write-Host "[What-If] Would build DesktopClient, Agent, and Installer for: win-x64, win-x86, linux-x64" -ForegroundColor Gray
@@ -690,21 +817,21 @@ $architectures = @("win-x64", "win-x86")
 $linuxArch = "linux-x64"
 
 foreach ($arch in $architectures) {
-  Write-Host "  Building DesktopClient ($arch)..." -ForegroundColor Cyan
+  Write-Host "Building DesktopClient ($arch)..." -ForegroundColor Cyan
   dotnet publish ControlR.DesktopClient/ -c Release -f net10.0-windows8.0 -r $arch --self-contained -o "ControlR.DesktopClient/bin/publish/$arch/" -p:Version=$Version -p:FileVersion=$Version
   if ($LASTEXITCODE -ne 0) { throw "DesktopClient build failed for $arch" }
 
-  Write-Host "  Building Agent ($arch)..." -ForegroundColor Cyan
+  Write-Host "Building Agent ($arch)..." -ForegroundColor Cyan
   dotnet publish ControlR.Agent/ -c Release -r $arch -o "ControlR.Agent/bin/publish/$arch/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$Version -p:FileVersion=$Version -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
   if ($LASTEXITCODE -ne 0) { throw "Agent build failed for $arch" }
 
-  Write-Host "  Building Installer ($arch)..." -ForegroundColor Cyan
+  Write-Host "Building Installer ($arch)..." -ForegroundColor Cyan
   $archDownloadDir = "$downloadsBase/$arch"
   New-Item -ItemType Directory -Path $archDownloadDir -Force | Out-Null
   dotnet publish ControlR.Agent.Installer/ -c Release -r $arch --self-contained -o $archDownloadDir -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$Version -p:FileVersion=$Version -p:DebugType=none
   if ($LASTEXITCODE -ne 0) { throw "Installer build failed for $arch" }
 
-  Write-Host "  Creating bundle ZIP ($arch)..." -ForegroundColor Cyan
+  Write-Host "Creating bundle ZIP ($arch)..." -ForegroundColor Cyan
   $bundleDir = Join-Path $tempBuildRoot "bundle/$arch"
   $desktopDir = Join-Path $bundleDir "DesktopClient"
   Remove-Item -LiteralPath $bundleDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -718,22 +845,22 @@ foreach ($arch in $architectures) {
   Compress-Archive -Path "$bundleDir/*" -DestinationPath $bundleZip -Force
 }
 
-Write-Host "  Building DesktopClient ($linuxArch)..." -ForegroundColor Cyan
+Write-Host "Building DesktopClient ($linuxArch)..." -ForegroundColor Cyan
 dotnet publish ControlR.DesktopClient/ -c Release -f net10.0 -r $linuxArch --self-contained -o "ControlR.DesktopClient/bin/publish/$linuxArch/" -p:Version=$Version -p:FileVersion=$Version
 if ($LASTEXITCODE -ne 0) { throw "DesktopClient build failed for $linuxArch" }
 
-Write-Host "  Building Agent ($linuxArch)..." -ForegroundColor Cyan
+Write-Host "Building Agent ($linuxArch)..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Path "ControlR.Agent/bin/publish/$linuxArch" -Force | Out-Null
 dotnet publish ControlR.Agent/ -c Release -r $linuxArch -o "ControlR.Agent/bin/publish/$linuxArch/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$Version -p:FileVersion=$Version -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
 if ($LASTEXITCODE -ne 0) { throw "Agent build failed for $linuxArch" }
 
-Write-Host "  Building Installer ($linuxArch)..." -ForegroundColor Cyan
+Write-Host "Building Installer ($linuxArch)..." -ForegroundColor Cyan
 $linuxDownloadDir = "$downloadsBase/$linuxArch"
 New-Item -ItemType Directory -Path $linuxDownloadDir -Force | Out-Null
 dotnet publish ControlR.Agent.Installer/ -c Release -r $linuxArch --self-contained -o $linuxDownloadDir -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$Version -p:FileVersion=$Version -p:DebugType=none
 if ($LASTEXITCODE -ne 0) { throw "Installer build failed for $linuxArch" }
 
-Write-Host "  Creating bundle ZIP ($linuxArch)..." -ForegroundColor Cyan
+Write-Host "Creating bundle ZIP ($linuxArch)..." -ForegroundColor Cyan
 $linuxBundleDir = Join-Path $tempBuildRoot "bundle/$linuxArch"
 $linuxDesktopDir = Join-Path $linuxBundleDir "DesktopClient"
 Remove-Item -LiteralPath $linuxBundleDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -746,15 +873,15 @@ $linuxBundleZip = Join-Path $linuxDownloadDir "$brandKey.Agent.bundle.zip"
 if (Test-Path -LiteralPath $linuxBundleZip) { Remove-Item -LiteralPath $linuxBundleZip -Force }
 Compress-Archive -Path "$linuxBundleDir/*" -DestinationPath $linuxBundleZip -Force
 
-Write-Host "  Creating Version.txt" -ForegroundColor Cyan
+Write-Host "Creating Version.txt" -ForegroundColor Cyan
 Set-Content -LiteralPath "$downloadsBase/Version.txt" -Value $Version -Encoding UTF8 -Force
 
-Write-Host "  Publishing Web Server..." -ForegroundColor Cyan
+Write-Host "Publishing Web Server..." -ForegroundColor Cyan
 New-Item -ItemType Directory -Path "ControlR.Web.Server/bin/publish" -Force | Out-Null
 dotnet publish ControlR.Web.Server/ -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=$Version -p:FileVersion=$Version --output ControlR.Web.Server/bin/publish --self-contained true
 if ($LASTEXITCODE -ne 0) { throw "Web Server publish failed" }
 
-Write-Host "  Verifying artifacts..." -ForegroundColor Cyan
+Write-Host "Verifying artifacts..." -ForegroundColor Cyan
 $requiredArtifacts = @(
   "ControlR.Web.Server/bin/publish/wwwroot/downloads/Version.txt"
   "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/$brandKey.Agent.Installer.exe"
@@ -770,16 +897,16 @@ foreach ($artifact in $requiredArtifacts) {
   if (-not (Test-Path -LiteralPath $fullPath)) {
     throw "Missing artifact: $artifact"
   }
-  Write-Host "    OK: $artifact"
+  Write-Host "  OK: $artifact"
 }
 
-Write-Host "  Creating final ZIP" -ForegroundColor Cyan
-$outputDir = Join-Path $repoRoot $OutputPath
+Write-Host "Creating final ZIP" -ForegroundColor Cyan
+$outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $repoRoot $OutputPath }
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 $finalZip = Join-Path $outputDir "$brandKey-server-v$Version.zip"
 if (Test-Path -LiteralPath $finalZip) { Remove-Item -LiteralPath $finalZip -Force }
 Compress-Archive -Path (Join-Path $repoRoot "ControlR.Web.Server/bin/publish/*") -DestinationPath $finalZip -Force
-Write-Host "  Output: $finalZip"
+Write-Host "Output: $finalZip"
 
 #endregion
 

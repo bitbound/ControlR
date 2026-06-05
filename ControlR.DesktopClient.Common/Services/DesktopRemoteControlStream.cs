@@ -8,7 +8,6 @@ using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.State;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Messenger.Extensions.Messages;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;

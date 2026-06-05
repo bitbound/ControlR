@@ -1,6 +1,5 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using ControlR.Libraries.Shared.Helpers;
-using Xunit.Abstractions;
 
 namespace ControlR.Solution.Tests;
 
@@ -17,46 +16,61 @@ public class CustomizeScriptTests
     Assert.True(solutionDirResult.IsSuccess, $"Failed to find solution directory: {solutionDirResult.Reason}");
     _solutionDir = solutionDirResult.Value;
     _ps1Path = Path.Combine(_solutionDir, ".scripts", "customize.ps1");
+    Assert.True(File.Exists(_ps1Path), $"Script not found at {_ps1Path}. This usually means you're running tests against a repo that doesn't include .scripts/.");
   }
 
   [Fact]
-  public void BrandNameStartingWithDigit_Fails()
+  public async Task BrandNameStartingWithDigit_Fails()
   {
-    var result = RunScript("-BrandName", "123Brand", "-WhatIf");
+    var result = await RunScript("-BrandName", "123Brand", "-WhatIf");
     Assert.NotEqual(0, result.ExitCode);
     Assert.Contains("BrandName must start with a letter", result.StandardError);
   }
 
   [Fact]
-  public void BrandNameWithSpaces_Succeeds()
+  public async Task BrandNameWithSpaces_Succeeds()
   {
-    var result = RunScript("-BrandName", "My Space Brand", "-WhatIf");
+    var result = await RunScript("-BrandName", "My Space Brand", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
     AssertOutputMatchesBrandValues(result, "My Space Brand", "My_Space_Brand");
   }
 
   [Fact]
-  public void BrandNameWithSpecialChars_Fails()
+  public async Task BrandNameWithSpecialChars_Fails()
   {
-    var result = RunScript("-BrandName", "Brand!@#", "-WhatIf");
+    var result = await RunScript("-BrandName", "Brand!@#", "-WhatIf");
     Assert.NotEqual(0, result.ExitCode);
     Assert.Contains("BrandName must start with a letter", result.StandardError);
   }
 
   [Fact]
-  public void DefaultBrandName_NoChangesDetected()
+  public async Task DefaultBrandName_NoChangesDetected()
   {
-    var result = RunScript("-WhatIf");
+    var result = await RunScript("-WhatIf");
     Assert.Equal(0, result.ExitCode);
     // Default brand = "ControlR" which matches file contents, so no diffs should be reported
     Assert.DoesNotContain("[What-If] Would change", result.StandardOutput);
   }
 
   [Fact]
-  public void EmptyColor_Fails()
+  public async Task EmptyColor_Fails()
   {
-    var result = RunScript("-BrandName", "TestBrand", "-PrimaryColorDark", "", "-WhatIf");
+    var result = await RunScript("-BrandName", "TestBrand", "-PrimaryColorDark", "", "-WhatIf");
     Assert.NotEqual(0, result.ExitCode);
+  }
+
+  [Fact]
+  public async Task HexColorWithHash_Succeeds()
+  {
+    var result = await RunScript(
+      "-BrandName", "HashTest",
+      "-PrimaryColorDark", "#FF1122",
+      "-SecondaryColorDark", "#334455",
+      "-WhatIf"
+    );
+    Assert.Equal(0, result.ExitCode);
+    AssertContainsLine(result, "PrimaryColorDark = \"FF1122\"");
+    AssertContainsLine(result, "SecondaryColorDark = \"334455\"");
   }
 
   [Theory]
@@ -64,58 +78,58 @@ public class CustomizeScriptTests
   [InlineData("ZZZZZZ")]
   [InlineData("123")]
   [InlineData("FFFFFFF")]
-  public void InvalidHexColor_Fails(string color)
+  public async Task InvalidHexColor_Fails(string color)
   {
-    var result = RunScript("-BrandName", "TestBrand", "-PrimaryColorDark", color, "-WhatIf");
+    var result = await RunScript("-BrandName", "TestBrand", "-PrimaryColorDark", color, "-WhatIf");
     Assert.NotEqual(0, result.ExitCode);
     Assert.Contains("invalid hex color", result.StandardError.ToLowerInvariant());
   }
 
   [Fact]
-  public void ValidBrandName_ControlR_NoChanges()
+  public async Task ValidBrandName_ControlR_NoChanges()
   {
-    var result = RunScript("-BrandName", "ControlR", "-WhatIf");
+    var result = await RunScript("-BrandName", "ControlR", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
     // BrandName "ControlR" matches current file values, so no diffs
     Assert.DoesNotContain("[What-If] Would change", result.StandardOutput);
   }
 
   [Fact]
-  public void ValidBrandName_MyBrand_Succeeds()
+  public async Task ValidBrandName_MyBrand_Succeeds()
   {
-    var result = RunScript("-BrandName", "MyBrand", "-WhatIf");
+    var result = await RunScript("-BrandName", "MyBrand", "-Publisher", "MyPublisher", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
-    AssertOutputMatchesBrandValues(result, "MyBrand", "MyBrand");
+    AssertOutputMatchesBrandValues(result, "MyBrand", "MyBrand", "MyPublisher");
   }
 
   [Fact]
-  public void ValidBrandName_WithHyphens_Succeeds()
+  public async Task ValidBrandName_WithHyphens_Succeeds()
   {
-    var result = RunScript("-BrandName", "My-Brand", "-WhatIf");
+    var result = await RunScript("-BrandName", "My-Brand", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
     AssertOutputMatchesBrandValues(result, "My-Brand", "My_Brand");
   }
 
   [Fact]
-  public void ValidBrandName_WithPeriods_Succeeds()
+  public async Task ValidBrandName_WithPeriods_Succeeds()
   {
-    var result = RunScript("-BrandName", "My.Brand", "-WhatIf");
+    var result = await RunScript("-BrandName", "My.Brand", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
     AssertOutputMatchesBrandValues(result, "My.Brand", "My_Brand");
   }
 
   [Fact]
-  public void ValidBrandName_WithUnderscores_Succeeds()
+  public async Task ValidBrandName_WithUnderscores_Succeeds()
   {
-    var result = RunScript("-BrandName", "My_Brand", "-WhatIf");
+    var result = await RunScript("-BrandName", "My_Brand", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
     AssertOutputMatchesBrandValues(result, "My_Brand", "My_Brand");
   }
 
   [Fact]
-  public void ValidHexColors_AppearInAXAMLTheme()
+  public async Task ValidHexColors_AppearInAXAMLTheme()
   {
-    var result = RunScript(
+    var result = await RunScript(
       "-BrandName", "AxamlTest",
       "-PrimaryColorDark", "FF1122",
       "-SecondaryColorDark", "334455",
@@ -158,9 +172,9 @@ public class CustomizeScriptTests
   }
 
   [Fact]
-  public void ValidHexColors_AppearInOutput()
+  public async Task ValidHexColors_AppearInOutput()
   {
-    var result = RunScript(
+    var result = await RunScript(
       "-BrandName", "ColorTest",
       "-PrimaryColorDark", "FF0000",
       "-SecondaryColorDark", "00FF00",
@@ -197,13 +211,13 @@ public class CustomizeScriptTests
   }
 
   [Fact]
-  public void WhatIfMode_DoesNotModifyFiles()
+  public async Task WhatIfMode_DoesNotModifyFiles()
   {
     var filePath = "Directory.Build.props";
     var before = File.GetLastWriteTime(filePath);
     Thread.Sleep(100);
 
-    var result = RunScript("-BrandName", "TestWhatIf", "-WhatIf");
+    var result = await RunScript("-BrandName", "TestWhatIf", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
 
     var after = File.GetLastWriteTime(filePath);
@@ -215,20 +229,25 @@ public class CustomizeScriptTests
     Assert.Contains(expectedLine, result.StandardOutput);
   }
 
-  private void AssertOutputMatchesBrandValues(ProcessResult result, string brandName, string brandKey)
+  private void AssertOutputMatchesBrandValues(ProcessResult result, string brandName, string brandKey, string? publisher = null)
   {
     // Directory.Build.props: BrandPrefix and Substring
     AssertContainsLine(result, $"<BrandPrefix>{brandKey}</BrandPrefix>");
 
-    // BrandingConstants.cs: BrandName and Publisher (and colors only when passed)
+    // BrandingConstants.cs: BrandName
     AssertContainsLine(result, $"BrandName = \"{brandName}\"");
-    AssertContainsLine(result, "Publisher = \"Bitbound\"");
 
-    // Info.plist: BrandName replaces "ControlR" strings, Publisher in copyright
+    // When a custom publisher is provided, verify it appears in the diff
+    if (publisher is not null)
+    {
+      AssertContainsLine(result, $"Publisher = \"{publisher}\"");
+      AssertContainsLine(result, "Copyright");
+      AssertContainsLine(result, $"{publisher}. All rights reserved");
+    }
+
+    // Info.plist: BrandName replaces "ControlR" strings
     AssertContainsLine(result, $"<string>{brandName}</string>");
     AssertContainsLine(result, $"{brandName} uses notifications");
-    AssertContainsLine(result, "Copyright");
-    AssertContainsLine(result, "Bitbound. All rights reserved");
 
     // appsettings.json: AuthenticatorIssuerName
     AssertContainsLine(result, $"AuthenticatorIssuerName\": \"{brandName}\"");
@@ -257,7 +276,7 @@ public class CustomizeScriptTests
     AssertContainsLine(result, $"{brandName} agent bundle");
   }
 
-  private ProcessResult RunScript(params string[] args)
+  private async Task<ProcessResult> RunScript(params string[] args)
   {
     var ps1Quoted = $"\"{_ps1Path}\"";
     var quotedArgs = args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a);
@@ -272,14 +291,50 @@ public class CustomizeScriptTests
       UseShellExecute = false,
       WorkingDirectory = _solutionDir,
     };
-    using var process = Process.Start(startInfo)
-      ?? throw new InvalidOperationException($"Could not start process for '{startInfo.FileName} {arguments}'.");
-    process.WaitForExit(60_000);
-    var stdout = process.StandardOutput.ReadToEnd();
-    var stderr = process.StandardError.ReadToEnd();
+
+    var outputLines = new List<string>();
+    var errorLines = new List<string>();
+
+    using var process = Process.Start(startInfo);
+  
+    Assert.NotNull(process);
+
+    process.OutputDataReceived += (sender, e) =>
+    {
+      if (e.Data is not null)
+        outputLines.Add(e.Data);
+    };
+    process.ErrorDataReceived += (sender, e) =>
+    {
+      if (e.Data is not null)
+        errorLines.Add(e.Data);
+    };
+
+    process.BeginOutputReadLine();
+    process.BeginErrorReadLine();
+
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
+    try
+    {
+      await process.WaitForExitAsync(cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+      process.Kill(true);
+      process.WaitForExitAsync().Wait();
+      throw new TimeoutException(
+        $"Process '{startInfo.FileName} {arguments}' did not exit within 60s.");
+    }
+
+    var stdout = string.Join("\n", outputLines);
+    var stderr = string.Join("\n", errorLines);
+
     _output.WriteLine(stdout);
+
     if (!string.IsNullOrWhiteSpace(stderr))
       _output.WriteLine($"STDERR: {stderr}");
+      
     return new ProcessResult(process.ExitCode, stdout, stderr);
   }
 }
