@@ -144,7 +144,19 @@ public static class WebApplicationBuilderExtensions
       options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
     });
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddCors();
+    builder.Services.AddCors(options =>
+    {
+      if (appOptions.EnableCors && appOptions.CorsAllowedOrigins is { Length: > 0 } origins)
+      {
+        options.AddDefaultPolicy(policy =>
+        {
+          policy.WithOrigins(origins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+      }
+    });
     builder.Services.AddRateLimiter(options =>
     {
       options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

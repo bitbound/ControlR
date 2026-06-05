@@ -28,6 +28,11 @@ public class AppOptions
   /// </summary>
   public string? AuthenticatorIssuerName { get; init; }
   /// <summary>
+  /// Array of allowed origins for CORS.
+  /// Only used when EnableCors is true.
+  /// </summary>
+  public string[] CorsAllowedOrigins { get; init; } = [];
+  /// <summary>
   /// The default theme mode for unauthenticated users.
   /// Authenticated users have their own per-user theme preference.
   /// </summary>
@@ -47,6 +52,11 @@ public class AppOptions
   /// and adds them to the KnownNetworks list for forwarded headers.
   /// </summary>
   public bool EnableCloudflareProxySupport { get; init; }
+  /// <summary>
+  /// When enabled, CORS middleware will be applied and origins specified
+  /// in CorsAllowedOrigins will be permitted. If disabled, CORS is not applied.
+  /// </summary>
+  public bool EnableCors { get; init; }
   /// <summary>
   /// Enables detailed error messages from Entity Framework Core when database errors occur.
   /// This can be helpful for debugging but may leak sensitive information, so it is disabled by default.
@@ -122,7 +132,7 @@ public class AppOptions
   /// The maximum allowed file size for transfers in the remote File System component.
   /// Set to 0 or less for no limit. Default is 100 MB (104857600 bytes).
   /// </summary>
-  public long MaxFileTransferSize { get; init; } = 100 * 1024 * 1024; // 100 MB default
+  public long MaxFileTransferSize { get; init; } = 100 * 1024 * 1024;// 100 MB default
   /// <summary>
   /// The client ID for Microsoft account authentication.
   /// Create an App Registration in Azure and set this value to enable Microsoft login.
