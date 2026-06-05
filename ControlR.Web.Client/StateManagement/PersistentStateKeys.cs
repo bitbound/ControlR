@@ -5,6 +5,7 @@
 /// </summary>
 public static class PersistentStateKeys
 {
+  public const string DefaultThemeMode = nameof(DefaultThemeMode);
   public const string IsDarkMode = nameof(IsDarkMode);
   public const string ServerDecommissioned = nameof(ServerDecommissioned);
   public const string UserInfo = nameof(UserInfo);

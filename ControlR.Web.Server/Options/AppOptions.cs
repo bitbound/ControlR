@@ -28,6 +28,11 @@ public class AppOptions
   /// </summary>
   public string? AuthenticatorIssuerName { get; init; }
   /// <summary>
+  /// The default theme mode for unauthenticated users.
+  /// Authenticated users have their own per-user theme preference.
+  /// </summary>
+  public ThemeMode DefaultThemeMode { get; init; }
+  /// <summary>
   /// Disables all email sending from the application.
   /// When enabled, no emails will be sent for account confirmation, password reset, etc.
   /// </summary>

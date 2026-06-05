@@ -3,7 +3,6 @@ using ControlR.DesktopClient.Linux.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.TestingUtilities;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;

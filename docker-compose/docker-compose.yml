@@ -177,6 +177,10 @@ services:
       # Disable all email sending from the application.
       ControlR_AppOptions__DisableEmailSending: false
 
+      # The default theme mode for unauthenticated users ("Dark" or "Light").
+      # Authenticated users have their own per-user theme preference.
+      ControlR_AppOptions__DefaultThemeMode: "Dark"
+
       # SMTP settings are used for sending account-related emails, such as
       # account confirmation and password reset emails.  As of this writing,
       # emails are only used for Microsoft's Identity system.

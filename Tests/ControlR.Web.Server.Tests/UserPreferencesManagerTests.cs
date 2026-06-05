@@ -43,7 +43,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
     Assert.Equal(UserPreferenceDefinitions.DefaultHideOfflineDevices, result.HideOfflineDevices);
     Assert.Equal(UserPreferenceDefinitions.DefaultIncludeUntaggedDevices, result.IncludeUntaggedDevices);
     Assert.Equal(UserPreferenceDefinitions.DefaultNotifyUserOnSessionStart, result.NotifyUserOnSessionStart);
-    Assert.Equal(ThemeMode.Auto, result.ThemeMode);
+    Assert.Equal(ThemeMode.Dark, result.ThemeMode);
     Assert.Equal(ViewMode.Fit, result.ViewMode);
     Assert.Equal(string.Empty, result.UserDisplayName);
   }

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
 
-public partial class Settings
+public partial class Settings : IDisposable
 {
   private double _autoQualityLowerThresholdMbps = AppConstants.DefaultRemoteControlAutoQualityLowerThresholdMbps;
   private int _autoQualityMaximum = AppConstants.DefaultRemoteControlAutoQualityMaximum;
@@ -20,7 +20,7 @@ public partial class Settings
   private double _maxBandwidthMbps = AppConstants.DefaultRemoteControlMaxBandwidthMbps;
   private bool _notifyUser;
   private Guid? _tenantId;
-  private ThemeMode _themeMode = ThemeMode.Auto;
+  private ThemeMode _themeMode = ThemeMode.Dark;
   private string _userDisplayName = string.Empty;
   private Guid? _userId;
   private ViewMode _viewMode = ViewMode.Fit;
@@ -42,8 +42,16 @@ public partial class Settings
   [Inject]
   public required IUserPreferencesProvider UserPreferences { get; init; }
 
+  public void Dispose()
+  {
+    Messenger.UnregisterAll(this);
+    GC.SuppressFinalize(this);
+  }
+
   protected override async Task OnInitializedAsync()
   {
+    Messenger.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
+
     var state = await AuthState.GetAuthenticationStateAsync();
     if (state.User.TryGetTenantId(out var tenantId))
     {
@@ -112,6 +120,13 @@ public partial class Settings
   {
     await ClipboardManager.SetText($"{_userId}");
     Snackbar.Add("Copied to clipboard", Severity.Success);
+  }
+
+  private Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
+  {
+    _themeMode = message.ThemeMode;
+    StateHasChanged();
+    return Task.CompletedTask;
   }
 
   private async Task RestoreQualityDefaults()

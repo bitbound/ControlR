@@ -34,7 +34,7 @@
           <ConnectionIndicator THub="@IViewerHub" />
         }
 
-        @if (IsAuthenticated)
+        @if (RendererInfo.IsInteractive && IsAuthenticated)
         {
           <ThemeToggle OnThemeChanged="HandleThemeChanged" />
         }

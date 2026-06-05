@@ -85,13 +85,13 @@
   </MudText>
 
   <MudRadioGroup @bind-Value:get="_themeMode" @bind-Value:set="SetThemeMode" T="ThemeMode">
-    <MudRadio Value="@ThemeMode.Auto" Color="Color.Primary">
+    <MudRadio Value="@ThemeMode.Dark" Color="Color.Primary" Class="mt-2">
       <div class="d-flex align-center">
-        <MudIcon Icon="@Icons.Material.Filled.Brightness4" Class="me-2" Size="Size.Small" />
+        <MudIcon Icon="@Icons.Material.Filled.DarkMode" Class="me-2" Size="Size.Small" />
         <div>
-          <MudText>Auto</MudText>
+          <MudText>Dark</MudText>
           <MudText Typo="Typo.caption" Color="Color.Secondary">
-            Follows your system preference
+            Dark theme
           </MudText>
         </div>
       </div>
@@ -103,17 +103,6 @@
           <MudText>Light</MudText>
           <MudText Typo="Typo.caption" Color="Color.Secondary">
             Light theme
-          </MudText>
-        </div>
-      </div>
-    </MudRadio>
-    <MudRadio Value="@ThemeMode.Dark" Color="Color.Primary" Class="mt-2">
-      <div class="d-flex align-center">
-        <MudIcon Icon="@Icons.Material.Filled.DarkMode" Class="me-2" Size="Size.Small" />
-        <div>
-          <MudText>Dark</MudText>
-          <MudText Typo="Typo.caption" Color="Color.Secondary">
-            Dark theme
           </MudText>
         </div>
       </div>

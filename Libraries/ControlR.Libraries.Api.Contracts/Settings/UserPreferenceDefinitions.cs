@@ -55,7 +55,7 @@ public static class UserPreferenceDefinitions
   public static SettingDefinition<bool> OpenDeviceInNewTab { get; } =
     SettingDefinition.CreateBoolean(UserPreferenceNames.OpenDeviceInNewTab, DefaultOpenDeviceInNewTab);
   public static SettingDefinition<ThemeMode> ThemeMode { get; } =
-    SettingDefinition.CreateEnum(UserPreferenceNames.ThemeMode, Enums.ThemeMode.Auto);
+    SettingDefinition.CreateEnum(UserPreferenceNames.ThemeMode, Enums.ThemeMode.Dark);
   public static SettingDefinition<string> UserDisplayName { get; } =
     new(
       UserPreferenceNames.UserDisplayName,

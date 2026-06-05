@@ -42,6 +42,8 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   [CascadingParameter(Name = "AcceptsInteractiveRouting")]
   protected bool IsInteractiveRoutingPage { get; set; }
   protected PersistingComponentStateSubscription PersistingSubscription { get; set; }
+  [CascadingParameter(Name = "DefaultThemeMode")]
+  protected ThemeMode ServerDefaultThemeMode { get; set; }
   protected string ThemeClass => IsDarkMode ? "dark-mode" : "light-mode";
 
   public virtual ValueTask DisposeAsync()
@@ -74,28 +76,44 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   {
     await base.OnInitializedAsync();
 
-    var authState = await AuthState.GetAuthenticationStateAsync();
-    IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
-
-    // Restore persisted dark mode state from the SSR → WASM hydration handoff.
+    // Set IsDarkMode synchronously before the first await.  Blazor can render between
+    // await yield points within OnInitializedAsync.  If IsDarkMode is still the field
+    // default (true/dark) when that happens, the user sees a dark flash before the
+    // correct value is applied below.  This early seed prevents it.  DO NOT REMOVE.
     if (PersistentState.Exists)
     {
       IsDarkMode = PersistentState.Value.IsDarkMode;
     }
+    else
+    {
+      IsDarkMode = ServerDefaultThemeMode != ThemeMode.Light;
+    }
+
+    var authState = await AuthState.GetAuthenticationStateAsync();
+    IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
 
     // Load the user's stored theme preference in both SSR and WASM paths.
     if (IsAuthenticated)
     {
       CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode;
     }
+    else if (PersistentState.Exists)
+    {
+      // WASM: unauthenticated users always use the server's configured default.
+      CurrentThemeMode = PersistentState.Value.DefaultThemeMode;
+    }
+    else
+    {
+      // SSR: cascading value from App.razor (IOptions<AppOptions>.DefaultThemeMode).
+      CurrentThemeMode = ServerDefaultThemeMode;
+    }
 
-    // Re-evaluate IsDarkMode from the effective CurrentThemeMode.
+    // Evaluate IsDarkMode from the effective CurrentThemeMode.
     //   - During SSR, GetSystemDarkMode() defaults to dark (JS unavailable).
     //   - During WASM hydration, it queries the actual browser preference.
     await UpdateIsDarkMode();
 
     // During SSR, register a callback to persist state before the response is sent.
-    // After WASM hydration, PersistentStateAccessor already owns the persist hook, so skip.
     if (!PersistentState.Exists)
     {
       PersistingSubscription = ApplicationState.RegisterOnPersisting(PersistThemeState);
@@ -108,27 +126,11 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
     }
   }
 
-  protected Task PersistThemeState()
-  {
-    ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, IsDarkMode);
-    return Task.CompletedTask;
-  }
-
   protected void ToggleNavDrawer()
   {
     DrawerOpen = !DrawerOpen;
   }
 
-  protected virtual async Task UpdateIsDarkMode()
-  {
-    IsDarkMode = CurrentThemeMode switch
-    {
-      ThemeMode.Light => false,
-      ThemeMode.Dark => true,
-      ThemeMode.Auto => await GetSystemDarkMode(),
-      _ => true
-    };
-  }
 
   private async Task<bool> GetSystemDarkMode()
   {
@@ -138,7 +140,13 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
       {
         return await JsInterop.Value.GetSystemDarkMode();
       }
-      return true; // Default to dark during prerendering
+      // During SSR, JS is unavailable. Use the server's DefaultThemeMode as the hint.
+      return ServerDefaultThemeMode switch
+      {
+        ThemeMode.Light => false,
+        ThemeMode.Dark => true,
+        _ => true
+      };
     }
     catch (Exception ex)
     {
@@ -157,4 +165,26 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
     Snackbar.Value.Add(toast.Message, toast.Severity);
     return Task.CompletedTask;
   }
+
+  // Persists the SSR-computed IsDarkMode so WASM hydration can seed it before the
+  // first await (see the early-set above).  Without this, WASM would flash dark
+  // before UpdateIsDarkMode runs.  DO NOT REMOVE.
+  private Task PersistThemeState()
+  {
+    ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, IsDarkMode);
+    ApplicationState.PersistAsJson(PersistentStateKeys.DefaultThemeMode, ServerDefaultThemeMode);
+    return Task.CompletedTask;
+  }
+
+  private async Task UpdateIsDarkMode()
+  {
+    IsDarkMode = CurrentThemeMode switch
+    {
+      ThemeMode.Light => false,
+      ThemeMode.Dark => true,
+      ThemeMode.Auto => await GetSystemDarkMode(),
+      _ => true
+    };
+  }
+
 }

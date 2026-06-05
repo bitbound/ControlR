@@ -4,6 +4,7 @@ namespace ControlR.Web.Client.Services;
 
 public interface IPersistentStateAccessor
 {
+  ThemeMode DefaultThemeMode { get; }
   bool IsDarkMode { get; }
   bool IsDecommissioned { get; }
   UserInfo? UserInfo { get; }
@@ -13,7 +14,9 @@ public sealed class PersistentStateAccessor : IPersistentStateAccessor, IDisposa
 {
   private const string DarkModeKey = PersistentStateKeys.IsDarkMode;
   private const string DecommissionStateKey = PersistentStateKeys.ServerDecommissioned;
+  private const string DefaultThemeModeKey = PersistentStateKeys.DefaultThemeMode;
   private const string UserInfoKey = PersistentStateKeys.UserInfo;
+
   private readonly ILogger<PersistentStateAccessor> _logger;
   private readonly PersistingComponentStateSubscription _persistingSubscription;
 
@@ -25,6 +28,15 @@ public sealed class PersistentStateAccessor : IPersistentStateAccessor, IDisposa
   {
     _logger = logger;
 
+    if (state.TryTakeFromJson<ThemeMode>(DefaultThemeModeKey, out var defaultThemeMode))
+    {
+      _logger.LogDebug("Loaded persisted default theme mode: {DefaultThemeMode}.", defaultThemeMode);
+      DefaultThemeMode = defaultThemeMode;
+    }
+
+    // Consumed by BaseLayout to seed IsDarkMode synchronously before the first await
+    // in OnInitializedAsync, preventing a dark flash during SSR→WASM hydration.
+    // DO NOT REMOVE — see the early-set in BaseLayout.OnInitializedAsync.
     if (state.TryTakeFromJson<bool>(DarkModeKey, out var isDarkMode))
     {
       _logger.LogDebug("Loaded persisted dark mode state: {IsDarkMode}.", isDarkMode);
@@ -45,12 +57,13 @@ public sealed class PersistentStateAccessor : IPersistentStateAccessor, IDisposa
 
     _persistingSubscription = state.RegisterOnPersisting(() =>
       {
-        state.PersistAsJson(DarkModeKey, IsDarkMode);
+        state.PersistAsJson(DefaultThemeModeKey, DefaultThemeMode);
         state.PersistAsJson(DecommissionStateKey, IsDecommissioned);
         return Task.CompletedTask;
       });
   }
 
+  public ThemeMode DefaultThemeMode { get; private set; }
   public bool IsDarkMode { get; private set; }
   public bool IsDecommissioned { get; private set; }
   public UserInfo? UserInfo { get; private set; }

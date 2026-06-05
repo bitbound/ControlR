@@ -2,19 +2,12 @@
 @inject IUserPreferencesProvider UserPreferences
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthState
+@inject ILazyInjector<IMessenger> Messenger
+
+@implements IDisposable
 
 <MudTooltip Text="@GetTooltipText()">
   <MudMenu Icon="@GetCurrentIcon()" Color="Color.Inherit" AnchorOrigin="Origin.BottomLeft">
-    <MudMenuItem OnClick="@(() => SetTheme(ThemeMode.Auto))">
-      <div class="d-flex align-center">
-        <MudIcon Icon="@Icons.Material.Filled.Brightness4" Class="me-2" />
-        <MudText>Auto</MudText>
-        @if (_currentMode == ThemeMode.Auto)
-        {
-          <MudIcon Icon="@Icons.Material.Filled.Check" Class="ms-2" Size="Size.Small" Color="Color.Primary" />
-        }
-      </div>
-    </MudMenuItem>
     <MudMenuItem OnClick="@(() => SetTheme(ThemeMode.Light))">
       <div class="d-flex align-center">
         <MudIcon Icon="@Icons.Material.Filled.LightMode" Class="me-2" />
@@ -42,14 +35,36 @@
   [Parameter]
   public EventCallback<ThemeMode> OnThemeChanged { get; set; }
 
-  private ThemeMode _currentMode = ThemeMode.Auto;
+  private ThemeMode _currentMode = ThemeMode.Dark;
 
   protected override async Task OnInitializedAsync()
   {
+    await base.OnInitializedAsync();
+
+    if (Messenger.Exists)
+    {
+      Messenger.Value.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
+    }
+
     if (await AuthState.IsAuthenticated())
     {
       _currentMode = (await UserPreferences.GetPreferences()).ThemeMode;
     }
+  }
+
+  public void Dispose()
+  {
+    if (Messenger.Exists)
+    {
+      Messenger.Value.UnregisterAll(this);
+    }
+    GC.SuppressFinalize(this);
+  }
+
+  private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
+  {
+    _currentMode = message.ThemeMode;
+    await InvokeAsync(StateHasChanged);
   }
 
   private string GetCurrentIcon()
@@ -57,8 +72,7 @@
     return _currentMode switch
     {
       ThemeMode.Light => Icons.Material.Filled.LightMode,
-      ThemeMode.Dark => Icons.Material.Filled.DarkMode,
-      _ => Icons.Material.Filled.Brightness4
+      _ => Icons.Material.Filled.DarkMode
     };
   }
 
@@ -67,8 +81,7 @@
     return _currentMode switch
     {
       ThemeMode.Light => "Theme: Light",
-      ThemeMode.Dark => "Theme: Dark",
-      _ => "Theme: Auto"
+      _ => "Theme: Dark"
     };
   }
 
@@ -80,13 +93,12 @@
       await UserPreferences.SetPreference(UserPreferenceNames.ThemeMode, mode);
     }
     await OnThemeChanged.InvokeAsync(mode);
+    await Messenger.Value.Send(new ThemeChangedMessage(mode));
 
     var modeText = mode switch
     {
-      ThemeMode.Auto => "Auto",
       ThemeMode.Light => "Light",
-      ThemeMode.Dark => "Dark",
-      _ => "Unknown"
+      _ => "Dark"
     };
 
     Snackbar.Add($"Theme set to {modeText}", Severity.Success);

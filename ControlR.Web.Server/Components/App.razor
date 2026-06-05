@@ -22,7 +22,9 @@
 
 <body>
   <CascadingValue Value="HttpContext.AcceptsInteractiveRouting()" Name="AcceptsInteractiveRouting">
-    <Routes @rendermode="PageRenderMode" />
+    <CascadingValue Value="_defaultThemeMode" Name="DefaultThemeMode">
+      <Routes @rendermode="PageRenderMode" />
+    </CascadingValue>
   </CascadingValue>
   <script src="@Assets["_framework/blazor.web.js"]"></script>
   <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
@@ -41,8 +43,13 @@
 </html>
 
 @code {
+  [Inject]
+  private IOptions<AppOptions> AppOptions { get; set; } = default!;
+
   [CascadingParameter]
   private HttpContext HttpContext { get; set; } = default!;
+
+  private ThemeMode _defaultThemeMode => AppOptions.Value.DefaultThemeMode;
 
   private IComponentRenderMode? PageRenderMode
   {

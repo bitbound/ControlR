@@ -1,23 +1,19 @@
 using ControlR.Libraries.TestingUtilities;
-using ControlR.Libraries.TestingUtilities.FileSystem;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Tmds.DBus.Protocol;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.FileSystem;
-using Castle.Core.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Diagnostics;
-using ControlR.Libraries.Shared.Services.Processes;
 
 namespace ControlR.DesktopClient.Linux.Tests;
 
 public class XdgDesktopPortalTests : IDisposable
 {
   private readonly XdgDesktopPortal _desktopPortal;
-  private readonly FakeFileSystem _fileSystem;
+  private readonly FileAccessPermissions _fileAccessPermissions;
   private readonly ILogger<XdgDesktopPortal> _logger;
   private readonly OptionsMonitorWrapper<DesktopClientOptions> _options;
   private readonly ITestOutputHelper _outputHelper;
@@ -33,10 +29,11 @@ public class XdgDesktopPortalTests : IDisposable
     });
     _outputHelper = outputHelper;
     _logger = loggerFactory.CreateLogger<XdgDesktopPortal>();
-    _fileSystem = new FakeFileSystem();
-    _options = new OptionsMonitorWrapper<DesktopClientOptions>(new DesktopClientOptions());
-    _desktopPortal = new XdgDesktopPortal(_fileSystem, _fileSystem, _options, _logger);
     _realFileSystem = new FileSystem(NullLoggerFactory.Instance.CreateLogger<FileSystem>());
+    _fileAccessPermissions = new FileAccessPermissions();
+    _options = new OptionsMonitorWrapper<DesktopClientOptions>(new DesktopClientOptions());
+    _options.CurrentValue.InstanceId = "test";
+    _desktopPortal = new XdgDesktopPortal(_realFileSystem, _fileAccessPermissions, _options, _logger);
     _testCancellationToken = TestContext.Current.CancellationToken;
   }
 
