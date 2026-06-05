@@ -386,14 +386,17 @@ static FileSystemPathProvider GetTempPathProvider(HostApplicationBuilder builder
 
 static Guid[]? ParseTagIds(string? deviceTags)
 {
-  return deviceTags is null
-    ? null
-    : [.. deviceTags
-      .Split(",")
-      .Select(x => Guid.TryParse(x, out var tagId)
-        ? tagId
-        : Guid.Empty)
-      .Where(x => x != Guid.Empty)];
+  if (deviceTags is null)
+  {
+    return null;
+  }
+
+  return [.. deviceTags
+    .Split(",")
+    .Select(x => Guid.TryParse(x, out var tagId)
+      ? tagId
+      : Guid.Empty)
+    .Where(x => x != Guid.Empty)];
 }
 
 static void ValidateInstanceId(OptionResult optionResult)

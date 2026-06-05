@@ -3085,6 +3085,35 @@
         }
       }
     },
+    "/api/user-server-settings/decommission-status": {
+      "get": {
+        "tags": [
+          "UserServerSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecommissionServerResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecommissionServerResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecommissionServerResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/user-tags": {
       "post": {
         "tags": [
@@ -3757,6 +3786,17 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "DecommissionServerResponseDto": {
+        "required": [
+          "isEnabled"
+        ],
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "type": "boolean"
           }
         }
       },

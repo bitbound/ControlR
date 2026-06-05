@@ -12,13 +12,15 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   [Inject]
   public required AuthenticationStateProvider AuthState { get; set; }
   [Inject]
-  public required ILogger<BaseLayout> BaseLogger { get; set; }
-  [Inject]
   public required ILazyInjector<IJsInterop> JsInterop { get; set; }
+  [Inject]
+  public required ILogger<BaseLayout> Logger { get; set; }
   [Inject]
   public required ILazyInjector<IMessenger> Messenger { get; set; }
   [Inject]
   public required NavigationManager NavManager { get; set; }
+  [Inject]
+  public required ILazyInjector<IPersistentStateAccessor> PersistentState { get; set; }
   [Inject]
   public required ILazyInjector<ISnackbar> Snackbar { get; set; }
   [Inject]
@@ -54,35 +56,20 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
     }
     catch (Exception ex)
     {
-      BaseLogger.LogError(ex, "Error during BaseLayout disposal.");
+      Logger.LogError(ex, "Error during BaseLayout disposal.");
     }
 
     GC.SuppressFinalize(this);
     return ValueTask.CompletedTask;
   }
 
-  protected async Task<bool> GetSystemDarkMode()
-  {
-    try
-    {
-      if (RendererInfo.IsInteractive)
-      {
-        return await JsInterop.Value.GetSystemDarkMode();
-      }
-      return true; // Default to dark during prerendering
-    }
-    catch (Exception ex)
-    {
-      BaseLogger.LogWarning(ex, "Failed to get system dark mode preference. Defaulting to dark.");
-      return true;
-    }
-  }
   protected virtual async Task HandleThemeChanged(ThemeMode mode)
   {
     CurrentThemeMode = mode;
     await UpdateIsDarkMode();
     StateHasChanged();
   }
+
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
@@ -90,29 +77,28 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
     var authState = await AuthState.GetAuthenticationStateAsync();
     IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
 
-    // Try to restore persisted state from SSR
-    if (!ApplicationState.TryTakeFromJson<bool>(PersistentStateKeys.IsDarkMode, out var persistedIsDarkMode))
+    // Restore persisted dark mode state from the SSR → WASM hydration handoff.
+    if (PersistentState.Exists)
     {
-      // No persisted state, this is SSR or first load
-      if (IsAuthenticated)
-      {
-        CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode;
-      }
-      await UpdateIsDarkMode();
-
-      // Register a callback to persist state before SSR completes
-      PersistingSubscription = ApplicationState.RegisterOnPersisting(PersistThemeState);
+      IsDarkMode = PersistentState.Value.IsDarkMode;
     }
-    else
-    {
-      // Restored from persisted state (this is WASM after SSR)
-      IsDarkMode = persistedIsDarkMode;
 
-      // Still need to load theme mode
-      if (IsAuthenticated)
-      {
-        CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode;
-      }
+    // Load the user's stored theme preference in both SSR and WASM paths.
+    if (IsAuthenticated)
+    {
+      CurrentThemeMode = (await UserPreferences.GetPreferences()).ThemeMode;
+    }
+
+    // Re-evaluate IsDarkMode from the effective CurrentThemeMode.
+    //   - During SSR, GetSystemDarkMode() defaults to dark (JS unavailable).
+    //   - During WASM hydration, it queries the actual browser preference.
+    await UpdateIsDarkMode();
+
+    // During SSR, register a callback to persist state before the response is sent.
+    // After WASM hydration, PersistentStateAccessor already owns the persist hook, so skip.
+    if (!PersistentState.Exists)
+    {
+      PersistingSubscription = ApplicationState.RegisterOnPersisting(PersistThemeState);
     }
 
     if (RendererInfo.IsInteractive)
@@ -121,15 +107,18 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
       Messenger.Value.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
     }
   }
+
   protected Task PersistThemeState()
   {
     ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, IsDarkMode);
     return Task.CompletedTask;
   }
+
   protected void ToggleNavDrawer()
   {
     DrawerOpen = !DrawerOpen;
   }
+
   protected virtual async Task UpdateIsDarkMode()
   {
     IsDarkMode = CurrentThemeMode switch
@@ -141,10 +130,28 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
     };
   }
 
+  private async Task<bool> GetSystemDarkMode()
+  {
+    try
+    {
+      if (RendererInfo.IsInteractive)
+      {
+        return await JsInterop.Value.GetSystemDarkMode();
+      }
+      return true; // Default to dark during prerendering
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to get system dark mode preference. Defaulting to dark.");
+      return true;
+    }
+  }
+
   private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
   {
     await HandleThemeChanged(message.ThemeMode);
   }
+
   private Task HandleToastMessage(object subscriber, MudToastMessage toast)
   {
     Snackbar.Value.Add(toast.Message, toast.Severity);

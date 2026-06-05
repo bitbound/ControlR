@@ -17,6 +17,9 @@ public static class ServiceCollectionExtensions
       config.SnackbarConfiguration.ShowTransitionDuration = 300;
     });
 
+    services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
+    services.AddControlrApiClient(options => options.BaseUrl = baseUrl);
+    services.AddScoped(_ => new HttpClient { BaseAddress = baseUrl });
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();
 
     if (OperatingSystem.IsBrowser())
@@ -28,8 +31,13 @@ public static class ServiceCollectionExtensions
       services.AddScoped<IAppEnvironment, ServerAppEnvironment>();
     }
 
-    services.AddSingleton(TimeProvider.System);
     services.AddLazyInjection();
+
+    services.AddSingleton(TimeProvider.System);
+    services.AddSingleton<IPersistentStateAccessor, PersistentStateAccessor>();
+
+    services.AddScoped<IUserPreferencesProvider, UserPreferencesProviderClient>();
+    services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderClient>();
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
     services.AddScoped<IEffectiveUserPreferences, EffectiveUserPreferences>();
     services.AddScoped<ITenantSettingsProvider, TenantSettingsProvider>();
@@ -51,9 +59,6 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IMetricsState, MetricsState>();
     services.AddScoped<IViewerRemoteControlStream, ViewerRemoteControlStream>();
     services.AddScoped<IStreamMetrics, StreamMetrics>();
-    services.AddTransient<IJsInterop, JsInterop>();
-    services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
-
     services.AddScoped<IDeviceStore, DeviceStore>();
     services.AddScoped<IUserTagStore, UserTagStore>();
     services.AddScoped<IAdminTagStore, AdminTagStore>();
@@ -61,10 +66,8 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IRoleStore, RoleStore>();
     services.AddScoped<IInviteStore, InviteStore>();
 
-    services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
-
-    services.AddControlrApiClient(options => options.BaseUrl = baseUrl);
-    services.AddScoped(_ => new HttpClient { BaseAddress = baseUrl });
+    services.AddTransient<IJsInterop, JsInterop>();
+    services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
 
     return services;
   }

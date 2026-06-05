@@ -21,6 +21,7 @@ public partial class Dashboard : IDisposable
   private int _hiddenUntaggedDevices;
   private bool _hideOfflineDevices;
   private bool _includeUntaggedDevices;
+
   private bool _loading = true;
   private bool _openDeviceInNewTab;
   private int _rowsPerPage = 25;
@@ -42,6 +43,8 @@ public partial class Dashboard : IDisposable
   public required IMessenger Messenger { get; init; }
   [Inject]
   public required NavigationManager NavMan { get; init; }
+  [Inject]
+  public required IPersistentStateAccessor ServerSettings { get; init; }
   [Inject]
   public required ISnackbar Snackbar { get; init; }
   [Inject]
@@ -70,35 +73,44 @@ public partial class Dashboard : IDisposable
 
   protected override async Task OnInitializedAsync()
   {
-    await base.OnInitializedAsync();
-
-    var preferences = await UserPreferences.GetPreferences();
-    _hideOfflineDevices = preferences.HideOfflineDevices;
-    _openDeviceInNewTab = preferences.OpenDeviceInNewTab;
-
-    if (UserTagStore.Items.Count == 0)
+    try
     {
-      await UserTagStore.Refresh();
-    }
+      await base.OnInitializedAsync();
 
-    if (UserTagStore.Items.Count == 0)
+      var preferences = await UserPreferences.GetPreferences();
+      _hideOfflineDevices = preferences.HideOfflineDevices;
+      _openDeviceInNewTab = preferences.OpenDeviceInNewTab;
+
+      if (UserTagStore.Items.Count == 0)
+      {
+        await UserTagStore.Refresh();
+      }
+
+      if (UserTagStore.Items.Count == 0)
+      {
+        _selectedTags = [];
+        _includeUntaggedDevices = true;
+      }
+      else
+      {
+        _selectedTags = [.. UserTagStore.Items];
+        _includeUntaggedDevices = preferences.IncludeUntaggedDevices;
+      }
+
+      _disposables.AddRange(
+        Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage),
+        Messenger.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceived)
+      );
+
+
+      _loading = false;
+      _componentLoadedSignal.Set();
+    }
+    catch (Exception ex)
     {
-      _selectedTags = [];
-      _includeUntaggedDevices = true;
+      Logger.LogError(ex, "Error during dashboard initialization.");
+      Snackbar.Add("An error occurred during dashboard initialization.", Severity.Error);
     }
-    else
-    {
-      _selectedTags = [.. UserTagStore.Items];
-      _includeUntaggedDevices = preferences.IncludeUntaggedDevices;
-    }
-
-    _disposables.AddRange(
-      Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage),
-      Messenger.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceived)
-    );
-
-    _loading = false;
-    _componentLoadedSignal.Set();
   }
 
   private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceResponseDto> message)

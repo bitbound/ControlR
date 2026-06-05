@@ -77,6 +77,9 @@ public static class WebApplicationBuilderExtensions
     builder.Services.Configure<AspireDashboardOptions>(
       builder.Configuration.GetSection(AspireDashboardOptions.SectionKey));
 
+    builder.Services.Configure<ServerLifecycleOptions>(
+      builder.Configuration.GetSection(ServerLifecycleOptions.SectionKey));
+
     var appOptions = builder.Configuration
       .GetSection(AppOptions.SectionKey)
       .Get<AppOptions>() ?? new AppOptions();

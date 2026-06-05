@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using ControlR.ApiClient;
 using ControlR.Web.Client.Startup;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -21,9 +20,6 @@ builder.Services
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthenticationStateDeserialization();
 builder.Services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
-
-builder.Services.AddScoped<IUserPreferencesProvider, UserPreferencesProviderClient>();
-builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderClient>();
 
 var baseUrl = new Uri(builder.HostEnvironment.BaseAddress);
 builder.Services.AddControlrWebClient(baseUrl);

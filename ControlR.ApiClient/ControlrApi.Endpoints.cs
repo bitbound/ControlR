@@ -166,6 +166,7 @@ public interface IUserRolesApi
 
 public interface IUserServerSettingsApi
 {
+  Task<ApiResult<DecommissionServerResponseDto>> GetDecommissionStatus(CancellationToken cancellationToken = default);
   Task<ApiResult<long>> GetFileUploadMaxSize(CancellationToken cancellationToken = default);
 }
 

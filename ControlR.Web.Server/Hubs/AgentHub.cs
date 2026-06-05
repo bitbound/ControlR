@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.OutputCaching;
@@ -14,10 +13,11 @@ public class AgentHub(
   TimeProvider timeProvider,
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
   IDeviceManager deviceManager,
-  IOptions<AppOptions> appOptions,
   IOutputCacheStore outputCacheStore,
   IHubStreamStore hubStreamStore,
   IAgentVersionProvider agentVersionProvider,
+  IOptions<AppOptions> appOptions,
+  IOptions<ServerLifecycleOptions> serverOptions,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly IAgentVersionProvider _agentVersionProvider = agentVersionProvider;
@@ -27,6 +27,7 @@ public class AgentHub(
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<AgentHub> _logger = logger;
   private readonly IOutputCacheStore _outputCacheStore = outputCacheStore;
+  private readonly IOptions<ServerLifecycleOptions> _serverOptions = serverOptions;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
@@ -234,6 +235,28 @@ public class AgentHub(
   {
     try
     {
+      if (_serverOptions.Value.DecommissionServer)
+      {
+        _logger.LogInformation(
+          "Rejecting device update from agent {AgentName} because server is decommissioned.",
+          agentDto.Name);
+
+        await Clients.Caller.UninstallAgent("Server has been decommissioned.");
+
+        var device = await _appDb.Devices.FindAsync(agentDto.Id);
+        if (device is not null)
+        {
+          _appDb.Devices.Remove(device);
+        }
+        
+        await _appDb.SaveChangesAsync();
+
+        await _outputCacheStore.InvalidateDeviceCacheAsync(agentDto.Id);
+        _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", agentDto.Id);
+
+        return HubResult.Fail<DeviceResponseDto>("Server is decommissioned.");
+      }
+
       // Allow agents to self-bootstrap when enabled
       if (_appOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
       {
@@ -387,7 +410,7 @@ public class AgentHub(
       .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))
       .ReceiveDeviceUpdate(dto);
 
-    // Invalidate the device grid cache using the extension method
+    // Invalidate the device grid cache using the extension method.
     await _outputCacheStore.InvalidateDeviceCacheAsync(device.Id);
     _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", device.Id);
 

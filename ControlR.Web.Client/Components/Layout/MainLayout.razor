@@ -1,6 +1,5 @@
 @inherits BaseLayout
 @inject ILazyInjector<IHubConnector> HubConnector
-@inject ILogger<MainLayout> Logger
 
 <div class="@ThemeClass">
 	<ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
@@ -35,7 +34,10 @@
           <ConnectionIndicator THub="@IViewerHub" />
         }
 
-        <ThemeToggle OnThemeChanged="HandleThemeChanged" />
+        @if (IsAuthenticated)
+        {
+          <ThemeToggle OnThemeChanged="HandleThemeChanged" />
+        }
 
         <MudTooltip Text="GitHub">
           <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
@@ -50,6 +52,14 @@
 				@if (RendererInfo.IsInteractive)
 				{
 					<ServerAlertDisplay Class="mb-4" />
+
+					@if (_isServerDecommissioned)
+					{
+						<MudAlert Severity="Severity.Error" Class="mb-4"
+							Icon="@(Icons.Material.Filled.Dangerous)">
+							<strong>Server Decommission Mode is active.</strong> When agents connect, they will automatically uninstall themselves.
+						</MudAlert>
+					}
 				}
 
 				@if (!RendererInfo.IsInteractive && IsInteractiveRoutingPage)
@@ -84,6 +94,8 @@
 </div>
 
 @code {
+	private bool _isServerDecommissioned;
+
 	protected override async Task OnInitializedAsync()
 	{
 		await base.OnInitializedAsync();
@@ -96,6 +108,8 @@
 			{
 				await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
 			}
+
+			_isServerDecommissioned = PersistentState.Value.IsDecommissioned;
 		}
 	}
 

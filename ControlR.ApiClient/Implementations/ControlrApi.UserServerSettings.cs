@@ -7,6 +7,17 @@ namespace ControlR.ApiClient;
 
 public partial class ControlrApi
 {
+  async Task<ApiResult<DecommissionServerResponseDto>> IUserServerSettingsApi.GetDecommissionStatus(CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.GetAsync($"{HttpConstants.UserServerSettingsEndpoint}/decommission-status", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<DecommissionServerResponseDto>(cancellationToken)
+        ?? throw new HttpRequestException("The server response was empty.");
+    });
+  }
+
   async Task<ApiResult<long>> IUserServerSettingsApi.GetFileUploadMaxSize(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>

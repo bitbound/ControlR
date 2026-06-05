@@ -1,6 +1,4 @@
 using System.Security.Claims;
-using ControlR.Web.Client.StateManagement;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Services;
@@ -20,9 +18,11 @@ internal class PersistentAuthenticationStateProvider : AuthenticationStateProvid
 
   private readonly Task<AuthenticationState> _authenticationStateTask = _defaultUnauthenticatedTask;
 
-  public PersistentAuthenticationStateProvider(PersistentComponentState state)
+  public PersistentAuthenticationStateProvider(IPersistentStateAccessor persistentState)
   {
-    if (!state.TryTakeFromJson<UserInfo>(PersistentStateKeys.UserInfo, out var userInfo) || userInfo is null)
+    var userInfo = persistentState.UserInfo;
+
+    if (userInfo is null)
     {
       return;
     }

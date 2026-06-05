@@ -13,9 +13,10 @@ namespace ControlR.Web.Server.Components.Account;
 // authentication state to the client which is then fixed for the lifetime of the WebAssembly application.
 internal sealed class IdentityRevalidatingAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
 {
+  private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
   private readonly ILogger<IdentityRevalidatingAuthenticationStateProvider> _logger;
-  private readonly IdentityOptions _options;
   private readonly IServiceScopeFactory _scopeFactory;
+  private readonly IOptionsMonitor<ServerLifecycleOptions> _serverLifecycleOptions;
   private readonly PersistentComponentState _state;
   private readonly PersistingComponentStateSubscription _subscription;
 
@@ -25,13 +26,15 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
     PersistentComponentState persistentComponentState,
     ILoggerFactory loggerFactory,
     IServiceScopeFactory serviceScopeFactory,
-    IOptions<IdentityOptions> optionsAccessor,
+    IOptionsMonitor<IdentityOptions> identityOptions,
+    IOptionsMonitor<ServerLifecycleOptions> serverLifecycleOptions,
     ILogger<IdentityRevalidatingAuthenticationStateProvider> logger)
     : base(loggerFactory)
   {
     _scopeFactory = serviceScopeFactory;
     _state = persistentComponentState;
-    _options = optionsAccessor.Value;
+    _identityOptions = identityOptions;
+    _serverLifecycleOptions = serverLifecycleOptions;
     _logger = logger;
 
     AuthenticationStateChanged += OnAuthenticationStateChanged;
@@ -77,8 +80,8 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
       return;
     }
 
-    var userId = principal.FindFirst(_options.ClaimsIdentity.UserIdClaimType)?.Value;
-    var email = principal.FindFirst(_options.ClaimsIdentity.EmailClaimType)?.Value;
+    var userId = principal.FindFirst(_identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType)?.Value;
+    var email = principal.FindFirst(_identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType)?.Value;
 
     if (userId is null || email is null)
     {
@@ -115,6 +118,7 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
         principal.Identity?.Name);
     }
     _state.PersistAsJson(PersistentStateKeys.UserInfo, userInfo);
+    _state.PersistAsJson(PersistentStateKeys.ServerDecommissioned, _serverLifecycleOptions.CurrentValue.DecommissionServer);
   }
 
   private async Task<bool> ValidateSecurityStampAsync(UserManager<AppUser> userManager, ClaimsPrincipal principal)
@@ -130,7 +134,7 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
       return true;
     }
 
-    var principalStamp = principal.FindFirstValue(_options.ClaimsIdentity.SecurityStampClaimType);
+    var principalStamp = principal.FindFirstValue(_identityOptions.CurrentValue.ClaimsIdentity.SecurityStampClaimType);
     var userStamp = await userManager.GetSecurityStampAsync(user);
     return principalStamp == userStamp;
   }

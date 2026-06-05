@@ -23,8 +23,6 @@ public partial class DeviceAccessLayout
   [Inject]
   public required ILazyInjector<IHubConnector> HubConnector { get; init; }
   [Inject]
-  public required ILogger<DeviceAccessLayout> Logger { get; init; }
-  [Inject]
   public required ILazyInjector<IRemoteControlState> RemoteControlState { get; init; }
   [Inject]
   public required ILazyInjector<IViewerRemoteControlStream> RemoteControlStream { get; init; }

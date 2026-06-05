@@ -197,12 +197,21 @@ internal sealed class UiBrowserSession : IAsyncDisposable
         return;
       }
 
+      // First try installing with system dependencies (requires sudo on Linux).
       var retVal = await Task.Run(() => Microsoft.Playwright.Program.Main(["install", "--with-deps", "chromium"]));
+      if (retVal != 0)
+      {
+        // --with-deps often fails on non-Debian distros (Fedora, Arch, etc.)
+        // because it needs sudo and the package list is Debian-centric.
+        // Fall back to installing just the browser binaries.
+        retVal = await Task.Run(() => Microsoft.Playwright.Program.Main(["install", "chromium"]));
+      }
+
       if (retVal != 0)
       {
         throw new InvalidOperationException($"Playwright installation failed with exit code {retVal}.");
       }
-      
+
       _isPlaywrightInstalled = true;
     }
     finally
