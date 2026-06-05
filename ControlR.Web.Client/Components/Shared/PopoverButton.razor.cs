@@ -27,12 +27,12 @@ public partial class PopoverButton : JsInteropableComponent
   public Variant Variant { get; set; } = Variant.Outlined;
 
   [JSInvokable]
-  public void ClosePopover()
+  public async Task ClosePopover()
   {
     if (_isOpen)
     {
       _isOpen = false;
-      StateHasChanged();
+      await InvokeAsync(StateHasChanged);
     }
   }
 

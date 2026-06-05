@@ -162,6 +162,6 @@
   private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
   {
     _currentUrl = NavMan.ToBaseRelativePath(e.Location);
-    StateHasChanged();
+    InvokeAsync(StateHasChanged);
   }
 }

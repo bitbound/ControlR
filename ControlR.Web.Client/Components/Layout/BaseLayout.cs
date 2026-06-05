@@ -69,7 +69,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   {
     CurrentThemeMode = mode;
     await UpdateIsDarkMode();
-    StateHasChanged();
+    await InvokeAsync(StateHasChanged);
   }
 
   protected override async Task OnInitializedAsync()
