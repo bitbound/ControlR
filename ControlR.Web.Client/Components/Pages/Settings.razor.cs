@@ -122,11 +122,10 @@ public partial class Settings : IDisposable
     Snackbar.Add("Copied to clipboard", Severity.Success);
   }
 
-  private Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
+  private async Task HandleThemeChangedMessage(object subscriber, ThemeChangedMessage message)
   {
     _themeMode = message.ThemeMode;
-    StateHasChanged();
-    return Task.CompletedTask;
+    await InvokeAsync(StateHasChanged);
   }
 
   private async Task RestoreQualityDefaults()
