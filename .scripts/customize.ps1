@@ -129,35 +129,26 @@ function Resize-Image {
   )
 
   if (-not (Test-Path -LiteralPath $SourcePath)) {
-    Write-Warning "Source image not found for resize: $SourcePath"
-    return
+    throw "Source image not found for resize: $SourcePath"
   }
 
-  try {
-    Add-Type -AssemblyName System.Drawing
+  Add-Type -AssemblyName System.Drawing
 
-    $srcImage = [System.Drawing.Image]::FromFile((Resolve-Path $SourcePath))
-    $destDir = Split-Path $OutputPath -Parent
-    if (-not (Test-Path -LiteralPath $destDir)) {
-      New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-    }
+  $srcImage = [System.Drawing.Image]::FromFile((Resolve-Path $SourcePath))
+  $destDir = Split-Path $OutputPath -Parent
+  if (-not (Test-Path -LiteralPath $destDir)) {
+    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+  }
 
-    $bmp = New-Object System.Drawing.Bitmap($Width, $Height)
-    $gfx = [System.Drawing.Graphics]::FromImage($bmp)
-    $gfx.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-    $gfx.DrawImage($srcImage, 0, 0, $Width, $Height)
-    $bmp.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
-    $gfx.Dispose()
-    $bmp.Dispose()
-    $srcImage.Dispose()
-    Write-Host "Resized -> $OutputPath (${Width}x${Height})"
-  }
-  catch {
-    Write-Warning "Failed to resize image to ${Width}x${Height}: $_"
-    if (Test-Path -LiteralPath $SourcePath) {
-      Copy-Item -LiteralPath $SourcePath -Destination $OutputPath -Force
-    }
-  }
+  $bmp = New-Object System.Drawing.Bitmap($Width, $Height)
+  $gfx = [System.Drawing.Graphics]::FromImage($bmp)
+  $gfx.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+  $gfx.DrawImage($srcImage, 0, 0, $Width, $Height)
+  $bmp.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
+  $gfx.Dispose()
+  $bmp.Dispose()
+  $srcImage.Dispose()
+  Write-Host "Resized -> $OutputPath (${Width}x${Height})"
 }
 
 function Update-FileContent {
@@ -224,9 +215,11 @@ function Write-WhatIfDiff {
       if ($oldTrimmed -and $newTrimmed) {
         Write-Host "  [$($c.Line)] - '$oldTrimmed'" -ForegroundColor DarkGray
         Write-Host "  [$($c.Line)] + '$newTrimmed'" -ForegroundColor Green
-      } elseif ($newTrimmed) {
+      }
+      elseif ($newTrimmed) {
         Write-Host "  [$($c.Line)] + '$newTrimmed'" -ForegroundColor Green
-      } else {
+      }
+      else {
         Write-Host "  [$($c.Line)] - '$oldTrimmed'" -ForegroundColor DarkGray
       }
     }
@@ -422,63 +415,63 @@ else {
   if (Test-Path -LiteralPath $stagingDir) { Remove-Item -LiteralPath $stagingDir -Recurse -Force }
   New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
-$masterPng = ""
-$masterIco = ""
+  $masterPng = ""
+  $masterIco = ""
 
-if ($IconPng) {
-  $masterPng = Get-SourceFile -Source $IconPng -StagingDir $stagingDir -FileName "master.png"
-}
-if ($IconIco) {
-  $masterIco = Get-SourceFile -Source $IconIco -StagingDir $stagingDir -FileName "master.ico"
-}
-
-if ($masterPng) {
-  Write-Host "Distributing PNG icon to all locations"
-
-  $pngLocations = @(
-    ".assets/appicon.png"
-    "ControlR.DesktopClient/Assets/appicon.png"
-  )
-
-  foreach ($loc in $pngLocations) {
-    $dest = Join-Path $repoRoot $loc
-    Copy-Item -LiteralPath $masterPng -Destination $dest -Force
-    Write-Host "  -> $loc"
+  if ($IconPng) {
+    $masterPng = Get-SourceFile -Source $IconPng -StagingDir $stagingDir -FileName "master.png"
+  }
+  if ($IconIco) {
+    $masterIco = Get-SourceFile -Source $IconIco -StagingDir $stagingDir -FileName "master.ico"
   }
 
-  $macSizes = @(16, 32, 64, 128, 256, 512, 1024)
-  $macBase = "ControlR.DesktopClient/Assets.xcassets/AppIcon.appiconset"
-  foreach ($size in $macSizes) {
-    Resize-Image -SourcePath $masterPng -OutputPath (Join-Path $repoRoot "$macBase/Icon$size.png") -Width $size -Height $size
+  if ($masterPng) {
+    Write-Host "Distributing PNG icon to all locations"
+
+    $pngLocations = @(
+      ".assets/appicon.png"
+      "ControlR.DesktopClient/Assets/appicon.png"
+    )
+
+    foreach ($loc in $pngLocations) {
+      $dest = Join-Path $repoRoot $loc
+      Copy-Item -LiteralPath $masterPng -Destination $dest -Force
+      Write-Host "  -> $loc"
+    }
+
+    $macSizes = @(16, 32, 64, 128, 256, 512, 1024)
+    $macBase = "ControlR.DesktopClient/Assets.xcassets/AppIcon.appiconset"
+    foreach ($size in $macSizes) {
+      Resize-Image -SourcePath $masterPng -OutputPath (Join-Path $repoRoot "$macBase/Icon$size.png") -Width $size -Height $size
+    }
+
+    Resize-Image -SourcePath $masterPng -OutputPath (Join-Path $repoRoot "ControlR.Web.Server/wwwroot/static/appicon-192.png") -Width 192 -Height 192
+    Resize-Image -SourcePath $masterPng -OutputPath (Join-Path $repoRoot "ControlR.Web.Server/wwwroot/static/appicon-512.png") -Width 512 -Height 512
+    Copy-Item -LiteralPath $masterPng -Destination (Join-Path $repoRoot "ControlR.Web.Server/wwwroot/static/appicon-transparent.png") -Force
   }
 
-  Resize-Image -SourcePath $masterPng -OutputPath (Join-Path $repoRoot "ControlR.Web.Server/wwwroot/static/appicon-192.png") -Width 192 -Height 192
-  Resize-Image -SourcePath $masterPng -OutputPath (Join-Path $repoRoot "ControlR.Web.Server/wwwroot/static/appicon-512.png") -Width 512 -Height 512
-  Copy-Item -LiteralPath $masterPng -Destination (Join-Path $repoRoot "ControlR.Web.Server/wwwroot/static/appicon-transparent.png") -Force
-}
+  if ($masterIco) {
+    Write-Host "Distributing ICO icon to all locations"
 
-if ($masterIco) {
-  Write-Host "Distributing ICO icon to all locations"
+    $icoLocations = @(
+      ".assets/appicon.ico"
+      "ControlR.DesktopClient/Assets/appicon.ico"
+      "ControlR.Web.Server/wwwroot/static/favicon.ico"
+    )
 
-  $icoLocations = @(
-    ".assets/appicon.ico"
-    "ControlR.DesktopClient/Assets/appicon.ico"
-    "ControlR.Web.Server/wwwroot/static/favicon.ico"
-  )
-
-  foreach ($loc in $icoLocations) {
-    $dest = Join-Path $repoRoot $loc
-    Copy-Item -LiteralPath $masterIco -Destination $dest -Force
-    Write-Host "  -> $loc"
+    foreach ($loc in $icoLocations) {
+      $dest = Join-Path $repoRoot $loc
+      Copy-Item -LiteralPath $masterIco -Destination $dest -Force
+      Write-Host "  -> $loc"
+    }
   }
-}
 
-if ($masterPng -and -not $masterIco) {
-  Write-Host "WARNING: No ICO provided. favicon.ico and appicon.ico locations not updated."
-}
-if ($masterIco -and -not $masterPng) {
-  Write-Host "WARNING: No PNG provided. PNG-only locations not updated."
-}
+  if ($masterPng -and -not $masterIco) {
+    Write-Host "WARNING: No ICO provided. favicon.ico and appicon.ico locations not updated."
+  }
+  if ($masterIco -and -not $masterPng) {
+    Write-Host "WARNING: No PNG provided. PNG-only locations not updated."
+  }
 }
 
 #endregion
@@ -586,9 +579,9 @@ if (Test-Path -LiteralPath $manifestFile) {
 $localizationFile = Join-Path $repoRoot "ControlR.DesktopClient.Common/Resources/Strings/en-US.json"
 if (Test-Path -LiteralPath $localizationFile) {
   $locReplacements = @{
-    '"ControlR Chat"' = "`"$BrandName Chat`""
+    '"ControlR Chat"'                                                           = "`"$BrandName Chat`""
     '"ControlR is free, open-source, self-hostable, and powered by donations."' = "`"$BrandName is free, open-source, self-hostable, and powered by donations.`""
-    '"ControlR uses the following open-source software and libraries."' = "`"$BrandName uses the following open-source software and libraries.`""
+    '"ControlR uses the following open-source software and libraries."'         = "`"$BrandName uses the following open-source software and libraries.`""
   }
   Update-FileContent -FilePath $localizationFile -Replacements $locReplacements
 }
@@ -613,7 +606,7 @@ $openApiFile = Join-Path $repoRoot "ControlR.Web.Server/ControlR.Web.Server.json
 if (Test-Path -LiteralPath $openApiFile) {
   $openApiReplacements = @{
     '"ControlR.Web.Server | v1"' = "`"$brandKey.Web.Server | v1`""
-    '"ControlR.Web.Server"' = "`"$brandKey.Web.Server`""
+    '"ControlR.Web.Server"'      = "`"$brandKey.Web.Server`""
   }
   Update-FileContent -FilePath $openApiFile -Replacements $openApiReplacements
 }
@@ -624,12 +617,12 @@ if (Test-Path -LiteralPath $installerProgramFile) {
   $installerOriginal = $installerProgramContent
 
   $installerProgramContent = $installerProgramContent `
-    -Replace('const string RootDescription = ".*?"', "const string RootDescription = `"$BrandName agent installer.`"") `
-    -Replace('const string InstallCommandDescription = ".*?"', "const string InstallCommandDescription = `"Install the $BrandName agent bundle.`"") `
-    -Replace('const string UninstallCommandDescription = ".*?"', "const string UninstallCommandDescription = `"Uninstall the $BrandName agent bundle.`"") `
-    -Replace('const string TempDirectoryPrefix = ".*?"', "const string TempDirectoryPrefix = `"$unixBrandKey-install-`"") `
-    -Replace('const string TempBundleFileName = ".*?"', "const string TempBundleFileName = `"$brandKey.Agent.bundle.zip`"") `
-    -Replace('example\.\w+\.app', "example.$unixBrandKey.app")
+    -Replace ('const string RootDescription = ".*?"', "const string RootDescription = `"$BrandName agent installer.`"") `
+    -Replace ('const string InstallCommandDescription = ".*?"', "const string InstallCommandDescription = `"Install the $BrandName agent bundle.`"") `
+    -Replace ('const string UninstallCommandDescription = ".*?"', "const string UninstallCommandDescription = `"Uninstall the $BrandName agent bundle.`"") `
+    -Replace ('const string TempDirectoryPrefix = ".*?"', "const string TempDirectoryPrefix = `"$unixBrandKey-install-`"") `
+    -Replace ('const string TempBundleFileName = ".*?"', "const string TempBundleFileName = `"$brandKey.Agent.bundle.zip`"") `
+    -Replace ('example\.\w+\.app', "example.$unixBrandKey.app")
 
   if ($installerProgramContent -ne $installerOriginal) {
     Write-WhatIfDiff -OldContent $installerOriginal -NewContent $installerProgramContent -FilePath $installerProgramFile
@@ -647,8 +640,8 @@ $welcomeCss = Join-Path $repoRoot "ControlR.Web.Client/Components/Welcome.razor.
 if (Test-Path -LiteralPath $welcomeCss) {
   $cssReplacements = @{
     "linear-gradient(90deg, #2196F3, #21f3e9, #7b21f3)" = "linear-gradient(90deg, #$PrimaryColorDark, #$SecondaryColorDark, #$TertiaryColorDark)"
-    "linear-gradient(135deg, #2196F3, #21f3e9)" = "linear-gradient(135deg, #$PrimaryColorDark, #$SecondaryColorDark)"
-    "rgba(33, 150, 243, 0.3)" = "rgba($([int]::Parse($PrimaryColorDark.Substring(0,2), 'HexNumber')), $([int]::Parse($PrimaryColorDark.Substring(2,2), 'HexNumber')), $([int]::Parse($PrimaryColorDark.Substring(4,2), 'HexNumber')), 0.3)"
+    "linear-gradient(135deg, #2196F3, #21f3e9)"         = "linear-gradient(135deg, #$PrimaryColorDark, #$SecondaryColorDark)"
+    "rgba(33, 150, 243, 0.3)"                           = "rgba($([int]::Parse($PrimaryColorDark.Substring(0,2), 'HexNumber')), $([int]::Parse($PrimaryColorDark.Substring(2,2), 'HexNumber')), $([int]::Parse($PrimaryColorDark.Substring(4,2), 'HexNumber')), 0.3)"
   }
   Update-FileContent -FilePath $welcomeCss -Replacements $cssReplacements
 }
@@ -775,11 +768,15 @@ if (Test-Path -LiteralPath $appAxaml) {
   $appOriginal = Get-Content -LiteralPath $appAxaml -Raw -Encoding UTF8
   $appContent = $appOriginal
 
-  $darkPalettePattern = '(?<=<ColorPaletteResources x:Key="Dark"\s+[^>]*Accent=")#2196F3'
-  $lightPalettePattern = '(?<=<ColorPaletteResources x:Key="Light"\s+[^>]*Accent=")#2196F3'
+  $darkAccentFirst = '(<ColorPaletteResources\s[^>]*?\bAccent=")[0-9A-Fa-f]+([^>]*?\bx:Key="Dark"[^>]*?>)'
+  $darkKeyFirst = '(<ColorPaletteResources\s[^>]*?\bx:Key="Dark"[^>]*?\bAccent=")#[0-9A-Fa-f]+'
+  $lightAccentFirst = '(<ColorPaletteResources\s[^>]*?\bAccent=")[0-9A-Fa-f]+([^>]*?\bx:Key="Light"[^>]*?>)'
+  $lightKeyFirst = '(<ColorPaletteResources\s[^>]*?\bx:Key="Light"[^>]*?\bAccent=")#[0-9A-Fa-f]+'
 
-  $appContent = $appContent -replace $darkPalettePattern, "#$PrimaryColorDark"
-  $appContent = $appContent -replace $lightPalettePattern, "#$PrimaryColorLight"
+  $appContent = $appContent -replace $darkAccentFirst, "`$1#$PrimaryColorDark`$2"
+  $appContent = $appContent -replace $darkKeyFirst, "`$1#$PrimaryColorDark"
+  $appContent = $appContent -replace $lightAccentFirst, "`$1#$PrimaryColorLight`$2"
+  $appContent = $appContent -replace $lightKeyFirst, "`$1#$PrimaryColorLight"
 
   if ($appContent -ne $appOriginal) {
     Write-WhatIfDiff -OldContent $appOriginal -NewContent $appContent -FilePath $appAxaml
