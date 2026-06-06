@@ -363,6 +363,7 @@ Write-Host ""
 #region Update BrandPrefix in Directory.Build.props
 
 $brandKey = $BrandName -replace '[^A-Za-z0-9]', '_'
+$unixBrandKey = $BrandName.ToLowerInvariant() -replace '[^a-z0-9]', '_'
 Write-Host "Updating BrandPrefix in Directory.Build.props" -ForegroundColor Yellow
 
 $propsFile = Join-Path $repoRoot "Directory.Build.props"
@@ -418,8 +419,8 @@ if ($WhatIf) {
 }
 else {
   $stagingDir = Join-Path $tempBuildRoot "icon-staging"
-if (Test-Path -LiteralPath $stagingDir) { Remove-Item -LiteralPath $stagingDir -Recurse -Force }
-New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+  if (Test-Path -LiteralPath $stagingDir) { Remove-Item -LiteralPath $stagingDir -Recurse -Force }
+  New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
 $masterPng = ""
 $masterIco = ""
@@ -491,8 +492,6 @@ if (Test-Path -LiteralPath $infoPlistFile) {
   $infoPlistContent = Get-Content -LiteralPath $infoPlistFile -Raw -Encoding UTF8
   $infoOriginal = $infoPlistContent
 
-  $brandKey = $BrandName -replace '[^A-Za-z0-9]', '_'
-  $unixBrandKey = $BrandName.ToLowerInvariant() -replace '[^a-z0-9]', '_'
   $nl = [System.Environment]::NewLine
 
   $infoPlistContent = $infoPlistContent -replace '<string>ControlR</string>', "<string>$BrandName</string>"
@@ -512,8 +511,6 @@ if (Test-Path -LiteralPath $infoPlistFile) {
 #region Config / JSON Text Replacements
 
 Write-Host "Updating config files" -ForegroundColor Yellow
-
-$brandKey = $BrandName -replace '[^A-Za-z0-9]', '_'
 
 Write-Host "Updating InternalsVisibleTo in AssemblyInfo.cs files" -ForegroundColor Yellow
 
@@ -626,12 +623,9 @@ if (Test-Path -LiteralPath $installerProgramFile) {
   $installerProgramContent = Get-Content -LiteralPath $installerProgramFile -Raw -Encoding UTF8
   $installerOriginal = $installerProgramContent
 
-  $unixBrandKey = $BrandName.ToLowerInvariant() -replace '[^a-z0-9]', '_'
-
   $installerProgramContent = $installerProgramContent `
     -Replace('const string RootDescription = ".*?"', "const string RootDescription = `"$BrandName agent installer.`"") `
     -Replace('const string InstallCommandDescription = ".*?"', "const string InstallCommandDescription = `"Install the $BrandName agent bundle.`"") `
-    -Replace('const string RepairDesktopCommandDescription = ".*?"', "const string RepairDesktopCommandDescription = `"Repair the installed desktop client payload without modifying the agent service.`"") `
     -Replace('const string UninstallCommandDescription = ".*?"', "const string UninstallCommandDescription = `"Uninstall the $BrandName agent bundle.`"") `
     -Replace('const string TempDirectoryPrefix = ".*?"', "const string TempDirectoryPrefix = `"$unixBrandKey-install-`"") `
     -Replace('const string TempBundleFileName = ".*?"', "const string TempBundleFileName = `"$brandKey.Agent.bundle.zip`"") `
