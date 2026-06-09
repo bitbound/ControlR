@@ -116,7 +116,7 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   {
     var logger = ViewerRegistry.GetService<ILogger<MainWindowViewModel>>(viewerInstanceId);
     
-    if (_viewerInstanceId != viewerInstanceId)
+    if (_viewerInstanceId is not null && _viewerInstanceId != viewerInstanceId)
     {
       logger?.LogWarning(
         "Attempting to register auth change handler for viewer instance {InstanceId}, but the current handler is registered for a different instance {CurrentInstanceId}.", 

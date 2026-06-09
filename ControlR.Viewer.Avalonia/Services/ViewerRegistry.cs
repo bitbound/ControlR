@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Collections;
 
 namespace ControlR.Viewer.Avalonia.Services;
 
@@ -13,16 +14,15 @@ namespace ControlR.Viewer.Avalonia.Services;
 /// </summary>
 public static class ViewerRegistry
 {
-  private static readonly ConcurrentDictionary<Guid, ViewerInstanceInfo> _instances = new();
-  private static readonly ConcurrentDictionary<Guid, List<Func<ViewerInstanceInfo, Task>>> _pendingServicesReadyHandlers = [];
-  private static readonly Lock _servicesReadyStateLock = new();
+  private static readonly ConcurrentDictionary<Guid, InstanceEntry> _entries = new();
+  private static readonly Lock _handlersLock = new();
 
   /// <summary>
   /// Get all registered viewer instance IDs.
   /// </summary>
   public static ICollection<Guid> GetAllInstanceIds()
   {
-    return _instances.Keys;
+    return _entries.Keys;
   }
 
   /// <summary>
@@ -97,41 +97,22 @@ public static class ViewerRegistry
   {
     ArgumentNullException.ThrowIfNull(handler);
 
-    ViewerInstanceInfo? existingInstance;
-
-    lock (_servicesReadyStateLock)
+    lock (_handlersLock)
     {
-      if (!_instances.TryGetValue(instanceId, out existingInstance))
+      if (!_entries.TryGetValue(instanceId, out var entry) || entry.Info is null)
       {
-        _pendingServicesReadyHandlers.AddOrUpdate(
-          key: instanceId,
-          addValueFactory: _ => [handler],
-          updateValueFactory: (_, existingHandlers) =>
-          {
-            existingHandlers.Add(handler);
-            return existingHandlers;
-          });
-
+        var newEntry = new InstanceEntry();
+        newEntry.Handlers.Add(handler);
+        _entries.TryAdd(instanceId, newEntry);
         return new CallbackDisposable(() =>
         {
-          lock (_servicesReadyStateLock)
-          {
-            if (!_pendingServicesReadyHandlers.TryGetValue(instanceId, out var handlers))
-            {
-              return;
-            }
-
-            handlers.Remove(handler);
-            if (handlers.Count == 0)
-            {
-              _ = _pendingServicesReadyHandlers.TryRemove(instanceId, out _);
-            }
-          }
+          RemoveHandler(instanceId, handler);
         });
       }
+
+      NotifyServicesReady(entry.Info, handler).Forget();
     }
 
-    NotifyServicesReady(existingInstance, handler).Forget();
     return new NoopDisposable();
   }
 
@@ -143,14 +124,21 @@ public static class ViewerRegistry
     var info = new ViewerInstanceInfo(instanceId, viewer, serviceProvider);
     List<Func<ViewerInstanceInfo, Task>>? handlersToNotify;
 
-    lock (_servicesReadyStateLock)
+    lock (_handlersLock)
     {
-      if (!_instances.TryAdd(instanceId, info))
+      if (!_entries.TryGetValue(instanceId, out var entry))
       {
-        return _instances[instanceId];
+        entry = new InstanceEntry();
+        _entries.TryAdd(instanceId, entry);
+      }
+      else if (entry.Info is not null)
+      {
+        return entry.Info;
       }
 
-      _ = _pendingServicesReadyHandlers.TryRemove(instanceId, out handlersToNotify);
+      entry.Info = info;
+      handlersToNotify = entry.Handlers.Count > 0 ? [.. entry.Handlers] : null;
+      entry.Handlers.Clear();
     }
 
     if (handlersToNotify is not null)
@@ -168,7 +156,13 @@ public static class ViewerRegistry
       Guid instanceId,
       [NotNullWhen(true)] out ViewerInstanceInfo? viewerInstanceInfo)
   {
-    return _instances.TryGetValue(instanceId, out viewerInstanceInfo);
+    if (_entries.TryGetValue(instanceId, out var entry))
+    {
+      viewerInstanceInfo = entry.Info;
+      return viewerInstanceInfo is not null;
+    }
+    viewerInstanceInfo = null;
+    return false;
   }
 
   /// <summary>
@@ -176,7 +170,7 @@ public static class ViewerRegistry
   /// </summary>
   public static void Unregister(Guid instanceId)
   {
-    _ = _instances.TryRemove(instanceId, out _);
+    _ = _entries.TryRemove(instanceId, out _);
   }
 
   private static async Task NotifyServicesReady(
@@ -203,5 +197,28 @@ public static class ViewerRegistry
     {
       logger?.LogError(ex, "Error executing services ready handler for viewer instance {InstanceId}", instanceInfo.InstanceId);
     }
+  }
+
+  private static void RemoveHandler(Guid instanceId, Func<ViewerInstanceInfo, Task> handler)
+  {
+    lock (_handlersLock)
+    {
+      if (!_entries.TryGetValue(instanceId, out var entry) || entry.Handlers.Count == 0)
+      {
+        return;
+      }
+
+      entry.Handlers.Remove(handler);
+      if (entry.Handlers.Count == 0)
+      {
+        _ = _entries.TryRemove(instanceId, out _);
+      }
+    }
+  }
+
+  private class InstanceEntry
+  {
+    public ConcurrentList<Func<ViewerInstanceInfo, Task>> Handlers { get; } = [];
+    public ViewerInstanceInfo? Info { get; set; }
   }
 }
