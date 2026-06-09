@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
-		<Title>ControlR Libraries Messenger Extensions</Title>
+		<Title>ControlR.Libraries.Messenger.Extensions</Title>
 		<Description>
 		  Messenger extensions for ControlR, an open-source remote control and remote access solution.
 		</Description>

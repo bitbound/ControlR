@@ -114,9 +114,20 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
 
   public void RegisterAuthChangeHandler(Guid viewerInstanceId)
   {
-    if (_viewerInstanceId == viewerInstanceId && _authSession is not null)
+    var logger = ViewerRegistry.GetService<ILogger<MainWindowViewModel>>(viewerInstanceId);
+    
+    if (_viewerInstanceId != viewerInstanceId)
     {
-      var logger = ViewerRegistry.GetService<ILogger<MainWindowViewModel>>(viewerInstanceId);
+      logger?.LogWarning(
+        "Attempting to register auth change handler for viewer instance {InstanceId}, but the current handler is registered for a different instance {CurrentInstanceId}.", 
+        viewerInstanceId, 
+        _viewerInstanceId);
+
+      return;
+    }
+
+    if (_authSession is not null)
+    {
       logger?.LogWarning("Attempted to register auth change handler for viewer instance {InstanceId}, but a handler is already registered.", viewerInstanceId);
       return;
     }

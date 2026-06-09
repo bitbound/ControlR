@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Title>ControlR Libraries Viewer Common</Title>
+    <Title>ControlR.Libraries.Viewer.Common</Title>
     <Description>
       Common viewer utilities for ControlR, an open-source remote control and remote access solution.
     </Description>

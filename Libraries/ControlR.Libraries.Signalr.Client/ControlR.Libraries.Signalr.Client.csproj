@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
-		<Title>ControlR Libraries SignalR Client</Title>
+		<Title>ControlR.Libraries.SignalR.Client</Title>
 		<Description>
 		  SignalR client utilities for ControlR, an open-source remote control and remote access solution.
 		</Description>

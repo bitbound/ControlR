@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
-		<Title>ControlR Libraries Shared</Title>
+		<Title>ControlR.Libraries.Shared</Title>
 		<Description>
 		  Shared utilities for ControlR, an open-source remote control and remote access solution.
 		</Description>

@@ -17,7 +17,8 @@
     <PackageVersion Include="Bitbound.SimpleMessenger" Version="2.6.31" />
     <PackageVersion Include="CommunityToolkit.Diagnostics" Version="8.4.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageVersion Include="ControlR.ApiClient" Version="0.19.2" />
+    <PackageVersion Include="ControlR.ApiClient" Version="0.23.17" />
+    <PackageVersion Include="ControlR.Viewer.Avalonia" Version="0.23.17" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Devolutions.AvaloniaControls" Version="2026.5.28" />
     <PackageVersion Include="Devolutions.AvaloniaTheme.DevExpress" Version="2026.5.26" />

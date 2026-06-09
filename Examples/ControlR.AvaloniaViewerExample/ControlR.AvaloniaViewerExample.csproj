@@ -29,8 +29,14 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- Use to reference the local project during development -->
+  <!-- <ItemGroup>
     <ProjectReference Include="..\..\ControlR.Viewer.Avalonia\ControlR.Viewer.Avalonia.csproj" />
+  </ItemGroup> -->
+
+  <!-- Use to reference NuGet package for testing -->
+  <ItemGroup>
+    <PackageReference Include="ControlR.Viewer.Avalonia"/>
   </ItemGroup>
 
   <ItemGroup>

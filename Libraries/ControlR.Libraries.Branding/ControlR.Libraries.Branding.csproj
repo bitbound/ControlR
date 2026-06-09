@@ -1,4 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Title>ControlR.Libraries.Branding</Title>
+    <Description>
+      Branding constants for ControlR.
+    </Description>
+    <PackageIcon>appicon.png</PackageIcon>
+    <IsNuGetPackage>true</IsNuGetPackage>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\.assets\appicon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Update="Bitbound.Analyzers.MemberOrder">
       <PrivateAssets>all</PrivateAssets>

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Title>ControlR Libraries WebSocket Relay Client</Title>
+    <Title>ControlR.Libraries.WebSocketRelay.Client</Title>
     <Description>
       WebSocket relay client utilities for ControlR, an open-source remote control and remote access solution.
     </Description>
