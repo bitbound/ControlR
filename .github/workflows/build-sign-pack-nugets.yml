@@ -153,8 +153,10 @@ jobs:
           }
 
       - name: Upload NuGet Packages
-        uses: actions/upload-artifact@v7
+        uses: ./.github/actions/upload-artifact
         with:
           name: NuGetPackages
           path: nuget-packages
           retention-days: ${{ inputs.retention-days }}
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}

@@ -13,6 +13,11 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+      use_local_artifact_storage:
+        description: "Use local SCP artifact storage"
+        required: false
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       prerelease:
@@ -24,6 +29,11 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+      use_local_artifact_storage:
+        description: "Use local SCP artifact storage"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -45,19 +55,23 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Download Server Artifact
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/download-artifact
         with:
           name: Server
           path: ./server-publish
           github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
       - name: Download docker-compose file
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/download-artifact
         with:
           name: DockerCompose
           path: ./docker-compose-download
           github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
       - name: Get Version from Version.txt

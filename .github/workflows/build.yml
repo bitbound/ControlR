@@ -378,11 +378,13 @@ jobs:
           codesign --verify --strict --verbose=2 "$INSTALLER_PATH"
 
       - name: Upload Downloads (${{ matrix.arch }})
-        uses: actions/upload-artifact@v7
+        uses: ./.github/actions/upload-artifact
         with:
           name: Downloads-${{ matrix.arch }}
           path: ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}/
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Cleanup Keychain
         if: always()
@@ -529,11 +531,13 @@ jobs:
           Compress-Archive -Path "$bundleDir\*" -DestinationPath "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.bundle.zip" -Force
 
       - name: Upload Downloads (${{ matrix.arch }})
-        uses: actions/upload-artifact@v7
+        uses: ./.github/actions/upload-artifact
         with:
           name: Downloads-${{ matrix.arch }}
           path: ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
   build-linux-binaries:
     name: Linux Build
@@ -589,11 +593,13 @@ jobs:
           cd "${{ github.workspace }}"
 
       - name: Upload Downloads (linux-x64)
-        uses: actions/upload-artifact@v7
+        uses: ./.github/actions/upload-artifact
         with:
           name: Downloads-linux-x64
           path: ControlR.Web.Server/wwwroot/downloads/linux-x64/
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
   build-web-server:
     name: Build Web Server
@@ -617,34 +623,44 @@ jobs:
         uses: ./.github/actions/setup-dotnet
 
       - name: Download Runtime Downloads (win-x86)
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/download-artifact
         with:
           name: Downloads-win-x86
           path: ControlR.Web.Server/wwwroot/downloads/win-x86/
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Download Runtime Downloads (win-x64)
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/download-artifact
         with:
           name: Downloads-win-x64
           path: ControlR.Web.Server/wwwroot/downloads/win-x64/
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Download Runtime Downloads (linux-x64)
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/download-artifact
         with:
           name: Downloads-linux-x64
           path: ControlR.Web.Server/wwwroot/downloads/linux-x64/
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Download Runtime Downloads (macOS ARM64)
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/download-artifact
         with:
           name: Downloads-osx-arm64
           path: ControlR.Web.Server/wwwroot/downloads/osx-arm64/
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Download Runtime Downloads (macOS x64)
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/download-artifact
         with:
           name: Downloads-osx-x64
           path: ControlR.Web.Server/wwwroot/downloads/osx-x64/
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Create Version.txt
         shell: pwsh
@@ -682,15 +698,19 @@ jobs:
           }
 
       - name: Upload Server
-        uses: actions/upload-artifact@v7
+        uses: ./.github/actions/upload-artifact
         with:
           name: Server
           path: ControlR.Web.Server/bin/publish
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Upload docker-compose
-        uses: actions/upload-artifact@v7
+        uses: ./.github/actions/upload-artifact
         with:
           name: DockerCompose
           path: docker-compose/docker-compose.yml
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}

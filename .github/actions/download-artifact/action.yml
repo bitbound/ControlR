@@ -1,0 +1,68 @@
+name: Download Artifact
+description: Downloads build artifact from GitHub or local SCP storage
+
+inputs:
+  name:
+    description: Artifact name
+    required: true
+  path:
+    description: Path to download to
+    required: true
+  github-token:
+    description: GitHub token for cross-run downloads when using GitHub artifacts
+    required: false
+    default: ''
+  artifact-host:
+    description: SCP host string (e.g. user@host). When provided, uses SCP instead of GitHub artifacts.
+    required: false
+    default: ''
+  artifact-base-path:
+    description: Remote base path for SCP artifact storage (e.g. /path/to/artifacts). Used with artifact-host.
+    required: false
+    default: ''
+  run-id:
+    description: Build workflow run ID (defaults to current run; used for local storage only)
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Check if local storage is available
+      id: check
+      shell: pwsh
+      run: |
+        if ([string]::IsNullOrEmpty('${{ inputs.artifact-host }}')) {
+          'use_local=false' | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+        } else {
+          'use_local=true' | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+        }
+
+    - name: Download via GitHub
+      if: steps.check.outputs.use_local != 'true'
+      uses: actions/download-artifact@v8
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        github-token: ${{ inputs.github-token }}
+        run-id: ${{ inputs.run-id }}
+
+    - name: Download via SCP
+      if: steps.check.outputs.use_local == 'true'
+      shell: pwsh
+      run: |
+        $sshHost = '${{ inputs.artifact-host }}'
+        $basePath = '${{ inputs.artifact-base-path }}'
+        $runId = if ('${{ inputs.run-id }}') { '${{ inputs.run-id }}' } else { '${{ github.run_id }}' }
+        $artifactName = '${{ inputs.name }}'
+        $downloadPath = '${{ inputs.path }}'
+
+        $remoteDir = "$basePath/$runId/$artifactName"
+
+        Write-Host "Downloading from '${sshHost}:${remoteDir}/' to '$downloadPath'"
+
+        if (-not (Test-Path $downloadPath)) {
+          New-Item -ItemType Directory -Path $downloadPath -Force | Out-Null
+        }
+
+        scp -r "${sshHost}:${remoteDir}/*" "${downloadPath}/"

@@ -8,12 +8,22 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+      use_local_artifact_storage:
+        description: "Use local SCP artifact storage"
+        required: false
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       run_id:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+      use_local_artifact_storage:
+        description: "Use local SCP artifact storage"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -37,11 +47,13 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Download NuGet Packages
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/download-artifact
         with:
           name: NuGetPackages
           path: ./nuget-packages
           github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
       - name: Setup .NET

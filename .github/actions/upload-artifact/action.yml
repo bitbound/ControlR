@@ -1,0 +1,98 @@
+name: Upload Artifact
+description: Uploads build artifact to GitHub or local SCP storage
+
+inputs:
+  name:
+    description: Artifact name
+    required: true
+  path:
+    description: Path to upload
+    required: true
+  retention-days:
+    description: Retention days (ignored for local storage)
+    required: false
+    default: '1'
+  artifact-host:
+    description: SCP host string (e.g. user@host). When provided, uses SCP instead of GitHub artifacts.
+    required: false
+    default: ''
+  artifact-base-path:
+    description: Remote base path for SCP artifact storage (e.g. /path/to/artifacts). Used with artifact-host.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Check if local storage is available
+      id: check
+      shell: pwsh
+      run: |
+        if ([string]::IsNullOrEmpty('${{ inputs.artifact-host }}')) {
+          'use_local=false' | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+        } else {
+          'use_local=true' | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+        }
+
+    - name: Upload via GitHub
+      if: steps.check.outputs.use_local != 'true'
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Upload via SCP
+      if: steps.check.outputs.use_local == 'true'
+      shell: pwsh
+      run: |
+        $sshHost = '${{ inputs.artifact-host }}'
+        $basePath = '${{ inputs.artifact-base-path }}'
+        $runId = '${{ github.run_id }}'
+        $artifactName = '${{ inputs.name }}'
+        $uploadPath = '${{ inputs.path }}'
+
+        $remoteDir = "$basePath/$runId/$artifactName"
+
+        if (Test-Path -PathType Leaf $uploadPath) {
+          $parentDir = Split-Path $uploadPath -Parent
+          $fileName = Split-Path $uploadPath -Leaf
+          Write-Host "Uploading file '$uploadPath' to '${sshHost}:${remoteDir}/'"
+          ssh "$sshHost" "mkdir -p '$remoteDir'"
+          scp "${uploadPath}" "${sshHost}:${remoteDir}/${fileName}"
+        } else {
+          Write-Host "Uploading '$uploadPath' to '${sshHost}:${remoteDir}/'"
+          ssh "$sshHost" "mkdir -p '$remoteDir'"
+          scp -r "${uploadPath}/." "${sshHost}:${remoteDir}/"
+        }
+
+    - name: Cleanup old runs (SCP)
+      if: steps.check.outputs.use_local == 'true'
+      shell: pwsh
+      run: |
+        $sshHost = '${{ inputs.artifact-host }}'
+        $basePath = '${{ inputs.artifact-base-path }}'
+        $runId = '${{ github.run_id }}'
+        Write-Host "Cleaning up old runs on '${sshHost}', keeping current ($runId) and previous"
+        $escapedBasePath = $basePath.Replace("'", "'\\''")
+        $remoteListCommand = "find '$escapedBasePath' -mindepth 1 -maxdepth 1 -type d -printf '%f`n' | sort -nr"
+        $runDirectories = @(ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes $sshHost $remoteListCommand)
+
+        if ($LASTEXITCODE -ne 0) {
+          throw "Failed to list remote artifact directories."
+        }
+
+        $directoriesToRemove = $runDirectories |
+          Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+          Where-Object { $_ -ne $runId } |
+          Select-Object -Skip 1
+
+        foreach ($directory in $directoriesToRemove) {
+          $escapedDirectory = $directory.Replace("'", "'\\''")
+          Write-Host "Removing old run directory: $directory"
+          ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes $sshHost "rm -rf '$escapedBasePath/$escapedDirectory'"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to remove remote directory '$directory'."
+          }
+        }

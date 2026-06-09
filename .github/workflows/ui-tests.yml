@@ -2,6 +2,12 @@ name: UI Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      use_local_artifact_storage:
+        description: Use local SCP artifact storage for test results.
+        required: false
+        default: false
+        type: boolean
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
@@ -43,8 +49,10 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: ./.github/actions/upload-artifact
         with:
           name: ui-test-results
           path: TestResults/ControlR.Web.Server.UITests/
           retention-days: 7
+          artifact-host: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_BASE_PATH || '' }}

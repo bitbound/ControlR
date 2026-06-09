@@ -13,6 +13,11 @@ on:
         required: true
         type: boolean
         default: false
+      use_local_artifact_storage:
+        description: "Use local SCP artifact storage"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -26,6 +31,7 @@ jobs:
     with:
       docker_tag: latest
       run_id: ${{ inputs.run_id }}
+      use_local_artifact_storage: ${{ inputs.use_local_artifact_storage }}
     permissions:
       actions: read
       contents: read
@@ -38,6 +44,7 @@ jobs:
     with:
       prerelease: ${{ inputs.prerelease }}
       run_id: ${{ inputs.run_id }}
+      use_local_artifact_storage: ${{ inputs.use_local_artifact_storage }}
     permissions:
       contents: write
 
@@ -48,6 +55,7 @@ jobs:
     secrets: inherit
     with:
       run_id: ${{ inputs.run_id }}
+      use_local_artifact_storage: ${{ inputs.use_local_artifact_storage }}
     permissions:
       actions: read
       contents: read
