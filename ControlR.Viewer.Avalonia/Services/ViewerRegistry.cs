@@ -4,6 +4,7 @@ using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using ControlR.Libraries.Shared.Helpers;
 
 namespace ControlR.Viewer.Avalonia.Services;
 
@@ -13,7 +14,6 @@ namespace ControlR.Viewer.Avalonia.Services;
 public static class ViewerRegistry
 {
   private static readonly ConcurrentDictionary<Guid, ViewerInstanceInfo> _instances = new();
-  private static readonly CallbackDisposable _noopDisposable = new(() => { });
   private static readonly ConcurrentDictionary<Guid, List<Func<ViewerInstanceInfo, Task>>> _pendingServicesReadyHandlers = [];
   private static readonly Lock _servicesReadyStateLock = new();
 
@@ -132,7 +132,7 @@ public static class ViewerRegistry
     }
 
     NotifyServicesReady(existingInstance, handler).Forget();
-    return _noopDisposable;
+    return new NoopDisposable();
   }
 
   /// <summary>
