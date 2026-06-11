@@ -46,6 +46,12 @@ on:
         default: false
         type: boolean
 
+      customization_config_url:
+        description: "URL to JSON customization config (empty for default branding)"
+        required: false
+        default: ""
+        type: string
+
 env:
   VERSION: ${{ inputs.version || vars.CURRENT_VERSION }}
   RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || 1 }}
@@ -206,6 +212,26 @@ jobs:
           fi
           echo "IDENTITY_HASH=$IDENTITY_HASH" >> "$GITHUB_ENV"
 
+      - name: Apply Customization
+        id: customize
+        if: inputs.customization_config_url != ''
+        shell: pwsh
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigUrl '${{ inputs.customization_config_url }}' -Version '${{ needs.set-version.outputs.version }}'
+
+      - name: Set Default Branding
+        if: inputs.customization_config_url == ''
+        shell: pwsh
+        run: |
+          echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
+          echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
+
+      - name: Validate Brand Keys
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
+          if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
+          Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
+
       - name: Publish DesktopClient Bundle (${{ matrix.arch }})
         run: |
           PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
@@ -222,17 +248,17 @@ jobs:
             --self-contained \
             -p:CreatePackage=false \
             -p:EnableCodeSigning=false \
-            -p:AppBundleDir="$PUBLISH_DIR/ControlR.DesktopClient.app" \
+            -p:AppBundleDir="$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app" \
             -p:Version="$VERSION" \
             -p:FileVersion="$VERSION"
 
-          if [ ! -f "$PUBLISH_DIR/ControlR.DesktopClient.app/Contents/MacOS/ControlR.DesktopClient" ]; then
+          if [ ! -f "$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app/Contents/MacOS/${BRAND_KEY}.DesktopClient" ]; then
             ls -la "$PUBLISH_DIR/" || true
-            echo "ERROR: DesktopClient publish output missing: $PUBLISH_DIR/ControlR.DesktopClient.app/Contents/MacOS/ControlR.DesktopClient"
+            echo "ERROR: DesktopClient publish output missing: $PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app/Contents/MacOS/${BRAND_KEY}.DesktopClient"
             exit 1
           fi
 
-          mv "$PUBLISH_DIR/ControlR.DesktopClient.app" "$PUBLISH_DIR/ControlR.app"
+          mv "$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app" "$PUBLISH_DIR/${BRAND_KEY}.app"
 
       - name: Publish Agent (${{ matrix.arch }})
         run: |
@@ -251,9 +277,9 @@ jobs:
             -p:IncludeAppSettingsInSingleFile=true \
             -o "$AGENT_PUBLISH_DIR"
 
-          if [ ! -f "$AGENT_PUBLISH_DIR/ControlR.Agent" ]; then
+          if [ ! -f "$AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent" ]; then
             ls -la "$AGENT_PUBLISH_DIR/" || true
-            echo "ERROR: Agent publish output missing: $AGENT_PUBLISH_DIR/ControlR.Agent"
+            echo "ERROR: Agent publish output missing: $AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent"
             exit 1
           fi
 
@@ -261,11 +287,11 @@ jobs:
         run: |
           PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
           AGENT_PUBLISH_DIR="${{ github.workspace }}/ControlR.Agent/bin/publish/${{ matrix.arch }}"
-          EMBEDDED_AGENT_PATH="$PUBLISH_DIR/ControlR.app/Contents/Library/LaunchServices/ControlR.Agent"
+          EMBEDDED_AGENT_PATH="$PUBLISH_DIR/${BRAND_KEY}.app/Contents/Library/LaunchServices/${BRAND_KEY}.Agent"
 
           echo "Embedding agent helper inside app bundle..."
-          mkdir -p "$PUBLISH_DIR/ControlR.app/Contents/Library/LaunchServices"
-          cp "$AGENT_PUBLISH_DIR/ControlR.Agent" "$EMBEDDED_AGENT_PATH"
+          mkdir -p "$PUBLISH_DIR/${BRAND_KEY}.app/Contents/Library/LaunchServices"
+          cp "$AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent" "$EMBEDDED_AGENT_PATH"
 
           echo "Code signing embedded helper for macOS ${{ matrix.arch }}..."
           codesign \
@@ -278,7 +304,7 @@ jobs:
             "$EMBEDDED_AGENT_PATH"
 
           shopt -s nullglob
-          for lib in "$PUBLISH_DIR/ControlR.app/Contents/MonoBundle/"*.dylib; do
+          for lib in "$PUBLISH_DIR/${BRAND_KEY}.app/Contents/MonoBundle/"*.dylib; do
             codesign \
               --force \
               --options runtime \
@@ -296,10 +322,10 @@ jobs:
             --entitlements "./ControlR.DesktopClient/Entitlements.plist" \
             --keychain "$RUNNER_TEMP/build.keychain" \
             --sign "$IDENTITY_HASH" \
-            "$PUBLISH_DIR/ControlR.app"
+            "$PUBLISH_DIR/${BRAND_KEY}.app"
 
           echo "Verifying signed app bundle..."
-          codesign --verify --deep --strict --verbose=2 "$PUBLISH_DIR/ControlR.app"
+          codesign --verify --deep --strict --verbose=2 "$PUBLISH_DIR/${BRAND_KEY}.app"
 
       - name: Package Bundle (${{ matrix.arch }})
         env:
@@ -309,16 +335,16 @@ jobs:
         run: |
           PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
           DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
-          BUNDLE_ZIP="$DOWNLOADS_DIR/ControlR.Agent.bundle.zip"
+          BUNDLE_ZIP="$DOWNLOADS_DIR/${BRAND_KEY}.Agent.bundle.zip"
 
           if [ "${{ inputs.notarize_mac_bundle }}" = "true" ]; then
             API_KEY_PATH="$RUNNER_TEMP/apple_api_key.p8"
-            SUBMISSION_ZIP="$RUNNER_TEMP/ControlR.Agent.bundle.${{ matrix.arch }}.zip"
+            SUBMISSION_ZIP="$RUNNER_TEMP/${BRAND_KEY}.Agent.bundle.${{ matrix.arch }}.zip"
 
             echo "$APPLE_API_KEY_P8" | base64 --decode > "$API_KEY_PATH"
 
             rm -f "$SUBMISSION_ZIP"
-            ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/ControlR.app" "$SUBMISSION_ZIP"
+            ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/${BRAND_KEY}.app" "$SUBMISSION_ZIP"
 
             echo "Submitting bundle for notarization (${{ matrix.arch }})..."
             xcrun notarytool submit "$SUBMISSION_ZIP" \
@@ -328,7 +354,7 @@ jobs:
               --wait
 
             echo "Stapling notarization ticket to app bundle..."
-            xcrun stapler staple "$PUBLISH_DIR/ControlR.app"
+            xcrun stapler staple "$PUBLISH_DIR/${BRAND_KEY}.app"
 
             rm -f "$SUBMISSION_ZIP"
             rm -f "$API_KEY_PATH"
@@ -336,7 +362,7 @@ jobs:
 
           echo "Creating final bundle ZIP for macOS ${{ matrix.arch }}..."
           rm -f "$BUNDLE_ZIP"
-          ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/ControlR.app" "$BUNDLE_ZIP"
+          ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/${BRAND_KEY}.app" "$BUNDLE_ZIP"
 
       - name: Publish Installer (${{ matrix.arch }})
         run: |
@@ -354,16 +380,16 @@ jobs:
             -p:DebugType=none \
             -o "$DOWNLOADS_DIR"
 
-          if [ ! -f "$DOWNLOADS_DIR/ControlR.Agent.Installer" ]; then
+          if [ ! -f "$DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer" ]; then
             ls -la "$DOWNLOADS_DIR" || true
-            echo "ERROR: Installer publish output missing: $DOWNLOADS_DIR/ControlR.Agent.Installer"
+            echo "ERROR: Installer publish output missing: $DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer"
             exit 1
           fi
 
       - name: Sign Installer (${{ matrix.arch }})
         run: |
           DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
-          INSTALLER_PATH="$DOWNLOADS_DIR/ControlR.Agent.Installer"
+          INSTALLER_PATH="$DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer"
 
           echo "Code signing Installer for macOS ${{ matrix.arch }}..."
           codesign \
@@ -423,6 +449,26 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
+      - name: Apply Customization
+        id: customize
+        if: inputs.customization_config_url != ''
+        shell: pwsh
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigUrl '${{ inputs.customization_config_url }}' -Version '${{ needs.set-version.outputs.version }}'
+
+      - name: Set Default Branding
+        if: inputs.customization_config_url == ''
+        shell: pwsh
+        run: |
+          echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
+          echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
+
+      - name: Validate Brand Keys
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
+          if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
+          Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
+
       # ===== Build Windows =====
       - name: Build DesktopClient (${{ matrix.arch }})
         shell: pwsh
@@ -451,7 +497,7 @@ jobs:
           New-Item -Path $stagingDir -ItemType Directory -Force | Out-Null
 
           # Create ZIP
-          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" -DestinationPath (Join-Path $stagingDir "ControlR.DesktopClient.zip") -Force
+          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" -DestinationPath (Join-Path $stagingDir "$env:BRAND_KEY.DesktopClient.zip") -Force
 
       - name: Azure Login For Agent Publish (${{ matrix.arch }})
         uses: azure/login@v3
@@ -486,8 +532,10 @@ jobs:
 
       - name: Sign Agent (${{ matrix.arch }})
         uses: ./.github/actions/windows-code-sign
+        env:
+          BRAND_KEY: ${{ env.BRAND_KEY }}
         with:
-          file-patterns: ${{ github.workspace }}\ControlR.Agent\bin\publish\${{ matrix.arch }}\ControlR.Agent.exe
+          file-patterns: ${{ github.workspace }}\ControlR.Agent\bin\publish\${{ matrix.arch }}\${{ env.BRAND_KEY }}.Agent.exe
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -507,8 +555,10 @@ jobs:
 
       - name: Sign Installer (${{ matrix.arch }})
         uses: ./.github/actions/windows-code-sign
+        env:
+          BRAND_KEY: ${{ env.BRAND_KEY }}
         with:
-          file-patterns: ${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.Installer.exe
+          file-patterns: ${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\${{ env.BRAND_KEY }}.Agent.Installer.exe
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -525,10 +575,10 @@ jobs:
           Remove-Item -Path $bundleDir -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -Path $desktopDir -ItemType Directory -Force | Out-Null
 
-          Copy-Item (Join-Path $agentPublishDir "ControlR.Agent.exe") (Join-Path $bundleDir "ControlR.Agent.exe") -Force
+          Copy-Item (Join-Path $agentPublishDir "$env:BRAND_KEY.Agent.exe") (Join-Path $bundleDir "$env:BRAND_KEY.Agent.exe") -Force
           Copy-Item "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" $desktopDir -Recurse -Force
 
-          Compress-Archive -Path "$bundleDir\*" -DestinationPath "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ControlR.Agent.bundle.zip" -Force
+          Compress-Archive -Path "$bundleDir\*" -DestinationPath "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\$env:BRAND_KEY.Agent.bundle.zip" -Force
 
       - name: Upload Downloads (${{ matrix.arch }})
         uses: ./.github/actions/upload-artifact
@@ -558,6 +608,26 @@ jobs:
       - name: Install macOS workload
         run: dotnet workload install macos
 
+      - name: Apply Customization
+        id: customize
+        if: inputs.customization_config_url != ''
+        shell: pwsh
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigUrl '${{ inputs.customization_config_url }}' -Version '${{ needs.set-version.outputs.version }}'
+
+      - name: Set Default Branding
+        if: inputs.customization_config_url == ''
+        shell: pwsh
+        run: |
+          echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
+          echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
+
+      - name: Validate Brand Keys
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
+          if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
+          Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
+
       - name: Build DesktopClient (linux-x64)
         run: |
           # Build DesktopClient
@@ -568,7 +638,7 @@ jobs:
 
           # Create ZIP
           cd ./ControlR.DesktopClient/bin/publish/linux-x64
-          zip -r "$RUNNER_TEMP/staging-desktop/linux-x64/ControlR.DesktopClient.zip" .
+          zip -r "$RUNNER_TEMP/staging-desktop/linux-x64/${BRAND_KEY}.DesktopClient.zip" .
           cd ${{ github.workspace}}
 
       - name: Build Agent (linux-x64)
@@ -585,11 +655,11 @@ jobs:
         run: |
           rm -rf "$RUNNER_TEMP/bundle/linux-x64"
           mkdir -p "$RUNNER_TEMP/bundle/linux-x64/DesktopClient"
-          cp "./ControlR.Agent/bin/publish/linux-x64/ControlR.Agent" "$RUNNER_TEMP/bundle/linux-x64/ControlR.Agent"
+          cp "./ControlR.Agent/bin/publish/linux-x64/${BRAND_KEY}.Agent" "$RUNNER_TEMP/bundle/linux-x64/${BRAND_KEY}.Agent"
           cp -R ./ControlR.DesktopClient/bin/publish/linux-x64/. "$RUNNER_TEMP/bundle/linux-x64/DesktopClient/"
 
           cd "$RUNNER_TEMP/bundle/linux-x64"
-          zip -r "${{ github.workspace }}/ControlR.Web.Server/wwwroot/downloads/linux-x64/ControlR.Agent.bundle.zip" .
+          zip -r "${{ github.workspace }}/ControlR.Web.Server/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.bundle.zip" .
           cd "${{ github.workspace }}"
 
       - name: Upload Downloads (linux-x64)
@@ -621,6 +691,26 @@ jobs:
 
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
+
+      - name: Apply Customization
+        id: customize
+        if: inputs.customization_config_url != ''
+        shell: pwsh
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigUrl '${{ inputs.customization_config_url }}' -Version '${{ env.VERSION }}'
+
+      - name: Set Default Branding
+        if: inputs.customization_config_url == ''
+        shell: pwsh
+        run: |
+          echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
+          echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
+
+      - name: Validate Brand Keys
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
+          if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
+          Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
 
       - name: Download Runtime Downloads (win-x86)
         uses: ./.github/actions/download-artifact
@@ -673,22 +763,44 @@ jobs:
           New-Item -Path "ControlR.Web.Server/bin/publish" -ItemType Directory -Force | Out-Null
           dotnet publish ControlR.Web.Server/ -p:ExcludeApp_Data=true --runtime linux-x64 --configuration Release -p:Version=$env:VERSION -p:FileVersion=$env:VERSION --output ControlR.Web.Server/bin/publish --self-contained true
 
+      - name: Create Dockerfile
+        shell: pwsh
+        run: |
+          @"
+          FROM mcr.microsoft.com/dotnet/aspnet:10.0
+          RUN apt update
+          RUN apt -y install curl
+
+          USER `$APP_UID
+          WORKDIR /app
+          EXPOSE 8080
+          EXPOSE 8081
+
+          COPY . /app
+
+          ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
+
+          HEALTHCHECK \
+            CMD curl -f http://localhost:8080/health || exit 1
+          "@ | Set-Content -Path "ControlR.Web.Server/bin/publish/Dockerfile" -Encoding UTF8
+
       - name: Verify Download Artifacts
         shell: pwsh
         run: |
           $TestPaths = @(
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/Version.txt",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/ControlR.Agent.Installer.exe",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/ControlR.Agent.Installer.exe",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/ControlR.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/ControlR.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/ControlR.Agent.Installer",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/ControlR.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/ControlR.Agent.Installer",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/ControlR.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/ControlR.Agent.Installer",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/ControlR.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/novnc/vnc.html"
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.Installer.exe",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.Installer.exe",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/$env:BRAND_KEY.Agent.Installer",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/$env:BRAND_KEY.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/$env:BRAND_KEY.Agent.Installer",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/$env:BRAND_KEY.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/$env:BRAND_KEY.Agent.Installer",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/$env:BRAND_KEY.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/novnc/vnc.html",
+            "ControlR.Web.Server/bin/publish/Dockerfile"
           )
           foreach ($TestPath in $TestPaths) {
             if (!(Test-Path $TestPath)) {

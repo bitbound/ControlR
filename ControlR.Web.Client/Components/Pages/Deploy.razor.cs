@@ -1,5 +1,4 @@
-using ControlR.Web.Client.Extensions;
-using Microsoft.AspNetCore.Components;
+using ControlR.Libraries.Branding;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
@@ -59,10 +58,10 @@ public partial class Deploy
     {
       var downloadUri = new Uri(GetServerUri(), AppConstants.GetInstallerDownloadPath(RuntimeId.LinuxX64));
       return
-        $"sudo rm -f /tmp/ControlR.Agent.Installer && " +
-        $"sudo curl -o /tmp/ControlR.Agent.Installer {downloadUri} && " +
-        $"sudo chmod +x /tmp/ControlR.Agent.Installer && " +
-        $"sudo /tmp/ControlR.Agent.Installer install {GetCommonArgs()}";
+        $"sudo rm -f /tmp/{BrandingConstants.InstallerBaseName} && " +
+        $"sudo curl -o /tmp/{BrandingConstants.InstallerBaseName} {downloadUri} && " +
+        $"sudo chmod +x /tmp/{BrandingConstants.InstallerBaseName} && " +
+        $"sudo /tmp/{BrandingConstants.InstallerBaseName} install {GetCommonArgs()}";
     }
   }
   private string MacArm64DeployScript
@@ -71,10 +70,10 @@ public partial class Deploy
     {
       var downloadUri = new Uri(GetServerUri(), AppConstants.GetInstallerDownloadPath(RuntimeId.MacOsArm64));
       return
-        $"sudo rm -f /tmp/ControlR.Agent.Installer && " +
-        $"sudo curl -o /tmp/ControlR.Agent.Installer {downloadUri} && " +
-        $"sudo chmod +x /tmp/ControlR.Agent.Installer && " +
-        $"sudo /tmp/ControlR.Agent.Installer install {GetCommonArgs()}";
+        $"sudo rm -f /tmp/{BrandingConstants.InstallerBaseName} && " +
+        $"sudo curl -o /tmp/{BrandingConstants.InstallerBaseName} {downloadUri} && " +
+        $"sudo chmod +x /tmp/{BrandingConstants.InstallerBaseName} && " +
+        $"sudo /tmp/{BrandingConstants.InstallerBaseName} install {GetCommonArgs()}";
     }
   }
   private string MacX64DeployScript
@@ -83,10 +82,10 @@ public partial class Deploy
     {
       var downloadUri = new Uri(GetServerUri(), AppConstants.GetInstallerDownloadPath(RuntimeId.MacOsX64));
       return
-        $"sudo rm -f /tmp/ControlR.Agent.Installer && " +
-        $"sudo curl -o /tmp/ControlR.Agent.Installer {downloadUri} && " +
-        $"sudo chmod +x /tmp/ControlR.Agent.Installer && " +
-        $"sudo /tmp/ControlR.Agent.Installer install {GetCommonArgs()}";
+        $"sudo rm -f /tmp/{BrandingConstants.InstallerBaseName} && " +
+        $"sudo curl -o /tmp/{BrandingConstants.InstallerBaseName} {downloadUri} && " +
+        $"sudo chmod +x /tmp/{BrandingConstants.InstallerBaseName} && " +
+        $"sudo /tmp/{BrandingConstants.InstallerBaseName} install {GetCommonArgs()}";
     }
   }
   
@@ -101,8 +100,8 @@ public partial class Deploy
     {
       var downloadUri = new Uri(GetServerUri(), AppConstants.GetInstallerDownloadPath(RuntimeId.WinX64));
       return "$ProgressPreference = 'SilentlyContinue'; " +
-             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.Installer.exe\" -UseBasicParsing; " +
-             $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.Installer.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
+             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/{BrandingConstants.InstallerBaseName}.exe\" -UseBasicParsing; " +
+             $"Start-Process -FilePath \"$env:TEMP/{BrandingConstants.InstallerBaseName}.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
     }
   }
   private string WindowsX86DeployScript
@@ -111,8 +110,8 @@ public partial class Deploy
     {
       var downloadUri = new Uri(GetServerUri(), AppConstants.GetInstallerDownloadPath(RuntimeId.WinX86));
       return "$ProgressPreference = 'SilentlyContinue'; " +
-             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/ControlR.Agent.Installer.exe\" -UseBasicParsing; " +
-             $"Start-Process -FilePath \"$env:TEMP/ControlR.Agent.Installer.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
+             $"Invoke-WebRequest -Uri \"{downloadUri}\" -OutFile \"$env:TEMP/{BrandingConstants.InstallerBaseName}.exe\" -UseBasicParsing; " +
+             $"Start-Process -FilePath \"$env:TEMP/{BrandingConstants.InstallerBaseName}.exe\" -ArgumentList \"install {GetCommonArgs()}\" -Verb RunAs;";
     }
   }
 

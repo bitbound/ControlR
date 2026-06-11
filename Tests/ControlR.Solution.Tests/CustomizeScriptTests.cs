@@ -44,6 +44,22 @@ public class CustomizeScriptTests
   }
 
   [Fact]
+  public async Task CompanyLogoPng_NotProvided_DefaultMessage()
+  {
+    var result = await RunScript("-BrandName", "NoLogoTest", "-WhatIf");
+    Assert.Equal(0, result.ExitCode);
+    Assert.Contains("No company logo provided", result.StandardOutput);
+  }
+
+  [Fact]
+  public async Task CompanyLogoPng_Provided_Succeeds()
+  {
+    var result = await RunScript("-BrandName", "LogoTest", "-CompanyLogoPng", "./my-logo.png", "-WhatIf");
+    Assert.Equal(0, result.ExitCode);
+    Assert.Contains("Would download/copy company logo from: ./my-logo.png", result.StandardOutput);
+  }
+
+  [Fact]
   public async Task DefaultBrandName_NoChangesDetected()
   {
     var result = await RunScript("-WhatIf");

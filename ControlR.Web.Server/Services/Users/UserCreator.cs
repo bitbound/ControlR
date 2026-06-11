@@ -99,7 +99,7 @@ public class UserCreator(
     var user = result.User;
     if (user is null)
     {
-      return new CreateUserResult(false, IdentityResult.Failed(new IdentityError { Description = "User creation failed - no user returned" }));
+      return new CreateUserResult(false, IdentityResult.Failed(new IdentityError { Description = "User creation failed. No user returned." }));
     }
 
     // Assign roles if provided
@@ -111,7 +111,7 @@ public class UserCreator(
       if (missingRoleIds.Count != 0)
       {
         await _userManager.DeleteAsync(user);
-        var err = new IdentityError { Description = $"Roles not found: {string.Join(',', missingRoleIds)}" };
+        var err = new IdentityError { Description = $"Roles not found: {string.Join(',', missingRoleIds)}." };
         return new CreateUserResult(false, IdentityResult.Failed(err));
       }
 
@@ -120,7 +120,7 @@ public class UserCreator(
         if (string.IsNullOrWhiteSpace(role.Name))
         {
           await _userManager.DeleteAsync(user);
-          var err = new IdentityError { Description = "Role has no name configured" };
+          var err = new IdentityError { Description = "Role has no name configured." };
           return new CreateUserResult(false, IdentityResult.Failed(err));
         }
 
@@ -143,7 +143,7 @@ public class UserCreator(
       if (missingTagIds.Count != 0)
       {
         await _userManager.DeleteAsync(user);
-        var err = new IdentityError { Description = $"Tags not found: {string.Join(',', missingTagIds)}" };
+        var err = new IdentityError { Description = $"Tags not found: {string.Join(',', missingTagIds)}." };
         return new CreateUserResult(false, IdentityResult.Failed(err));
       }
 

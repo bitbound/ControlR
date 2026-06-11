@@ -54,6 +54,9 @@ param(
   [Parameter(HelpMessage = "Path or URL to ICO icon (multi-size)")]
   [string] $IconIco = "",
 
+  [Parameter(HelpMessage = "Path or URL to company logo PNG (for email templates, etc.)")]
+  [string] $CompanyLogoPng = "",
+
   [Parameter(HelpMessage = "Build version (e.g. '1.2.3.0')")]
   [string] $Version = "0.0.1.0",
 
@@ -132,23 +135,11 @@ function Resize-Image {
     throw "Source image not found for resize: $SourcePath"
   }
 
-  Add-Type -AssemblyName System.Drawing
-
-  $srcImage = [System.Drawing.Image]::FromFile((Resolve-Path $SourcePath))
-  $destDir = Split-Path $OutputPath -Parent
-  if (-not (Test-Path -LiteralPath $destDir)) {
-    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+  $csScriptPath = Join-Path $PSScriptRoot "resize-image.cs"
+  dotnet run "$csScriptPath" "$SourcePath" "$OutputPath" $Width $Height
+  if ($LASTEXITCODE -ne 0) {
+    throw "Image resize failed for $SourcePath -> $OutputPath"
   }
-
-  $bmp = New-Object System.Drawing.Bitmap($Width, $Height)
-  $gfx = [System.Drawing.Graphics]::FromImage($bmp)
-  $gfx.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-  $gfx.DrawImage($srcImage, 0, 0, $Width, $Height)
-  $bmp.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
-  $gfx.Dispose()
-  $bmp.Dispose()
-  $srcImage.Dispose()
-  Write-Host "Resized -> $OutputPath (${Width}x${Height})"
 }
 
 function Update-FileContent {
@@ -471,6 +462,30 @@ else {
   }
   if ($masterIco -and -not $masterPng) {
     Write-Host "WARNING: No PNG provided. PNG-only locations not updated."
+  }
+}
+
+#endregion
+
+#region Process Company Logo
+
+Write-Host "Processing company logo" -ForegroundColor Yellow
+
+if ($WhatIf) {
+  if ($CompanyLogoPng) { Write-Host "[What-If] Would download/copy company logo from: $CompanyLogoPng to wwwroot/images/company-logo.png" -ForegroundColor Gray }
+  else { Write-Host "[What-If] No company logo provided (using default)" -ForegroundColor Gray }
+  Write-Host ""
+}
+else {
+  $stagingDir = Join-Path $tempBuildRoot "logo-staging"
+  if (Test-Path -LiteralPath $stagingDir) { Remove-Item -LiteralPath $stagingDir -Recurse -Force }
+  New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+
+  if ($CompanyLogoPng) {
+    $masterLogo = Get-SourceFile -Source $CompanyLogoPng -StagingDir $stagingDir -FileName "company-logo.png"
+    $destLogo = Join-Path $repoRoot "ControlR.Web.Server/wwwroot/images/company-logo.png"
+    Copy-Item -LiteralPath $masterLogo -Destination $destLogo -Force
+    Write-Host "  -> wwwroot/images/company-logo.png"
   }
 }
 
@@ -804,10 +819,10 @@ if ($WhatIf) {
 
 $downloadsBase = Join-Path $repoRoot "ControlR.Web.Server/wwwroot/downloads"
 
-$architectures = @("win-x64", "win-x86")
+$winArchitectures = @("win-x64", "win-x86")
 $linuxArch = "linux-x64"
 
-foreach ($arch in $architectures) {
+foreach ($arch in $winArchitectures) {
   Write-Host "Building DesktopClient ($arch)..." -ForegroundColor Cyan
   dotnet publish ControlR.DesktopClient/ -c Release -f net10.0-windows8.0 -r $arch --self-contained -o "ControlR.DesktopClient/bin/publish/$arch/" -p:Version=$Version -p:FileVersion=$Version
   if ($LASTEXITCODE -ne 0) { throw "DesktopClient build failed for $arch" }
@@ -890,6 +905,26 @@ foreach ($artifact in $requiredArtifacts) {
   }
   Write-Host "  OK: $artifact"
 }
+
+Write-Host "Creating Dockerfile" -ForegroundColor Cyan
+$dockerfilePath = Join-Path $repoRoot "ControlR.Web.Server/bin/publish/Dockerfile"
+@"
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+RUN apt update
+RUN apt -y install curl
+
+USER `$APP_UID
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
+
+COPY . /app
+
+ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
+
+HEALTHCHECK \
+  CMD curl -f http://localhost:8080/health || exit 1
+"@ | Set-Content -LiteralPath $dockerfilePath -Encoding UTF8
 
 Write-Host "Creating final ZIP" -ForegroundColor Cyan
 $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $repoRoot $OutputPath }

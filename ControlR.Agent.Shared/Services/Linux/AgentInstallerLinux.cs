@@ -36,7 +36,6 @@ internal class AgentInstallerLinux(
 
   private readonly IElevationChecker _elevationChecker = elevationChecker;
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
-  private readonly ISystemEnvironment _environment = systemEnvironment;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;

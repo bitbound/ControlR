@@ -27,7 +27,6 @@ using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Shared.Logging;
-using ControlR.Libraries.Shared.Extensions;
 
 namespace ControlR.Libraries.NativeInterop.Windows;
 
@@ -457,7 +456,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     if (!enumSessionResult)
     {
-      return [.. sessions];
+      return sessions;
     }
 
     var dataSize = sizeof(WTS_SESSION_INFOW);
@@ -480,7 +479,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
     PInvoke.WTSFreeMemory(ppSessionInfos);
 
-    return [.. sessions];
+    return sessions;
   }
 
   public string? GetClipboardText()

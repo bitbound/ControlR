@@ -18,7 +18,7 @@
   <!-- BrandPrefix is replaced by customize.ps1 for whitelabel builds. -->
   <PropertyGroup>
     <BrandPrefix>ControlR</BrandPrefix>
-    <_BrandSuffix Condition="$(MSBuildProjectName.StartsWith('ControlR'))">
+    <_BrandSuffix Condition="$(MSBuildProjectName.StartsWith('ControlR')) AND !$(MSBuildProjectName.StartsWith('ControlR.Web.'))">
       $(MSBuildProjectName.Substring(8))</_BrandSuffix>
     <AssemblyName Condition="'$(_BrandSuffix)' != ''">$(BrandPrefix)$(_BrandSuffix.Trim())</AssemblyName>
   </PropertyGroup>
