@@ -620,8 +620,7 @@ if (Test-Path -LiteralPath $desktopServiceTemplate) {
 $openApiFile = Join-Path $repoRoot "ControlR.Web.Server/ControlR.Web.Server.json"
 if (Test-Path -LiteralPath $openApiFile) {
   $openApiReplacements = @{
-    '"ControlR.Web.Server | v1"' = "`"$brandKey.Web.Server | v1`""
-    '"ControlR.Web.Server"'      = "`"$brandKey.Web.Server`""
+    "ControlR.Web.Server" = "$brandKey.Web.Server"
   }
   Update-FileContent -FilePath $openApiFile -Replacements $openApiReplacements
 }

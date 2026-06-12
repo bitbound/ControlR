@@ -280,7 +280,8 @@ internal class AgentInstallerLinux(
     template = template
       .Replace("{{INSTALL_DIRECTORY}}", installDir)
       .Replace("{{BUNDLE_EXTRACT_DIR}}", bundleExtractDir)
-      .Replace("{{INSTANCE_ARGS}}", instanceArgs);
+      .Replace("{{INSTANCE_ARGS}}", instanceArgs)
+      .Replace("ControlR.DesktopClient", BrandingConstants.DesktopClientBaseName);
 
     return template;
   }
@@ -301,7 +302,8 @@ internal class AgentInstallerLinux(
     template = template
       .Replace("{{INSTALL_DIRECTORY}}", installDir)
       .Replace("{{BUNDLE_EXTRACT_DIR}}", bundleExtractDir)
-      .Replace("{{INSTANCE_ARGS}}", instanceArgs);
+      .Replace("{{INSTANCE_ARGS}}", instanceArgs)
+      .Replace("ControlR.Agent", BrandingConstants.AgentBaseName);
 
     return template;
   }
