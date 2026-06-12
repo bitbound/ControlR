@@ -5,13 +5,13 @@ on:
   workflow_dispatch:
     inputs:
       use_self_hosted_runners:
-        description: "Use Self-Hosted Runners"
+        description: "Use self-hosted runners"
         required: true
         default: true
         type: boolean
 
       retention_days_artifacts:
-        description: "Retention Days for Artifacts"
+        description: "Retention days for artifacts"
         required: false
         default: 1
         type: number
