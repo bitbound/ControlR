@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;
 using Microsoft.Win32;
+using ControlR.Libraries.Shared.Services.Encryption;
 
 namespace ControlR.Agent.Shared.Services.Windows;
 
@@ -27,8 +28,9 @@ internal class AgentInstallerWindows(
   IFileSystem fileSystem,
   IOptionsAccessor optionsAccessor,
   IOptionsMonitor<AgentAppOptions> appOptions,
+  IEd25519KeyProvider keyProvider,
   ILogger<AgentInstallerWindows> logger)
-  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processes, systemEnvironment, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processes, systemEnvironment, appOptions, logger, keyProvider), IAgentInstaller
 {
   private const string DesktopClientDirectoryName = "DesktopClient";
 

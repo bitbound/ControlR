@@ -30,6 +30,7 @@ using System.Threading.RateLimiting;
 
 namespace ControlR.Web.Server.Startup;
 
+using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.Settings;
 
 public static class WebApplicationBuilderExtensions
@@ -381,6 +382,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<EmailSender>());
     builder.Services.AddSingleton<IControlrEmailSender>(sp => sp.GetRequiredService<EmailSender>());
     builder.Services.AddSingleton<IHubStreamStore, HubStreamStore>();
+    builder.Services.AddSingleton<IEd25519KeyProvider, Ed25519KeyProvider>();
     builder.Services.AddWebSocketRelay(options =>
     {
       options.RequireAuthenticationForRequester = true;

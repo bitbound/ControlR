@@ -832,3 +832,15 @@ jobs:
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
           artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
           artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+
+      - name: Build Completed
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Git Ref:** ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Use Self-Hosted Runners:** ${{ inputs.use_self_hosted_runners }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Use Local Storage for Artifacts:** ${{ inputs.use_local_storage }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Customization Config URL:** ${{ inputs.customization_config_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Pre-release:** ${{ inputs.prerelease }}" >> $GITHUB_STEP_SUMMARY

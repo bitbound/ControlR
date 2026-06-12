@@ -1,6 +1,7 @@
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Branding;
+using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Options;
@@ -16,10 +17,12 @@ internal abstract class AgentInstallerBase(
   IProcessManager processManager,
   ISystemEnvironment systemEnvironment,
   IOptionsMonitor<AgentAppOptions> appOptions,
-  ILogger<AgentInstallerBase> logger)
+  ILogger<AgentInstallerBase> logger,
+  IEd25519KeyProvider keyProvider)
 {
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly IDeviceInfoProvider _deviceDataGenerator = deviceDataGenerator;
+  private readonly IEd25519KeyProvider _keyProvider = keyProvider;
   private readonly IOptionsAccessor _optionsAccessor = optionsAccessor;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
@@ -55,8 +58,16 @@ internal abstract class AgentInstallerBase(
       return Result.Fail("Installer key secret is required when installer key ID is provided.");
     }
 
+    var (publicKey, privateKey) = _keyProvider.GenerateKeyPair();
+    var privateKeyBase64 = Convert.ToBase64String(privateKey);
+    var publicKeyBase64 = Convert.ToBase64String(publicKey);
+
+    AppOptions.CurrentValue.PrivateKey = privateKeyBase64;
+    await _optionsAccessor.UpdateAppOptions(AppOptions.CurrentValue);
+
     var deviceDto = await _deviceDataGenerator.GetDeviceInfo();
-    var createRequest = new CreateDeviceRequestDto(deviceDto, installerKeyId.Value, installerKeySecret, tagIds);
+    var createRequest = new CreateDeviceRequestDto(
+      deviceDto, installerKeyId.Value, installerKeySecret, tagIds, publicKeyBase64);
 
     if (tagIds is null)
     {

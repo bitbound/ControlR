@@ -23,7 +23,7 @@ public interface IDeviceManager
   ///   If an empty array is provided, all tags will be removed, if any exist.
   /// </param>
   /// <returns>The added or updated <see cref="Device"/> entity.</returns>
-  Task<Device> AddOrUpdate(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, Guid[]? tagIds = null);
+  Task<Device> AddOrUpdate(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, Guid[]? tagIds = null, string? publicKeyBase64 = null);
 
   /// <summary>
   /// Determines whether the specified user is authorized to install an agent on the given device.
@@ -60,7 +60,7 @@ public interface IDeviceManager
   ///   A <see cref="Result{Device}"/> containing the updated device if successful,
   ///   or a failure result if the device does not exist.
   /// </returns>
-  Task<Result<Device>> UpdateDevice(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, Guid[]? tagIds = null);
+  Task<Result<Device>> UpdateDevice(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, Guid[]? tagIds = null, string? publicKeyBase64 = null);
 }
 
 public class DeviceManager(
@@ -76,7 +76,7 @@ public class DeviceManager(
   private readonly ILogger<DeviceManager> _logger = logger;
   private readonly UserManager<AppUser> _userManager = userManager;
 
-  public async Task<Device> AddOrUpdate(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, Guid[]? tagIds = null)
+  public async Task<Device> AddOrUpdate(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, Guid[]? tagIds = null, string? publicKeyBase64 = null)
   {
     var entity = await _appDb.Devices
       .IgnoreQueryFilters()
@@ -88,7 +88,7 @@ public class DeviceManager(
 
     entity ??= new Device();
 
-    await UpdateDeviceEntity(entity, deviceDto, context, entityState, tagIds);
+    await UpdateDeviceEntity(entity, deviceDto, context, entityState, tagIds, publicKeyBase64);
 
     return entity;
   }
@@ -122,7 +122,7 @@ public class DeviceManager(
     return Result.Ok(entity);
   }
 
-  public async Task<Result<Device>> UpdateDevice(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, Guid[]? tagIds = null)
+  public async Task<Result<Device>> UpdateDevice(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, Guid[]? tagIds = null, string? publicKeyBase64 = null)
   {
     var entity = await _appDb.Devices
       .IgnoreQueryFilters()
@@ -133,7 +133,7 @@ public class DeviceManager(
       return Result.Fail<Device>("Device does not exist in the database.");
     }
 
-    await UpdateDeviceEntity(entity, deviceDto, context, EntityState.Modified, tagIds);
+    await UpdateDeviceEntity(entity, deviceDto, context, EntityState.Modified, tagIds, publicKeyBase64);
 
     return Result.Ok(entity);
   }
@@ -207,7 +207,8 @@ public class DeviceManager(
     DeviceUpdateRequestDto deviceDto,
     DeviceConnectionContext context,
     EntityState entityState,
-    Guid[]? tagIds = null)
+    Guid[]? tagIds = null,
+    string? publicKeyBase64 = null)
   {
     var entry = _appDb.Entry(entity);
     await entry.Reference(x => x.Tenant).LoadAsync();
@@ -247,6 +248,12 @@ public class DeviceManager(
       {
         _logger.LogWarning("Unsupported IP address family: {AddressFamily}", context.RemoteIpAddress.AddressFamily);
       }
+    }
+
+    // Adopt the verified public key if one was provided.
+    if (!string.IsNullOrEmpty(publicKeyBase64))
+    {
+      entity.PublicKey = publicKeyBase64;
     }
 
     await _appDb.SaveChangesAsync();

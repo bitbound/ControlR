@@ -1,10 +1,12 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.DeviceManagement;
+using ControlR.Libraries.Shared.Services.Encryption;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -18,6 +20,7 @@ public class AgentHub(
   IAgentVersionProvider agentVersionProvider,
   IOptions<AppOptions> appOptions,
   IOptions<ServerLifecycleOptions> serverOptions,
+  IEd25519KeyProvider keyProvider,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
 {
   private readonly IAgentVersionProvider _agentVersionProvider = agentVersionProvider;
@@ -25,6 +28,7 @@ public class AgentHub(
   private readonly IOptions<AppOptions> _appOptions = appOptions;
   private readonly IDeviceManager _deviceManager = deviceManager;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
+  private readonly IEd25519KeyProvider _keyProvider = keyProvider;
   private readonly ILogger<AgentHub> _logger = logger;
   private readonly IOutputCacheStore _outputCacheStore = outputCacheStore;
   private readonly IOptions<ServerLifecycleOptions> _serverOptions = serverOptions;
@@ -231,30 +235,20 @@ public class AgentHub(
     }
   }
 
+  [Obsolete("This method is deprecated. Please use UpdateDeviceSigned instead.")]
   public async Task<HubResult<DeviceResponseDto>> UpdateDevice(DeviceUpdateRequestDto agentDto)
   {
     try
     {
+      var device = await _appDb.Devices.FindAsync(agentDto.Id);
+      if (device is not null && !string.IsNullOrEmpty(device.PublicKey))
+      {
+        return HubResult.Fail<DeviceResponseDto>("Device requires signed updates.");
+      }
+
       if (_serverOptions.Value.DecommissionServer)
       {
-        _logger.LogInformation(
-          "Rejecting device update from agent {AgentName} because server is decommissioned.",
-          agentDto.Name);
-
-        await Clients.Caller.UninstallAgent("Server has been decommissioned.");
-
-        var device = await _appDb.Devices.FindAsync(agentDto.Id);
-        if (device is not null)
-        {
-          _appDb.Devices.Remove(device);
-        }
-        
-        await _appDb.SaveChangesAsync();
-
-        await _outputCacheStore.InvalidateDeviceCacheAsync(agentDto.Id);
-        _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", agentDto.Id);
-
-        return HubResult.Fail<DeviceResponseDto>("Server is decommissioned.");
+        return await HandleAgentUpdateForDecommission(agentDto, device);
       }
 
       // Allow agents to self-bootstrap when enabled
@@ -315,6 +309,113 @@ public class AgentHub(
     }
   }
 
+  public async Task<HubResult<DeviceResponseDto>> UpdateDeviceSigned(SignedDto<DeviceUpdateRequestDto> signedDto)
+  {
+    try
+    {
+      var agentDto = signedDto.Dto;
+
+      // 1. Determine the public key to verify against
+      var device = await _appDb.Devices.FindAsync(agentDto.Id);
+      var storedPublicKey = device?.PublicKey;
+      var publicKeyBase64 = !string.IsNullOrEmpty(storedPublicKey)
+        ? storedPublicKey
+        : signedDto.PublicKey;
+
+      // 2. Validate and decode public key
+      var keyValidationResult = _keyProvider.ValidatePublicKeyBase64(publicKeyBase64);
+      if (!keyValidationResult.IsSuccess)
+      {
+        _logger.LogWarning(
+          "Public key validation failed for device {DeviceId}: {Reason}",
+          agentDto.Id,
+          keyValidationResult.Reason);
+        return HubResult.Fail<DeviceResponseDto>(keyValidationResult.Reason);
+      }
+
+      var publicKeyBytes = keyValidationResult.Value;
+
+      // 3. Verify signature
+      if (!_keyProvider.Verify(signedDto, publicKeyBytes))
+      {
+        _logger.LogWarning("Signature verification failed for device {DeviceId}.", agentDto.Id);
+        return HubResult.Fail<DeviceResponseDto>("Signature verification failed.");
+      }
+
+      // 4. Verify timestamp freshness (±30 seconds)
+      var clockSkew = TimeSpan.FromSeconds(30);
+      if (!_keyProvider.VerifyTimestamp(signedDto, clockSkew))
+      {
+        _logger.LogWarning("Timestamp expired for device {DeviceId}.", agentDto.Id);
+        return HubResult.Fail<DeviceResponseDto>("Timestamp expired.");
+      }
+
+      // 5. Handle decommissioning if enabled
+      if (_serverOptions.Value.DecommissionServer)
+      {
+        return await HandleAgentUpdateForDecommission(agentDto, device);
+      }
+
+      // 6. Allow agents to self-bootstrap when enabled.
+      if (_appOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
+      {
+        var lastTenant = await _appDb.Tenants
+          .OrderByDescending(x => x.CreatedAt)
+          .FirstOrDefaultAsync();
+
+        if (lastTenant is null)
+        {
+          return HubResult.Fail<DeviceResponseDto>("No tenants found.");
+        }
+
+        agentDto = agentDto with { TenantId = lastTenant.Id };
+      }
+
+      // 7. Validate tenant ID
+      if (agentDto.TenantId == Guid.Empty)
+      {
+        return HubResult.Fail<DeviceResponseDto>("Invalid tenant ID.");
+      }
+
+      if (!await _appDb.Tenants.AnyAsync(x => x.Id == agentDto.TenantId))
+      {
+        return HubResult.Fail<DeviceResponseDto>("Invalid tenant ID.");
+      }
+
+      // 8. Update device entity and adopt public key if necessary.
+      var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: Context.ConnectionId,
+        RemoteIpAddress: remoteIp,
+        LastSeen: _timeProvider.GetLocalNow(),
+        IsOnline: true
+      );
+
+      var updateResult = await UpdateDeviceEntity(agentDto, connectionContext, publicKeyBase64);
+
+      if (!updateResult.IsSuccess)
+      {
+        return HubResult.Fail<DeviceResponseDto>(updateResult.Reason);
+      }
+
+      var deviceEntity = updateResult.Value;
+
+      await AddToGroups(deviceEntity);
+
+      var isOutdated = await GetIsAgentOutdated(deviceEntity);
+      Device = deviceEntity.ToDto(isOutdated);
+
+      await SendDeviceUpdate(deviceEntity, Device);
+
+      return HubResult.Ok(Device);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while updating signed device.");
+      return HubResult.Fail<DeviceResponseDto>("An error occurred while updating the device.");
+    }
+  }
+
   private static async Task DrainChannelReader<T>(ChannelReader<T> reader)
   {
     try
@@ -367,6 +468,29 @@ public class AgentHub(
 
     var currentAgentVersion = agentVersionResult.Value;
     return deviceVersion != currentAgentVersion;
+  }
+
+  private async Task<HubResult<DeviceResponseDto>> HandleAgentUpdateForDecommission(
+    DeviceUpdateRequestDto agentDto,
+    Device? device = null)
+  {
+    _logger.LogInformation(
+          "Rejecting device update from agent {AgentName} because server is decommissioned.",
+          agentDto.Name);
+
+    await Clients.Caller.UninstallAgent("Server has been decommissioned.");
+
+    if (device is not null)
+    {
+      _appDb.Devices.Remove(device);
+    }
+
+    await _appDb.SaveChangesAsync();
+
+    await _outputCacheStore.InvalidateDeviceCacheAsync(agentDto.Id);
+    _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", agentDto.Id);
+
+    return HubResult.Fail<DeviceResponseDto>("Server is decommissioned.");
   }
 
   /// <summary>
@@ -425,16 +549,17 @@ public class AgentHub(
 
   private async Task<HubResult<Device>> UpdateDeviceEntity(
     DeviceUpdateRequestDto agentDto,
-    DeviceConnectionContext context)
+    DeviceConnectionContext context,
+    string? publicKeyBase64 = null)
   {
     // Allow agents to self-bootstrap when enabled
     if (_appOptions.Value.AllowAgentsToSelfBootstrap)
     {
-      var device = await _deviceManager.AddOrUpdate(agentDto, context);
+      var device = await _deviceManager.AddOrUpdate(agentDto, context, publicKeyBase64: publicKeyBase64);
       return HubResult.Ok(device);
     }
 
-    var updateResult = await _deviceManager.UpdateDevice(agentDto, context);
+    var updateResult = await _deviceManager.UpdateDevice(agentDto, context, publicKeyBase64: publicKeyBase64);
     if (updateResult.IsSuccess)
     {
       return HubResult.Ok(updateResult.Value);

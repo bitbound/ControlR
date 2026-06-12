@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Shared.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

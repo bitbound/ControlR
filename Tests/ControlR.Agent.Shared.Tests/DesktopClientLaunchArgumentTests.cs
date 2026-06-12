@@ -7,6 +7,7 @@ using ControlR.Agent.Shared.Services.Linux;
 using ControlR.Agent.Shared.Services.Mac;
 using ControlR.ApiClient;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.TestingUtilities;
@@ -78,6 +79,7 @@ public class DesktopClientLaunchArgumentTests
       embeddedResources,
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = instanceId }),
+      Mock.Of<IEd25519KeyProvider>(),
       NullLogger<AgentInstallerLinux>.Instance);
   }
 
@@ -102,6 +104,7 @@ public class DesktopClientLaunchArgumentTests
       Mock.Of<ISystemEnvironment>(),
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
         Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = instanceId }),
+      Mock.Of<IEd25519KeyProvider>(),
       NullLogger<AgentInstallerMac>.Instance);
   }
 

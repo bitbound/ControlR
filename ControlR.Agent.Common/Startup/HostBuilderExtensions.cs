@@ -167,6 +167,7 @@ internal static class HostApplicationBuilderExtensions
       services.AddHostedService<MessageHandler>();
       services.AddHostedService<HostLifetimeEventResponder>();
       services.AddHostedService(s => s.GetRequiredService<ICpuUtilizationSampler>());
+      services.AddHostedService<FilePermissionsEnforcer>();
 
       if (OperatingSystem.IsWindowsVersionAtLeast(8))
       {

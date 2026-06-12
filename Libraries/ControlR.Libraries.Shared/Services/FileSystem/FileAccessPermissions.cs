@@ -8,10 +8,11 @@ public interface IFileAccessPermissions
 {
   [SupportedOSPlatform("windows")]
   void Set(
-    string filePath, 
+    string filePath,
     bool includeCurrentUser,
     bool isProtected,
     bool preserveInheritance,
+    WellKnownSidType owner,
     params WellKnownSidType[] sids);
 
   [SupportedOSPlatform("linux")]
@@ -23,10 +24,11 @@ public class FileAccessPermissions : IFileAccessPermissions
 {
   [SupportedOSPlatform("windows")]
   public void Set(
-    string filePath, 
-    bool includeCurrentUser, 
-    bool isProtected, 
-    bool preserveInheritance, 
+    string filePath,
+    bool includeCurrentUser,
+    bool isProtected,
+    bool preserveInheritance,
+    WellKnownSidType owner,
     params WellKnownSidType[] sids)
   {
     if (!OperatingSystem.IsWindows())
@@ -37,6 +39,7 @@ public class FileAccessPermissions : IFileAccessPermissions
     var fileInfo = new FileInfo(filePath);
     var security = fileInfo.GetAccessControl();
     security.SetAccessRuleProtection(isProtected, preserveInheritance);
+    security.SetOwner(new SecurityIdentifier(owner, null));
     foreach (var sid in sids)
     {
       security.AddAccessRule(new FileSystemAccessRule(

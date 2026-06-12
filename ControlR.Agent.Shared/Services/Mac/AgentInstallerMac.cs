@@ -8,6 +8,7 @@ using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Runtime.Versioning;
+using ControlR.Libraries.Shared.Services.Encryption;
 
 namespace ControlR.Agent.Shared.Services.Mac;
 
@@ -25,8 +26,9 @@ internal class AgentInstallerMac(
   ISystemEnvironment systemEnvironment,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
+  IEd25519KeyProvider keyProvider,
   ILogger<AgentInstallerMac> logger)
-  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processManager, systemEnvironment, appOptions, logger, keyProvider), IAgentInstaller
 {
   private static readonly SemaphoreSlim _installLock = new(1, 1);
   private static readonly string _macInstallerTempDirectory = $"/tmp/{BrandingConstants.UpdaterTempDirectoryName}";

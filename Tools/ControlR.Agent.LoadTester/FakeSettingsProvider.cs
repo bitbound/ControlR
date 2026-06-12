@@ -11,6 +11,8 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : IOptionsAcce
   public int HubDtoChunkSize => 100;
   public string InstanceId { get; } = string.Empty;
 
+  public string? PrivateKey => null;
+
   public Uri ServerUri { get; } = serverUri;
 
   public Guid TenantId { get; } = Guid.NewGuid();
@@ -31,6 +33,11 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : IOptionsAcce
   }
 
   public Task UpdateId(Guid uid)
+  {
+    return Task.CompletedTask;
+  }
+
+  public Task UpdatePrivateKey(string privateKeyBase64)
   {
     return Task.CompletedTask;
   }

@@ -8,6 +8,7 @@ using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.TestingUtilities;
@@ -168,6 +169,7 @@ public class AgentInstallerWindowsRepairTests
       fileSystem,
       Mock.Of<IOptionsAccessor>(),
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
+      Mock.Of<IEd25519KeyProvider>(),
       NullLogger<AgentInstallerWindows>.Instance);
   }
 }

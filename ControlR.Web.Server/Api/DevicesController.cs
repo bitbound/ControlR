@@ -1,5 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Extensions;
+using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +23,8 @@ public class DevicesController(
     [FromServices] IAgentInstallerKeyManager keyManager,
     [FromServices] IDeviceManager deviceManager,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<DevicesController> logger)
+    [FromServices] ILogger<DevicesController> logger,
+    [FromServices] IEd25519KeyProvider keyProvider)
   {
     using var logScope = logger.BeginScope(requestDto);
     var deviceDto = requestDto.Device;
@@ -34,7 +35,21 @@ public class DevicesController(
       return BadRequest();
     }
 
-    // Validate key without consuming usage - we'll consume at the end if all checks pass
+    // Validate public key format if provided.
+    if (!string.IsNullOrWhiteSpace(requestDto.PublicKey))
+    {
+      var keyValidationResult = keyProvider.ValidatePublicKeyBase64(requestDto.PublicKey);
+      if (!keyValidationResult.IsSuccess)
+      {
+        logger.LogWarning(
+          "Public key validation failed for device {DeviceId}: {Reason}",
+          deviceDto.Id,
+          keyValidationResult.Reason);
+        return BadRequest();
+      }
+    }
+
+    // Validate key without consuming usage. We'll consume at the end if all checks pass.
     var keyResult = await keyManager.ValidateKey(requestDto.InstallerKeyId, requestDto.InstallerKeySecret);
     if (!keyResult.IsSuccess)
     {
@@ -91,7 +106,8 @@ public class DevicesController(
       LastSeen: DateTimeOffset.UtcNow,
       IsOnline: false);
 
-    var entity = await deviceManager.AddOrUpdate(deviceDto, connectionContext, requestDto.TagIds);
+    var entity = await deviceManager.AddOrUpdate(deviceDto, connectionContext, requestDto.TagIds, requestDto.PublicKey);
+
     var isOutdated = await GetIsOutdated(entity, agentVersionProvider);
     return entity.ToDto(isOutdated);
   }

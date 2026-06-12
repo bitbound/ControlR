@@ -630,7 +630,7 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
   }
 
   [SupportedOSPlatform("windows")]
-  public void Set(string filePath, bool includeCurrentUser, bool isProtected, bool preserveInheritance, params WellKnownSidType[] sids)
+  public void Set(string filePath, bool includeCurrentUser, bool isProtected, bool preserveInheritance, WellKnownSidType owner, params WellKnownSidType[] sids)
   {
     lock (_syncRoot)
     {

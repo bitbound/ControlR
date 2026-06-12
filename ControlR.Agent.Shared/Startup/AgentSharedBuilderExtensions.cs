@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using ControlR.Libraries.Shared.Services.Encryption;
 
 namespace ControlR.Agent.Shared.Startup;
 
@@ -22,6 +23,7 @@ public static class AgentSharedBuilderExtensions
   {
     services.AddSingleton<IOptionsAccessor, OptionsAccessor>();
     services.AddSingleton<IFileSystemPathProvider, FileSystemPathProvider>();
+    services.AddSingleton<IEd25519KeyProvider, Ed25519KeyProvider>();
 
     if (OperatingSystem.IsWindowsVersionAtLeast(8))
     {

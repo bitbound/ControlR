@@ -8,6 +8,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -80,7 +81,8 @@ public class AgentInstallerBaseTests
       processManager,
       systemEnvironment,
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
-      NullLogger<AgentInstallerBase>.Instance)
+      NullLogger<AgentInstallerBase>.Instance,
+      Mock.Of<IEd25519KeyProvider>())
   {
     public static string GetInstallDirectoryForTest(string rootDirectory, string? instanceId)
     {

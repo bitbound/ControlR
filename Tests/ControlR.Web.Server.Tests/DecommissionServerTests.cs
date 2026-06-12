@@ -2,7 +2,6 @@ using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
-using ControlR.Libraries.Shared.Services;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Hubs;
@@ -19,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using ControlR.Libraries.Shared.Services.Encryption;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -115,6 +115,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     var mockOutputCache = new Mock<IOutputCacheStore>();
     var mockHubStreamStore = new Mock<IHubStreamStore>();
     var mockAgentVersionProvider = new Mock<IAgentVersionProvider>();
+    var mockKeyProvider = new Mock<IEd25519KeyProvider>();
     var mockLogger = new Mock<ILogger<AgentHub>>();
 
     var serverOptions = Microsoft.Extensions.Options.Options.Create(
@@ -135,6 +136,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       mockAgentVersionProvider.Object,
       appOptions,
       serverOptions,
+      mockKeyProvider.Object,
       mockLogger.Object);
 
     hub.Clients = mockClients.Object;
@@ -213,6 +215,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     var mockOutputCache = new Mock<IOutputCacheStore>();
     var mockHubStreamStore = new Mock<IHubStreamStore>();
     var mockAgentVersionProvider = new Mock<IAgentVersionProvider>();
+    var mockKeyProvider = new Mock<IEd25519KeyProvider>();
     var mockLogger = new Mock<ILogger<AgentHub>>();
 
     // DecommissionServer is false (the default).
@@ -233,6 +236,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       mockAgentVersionProvider.Object,
       appOptions,
       serverOptions,
+      mockKeyProvider.Object,
       mockLogger.Object);
 
     hub.Clients = mockClients.Object;

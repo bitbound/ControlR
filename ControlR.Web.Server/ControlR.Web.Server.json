@@ -3959,6 +3959,12 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "publicKey": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

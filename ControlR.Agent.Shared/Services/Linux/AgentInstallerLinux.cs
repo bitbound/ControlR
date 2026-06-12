@@ -8,6 +8,7 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using ControlR.Libraries.Shared.Services.Encryption;
 
 namespace ControlR.Agent.Shared.Services.Linux;
 
@@ -27,8 +28,9 @@ internal class AgentInstallerLinux(
   IEmbeddedResourceAccessor embeddedResourceAccessor,
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
+  IEd25519KeyProvider keyProvider,
   ILogger<AgentInstallerLinux> logger)
-  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAcccessor, processManager, systemEnvironment, appOptions, logger), IAgentInstaller
+  : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAcccessor, processManager, systemEnvironment, appOptions, logger, keyProvider), IAgentInstaller
 {
   private const string DesktopClientDirectoryName = "DesktopClient";
 
