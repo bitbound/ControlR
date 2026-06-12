@@ -22,8 +22,8 @@ public class UserCreatorTests(ITestOutputHelper output)
         using var scope = testApp.CreateScope();
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
 
-        await userCreator.CreateUser("duplicate@example.com", "Password123!", null);
-        var result = await userCreator.CreateUser("duplicate@example.com", "Password123!", null);
+        await userCreator.CreateUser("duplicate@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await userCreator.CreateUser("duplicate@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Contains(result.IdentityResult.Errors, e => e.Code == "DuplicateUserName");
@@ -42,7 +42,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         using var scope = testApp.CreateScope();
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
 
-        var result = await userCreator.CreateUser("noconfirm@example.com", "Password123!", null);
+        var result = await userCreator.CreateUser("noconfirm@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.True(result.User!.EmailConfirmed);
@@ -66,7 +66,7 @@ public class UserCreatorTests(ITestOutputHelper output)
 
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
 
-        var result = await userCreator.CreateUser("throw@example.com", "Password123!", null);
+        var result = await userCreator.CreateUser("throw@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
             
         Assert.False(result.Succeeded);
         Assert.Contains(result.IdentityResult.Errors, e => e.Description.Contains("Email sending is disabled"));
@@ -82,7 +82,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
         // Create first user so next one isn't server admin
-        await userCreator.CreateUser("admin@example.com", "Password123!", null);
+        await userCreator.CreateUser("admin@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
 
         var tenant = new Tenant { Name = "Existing Tenant" };
         appDb.Tenants.Add(tenant);
@@ -103,7 +103,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
-        var result = await userCreator.CreateUser("admin@example.com", "Password123!", null);
+        var result = await userCreator.CreateUser("admin@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         var roles = await userManager.GetRolesAsync(result.User!);
@@ -128,7 +128,8 @@ public class UserCreatorTests(ITestOutputHelper output)
             "fail@example.com", 
             "Password123!", 
             tenant.Id, 
-            roleIds: [missingRoleId]);
+            roleIds: [missingRoleId],
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Contains(result.IdentityResult.Errors, e => e.Description.Contains("Roles not found"));
@@ -156,7 +157,8 @@ public class UserCreatorTests(ITestOutputHelper output)
             "failtags@example.com", 
             "Password123!", 
             tenant.Id, 
-            tagIds: [missingTagId]);
+            tagIds: [missingTagId],
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Contains(result.IdentityResult.Errors, e => e.Description.Contains("Tags not found"));
@@ -180,9 +182,9 @@ public class UserCreatorTests(ITestOutputHelper output)
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
         // Create first user so next one isn't server admin
-        await userCreator.CreateUser("admin@example.com", "Password123!", null);
+        await userCreator.CreateUser("admin@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
 
-        var result = await userCreator.CreateUser("tenantadmin@example.com", "Password123!", null);
+        var result = await userCreator.CreateUser("tenantadmin@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
 
         if (!result.Succeeded)
         {
@@ -210,7 +212,7 @@ public class UserCreatorTests(ITestOutputHelper output)
             "123",
             "Test User");
 
-        var result = await userCreator.CreateUser(email, loginInfo, null);
+        var result = await userCreator.CreateUser(email, loginInfo, null, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.NotNull(result.User);
@@ -228,7 +230,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
 
         var email = "test@example.com";
-        var result = await userCreator.CreateUser(email, "Password123!", null);
+        var result = await userCreator.CreateUser(email, "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.NotNull(result.User);
@@ -265,7 +267,8 @@ public class UserCreatorTests(ITestOutputHelper output)
             "Password123!", 
             tenant.Id, 
             roleIds: [role.Id], 
-            tagIds: [tag1.Id, tag2.Id]);
+            tagIds: [tag1.Id, tag2.Id],
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.NotNull(result.User);

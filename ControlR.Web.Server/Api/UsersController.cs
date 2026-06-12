@@ -85,7 +85,8 @@ public class UsersController : ControllerBase
       request.Password ?? string.Empty,
       tenantId,
       requestRoleIds,
-      request.TagIds);
+      request.TagIds,
+      cancellationToken: HttpContext.RequestAborted);
 
     if (!createResult.Succeeded)
     {

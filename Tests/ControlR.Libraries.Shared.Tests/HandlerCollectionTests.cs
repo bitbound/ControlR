@@ -41,7 +41,7 @@ public class HandlerCollectionTests
     });
 
     // Act
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.True(handlerInvoked);
@@ -63,7 +63,7 @@ public class HandlerCollectionTests
     collection.AddHandler(subscriber3, _ => { invocationCount++; return Task.CompletedTask; });
 
     // Act
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.Equal(3, invocationCount);
@@ -86,7 +86,7 @@ public class HandlerCollectionTests
 
     // Act
     disposable.Dispose();
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.False(handlerInvoked);
@@ -108,7 +108,7 @@ public class HandlerCollectionTests
     });
 
     // Act
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.NotNull(receivedData);
@@ -131,7 +131,7 @@ public class HandlerCollectionTests
     });
 
     // Act
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.True(asyncOperationCompleted);
@@ -151,7 +151,7 @@ public class HandlerCollectionTests
 
     // Act
     var disposable2 = collection.AddHandler(subscriber, _ => { invocationCount++; return Task.CompletedTask; });
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.Equal(1, invocationCount);
@@ -173,7 +173,7 @@ public class HandlerCollectionTests
     collection.AddHandler(subscriber, _ => throw new InvalidOperationException());
 
     // Act
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.True(exceptionHandlerCompleted);
@@ -196,7 +196,7 @@ public class HandlerCollectionTests
     collection.AddHandler(subscriber, _ => throw expectedException);
 
     // Act
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.NotNull(caughtException);
@@ -217,7 +217,7 @@ public class HandlerCollectionTests
     collection.AddHandler(subscriber2, _ => { handler2Invoked = true; return Task.CompletedTask; });
 
     // Act
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
 
     // Assert
     Assert.True(handler2Invoked);
@@ -234,7 +234,7 @@ public class HandlerCollectionTests
     collection.AddHandler(subscriber, _ => throw new InvalidOperationException());
 
     // Act & Assert
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
   }
 
   [Fact]
@@ -245,7 +245,7 @@ public class HandlerCollectionTests
     var testData = new TestData { Message = "Test" };
 
     // Act & Assert
-    await collection.InvokeHandlers(testData, CancellationToken.None);
+    await collection.InvokeHandlers(testData, TestContext.Current.CancellationToken);
   }
 
   [Fact]

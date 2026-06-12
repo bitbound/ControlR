@@ -36,7 +36,12 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     var deviceManager = scope.ServiceProvider.GetRequiredService<IDeviceManager>();
 
     // Create test user
-    var userResult = await userCreator.CreateUser("cachetest@example.com", "T3stP@ssw0rd!",returnUrl: null);
+    var userResult = await userCreator.CreateUser(
+      "cachetest@example.com",
+      "T3stP@ssw0rd!",
+      returnUrl: null,
+      cancellationToken: TestContext.Current.CancellationToken);
+      
     Assert.True(userResult.Succeeded);
 
     var user = userResult.User;

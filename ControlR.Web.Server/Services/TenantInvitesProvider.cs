@@ -13,7 +13,8 @@ public interface ITenantInvitesProvider
   Task<HttpResult<TenantInviteResponseDto>> CreateInvite(
     string inviteeEmail,
     Guid tenantId,
-    Uri origin);
+    Uri origin,
+    CancellationToken cancellationToken = default);
 
   Task<HttpResult> DeleteInvite(
     Guid inviteId,
@@ -92,7 +93,8 @@ public class TenantInvitesProvider(
   public async Task<HttpResult<TenantInviteResponseDto>> CreateInvite(
     string inviteeEmail,
     Guid tenantId,
-    Uri origin)
+    Uri origin,
+    CancellationToken cancellationToken = default)
   {
     var normalizedEmail = inviteeEmail.Trim().ToLower();
 
@@ -114,7 +116,8 @@ public class TenantInvitesProvider(
     var createResult = await _userCreator.CreateUser(
       inviteeEmail,
       password: randomPassword,
-      tenantId: tenantId);
+      tenantId: tenantId,
+      cancellationToken: cancellationToken);
 
     if (!createResult.Succeeded)
     {

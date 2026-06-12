@@ -57,6 +57,9 @@
 @code {
   private IEnumerable<IdentityError>? _identityErrors;
 
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
+
   [SupplyParameterFromForm]
   private InputModel Input { get; set; } = default!;
 
@@ -69,13 +72,13 @@
 
   public async Task RegisterUser(EditContext editContext)
   {
-    if (!await UserRegistrationProvider.IsSelfRegistrationEnabled())
-    {
-      Logger.LogCritical("Self-registration attempted while self-registration is disabled.  Email: {Email}", Input.Email);
-      return;
-    }
+    var createResult = await UserCreator.CreateUser(
+      Input.Email,
+      Input.Password,
+      ReturnUrl,
+      isPublicRegistration: true,
+      cancellationToken: HttpContext.RequestAborted);
 
-    var createResult = await UserCreator.CreateUser(Input.Email, Input.Password, ReturnUrl);
     if (!createResult.Succeeded)
     {
       _identityErrors = createResult.IdentityResult.Errors;
@@ -97,7 +100,7 @@
   protected override async Task OnInitializedAsync()
   {
     Input ??= new();
-    if (!await UserRegistrationProvider.IsSelfRegistrationEnabled())
+    if (!await UserRegistrationProvider.IsPublicRegistrationEnabled())
     {
       RedirectManager.RedirectTo("/");
       return;

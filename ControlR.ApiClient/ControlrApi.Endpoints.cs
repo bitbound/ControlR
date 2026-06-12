@@ -24,6 +24,7 @@ public interface IAuthApi
   Task<ApiResult<AccessTokenResponseDto>> Refresh(RefreshTokenRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> Register(RegisterRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> ResendConfirmationEmail(ResendConfirmationEmailRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult> ResetPassword(ResetPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<ManageInfoResponseDto>> UpdateManageInfo(ManageInfoRequestDto request, CancellationToken cancellationToken = default);
 }
 

@@ -2,7 +2,12 @@
 
 public interface IUserRegistrationProvider
 {
-  Task<bool> IsSelfRegistrationEnabled();
+  /// <summary>
+  /// Acquires a lock around public registration.  This is necessary to prevent multiple first-time
+  /// registration requests from slipping through simultaneously, which could result in multiple admin accounts being created.
+  /// </summary>
+  Task<IDisposable> AcquirePublicRegistrationLock(CancellationToken cancellationToken);
+  Task<bool> IsPublicRegistrationEnabled();
 }
 
 public class UserRegistrationProvider(
@@ -13,11 +18,17 @@ public class UserRegistrationProvider(
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly ILogger<UserRegistrationProvider> _logger = logger;
   private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
-  public async Task<bool> IsSelfRegistrationEnabled()
+  private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+  public async Task<IDisposable> AcquirePublicRegistrationLock(CancellationToken cancellationToken)
+  {
+    return await _semaphore.AcquireLockAsync(cancellationToken);
+  }
+
+  public async Task<bool> IsPublicRegistrationEnabled()
   {
     try
     {
-
       await using var scope = _scopeFactory.CreateAsyncScope();
       await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 

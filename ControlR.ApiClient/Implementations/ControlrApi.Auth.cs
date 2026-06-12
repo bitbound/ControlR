@@ -16,6 +16,7 @@ public partial class ControlrApi
   private const string ManageInfoEndpoint = $"{HttpConstants.AuthEndpoint}/manage/info";
   private const string RegisterEndpoint = $"{HttpConstants.AuthEndpoint}/register";
   private const string ResendConfirmationEmailEndpoint = $"{HttpConstants.AuthEndpoint}/resendConfirmationEmail";
+  private const string ResetPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/resetPassword";
   private const string TwoFactorEndpoint = $"{HttpConstants.AuthEndpoint}/manage/2fa";
 
   async Task<ApiResult> IAuthApi.ChangePassword(ChangePasswordRequestDto request, CancellationToken cancellationToken)
@@ -143,6 +144,15 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
     {
       using var response = await _client.PostAsJsonAsync(ResendConfirmationEmailEndpoint, request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
+  async Task<ApiResult> IAuthApi.ResetPassword(ResetPasswordRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync(ResetPasswordEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }

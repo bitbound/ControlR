@@ -100,10 +100,14 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 
 ## Testing
 
-- xUnit v3. Run tests with `dotnet run`, not `dotnet test`.  Build the solution first if using `--no-build`.
-  - Syntax (whole test project): `dotnet run --no-build --project {project_path}}`
-  - Specifc class/method: `dotnet run --no-build --project {project_path} -- -filter /{namespace}/{class}/{method}`
-  - Example: `dotnet run --no-build --project .\Tests\ControlR.Web.Server.Tests\ControlR.Web.Server.Tests.csproj -- -filter /ControlR.Web.Server.Tests/ControlR.Web.Server.Tests/InteractiveLoginApiTests`
+- xUnit v3. Run tests with `dotnet run`, not `dotnet test`.
+  - Build the test project(s) before running tests: `dotnet build {project_path} --verbosity quiet`
+  - Whole test project: `dotnet run --project {project_path}`
+  - Specific class/method: `dotnet run --project {project_path} -- -filter /{assembly-name}/{namespace}/{class}/{method}`
+  - **IMPORTANT**: xUnit v3 filter paths use assembly name + C# namespace, which may look similar but are distinct. The assembly name is the project name.
+    - Example: for class `IdentityApiRegisterFilterTests` in namespace `ControlR.Web.Server.Tests`, project `ControlR.Web.Server.Tests`:
+      `-filter /ControlR.Web.Server.Tests/ControlR.Web.Server.Tests/IdentityApiRegisterFilterTests`
+    - For a specific method, append `/{method}`.
 
 ## Package Management
 

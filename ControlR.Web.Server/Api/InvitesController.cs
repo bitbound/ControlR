@@ -34,7 +34,11 @@ public class InvitesController : ControllerBase
     }
 
     var origin = Request.ToOrigin();
-    var result = await tenantInvitesProvider.CreateInvite(dto.InviteeEmail, tenantId, origin);
+    var result = await tenantInvitesProvider.CreateInvite(
+      dto.InviteeEmail,
+      tenantId,
+      origin,
+      HttpContext.RequestAborted);
 
     return result.ToActionResult();
   }

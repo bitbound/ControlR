@@ -11,7 +11,9 @@ public interface IUserCreator
   Task<CreateUserResult> CreateUser(
     string emailAddress,
     string password,
-    string? returnUrl);
+    string? returnUrl,
+    bool isPublicRegistration = false,
+    CancellationToken cancellationToken = default);
 
   Task<CreateUserResult> CreateUser(
     string emailAddress,
@@ -21,7 +23,9 @@ public interface IUserCreator
   Task<CreateUserResult> CreateUser(
     string emailAddress,
     ExternalLoginInfo externalLoginInfo,
-    string? returnUrl);
+    string? returnUrl,
+    bool isPublicRegistration = false,
+    CancellationToken cancellationToken = default);
   
   // Overload to create a user within a tenant and optionally assign roles and tags.
   Task<CreateUserResult> CreateUser(
@@ -29,7 +33,17 @@ public interface IUserCreator
     string password,
     Guid tenantId,
     IEnumerable<Guid>? roleIds = null,
-    IEnumerable<Guid>? tagIds = null);
+    IEnumerable<Guid>? tagIds = null,
+    CancellationToken cancellationToken = default);
+
+  // Overload for API context where NavigationManager is unavailable.
+  Task<CreateUserResult> CreateUser(
+    string emailAddress,
+    string password,
+    string? returnUrl,
+    string confirmationBaseUrl,
+    bool isPublicRegistration = false,
+    CancellationToken cancellationToken = default);
 }
 
 public class UserCreator(
@@ -39,6 +53,7 @@ public class UserCreator(
   IUserStore<AppUser> userStore,
   IEmailSender<AppUser> emailSender,
   IOptionsMonitor<AppOptions> appOptions,
+  IUserRegistrationProvider registrationProvider,
   ILogger<UserCreator> logger) : IUserCreator
 {
   private readonly AppDb _appDb = appDb;
@@ -46,32 +61,44 @@ public class UserCreator(
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
   private readonly ILogger<UserCreator> _logger = logger;
   private readonly NavigationManager _navigationManager = navigationManager;
+  private readonly IUserRegistrationProvider _registrationProvider = registrationProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IUserStore<AppUser> _userStore = userStore;
 
   public async Task<CreateUserResult> CreateUser(
     string emailAddress,
     string password,
-    string? returnUrl)
+    string? returnUrl,
+    bool isPublicRegistration = false,
+    CancellationToken cancellationToken = default)
   {
     return await CreateUserImpl(
       emailAddress,
       returnUrl: returnUrl,
-      password: password);
+      password: password,
+      isPublicRegistration: isPublicRegistration,
+      cancellationToken: cancellationToken);
   }
 
   public async Task<CreateUserResult> CreateUser(
     string emailAddress,
     ExternalLoginInfo externalLoginInfo,
-    string? returnUrl)
+    string? returnUrl,
+    bool isPublicRegistration = false,
+    CancellationToken cancellationToken = default)
   {
     return await CreateUserImpl(
       emailAddress,
       returnUrl: returnUrl,
-      externalLoginInfo: externalLoginInfo);
+      externalLoginInfo: externalLoginInfo,
+      isPublicRegistration: isPublicRegistration,
+      cancellationToken: cancellationToken);
   }
 
-  public async Task<CreateUserResult> CreateUser(string emailAddress, string password, Guid tenantId)
+  public async Task<CreateUserResult> CreateUser(
+    string emailAddress,
+    string password,
+    Guid tenantId)
   {
     return await CreateUserImpl(
       emailAddress,
@@ -84,12 +111,14 @@ public class UserCreator(
     string password,
     Guid tenantId,
     IEnumerable<Guid>? roleIds = null,
-    IEnumerable<Guid>? tagIds = null)
+    IEnumerable<Guid>? tagIds = null,
+    CancellationToken cancellationToken = default)
   {
     var result = await CreateUserImpl(
       emailAddress,
       password: password,
-      tenantId: tenantId);
+      tenantId: tenantId,
+      cancellationToken: cancellationToken);
 
     if (!result.Succeeded)
     {
@@ -158,12 +187,77 @@ public class UserCreator(
     return new CreateUserResult(true, result.IdentityResult, user);
   }
 
+  public async Task<CreateUserResult> CreateUser(
+    string emailAddress,
+    string password,
+    string? returnUrl,
+    string confirmationBaseUrl,
+    bool isPublicRegistration = false,
+    CancellationToken cancellationToken = default)
+  {
+    return await CreateUserImpl(
+      emailAddress,
+      returnUrl: returnUrl,
+      password: password,
+      confirmationBaseUrl: confirmationBaseUrl,
+      isPublicRegistration: isPublicRegistration,
+      cancellationToken: cancellationToken);
+  }
+
   private async Task<CreateUserResult> CreateUserImpl(
     string emailAddress,
     string? password = null,
     ExternalLoginInfo? externalLoginInfo = null,
     string? returnUrl = null,
     Guid? tenantId = null,
+    string? confirmationBaseUrl = null,
+    bool isPublicRegistration = false,
+    CancellationToken cancellationToken = default)
+  {
+    // Acquire the registration lock for ALL public registrations to prevent
+    // concurrent first-time registrations from both becoming server admins.
+    // The EnablePublicRegistration flag only controls whether to block the
+    // request when users already exist — not whether to serialize.
+    if (isPublicRegistration)
+    {
+      using var gate = await _registrationProvider.AcquirePublicRegistrationLock(cancellationToken);
+
+      if (!_appOptions.CurrentValue.EnablePublicRegistration)
+      {
+        var hasExistingUsers = await _appDb.Users.AnyAsync(cancellationToken);
+        if (hasExistingUsers)
+        {
+          _logger.LogWarning(
+            "Public registration blocked for {Email}. Registration is disabled and users already exist.",
+            emailAddress);
+
+          return new CreateUserResult(
+            false,
+            IdentityResult.Failed(new IdentityError
+            {
+              Code = "RegistrationDisabled",
+              Description = "Public registration is not currently enabled."
+            }));
+        }
+      }
+
+      return await CreateUserInternal(
+        emailAddress, password, externalLoginInfo, returnUrl,
+        tenantId, confirmationBaseUrl, cancellationToken);
+    }
+
+    return await CreateUserInternal(
+      emailAddress, password, externalLoginInfo, returnUrl,
+      tenantId, confirmationBaseUrl, cancellationToken);
+  }
+
+  private async Task<CreateUserResult> CreateUserInternal(
+    string emailAddress,
+    string? password = null,
+    ExternalLoginInfo? externalLoginInfo = null,
+    string? returnUrl = null,
+    Guid? tenantId = null,
+    string? confirmationBaseUrl = null,
     CancellationToken cancellationToken = default)
   {
     try
@@ -263,9 +357,21 @@ public class UserCreator(
       if (isNewTenant && !isServerAdmin && !_appOptions.CurrentValue.DisableEmailSending)
       {
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-        var callbackUrl = _navigationManager.GetUriWithQueryParameters(
-          _navigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-          new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = returnUrl });
+
+        var queryParams = new Dictionary<string, string?>
+        {
+          ["userId"] = userId,
+          ["code"] = code,
+          ["returnUrl"] = returnUrl
+        };
+
+        var callbackUrl = confirmationBaseUrl is not null
+          ? QueryHelpers.AddQueryString(
+            $"{confirmationBaseUrl.TrimEnd('/')}/Account/ConfirmEmail",
+            queryParams)
+          : _navigationManager.GetUriWithQueryParameters(
+            _navigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = returnUrl });
 
         await _emailSender.SendConfirmationLinkAsync(user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
       }

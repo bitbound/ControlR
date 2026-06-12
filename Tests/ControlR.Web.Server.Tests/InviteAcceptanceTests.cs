@@ -29,7 +29,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
-      var adminResult = await userCreator.CreateUser("admin@example.com", "Password123!", returnUrl: null);
+      var adminResult = await userCreator.CreateUser("admin@example.com", "Password123!", returnUrl: null, cancellationToken: TestContext.Current.CancellationToken);
       Assert.True(adminResult.Succeeded);
       adminUser = adminResult.User;
       tenantAId = adminUser.TenantId;
@@ -43,7 +43,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
-      var tempUserResult = await userCreator.CreateUser("temp@example.com", "Password123!", returnUrl: null);
+      var tempUserResult = await userCreator.CreateUser("temp@example.com", "Password123!", returnUrl: null, cancellationToken: TestContext.Current.CancellationToken);
       Assert.True(tempUserResult.Succeeded);
       tenantBId = tempUserResult.User.TenantId;
 

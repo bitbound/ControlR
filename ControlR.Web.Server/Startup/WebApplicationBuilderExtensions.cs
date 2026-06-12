@@ -141,6 +141,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddOpenApi(options =>
     {
       options.AddDocumentTransformer<FileUploadTransformer>();
+      options.AddDocumentTransformer<IdentityApiOpenApiTransformer>();
       options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
     });
     builder.Services.AddEndpointsApiExplorer();

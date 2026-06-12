@@ -46,9 +46,6 @@
 
     private ExternalLoginInfo? _externalLoginInfo;
 
-    [Inject]
-    public required IUserRegistrationProvider UserRegistrationProvider { get; init; }
-
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
@@ -136,18 +133,19 @@
 
     private async Task OnValidSubmitAsync()
     {
-        if (!await UserRegistrationProvider.IsSelfRegistrationEnabled())
-        {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error: Public registration is disabled.", HttpContext);
-        }
-
         if (_externalLoginInfo is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", "Error: Failed to load external login information during confirmation.", HttpContext);
             return;
         }
 
-        var createUserResult = await UserCreator.CreateUser(Input.Email, _externalLoginInfo, ReturnUrl);
+        var createUserResult = await UserCreator.CreateUser(
+          Input.Email,
+          _externalLoginInfo,
+          ReturnUrl,
+          isPublicRegistration: true,
+          cancellationToken: HttpContext.RequestAborted);
+          
         if (!createUserResult.Succeeded)
         {
             var errors = createUserResult.IdentityResult.Errors.Select(error => error.Description);

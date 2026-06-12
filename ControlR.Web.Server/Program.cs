@@ -9,6 +9,7 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.Extensions.FileProviders;
 using Scalar.AspNetCore;
 using System.Reflection;
+using ControlR.Web.Server.EndpointFilters;
 
 var isOpenApiBuild = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 var builder = WebApplication.CreateBuilder(args);
@@ -78,9 +79,12 @@ app.UseOutputCache();
 
 app.MapControllers();
 
-if (appOptions.EnableInteractiveBearerLogin)
+if (appOptions.EnableInteractiveBearerLogin || isOpenApiBuild)
 {
-  app.MapGroup(HttpConstants.AuthEndpoint).MapIdentityApi<AppUser>();
+  var authGroup = app.MapGroup(HttpConstants.AuthEndpoint);
+  authGroup
+    .MapIdentityApi<AppUser>()
+    .AddEndpointFilter<IEndpointConventionBuilder, IdentityApiRegisterFilter>();
 }
 
 app.UseWhen(
