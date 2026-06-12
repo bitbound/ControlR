@@ -19,6 +19,7 @@ public partial class App : Application
 {
   private readonly CancellationTokenSource _appShutdownTokenSource = new();
   private readonly Lock _shutdownLock = new();
+  private bool _hasShutdownStarted = false;
 
   public static Window MainWindow
   {
@@ -142,6 +143,14 @@ public partial class App : Application
     {
       return;
     }
+
+    if (_hasShutdownStarted)
+    {
+      _shutdownLock.Exit();
+      return;
+    }
+
+    _hasShutdownStarted = true;
 
     try
     {
