@@ -1,7 +1,7 @@
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.State;
 using ControlR.DesktopClient.Services;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Services;
@@ -56,6 +56,7 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<IUrlLauncher, UrlLauncher>()
       .AddSingleton<IWaiter, Waiter>()
       .AddSingleton<INavigationItemProvider, ShellNavigationItemProvider>()
+      .AddTransient<IRemoteControlSessionState, RemoteControlSessionState>()
       .AddTransient<MainWindow>()
       .AddTransient<ConnectionsView>()
       .AddTransient<SettingsView>()
