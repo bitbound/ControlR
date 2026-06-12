@@ -47,7 +47,7 @@ on:
         type: boolean
 
       use_local_storage:
-        description: "Use local storage for artifact upload/download"
+        description: "Use local storage for artifacts"
         required: false
         default: true
         type: boolean
