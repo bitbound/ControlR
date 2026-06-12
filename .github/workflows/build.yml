@@ -46,6 +46,12 @@ on:
         default: false
         type: boolean
 
+      use_local_storage:
+        description: "Use local storage for artifact upload/download"
+        required: false
+        default: true
+        type: boolean
+
       customization_config_url:
         description: "URL to JSON customization config (empty for default branding)"
         required: false
@@ -409,8 +415,8 @@ jobs:
           name: Downloads-${{ matrix.arch }}
           path: ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}/
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Cleanup Keychain
         if: always()

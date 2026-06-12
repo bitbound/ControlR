@@ -42,6 +42,10 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
+      - name: Install macOS workload
+        if: inputs.use_self_hosted_runners == false
+        run: dotnet workload install macos
+
       - name: Restore Solution
         shell: pwsh
         run: |
