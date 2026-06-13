@@ -82,6 +82,30 @@ public partial class DeviceOverviewGrid
     }
   }
 
+  private string GetCurrentUsersDisplay()
+  {
+    if (Device.CurrentUsers == null || Device.CurrentUsers.Length == 0)
+    {
+      return "No active users";
+    }
+
+    if (Device.CurrentUsers.Length == 1)
+    {
+      return Device.CurrentUsers[0];
+    }
+
+    var currentUser = Device.CurrentUsers[0];
+    var additionalUsersCount = Device.CurrentUsers.Length - 1;
+    return $"{currentUser} and {additionalUsersCount} more";
+  }
+
+  private string GetUsedStorageDisplay()
+  {
+    var usedStorageGB = Device.UsedStorage.ToString("N0");
+    var usedStoragePercent = (Device.UsedStoragePercent * 100).ToString("N2");
+    return $"{usedStorageGB} GB ({usedStoragePercent}%)";
+  }
+
   private async Task HandleAliasKeyDown(KeyboardEventArgs e)
   {
     if (e.Key == "Enter")

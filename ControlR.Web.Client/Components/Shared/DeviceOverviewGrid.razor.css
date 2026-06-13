@@ -1,3 +1,7 @@
+.device-overview-container {
+  container-type: inline-size;
+}
+
 .child-content-grid {
   display: inline-grid;
   grid-template-columns: min-content auto;
@@ -12,8 +16,44 @@
 }
 
 /* typical phone screen resolution */
-@media only screen and (max-width : 667px) {
+@container (max-width: 667px) {
   .child-content-grid {
     display: grid;
+  }
+}
+
+/*
+  Container-based grid overrides for MudBlazor MudItem breakpoints.
+  When DeviceOverviewGrid is placed inside a scrollable container
+  (e.g. MudDataGrid ChildRowContent), viewport-based media queries
+  fire at the wrong widths. Container queries ensure items respond
+  to the actual available inline size of this component.
+
+  Breakpoints mirror MudBlazor defaults:
+    xs: < 600px    sm: 600-959px   md: 960-1279px   lg: >= 1280px
+  The component uses: xs=12  sm=12  md=6  lg=4
+*/
+
+/* xs + sm: full width */
+@container (max-width: 959px) {
+  ::deep .mud-grid-item {
+    max-width: 100% !important;
+    flex-basis: 100% !important;
+  }
+}
+
+/* md: half width */
+@container (min-width: 960px) and (max-width: 1279px) {
+  ::deep .mud-grid-item {
+    max-width: 50% !important;
+    flex-basis: 50% !important;
+  }
+}
+
+/* lg+: one third */
+@container (min-width: 1280px) {
+  ::deep .mud-grid-item {
+    max-width: 33.333333% !important;
+    flex-basis: 33.333333% !important;
   }
 }

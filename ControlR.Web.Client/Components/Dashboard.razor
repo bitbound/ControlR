@@ -1,4 +1,4 @@
-﻿<div>
+﻿<div class="dashboard-container">
   @if (!_loading && _anyDevicesForUser == false)
   {
     <MudAlert Severity="Severity.Info">
@@ -248,7 +248,9 @@
       <HierarchyColumn T="DeviceViewModel" />
     </Columns>
     <ChildRowContent>
-      <DeviceOverviewGrid Device="context.Item.Dto" />
+      <div class="dashboard-child-row-wrapper">
+        <DeviceOverviewGrid Device="context.Item.Dto" />
+      </div>
     </ChildRowContent>
 
     <PagerContent>

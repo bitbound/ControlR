@@ -9,6 +9,7 @@ public static class FileSystemConstants
     "/System/Volumes",
     "/snap",
     "/boot",
-    "/var/lib/docker"
+    "/var/lib/docker",
+    "/sys/firmware/efi"
   ];  
 }

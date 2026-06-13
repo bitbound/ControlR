@@ -1,3 +1,4 @@
+<div class="device-overview-container">
 <MudGrid>
   <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center mb-6">
     <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
@@ -5,6 +6,44 @@
     </MudText>
     <div class="w-100">
       <div class="child-content-grid">
+
+        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+          Name:
+        </MudText>
+        <MudText Typo="Typo.body1">
+          @Device.Name
+        </MudText>
+
+        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+          Alias:
+        </MudText>
+        <div class="d-flex align-center gap-2">
+          @if (_isEditingAlias)
+          {
+            <MudTextField T="string" @bind-Value="_aliasValue" Immediate Variant="Variant.Text" MaxLength="100"
+                          Disabled="@_isSavingAlias" Validation="@((string x) => ValidateAlias(x))" @onkeydown="HandleAliasKeyDown"
+                          Class="flex-grow-1" />
+            <MudTooltip Text="Cancel">
+              <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small"
+                             Disabled="@_isSavingAlias" OnClick="CancelEditAlias" />
+            </MudTooltip>
+            <MudTooltip Text="Save">
+              <MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Primary" Size="Size.Small"
+                             Disabled="@_isSavingAlias" OnClick="SaveAlias" />
+            </MudTooltip>
+          }
+          else
+          {
+            <MudText Typo="Typo.body1" Class="flex-grow-1 align-self-center">
+              @_aliasValue
+            </MudText>
+            <MudTooltip Text="Edit Alias">
+              <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default" Size="Size.Small"
+                             OnClick="StartEditAlias" />
+            </MudTooltip>
+          }
+        </div>
+
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
           Online Status:
         </MudText>
@@ -66,57 +105,6 @@
         </div>
 
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-          Name:
-        </MudText>
-        <MudText Typo="Typo.body1">
-          @Device.Name
-        </MudText>
-
-        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-          Alias:
-        </MudText>
-        <div class="d-flex align-center gap-2">
-          @if (_isEditingAlias)
-          {
-            <MudTextField T="string"
-                          @bind-Value="_aliasValue"
-                          Immediate
-                          Variant="Variant.Text"
-                          MaxLength="100"
-                          Disabled="@_isSavingAlias"
-                          Validation="@((string x) => ValidateAlias(x))"
-                          @onkeydown="HandleAliasKeyDown"
-                          Class="flex-grow-1" />
-            <MudTooltip Text="Cancel">
-              <MudIconButton Icon="@Icons.Material.Filled.Close"
-                             Color="Color.Default"
-                             Size="Size.Small"
-                             Disabled="@_isSavingAlias"
-                             OnClick="CancelEditAlias" />
-            </MudTooltip>
-            <MudTooltip Text="Save">
-              <MudIconButton Icon="@Icons.Material.Filled.Check"
-                             Color="Color.Primary"
-                             Size="Size.Small"
-                             Disabled="@_isSavingAlias"
-                             OnClick="SaveAlias" />
-            </MudTooltip>
-          }
-          else
-          {
-            <MudText Typo="Typo.body1" Class="flex-grow-1 align-self-center">
-              @_aliasValue
-            </MudText>
-            <MudTooltip Text="Edit Alias">
-              <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                             Color="Color.Default"
-                             Size="Size.Small"
-                             OnClick="StartEditAlias" />
-            </MudTooltip>
-          }
-        </div>
-
-        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
           Id:
         </MudText>
         <div class="d-flex align-center gap-2">
@@ -124,9 +112,7 @@
             @Device.Id
           </MudText>
           <MudTooltip Text="Copy ID">
-            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                           Color="Color.Default"
-                           Size="Size.Small"
+            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default" Size="Size.Small"
                            OnClick="CopyDeviceId" />
           </MudTooltip>
         </div>
@@ -137,6 +123,16 @@
         <MudText Typo="Typo.body1">
           @Device.AgentVersion
         </MudText>
+
+        @if (Device.CurrentUsers.Length > 0)
+        {
+          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+            Active Users:
+          </MudText>
+          <MudText Typo="Typo.body1">
+            @(GetCurrentUsersDisplay())
+          </MudText>
+        }
 
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
           Last Seen:
@@ -150,22 +146,31 @@
 
   <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center mb-6">
     <MudText Typo="Typo.h6" GutterBottom Color="Color.Primary">
-      Hardware
+      System Information
     </MudText>
     <div class="w-100">
       <div class="child-content-grid">
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-          CPU Count:
+          OS Description:
         </MudText>
-        <MudText Typo="Typo.body1">
-          @Device.ProcessorCount
-        </MudText>
+        <MudTooltip Text="@Device.OsDescription">
+          <MudText Typo="Typo.body1" Class="ellipsis-text">
+            @Device.OsDescription
+          </MudText>
+        </MudTooltip>
 
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
           Architecture:
         </MudText>
         <MudText Typo="Typo.body1">
-          @Device.OsArchitecture
+          @(Device.OsArchitecture.ToString()) @(Device.Is64Bit ? "(64-bit)" : "(32-bit)")
+        </MudText>
+
+        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+          Processor Count:
+        </MudText>
+        <MudText Typo="Typo.body1">
+          @(Device.ProcessorCount)
         </MudText>
 
         <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
@@ -180,6 +185,13 @@
         </MudText>
         <MudText Typo="Typo.body1">
           @(Device.TotalStorage.ToString("N0")) GB
+        </MudText>
+
+        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+          Used Storage (OS):
+        </MudText>
+        <MudText Typo="Typo.body1">
+          @(GetUsedStorageDisplay())
         </MudText>
       </div>
     </div>
@@ -247,7 +259,6 @@
         @(Math.Round(Device.CpuUtilization * 100, 2))%
       </MudText>
     </RadialGauge>
-
   </MudItem>
 
   <MudItem xs="12" sm="12" md="6" lg="4" Class="text-center mb-6">
@@ -268,15 +279,15 @@
         Hard Drive
       </MudText>
       <MudChart ChartType="ChartType.Donut" Width="250px" Height="250px" Class="d-inline-block"
-        ChartSeries="@GetDriveChartSeries(drive)"
-        ChartLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
+                ChartSeries="@GetDriveChartSeries(drive)"
+                ChartLabels='@(new string[] { $"Used Space ({drive.UsedSpacePercentFormatted})", $"Free Space ({drive.FreeSpacePercentFormatted})" })'>
         <CustomGraphics>
           <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="@(Palette?.TextPrimary)"
-            font-family="Helvetica" font-size="16">
+                font-family="Helvetica" font-size="16">
             Total
           </text>
           <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="@(Palette?.TextPrimary)"
-            font-family="Helvetica" font-size="20">
+                font-family="Helvetica" font-size="20">
             @(drive.TotalSize.ToString("N0")) GB
           </text>
         </CustomGraphics>
@@ -322,4 +333,4 @@
     </MudItem>
   }
 </MudGrid>
-
+</div>

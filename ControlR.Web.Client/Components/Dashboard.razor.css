@@ -104,3 +104,25 @@
     width: 100%;
   }
 }
+
+/*
+  Establishes a container query anchor scoped to the Dashboard's
+  actual content area (viewport minus sidebar).  Descendants can
+  use cqw units to size relative to this width regardless of how
+  deep they're nested (e.g. inside a MudDataGrid ChildRowContent).
+*/
+.dashboard-container {
+  container-type: inline-size;
+}
+
+/*
+  Constrain the child row content to the dashboard's content area width
+  (100cqw = 100% of the nearest ancestor container).  This prevents the
+  child row from inheriting the mud-table-cell's inflated size when the
+  data grid overflows horizontally.  DeviceOverviewGrid's container
+  queries then see a predictable width and fire correct breakpoints.
+*/
+.dashboard-child-row-wrapper {
+  width: 100cqw;
+  overflow-x: hidden;
+}
