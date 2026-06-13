@@ -90,9 +90,24 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
       if (_sessionState.EnableDirectX)
       {
         var dxResult = GetDirectXCapture(targetDisplay, captureCursor);
-        if (dxResult.IsSuccess || (dxResult.HadNoChanges && !forceKeyFrame))
+        if (dxResult.IsSuccess)
         {
           return dxResult;
+        }
+
+        if (dxResult.HadNoChanges)
+        {
+          if (!forceKeyFrame)
+          {
+            return dxResult;
+          }
+
+          // DX has no changes but the caller needs a full frame. Fall through to
+          // BitBlt, but preserve the DirectX capture mode to avoid triggering a
+          // mode-change oscillation in the FrameBasedCapturer.
+          var fallbackResult = GetBitBltCapture(targetDisplay.LayoutBounds, captureCursor);
+          fallbackResult.CaptureMode = DirectXCaptureMode;
+          return fallbackResult;
         }
       }
 
