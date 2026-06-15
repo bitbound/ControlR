@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       use_local_artifact_storage:
-        description: Use local SCP artifact storage for test results.
+        description: Use local artifact storage for test results.
         required: false
         default: false
         type: boolean

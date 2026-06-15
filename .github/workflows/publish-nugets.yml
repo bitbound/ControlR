@@ -9,7 +9,7 @@ on:
         required: false
         type: string
       use_local_artifact_storage:
-        description: "Use local SCP artifact storage"
+        description: "Use local artifact storage"
         required: false
         type: boolean
         default: false
@@ -20,7 +20,7 @@ on:
         required: false
         type: string
       use_local_artifact_storage:
-        description: "Use local SCP artifact storage"
+        description: "Use local artifact storage"
         required: false
         type: boolean
         default: false

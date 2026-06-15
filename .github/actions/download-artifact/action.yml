@@ -1,5 +1,5 @@
 name: Download Artifact
-description: Downloads build artifact from GitHub or local SCP storage
+description: Downloads build artifact from GitHub or local storage
 
 inputs:
   name:

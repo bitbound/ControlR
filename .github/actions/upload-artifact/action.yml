@@ -1,5 +1,5 @@
 name: Upload Artifact
-description: Uploads build artifact to GitHub or local SCP storage
+description: Uploads build artifact to GitHub or local storage
 
 inputs:
   name:
