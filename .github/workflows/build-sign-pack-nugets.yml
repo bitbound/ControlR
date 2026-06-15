@@ -22,6 +22,11 @@ on:
         required: false
         default: true
         type: boolean
+      use_local_storage:
+        description: Use local artifact storage
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   build-sign-pack:
@@ -162,5 +167,5 @@ jobs:
           name: NuGetPackages
           path: nuget-packages
           retention-days: ${{ inputs.retention-days }}
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}

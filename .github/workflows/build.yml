@@ -10,6 +10,12 @@ on:
         default: true
         type: boolean
 
+      use_local_storage:
+        description: "Use local storage for artifacts"
+        required: false
+        default: true
+        type: boolean
+
       retention_days_artifacts:
         description: "Retention days for artifacts"
         required: false
@@ -44,12 +50,6 @@ on:
         description: "Run tests"
         required: false
         default: false
-        type: boolean
-
-      use_local_storage:
-        description: "Use local storage for artifacts"
-        required: false
-        default: true
         type: boolean
 
       customization_config_url:
@@ -137,6 +137,7 @@ jobs:
       retention-days: ${{ fromJson(inputs.retention_days_artifacts) }}
       prerelease: ${{ inputs.prerelease }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
+      use_local_storage: ${{ inputs.use_local_storage }}
     secrets: inherit
     permissions:
       id-token: write
@@ -592,8 +593,8 @@ jobs:
           name: Downloads-${{ matrix.arch }}
           path: ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
   build-linux-binaries:
     name: Linux Build
@@ -674,8 +675,8 @@ jobs:
           name: Downloads-linux-x64
           path: ControlR.Web.Server/wwwroot/downloads/linux-x64/
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
   build-web-server:
     name: Build Web Server
@@ -718,45 +719,45 @@ jobs:
           if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
           Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
 
-      - name: Download Runtime Downloads (win-x86)
+      - name: Download Runtime Artifacts (win-x86)
         uses: ./.github/actions/download-artifact
         with:
           name: Downloads-win-x86
           path: ControlR.Web.Server/wwwroot/downloads/win-x86/
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Download Runtime Downloads (win-x64)
+      - name: Download Runtime Artifacts (win-x64)
         uses: ./.github/actions/download-artifact
         with:
           name: Downloads-win-x64
           path: ControlR.Web.Server/wwwroot/downloads/win-x64/
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Download Runtime Downloads (linux-x64)
+      - name: Download Runtime Artifacts (linux-x64)
         uses: ./.github/actions/download-artifact
         with:
           name: Downloads-linux-x64
           path: ControlR.Web.Server/wwwroot/downloads/linux-x64/
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Download Runtime Downloads (macOS ARM64)
+      - name: Download Runtime Artifacts (macOS ARM64)
         uses: ./.github/actions/download-artifact
         with:
           name: Downloads-osx-arm64
           path: ControlR.Web.Server/wwwroot/downloads/osx-arm64/
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Download Runtime Downloads (macOS x64)
+      - name: Download Runtime Artifacts (macOS x64)
         uses: ./.github/actions/download-artifact
         with:
           name: Downloads-osx-x64
           path: ControlR.Web.Server/wwwroot/downloads/osx-x64/
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Create Version.txt
         shell: pwsh
@@ -821,8 +822,8 @@ jobs:
           name: Server
           path: ControlR.Web.Server/bin/publish
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Upload docker-compose
         uses: ./.github/actions/upload-artifact
@@ -830,8 +831,8 @@ jobs:
           name: DockerCompose
           path: docker-compose/docker-compose.yml
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-          artifact-host: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_self_hosted_runners && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Build Completed
         env:
