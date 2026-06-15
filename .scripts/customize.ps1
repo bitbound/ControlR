@@ -57,8 +57,8 @@ param(
   [Parameter(HelpMessage = "Path or URL to company logo PNG (for email templates, etc.)")]
   [string] $CompanyLogoPng = "",
 
-  [Parameter(HelpMessage = "Build version (e.g. '1.2.3.0')")]
-  [string] $Version = "0.0.1.0",
+  [Parameter(HelpMessage = "Build version (defaults to latest tag)")]
+  [string] $Version = "",
 
   [Parameter(HelpMessage = "Output directory for final build artifacts")]
   [string] $OutputPath = "",
@@ -303,6 +303,31 @@ function Set-ThemeBrush {
 #endregion
 
 #region Validate Inputs
+
+if ($Version) {
+  $versionIsValid = [System.Version]::TryParse($Version, [ref] $null)
+  if (-not $versionIsValid) {
+    throw "Invalid version format: '$Version'. Expected format: 'major.minor.build.revision' (e.g. '1.2.3.4')."
+  }
+  Write-Host "Using specified version: $Version" -ForegroundColor Green
+}
+else {
+  $latestTag = git -C $repoRoot describe --tags --abbrev=0 2>$null
+  if (!$latestTag) {
+    throw "Failed to get latest git tag for version. Please specify a version using the -Version parameter (e.g. '1.2.3.4')."
+  }
+  
+  $trimmedVersion = $latestTag.TrimStart('v')
+  $parsedVersion = $null
+  $versionIsValid = [System.Version]::TryParse($trimmedVersion, [ref] $parsedVersion)
+  if (-not $versionIsValid) {
+    throw "Latest git tag '$latestTag' is not a valid version format. Please specify a version using the -Version parameter (e.g. '1.2.3.4')."
+  }
+
+  $revision = if ($parsedVersion.Revision -ge 0) { $parsedVersion.Revision } else { 0 }
+  $Version = [System.Version]::new($parsedVersion.Major, $parsedVersion.Minor, $parsedVersion.Build + 1, $revision).ToString()
+  Write-Host "Using latest git tag for version with Build + 1: $Version" -ForegroundColor Green
+}
 
 $hexPattern = "^[0-9A-Fa-f]{6}$"
 $colorParams = @{
