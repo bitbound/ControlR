@@ -71,8 +71,11 @@ public interface IEd25519KeyProvider
   bool VerifyTimestamp<T>(SignedDto<T> signedDto, TimeSpan clockSkew);
 }
 
-public class Ed25519KeyProvider(TimeProvider timeProvider) : IEd25519KeyProvider
+public class Ed25519KeyProvider(
+  TimeProvider timeProvider,
+  ILogger<Ed25519KeyProvider> logger) : IEd25519KeyProvider
 {
+  private readonly ILogger<Ed25519KeyProvider> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
 
   public byte[] DerivePublicKey(byte[] privateKey)
@@ -153,7 +156,18 @@ public class Ed25519KeyProvider(TimeProvider timeProvider) : IEd25519KeyProvider
   public bool VerifyTimestamp<T>(SignedDto<T> signedDto, TimeSpan clockSkew)
   {
     var now = _timeProvider.GetUtcNow();
-    return Math.Abs((now - signedDto.Timestamp).Ticks) <= clockSkew.Ticks;
+    var isValid = Math.Abs((now - signedDto.Timestamp).Ticks) <= clockSkew.Ticks;
+    if (!isValid)
+    {
+      _logger.LogWarning(
+        "Timestamp verification failed. Current time: {CurrentTime}. " + 
+        "Signed timestamp: {SignedTimestamp}. Allowed clock skew (seconds): {ClockSkewSeconds}. " +
+        "Are system clocks synchronized on both ends?",
+        now, 
+        signedDto.Timestamp,
+        clockSkew.TotalSeconds);
+    }
+    return isValid;
   }
 
   [MessagePackObject(AllowPrivate = true)]

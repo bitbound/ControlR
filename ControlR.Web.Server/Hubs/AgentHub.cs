@@ -346,7 +346,10 @@ public class AgentHub(
       var clockSkew = TimeSpan.FromSeconds(30);
       if (!_keyProvider.VerifyTimestamp(signedDto, clockSkew))
       {
-        _logger.LogWarning("Timestamp expired for device {DeviceId}.", agentDto.Id);
+        _logger.LogWarning(
+          "Timestamp expired for device {DeviceId}. " + 
+          "Are system clocks synchronized on both the server and the device?", 
+          agentDto.Id);
         return HubResult.Fail<DeviceResponseDto>("Timestamp expired.");
       }
 
