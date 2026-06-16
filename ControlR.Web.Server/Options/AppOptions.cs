@@ -13,6 +13,22 @@ public class AppOptions
   public const string SectionKey = "AppOptions";
 
   /// <summary>
+  /// The maximum allowed time difference between the agent's signed timestamp and the server's
+  /// current time. If the difference exceeds this value, the agent's connection request is rejected.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  /// A value of <c>null</c> disables timestamp verification entirely. This allows agents with
+  /// unbounded clock drift to connect, but also opens the door to replay attacks — signed
+  /// connection requests can be captured and reused indefinitely.
+  /// </para>
+  /// <para>
+  /// For most deployments, a tolerance of 30-60 seconds is recommended to balance between
+  /// allowing for legitimate clock skew and limiting the window for replay attacks.
+  /// </para>
+  /// </remarks>
+  public TimeSpan? AgentClockSkewTolerance { get; init; } = TimeSpan.FromMinutes(1);
+  /// <summary>
   /// The number of days to retain installer key usage history.
   /// Usage entries older than this are excluded from installer key history queries and cleaned up by a background service.
   /// Values less than or equal to 0 disable history expiration and retain usage history indefinitely.

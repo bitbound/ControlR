@@ -342,9 +342,9 @@ public class AgentHub(
         return HubResult.Fail<DeviceResponseDto>("Signature verification failed.");
       }
 
-      // 4. Verify timestamp freshness (±30 seconds)
-      var clockSkew = TimeSpan.FromSeconds(30);
-      if (!_keyProvider.VerifyTimestamp(signedDto, clockSkew))
+      // 4. Verify timestamp freshness (disabled if AgentClockSkewTolerance is null)
+      var clockSkew = _appOptions.Value.AgentClockSkewTolerance;
+      if (clockSkew.HasValue && !_keyProvider.VerifyTimestamp(signedDto, clockSkew.Value))
       {
         _logger.LogWarning(
           "Timestamp expired for device {DeviceId}. " + 

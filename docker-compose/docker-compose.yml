@@ -72,6 +72,12 @@ services:
       # Set this to 0 or a negative value to disable history expiration.
       ControlR_AppOptions__AgentInstallerKeyHistoryDays: 90
 
+      # The maximum allowed time difference between the agent's signed timestamp and the server's
+      # current time. If the difference exceeds this value, the agent's connection request is rejected.
+      # Set to null to disable timestamp verification. For most deployments, 30-60 seconds is
+      # recommended to balance between allowing legitimate clock skew and limiting replay attacks.
+      ControlR_AppOptions__AgentClockSkewTolerance: "00:01:00"
+
       # The name that appears in TOTP authenticator apps.
       ControlR_AppOptions__AuthenticatorIssuerName: "ControlR"
 
