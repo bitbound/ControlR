@@ -1,5 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Shared.Services.Encryption;
+using ControlR.Libraries.TestingUtilities;
 using MessagePack;
 using Microsoft.Extensions.Time.Testing;
 
@@ -7,13 +8,15 @@ namespace ControlR.Libraries.Shared.Tests;
 
 public class Ed25519KeyProviderTests
 {
+  private readonly XunitLogger<Ed25519KeyProvider> _logger;
   private readonly Ed25519KeyProvider _provider;
   private readonly FakeTimeProvider _timeProvider;
 
-  public Ed25519KeyProviderTests()
+  public Ed25519KeyProviderTests(ITestOutputHelper testOutputHelper)
   {
     _timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
-    _provider = new Ed25519KeyProvider(_timeProvider);
+    _logger = new XunitLogger<Ed25519KeyProvider>(testOutputHelper);
+    _provider = new Ed25519KeyProvider(_timeProvider, _logger);
   }
 
   [Fact]
