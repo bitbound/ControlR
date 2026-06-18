@@ -12,8 +12,8 @@ public interface IFileAccessPermissions
     bool includeCurrentUser,
     bool isProtected,
     bool preserveInheritance,
-    WellKnownSidType owner,
-    params WellKnownSidType[] sids);
+    WellKnownSidType? owner,
+    params WellKnownSidType[] allowedSids);
 
   [SupportedOSPlatform("linux")]
   [SupportedOSPlatform("macos")]
@@ -28,19 +28,26 @@ public class FileAccessPermissions : IFileAccessPermissions
     bool includeCurrentUser,
     bool isProtected,
     bool preserveInheritance,
-    WellKnownSidType owner,
-    params WellKnownSidType[] sids)
+    WellKnownSidType? owner,
+    params WellKnownSidType[] allowedSids)
   {
     if (!OperatingSystem.IsWindows())
     {
       throw new PlatformNotSupportedException("WellKnownSidType permissions are only supported on Windows.");
     }
-    var currentUser = WindowsIdentity.GetCurrent();
+    using var currentUser = WindowsIdentity.GetCurrent();
     var fileInfo = new FileInfo(filePath);
-    var security = fileInfo.GetAccessControl();
+    var security = preserveInheritance
+      ? fileInfo.GetAccessControl()
+      : new FileSecurity();
+
     security.SetAccessRuleProtection(isProtected, preserveInheritance);
-    security.SetOwner(new SecurityIdentifier(owner, null));
-    foreach (var sid in sids)
+    
+    if (owner.HasValue)
+    {
+      security.SetOwner(new SecurityIdentifier(owner.Value, null));
+    }
+    foreach (var sid in allowedSids)
     {
       security.AddAccessRule(new FileSystemAccessRule(
         new SecurityIdentifier(sid, null),

@@ -113,8 +113,8 @@ internal class OptionsAccessor(
         includeCurrentUser: true,
         isProtected: true,
         preserveInheritance: false,
-        owner: WellKnownSidType.LocalSystemSid,
-        sids: [WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid]);
+        owner: WellKnownSidType.BuiltinAdministratorsSid,
+        allowedSids: [WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid]);
     }
     else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
     {
