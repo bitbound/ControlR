@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
+using ControlR.Web.Server.Authz.Roles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -134,7 +135,7 @@ public class UserCreator(
     // Assign roles if provided
     if (roleIds?.Any() == true)
     {
-      var roles = await _appDb.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
+      var roles = await _appDb.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync(cancellationToken: cancellationToken);
       var foundRoleIds = roles.Select(r => r.Id).ToHashSet();
       var missingRoleIds = roleIds.Except(foundRoleIds).ToList();
       if (missingRoleIds.Count != 0)
@@ -154,11 +155,11 @@ public class UserCreator(
         }
 
         // Add mapping directly to AspNetUserRoles to avoid relying on RoleManager lookups in tests.
-        var exists = await _appDb.UserRoles.AnyAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
+        var exists = await _appDb.UserRoles.AnyAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id, cancellationToken: cancellationToken);
         if (!exists)
         {
           _appDb.UserRoles.Add(new IdentityUserRole<Guid> { UserId = user.Id, RoleId = role.Id });
-          await _appDb.SaveChangesAsync();
+          await _appDb.SaveChangesAsync(cancellationToken);
         }
       }
     }
@@ -166,7 +167,7 @@ public class UserCreator(
     // Assign tags if provided
     if (tagIds?.Any() == true)
     {
-      var tags = await _appDb.Tags.Where(t => tagIds.Contains(t.Id)).ToListAsync();
+      var tags = await _appDb.Tags.Where(t => tagIds.Contains(t.Id)).ToListAsync(cancellationToken: cancellationToken);
       var foundTagIds = tags.Select(t => t.Id).ToHashSet();
       var missingTagIds = tagIds.Except(foundTagIds).ToList();
       if (missingTagIds.Count != 0)
@@ -180,7 +181,7 @@ public class UserCreator(
       {
         user.Tags = tags;
         _appDb.Users.Update(user);
-        await _appDb.SaveChangesAsync();
+        await _appDb.SaveChangesAsync(cancellationToken);
       }
     }
 
@@ -303,7 +304,7 @@ public class UserCreator(
 
       _logger.LogInformation("Created new account: {Email}.", emailAddress);
 
-      var isServerAdmin = await _userManager.Users.CountAsync() == 1;
+      var isServerAdmin = await _userManager.Users.CountAsync(cancellationToken: cancellationToken) == 1;
       if (isServerAdmin)
       {
         _logger.LogInformation(
@@ -320,17 +321,16 @@ public class UserCreator(
 
       if (isNewTenant)
       {
-        await _userManager.AddToRoleAsync(user, RoleNames.TenantAdministrator);
-        _logger.LogInformation("Assigned user role TenantAdministrator for newly-created tenant.");
+        var rolesToAdd = RoleFactory
+          .GetBuiltInRoles()
+          .Where(x => x.Name != RoleNames.ServerAdministrator)
+          .Where(x => x.Name is not null)
+          .Select(x => x.Name!)
+          .ToArray();
 
-        await _userManager.AddToRoleAsync(user, RoleNames.DeviceSuperUser);
-        _logger.LogInformation("Assigned user role DeviceSuperUser for newly-created tenant.");
-
-        await _userManager.AddToRoleAsync(user, RoleNames.AgentInstaller);
-        _logger.LogInformation("Assigned user role AgentInstaller for newly-created tenant.");
-
-        await _userManager.AddToRoleAsync(user, RoleNames.InstallerKeyManager);
-        _logger.LogInformation("Assigned user role InstallerKeyManager for newly-created tenant.");
+        await _userManager.AddToRolesAsync(user, rolesToAdd);
+        var rolesString = string.Join(", ", rolesToAdd);
+        _logger.LogInformation("Assigned default roles for newly-created tenant admin user: {Roles}.", rolesString);
       }
 
       if (externalLoginInfo is not null)

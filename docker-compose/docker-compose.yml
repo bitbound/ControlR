@@ -159,7 +159,7 @@ services:
       #ControlR_KeyProtectionOptions__CertificatePath:
 
       # An alternative means of supplying the certificate.  It should be the
-      # base64-encoded contents of the PFX file If this is set, it will 
+      # base64-encoded contents of the PFX file If this is set, it will
       # override CertificatePath.
       #ControlR_KeyProtectionOptions__CertificateContentsBase64:
 
@@ -225,6 +225,13 @@ services:
       # https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
       #ControlR_AppOptions__GitHubClientId: ""
       #ControlR_AppOptions__GitHubClientSecret: ""
+
+      # Bootstrap an admin user on first startup (only when no users exist).
+      # Provide email, password, and optionally a PAT for API access.
+      #ControlR_Bootstrap__AdminEmail: "admin@example.com"
+      #ControlR_Bootstrap__AdminPassword: "change-me-now"
+      #ControlR_Bootstrap__AdminPatTokenId: "11111111-2222-3333-4444-555555555555"
+      #ControlR_Bootstrap__AdminPatSecret: "a-very-strong-and-long-pat-secret-key"
 
   postgres:
     image: postgres:18

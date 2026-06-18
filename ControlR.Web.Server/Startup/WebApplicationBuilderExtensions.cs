@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using IPNetwork = System.Net.IPNetwork;
 using ControlR.Web.ServiceDefaults;
-using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.DataRedaction;
 using Microsoft.AspNetCore.HttpOverrides;
 using Npgsql;
 using ControlR.Libraries.Shared.Services.Buffers;
@@ -81,12 +81,16 @@ public static class WebApplicationBuilderExtensions
     builder.Services.Configure<ServerLifecycleOptions>(
       builder.Configuration.GetSection(ServerLifecycleOptions.SectionKey));
 
+    builder.Services.Configure<BootstrapOptions>(
+      builder.Configuration.GetSection(BootstrapOptions.SectionKey));
+
     var appOptions = builder.Configuration
       .GetSection(AppOptions.SectionKey)
       .Get<AppOptions>() ?? new AppOptions();
 
     // Configure logging.
     builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+    builder.Services.AddStarRedactor();
 
     if (!builder.Environment.IsEnvironment("Testing"))
     {

@@ -112,4 +112,6 @@ else
   await app.RemoveEmptyTenants();
 }
 
+await app.BootstrapAdminUser();
+
 await app.RunAsync();

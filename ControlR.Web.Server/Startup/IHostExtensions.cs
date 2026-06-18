@@ -1,4 +1,6 @@
-﻿using ControlR.Web.Server.Authz.Roles;
+﻿using System.Security.Claims;
+using ControlR.Libraries.Shared.Helpers;
+using ControlR.Web.Server.Authz.Roles;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -12,6 +14,7 @@ public static class HostExtensions
     await context.Roles.AddRangeAsync(builtInRoles);
     await context.SaveChangesAsync();
   }
+
   public static async Task ApplyMigrations(this IHost host)
   {
     await using var scope = host.Services.CreateAsyncScope();
@@ -20,6 +23,166 @@ public static class HostExtensions
     {
       await context.Database.MigrateAsync();
     }
+  }
+
+  public static async Task BootstrapAdminUser(this IHost host)
+  {
+    await using var scope = host.Services.CreateAsyncScope();
+    var sp = scope.ServiceProvider;
+
+    var appLifetime = sp.GetRequiredService<IHostApplicationLifetime>();
+    var bootstrapOptions = sp.GetRequiredService<IOptions<BootstrapOptions>>();
+    var options = bootstrapOptions.Value;
+
+    var isEmailSet = !string.IsNullOrWhiteSpace(options.AdminEmail);
+    var isPasswordSet = !string.IsNullOrWhiteSpace(options.AdminPassword);
+
+    var logger = sp.GetRequiredService<ILogger<Program>>();
+
+    if (!isEmailSet && !isPasswordSet)
+    {
+      logger.LogInformation("Bootstrap admin user skipped: Neither AdminEmail nor AdminPassword configured.");
+      return;
+    }
+
+    if (!isEmailSet || !isPasswordSet)
+    {
+      logger.LogError(
+        "Bootstrap admin configuration incomplete. AdminEmail configured: {EmailIsSet}, AdminPassword configured: {PasswordIsSet}. Both must be set.",
+        isEmailSet,
+        isPasswordSet);
+      throw new InvalidOperationException(
+        "Bootstrap admin configuration is incomplete: Both AdminEmail and AdminPassword must be configured.");
+    }
+
+    // To satisfy the compiler's null tracking.
+    Guard.IsNotNullOrWhiteSpace(options.AdminEmail, nameof(options.AdminEmail));
+    Guard.IsNotNullOrWhiteSpace(options.AdminPassword, nameof(options.AdminPassword));
+
+    await using var context = sp.GetRequiredService<AppDb>();
+
+    // SCALE-OUT: Non-transactional check-then-act. In a multi-instance deployment,
+    // two instances could both pass AnyAsync() and both attempt CreateAsync,
+    // causing a unique constraint failure on the second. Wrap in a database
+    // transaction with unique-violation handling when scale-out is needed.
+    if (await context.Users.AnyAsync())
+    {
+      logger.LogInformation("Bootstrap skipped: Users already exist.");
+      return;
+    }
+
+    var userManager = sp.GetRequiredService<UserManager<AppUser>>();
+    var userStore = sp.GetRequiredService<IUserStore<AppUser>>();
+
+    var user = new AppUser();
+    var tenant = new Tenant();
+    user.Tenant = tenant;
+
+    await userStore.SetUserNameAsync(user, options.AdminEmail, appLifetime.ApplicationStopping);
+
+    if (userStore is not IUserEmailStore<AppUser> emailStore)
+    {
+      logger.LogError("User store does not implement IUserEmailStore<AppUser>.");
+      return;
+    }
+
+    await emailStore.SetEmailAsync(user, options.AdminEmail, appLifetime.ApplicationStopping);
+
+    var identityResult = await userManager.CreateAsync(user, options.AdminPassword);
+    if (!identityResult.Succeeded)
+    {
+      foreach (var error in identityResult.Errors)
+      {
+        logger.LogError(
+          "Bootstrap user creation error. Code: {Code}. Description: {Description}",
+          error.Code,
+          error.Description);
+      }
+      return;
+    }
+
+    logger.LogInformation("Bootstrap admin user created: {Email}.", options.AdminEmail);
+
+    // Assign all built-in roles. When new roles are added to RoleFactory,
+    // they are automatically assigned to the bootstrapped admin.
+    var builtInRoles = RoleFactory
+      .GetBuiltInRoles()
+      .Where(x => x.Name is not null)
+      .Select(x => x.Name!)
+      .ToArray();
+
+    var roleResult = await userManager.AddToRolesAsync(user, builtInRoles);
+    if (!roleResult.Succeeded)
+    {
+      foreach (var error in roleResult.Errors)
+      {
+        logger.LogError(
+          "Bootstrap role assignment error. Code: {Code}. Description: {Description}",
+          error.Code,
+          error.Description);
+      }
+      throw new InvalidOperationException($"Bootstrap admin role assignment failed: {string.Join("; ", roleResult.Errors.Select(e => e.Description))}");
+    }
+
+    var claimResult = await userManager.AddClaimsAsync(user, [
+      new Claim(UserClaimTypes.UserId, $"{user.Id}"),
+      new Claim(UserClaimTypes.TenantId, $"{user.TenantId}")
+    ]);
+    if (!claimResult.Succeeded)
+    {
+      foreach (var error in claimResult.Errors)
+      {
+        logger.LogError(
+          "Bootstrap claim assignment error. Code: {Code}. Description: {Description}",
+          error.Code,
+          error.Description);
+      }
+      throw new InvalidOperationException($"Bootstrap admin claim assignment failed: {string.Join("; ", claimResult.Errors.Select(e => e.Description))}");
+    }
+
+    var emailConfirmationCode = await userManager.GenerateEmailConfirmationTokenAsync(user);
+    var confirmResult = await userManager.ConfirmEmailAsync(user, emailConfirmationCode);
+    if (!confirmResult.Succeeded)
+    {
+      foreach (var error in confirmResult.Errors)
+      {
+        logger.LogError(
+          "Bootstrap email confirmation error. Code: {Code}. Description: {Description}",
+          error.Code,
+          error.Description);
+      }
+      throw new InvalidOperationException($"Bootstrap admin email confirmation failed: {string.Join("; ", confirmResult.Errors.Select(e => e.Description))}");
+    }
+
+    if (string.IsNullOrWhiteSpace(options.AdminPatTokenId) || string.IsNullOrWhiteSpace(options.AdminPatSecret))
+    {
+      logger.LogInformation("Bootstrap admin PAT creation skipped: AdminPatTokenId and AdminPatSecret must both be set.");
+    }
+    else
+    {
+      if (!Guid.TryParse(options.AdminPatTokenId, out var tokenId))
+      {
+        logger.LogError("Bootstrap admin PAT creation skipped: AdminPatTokenId is not a valid GUID.");
+        throw new InvalidOperationException("Bootstrap admin PAT creation failed: AdminPatTokenId must be a valid GUID.");
+      }
+      else
+      {
+        var patManager = sp.GetRequiredService<IPersonalAccessTokenManager>();
+        var patResult = await patManager.CreateTokenWithKey(
+          tokenId,
+          options.AdminPatSecret,
+          "Bootstrap Admin PAT",
+          user.Id);
+
+        if (!patResult.IsSuccess)
+        {
+          logger.LogError(patResult.Exception, "Failed to create bootstrap PAT: {Error}", patResult.Reason);
+          throw new InvalidOperationException($"Bootstrap PAT creation failed: {patResult.Reason}");
+        }
+      }
+    }
+
+    logger.LogInformation("Bootstrap admin user setup completed successfully.");
   }
 
   public static async Task RemoveEmptyTenants(this IHost host)
