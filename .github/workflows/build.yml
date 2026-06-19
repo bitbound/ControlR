@@ -80,6 +80,12 @@ jobs:
           clean: true
           fetch-depth: 0
 
+      - name: Validate local storage configuration
+        uses: ./.github/actions/validate-local-storage
+        with:
+          use_local_storage: ${{ inputs.use_local_storage }}
+          artifact_host: ${{ vars.ARTIFACT_HOST }}
+          artifact_base_path: ${{ vars.ARTIFACT_BASE_PATH }}
       - name: Set Next Version
         id: setver
         shell: pwsh
@@ -436,7 +442,7 @@ jobs:
     name: Windows Build (${{ matrix.arch }})
     # When using self-hosted Windows runners, require both the self-hosted label and OS label.
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
-    environment: secure-signing
+    environment: ${{ github.repository == 'bitbound/ControlR' && 'production' || 'development' }}
     needs: [set-version]
     permissions:
       id-token: write
@@ -835,13 +841,14 @@ jobs:
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Build Completed
+        shell: pwsh
         env:
           VERSION: ${{ env.VERSION }}
         run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Git Ref:** ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Use Self-Hosted Runners:** ${{ inputs.use_self_hosted_runners }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Use Local Storage for Artifacts:** ${{ inputs.use_local_storage }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Customization Config URL:** ${{ inputs.customization_config_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Pre-release:** ${{ inputs.prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Summary" >> $env:GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ env.VERSION }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "**Git Ref:** ${{ github.ref }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "**Use Self-Hosted Runners:** ${{ inputs.use_self_hosted_runners }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "**Use Local Storage for Artifacts:** ${{ inputs.use_local_storage }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "**Customization Config URL:** ${{ inputs.customization_config_url }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "**Pre-release:** ${{ inputs.prerelease }}" >> $env:GITHUB_STEP_SUMMARY

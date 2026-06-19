@@ -17,11 +17,16 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
-      use_local_artifact_storage:
+      use_local_storage:
         description: "Use local artifact storage"
         required: false
         type: boolean
-        default: false
+        default: true
+      use_self_hosted_runners:
+        description: "Use self-hosted runners"
+        required: false
+        type: boolean
+        default: true
   workflow_call:
     inputs:
       docker_tag:
@@ -32,11 +37,16 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
-      use_local_artifact_storage:
+      use_local_storage:
         description: "Use local artifact storage"
         required: false
         type: boolean
-        default: false
+        default: true
+      use_self_hosted_runners:
+        description: "Use self-hosted runners"
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   actions: read
@@ -45,12 +55,18 @@ permissions:
 jobs:
   publish:
     name: Publish to Docker Hub
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Validate local storage configuration
+        uses: ./.github/actions/validate-local-storage
+        with:
+          use_local_storage: ${{ inputs.use_local_storage }}
+          artifact_host: ${{ vars.ARTIFACT_HOST }}
+          artifact_base_path: ${{ vars.ARTIFACT_BASE_PATH }}
       - name: Get Latest Build Run ID
         id: get-run-id
         uses: ./.github/actions/get-latest-build-run-id
@@ -64,8 +80,8 @@ jobs:
           name: Server
           path: ./server-publish
           github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
       - name: Download docker-compose file
@@ -74,8 +90,8 @@ jobs:
           name: DockerCompose
           path: ./docker-compose-download
           github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
       - name: Get Version from Version.txt

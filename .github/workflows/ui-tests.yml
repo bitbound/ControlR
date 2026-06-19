@@ -3,10 +3,10 @@ name: UI Tests
 on:
   workflow_dispatch:
     inputs:
-      use_local_artifact_storage:
+      use_local_storage:
         description: Use local artifact storage for test results.
         required: false
-        default: false
+        default: true
         type: boolean
 
 env:
@@ -27,6 +27,13 @@ jobs:
         with:
           fetch-depth: 1
           clean: true
+
+      - name: Validate local storage configuration
+        uses: ./.github/actions/validate-local-storage
+        with:
+          use_local_storage: ${{ inputs.use_local_storage }}
+          artifact_host: ${{ vars.ARTIFACT_HOST }}
+          artifact_base_path: ${{ vars.ARTIFACT_BASE_PATH }}
 
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
@@ -54,5 +61,5 @@ jobs:
           name: ui-test-results
           path: TestResults/ControlR.Web.Server.UITests/
           retention-days: 7
-          artifact-host: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}

@@ -65,7 +65,6 @@ public static class WebApplicationBuilderExtensions
         throw new PlatformNotSupportedException("Docker secrets configuration provider is not supported on Windows.");
       }
 
-      //builder.Configuration.AddDockerSecrets();
       builder.Configuration.AddKeyPerFile(
         directoryPath: "/run/secrets",
         optional: false,

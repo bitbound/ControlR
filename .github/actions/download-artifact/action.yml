@@ -52,7 +52,7 @@ runs:
       shell: pwsh
       run: |
         $sshHost = '${{ inputs.artifact-host }}'
-        $basePath = '${{ inputs.artifact-base-path }}'
+        $basePath = '${{ inputs.artifact-base-path }}'.TrimEnd('/')
         $runId = if ('${{ inputs.run-id }}') { '${{ inputs.run-id }}' } else { '${{ github.run_id }}' }
         $artifactName = '${{ inputs.name }}'
         $downloadPath = '${{ inputs.path }}'

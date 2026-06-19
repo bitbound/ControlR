@@ -1,0 +1,29 @@
+name: Validate Local Storage Configuration
+description: Validates that ARTIFACT_HOST and ARTIFACT_BASE_PATH are configured when use_local_storage is enabled
+
+inputs:
+  use_local_storage:
+    description: 'Whether local storage is being used'
+    required: true
+  artifact_host:
+    description: 'SCP host for local artifact storage'
+    required: false
+    default: ''
+  artifact_base_path:
+    description: 'Remote base path for local artifact storage'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Validate local storage configuration
+      if: inputs.use_local_storage == 'true'
+      shell: pwsh
+      run: |
+        $artifactHost = '${{ inputs.artifact_host }}'
+        $basePath = '${{ inputs.artifact_base_path }}'
+        if (-not $artifactHost -or -not $basePath) {
+          throw "use_local_storage is true but ARTIFACT_HOST and ARTIFACT_BASE_PATH must both be configured. Host='$artifactHost' Path='$basePath'"
+        }
+        Write-Host "Local artifact storage validated: $artifactHost / $basePath"

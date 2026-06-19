@@ -33,5 +33,6 @@ public class BootstrapOptions
   /// The resulting token format is <c>{hex-guid}:{AdminPatSecret}</c>.
   /// Must be supplied alongside <see cref="AdminPatSecret"/> for the PAT to be created.
   /// </summary>
+  [ProtectedDataClassification]
   public string? AdminPatTokenId { get; init; }
 }

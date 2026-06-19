@@ -8,37 +8,54 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
-      use_local_artifact_storage:
+      use_local_storage:
         description: "Use local artifact storage"
         required: false
         type: boolean
-        default: false
+        default: true
+      use_self_hosted_runners:
+        description: "Use self-hosted runners"
+        required: false
+        type: boolean
+        default: true
   workflow_call:
     inputs:
       run_id:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
-      use_local_artifact_storage:
+      use_local_storage:
         description: "Use local artifact storage"
         required: false
         type: boolean
-        default: false
+        default: true
+      use_self_hosted_runners:
+        description: "Use self-hosted runners"
+        required: false
+        type: boolean
+        default: true
 
 permissions:
+  id-token: write
   actions: read
   contents: read
 
 jobs:
   publish:
     name: Publish to NuGet.org
-    runs-on: ubuntu-latest
-    environment: production
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    environment: ${{ github.repository == 'bitbound/ControlR' && 'production' || 'development' }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Validate local storage configuration
+        uses: ./.github/actions/validate-local-storage
+        with:
+          use_local_storage: ${{ inputs.use_local_storage }}
+          artifact_host: ${{ vars.ARTIFACT_HOST }}
+          artifact_base_path: ${{ vars.ARTIFACT_BASE_PATH }}
       - name: Get Latest Build Run ID
         id: get-run-id
         uses: ./.github/actions/get-latest-build-run-id
@@ -52,14 +69,20 @@ jobs:
           name: NuGetPackages
           path: ./nuget-packages
           github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_artifact_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.x"
+
+      - name: NuGet login (OIDC)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
 
       - name: Publish to NuGet.org
         shell: pwsh
@@ -68,7 +91,7 @@ jobs:
           foreach ($package in Get-ChildItem -Path ./nuget-packages/*.nupkg) {
             Write-Host "Publishing $($package.Name) to main feed..."
             dotnet nuget push "$($package.FullName)" `
-              --api-key ${{ secrets.NUGET_KEY }} `
+              --api-key ${{ steps.login.outputs.NUGET_API_KEY }} `
               --source https://api.nuget.org/v3/index.json `
               --skip-duplicate
           }
@@ -77,7 +100,7 @@ jobs:
           foreach ($package in Get-ChildItem -Path ./nuget-packages/*.snupkg) {
             Write-Host "Publishing $($package.Name) to symbol feed..."
             dotnet nuget push "$($package.FullName)" `
-              --api-key ${{ secrets.NUGET_KEY }} `
+              --api-key ${{ steps.login.outputs.NUGET_API_KEY }} `
               --source https://api.nuget.org/v3/index.json?packageType=symbols `
               --skip-duplicate
           }

@@ -32,7 +32,7 @@ jobs:
   build-sign-pack:
     name: Build, Sign and Pack NuGets
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
-    environment: secure-signing
+    environment: ${{ github.repository == 'bitbound/ControlR' && 'production' || 'development' }}
     permissions:
       id-token: write
       contents: read
@@ -92,6 +92,7 @@ jobs:
         run: |
           $projects = @(
             @{ path = "ControlR.ApiClient/ControlR.ApiClient.csproj"; name = "ApiClientNuGet" },
+            @{ path = "Libraries/ControlR.Libraries.Branding/ControlR.Libraries.Branding.csproj"; name = "BrandingNuGet" },
             @{ path = "Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj"; name = "DataRedactionNuGet" },
             @{ path = "Libraries/ControlR.Libraries.Api.Contracts/ControlR.Libraries.Api.Contracts.csproj"; name = "ApiContractsNuGet" },
             @{ path = "Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj"; name = "LibrariesSharedNuGet" },

@@ -47,7 +47,7 @@ runs:
       shell: pwsh
       run: |
         $sshHost = '${{ inputs.artifact-host }}'
-        $basePath = '${{ inputs.artifact-base-path }}'
+        $basePath = '${{ inputs.artifact-base-path }}'.TrimEnd('/')
         $runId = '${{ github.run_id }}'
         $artifactName = '${{ inputs.name }}'
         $uploadPath = '${{ inputs.path }}'
@@ -71,7 +71,7 @@ runs:
       shell: pwsh
       run: |
         $sshHost = '${{ inputs.artifact-host }}'
-        $basePath = '${{ inputs.artifact-base-path }}'
+        $basePath = '${{ inputs.artifact-base-path }}'.TrimEnd('/')
         $runId = '${{ github.run_id }}'
         Write-Host "Cleaning up old runs on '${sshHost}', keeping current ($runId) and previous"
         $escapedBasePath = $basePath.Replace("'", "'\\''")
