@@ -19,6 +19,7 @@ global using ControlR.Libraries.Messenger.Extensions.Messages;
 global using ControlR.Libraries.Messenger.Extensions;
 global using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 global using ControlR.Libraries.Viewer.Common;
+global using ControlR.Libraries.Viewer.Common.Helpers;
 global using ControlR.Libraries.Viewer.Common.Models.Messages;
 global using ControlR.Libraries.Viewer.Common.State;
 global using ControlR.Libraries.Viewer.Common.Enums;

@@ -867,4 +867,70 @@ Details: {0}</value>
   <data name="FileSystem_TabTitle" xml:space="preserve">
     <value>File System</value>
   </data>
+  <data name="RemoteLogs_LogFilesHeading" xml:space="preserve">
+    <value>Log Files</value>
+  </data>
+  <data name="RemoteLogs_LogContentsHeading" xml:space="preserve">
+    <value>Log Contents</value>
+  </data>
+  <data name="RemoteLogs_NoLogFiles" xml:space="preserve">
+    <value>No log files found.</value>
+  </data>
+  <data name="RemoteLogs_SelectLogFilePrompt" xml:space="preserve">
+    <value>Select a log file to view its contents.</value>
+  </data>
+  <data name="RemoteLogs_NoContent" xml:space="preserve">
+    <value>No content available for this log file.</value>
+  </data>
+  <data name="RemoteLogs_Loading" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="RemoteLogs_RefreshFiles" xml:space="preserve">
+    <value>Refresh Files</value>
+  </data>
+  <data name="RemoteLogs_DownloadLogFile" xml:space="preserve">
+    <value>Download Log File</value>
+  </data>
+  <data name="RemoteLogs_CopyToClipboard" xml:space="preserve">
+    <value>Copy to Clipboard</value>
+  </data>
+  <data name="RemoteLogs_RefreshContents" xml:space="preserve">
+    <value>Refresh Contents</value>
+  </data>
+  <data name="RemoteLogs_CopySuccess" xml:space="preserve">
+    <value>Log contents copied to clipboard</value>
+  </data>
+  <data name="RemoteLogs_CopyError" xml:space="preserve">
+    <value>An error occurred while copying to clipboard</value>
+  </data>
+  <data name="RemoteLogs_DownloadError" xml:space="preserve">
+    <value>An error occurred while downloading log contents</value>
+  </data>
+  <data name="RemoteLogs_DownloadNoSelection" xml:space="preserve">
+    <value>No log file selected for download</value>
+  </data>
+  <data name="RemoteLogs_DownloadDialogTitle" xml:space="preserve">
+    <value>Save log file</value>
+  </data>
+  <data name="RemoteLogs_LoadFilesFailure" xml:space="preserve">
+    <value>Failed to load log files: {0}</value>
+  </data>
+  <data name="RemoteLogs_LoadContentsFailure" xml:space="preserve">
+    <value>Failed to load log file: {0}</value>
+  </data>
+  <data name="RemoteLogs_LoadFilesError" xml:space="preserve">
+    <value>An error occurred while loading log files</value>
+  </data>
+  <data name="RemoteLogs_LoadContentsError" xml:space="preserve">
+    <value>An error occurred while loading the log file</value>
+  </data>
+  <data name="RemoteLogs_FilterPlaceholder" xml:space="preserve">
+    <value>Filter log contents</value>
+  </data>
+  <data name="RemoteLogs_NoMatchingLines" xml:space="preserve">
+    <value>No log lines match the filter.</value>
+  </data>
+  <data name="RemoteLogs_TabTitle" xml:space="preserve">
+    <value>Remote Logs</value>
+  </data>
 </root>

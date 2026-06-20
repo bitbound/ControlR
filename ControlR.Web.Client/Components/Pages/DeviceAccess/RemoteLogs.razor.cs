@@ -19,6 +19,7 @@ public partial class RemoteLogs : JsInteropableComponent
   [Inject]
   public required ISnackbar Snackbar { get; set; }
 
+  private string DisplayedLogContents { get; set; } = string.Empty;
   private bool IsCopyContentsButtonDisabled => string.IsNullOrEmpty(LogContents) || IsLoadingContents;
   private bool IsDownloadContentButtonDisabled => string.IsNullOrEmpty(LogContents) || IsLoadingContents;
   private bool IsLoading { get; set; }
@@ -26,6 +27,8 @@ public partial class RemoteLogs : JsInteropableComponent
   private bool IsRefreshContentsButtonDisabled => _selectedNode is null || _selectedNode.IsFolder || IsLoadingContents;
   private string LogContents { get; set; } = string.Empty;
   private List<TreeItemData<LogTreeNode>> LogTreeItems { get; set; } = [];
+  private bool ScrollToBottomOnLoad { get; set; }
+  private string SearchText { get; set; } = string.Empty;
   private LogTreeNode? SelectedNode
   {
     get => _selectedNode;
@@ -39,6 +42,11 @@ public partial class RemoteLogs : JsInteropableComponent
       _selectedNode = value;
     }
   }
+  private bool ShowNoMatchingLines =>
+    !IsLoadingContents
+    && !string.IsNullOrEmpty(LogContents)
+    && !string.IsNullOrWhiteSpace(SearchText)
+    && string.IsNullOrEmpty(DisplayedLogContents);
 
   protected override async Task OnInitializedAsync()
   {
@@ -49,6 +57,11 @@ public partial class RemoteLogs : JsInteropableComponent
     }
 
     await LoadLogFiles();
+  }
+
+  private void ApplyFilter()
+  {
+    DisplayedLogContents = LogContentFilter.Apply(LogContents, SearchText);
   }
 
   private async Task HandleCopyContentClicked()
@@ -97,11 +110,13 @@ public partial class RemoteLogs : JsInteropableComponent
       if (_selectedNode?.Path is null || _selectedNode.IsFolder)
       {
         LogContents = string.Empty;
+        ApplyFilter();
         return;
       }
 
       IsLoadingContents = true;
-      StateHasChanged();
+      ScrollToBottomOnLoad = true;
+      await InvokeAsync(StateHasChanged);
 
       var request = new GetLogFileContentsRequestDto(_selectedNode.Path);
       var result = await ControlrApi.DeviceFileSystem.GetLogFileContents(DeviceId, request);
@@ -111,21 +126,24 @@ public partial class RemoteLogs : JsInteropableComponent
         Logger.LogError("Failed to load log file contents: {Error}", result.Reason);
         Snackbar.Add($"Failed to load log file: {result.Reason}", Severity.Error);
         LogContents = string.Empty;
+        ApplyFilter();
         return;
       }
 
       LogContents = result.Value;
+      ApplyFilter();
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error loading log file contents");
       Snackbar.Add("An error occurred while loading the log file", Severity.Error);
       LogContents = string.Empty;
+      ApplyFilter();
     }
     finally
     {
       IsLoadingContents = false;
-      StateHasChanged();
+      await InvokeAsync(StateHasChanged);
     }
   }
 
@@ -134,7 +152,7 @@ public partial class RemoteLogs : JsInteropableComponent
     try
     {
       IsLoading = true;
-      StateHasChanged();
+      await InvokeAsync(StateHasChanged);
 
       var result = await ControlrApi.DeviceFileSystem.GetLogFiles(DeviceId);
 
@@ -176,13 +194,21 @@ public partial class RemoteLogs : JsInteropableComponent
     finally
     {
       IsLoading = false;
-      StateHasChanged();
+      await InvokeAsync(StateHasChanged);
     }
   }
 
   private async Task OnRefreshTreeClick()
   {
     await LoadLogFiles();
+  }
+
+  private async Task OnSearchTextChanged(string text)
+  {
+    SearchText = text;
+    ScrollToBottomOnLoad = false;
+    ApplyFilter();
+    await InvokeAsync(StateHasChanged);
   }
 
   private record LogTreeNode(bool IsFolder, string? Path, string? FileName)

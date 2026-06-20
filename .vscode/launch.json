@@ -227,7 +227,7 @@
       "name": "Server (wasm debug)",
       "type": "blazorwasm",
       "request": "launch",
-      "browser": "edge",
+      "browser": "chrome",
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

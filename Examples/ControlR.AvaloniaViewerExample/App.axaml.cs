@@ -67,14 +67,15 @@ public partial class App : Application
     // for getting these options into the ControlrViewer component.
     var viewerOptions = new ControlrViewerOptions
     {
-      AuthenticationMethod = ViewerAuthenticationMethod.InteractiveBearer,
+
+      AuthenticationMethod = ViewerAuthenticationMethod.PersonalAccessToken,
       BaseUrl = Uri.TryCreate(configuration["ControlrViewerOptions:BaseUrl"], UriKind.Absolute, out var baseUrl)
         ? baseUrl
         : throw new InvalidOperationException("ControlrViewerOptions:BaseUrl not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:BaseUrl\" \"https://controlr.example.com\""),
       DeviceId = Guid.Parse(configuration["ControlrViewerOptions:DeviceId"]
-        ?? throw new InvalidOperationException("ControlrViewerOptions:DeviceId not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:DeviceId\" \"your-device-guid\""))
+        ?? throw new InvalidOperationException("ControlrViewerOptions:DeviceId not configured. Use: dotnet user-secrets set \"ControlrViewerOptions:DeviceId\" \"your-device-guid\"")),
+      PersonalAccessToken = configuration["ControlrViewerOptions:PersonalAccessToken"]
     };
-    viewerOptions.PersonalAccessToken = configuration["ControlrViewerOptions:PersonalAccessToken"];
 
     return new MainWindowViewModel(viewerOptions);
   }

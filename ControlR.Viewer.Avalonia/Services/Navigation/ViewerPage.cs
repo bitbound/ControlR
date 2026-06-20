@@ -5,5 +5,6 @@ public enum ViewerPage
   None,
   RemoteControl,
   FileSystem,
-  Terminal
+  Terminal,
+  RemoteLogs
 }

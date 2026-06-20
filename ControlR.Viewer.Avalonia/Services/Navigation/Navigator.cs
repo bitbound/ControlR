@@ -35,6 +35,9 @@ internal class Navigator(
         case ViewerPage.Terminal:
           await _navigationProvider.NavigateTo<ITerminalViewModel>(page);
           break;
+        case ViewerPage.RemoteLogs:
+          await _navigationProvider.NavigateTo<IRemoteLogsViewModel>(page);
+          break;
         default:
           return Result.Fail($"Unsupported page: {page}.");
       }

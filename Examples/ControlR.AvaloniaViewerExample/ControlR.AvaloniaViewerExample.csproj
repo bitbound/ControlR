@@ -30,14 +30,14 @@
   </ItemGroup>
 
   <!-- Use to reference the local project during development -->
-  <!-- <ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\ControlR.Viewer.Avalonia\ControlR.Viewer.Avalonia.csproj" />
-  </ItemGroup> -->
+  </ItemGroup>
 
   <!-- Use to reference NuGet package for testing -->
-  <ItemGroup>
+  <!-- <ItemGroup>
     <PackageReference Include="ControlR.Viewer.Avalonia"/>
-  </ItemGroup>
+  </ItemGroup> -->
 
   <ItemGroup>
     <PackageReference Update="Bitbound.Analyzers.MemberOrder">

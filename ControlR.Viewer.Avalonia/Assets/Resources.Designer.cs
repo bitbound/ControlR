@@ -1833,6 +1833,204 @@ namespace ControlR.Viewer.Avalonia.Assets {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Log Files.
+        /// </summary>
+        public static string RemoteLogs_LogFilesHeading {
+            get {
+                return ResourceManager.GetString("RemoteLogs_LogFilesHeading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Log Contents.
+        /// </summary>
+        public static string RemoteLogs_LogContentsHeading {
+            get {
+                return ResourceManager.GetString("RemoteLogs_LogContentsHeading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No log files found..
+        /// </summary>
+        public static string RemoteLogs_NoLogFiles {
+            get {
+                return ResourceManager.GetString("RemoteLogs_NoLogFiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Select a log file to view its contents..
+        /// </summary>
+        public static string RemoteLogs_SelectLogFilePrompt {
+            get {
+                return ResourceManager.GetString("RemoteLogs_SelectLogFilePrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No content available for this log file..
+        /// </summary>
+        public static string RemoteLogs_NoContent {
+            get {
+                return ResourceManager.GetString("RemoteLogs_NoContent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Loading....
+        /// </summary>
+        public static string RemoteLogs_Loading {
+            get {
+                return ResourceManager.GetString("RemoteLogs_Loading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Refresh Files.
+        /// </summary>
+        public static string RemoteLogs_RefreshFiles {
+            get {
+                return ResourceManager.GetString("RemoteLogs_RefreshFiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Download Log File.
+        /// </summary>
+        public static string RemoteLogs_DownloadLogFile {
+            get {
+                return ResourceManager.GetString("RemoteLogs_DownloadLogFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Copy to Clipboard.
+        /// </summary>
+        public static string RemoteLogs_CopyToClipboard {
+            get {
+                return ResourceManager.GetString("RemoteLogs_CopyToClipboard", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Refresh Contents.
+        /// </summary>
+        public static string RemoteLogs_RefreshContents {
+            get {
+                return ResourceManager.GetString("RemoteLogs_RefreshContents", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Log contents copied to clipboard.
+        /// </summary>
+        public static string RemoteLogs_CopySuccess {
+            get {
+                return ResourceManager.GetString("RemoteLogs_CopySuccess", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An error occurred while copying to clipboard.
+        /// </summary>
+        public static string RemoteLogs_CopyError {
+            get {
+                return ResourceManager.GetString("RemoteLogs_CopyError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An error occurred while downloading log contents.
+        /// </summary>
+        public static string RemoteLogs_DownloadError {
+            get {
+                return ResourceManager.GetString("RemoteLogs_DownloadError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No log file selected for download.
+        /// </summary>
+        public static string RemoteLogs_DownloadNoSelection {
+            get {
+                return ResourceManager.GetString("RemoteLogs_DownloadNoSelection", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Save log file.
+        /// </summary>
+        public static string RemoteLogs_DownloadDialogTitle {
+            get {
+                return ResourceManager.GetString("RemoteLogs_DownloadDialogTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to load log files: {0}.
+        /// </summary>
+        public static string RemoteLogs_LoadFilesFailure {
+            get {
+                return ResourceManager.GetString("RemoteLogs_LoadFilesFailure", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to load log file: {0}.
+        /// </summary>
+        public static string RemoteLogs_LoadContentsFailure {
+            get {
+                return ResourceManager.GetString("RemoteLogs_LoadContentsFailure", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An error occurred while loading log files.
+        /// </summary>
+        public static string RemoteLogs_LoadFilesError {
+            get {
+                return ResourceManager.GetString("RemoteLogs_LoadFilesError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An error occurred while loading the log file.
+        /// </summary>
+        public static string RemoteLogs_LoadContentsError {
+            get {
+                return ResourceManager.GetString("RemoteLogs_LoadContentsError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Filter log contents.
+        /// </summary>
+        public static string RemoteLogs_FilterPlaceholder {
+            get {
+                return ResourceManager.GetString("RemoteLogs_FilterPlaceholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No log lines match the filter.
+        /// </summary>
+        public static string RemoteLogs_NoMatchingLines {
+            get {
+                return ResourceManager.GetString("RemoteLogs_NoMatchingLines", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remote Logs.
+        /// </summary>
+        public static string RemoteLogs_TabTitle {
+            get {
+                return ResourceManager.GetString("RemoteLogs_TabTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Scale Level.
         /// </summary>
         public static string ScaleLevel {

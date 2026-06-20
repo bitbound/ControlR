@@ -151,12 +151,26 @@
                        Tag="{x:Static nav:ViewerPage.FileSystem}">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <PathIcon Data="{DynamicResource desktop_regular}"
-                        Width="20"
-                        Height="20" />
+                         Width="20"
+                         Height="20" />
               <TextBlock VerticalAlignment="Center"
-                         FontSize="15"
-                         FontWeight="SemiBold"
-                         Text="File System" />
+                          FontSize="15"
+                          FontWeight="SemiBold"
+                          Text="File System" />
+            </StackPanel>
+          </ListBoxItem>
+
+          <ListBoxItem Classes="SidebarNavItem"
+                       Cursor="Hand"
+                       Tag="{x:Static nav:ViewerPage.RemoteLogs}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{DynamicResource document_regular}"
+                         Width="20"
+                         Height="20" />
+              <TextBlock VerticalAlignment="Center"
+                          FontSize="15"
+                          FontWeight="SemiBold"
+                          Text="Remote Logs" />
             </StackPanel>
           </ListBoxItem>
         </ListBox>

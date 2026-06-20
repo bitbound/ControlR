@@ -97,6 +97,7 @@ public static class ViewerServiceBuilder
     // Register ViewModels.
     services.AddSingleton<IViewerShellViewModel, ViewerShellViewModel>();
     services.AddSingleton<IFileSystemViewModel, FileSystemViewModel>();
+    services.AddSingleton<IRemoteLogsViewModel, RemoteLogsViewModel>();
     services.AddSingleton<IRemoteControlViewModel, RemoteControlViewModel>();
     services.AddSingleton<IDesktopSessionViewModel, DesktopSessionViewModel>();
     services.AddSingleton<IRemoteDisplayViewModel, RemoteDisplayViewModel>();
@@ -107,6 +108,7 @@ public static class ViewerServiceBuilder
     // Register Views.
     services.AddSingleton<ViewerShell>();
     services.AddTransient<FileSystemView>();
+    services.AddTransient<RemoteLogsView>();
     services.AddTransient<RemoteControlView>();
     services.AddTransient<RemoteDisplayView>();
     services.AddTransient<TerminalView>();
