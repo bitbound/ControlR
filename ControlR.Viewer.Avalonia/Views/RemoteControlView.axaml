@@ -5,7 +5,6 @@
              xmlns:vm="using:ControlR.Viewer.Avalonia.ViewModels"
              xmlns:fakes="using:ControlR.Viewer.Avalonia.ViewModels.Fakes"
              xmlns:vmc="using:ControlR.Viewer.Avalonia.ViewModels.Controls"
-             xmlns:controls="using:ControlR.Viewer.Avalonia.Controls"
              xmlns:enums="using:ControlR.Libraries.Viewer.Common.Enums"
              xmlns:cava="using:ControlR.Libraries.Avalonia.Controls"
              xmlns:converters="using:ControlR.Viewer.Avalonia.Converters"
@@ -97,7 +96,7 @@
             </ItemsControl.ItemsPanel>
 
             <ItemsControl.ItemTemplate>
-              <DataTemplate DataType="vmc:IDesktopSessionViewModel">
+              <DataTemplate DataType="vmc:IRemoteControlDesktopCardViewModel">
                 <Border Classes="Card" Margin="0, 0, 12, 12">
                   <StackPanel Spacing="18">
                     <Grid ColumnDefinitions="Auto,*"

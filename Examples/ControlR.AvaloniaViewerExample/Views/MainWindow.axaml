@@ -173,6 +173,20 @@
                           Text="Remote Logs" />
             </StackPanel>
           </ListBoxItem>
+
+          <ListBoxItem Classes="SidebarNavItem"
+                       Cursor="Hand"
+                       Tag="{x:Static nav:ViewerPage.Chat}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="{DynamicResource chat_regular}"
+                        Width="20"
+                        Height="20" />
+              <TextBlock VerticalAlignment="Center"
+                         FontSize="15"
+                         FontWeight="SemiBold"
+                         Text="Chat" />
+            </StackPanel>
+          </ListBoxItem>
         </ListBox>
       </Border>
 

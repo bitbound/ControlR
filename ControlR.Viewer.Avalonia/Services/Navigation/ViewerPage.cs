@@ -6,5 +6,6 @@ public enum ViewerPage
   RemoteControl,
   FileSystem,
   Terminal,
-  RemoteLogs
+  RemoteLogs,
+  Chat
 }

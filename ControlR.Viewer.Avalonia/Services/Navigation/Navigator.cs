@@ -38,6 +38,9 @@ internal class Navigator(
         case ViewerPage.RemoteLogs:
           await _navigationProvider.NavigateTo<IRemoteLogsViewModel>(page);
           break;
+        case ViewerPage.Chat:
+          await _navigationProvider.NavigateTo<IChatViewModel>(page);
+          break;
         default:
           return Result.Fail($"Unsupported page: {page}.");
       }

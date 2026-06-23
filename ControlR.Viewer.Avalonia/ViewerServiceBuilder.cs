@@ -99,8 +99,8 @@ public static class ViewerServiceBuilder
     services.AddSingleton<IFileSystemViewModel, FileSystemViewModel>();
     services.AddSingleton<IRemoteLogsViewModel, RemoteLogsViewModel>();
     services.AddSingleton<IRemoteControlViewModel, RemoteControlViewModel>();
-    services.AddSingleton<IDesktopSessionViewModel, DesktopSessionViewModel>();
     services.AddSingleton<IRemoteDisplayViewModel, RemoteDisplayViewModel>();
+    services.AddSingleton<IChatViewModel, ChatViewModel>();
     services.AddSingleton<TerminalViewModel>();
     services.AddSingleton<ITerminalViewModel>(serviceProvider => serviceProvider.GetRequiredService<TerminalViewModel>());
     services.AddSingleton<ITerminalKeyboardShortcutsDialogViewModel, TerminalKeyboardShortcutsDialogViewModel>();
@@ -112,6 +112,7 @@ public static class ViewerServiceBuilder
     services.AddTransient<RemoteControlView>();
     services.AddTransient<RemoteDisplayView>();
     services.AddTransient<TerminalView>();
+    services.AddTransient<ChatView>();
     services.AddSingleton<TerminalKeyboardShortcutsDialogView>();
     services.AddTransient<ConfirmationDialogView>();
     services.AddTransient<TextPromptDialogView>();

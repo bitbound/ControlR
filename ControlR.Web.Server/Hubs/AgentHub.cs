@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.OutputCaching;
@@ -91,6 +90,7 @@ public class AgentHub(
             var offlineDto = cachedDeviceDto with
             {
               IsOnline = false,
+              ConnectionId = string.Empty,
               LastSeen = _timeProvider.GetLocalNow()
             };
             await SendDeviceUpdate(updateResult.Value, offlineDto);

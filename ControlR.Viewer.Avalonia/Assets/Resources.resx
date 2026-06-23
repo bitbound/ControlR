@@ -285,8 +285,8 @@
   <data name="RemoteControl_StartingSession" xml:space="preserve">
     <value>Starting remote control session</value>
   </data>
-  <data name="RemoteControl_DesktopSessionOnDevice" xml:space="preserve">
-    <value>Desktop Session on {0}</value>
+  <data name="DesktopSessionsOnDevice" xml:space="preserve">
+    <value>Desktop Session(s) on {0}</value>
   </data>
   <data name="RemoteControl_DeviceInfoUnavailable" xml:space="preserve">
     <value>Device information is not available.</value>
@@ -306,6 +306,69 @@
   </data>
   <data name="RemoteControl_UnexpectedSignalingState" xml:space="preserve">
     <value>Unexpected signaling state.</value>
+  </data>
+  <data name="Chat_ChatWith" xml:space="preserve">
+    <value>Chat with {0} ({1})</value>
+  </data>
+  <data name="Chat_CloseChat" xml:space="preserve">
+    <value>Close Chat</value>
+  </data>
+  <data name="Chat_FailedToCloseSession" xml:space="preserve">
+    <value>Failed to close chat session</value>
+  </data>
+  <data name="Chat_FailedToLoadSessions" xml:space="preserve">
+    <value>An error occurred while loading desktop sessions.</value>
+  </data>
+  <data name="Chat_FailedToSend" xml:space="preserve">
+    <value>Failed to send message</value>
+  </data>
+  <data name="Chat_FailedToStartChat" xml:space="preserve">
+    <value>Failed to start chat session.</value>
+  </data>
+  <data name="Chat_Loading" xml:space="preserve">
+    <value>Loading</value>
+  </data>
+  <data name="Chat_MessagePlaceholder" xml:space="preserve">
+    <value>Enter a message</value>
+  </data>
+  <data name="Chat_Multiline" xml:space="preserve">
+    <value>Multiline Input</value>
+  </data>
+  <data name="Chat_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Chat_NoMessages" xml:space="preserve">
+    <value>No messages yet. Send a message to start the conversation.</value>
+  </data>
+  <data name="Chat_NoSessions" xml:space="preserve">
+    <value>No desktop sessions available.</value>
+  </data>
+  <data name="Chat_ProcessID" xml:space="preserve">
+    <value>Process ID</value>
+  </data>
+  <data name="Chat_RefreshSessions" xml:space="preserve">
+    <value>Refresh Sessions</value>
+  </data>
+  <data name="Chat_Send" xml:space="preserve">
+    <value>Send</value>
+  </data>
+  <data name="Chat_Session" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="Chat_StartChat" xml:space="preserve">
+    <value>Start Chat</value>
+  </data>
+  <data name="Chat_UnexpectedState" xml:space="preserve">
+    <value>Unexpected chat state.</value>
+  </data>
+  <data name="Chat_UnsupportedOS" xml:space="preserve">
+    <value>Chat is not supported on this operating system.</value>
+  </data>
+  <data name="Chat_User" xml:space="preserve">
+    <value>User</value>
+  </data>
+  <data name="Chat_You" xml:space="preserve">
+    <value>You</value>
   </data>
   <data name="ViewerHub_ConnectionFailed" xml:space="preserve">
     <value>Failed to connect to Viewer Hub.</value>

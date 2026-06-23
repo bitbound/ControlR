@@ -117,8 +117,8 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 
 ## Agent Hints
 
-- `semantic_search` is available for searching the codebase. It runs locally and can be used liberally.
-- `brave-search_brave_web_search` is available for web searches. It is metered and should be used sparingly, only when external data is needed.
+- `semantic_search` is available for searching the codebase. Use when information is needed about the codebase.
+- `brave-search_brave_web_search` is available for web searches. Use when external data is needed.
 
 ## Planning
 

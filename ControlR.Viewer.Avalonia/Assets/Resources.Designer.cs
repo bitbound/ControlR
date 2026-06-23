@@ -1185,11 +1185,11 @@ namespace ControlR.Viewer.Avalonia.Assets {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Desktop Session on {0}.
+        ///   Looks up a localized string similar to Desktop Session(s) on {0}.
         /// </summary>
-        public static string RemoteControl_DesktopSessionOnDevice {
+        public static string DesktopSessionsOnDevice {
             get {
-                return ResourceManager.GetString("RemoteControl_DesktopSessionOnDevice", resourceCulture);
+                return ResourceManager.GetString("DesktopSessionsOnDevice", resourceCulture);
             }
         }
         
@@ -2279,6 +2279,195 @@ namespace ControlR.Viewer.Avalonia.Assets {
         public static string VirtualKeyboard {
             get {
                 return ResourceManager.GetString("VirtualKeyboard", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Chat with {0} ({1}).
+        /// </summary>
+        public static string Chat_ChatWith {
+            get {
+                return ResourceManager.GetString("Chat_ChatWith", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Close Chat.
+        /// </summary>
+        public static string Chat_CloseChat {
+            get {
+                return ResourceManager.GetString("Chat_CloseChat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to close chat session.
+        /// </summary>
+        public static string Chat_FailedToCloseSession {
+            get {
+                return ResourceManager.GetString("Chat_FailedToCloseSession", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An error occurred while loading desktop sessions..
+        /// </summary>
+        public static string Chat_FailedToLoadSessions {
+            get {
+                return ResourceManager.GetString("Chat_FailedToLoadSessions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to send message.
+        /// </summary>
+        public static string Chat_FailedToSend {
+            get {
+                return ResourceManager.GetString("Chat_FailedToSend", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to start chat session..
+        /// </summary>
+        public static string Chat_FailedToStartChat {
+            get {
+                return ResourceManager.GetString("Chat_FailedToStartChat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Loading.
+        /// </summary>
+        public static string Chat_Loading {
+            get {
+                return ResourceManager.GetString("Chat_Loading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Enter a message.
+        /// </summary>
+        public static string Chat_MessagePlaceholder {
+            get {
+                return ResourceManager.GetString("Chat_MessagePlaceholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Multiline Input.
+        /// </summary>
+        public static string Chat_Multiline {
+            get {
+                return ResourceManager.GetString("Chat_Multiline", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        public static string Chat_Name {
+            get {
+                return ResourceManager.GetString("Chat_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No messages yet. Send a message to start the conversation..
+        /// </summary>
+        public static string Chat_NoMessages {
+            get {
+                return ResourceManager.GetString("Chat_NoMessages", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No desktop sessions available..
+        /// </summary>
+        public static string Chat_NoSessions {
+            get {
+                return ResourceManager.GetString("Chat_NoSessions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Process ID.
+        /// </summary>
+        public static string Chat_ProcessID {
+            get {
+                return ResourceManager.GetString("Chat_ProcessID", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Refresh Sessions.
+        /// </summary>
+        public static string Chat_RefreshSessions {
+            get {
+                return ResourceManager.GetString("Chat_RefreshSessions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Send.
+        /// </summary>
+        public static string Chat_Send {
+            get {
+                return ResourceManager.GetString("Chat_Send", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Session.
+        /// </summary>
+        public static string Chat_Session {
+            get {
+                return ResourceManager.GetString("Chat_Session", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Start Chat.
+        /// </summary>
+        public static string Chat_StartChat {
+            get {
+                return ResourceManager.GetString("Chat_StartChat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unexpected chat state..
+        /// </summary>
+        public static string Chat_UnexpectedState {
+            get {
+                return ResourceManager.GetString("Chat_UnexpectedState", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Chat is not supported on this operating system..
+        /// </summary>
+        public static string Chat_UnsupportedOS {
+            get {
+                return ResourceManager.GetString("Chat_UnsupportedOS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to User.
+        /// </summary>
+        public static string Chat_User {
+            get {
+                return ResourceManager.GetString("Chat_User", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You.
+        /// </summary>
+        public static string Chat_You {
+            get {
+                return ResourceManager.GetString("Chat_You", resourceCulture);
             }
         }
     }

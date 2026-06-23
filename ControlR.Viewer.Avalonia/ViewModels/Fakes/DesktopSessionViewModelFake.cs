@@ -2,7 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 
 namespace ControlR.Viewer.Avalonia.ViewModels.Fakes;
-internal class DesktopSessionViewModelFake : IDesktopSessionViewModel
+internal class DesktopSessionViewModelFake : IRemoteControlDesktopCardViewModel
 {
   public DesktopSessionViewModelFake()
   {

@@ -1,9 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace ControlR.Viewer.Avalonia.ViewModels.Controls;
 
-public interface IDesktopSessionViewModel
+public interface IRemoteControlDesktopCardViewModel
 {
   event EventHandler<DesktopSession>? PreviewRequested;
   event EventHandler<DesktopSession>? ConnectRequested;
@@ -21,14 +20,9 @@ public interface IDesktopSessionViewModel
   string Username { get; }
 }
 
-public partial class DesktopSessionViewModel : ObservableObject, IDesktopSessionViewModel
+public partial class RemoteControlDesktopCardViewModel(DesktopSession session) : ObservableObject, IRemoteControlDesktopCardViewModel
 {
-  private readonly DesktopSession _session;
-
-  public DesktopSessionViewModel(DesktopSession session)
-  {
-    _session = session;
-  }
+  private readonly DesktopSession _session = session;
 
   public event EventHandler<DesktopSession>? PreviewRequested;
   public event EventHandler<DesktopSession>? ConnectRequested;

@@ -34,7 +34,7 @@ internal static class HttpExtensions
     }
 
     // If we have ProblemDetails, prefer its structured message.
-    var bestMessage = problemDetails.GetBestMessage();
+    var bestMessage = GetBestMessage(problemDetails);
 
     // Optionally include the status code for context.
     if (problemDetails.Status.HasValue)
@@ -44,6 +44,12 @@ internal static class HttpExtensions
 
     return bestMessage;
   }
+
+  private static string GetBestMessage(ProblemDetailsDto problemDetails)
+  {
+    return problemDetails.Detail ?? problemDetails.Title ?? "An error occurred.";
+  }
+
 
   private static async Task<HttpRequestException?> TryGetEnrichedException(HttpResponseMessage response)
   {

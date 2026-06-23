@@ -285,13 +285,3 @@ public partial class Chat : ComponentBase, IDisposable
     }
   }
 }
-
-public enum ChatPageState
-{
-  Unknown,
-  Loading,
-  Alert,
-  SessionSelect,
-  ChatActive,
-  UnsupportedOperatingSystem
-}

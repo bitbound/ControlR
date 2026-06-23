@@ -9,7 +9,7 @@ internal class RemoteControlViewModelFake : ViewModelBaseFake<RemoteControlView>
     CurrentState = SignalingState.SessionSelect;
     DesktopSessions =
     [
-      new DesktopSessionViewModel(new DesktopSession
+      new RemoteControlDesktopCardViewModel(new DesktopSession
       {
         Name = "Desktop 1",
         Username = "john.doe",
@@ -18,7 +18,7 @@ internal class RemoteControlViewModelFake : ViewModelBaseFake<RemoteControlView>
         Type = DesktopSessionType.Console,
         AreRemoteControlPermissionsGranted = true
       }),
-      new DesktopSessionViewModel(new DesktopSession
+      new RemoteControlDesktopCardViewModel(new DesktopSession
       {
         Name = "Desktop 2",
         Username = "jane.smith",
@@ -33,7 +33,7 @@ internal class RemoteControlViewModelFake : ViewModelBaseFake<RemoteControlView>
   public string? AlertMessage { get; set; } = "This is an alert message.";
   public SnackbarSeverity AlertSeverity => SnackbarSeverity.Info;
   public SignalingState CurrentState { get; set; }
-  public ObservableCollection<DesktopSessionViewModel> DesktopSessions { get; }
+  public ObservableCollection<RemoteControlDesktopCardViewModel> DesktopSessions { get; }
   public string DesktopSessionTitle { get; } = "Desktop Session on VMHOST";
   public IAsyncRelayCommand DisconnectCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
   public bool HasDesktopSessions => DesktopSessions.Count > 0;

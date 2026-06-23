@@ -1,0 +1,269 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Viewer.Avalonia.ViewModels"
+             xmlns:fakes="using:ControlR.Viewer.Avalonia.ViewModels.Fakes"
+             xmlns:cava="using:ControlR.Libraries.Avalonia.Controls"
+             xmlns:converters="using:ControlR.Viewer.Avalonia.Converters"
+             xmlns:assets="using:ControlR.Viewer.Avalonia.Assets"
+             xmlns:models="using:ControlR.Libraries.Viewer.Common.Models.Messages"
+             xmlns:enums="using:ControlR.Libraries.Viewer.Common.Enums"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ControlR.Viewer.Avalonia.Views.ChatView"
+             x:DataType="vm:IChatViewModel">
+
+  <UserControl.Resources>
+    <converters:SnackbarSeverityToBrushConverter x:Key="SeverityBrushConverter" />
+  </UserControl.Resources>
+
+  <UserControl.Styles>
+    <Style Selector="Border.ChatUser">
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="{DynamicResource ChatUserMessageBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="HorizontalAlignment" Value="Right" />
+    </Style>
+    <Style Selector="Border.ChatViewer">
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="{DynamicResource ChatViewerMessageBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+  </UserControl.Styles>
+
+  <Design.DataContext>
+    <fakes:ChatViewModelFake />
+  </Design.DataContext>
+
+  <Grid>
+    <!-- ========== Session Select State ========== -->
+    <ScrollViewer IsVisible="{Binding CurrentState,
+    Converter={x:Static ObjectConverters.Equal},
+    ConverterParameter={x:Static enums:ChatPageState.SessionSelect}}">
+      <StackPanel Margin="20, 0, 20, 20" Spacing="20">
+        <!-- Title -->
+        <TextBlock Text="{Binding DesktopSessionTitle}"
+                   Classes="Info" FontSize="24" FontWeight="Bold"/>
+
+        <!-- Refresh button -->
+        <cava:IconButton Text="{x:Static assets:Resources.Chat_RefreshSessions}"
+                         Icon="{StaticResource arrow_sync_regular}"
+                         Command="{Binding RefreshSessionsCommand}"
+                         HorizontalAlignment="Left" />
+
+        <!-- Session cards -->
+        <StackPanel Spacing="20" IsVisible="{Binding HasDesktopSessions}">
+          <ItemsControl ItemsSource="{Binding DesktopSessions}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" ItemWidth="300" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vm:IChatDesktopCardViewModel">
+                <Border Classes="Card" Margin="0, 0, 12, 12">
+                  <StackPanel Spacing="18">
+                    <!-- Session details grid -->
+                    <Grid ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto"
+                          ColumnSpacing="18" RowSpacing="6">
+                      <TextBlock Grid.Row="0" Grid.Column="0"
+                                 Text="{x:Static assets:Resources.Chat_Session}"
+                                 Classes="Info" />
+                      <TextBlock Grid.Row="0" Grid.Column="1"
+                                 Text="{Binding SystemSessionId}" />
+
+                      <TextBlock Grid.Row="1" Grid.Column="0"
+                                 Text="{x:Static assets:Resources.Chat_ProcessID}"
+                                 Classes="Info" />
+                      <TextBlock Grid.Row="1" Grid.Column="1"
+                                 Text="{Binding ProcessId}" />
+
+                      <TextBlock Grid.Row="2" Grid.Column="0"
+                                 Text="{x:Static assets:Resources.Chat_Name}"
+                                 Classes="Info" />
+                      <TextBlock Grid.Row="2" Grid.Column="1"
+                                 Text="{Binding Name}" />
+
+                      <TextBlock Grid.Row="3" Grid.Column="0"
+                                 Text="{x:Static assets:Resources.Chat_User}"
+                                 Classes="Info" />
+                      <TextBlock Grid.Row="3" Grid.Column="1"
+                                 Text="{Binding Username}" />
+                    </Grid>
+
+                    <!-- Start Chat button -->
+                    <Button Content="{x:Static assets:Resources.Chat_StartChat}"
+                            Classes="accent"
+                            Command="{Binding StartChatCommand}"
+                            HorizontalAlignment="Left" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- No sessions fallback -->
+        <TextBlock Text="{x:Static assets:Resources.Chat_NoSessions}"
+                   FontSize="16" TextAlignment="Center"
+                   IsVisible="{Binding !HasDesktopSessions}" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- ========== Chat Active State ========== -->
+    <Grid IsVisible="{Binding CurrentState,
+    Converter={x:Static ObjectConverters.Equal},
+    ConverterParameter={x:Static enums:ChatPageState.ChatActive}}"
+    RowDefinitions="Auto,*,Auto">
+
+      <!-- Header bar -->
+      <Border Grid.Row="0" Padding="8"
+              BorderThickness="0, 0, 0, 1"
+              BorderBrush="{DynamicResource DividerBrush}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="{Binding ChatTitle}"
+                     Classes="Info" FontSize="16"
+                     VerticalAlignment="Center" />
+          <Button Grid.Column="1"
+                  Cursor="Hand"
+                  Focusable="False"
+                  IsTabStop="False"
+                  Classes="TransparentButton"
+                  ToolTip.Tip="{x:Static assets:Resources.Chat_CloseChat}"
+                  Command="{Binding CloseChatCommand}">
+            <PathIcon Width="18"
+                      Height="18"
+                      Classes="Error"
+                      Data="{DynamicResource dismiss_regular}" />
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- Messages area -->
+      <Border Grid.Row="1" Padding="12">
+        <ScrollViewer x:Name="MessagesScrollViewer">
+          <StackPanel Spacing="4">
+            <!-- Empty state -->
+            <TextBlock Text="{x:Static assets:Resources.Chat_NoMessages}"
+                       Classes="Info" TextAlignment="Center"
+                       Margin="0, 16, 0, 0"
+                       IsVisible="{Binding ChatMessages.Count,
+                       Converter={x:Static ObjectConverters.Equal},
+                       ConverterParameter=0}" />
+
+            <!-- Message list -->
+            <ItemsControl ItemsSource="{Binding ChatMessages}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="models:ChatMessage">
+                  <Border Classes.ChatUser="{Binding IsFromViewer}"
+                          Classes.ChatViewer="{Binding !IsFromViewer}">
+                    <StackPanel Spacing="4">
+                      <!-- Sender + timestamp header -->
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding SenderName}"
+                                   FontSize="12" Classes="Info" />
+                        <TextBlock Text="{Binding Timestamp}"
+                                   FontSize="10" Classes="Info"
+                                   Grid.Column="1" />
+                      </Grid>
+                      <!-- Message body -->
+                      <TextBlock Text="{Binding Message}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <!-- Input area -->
+      <Border Grid.Row="2" Padding="8"
+              BorderThickness="0, 1, 0, 0"
+              BorderBrush="{DynamicResource DividerBrush}">
+        <Grid ColumnDefinitions="*,Auto">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <TextBox x:Name="ChatTextBox"
+                   Text="{Binding NewMessage}"
+                   AcceptsReturn="{Binding EnableMultiline}"
+                   Height="{Binding CommandInputHeight}"
+                   Watermark="{x:Static assets:Resources.Chat_MessagePlaceholder}"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Stretch"
+                   Background="{DynamicResource SurfaceBrush}"
+                   Foreground="{DynamicResource DefaultColor}"
+                   BorderBrush="{DynamicResource DividerBrush}" />
+          <cava:IconButton Grid.Row="0" Grid.Column="1"
+                           Icon="{StaticResource send_regular}"
+                           Command="{Binding SendMessageCommand}"
+                           Cursor="Hand"
+                           IconSize="14"
+                           Padding="8" VerticalAlignment="Stretch"
+                           Margin="8,0,0,0" />
+          <ToggleSwitch Grid.Row="1" Grid.ColumnSpan="2"
+                        IsChecked="{Binding EnableMultiline}"
+                        Content="{x:Static assets:Resources.Chat_Multiline}"
+                        Margin="0,8,0,0" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ========== Alert State ========== -->
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top"
+                Margin="0, 40, 0, 0"
+                IsVisible="{Binding CurrentState,
+                Converter={x:Static ObjectConverters.Equal},
+                ConverterParameter={x:Static enums:ChatPageState.Alert}}"
+                Spacing="16">
+      <TextBlock Text="{Binding AlertMessage}"
+                 Foreground="{Binding AlertSeverity,
+                 Converter={StaticResource SeverityBrushConverter}}"
+                 FontSize="24" TextAlignment="Center" />
+      <Button Content="{x:Static assets:Resources.Refresh}"
+              Classes="accent"
+              Command="{Binding ReloadCommand}" />
+    </StackPanel>
+
+    <!-- ========== Loading State ========== -->
+    <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center"
+                Margin="0, 40, 0, 0"
+                IsVisible="{Binding CurrentState,
+                Converter={x:Static ObjectConverters.Equal},
+                ConverterParameter={x:Static enums:ChatPageState.Loading}}"
+                Spacing="12">
+      <TextBlock Text="{Binding LoadingMessage}"
+                 Classes="Info" FontSize="24" TextAlignment="Center" />
+      <ProgressBar IsIndeterminate="True" Width="200" />
+    </StackPanel>
+
+    <!-- ========== Unsupported OS State ========== -->
+    <TextBlock Text="{x:Static assets:Resources.Chat_UnsupportedOS}"
+               Classes="Error" FontSize="24"
+               VerticalAlignment="Top" HorizontalAlignment="Center"
+               TextAlignment="Center" Margin="0, 40, 0, 0"
+               IsVisible="{Binding CurrentState,
+               Converter={x:Static ObjectConverters.Equal},
+               ConverterParameter={x:Static enums:ChatPageState.UnsupportedOperatingSystem}}"/>
+
+    <!-- ========== Unknown State ========== -->
+    <TextBlock Text="{x:Static assets:Resources.Chat_UnexpectedState}"
+               Classes="Info" FontSize="24"
+               VerticalAlignment="Top" HorizontalAlignment="Center"
+               TextAlignment="Center" Margin="0, 40, 0, 0"
+               IsVisible="{Binding CurrentState,
+               Converter={x:Static ObjectConverters.Equal},
+               ConverterParameter={x:Static enums:ChatPageState.Unknown}}"/>
+
+  </Grid>
+</UserControl>

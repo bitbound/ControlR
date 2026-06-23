@@ -51,10 +51,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     var createDirectoryRequest = new CreateDirectoryHubDto(request.ParentPath, request.DirectoryName);
@@ -115,10 +115,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     var deleteRequest = new FileDeleteHubDto(request.FilePath);
@@ -223,10 +223,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     var streamId = Guid.NewGuid();
@@ -316,10 +316,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", request.DeviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     var streamId = Guid.NewGuid();
@@ -398,10 +398,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     var streamId = Guid.NewGuid();
@@ -484,10 +484,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     try
@@ -549,6 +549,12 @@ public class DeviceFileSystemController : ControllerBase
         return Forbid();
       }
 
+      if (!device.IsOnline)
+      {
+        logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
+        return BadRequest("Device is not currently online.");
+      }
+
       logger.LogInformation("Getting path segments for device {DeviceId} path {TargetPath}", request.DeviceId, request.TargetPath);
 
       var hubDto = new GetPathSegmentsHubDto { TargetPath = request.TargetPath };
@@ -602,10 +608,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", request.DeviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     try
@@ -661,10 +667,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", request.DeviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     var streamId = Guid.NewGuid();
@@ -745,10 +751,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     if (!Request.HasFormContentType)
@@ -855,10 +861,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     var validateRequest = new ValidateFilePathHubDto(request.DirectoryPath, request.FileName);
@@ -927,10 +933,10 @@ public class DeviceFileSystemController : ControllerBase
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(device.ConnectionId))
+    if (!device.IsOnline)
     {
-      logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-      return BadRequest("Device is not currently connected.");
+      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return BadRequest("Device is not currently online.");
     }
 
     var streamId = Guid.NewGuid();

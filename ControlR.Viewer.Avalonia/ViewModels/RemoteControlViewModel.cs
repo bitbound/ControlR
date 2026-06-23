@@ -17,7 +17,7 @@ public interface IRemoteControlViewModel : IViewModelBase
   string? AlertMessage { get; set; }
   SnackbarSeverity AlertSeverity { get; }
   SignalingState CurrentState { get; }
-  ObservableCollection<DesktopSessionViewModel> DesktopSessions { get; }
+  ObservableCollection<RemoteControlDesktopCardViewModel> DesktopSessions { get; }
   string DesktopSessionTitle { get; }
   bool HasDesktopSessions { get; }
   bool IsReconnecting { get; set; }
@@ -135,7 +135,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       return SignalingState.SessionSelect;
     }
   }
-  public ObservableCollection<DesktopSessionViewModel> DesktopSessions { get; } = [];
+  public ObservableCollection<RemoteControlDesktopCardViewModel> DesktopSessions { get; } = [];
   public string DesktopSessionTitle
   {
     get
@@ -148,7 +148,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
 
       return string.Format(
         CultureInfo.CurrentCulture,
-        Resources.RemoteControl_DesktopSessionOnDevice,
+        Resources.DesktopSessionsOnDevice,
         deviceName);
     }
   }
@@ -233,7 +233,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       DesktopSessions.Clear();
       foreach (var session in desktopSessions)
       {
-        var vm = new DesktopSessionViewModel(session);
+        var vm = new RemoteControlDesktopCardViewModel(session);
         vm.PreviewRequested += HandlePreviewRequested;
         vm.ConnectRequested += HandleConnectRequested;
         vm.RemoteControlPermissionRequested += HandleRequestPermissionsResult;
