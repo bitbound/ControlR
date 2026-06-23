@@ -3,6 +3,7 @@ using ControlR.DesktopClient.Common.Messages;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Mac.Helpers;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Hosting;
 using ControlR.Libraries.NativeInterop.Mac;
 using ControlR.Libraries.Api.Contracts.Enums;
@@ -17,14 +18,14 @@ internal class CursorWatcherMac(
   IDisplayManager displayManager,
   IMessenger messenger,
   IImageUtility imageUtility,
-  IUiThread uiThread,
+  IUiDispatcher dispatcher,
   ILogger<CursorWatcherMac> logger)
   : PeriodicBackgroundService(TimeSpan.FromMilliseconds(10), catchExceptions: true, timeProvider, logger)
 {
+  private readonly IUiDispatcher _dispatcher = dispatcher;
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IImageUtility _imageUtility = imageUtility;
   private readonly IMessenger _messenger = messenger;
-  private readonly IUiThread _uiThread = uiThread;
 
   private string? _lastCursorBase64;
   private nint _lastCursorPointer = nint.Zero;
@@ -76,7 +77,7 @@ internal class CursorWatcherMac(
 
   private async Task CheckCursorChange()
   {
-    var cursorPointer = _uiThread.Invoke(GetCurrentCursorPointer);
+    var cursorPointer = _dispatcher.Invoke(GetCurrentCursorPointer);
     if (cursorPointer == nint.Zero)
     {
       return;
@@ -88,7 +89,7 @@ internal class CursorWatcherMac(
     }
 
     var scaleFactor = await TryGetCurrentCursorDisplayScaleFactor();
-    var snapshot = _uiThread.Invoke(() => CaptureCursorSnapshot(scaleFactor));
+    var snapshot = _dispatcher.Invoke(() => CaptureCursorSnapshot(scaleFactor));
     if (snapshot is null)
     {
       return;

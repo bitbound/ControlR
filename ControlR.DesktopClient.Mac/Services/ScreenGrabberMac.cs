@@ -1,6 +1,7 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Mac.Helpers;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.NativeInterop.Mac;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
@@ -14,14 +15,14 @@ namespace ControlR.DesktopClient.Mac.Services;
 /// </summary>
 public sealed class ScreenGrabberMac(
   IDisplayManager displayManager,
-  IUiThread uiThread,
+  IUiDispatcher dispatcher,
   ILogger<ScreenGrabberMac> logger) : IScreenGrabber
 {
   private const string CoreGraphicsCaptureMode = "CoreGraphics";
 
+  private readonly IUiDispatcher _dispatcher = dispatcher;
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly ILogger<ScreenGrabberMac> _logger = logger;
-  private readonly IUiThread _uiThread = uiThread;
 
   /// <summary>
   /// Captures all displays as a single composite image.
@@ -328,7 +329,7 @@ public sealed class ScreenGrabberMac(
         cursorY -= captureArea.Y;
       }
 
-      using var cursorSnapshot = _uiThread.Invoke(CaptureCursorSnapshot);
+      using var cursorSnapshot = _dispatcher.Invoke(CaptureCursorSnapshot);
       if (cursorSnapshot is null)
       {
         return;

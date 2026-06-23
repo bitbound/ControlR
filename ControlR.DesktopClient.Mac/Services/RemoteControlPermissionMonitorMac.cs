@@ -4,6 +4,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.ViewModelInterfaces;
 using ControlR.DesktopClient.ViewModels.Mac;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +13,7 @@ namespace ControlR.DesktopClient.Mac.Services;
 public class RemoteControlPermissionMonitorMac(
   TimeProvider timeProvider,
   IDesktopClientPermissionService desktopClientPermissionService,
-  IUiThread uiThread,
+  IUiDispatcher dispatcher,
   IToaster toaster,
   INavigationProvider navigationProvider,
   ILogger<RemoteControlPermissionMonitorMac> logger)
@@ -23,9 +24,9 @@ public class RemoteControlPermissionMonitorMac(
       logger)
 {
   private readonly IDesktopClientPermissionService _desktopClientPermissionService = desktopClientPermissionService;
+  private readonly IUiDispatcher _dispatcher = dispatcher;
   private readonly INavigationProvider _navigationProvider = navigationProvider;
   private readonly IToaster _toaster = toaster;
-  private readonly IUiThread _uiThread = uiThread;
 
   protected override async Task HandleElapsed()
   {
@@ -73,7 +74,7 @@ public class RemoteControlPermissionMonitorMac(
   {
     try
     {
-      await _uiThread.InvokeAsync(async () =>
+      await _dispatcher.InvokeAsync(async () =>
       {
         await _toaster.ShowToast(
           Localization.PermissionsMissingToastTitle,

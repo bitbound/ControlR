@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Viewer.Common.Helpers;
 
 namespace ControlR.Viewer.Avalonia.ViewModels;
@@ -20,7 +21,6 @@ public interface IRemoteLogsViewModel : IViewModelBase
   bool IsLoading { get; set; }
   bool IsLoadingContents { get; set; }
   bool IsRefreshContentsButtonEnabled { get; }
-  string LogContents { get; set; }
   ObservableCollection<LogFilesTreeItemViewModel> RootItems { get; }
   string? SelectedFileName { get; }
   bool ShowLogContentTextBox { get; }
@@ -41,26 +41,32 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
 {
   private readonly IControlrApi _controlrApi;
   private readonly IDeviceState _deviceState;
+  private readonly IUiDispatcher _dispatcher;
+  private readonly TimeSpan _filterDebounceInterval = TimeSpan.FromMilliseconds(500);
   private readonly ILogger<RemoteLogsViewModel> _logger;
   private readonly ISnackbar _snackbar;
+  private readonly TimeProvider _timeProvider;
 
   private string _displayedLogContents = string.Empty;
   private CancellationTokenSource? _filterDebounceCts;
-  private TimeSpan _filterDebounceInterval = TimeSpan.FromMilliseconds(500);
   private CancellationTokenSource? _loadCts;
   private LogFilesTreeItemViewModel? _selectedNode;
   private bool _updatingTreeSelection;
 
   public RemoteLogsViewModel(
+    TimeProvider timeProvider,
     IControlrApi controlrApi,
     IDeviceState deviceState,
     ISnackbar snackbar,
-    ILogger<RemoteLogsViewModel> logger)
+    ILogger<RemoteLogsViewModel> logger,
+    IUiDispatcher dispatcher)
   {
+    _timeProvider = timeProvider;
     _controlrApi = controlrApi;
     _deviceState = deviceState;
     _snackbar = snackbar;
     _logger = logger;
+    _dispatcher = dispatcher;
 
     RootItems.CollectionChanged += (_, _) => OnRootItemsChanged();
   }
@@ -253,7 +259,7 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
       return;
     }
 
-    _ = Dispatcher.UIThread.InvokeAsync(async () =>
+    _ = _dispatcher.InvokeAsync(async () =>
     {
       try
       {
@@ -268,7 +274,7 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
         _logger.LogError(ex, "Error loading selected log file.");
         _snackbar.Add("An error occurred while loading the log file", SnackbarSeverity.Error);
       }
-    });
+    }, DispatcherPriority.Normal);
   }
 
   private async Task LoadLogContentsCore(LogFilesTreeItemViewModel node)
@@ -339,6 +345,13 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
       IsLoading = true;
       UnsubscribeAllTreeItems();
       RootItems.Clear();
+      _selectedNode = null;
+      LogContents = string.Empty;
+      OnPropertyChanged(nameof(ShowSelectLogFilePrompt));
+      OnPropertyChanged(nameof(ShowNoFilterMatchesMessage));
+      OnPropertyChanged(nameof(ShowLogContentTextBox));
+      OnPropertyChanged(nameof(IsRefreshContentsButtonEnabled));
+      OnPropertyChanged(nameof(SelectedFileName));
 
       var result = await _controlrApi.DeviceFileSystem.GetLogFiles(_deviceState.CurrentDevice.Id);
       if (!result.IsSuccess || result.Value is null)
@@ -427,11 +440,11 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
     _filterDebounceCts = new CancellationTokenSource();
     var token = _filterDebounceCts.Token;
 
-    _ = Dispatcher.UIThread.InvokeAsync(async () =>
+    _ = _dispatcher.InvokeAsync(async () =>
     {
       try
       {
-        await Task.Delay(_filterDebounceInterval, token);
+        await Task.Delay(_filterDebounceInterval, _timeProvider, token);
       }
       catch (TaskCanceledException)
       {
@@ -444,7 +457,7 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
       }
 
       RefreshDisplayedContents();
-    });
+    }, DispatcherPriority.Normal);
   }
 
   private void SubscribeToTreeItem(LogFilesTreeItemViewModel item)

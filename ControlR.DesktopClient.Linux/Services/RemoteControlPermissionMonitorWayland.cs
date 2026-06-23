@@ -4,6 +4,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.ViewModelInterfaces;
 using ControlR.DesktopClient.ViewModels.Linux;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ public class RemoteControlPermissionMonitorWayland(
   IDesktopEnvironmentDetector desktopEnvironmentDetector,
   INavigationProvider navigationProvider,
   IToaster toaster,
-  IUiThread uiThread,
+  IUiDispatcher dispatcher,
   IWaylandPermissionProvider waylandPermissionProvider,
   ILogger<RemoteControlPermissionMonitorWayland> logger)
   : PeriodicBackgroundService(
@@ -24,9 +25,9 @@ public class RemoteControlPermissionMonitorWayland(
       logger)
 {
   private readonly IDesktopEnvironmentDetector _desktopEnvironmentDetector = desktopEnvironmentDetector;
+  private readonly IUiDispatcher _dispatcher = dispatcher;
   private readonly INavigationProvider _navigationProvider = navigationProvider;
   private readonly IToaster _toaster = toaster;
-  private readonly IUiThread _uiThread = uiThread;
   private readonly IWaylandPermissionProvider _waylandPermissionProvider = waylandPermissionProvider;
 
   protected override async Task HandleElapsed()
@@ -79,7 +80,7 @@ public class RemoteControlPermissionMonitorWayland(
   {
     try
     {
-      await _uiThread.InvokeAsync(async () =>
+      await _dispatcher.InvokeAsync(async () =>
       {
         await _toaster.ShowToast(
           Localization.PermissionsMissingToastTitle,

@@ -2,6 +2,7 @@ using Avalonia.Input.Platform;
 using ControlR.ApiClient;
 using ControlR.Libraries.Avalonia.Controls.Dialogs;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
@@ -67,6 +68,7 @@ public static class ViewerServiceBuilder
     services.AddSingleton<IStreamMetrics, StreamMetrics>();
     services.AddSingleton<IWaiter, Waiter>();
     services.AddSingleton(TimeProvider.System);
+    services.AddSingleton<IUiDispatcher, UiDispatcher>();
     services.AddSingleton(clipboard);
     services.AddSingleton<IInstanceIdProvider>(new InstanceIdProvider(instanceId));
 

@@ -3,6 +3,7 @@ using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Common.State;
 using ControlR.DesktopClient.Services;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.FileSystem;
@@ -48,7 +49,7 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<IpcClientManager>()
       .AddSingleton<IIpcClientAccessor>(sp => sp.GetRequiredService<IpcClientManager>())
       .AddSingleton<IToaster, Toaster>()
-      .AddSingleton<IUiThread, UiThread>()
+      .AddSingleton<IUiDispatcher, UiDispatcher>()
       .AddSingleton<IImageUtility, ImageUtility>()
       .AddSingleton<DesktopApplicationLifetime>()
       .AddSingleton<IHostApplicationLifetime>(sp => sp.GetRequiredService<DesktopApplicationLifetime>())

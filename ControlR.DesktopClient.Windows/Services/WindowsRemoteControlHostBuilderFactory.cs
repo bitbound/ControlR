@@ -2,8 +2,8 @@ using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
-using ControlR.DesktopClient.Windows;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
+using ControlR.Libraries.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -15,12 +15,12 @@ public class WindowsRemoteControlHostBuilderFactory(
   IUserInteractionService userInteractionService,
   IIpcClientAccessor ipcClientAccessor,
   IToaster toaster,
-  IUiThread uiThread) : IRemoteControlHostBuilderFactory
+  IUiDispatcher uiThread) : IRemoteControlHostBuilderFactory
 {
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
+  private readonly IUiDispatcher _dispatcher = uiThread;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly IToaster _toaster = toaster;
-  private readonly IUiThread _uiThread = uiThread;
   private readonly IUserInteractionService _userInteractionService = userInteractionService;
 
   public HostApplicationBuilder CreateHostBuilder(RemoteControlRequestIpcDto requestDto)
@@ -32,7 +32,7 @@ public class WindowsRemoteControlHostBuilderFactory(
       {
         appBuilder.Services
           .AddSingleton(_toaster)
-          .AddSingleton(_uiThread)
+          .AddSingleton(_dispatcher)
           .AddSingleton(_userInteractionService)
           .AddSingleton(_ipcClientAccessor);
       },

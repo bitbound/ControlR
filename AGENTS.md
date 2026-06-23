@@ -83,6 +83,7 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
   - If an interface has only one implementation, those types can go in the same file.  E.g. `ISecretProvider` and `SecretProvider` can both go in `SecretProvider.cs`.
   - Enums that are tightly coupled to another class and only used there.
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
+- Constructor parameter order: put concrete classes/implementations before interfaces.
 
 ## Web UI
 

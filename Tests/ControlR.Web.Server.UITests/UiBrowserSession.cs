@@ -270,6 +270,9 @@ internal sealed class UiBrowserSession : IAsyncDisposable
         ["ControlR_POSTGRES_HOST"] = databaseSession.Host,
         ["ControlR_POSTGRES_PORT"] = databaseSession.Port.ToString(),
         ["ControlR_POSTGRES_DB"] = databaseSession.DatabaseName,
+        ["Bootstrap:AdminEmail"] = UiTestConstants.BootstrapAdminEmail,
+        ["Bootstrap:AdminPassword"] = UiTestConstants.BootstrapAdminPassword,
+        ["AppOptions:DisableEmailSending"] = "true",
       });
 
     await WaitForServerReadyAsync(options, TimeSpan.FromSeconds(120), processSession);
