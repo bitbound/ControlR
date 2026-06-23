@@ -166,12 +166,15 @@
                           Classes.ChatViewer="{Binding !IsFromViewer}">
                     <StackPanel Spacing="4">
                       <!-- Sender + timestamp header -->
-                      <Grid ColumnDefinitions="*,Auto">
+                      <Grid ColumnDefinitions="Auto,Auto,*">
                         <TextBlock Text="{Binding SenderName}"
                                    FontSize="12" Classes="Info" />
+                        <TextBlock Text=" - "
+                                   FontSize="12" Classes="Info"
+                                   Grid.Column="1" />
                         <TextBlock Text="{Binding Timestamp}"
                                    FontSize="10" Classes="Info"
-                                   Grid.Column="1" />
+                                   Grid.Column="2" />
                       </Grid>
                       <!-- Message body -->
                       <TextBlock Text="{Binding Message}"
