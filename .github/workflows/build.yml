@@ -75,7 +75,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_VARIABLES_PAT }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           clean: true
           fetch-depth: 0
@@ -159,7 +159,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           clean: true
           fetch-depth: 0
@@ -453,7 +453,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           clean: true
           fetch-depth: 0
@@ -609,7 +609,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           clean: true
           fetch-depth: 0
@@ -696,7 +696,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           clean: true
           fetch-depth: 0
