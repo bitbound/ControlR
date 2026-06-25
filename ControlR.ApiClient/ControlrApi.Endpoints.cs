@@ -16,6 +16,7 @@ public interface IAuthApi
   Task<ApiResult> CompletePasswordReset(ResetPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<string>> ConfirmEmail(Guid userId, string code, string? changedEmail = null, CancellationToken cancellationToken = default);
   Task<ApiResult> ForgotPassword(ForgotPasswordRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<CurrentUserResponseDto>> GetCurrentUser(CancellationToken cancellationToken = default);
   Task<ApiResult<ManageInfoResponseDto>> GetManageInfo(CancellationToken cancellationToken = default);
   Task<ApiResult<AccessTokenResponseDto>> LogIn(LoginRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<InteractiveLoginResponseDto>> LogInInteractive(LoginRequestDto request, CancellationToken cancellationToken = default);

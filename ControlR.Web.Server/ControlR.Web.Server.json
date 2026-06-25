@@ -679,6 +679,35 @@
         }
       }
     },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUserResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/interactive-login": {
       "post": {
         "tags": [
@@ -4166,6 +4195,60 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CurrentUserResponseDto": {
+        "required": [
+          "id",
+          "userName",
+          "email",
+          "createdAt",
+          "isOnline",
+          "requirePasswordChange",
+          "twoFactorEnabled",
+          "emailConfirmed",
+          "roles"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isOnline": {
+            "type": "boolean"
+          },
+          "requirePasswordChange": {
+            "type": "boolean"
+          },
+          "twoFactorEnabled": {
+            "type": "boolean"
+          },
+          "emailConfirmed": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

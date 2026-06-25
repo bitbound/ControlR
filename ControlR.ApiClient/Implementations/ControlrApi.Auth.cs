@@ -11,6 +11,7 @@ public partial class ControlrApi
   private const string ChangePasswordWithCredentialsEndpoint = $"{HttpConstants.AuthEndpoint}/change-password-with-credentials";
   private const string CompletePasswordResetEndpoint = $"{HttpConstants.AuthEndpoint}/complete-password-reset";
   private const string ConfirmEmailEndpoint = $"{HttpConstants.AuthEndpoint}/confirmEmail";
+  private const string CurrentUserEndpoint = $"{HttpConstants.AuthEndpoint}/me";
   private const string ForgotPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/forgotPassword";
   private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
   private const string ManageInfoEndpoint = $"{HttpConstants.AuthEndpoint}/manage/info";
@@ -68,6 +69,16 @@ public partial class ControlrApi
     {
       using var response = await _client.PostAsJsonAsync(ForgotPasswordEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
+  async Task<ApiResult<CurrentUserResponseDto>> IAuthApi.GetCurrentUser(CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.GetAsync(CurrentUserEndpoint, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<CurrentUserResponseDto>(cancellationToken);
     });
   }
 

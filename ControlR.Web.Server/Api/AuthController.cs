@@ -121,6 +121,31 @@ public class AuthController : ControllerBase
     return Ok();
   }
 
+  [Authorize]
+  [HttpGet("me")]
+  public async Task<ActionResult<CurrentUserResponseDto>> GetCurrentUser(
+    [FromServices] UserManager<AppUser> userManager)
+  {
+    var user = await userManager.GetUserAsync(User);
+    if (user is null)
+    {
+      return NotFound();
+    }
+
+    var roles = await userManager.GetRolesAsync(user);
+
+    return Ok(new CurrentUserResponseDto(
+      user.Id,
+      user.UserName,
+      user.Email,
+      user.CreatedAt,
+      user.IsOnline,
+      user.RequirePasswordChange,
+      user.TwoFactorEnabled,
+      user.EmailConfirmed,
+      [.. roles]));
+  }
+
   [AllowAnonymous]
   [EnableRateLimiting(AnonymousAuthRateLimitPolicy.PolicyName)]
   [HttpPost("interactive-login")]
