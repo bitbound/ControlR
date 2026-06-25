@@ -1,5 +1,6 @@
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Shared.Services.Encryption;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
@@ -49,18 +50,18 @@ internal class AgentHeartbeatTimer(
       
       if (string.IsNullOrWhiteSpace(privateKeyBase64))
       {
-        _logger.LogInformation("No private key found. Generating new Ed25519 keypair for identity bootstrapping.");
+        _logger.LogInformationDeduped("No private key found. Generating new Ed25519 keypair for identity bootstrapping.");
         var keyPair = _keyProvider.GenerateKeyPair();
         privateKeyBase64 = Convert.ToBase64String(keyPair.PrivateKey);
         publicKeyBase64 = Convert.ToBase64String(keyPair.PublicKey);
 
         await _optionsAccessor.UpdatePrivateKey(privateKeyBase64);
 
-        _logger.LogInformation("New keypair generated and saved.");
+        _logger.LogInformationDeduped("New keypair generated and saved.");
       }
       else
       {
-        _logger.LogDebug("Private key found. Using existing key for heartbeat.");
+        _logger.LogDebugDeduped("Private key found. Using existing key for heartbeat.");
         publicKeyBase64 = _keyProvider.DerivePublicKeyBase64(privateKeyBase64);
       }
 

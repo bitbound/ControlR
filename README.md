@@ -124,25 +124,27 @@ The database uses EF Core's [Global Query Filters](https://learn.microsoft.com/e
 
 - Full remote control support
 
-### macOS Apple Silicon (tested on M1 running Sequoia)
+### macOS Apple Silicon
+
+Tested on Mac Mini M4 and MacBook Air M1.
+
 - Full remote control support
   - Controlling the login window is only possible after a user has logged in
 - Experimental remote control via VNC (Apple Screen Sharing)
-- Signed using adhoc certificate (this will change soon)
 
 ### macOS Intel (untested)
-- Experimental remote control via VNC (Apple Screen Sharing)
-- Signed using adhoc certificate (this will change soon)
+
+ControlR is untested on Intel Macs, but it should work similarly to Apple Silicon Macs.
 
 ### Linux AMD64 (latest LTS)
 
+Tested on Fedora KDE, Ubuntu, Kubuntu, and Mint.
+
 - Full remote control support on X11
-  - Tested on Ubuntu, Kubuntu, and Mint
   - On Ubuntu, you must enable X11 for the login screen
     - Edit `/etc/gdm3/custom.conf` and uncomment the line `WaylandEnable=false`, then reboot
-- Experimental remote control on Wayland via XDG Desktop Portal
-  - Tested on Ubuntu, Kubuntu, and Fedora KDE
-  - These are preinstalled on the above distros
+- Full remote control on Wayland via XDG Desktop Portal
+  - All dependencies should be preinstalled on the above distributions (except Mint, which is X11).
     - Manual installation: `sudo apt install libgstreamer1.0-0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good`
   - Requires X11 to be used for the login/greeter screen
 - Experimental remote control via VNC
@@ -239,11 +241,6 @@ The dashboard also supports OpenIdConnect authentication. See their [readme](htt
 
 You can also add a connection string for Azure Monitor to see your data there. This can be used in combination with the Aspire Dashboard (OTLP) or on its own.
 
-## Relay Servers
-
-ControlR is able to integrate with geographically-distributed relay servers and transfer remote control sessions to a server closest to you. See the comments in the Docker Compose file for configuration information.
-
-Relay servers are currently disabled on the public server (https://controlr.app), which is located in Seattle, WA.
 
 ## VNC and Apple Screen Sharing (Experimental)
 

@@ -27,11 +27,10 @@ using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using System.Globalization;
 using System.Threading.RateLimiting;
-
-namespace ControlR.Web.Server.Startup;
-
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.Settings;
+
+namespace ControlR.Web.Server.Startup;
 
 public static class WebApplicationBuilderExtensions
 {
@@ -142,6 +141,9 @@ public static class WebApplicationBuilderExtensions
       }
     });
     builder.Services.AddControllers();
+    builder.Services.AddProblemDetails();
+    builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+    builder.Services.AddExceptionHandler<UiExceptionHandler>();
     builder.Services.AddOpenApi(options =>
     {
       options.AddDocumentTransformer<FileUploadTransformer>();

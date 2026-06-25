@@ -109,6 +109,7 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
     - Example: for class `IdentityApiRegisterFilterTests` in namespace `ControlR.Web.Server.Tests`, project `ControlR.Web.Server.Tests`:
       `-filter /ControlR.Web.Server.Tests/ControlR.Web.Server.Tests/IdentityApiRegisterFilterTests`
     - For a specific method, append `/{method}`.
+- If the test filter doesn't find the test, rebuild the solution and try again.
 
 ## Package Management
 

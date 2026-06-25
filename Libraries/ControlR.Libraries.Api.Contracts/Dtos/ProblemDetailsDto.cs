@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos;
@@ -10,12 +11,19 @@ public class ProblemDetailsDto
 {
     [JsonPropertyName("detail")]
     public string? Detail { get; init; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Extensions { get; init; }
+
     [JsonPropertyName("instance")]
     public string? Instance { get; init; }
+
     [JsonPropertyName("status")]
     public int? Status { get; init; }
+
     [JsonPropertyName("title")]
     public string? Title { get; init; }
+    
     [JsonPropertyName("type")]
     public string? Type { get; init; }
 }

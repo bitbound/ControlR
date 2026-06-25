@@ -1,6 +1,7 @@
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using System.Runtime.CompilerServices;
@@ -18,7 +19,8 @@ internal static class TestWebServerBuilder
     ITestOutputHelper testOutput,
     [CallerMemberName] string testDatabaseName = "",
     bool useInMemoryDatabase = true,
-    IReadOnlyDictionary<string, string?>? settings = null)
+    IReadOnlyDictionary<string, string?>? settings = null,
+    Action<IServiceCollection>? configureServices = null)
   {
     WebApplicationFactory<Program>? factory;
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
@@ -34,7 +36,7 @@ internal static class TestWebServerBuilder
           builder.UseSetting("AppOptions:InMemoryDatabaseName", uniqueDatabaseName);
           ApplySettings(builder, settings);
 
-          builder.ConfigureTestServices(timeProvider, testOutput);
+          builder.ConfigureTestServices(timeProvider, testOutput, configureServices);
         });
     }
     else
@@ -55,7 +57,7 @@ internal static class TestWebServerBuilder
           builder.UseSetting("POSTGRES_DB", databaseName);
           ApplySettings(builder, settings);
 
-          builder.ConfigureTestServices(timeProvider, testOutput);
+          builder.ConfigureTestServices(timeProvider, testOutput, configureServices);
         });
     }
 
@@ -79,12 +81,13 @@ internal static class TestWebServerBuilder
   private static IWebHostBuilder ConfigureTestServices(
     this IWebHostBuilder builder,
     FakeTimeProvider timeProvider,
-    ITestOutputHelper testOutput)
+    ITestOutputHelper testOutput,
+    Action<IServiceCollection>? configureServices = null)
   {
     builder.ConfigureServices(services =>
     {
-      // Replace TimeProvider with FakeTimeProvider in the test server
       _ = services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
+      configureServices?.Invoke(services);
     });
 
     builder.ConfigureLogging(logging =>

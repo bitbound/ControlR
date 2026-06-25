@@ -25,7 +25,6 @@ public class HttpResult
     ErrorCode = errorCode;
     Reason = reason;
   }
-
   public HttpResult(bool isSuccess, Exception? exception, HttpResultErrorCode errorCode, string reason)
   {
     if (!isSuccess && errorCode == HttpResultErrorCode.None)
@@ -46,7 +45,6 @@ public class HttpResult
     Exception = ex;
     ErrorCode = errorCode;
   }
-
   private HttpResult(Exception ex, HttpResultErrorCode errorCode, string reason)
   {
     IsSuccess = false;
@@ -54,17 +52,26 @@ public class HttpResult
     Exception = ex;
     ErrorCode = errorCode;
   }
+  private HttpResult(
+    Exception ex,
+    HttpResultErrorCode errorCode,
+    string reason,
+    Dictionary<string, object?>? extensions)
+  {
+    IsSuccess = false;
+    Reason = reason;
+    Exception = ex;
+    ErrorCode = errorCode;
+    Extensions = extensions;
+  }
 
   public HttpResultErrorCode ErrorCode { get; init; }
-
   public Exception? Exception { get; init; }
-
+  public Dictionary<string, object?>? Extensions { get; init; }
   [MemberNotNullWhen(true, nameof(Exception))]
   public bool HadException => Exception is not null;
-
   [MemberNotNullWhen(false, nameof(Reason))]
   public bool IsSuccess { get; init; }
-
   public string Reason { get; init; } = string.Empty;
 
   public static HttpResult Fail(HttpResultErrorCode errorCode, string reason)
@@ -82,6 +89,23 @@ public class HttpResult
     return new HttpResult(ex, errorCode, reason);
   }
 
+  public static HttpResult Fail(
+    HttpResultErrorCode errorCode,
+    string reason,
+    Dictionary<string, object?> extensions)
+  {
+    return new HttpResult(false, errorCode, reason) { Extensions = extensions };
+  }
+
+  public static HttpResult Fail(
+    Exception ex,
+    HttpResultErrorCode errorCode,
+    string reason,
+    Dictionary<string, object?> extensions)
+  {
+    return new HttpResult(ex, errorCode, reason, extensions);
+  }
+
   public static HttpResult<T> Fail<T>(HttpResultErrorCode errorCode, string reason)
   {
     return new HttpResult<T>(errorCode, reason);
@@ -95,6 +119,23 @@ public class HttpResult
   public static HttpResult<T> Fail<T>(Exception ex, HttpResultErrorCode errorCode, string reason)
   {
     return new HttpResult<T>(ex, errorCode, reason);
+  }
+
+  public static HttpResult<T> Fail<T>(
+    HttpResultErrorCode errorCode,
+    string reason,
+    Dictionary<string, object?> extensions)
+  {
+    return new HttpResult<T>(errorCode, reason, extensions);
+  }
+
+  public static HttpResult<T> Fail<T>(
+    Exception ex,
+    HttpResultErrorCode errorCode,
+    string reason,
+    Dictionary<string, object?> extensions)
+  {
+    return new HttpResult<T>(ex, errorCode, reason, extensions);
   }
 
   public static HttpResult Ok()
@@ -123,7 +164,6 @@ public class HttpResult<T>
     Value = value;
     ErrorCode = HttpResultErrorCode.None;
   }
-
   /// <summary>
   /// Returns an unsuccessful result with the given error code and exception.
   /// </summary>
@@ -136,7 +176,6 @@ public class HttpResult<T>
     ErrorCode = errorCode;
     Reason = exception.Message;
   }
-
   /// <summary>
   /// Returns an unsuccessful result with the given error code, exception and reason.
   /// </summary>
@@ -150,7 +189,18 @@ public class HttpResult<T>
     ErrorCode = errorCode;
     Reason = reason;
   }
-
+  public HttpResult(
+    Exception exception,
+    HttpResultErrorCode errorCode,
+    string reason,
+    Dictionary<string, object?>? extensions)
+  {
+    IsSuccess = false;
+    Exception = exception;
+    ErrorCode = errorCode;
+    Reason = reason;
+    Extensions = extensions;
+  }
   /// <summary>
   ///  Returns an unsuccessful result with the given error code and reason.
   /// </summary>
@@ -162,25 +212,34 @@ public class HttpResult<T>
     ErrorCode = errorCode;
     Reason = reason;
   }
+  public HttpResult(
+    HttpResultErrorCode errorCode,
+    string reason,
+    Dictionary<string, object?>? extensions)
+  {
+    IsSuccess = false;
+    ErrorCode = errorCode;
+    Reason = reason;
+    Extensions = extensions;
+  }
 
   public HttpResultErrorCode ErrorCode { get; init; }
-
   public Exception? Exception { get; init; }
-
+  public Dictionary<string, object?>? Extensions { get; init; }
   [MemberNotNullWhen(true, nameof(Exception))]
   public bool HadException => Exception is not null;
-
   [MemberNotNullWhen(true, nameof(Value))]
   [MemberNotNullWhen(false, nameof(Reason))]
   public bool IsSuccess { get; init; }
-
   public string Reason { get; init; } = string.Empty;
-
   public T? Value { get; init; }
 
   public HttpResult ToHttpResult()
   {
-    return new HttpResult(IsSuccess, Exception, ErrorCode, Reason);
+    return new HttpResult(IsSuccess, Exception, ErrorCode, Reason)
+    {
+      Extensions = Extensions
+    };
   }
 
   public HttpResult<TNewValue> ToHttpResult<TNewValue>(TNewValue value)

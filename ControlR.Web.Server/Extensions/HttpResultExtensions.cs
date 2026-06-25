@@ -18,30 +18,7 @@ public static class HttpResultExtensions
       return new NoContentResult();
     }
 
-    return result.ErrorCode switch
-    {
-      HttpResultErrorCode.NotFound => new NotFoundObjectResult(result.Reason),
-      HttpResultErrorCode.Conflict => new ConflictObjectResult(result.Reason),
-      HttpResultErrorCode.BadRequest => new BadRequestObjectResult(result.Reason),
-      HttpResultErrorCode.Unauthorized => new UnauthorizedObjectResult(result.Reason),
-      HttpResultErrorCode.Forbidden => new ObjectResult(result.Reason)
-      {
-        StatusCode = StatusCodes.Status403Forbidden
-      },
-      HttpResultErrorCode.ValidationFailed => new BadRequestObjectResult(result.Reason),
-      HttpResultErrorCode.ServiceUnavailable => new ObjectResult(result.Reason)
-      {
-        StatusCode = StatusCodes.Status503ServiceUnavailable
-      },
-      HttpResultErrorCode.NotImplemented => new ObjectResult(result.Reason)
-      {
-        StatusCode = StatusCodes.Status501NotImplemented
-      },
-      _ => new ObjectResult(result.Reason)
-      {
-        StatusCode = StatusCodes.Status500InternalServerError
-      }
-    };
+    return CreateProblemResult(result);
   }
 
   /// <summary>
@@ -54,29 +31,56 @@ public static class HttpResultExtensions
       return new OkObjectResult(result.Value);
     }
 
-    return result.ErrorCode switch
+    return CreateProblemResult(result.ToHttpResult());
+  }
+
+  private static ObjectResult CreateProblemResult(HttpResult result)
+  {
+    var (statusCode, title) = result.ErrorCode switch
     {
-      HttpResultErrorCode.NotFound => new NotFoundObjectResult(result.Reason),
-      HttpResultErrorCode.Conflict => new ConflictObjectResult(result.Reason),
-      HttpResultErrorCode.BadRequest => new BadRequestObjectResult(result.Reason),
-      HttpResultErrorCode.Unauthorized => new UnauthorizedObjectResult(result.Reason),
-      HttpResultErrorCode.Forbidden => new ObjectResult(result.Reason)
+      HttpResultErrorCode.BadRequest => (StatusCodes.Status400BadRequest, "Bad Request"),
+      HttpResultErrorCode.Conflict => (StatusCodes.Status409Conflict, "Conflict"),
+      HttpResultErrorCode.Forbidden => (StatusCodes.Status403Forbidden, "Forbidden"),
+      HttpResultErrorCode.NotFound => (StatusCodes.Status404NotFound, "Not Found"),
+      HttpResultErrorCode.Unauthorized => (StatusCodes.Status401Unauthorized, "Unauthorized"),
+      HttpResultErrorCode.ValidationFailed => (StatusCodes.Status400BadRequest, "Validation Failed"),
+      HttpResultErrorCode.NotImplemented => (StatusCodes.Status501NotImplemented, "Not Implemented"),
+      HttpResultErrorCode.ServiceUnavailable => (StatusCodes.Status503ServiceUnavailable, "Service Unavailable"),
+      _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
+    };
+
+    var problem = new ProblemDetails
+    {
+      Status = statusCode,
+      Title = title,
+      Detail = result.Reason,
+      Type = GetProblemType(statusCode),
+    };
+
+    if (result.Extensions is { Count: > 0 })
+    {
+      foreach (var kvp in result.Extensions)
       {
-        StatusCode = StatusCodes.Status403Forbidden
-      },
-      HttpResultErrorCode.ValidationFailed => new BadRequestObjectResult(result.Reason),
-      HttpResultErrorCode.ServiceUnavailable => new ObjectResult(result.Reason)
-      {
-        StatusCode = StatusCodes.Status503ServiceUnavailable
-      },
-      HttpResultErrorCode.NotImplemented => new ObjectResult(result.Reason)
-      {
-        StatusCode = StatusCodes.Status501NotImplemented
-      },
-      _ => new ObjectResult(result.Reason)
-      {
-        StatusCode = StatusCodes.Status500InternalServerError
+        problem.Extensions[kvp.Key] = kvp.Value;
       }
+    }
+
+    return new ObjectResult(problem)
+    {
+      StatusCode = statusCode,
     };
   }
+
+  private static string GetProblemType(int statusCode) => statusCode switch
+  {
+    StatusCodes.Status400BadRequest => "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+    StatusCodes.Status401Unauthorized => "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+    StatusCodes.Status403Forbidden => "https://tools.ietf.org/html/rfc9110#section-15.5.3",
+    StatusCodes.Status404NotFound => "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+    StatusCodes.Status409Conflict => "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+    StatusCodes.Status500InternalServerError => "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+    StatusCodes.Status501NotImplemented => "https://tools.ietf.org/html/rfc9110#section-15.6.2",
+    StatusCodes.Status503ServiceUnavailable => "https://tools.ietf.org/html/rfc9110#section-15.6.4",
+    _ => "https://tools.ietf.org/html/rfc9110#section-15.6.1"
+  };
 }

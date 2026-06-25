@@ -49,7 +49,7 @@ if (app.Environment.IsDevelopment())
 else
 {
   app.UseHttpsRedirection();
-  app.UseExceptionHandler("/Error", true);
+  app.UseExceptionHandler();
   app.UseHsts();
 }
 
