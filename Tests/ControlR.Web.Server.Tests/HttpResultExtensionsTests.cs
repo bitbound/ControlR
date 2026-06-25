@@ -7,11 +7,30 @@ namespace ControlR.Web.Server.Tests;
 public class HttpResultExtensionsTests
 {
   [Fact]
-  public void ToActionResult_Success_ReturnsNoContent()
+  public void HttpResultT_Extensions_DefaultsToNull()
   {
-    var result = HttpResult.Ok().ToActionResult();
+    var result = HttpResult.Fail<int>(HttpResultErrorCode.NotFound, "reason");
+    Assert.Null(result.Extensions);
+  }
 
-    Assert.IsType<NoContentResult>(result);
+  [Fact]
+  public void HttpResult_Extensions_DefaultsToNull()
+  {
+    var result = HttpResult.Fail(HttpResultErrorCode.NotFound, "reason");
+    Assert.Null(result.Extensions);
+  }
+
+  [Fact]
+  public void ToActionResultT_Error_ReturnsObjectResultWithProblemDetails()
+  {
+    var result = HttpResult.Fail<int>(HttpResultErrorCode.Conflict, "conflicted").ToActionResult();
+
+    var objectResult = Assert.IsType<ObjectResult>(result.Result);
+    Assert.Equal(409, objectResult.StatusCode);
+
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal("Conflict", problem.Title);
+    Assert.Equal("conflicted", problem.Detail);
   }
 
   [Fact]
@@ -21,6 +40,21 @@ public class HttpResultExtensionsTests
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
     Assert.Equal(42, okResult.Value);
+  }
+
+  [Fact]
+  public void ToActionResultT_WithExtensions_ExtensionsForwarded()
+  {
+    var result = HttpResult.Fail<int>(
+      HttpResultErrorCode.ValidationFailed,
+      "Validation failed",
+      new() { ["field"] = "email" }
+    ).ToActionResult();
+
+    var objectResult = Assert.IsType<ObjectResult>(result.Result);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.True(problem.Extensions.ContainsKey("field"));
+    Assert.Equal("email", problem.Extensions["field"]);
   }
 
   [Theory]
@@ -46,63 +80,6 @@ public class HttpResultExtensionsTests
     Assert.Equal("test reason", problem.Detail);
   }
 
-  [Fact]
-  public void ToActionResult_ErrorResponse_ContainsExpectedProblemDetailsFields()
-  {
-    var result = HttpResult.Fail(HttpResultErrorCode.NotFound, "User not found").ToActionResult();
-
-    var objectResult = Assert.IsType<ObjectResult>(result);
-    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
-
-    Assert.Equal(404, problem.Status);
-    Assert.Equal("Not Found", problem.Title);
-    Assert.Equal("User not found", problem.Detail);
-    Assert.Equal("https://tools.ietf.org/html/rfc9110#section-15.5.4", problem.Type);
-    Assert.Null(problem.Instance);
-  }
-
-  [Fact]
-  public void ToActionResult_WithoutExtensions_InstanceIsNull()
-  {
-    var result = HttpResult.Fail(HttpResultErrorCode.BadRequest, "invalid").ToActionResult();
-
-    var objectResult = Assert.IsType<ObjectResult>(result);
-    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
-    Assert.Null(problem.Instance);
-  }
-
-  [Fact]
-  public void ToActionResult_WithExtensions_ExtensionsForwarded()
-  {
-    var result = HttpResult.Fail(
-      HttpResultErrorCode.ValidationFailed,
-      "Validation failed",
-      new() { ["field"] = "email", ["code"] = "duplicate" }
-    ).ToActionResult();
-
-    var objectResult = Assert.IsType<ObjectResult>(result);
-    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
-
-    Assert.True(problem.Extensions.ContainsKey("field"));
-    Assert.Equal("email", problem.Extensions["field"]);
-    Assert.True(problem.Extensions.ContainsKey("code"));
-    Assert.Equal("duplicate", problem.Extensions["code"]);
-  }
-
-  [Fact]
-  public void HttpResult_Extensions_DefaultsToNull()
-  {
-    var result = HttpResult.Fail(HttpResultErrorCode.NotFound, "reason");
-    Assert.Null(result.Extensions);
-  }
-
-  [Fact]
-  public void HttpResultT_Extensions_DefaultsToNull()
-  {
-    var result = HttpResult.Fail<int>(HttpResultErrorCode.NotFound, "reason");
-    Assert.Null(result.Extensions);
-  }
-
   [Theory]
   [InlineData(HttpResultErrorCode.BadRequest, "https://tools.ietf.org/html/rfc9110#section-15.5.1")]
   [InlineData(HttpResultErrorCode.Unauthorized, "https://tools.ietf.org/html/rfc9110#section-15.5.2")]
@@ -124,30 +101,53 @@ public class HttpResultExtensionsTests
   }
 
   [Fact]
-  public void ToActionResultT_Error_ReturnsObjectResultWithProblemDetails()
+  public void ToActionResult_ErrorResponse_ContainsExpectedProblemDetailsFields()
   {
-    var result = HttpResult.Fail<int>(HttpResultErrorCode.Conflict, "conflicted").ToActionResult();
+    var result = HttpResult.Fail(HttpResultErrorCode.NotFound, "User not found").ToActionResult();
 
-    var objectResult = Assert.IsType<ObjectResult>(result.Result);
-    Assert.Equal(409, objectResult.StatusCode);
-
+    var objectResult = Assert.IsType<ObjectResult>(result);
     var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
-    Assert.Equal("Conflict", problem.Title);
-    Assert.Equal("conflicted", problem.Detail);
+
+    Assert.Equal(404, problem.Status);
+    Assert.Equal("Not Found", problem.Title);
+    Assert.Equal("User not found", problem.Detail);
+    Assert.Equal("https://tools.ietf.org/html/rfc9110#section-15.5.4", problem.Type);
+    Assert.Null(problem.Instance);
   }
 
   [Fact]
-  public void ToActionResultT_WithExtensions_ExtensionsForwarded()
+  public void ToActionResult_Success_ReturnsNoContent()
   {
-    var result = HttpResult.Fail<int>(
+    var result = HttpResult.Ok().ToActionResult();
+
+    Assert.IsType<NoContentResult>(result);
+  }
+
+  [Fact]
+  public void ToActionResult_WithExtensions_ExtensionsForwarded()
+  {
+    var result = HttpResult.Fail(
       HttpResultErrorCode.ValidationFailed,
       "Validation failed",
-      new() { ["field"] = "email" }
+      new() { ["field"] = "email", ["code"] = "duplicate" }
     ).ToActionResult();
 
-    var objectResult = Assert.IsType<ObjectResult>(result.Result);
+    var objectResult = Assert.IsType<ObjectResult>(result);
     var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+
     Assert.True(problem.Extensions.ContainsKey("field"));
     Assert.Equal("email", problem.Extensions["field"]);
+    Assert.True(problem.Extensions.ContainsKey("code"));
+    Assert.Equal("duplicate", problem.Extensions["code"]);
+  }
+
+  [Fact]
+  public void ToActionResult_WithoutExtensions_InstanceIsNull()
+  {
+    var result = HttpResult.Fail(HttpResultErrorCode.BadRequest, "invalid").ToActionResult();
+
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Null(problem.Instance);
   }
 }
