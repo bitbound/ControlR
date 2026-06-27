@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.AgentInstaller;
@@ -123,7 +124,9 @@ public class DevicesController(
       return BadRequest("Tenant ID not found.");
     }
 
-    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId && x.TenantId == tenantId);
+    var device = await appDb.Devices.FirstOrDefaultAsync(
+        x => x.Id == deviceId && x.TenantId == tenantId);
+
     if (device is null)
     {
       return NotFound();
@@ -140,6 +143,53 @@ public class DevicesController(
     appDb.Devices.Remove(device);
     await appDb.SaveChangesAsync();
     return NoContent();
+  }
+
+  [HttpPost("delete-many")]
+  public async Task<ActionResult<DeleteManyDevicesResponseDto>> DeleteMany(
+    [FromServices] AppDb appDb,
+    [FromBody] DeleteDevicesRequestDto requestDto,
+    CancellationToken cancellationToken)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("Tenant ID not found.");
+    }
+
+    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+
+    // Authorized + existing devices (subset of input that user can delete).
+    var authorizedDeviceIds = await appDb.Devices
+      .ApplyAccessScope(tenantId, accessScope)
+      .Where(d => requestDto.DeviceIds.Contains(d.Id))
+      .Select(d => d.Id)
+      .ToListAsync(cancellationToken);
+
+    var authorizedIdSet = authorizedDeviceIds.ToHashSet();
+
+    // Bulk-delete authorized devices.
+    var deletedCount = await appDb.Devices
+      .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
+      .ExecuteDeleteAsync(cancellationToken);
+
+    if (deletedCount == authorizedDeviceIds.Count)
+    {
+      // All authorized devices were deleted.
+      return new DeleteManyDevicesResponseDto(
+        SuccessIds: authorizedDeviceIds.ToImmutableList(),
+        FailureIds: requestDto.DeviceIds.Except(authorizedIdSet).ToImmutableList());
+    }
+
+    // Race condition: some were deleted concurrently. Find remaining.
+    var remainingIds = await appDb.Devices
+      .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
+      .Select(x => x.Id)
+      .ToListAsync(cancellationToken);
+
+    var successIds = authorizedIdSet.Except(remainingIds).ToImmutableList();
+    var failureIds = remainingIds.Concat(requestDto.DeviceIds.Except(authorizedIdSet)).ToImmutableList();
+
+    return new DeleteManyDevicesResponseDto(successIds, failureIds);
   }
 
   [HttpGet]
@@ -193,11 +243,32 @@ public class DevicesController(
     return device.ToDto(isOutdated);
   }
 
+  [HttpGet("summary")]
+  public async IAsyncEnumerable<DeviceSummaryDto> GetDeviceSummaries(
+    [FromServices] AppDb appDb)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      yield break;
+    }
+
+    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+
+    var deviceStream = appDb.Devices
+      .ApplyAccessScope(tenantId, accessScope)
+      .OrderBy(x => x.CreatedAt)
+      .AsAsyncEnumerable();
+
+    await foreach (var device in deviceStream)
+    {
+      yield return device.ToSummaryDto();
+    }
+  }
+
   [HttpPost("search")]
   public async Task<ActionResult<DeviceSearchResponseDto>> SearchDevices(
     [FromBody] DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
-    [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] ILogger<DevicesController> logger)
   {

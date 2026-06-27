@@ -22,15 +22,175 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
 public class DevicesControllerTests(ITestOutputHelper testOutput)
 {
-  private readonly ITestOutputHelper _testOutputHelper = testOutput; 
+  private readonly ITestOutputHelper _testOutputHelper = testOutput;
 
-[Fact]
+  [Fact]
+  public async Task DeleteMany_NonExistentDevicesReturnedInFailureIds()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, useInMemoryDatabase: false);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+
+    // One device exists, two don't
+    var existingId = Guid.NewGuid();
+    var nonExistentIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    var deviceDto = new DeviceUpdateRequestDto(
+      Name: "Existing Device",
+      AgentVersion: "1.0.0",
+      CpuUtilization: 10,
+      Id: existingId,
+      Is64Bit: true,
+      OsArchitecture: Architecture.X64,
+      Platform: SystemPlatform.Windows,
+      ProcessorCount: 4,
+      OsDescription: "Windows 10",
+      TenantId: tenant.Id,
+      TotalMemory: 8192,
+      TotalStorage: 256000,
+      UsedMemory: 4096,
+      UsedStorage: 128000,
+      CurrentUsers: ["TestUser"],
+      MacAddresses: ["00:11:22:33:44:55"],
+      LocalIpV4: "10.0.0.2",
+      LocalIpV6: "fe80::2",
+      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 256000, FreeSpace = 128000 }]);
+
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "test-conn",
+      RemoteIpAddress: IPAddress.Loopback,
+      LastSeen: DateTimeOffset.UtcNow,
+      IsOnline: true);
+
+    await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+
+    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
+
+    // Act
+    var request = new DeleteDevicesRequestDto([.. nonExistentIds, existingId]);
+    var result = await controller.DeleteMany(db, request, TestContext.Current.CancellationToken);
+
+    // Assert
+    var response = result.Value;
+    Assert.NotNull(response);
+    Assert.Single(response.SuccessIds);
+    Assert.Contains(existingId, response.SuccessIds);
+    Assert.Equal(nonExistentIds.Length, response.FailureIds.Count);
+    Assert.All(nonExistentIds, id => Assert.Contains(id, response.FailureIds));
+  }
+
+  [Fact]
+  public async Task DeleteMany_ReturnsBadRequestWhenNoTenantId()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var controller = scope.CreateController<DevicesController>();
+
+    var request = new DeleteDevicesRequestDto([Guid.NewGuid()]);
+
+    // Act
+    var result = await controller.DeleteMany(
+      scope.ServiceProvider.GetRequiredService<AppDb>(),
+      request,
+      TestContext.Current.CancellationToken);
+
+    // Assert
+    Assert.IsType<BadRequestObjectResult>(result.Result);
+  }
+
+  [Fact]
+  public async Task DeleteMany_SpecifiedDevicesDeleted_UnaffectedDevicesRemain()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, useInMemoryDatabase: false);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+
+    // Devices that exist and will be requested for deletion
+    var deleteIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+    // Devices that exist but are NOT requested (should remain unaffected)
+    var unaffectedIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+
+    // Create all existing devices
+    foreach (var id in deleteIds.Concat(unaffectedIds))
+    {
+      var deviceDto = new DeviceUpdateRequestDto(
+        Name: $"Device {id}",
+        AgentVersion: "1.0.0",
+        CpuUtilization: 10,
+        Id: id,
+        Is64Bit: true,
+        OsArchitecture: Architecture.X64,
+        Platform: SystemPlatform.Windows,
+        ProcessorCount: 4,
+        OsDescription: "Windows 10",
+        TenantId: tenant.Id,
+        TotalMemory: 8192,
+        TotalStorage: 256000,
+        UsedMemory: 4096,
+        UsedStorage: 128000,
+        CurrentUsers: ["TestUser"],
+        MacAddresses: ["00:11:22:33:44:55"],
+        LocalIpV4: "10.0.0.2",
+        LocalIpV6: "fe80::2",
+        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 256000, FreeSpace = 128000 }]);
+
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: "test-conn",
+        RemoteIpAddress: IPAddress.Loopback,
+        LastSeen: DateTimeOffset.UtcNow,
+        IsOnline: true);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+    }
+
+    // Verify devices exist before deletion
+    foreach (var id in deleteIds.Concat(unaffectedIds))
+    {
+      Assert.True(await db.Devices.AnyAsync(x => x.Id == id, TestContext.Current.CancellationToken));
+    }
+
+    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
+
+    // Act
+    var request = new DeleteDevicesRequestDto(deleteIds);
+    var result = await controller.DeleteMany(db, request, TestContext.Current.CancellationToken);
+
+    // Assert
+    var response = result.Value;
+    Assert.NotNull(response);
+    Assert.Equal(deleteIds.Length, response.SuccessIds.Count);
+    Assert.All(deleteIds, id => Assert.Contains(id, response.SuccessIds));
+    Assert.Empty(response.FailureIds);
+
+    // Unspecified devices should still exist
+    foreach (var id in unaffectedIds)
+    {
+      Assert.True(await db.Devices.AnyAsync(x => x.Id == id, TestContext.Current.CancellationToken));
+    }
+  }
+
+  [Fact]
   public async Task GetDevicesGridData_AppliesCombinedFilters()
   {
     // Arrange
@@ -101,11 +261,10 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     };
 
     var result = await controller.SearchDevices(
-        request,
-        db,
-        services.GetRequiredService<IAuthorizationService>(),
-        services.GetRequiredService<IAgentVersionProvider>(),
-        services.GetRequiredService<ILogger<DevicesController>>());
+      request,
+      db,
+      services.GetRequiredService<IAgentVersionProvider>(),
+      services.GetRequiredService<ILogger<DevicesController>>());
 
     var response = result.Value;
 
@@ -179,9 +338,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var onlineResult = await controller.SearchDevices(
       onlineRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
+
     var offlineRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "false" }],
@@ -192,7 +351,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var offlineResult = await controller.SearchDevices(
       offlineRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
@@ -284,7 +442,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var multiFilterResult = await controller.SearchDevices(
       multiFilterRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
@@ -302,7 +459,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var osOnlineResult = await controller.SearchDevices(
       osOnlineRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
@@ -388,7 +544,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var cpuGtResult = await controller.SearchDevices(
       cpuGtRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var cpuEqRequest = new DeviceSearchRequestDto
@@ -401,9 +556,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var cpuEqResult = await controller.SearchDevices(
       cpuEqRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
+
     var cpuLteRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.LessThanOrEqual, Value = "0.5" }],
@@ -414,9 +569,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var cpuLteResult = await controller.SearchDevices(
       cpuLteRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
+
     var memGteRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "UsedMemoryPercent", Operator = FilterOperator.Number.GreaterThanOrEqual, Value = "0.6" }],
@@ -427,9 +582,9 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var memGteResult = await controller.SearchDevices(
       memGteRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
+
     var storageNeRequest = new DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "UsedStoragePercent", Operator = FilterOperator.Number.NotEqual, Value = "0.5" }],
@@ -440,7 +595,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var storageNeResult = await controller.SearchDevices(
       storageNeRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     Assert.NotNull(cpuGtResult.Value);
@@ -537,7 +691,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var nameResult = await controller.SearchDevices(
       nameRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var osRequest = new DeviceSearchRequestDto
@@ -550,7 +703,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var osResult = await controller.SearchDevices(
       osRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var connRequest = new DeviceSearchRequestDto
@@ -563,7 +715,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var connResult = await controller.SearchDevices(
       connRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     Assert.NotNull(nameResult.Value);
@@ -658,7 +809,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var startsWithResult = await controller.SearchDevices(
       startsWithRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var endsWithRequest = new DeviceSearchRequestDto
@@ -671,7 +821,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var endsWithResult = await controller.SearchDevices(
       endsWithRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var notContainsRequest = new DeviceSearchRequestDto
@@ -684,7 +833,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var notContainsResult = await controller.SearchDevices(
       notContainsRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var emptyRequest = new DeviceSearchRequestDto
@@ -697,7 +845,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var emptyResult = await controller.SearchDevices(
       emptyRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var notEmptyRequest = new DeviceSearchRequestDto
@@ -710,7 +857,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var notEmptyResult = await controller.SearchDevices(
       notEmptyRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
@@ -803,7 +949,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var emptyResult = await controller.SearchDevices(
       emptyRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
@@ -818,7 +963,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var notEmptyResult = await controller.SearchDevices(
       notEmptyRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
@@ -890,7 +1034,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var invalidNumericResult = await controller.SearchDevices(
       invalidNumericRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var invalidBooleanRequest = new DeviceSearchRequestDto
@@ -903,7 +1046,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var invalidBooleanResult = await controller.SearchDevices(
       invalidBooleanRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     var invalidPropertyRequest = new DeviceSearchRequestDto
@@ -916,7 +1058,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var invalidPropertyResult = await controller.SearchDevices(
       invalidPropertyRequest,
       db,
-      services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
     Assert.NotNull(invalidNumericResult.Value);
@@ -1031,7 +1172,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result = await controller.SearchDevices(
         request,
         db,
-        services.GetRequiredService<IAuthorizationService>(),
         services.GetRequiredService<IAgentVersionProvider>(),
         services.GetRequiredService<ILogger<DevicesController>>());
     var response = result.Value;
@@ -1119,7 +1259,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result1 = await controller.SearchDevices(
         request1,
         db,
-        authorizationService,
         agentVersionProvider,
         logger);
 
@@ -1136,7 +1275,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result2 = await controller.SearchDevices(
         request2,
         db,
-        authorizationService,
         agentVersionProvider,
         logger);
 
@@ -1153,7 +1291,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result3 = await controller.SearchDevices(
         request3,
         db,
-        authorizationService,
         agentVersionProvider,
         logger);
 
@@ -1170,7 +1307,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result4 = await controller.SearchDevices(
         request4,
         db,
-        authorizationService,
         agentVersionProvider,
         logger);
     var response4 = result4.Value;
@@ -1186,7 +1322,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result5 = await controller.SearchDevices(
         request5,
         db,
-        authorizationService,
         agentVersionProvider,
         logger);
 
@@ -1204,7 +1339,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result6 = await controller.SearchDevices(
         request6,
         db,
-        authorizationService,
         agentVersionProvider,
         logger);
 
@@ -1221,7 +1355,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var result7 = await controller.SearchDevices(
         request7,
         db,
-        authorizationService,
         agentVersionProvider,
         logger);
 
@@ -1292,6 +1425,88 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     Assert.Equal(6, response7.FilterCounts.UntaggedDevices);
     Assert.Equal(0, response7.HiddenUntaggedDevices);
     Assert.All(response7.Items, device => Assert.True(device.TagIds is null or { Length: 0 }));
+  }
+
+  [Fact]
+  public async Task GetDeviceSummaries_RespectsTenantBoundary()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+
+    var deviceDto = new DeviceUpdateRequestDto(
+      Name: "Cross-Tenant Device",
+      AgentVersion: "1.0.0",
+      CpuUtilization: 10,
+      Id: Guid.NewGuid(),
+      Is64Bit: true,
+      OsArchitecture: Architecture.X64,
+      Platform: SystemPlatform.Windows,
+      ProcessorCount: 4,
+      OsDescription: "Windows 10",
+      TenantId: Guid.NewGuid(),
+      TotalMemory: 8192,
+      TotalStorage: 256000,
+      UsedMemory: 4096,
+      UsedStorage: 128000,
+      CurrentUsers: ["TestUser"],
+      MacAddresses: ["00:11:22:33:44:55"],
+      LocalIpV4: "10.0.0.2",
+      LocalIpV6: "fe80::2",
+      Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 256000, FreeSpace = 128000 }]);
+
+    var connectionContext = new DeviceConnectionContext(
+      ConnectionId: "test-conn",
+      RemoteIpAddress: IPAddress.Loopback,
+      LastSeen: DateTimeOffset.UtcNow,
+      IsOnline: true);
+
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+    await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+
+    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
+
+    // Act
+    var results = new List<DeviceSummaryDto>();
+    await foreach (var summary in controller.GetDeviceSummaries(db))
+    {
+      results.Add(summary);
+    }
+
+    // Assert
+    Assert.Empty(results);
+  }
+
+  [Fact]
+  public async Task GetDeviceSummaries_ReturnsEmptyWhenNoDevices()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+
+    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
+
+    // Act
+    var results = new List<DeviceSummaryDto>();
+    await foreach (var summary in controller.GetDeviceSummaries(db))
+    {
+      results.Add(summary);
+    }
+
+    // Assert
+    Assert.Empty(results);
   }
 
   [Fact]
@@ -1384,12 +1599,11 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
     var deviceManager = services.GetRequiredService<IDeviceManager>();
-    var authorizationService = services.GetRequiredService<IAuthorizationService>();
     var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
     var logger = services.GetRequiredService<ILogger<DevicesController>>();
 
     var tenant = await services.CreateTestTenant();
-  _ = await services.CreateTestUser(tenant.Id, email: "seed-user@test.local");
+    _ = await services.CreateTestUser(tenant.Id, email: "seed-user@test.local");
     var user = await services.CreateTestUser(tenant.Id, email: "tagged-user@test.local");
 
     var allowedTag = new Tag { Id = Guid.NewGuid(), Name = "Allowed", TenantId = tenant.Id };
@@ -1451,7 +1665,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         PageSize = 20
       },
       db,
-      authorizationService,
       agentVersionProvider,
       logger);
 
@@ -1544,7 +1757,6 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
         PageSize = 20
       },
       db,
-      authorizationService,
       agentVersionProvider,
       logger);
 

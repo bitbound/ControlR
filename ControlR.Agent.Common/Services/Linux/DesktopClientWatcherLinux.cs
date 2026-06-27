@@ -90,11 +90,11 @@ internal class DesktopClientWatcherLinux(
       var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
       if (loggedInUsers.Count == 0)
       {
-        _logger.LogInformationDeduped( "No logged-in users found.");
+        _logger.LogDebugDeduped( "No logged-in users found.");
         return;
       }
 
-      _logger.LogInformationDeduped("Found {UserCount} logged-in users.", args: loggedInUsers.Count);
+      _logger.LogDebugDeduped("Found {UserCount} logged-in users.", args: loggedInUsers.Count);
 
       foreach (var uid in loggedInUsers)
       {
@@ -142,7 +142,7 @@ internal class DesktopClientWatcherLinux(
       }
 
       _desktopClientRepairCoordinator.ReportHealthy(repairKey);
-      _logger.LogInformationDeduped("Desktop client service is running for user {UID}.", args: uid);
+      _logger.LogDebugDeduped("Desktop client service is running for user {UID}.", args: uid);
     }
     catch (Exception ex)
     {
@@ -300,7 +300,7 @@ internal class DesktopClientWatcherLinux(
       var output = result.Value?.Trim();
       var isRunning = string.Equals(output, "active", StringComparison.OrdinalIgnoreCase);
 
-      _logger.LogInformationDeduped("Service {ServiceName} status for user {UID}: {Status}", args: [serviceName, uid, isRunning ? "Running" : "Not running"]);
+      _logger.LogDebugDeduped("Service {ServiceName} status for user {UID}: {Status}", args: [serviceName, uid, isRunning ? "Running" : "Not running"]);
 
       return isRunning;
     }

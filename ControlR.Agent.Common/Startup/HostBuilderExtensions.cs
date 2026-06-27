@@ -37,7 +37,6 @@ internal static class HostApplicationBuilderExtensions
     Uri? serverUri,
     bool loadAppSettings = true)
   {
-    builder.AddServiceDefaults(ServiceNames.ControlrAgent);
 
     instanceId = instanceId?.SanitizeForFileSystem();
     var services = builder.Services;
@@ -49,6 +48,8 @@ internal static class HostApplicationBuilderExtensions
       })
       .AddSystemd();
 
+    // Prevent reading for appsettings in same directory as the executable.
+    // We want it to use the custom path, which we set further below.
     if (!SystemEnvironment.Instance.IsDebug)
     {
       configuration.Sources.Clear();
@@ -187,6 +188,7 @@ internal static class HostApplicationBuilderExtensions
       }
     }
 
+    builder.AddServiceDefaults(ServiceNames.ControlrAgent);
     builder.BootstrapSerilog(pathProvider.GetAgentLogFilePath(), TimeSpan.FromDays(7));
 
     return builder;

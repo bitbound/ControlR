@@ -8,7 +8,6 @@ namespace ControlR.ApiClient;
 public interface IControlrApi
 {
   IAgentUpdateApi AgentUpdate { get; }
-  IAgentVersionApi AgentVersion { get; }
   IAuthApi Auth { get; }
   IDesktopPreviewApi DesktopPreview { get; }
   IDeviceFileSystemApi DeviceFileSystem { get; }
@@ -24,7 +23,6 @@ public interface IControlrApi
   IServerAlertApi ServerAlert { get; }
   IServerLogsApi ServerLogs { get; }
   IServerStatsApi ServerStats { get; }
-  IServerVersionApi ServerVersion { get; }
   ITagsApi Tags { get; }
   ITenantSettingsApi TenantSettings { get; }
   ITestEmailApi TestEmail { get; }
@@ -33,6 +31,7 @@ public interface IControlrApi
   IUsersApi Users { get; }
   IUserServerSettingsApi UserServerSettings { get; }
   IUserTagsApi UserTags { get; }
+  IVersionApi Version { get; }
 }
 
 public partial class ControlrApi(
@@ -66,8 +65,7 @@ public partial class ControlrApi(
   IUserServerSettingsApi,
   IUserTagsApi,
   IUsersApi,
-  IAgentVersionApi,
-  IServerVersionApi
+  IVersionApi
 {
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
@@ -76,7 +74,6 @@ public partial class ControlrApi(
   private readonly IOptions<ControlrApiClientOptions> _options = options;
 
   public IAgentUpdateApi AgentUpdate => this;
-  public IAgentVersionApi AgentVersion => this;
   public IAuthApi Auth => this;
   public IDesktopPreviewApi DesktopPreview => this;
   public IDeviceFileSystemApi DeviceFileSystem => this;
@@ -92,7 +89,6 @@ public partial class ControlrApi(
   public IServerAlertApi ServerAlert => this;
   public IServerLogsApi ServerLogs => this;
   public IServerStatsApi ServerStats => this;
-  public IServerVersionApi ServerVersion => this;
   public ITagsApi Tags => this;
   public ITenantSettingsApi TenantSettings => this;
   public ITestEmailApi TestEmail => this;
@@ -101,6 +97,7 @@ public partial class ControlrApi(
   public IUsersApi Users => this;
   public IUserServerSettingsApi UserServerSettings => this;
   public IUserTagsApi UserTags => this;
+  public IVersionApi Version => this;
 
   private async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
   {

@@ -3,7 +3,6 @@ namespace ControlR.Libraries.Api.Contracts.Constants;
 public static class HttpConstants
 {
   public const string AgentUpdateEndpoint = "/api/agent-update";
-  public const string AgentVersionEndpoint = "/api/version/agent";
   public const string AuthEndpoint = "/api/auth";
   public const string DesktopPreviewEndpoint = "/api/desktop-preview";
   public const string DeviceFileSystemEndpoint = "/api/device-file-system";
@@ -19,7 +18,6 @@ public static class HttpConstants
   public const string ServerAlertEndpoint = "/api/server-alert";
   public const string ServerLogsEndpoint = "/api/server-logs";
   public const string ServerStatsEndpoint = "/api/server-stats";
-  public const string ServerVersionEndpoint = "/api/version/server";
   public const string TagsEndpoint = "/api/tags";
   public const string TenantSettingsEndpoint = "/api/tenant-settings";
   public const string TestEmailEndpoint = "/api/test-email";

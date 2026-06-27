@@ -1379,6 +1379,93 @@
         }
       }
     },
+    "/api/devices/delete-many": {
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteDevicesRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteDevicesRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteDevicesRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteManyDevicesResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteManyDevicesResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteManyDevicesResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices/summary": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceSummaryDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceSummaryDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/devices/search": {
       "post": {
         "tags": [
@@ -4208,7 +4295,7 @@
           "requirePasswordChange",
           "twoFactorEnabled",
           "emailConfirmed",
-          "roles"
+          "tenantId"
         ],
         "type": "object",
         "properties": {
@@ -4217,16 +4304,10 @@
             "format": "uuid"
           },
           "userName": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string"
           },
           "email": {
-            "type": [
-              "null",
-              "string"
-            ]
+            "type": "string"
           },
           "createdAt": {
             "type": "string",
@@ -4244,11 +4325,9 @@
           "emailConfirmed": {
             "type": "boolean"
           },
-          "roles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -4260,6 +4339,45 @@
         "properties": {
           "isEnabled": {
             "type": "boolean"
+          }
+        }
+      },
+      "DeleteDevicesRequestDto": {
+        "required": [
+          "deviceIds"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceIds": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "DeleteManyDevicesResponseDto": {
+        "required": [
+          "successIds",
+          "failureIds"
+        ],
+        "type": "object",
+        "properties": {
+          "successIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "failureIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -4563,6 +4681,27 @@
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "DeviceSummaryDto": {
+        "required": [
+          "id",
+          "lastSeen",
+          "agentVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "agentVersion": {
+            "type": "string"
           }
         }
       },

@@ -52,8 +52,7 @@ internal sealed class DxOutputDuplicator(ILogger<DxOutputDuplicator> logger) : I
       _currentOutput?.Dispose();
       _currentOutput = null;
 
-      var factoryGuid = typeof(IDXGIFactory1).GUID;
-      var factoryResult = PInvoke.CreateDXGIFactory1(factoryGuid, out var factoryObj);
+      var factoryResult = PInvoke.CreateDXGIFactory1<IDXGIFactory1>(out var factoryObj);
       if (factoryResult.Failed)
       {
         _logger.LogWarning("Failed to create DXGI Factory. Result: {Result}.", factoryResult);

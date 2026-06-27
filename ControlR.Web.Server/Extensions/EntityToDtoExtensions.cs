@@ -16,6 +16,7 @@ public static class EntityToDtoExtensions
       key.Expiration,
       key.FriendlyName);
   }
+
   public static DeviceResponseDto ToDto(this Device device, bool isOutdated)
   {
     return new DeviceResponseDto(
@@ -50,6 +51,7 @@ public static class EntityToDtoExtensions
       TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray()
     };
   }
+
   public static RoleResponseDto ToDto(this AppRole role)
   {
     var userIds = role
@@ -62,10 +64,12 @@ public static class EntityToDtoExtensions
       role.Name ?? string.Empty,
       userIds);
   }
+
   public static UserPreferenceResponseDto ToDto(this UserPreference userPreference)
   {
     return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
   }
+
   public static ServerAlertResponseDto ToDto(this ServerAlert serverAlert)
   {
     return new ServerAlertResponseDto(
@@ -76,10 +80,12 @@ public static class EntityToDtoExtensions
       serverAlert.IsSticky,
       serverAlert.IsEnabled);
   }
+
   public static TenantSettingResponseDto ToDto(this TenantSetting tenantSetting)
   {
     return new TenantSettingResponseDto(tenantSetting.Id, tenantSetting.Name, tenantSetting.Value);
   }
+
   public static TagResponseDto ToDto(this Tag tag)
   {
     var userIds = tag
@@ -98,5 +104,13 @@ public static class EntityToDtoExtensions
       tag.Type,
       userIds,
       deviceIds);
+  }
+
+  public static DeviceSummaryDto ToSummaryDto(this Device device)
+  {
+    return new DeviceSummaryDto(
+      device.Id,
+      device.LastSeen,
+      device.AgentVersion);
   }
 }

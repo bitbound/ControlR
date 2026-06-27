@@ -13,11 +13,10 @@ public static class SerilogHostExtensions
       TimeSpan logRetention,
       Action<LoggerConfiguration>? extraLoggerConfig = null)
   {
-    hostBuilder.Services.BootstrapSerilog(
-        hostBuilder.Configuration,
-        logFilePath,
-        logRetention,
-        extraLoggerConfig);
+    var loggerConfig = new LoggerConfiguration();
+    ApplySharedLoggerConfig(loggerConfig, logFilePath, logRetention, extraLoggerConfig);
+    Log.Logger = loggerConfig.CreateBootstrapLogger();
+    hostBuilder.Logging.AddSerilog(Log.Logger);
 
     return hostBuilder;
   }
@@ -28,11 +27,37 @@ public static class SerilogHostExtensions
     TimeSpan logRetention,
     Action<LoggerConfiguration>? extraLoggerConfig = null)
   {
-    try
-    {
-      void ApplySharedLoggerConfig(LoggerConfiguration loggerConfiguration)
+    // https://github.com/serilog/serilog-aspnetcore#two-stage-initialization
+    var loggerConfig = new LoggerConfiguration();
+    ApplySharedLoggerConfig(loggerConfig, logFilePath, logRetention, extraLoggerConfig);
+    Log.Logger = loggerConfig.CreateBootstrapLogger();
+
+    services.AddSerilog(
+      (serviceProvider, loggerConfig) =>
       {
-        loggerConfiguration
+        loggerConfig
+          .ReadFrom.Configuration(configuration)
+          .ReadFrom.Services(serviceProvider);
+
+        ApplySharedLoggerConfig(loggerConfig, logFilePath, logRetention, extraLoggerConfig);
+      },
+      preserveStaticLogger: true);
+
+    var logsDir = Path.GetDirectoryName(logFilePath);
+    if (logsDir is not null)
+    {
+      _ = Directory.CreateDirectory(logsDir);
+    }
+    return services;
+  }
+
+  private static void ApplySharedLoggerConfig(
+    LoggerConfiguration loggerConfiguration,
+    string logFilePath,
+    TimeSpan logRetention,
+    Action<LoggerConfiguration>? extraLoggerConfig)
+  {
+    loggerConfiguration
             .Destructure.ToMaximumDepth(3)
             .Enrich.FromLogContext()
             .Enrich.WithThreadId()
@@ -43,35 +68,6 @@ public static class SerilogHostExtensions
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}",
                 shared: true);
 
-        extraLoggerConfig?.Invoke(loggerConfiguration);
-      }
-
-      // https://github.com/serilog/serilog-aspnetcore#two-stage-initialization
-      var loggerConfig = new LoggerConfiguration();
-      ApplySharedLoggerConfig(loggerConfig);
-      Log.Logger = loggerConfig.CreateBootstrapLogger();
-
-      services.AddSerilog(
-        (serviceProvider, loggerConfig) =>
-        {
-          loggerConfig
-            .ReadFrom.Configuration(configuration)
-            .ReadFrom.Services(serviceProvider);
-
-          ApplySharedLoggerConfig(loggerConfig);
-        },
-        preserveStaticLogger: true);
-
-      var logsDir = Path.GetDirectoryName(logFilePath);
-      if (logsDir is not null)
-      {
-        _ = Directory.CreateDirectory(logsDir);
-      }
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"Failed to configure Serilog file logging.  Error: {ex.Message}");
-    }
-    return services;
+    extraLoggerConfig?.Invoke(loggerConfiguration);
   }
 }

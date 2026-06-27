@@ -124,7 +124,6 @@ public partial class ControlrApiContractSyncTests
 
     var mappedConstants = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     var endpointPropertyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-    var endpointOverrides = GetEndpointPropertyOverrides();
 
     var constantFields = typeof(HttpConstants)
       .GetFields(BindingFlags.Public | BindingFlags.Static)
@@ -143,26 +142,15 @@ public partial class ControlrApiContractSyncTests
 
       mappedConstants.Add(field.Name);
 
-      var inferredPropertyName = field.Name.EndsWith("Endpoint", StringComparison.Ordinal)
+      var propertyName = field.Name.EndsWith("Endpoint", StringComparison.Ordinal)
         ? field.Name[..^"Endpoint".Length]
         : field.Name;
-
-      var propertyName = endpointOverrides.TryGetValue(field.Name, out var overridePropertyName)
-        ? overridePropertyName
-        : inferredPropertyName;
 
       Assert.True(
         propertyNames.Contains(propertyName),
         $"HttpConstants field '{field.Name}' inferred IControlrApi property '{propertyName}', but that property was not found.");
 
       endpointPropertyMap[constantValue] = propertyName;
-    }
-
-    foreach (var overrideFieldName in endpointOverrides.Keys)
-    {
-      Assert.True(
-        mappedConstants.Contains(overrideFieldName),
-        $"Endpoint override is defined for '{overrideFieldName}', but HttpConstants does not contain that field.");
     }
 
     return endpointPropertyMap;
@@ -186,13 +174,6 @@ public partial class ControlrApiContractSyncTests
     throw new DirectoryNotFoundException("Could not locate repository root containing ControlR.slnx.");
   }
 
-  private static Dictionary<string, string> GetEndpointPropertyOverrides()
-  {
-    return new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-      ["VersionEndpoint"] = "AgentVersion",
-    };
-  }
 
   private static string[] GetHttpConstantValues()
   {

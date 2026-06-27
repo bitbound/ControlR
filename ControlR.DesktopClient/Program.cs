@@ -16,12 +16,15 @@ internal sealed class Program
       => AppBuilder.Configure<App>()
           .UsePlatformDetect()
           .WithInterFont()
+#if DEBUG
+          // TODO: Add after migration to v12.
+          //.WithDeveloperTools()
+#endif
           .LogToTrace()
           .With(new MacOSPlatformOptions()
           {
             ShowInDock = false
-          })
-          .WithDeveloperTools();
+          });
 
   // Initialization code. Don't use any Avalonia, third-party APIs or any
   // SynchronizationContext-reliant code before AppMain is called: things aren't initialized

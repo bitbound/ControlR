@@ -60,8 +60,10 @@ public interface IDevicesApi
 {
   Task<ApiResult> CreateDevice(CreateDeviceRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteDevice(Guid deviceId, CancellationToken cancellationToken = default);
+  Task<ApiResult<DeleteManyDevicesResponseDto>> DeleteManyDevices(DeleteDevicesRequestDto request, CancellationToken cancellationToken = default);
   IAsyncEnumerable<DeviceResponseDto> GetAllDevices(CancellationToken cancellationToken = default);
   Task<ApiResult<DeviceResponseDto>> GetDevice(Guid deviceId, CancellationToken cancellationToken = default);
+  IAsyncEnumerable<DeviceSummaryDto> GetDeviceSummaries(CancellationToken cancellationToken = default);
   Task<ApiResult<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<DeviceResponseDto>> UpdateDeviceAlias(UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken = default);
 }
@@ -192,12 +194,8 @@ public interface IUsersApi
   Task<ApiResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
 }
 
-public interface IAgentVersionApi
+public interface IVersionApi
 {
   Task<ApiResult<Version>> GetCurrentAgentVersion(CancellationToken cancellationToken = default);
-}
-
-public interface IServerVersionApi
-{
   Task<ApiResult<Version>> GetCurrentServerVersion(CancellationToken cancellationToken = default);
 }

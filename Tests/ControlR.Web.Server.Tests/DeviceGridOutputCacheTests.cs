@@ -99,7 +99,6 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     var result1 = await controller.SearchDevices(
         request,
         db,
-        scope.ServiceProvider.GetRequiredService<IAuthorizationService>(),
         scope.ServiceProvider.GetRequiredService<IAgentVersionProvider>(),
         scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
 
@@ -141,7 +140,6 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     var result3 = await controller.SearchDevices(
       request,
       db,
-      scope.ServiceProvider.GetRequiredService<IAuthorizationService>(),
       scope.ServiceProvider.GetRequiredService<IAgentVersionProvider>(),
       scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
 

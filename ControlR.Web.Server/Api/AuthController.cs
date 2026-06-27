@@ -132,7 +132,8 @@ public class AuthController : ControllerBase
       return NotFound();
     }
 
-    var roles = await userManager.GetRolesAsync(user);
+    ArgumentException.ThrowIfNullOrWhiteSpace(user.UserName);
+    ArgumentException.ThrowIfNullOrWhiteSpace(user.Email);
 
     return Ok(new CurrentUserResponseDto(
       user.Id,
@@ -143,7 +144,7 @@ public class AuthController : ControllerBase
       user.RequirePasswordChange,
       user.TwoFactorEnabled,
       user.EmailConfirmed,
-      [.. roles]));
+      user.TenantId));
   }
 
   [AllowAnonymous]

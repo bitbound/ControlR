@@ -5,7 +5,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <!-- 
-      This direct reference to Nerdbank.MessagePack can be removed when StreamJsonRpc updates
+      TODO: This direct reference to Nerdbank.MessagePack can be removed when StreamJsonRpc updates
       their dependency, which currently has a vulnerability (5/30/26).
     -->
     <PackageReference Include="Nerdbank.MessagePack" />
