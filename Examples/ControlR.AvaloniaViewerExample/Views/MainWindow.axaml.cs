@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Styling;
 using System.ComponentModel;
 using ControlR.AvaloniaViewerExample.ViewModels;
+using ControlR.Viewer.Avalonia;
 using ControlR.Viewer.Avalonia.Services;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 
@@ -10,6 +11,7 @@ namespace ControlR.AvaloniaViewerExample.Views;
 
 public partial class MainWindow : Window
 {
+  private IDisposable? _errorContentSubscription;
   private IDisposable? _viewerServicesReadyRegistration;
   private IMainWindowViewModel? _viewModel;
 
@@ -20,6 +22,7 @@ public partial class MainWindow : Window
 
   protected override void OnClosed(EventArgs e)
   {
+    _errorContentSubscription?.Dispose();
     _viewerServicesReadyRegistration?.Dispose();
     _viewModel?.PropertyChanged -= HandleViewModelPropertyChanged;
     _viewModel?.Dispose();
@@ -56,8 +59,21 @@ public partial class MainWindow : Window
     ApplyTheme(_viewModel.IsDarkMode);
     _viewerServicesReadyRegistration = ViewerRegistry.OnServicesReady(Viewer.InstanceId, HandleViewerServicesReady);
 
+    // Sync the viewer's initialization error to the ViewModel.
+    _errorContentSubscription?.Dispose();
+    _errorContentSubscription = Viewer.GetObservable(ControlrViewer.ErrorContentProperty)
+      .Subscribe(HandleViewerErrorContentChanged);
+
+    // Also pick up any error that was set before we subscribed.
+    HandleViewerErrorContentChanged(Viewer.ErrorContent);
+
     _viewModel.PropertyChanged += HandleViewModelPropertyChanged;
     SyncSidebarSelection(_viewModel.ActivePage);
+  }
+
+  private void HandleViewerErrorContentChanged(string? errorMessage)
+  {
+    _viewModel?.HandleViewerError(errorMessage);
   }
 
   private Task HandleViewerServicesReady(ViewerInstanceInfo instanceInfo)

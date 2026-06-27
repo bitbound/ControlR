@@ -51,10 +51,16 @@ public partial class ChatView : UserControl
 
   private void HandleChatMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
   {
-    if (e.Action == NotifyCollectionChangedAction.Add ||
-        e.Action == NotifyCollectionChangedAction.Replace)
+    switch (e.Action)
     {
-      Dispatcher.UIThread.Post(ScrollToMessagesBottom, DispatcherPriority.Background);
+      case NotifyCollectionChangedAction.Add:
+      case NotifyCollectionChangedAction.Replace:
+        Dispatcher.UIThread.Post(ScrollToMessagesBottom, DispatcherPriority.Background);
+        break;
+      case NotifyCollectionChangedAction.Remove:
+      case NotifyCollectionChangedAction.Move:
+        // No scroll adjustment needed for message removal/reordering.
+        break;
     }
   }
 

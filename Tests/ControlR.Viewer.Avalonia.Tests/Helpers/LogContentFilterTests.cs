@@ -28,8 +28,8 @@ public class LogContentFilterTests
     var result = LogContentFilter.Apply(contents, "ERROR");
 
     // Assert
-    // Lines contain trailing \r because Apply splits on \n only.
-    Assert.Equal("ERROR: something\r\nERROR: another", result);
+    // CRLF is normalized to LF before filtering.
+    Assert.Equal("ERROR: something\nERROR: another", result);
   }
 
   [Fact]

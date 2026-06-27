@@ -13,6 +13,8 @@ namespace ControlR.Viewer.Avalonia;
 
 public partial class ControlrViewer : UserControl
 {
+  public static readonly StyledProperty<string?> ErrorContentProperty =
+    AvaloniaProperty.Register<ControlrViewer, string?>(nameof(ErrorContent));
   public static readonly StyledProperty<Guid> InstanceIdProperty =
     AvaloniaProperty.Register<ControlrViewer, Guid>(nameof(InstanceId));
   public static readonly StyledProperty<ControlrViewerOptions?> OptionsProperty =
@@ -43,6 +45,15 @@ public partial class ControlrViewer : UserControl
       .Subscribe(HandlePageChanged);
   }
 
+  /// <summary>
+  /// Gets or sets an error message set when initialization fails.
+  /// The host app can bind to this to display the error on the login screen.
+  /// </summary>
+  public string? ErrorContent
+  {
+    get => GetValue(ErrorContentProperty);
+    set => SetValue(ErrorContentProperty, value);
+  }
   public Guid InstanceId
   {
     get => GetValue(InstanceIdProperty);
@@ -108,30 +119,8 @@ public partial class ControlrViewer : UserControl
       return;
     }
 
-    if (Options is null)
-    {
-      SetErrorContent(Assets.Resources.ControlrViewer_OptionsNotSet);
-      return;
-    }
-
-    if (Options.BaseUrl is null)
-    {
-      SetErrorContent(Assets.Resources.ControlrViewer_BaseUrlRequired);
-      return;
-    }
-
-    if (Options.DeviceId == Guid.Empty)
-    {
-      SetErrorContent(Assets.Resources.ControlrViewer_DeviceIdRequired);
-      return;
-    }
-
-    if (Options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken &&
-        string.IsNullOrWhiteSpace(Options.PersonalAccessToken))
-    {
-      SetErrorContent(Assets.Resources.ControlrViewer_AuthRequired);
-      return;
-    }
+    // Options validation is deferred to InitializeServices(), which runs after the
+    // control is attached to the visual tree and data bindings have resolved.
   }
 
   protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -246,6 +235,25 @@ public partial class ControlrViewer : UserControl
         return;
       }
 
+      if (Options.BaseUrl is null)
+      {
+        SetErrorContent(Assets.Resources.ControlrViewer_BaseUrlRequired);
+        return;
+      }
+
+      if (Options.DeviceId == Guid.Empty)
+      {
+        SetErrorContent(Assets.Resources.ControlrViewer_DeviceIdRequired);
+        return;
+      }
+
+      if (Options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken &&
+          string.IsNullOrWhiteSpace(Options.PersonalAccessToken))
+      {
+        SetErrorContent(Assets.Resources.ControlrViewer_AuthRequired);
+        return;
+      }
+
       if (TopLevel.GetTopLevel(this) is not { } topLevel)
       {
         SetErrorContent(Assets.Resources.ControlrViewer_TopLevelMissing);
@@ -265,6 +273,9 @@ public partial class ControlrViewer : UserControl
 
       // Register this instance in the global registry
       _instanceInfo = ViewerRegistry.Register(InstanceId, this, _serviceProvider);
+
+      // Clear any previous initialization error
+      ErrorContent = null;
 
       // Create and set the ViewerShell
       Dispatcher.UIThread.Post(() =>
@@ -287,16 +298,6 @@ public partial class ControlrViewer : UserControl
 
   private void SetErrorContent(string message)
   {
-    var textBlock = new TextBlock
-    {
-      Text = message,
-      Foreground = Brushes.Red,
-      Margin = new Thickness(0, 40, 0, 0),
-      FontSize = 20,
-      HorizontalAlignment = HorizontalAlignment.Center,
-      VerticalAlignment = VerticalAlignment.Top,
-      TextWrapping = TextWrapping.Wrap
-    };
-    Content = textBlock;
+    ErrorContent = message;
   }
 }

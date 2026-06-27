@@ -35,8 +35,10 @@ public interface IMainWindowViewModel : INotifyPropertyChanged, IDisposable
   IRelayCommand SignOutCommand { get; }
   string StatusMessage { get; }
   string TwoFactorCode { get; set; }
+  string? ViewerInitializationErrorMessage { get; }
   ControlrViewerOptions ViewerOptions { get; }
 
+  void HandleViewerError(string? errorMessage);
   void RegisterAuthChangeHandler(Guid viewerInstanceId);
 }
 
@@ -104,12 +106,26 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   public partial string StatusMessage { get; set; } = string.Empty;
   [ObservableProperty]
   public partial string TwoFactorCode { get; set; } = string.Empty;
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(IsLoginVisible))]
+  public partial string? ViewerInitializationErrorMessage { get; set; }
   public ControlrViewerOptions ViewerOptions { get; }
 
   public void Dispose()
   {
     _authSession?.StateChanged -= HandleSessionStateChanged;
     GC.SuppressFinalize(this);
+  }
+
+  public void HandleViewerError(string? errorMessage)
+  {
+    if (string.IsNullOrWhiteSpace(errorMessage))
+    {
+      ViewerInitializationErrorMessage = null;
+      return;
+    }
+
+    ViewerInitializationErrorMessage = errorMessage;
   }
 
   public void RegisterAuthChangeHandler(Guid viewerInstanceId)

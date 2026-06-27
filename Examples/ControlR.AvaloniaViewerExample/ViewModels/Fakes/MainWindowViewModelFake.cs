@@ -49,6 +49,7 @@ public partial class MainWindowViewModelFake : ObservableObject, IMainWindowView
   public bool ShowUserPasswordInputs => IsInteractiveBearerAuth;
   public IAsyncRelayCommand SignInCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
   public IRelayCommand SignOutCommand { get; } = new RelayCommand(() => { });
+  public string? ViewerInitializationErrorMessage => null;
   public ControlrViewerOptions ViewerOptions { get; } = new()
   {
     AuthenticationMethod = ViewerAuthenticationMethod.InteractiveBearer,
@@ -57,6 +58,10 @@ public partial class MainWindowViewModelFake : ObservableObject, IMainWindowView
   };
 
   public void Dispose()
+  {
+  }
+
+  public void HandleViewerError(string? errorMessage)
   {
   }
 

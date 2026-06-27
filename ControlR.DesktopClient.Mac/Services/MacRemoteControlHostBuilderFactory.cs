@@ -2,7 +2,6 @@ using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
-using ControlR.DesktopClient.Mac;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,10 +15,10 @@ public class MacRemoteControlHostBuilderFactory(
   IUserInteractionService userInteractionService,
   IIpcClientAccessor ipcClientAccessor,
   IToaster toaster,
-  IUiDispatcher uiThread) : IRemoteControlHostBuilderFactory
+  IUiDispatcher dispatcher) : IRemoteControlHostBuilderFactory
 {
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
-  private readonly IUiDispatcher _dispatcher = uiThread;
+  private readonly IUiDispatcher _dispatcher = dispatcher;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly IToaster _toaster = toaster;
   private readonly IUserInteractionService _userInteractionService = userInteractionService;

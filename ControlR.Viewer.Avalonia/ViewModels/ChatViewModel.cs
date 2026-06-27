@@ -176,10 +176,26 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
     if (disposing)
     {
       _stateChangeHandler?.Dispose();
-      _ = CloseChat();
     }
 
     base.Dispose(disposing);
+  }
+
+  protected override async ValueTask DisposeAsync(bool disposing)
+  {
+    if (disposing)
+    {
+      try
+      {
+        await CloseChat();
+      }
+      catch (Exception ex)
+      {
+        _logger?.LogError(ex, "Failed to close chat session during disposal.");
+      }
+    }
+
+    await base.DisposeAsync(disposing);
   }
 
   protected override async Task OnInitializeAsync()
@@ -344,11 +360,11 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
         Timestamp = DateTimeOffset.Now
       });
 
-      NewMessage = string.Empty;
-
       await _viewerHub.Server.SendChatMessage(_viewerOptions.Value.DeviceId, dto);
 
       await _chatState.NotifyStateChanged();
+      
+      NewMessage = string.Empty;
     }
     catch (Exception ex)
     {

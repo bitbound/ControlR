@@ -11,7 +11,7 @@ public static class LogContentFilter
       return contents;
     }
 
-    var lines = contents.Split('\n');
+    var lines = contents.Replace("\r\n", "\n").Split('\n');
     var matching = lines.Where(line => line.Contains(filter, Comparison));
     return string.Join('\n', matching);
   }

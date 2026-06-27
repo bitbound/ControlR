@@ -4,6 +4,7 @@
     <IsNuGetPackage>true</IsNuGetPackage>
     <PackageIcon>appicon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <UserSecretsId>516726de-c25f-4e24-b3f0-d27ed0a6eda0</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\.assets\appicon.png">
@@ -29,10 +30,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
-    <ProjectReference
-      Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
-    <ProjectReference
-      Include="..\Libraries\ControlR.Libraries.Viewer.Common\ControlR.Libraries.Viewer.Common.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Viewer.Common\ControlR.Libraries.Viewer.Common.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Assets\Resources.Designer.cs">

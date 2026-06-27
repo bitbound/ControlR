@@ -16,7 +16,8 @@ public partial class ControlrApi
       return version;
     });
   }
-    async Task<ApiResult<Version>> IVersionApi.GetCurrentServerVersion(CancellationToken cancellationToken)
+
+  async Task<ApiResult<Version>> IVersionApi.GetCurrentServerVersion(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
       await _client.GetFromJsonAsync<Version>($"{HttpConstants.VersionEndpoint}/server", cancellationToken));

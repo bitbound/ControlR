@@ -253,10 +253,16 @@
               <TextBlock Text="Authenticator code" />
               <TextBox Text="{Binding TwoFactorCode}" />
             </StackPanel>
-
+            
             <TextBlock TextWrapping="Wrap"
                        Foreground="{DynamicResource InfoColor}"
+                       IsVisible="{Binding !!StatusMessage}"
                        Text="{Binding StatusMessage}" />
+
+            <TextBlock Text="{Binding ViewerInitializationErrorMessage}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding !!ViewerInitializationErrorMessage}"
+                       Foreground="{DynamicResource ErrorColor}" />
 
             <StackPanel Orientation="Horizontal"
                         Spacing="10">

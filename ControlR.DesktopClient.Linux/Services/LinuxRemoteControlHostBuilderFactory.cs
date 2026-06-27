@@ -16,10 +16,10 @@ public class LinuxRemoteControlHostBuilderFactory(
   IUserInteractionService userInteractionService,
   IIpcClientAccessor ipcClientAccessor,
   IToaster toaster,
-  IUiDispatcher uiThread) : IRemoteControlHostBuilderFactory
+  IUiDispatcher dispatcher) : IRemoteControlHostBuilderFactory
 {
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
-  private readonly IUiDispatcher _dispatcher = uiThread;
+  private readonly IUiDispatcher _dispatcher = dispatcher;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly IToaster _toaster = toaster;
   private readonly IUserInteractionService _userInteractionService = userInteractionService;

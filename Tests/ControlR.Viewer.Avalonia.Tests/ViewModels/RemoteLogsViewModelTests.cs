@@ -46,7 +46,8 @@ public class RemoteLogsViewModelTests
     vm.ApplyFilter();
 
     // Assert
-    Assert.Equal("ERROR: something\r\nERROR: another", vm.DisplayedLogContents);
+    // CRLF is normalized to LF before filtering.
+    Assert.Equal("ERROR: something\nERROR: another", vm.DisplayedLogContents);
   }
 
   [Fact]
