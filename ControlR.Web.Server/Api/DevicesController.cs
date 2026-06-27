@@ -176,11 +176,11 @@ public class DevicesController(
     {
       // All authorized devices were deleted.
       return new DeleteManyDevicesResponseDto(
-        SuccessIds: authorizedDeviceIds.ToImmutableList(),
-        FailureIds: requestDto.DeviceIds.Except(authorizedIdSet).ToImmutableList());
+        SuccessIds: [.. authorizedDeviceIds],
+        FailureIds: [.. requestDto.DeviceIds.Except(authorizedIdSet)]);
     }
 
-    // Race condition: some were deleted concurrently. Find remaining.
+    // Some failed to delete.  Find remaining.
     var remainingIds = await appDb.Devices
       .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
       .Select(x => x.Id)

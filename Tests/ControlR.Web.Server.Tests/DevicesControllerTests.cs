@@ -92,6 +92,142 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task DeleteMany_PartialDelete_ReturnsMixedSuccessAndFailure()
+  {
+    // Arrange
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, useInMemoryDatabase: false);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var controller = scope.CreateController<DevicesController>();
+    await using var db = services.GetRequiredService<AppDb>();
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, roles: RoleNames.DeviceSuperUser);
+
+    // Create an abundance of devices (15 total).
+    // 10 will be requested for deletion, 5 stay untouched.
+    var allDeviceIds = Enumerable.Range(0, 15).Select(_ => Guid.NewGuid()).ToList();
+    var deleteRequestIds = allDeviceIds.Take(10).ToList();
+    var unaffectedIds = allDeviceIds.Skip(10).ToList();
+
+    // 3 non-existent IDs → "not found" failures
+    var nonExistentIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+
+    // 3 IDs that the trigger will skip → "failed to delete"
+    var triggerSkipIds = deleteRequestIds.Take(3).ToList();
+
+    var deviceManager = services.GetRequiredService<IDeviceManager>();
+
+    foreach (var id in allDeviceIds)
+    {
+      var deviceDto = new DeviceUpdateRequestDto(
+        Name: $"Device {id}",
+        AgentVersion: "1.0.0",
+        CpuUtilization: 10,
+        Id: id,
+        Is64Bit: true,
+        OsArchitecture: Architecture.X64,
+        Platform: SystemPlatform.Windows,
+        ProcessorCount: 4,
+        OsDescription: "Windows 10",
+        TenantId: tenant.Id,
+        TotalMemory: 8192,
+        TotalStorage: 256000,
+        UsedMemory: 4096,
+        UsedStorage: 128000,
+        CurrentUsers: ["TestUser"],
+        MacAddresses: ["00:11:22:33:44:55"],
+        LocalIpV4: "10.0.0.2",
+        LocalIpV6: "fe80::2",
+        Drives: [new Drive { Name = "C:", VolumeLabel = "System", TotalSize = 256000, FreeSpace = 128000 }]);
+
+      var connectionContext = new DeviceConnectionContext(
+        ConnectionId: "test-conn",
+        RemoteIpAddress: IPAddress.Loopback,
+        LastSeen: DateTimeOffset.UtcNow,
+        IsOnline: true);
+
+      await deviceManager.AddOrUpdate(deviceDto, connectionContext);
+    }
+
+    foreach (var id in allDeviceIds)
+    {
+      Assert.True(await db.Devices.AnyAsync(x => x.Id == id, TestContext.Current.CancellationToken));
+    }
+
+    // Install a BEFORE DELETE trigger that silently suppresses deletion of
+    // 3 specific device IDs. ExecuteDelete will skip those rows, returning
+    // deletedCount < authorizedDeviceIds.Count, and they survive to appear
+    // in remainingIds → failureIds as "failed to delete".
+    var skipIdLiterals = string.Join(", ", triggerSkipIds.Select(id => $"'{id}'::uuid"));
+    var createTriggerSql =
+      $"""
+      CREATE OR REPLACE FUNCTION _test_skip_device_delete() RETURNS trigger AS $$
+      BEGIN
+        IF OLD."Id" IN ({skipIdLiterals}) THEN
+          RETURN NULL;
+        END IF;
+        RETURN OLD;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER _test_skip_device_delete
+      BEFORE DELETE ON "Devices"
+      FOR EACH ROW EXECUTE FUNCTION _test_skip_device_delete();
+      """;
+#pragma warning disable EF1002
+    await db.Database.ExecuteSqlRawAsync(createTriggerSql, TestContext.Current.CancellationToken);
+#pragma warning restore EF1002
+
+    try
+    {
+      await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
+
+      // Act — request 10 existing + 3 non-existent
+      var request = new DeleteDevicesRequestDto([.. deleteRequestIds, .. nonExistentIds]);
+      var result = await controller.DeleteMany(db, request, TestContext.Current.CancellationToken);
+
+      // Assert
+      var response = result.Value;
+      Assert.NotNull(response);
+
+      // 7 devices successfully deleted (10 requested - 3 skipped by trigger)
+      Assert.Equal(7, response.SuccessIds.Count);
+      foreach (var id in deleteRequestIds.Except(triggerSkipIds))
+      {
+        Assert.Contains(id, response.SuccessIds);
+      }
+
+      // 6 failures: 3 trigger-skipped ("failed to delete") + 3 non-existent ("not found")
+      Assert.Equal(6, response.FailureIds.Count);
+      foreach (var id in triggerSkipIds)
+      {
+        Assert.Contains(id, response.FailureIds);
+      }
+      foreach (var id in nonExistentIds)
+      {
+        Assert.Contains(id, response.FailureIds);
+      }
+
+      // Unaffected devices should still exist
+      foreach (var id in unaffectedIds)
+      {
+        Assert.True(await db.Devices.AnyAsync(x => x.Id == id, TestContext.Current.CancellationToken));
+      }
+    }
+    finally
+    {
+      // Clean up the trigger and function
+      await db.Database.ExecuteSqlRawAsync(
+        """
+        DROP TRIGGER IF EXISTS _test_skip_device_delete ON "Devices";
+        DROP FUNCTION IF EXISTS _test_skip_device_delete();
+        """,
+        TestContext.Current.CancellationToken);
+    }
+  }
+
+  [Fact]
   public async Task DeleteMany_ReturnsBadRequestWhenNoTenantId()
   {
     // Arrange
