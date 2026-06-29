@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 
-namespace ControlR.Web.Server;
+namespace ControlR.Web.Server.ExceptionHandlers;
 
 public sealed class UiExceptionHandler(ILogger<UiExceptionHandler> logger) : IExceptionHandler
 {

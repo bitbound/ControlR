@@ -29,6 +29,7 @@ using System.Globalization;
 using System.Threading.RateLimiting;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.Settings;
+using ControlR.Web.Server.ExceptionHandlers;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -148,6 +149,7 @@ public static class WebApplicationBuilderExtensions
     {
       options.AddDocumentTransformer<FileUploadTransformer>();
       options.AddDocumentTransformer<IdentityApiOpenApiTransformer>();
+      options.AddDocumentTransformer<ApiProblemDetailsTransformer>();
       options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
     });
     builder.Services.AddEndpointsApiExplorer();

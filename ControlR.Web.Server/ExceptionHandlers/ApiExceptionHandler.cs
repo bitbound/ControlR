@@ -1,8 +1,8 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
-namespace ControlR.Web.Server;
+namespace ControlR.Web.Server.ExceptionHandlers;
 
 public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExceptionHandler
 {
