@@ -1,4 +1,4 @@
-﻿<div class="dashboard-container">
+<div class="dashboard-container">
   @if (!_loading && _anyDevicesForUser == false)
   {
     <MudAlert Severity="Severity.Info">
@@ -80,6 +80,11 @@
 
                 @if (context.Item.Dto.IsOnline)
                 {
+                  <MudMenuItem Icon="@(Icons.Material.Filled.Code)" IconColor="Color.Primary"
+                              OnClick="@(() => RunScript(context.Item))">
+                    Run Script
+                  </MudMenuItem>
+
                   <MudMenuItem Icon="@(Icons.Material.Filled.Refresh)" IconColor="Color.Success"
                               OnClick="@(() => RefreshDeviceInfo(context.Item))">
                     Refresh

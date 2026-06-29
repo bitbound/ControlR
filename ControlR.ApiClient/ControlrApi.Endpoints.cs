@@ -200,3 +200,16 @@ public interface IServerVersionApi
 {
   Task<ApiResult<Version>> GetCurrentServerVersion(CancellationToken cancellationToken = default);
 }
+
+public interface IScriptsApi
+{
+  Task<ApiResult<ScriptDto>> CreateScript(ScriptCreateRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<ScriptDto[]>> GetAllScripts(CancellationToken cancellationToken = default);
+  Task<ApiResult<ScriptDto>> GetScript(Guid id, CancellationToken cancellationToken = default);
+  Task<ApiResult<ScriptDto>> UpdateScript(Guid id, ScriptCreateRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult> DeleteScript(Guid id, CancellationToken cancellationToken = default);
+  Task<ApiResult<ScriptExecutionDto[]>> ExecuteScript(Guid id, Guid[] deviceIds, ScriptRunAs runAs = ScriptRunAs.System, CancellationToken cancellationToken = default);
+  Task<ApiResult<ScriptExecutionDto[]>> ExecuteAdHocScript(ExecuteScriptRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<ScriptExecutionDto>> GetScriptExecution(Guid executionId, CancellationToken cancellationToken = default);
+  Task<ApiResult<ScriptExecutionDto[]>> GetAllExecutions(CancellationToken cancellationToken = default);
+}

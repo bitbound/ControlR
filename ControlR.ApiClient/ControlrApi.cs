@@ -33,6 +33,7 @@ public interface IControlrApi
   IUsersApi Users { get; }
   IUserServerSettingsApi UserServerSettings { get; }
   IUserTagsApi UserTags { get; }
+  IScriptsApi Scripts { get; }
 }
 
 public partial class ControlrApi(
@@ -67,7 +68,8 @@ public partial class ControlrApi(
   IUserTagsApi,
   IUsersApi,
   IAgentVersionApi,
-  IServerVersionApi
+  IServerVersionApi,
+  IScriptsApi
 {
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
@@ -98,6 +100,7 @@ public partial class ControlrApi(
   public ITestEmailApi TestEmail => this;
   public IUserPreferencesApi UserPreferences => this;
   public IUserRolesApi UserRoles => this;
+  public IScriptsApi Scripts => this;
   public IUsersApi Users => this;
   public IUserServerSettingsApi UserServerSettings => this;
   public IUserTagsApi UserTags => this;

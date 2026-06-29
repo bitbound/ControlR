@@ -1,0 +1,34 @@
+<MudDialog>
+  <TitleContent>
+    <MudText Typo="Typo.h6">Run Script on Device: @Device?.Name</MudText>
+  </TitleContent>
+  <DialogContent>
+    @if (_loading)
+    {
+      <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-6" />
+    }
+    else if (_scripts.Count == 0)
+    {
+      <MudAlert Severity="Severity.Warning">No scripts found. Please create scripts in the Scripts tab first.</MudAlert>
+    }
+    else
+    {
+      <MudSelect T="ScriptDto" Label="Select Script" @bind-Value="_selectedScript" AnchorOrigin="Origin.BottomCenter" Class="mb-4">
+        @foreach (var script in _scripts)
+        {
+          <MudSelectItem Value="@script">@script.Name (@script.ShellType)</MudSelectItem>
+        }
+      </MudSelect>
+
+      <MudSelect T="ScriptRunAs" Label="Run As / Elevation Mode" @bind-Value="_runAs" AnchorOrigin="Origin.BottomCenter" Class="mb-4">
+        <MudSelectItem Value="ScriptRunAs.System">System (Background Service account)</MudSelectItem>
+        <MudSelectItem Value="ScriptRunAs.CurrentUser">CurrentUser (Interactive user desktop session)</MudSelectItem>
+        <MudSelectItem Value="ScriptRunAs.CurrentUserElevated">CurrentUserElevated (Prompt for UAC elevation in desktop session)</MudSelectItem>
+      </MudSelect>
+    }
+  </DialogContent>
+  <DialogActions>
+    <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Default">Cancel</MudButton>
+    <MudButton OnClick="Confirm" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_selectedScript == null || _loading)" StartIcon="@Icons.Material.Filled.PlayArrow">Run</MudButton>
+  </DialogActions>
+</MudDialog>

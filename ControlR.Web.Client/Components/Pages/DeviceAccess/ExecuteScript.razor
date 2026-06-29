@@ -1,0 +1,77 @@
+@layout DeviceAccessLayout
+@attribute [Route(ClientRoutes.DeviceAccessScripts)]
+@attribute [Authorize]
+@using ControlR.Web.Client.Components.Layout.DeviceAccess
+
+<div class="h-100 pa-4" style="overflow-y: auto;">
+  <MudText Typo="Typo.h5" Class="mb-4">Run Script on Device</MudText>
+
+  <MudGrid>
+    <MudItem xs="12" md="4">
+      <MudCard Outlined="true" Class="pa-4">
+        @if (_loading)
+        {
+          <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-6" />
+        }
+        else if (_scripts.Count == 0)
+        {
+          <MudAlert Severity="Severity.Warning">No scripts found. Please create scripts in the Scripts panel first.</MudAlert>
+        }
+        else
+        {
+          <MudSelect T="ScriptDto" Label="Select Script" @bind-Value="_selectedScript" AnchorOrigin="Origin.BottomCenter" Class="mb-4">
+            @foreach (var script in _scripts)
+            {
+              <MudSelectItem Value="@script">@script.Name (@script.ShellType)</MudSelectItem>
+            }
+          </MudSelect>
+
+          @if (_selectedScript is not null)
+          {
+            <MudTextField Label="Description" Value="@_selectedScript.Description" ReadOnly="true" Lines="2" Class="mb-4" />
+          }
+
+          <MudSelect T="ScriptRunAs" Label="Run As / Elevation Mode" @bind-Value="_runAs" AnchorOrigin="Origin.BottomCenter" Class="mb-4">
+            <MudSelectItem Value="ScriptRunAs.System">System (Service)</MudSelectItem>
+            <MudSelectItem Value="ScriptRunAs.CurrentUser">CurrentUser (Interactive Desktop)</MudSelectItem>
+            <MudSelectItem Value="ScriptRunAs.CurrentUserElevated">CurrentUserElevated (Interactive Desktop + UAC)</MudSelectItem>
+          </MudSelect>
+
+          <div class="d-flex justify-end">
+            <MudButton OnClick="Execute" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_selectedScript == null || _running)" StartIcon="@Icons.Material.Filled.PlayArrow">
+              @(_running ? "Running..." : "Run Script")
+            </MudButton>
+          </div>
+        }
+      </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="8">
+      <div class="d-flex justify-space-between align-center mb-1">
+        <MudText Typo="Typo.subtitle2">Console Output</MudText>
+        @if (_executionStatus.HasValue)
+        {
+          <MudChip T="string" Color="@(_executionStatus switch {
+            ScriptStatus.Succeeded => Color.Success,
+            ScriptStatus.Failed => Color.Error,
+            ScriptStatus.Running => Color.Info,
+            ScriptStatus.Offline => Color.Warning,
+            _ => Color.Default
+          })" Size="Size.Small">
+            @_executionStatus
+          </MudChip>
+        }
+      </div>
+      <div style="background-color: #1e1e1e; color: #d4d4d4; font-family: monospace; padding: 16px; border-radius: 4px; height: 450px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #333;">
+        @if (!string.IsNullOrEmpty(_consoleOutput))
+        {
+          @_consoleOutput
+        }
+        else
+        {
+          <span style="color: #6a9955;">// Script output will appear here after execution starts...</span>
+        }
+      </div>
+    </MudItem>
+  </MudGrid>
+</div>

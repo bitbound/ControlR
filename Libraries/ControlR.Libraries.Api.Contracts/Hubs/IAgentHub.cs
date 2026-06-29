@@ -14,6 +14,7 @@ public interface IAgentHub
   Task<HubResult> SendFileContentStream(Guid streamId, ChannelReader<byte[]> fileChunks);
   Task SendSubdirectoriesStream(Guid streamId, ChannelReader<FileSystemEntryDto[]> subdirectoryChunks);
   Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
+  Task SendScriptOutput(Guid executionId, string stdoutChunk, string stderrChunk, bool isFinished, int? exitCode);
   Task<HubResult<DeviceResponseDto>> UpdateDevice(DeviceUpdateRequestDto agentDto);
   Task<HubResult<DeviceResponseDto>> UpdateDeviceSigned(SignedDto<DeviceUpdateRequestDto> signedDto);
 }

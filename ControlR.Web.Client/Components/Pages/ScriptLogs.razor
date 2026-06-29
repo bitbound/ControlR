@@ -1,0 +1,115 @@
+@attribute [Route(ClientRoutes.ScriptLogs)]
+@attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
+
+<PageTitle>Script Execution Logs</PageTitle>
+
+<PrimaryTitle>
+  Script Execution Logs
+</PrimaryTitle>
+
+@if (_loading)
+{
+  <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-6" />
+}
+else
+{
+  <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadExecutions" Class="mb-4">
+    Refresh History
+  </MudButton>
+
+  @if (_executions.Count == 0)
+  {
+    <MudAlert Severity="Severity.Info" Class="mt-2">No script executions recorded yet.</MudAlert>
+  }
+  else
+  {
+    <MudTable T="ScriptExecutionDto" Items="_executions" Hover="true" FixedHeader="true" Height="600px">
+      <HeaderContent>
+        <MudTh>Script Name</MudTh>
+        <MudTh>Device</MudTh>
+        <MudTh>Run By</MudTh>
+        <MudTh>Started At</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Exit Code</MudTh>
+        <MudTh>Actions</MudTh>
+      </HeaderContent>
+      <RowTemplate Context="execution">
+        <MudTd DataLabel="Script Name">@execution.ScriptName</MudTd>
+        <MudTd DataLabel="Device">@execution.DeviceName</MudTd>
+        <MudTd DataLabel="Run By">@execution.ExecutedByUserId</MudTd>
+        <MudTd DataLabel="Started At">@execution.StartedAt.ToLocalTime().ToString("g")</MudTd>
+        <MudTd DataLabel="Status">
+          <MudChip T="string" Color="@(execution.Status switch {
+            ScriptStatus.Succeeded => Color.Success,
+            ScriptStatus.Failed => Color.Error,
+            ScriptStatus.Running => Color.Info,
+            ScriptStatus.Offline => Color.Warning,
+            _ => Color.Default
+          })" Size="Size.Small">
+            @execution.Status
+          </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Exit Code">@(execution.ExitCode?.ToString() ?? "-")</MudTd>
+        <MudTd DataLabel="Actions">
+          <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="() => OpenDetail(execution)">View Logs</MudButton>
+        </MudTd>
+      </RowTemplate>
+    </MudTable>
+  }
+}
+
+<MudDialog @bind-Visible="_detailOpen" Options="new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true }">
+  <TitleContent>
+    <MudText Typo="Typo.h6">Execution Details: @_selectedExecution?.ScriptName</MudText>
+  </TitleContent>
+  <DialogContent>
+    @if (_selectedExecution is not null)
+    {
+      <MudGrid>
+        <MudItem xs="12" md="6">
+          <MudText Typo="Typo.body2"><b>Device:</b> @_selectedExecution.DeviceName</MudText>
+          <MudText Typo="Typo.body2"><b>Started:</b> @_selectedExecution.StartedAt.ToLocalTime().ToString("g")</MudText>
+          @if (_selectedExecution.FinishedAt.HasValue)
+          {
+            <MudText Typo="Typo.body2"><b>Finished:</b> @_selectedExecution.FinishedAt.Value.ToLocalTime().ToString("g")</MudText>
+          }
+        </MudItem>
+        <MudItem xs="12" md="6">
+          <MudText Typo="Typo.body2"><b>Status:</b> @_selectedExecution.Status</MudText>
+          <MudText Typo="Typo.body2"><b>Exit Code:</b> @(_selectedExecution.ExitCode?.ToString() ?? "N/A")</MudText>
+        </MudItem>
+        <MudItem xs="12">
+          <MudTabs Elevation="2" Rounded="true" TabPanelsClass="pa-6">
+            <MudTabPanel Text="Standard Output (Stdout)">
+              <div style="background-color: #1e1e1e; color: #d4d4d4; font-family: monospace; padding: 16px; border-radius: 4px; max-height: 350px; overflow-y: auto; white-space: pre-wrap;">
+                @if (string.IsNullOrEmpty(_selectedExecution.StdOut))
+                {
+                  <span style="color: #6a9955;">// No standard output recorded</span>
+                }
+                else
+                {
+                  @_selectedExecution.StdOut
+                }
+              </div>
+            </MudTabPanel>
+            <MudTabPanel Text="Standard Error (Stderr)" IconColor="Color.Error">
+              <div style="background-color: #1e1e1e; color: #f48771; font-family: monospace; padding: 16px; border-radius: 4px; max-height: 350px; overflow-y: auto; white-space: pre-wrap;">
+                @if (string.IsNullOrEmpty(_selectedExecution.StdErr))
+                {
+                  <span style="color: #6a9955;">// No errors recorded</span>
+                }
+                else
+                {
+                  @_selectedExecution.StdErr
+                }
+              </div>
+            </MudTabPanel>
+          </MudTabs>
+        </MudItem>
+      </MudGrid>
+    }
+  </DialogContent>
+  <DialogActions>
+    <MudButton OnClick="CloseDetail" Color="Color.Primary" Variant="Variant.Filled">Close</MudButton>
+  </DialogActions>
+</MudDialog>

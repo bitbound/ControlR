@@ -1,0 +1,90 @@
+@attribute [Route(ClientRoutes.Scripts)]
+@attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
+
+<PageTitle>Scripts</PageTitle>
+
+<PrimaryTitle>
+  Remote Scripts
+</PrimaryTitle>
+
+@if (_loading)
+{
+  <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-6" />
+}
+else if (_isEditing)
+{
+  <MudCard Elevation="2" Class="pa-4">
+    <MudCardHeader>
+      <CardHeaderContent>
+        <MudText Typo="Typo.h6">@(_editingScriptId.HasValue ? "Edit Script" : "Create Script")</MudText>
+      </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+      <MudGrid>
+        <MudItem xs="12" md="6">
+          <MudTextField @bind-Value="_scriptName" Label="Script Name" Variant="Variant.Outlined" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+          <MudSelect @bind-Value="_shellType" Label="Shell Type" Variant="Variant.Outlined">
+            <MudSelectItem Value="ShellType.PowerShell">PowerShell</MudSelectItem>
+            <MudSelectItem Value="ShellType.Cmd">Cmd (Windows)</MudSelectItem>
+            <MudSelectItem Value="ShellType.Bash">Bash (Linux/Mac)</MudSelectItem>
+          </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="3">
+          <MudNumericField @bind-Value="_timeoutSeconds" Label="Timeout (Seconds)" Variant="Variant.Outlined" Min="10" Max="3600" />
+        </MudItem>
+        <MudItem xs="12">
+          <MudTextField @bind-Value="_scriptDescription" Label="Description" Variant="Variant.Outlined" Lines="2" />
+        </MudItem>
+        <MudItem xs="12">
+          <MudTextField @bind-Value="_scriptCode" Label="Script Code Content" Variant="Variant.Outlined" Lines="15" Required="true" Style="font-family: monospace;" />
+        </MudItem>
+      </MudGrid>
+    </MudCardContent>
+    <MudCardActions>
+      <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveScript" Class="mr-2">Save</MudButton>
+      <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="CancelEdit">Cancel</MudButton>
+    </MudCardActions>
+  </MudCard>
+}
+else
+{
+  <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateForm" Class="mb-4">
+    Create Script
+  </MudButton>
+
+  @if (_scripts.Count == 0)
+  {
+    <MudAlert Severity="Severity.Info" Class="mt-2">No scripts configured yet. Click "Create Script" to add your first script.</MudAlert>
+  }
+  else
+  {
+    <MudGrid>
+      @foreach (var script in _scripts)
+      {
+        <MudItem xs="12" md="6" lg="4">
+          <MudCard Elevation="2" Class="d-flex flex-column h-100">
+            <MudCardHeader>
+              <CardHeaderContent>
+                <MudText Typo="Typo.h6">@script.Name</MudText>
+                <MudChip T="string" Color="Color.Secondary" Size="Size.Small">@script.ShellType</MudChip>
+                <MudChip T="string" Color="Color.Info" Size="Size.Small">Timeout: @script.TimeoutSeconds s</MudChip>
+              </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent Class="flex-grow-1">
+              <MudText Typo="Typo.body2">@script.Description</MudText>
+            </MudCardContent>
+            <MudCardActions Class="d-flex justify-space-between mt-auto">
+              <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="() => OpenRunDialog(script)">Run</MudButton>
+              <div>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => OpenEditForm(script)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => DeleteScript(script.Id)" />
+              </div>
+            </MudCardActions>
+          </MudCard>
+        </MudItem>
+      }
+    </MudGrid>
+  }
+}

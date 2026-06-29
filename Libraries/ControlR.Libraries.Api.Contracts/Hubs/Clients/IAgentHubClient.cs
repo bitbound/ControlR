@@ -17,6 +17,7 @@ public interface IAgentHubClient : IHubClient
   Task<HubResult> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId);
   Task<HubResult> CreateVncSession(VncSessionRequestDto sessionRequestDto);
   Task<HubResult> DeleteFile(FileDeleteHubDto dto);
+  Task ExecuteScript(Guid executionId, string scriptContent, ShellType shellType, ScriptRunAs runAs);
   Task<HubResult> DownloadFileFromViewer(FileUploadHubDto dto);
   Task<DesktopSession[]> GetActiveDesktopSessions();
   Task<HubResult<GetLogFilesResponseDto>> GetLogFiles();

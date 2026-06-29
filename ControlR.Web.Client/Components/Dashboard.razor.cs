@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Web.Client.Components;
 
@@ -184,6 +186,32 @@ public partial class Dashboard : IDisposable
         HistoryEntryState = HistoryEntryStates.CreateDeviceAccess()
       };
       NavMan.NavigateTo($"/device-access/remote-control?deviceId={device.Id}", navOptions);
+    }
+  }
+
+  private async Task RunScript(DeviceViewModel device)
+  {
+    var parameters = new DialogParameters<ControlR.Web.Client.Components.Dialogs.SelectScriptDialog>
+    {
+      { x => x.Device, device.Dto }
+    };
+
+    var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    var dialog = await DialogService.ShowAsync<ControlR.Web.Client.Components.Dialogs.SelectScriptDialog>($"Run Script: {device.Dto.Name}", parameters, options);
+    var result = await dialog.Result;
+
+    if (result is not null && !result.Canceled && result.Data is (ScriptDto script, ScriptRunAs runAs))
+    {
+      var runParams = new DialogParameters<ControlR.Web.Client.Components.Dialogs.RunScriptDialog>
+      {
+        { x => x.Script, script },
+        { x => x.TargetDevices, new List<DeviceResponseDto> { device.Dto } },
+        { x => x.RunAs, runAs },
+        { x => x.AutoExecute, true }
+      };
+
+      var runOptions = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+      await DialogService.ShowAsync<ControlR.Web.Client.Components.Dialogs.RunScriptDialog>($"Run Script Console: {script.Name}", runParams, runOptions);
     }
   }
 

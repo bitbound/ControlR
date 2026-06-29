@@ -1,0 +1,87 @@
+<MudDialog>
+  <TitleContent>
+    <MudText Typo="Typo.h6">Run Script: @Script?.Name</MudText>
+  </TitleContent>
+  <DialogContent>
+    @if (_loading)
+    {
+      <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-6" />
+    }
+    else if (!_running)
+    {
+      <MudSelect T="ScriptRunAs" Label="Run As / Elevation Mode" @bind-Value="_runAs" AnchorOrigin="Origin.BottomCenter" Class="mb-4">
+        <MudSelectItem Value="ScriptRunAs.System">System (Background Service account)</MudSelectItem>
+        <MudSelectItem Value="ScriptRunAs.CurrentUser">CurrentUser (Interactive user desktop session)</MudSelectItem>
+        <MudSelectItem Value="ScriptRunAs.CurrentUserElevated">CurrentUserElevated (Prompt for UAC elevation in desktop session)</MudSelectItem>
+      </MudSelect>
+      <MudText Typo="Typo.subtitle1" Class="mb-3">Select the target devices to run this script on:</MudText>
+      <MudTable T="DeviceResponseDto" Items="_allDevices" MultiSelection="true" @bind-SelectedItems="_selectedDevices" Hover="true" FixedHeader="true" Height="300px">
+        <HeaderContent>
+          <MudTh>Name</MudTh>
+          <MudTh>Platform</MudTh>
+          <MudTh>Status</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="device">
+          <MudTd DataLabel="Name">@device.Name</MudTd>
+          <MudTd DataLabel="Platform">@device.Platform</MudTd>
+          <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@(device.IsOnline ? Color.Success : Color.Error)" Size="Size.Small">
+              @(device.IsOnline ? "Online" : "Offline")
+            </MudChip>
+          </MudTd>
+        </RowTemplate>
+      </MudTable>
+    }
+    else
+    {
+      <MudGrid>
+        <MudItem xs="12" md="4">
+          <MudList T="ScriptExecutionDto" SelectedValue="_selectedExecution" SelectedValueChanged="OnSelectedExecutionChanged">
+            <MudListSubheader>Targets</MudListSubheader>
+            @foreach (var exec in _executions)
+            {
+              <MudListItem T="ScriptExecutionDto" Value="@exec">
+                <div class="d-flex justify-space-between align-center w-100">
+                  <MudText Typo="Typo.body2">@exec.DeviceName</MudText>
+                  <MudChip T="string" Color="@(exec.Status switch {
+                    ScriptStatus.Succeeded => Color.Success,
+                    ScriptStatus.Failed => Color.Error,
+                    ScriptStatus.Running => Color.Info,
+                    ScriptStatus.Offline => Color.Warning,
+                    _ => Color.Default
+                  })" Size="Size.Small">
+                    @exec.Status
+                  </MudChip>
+                </div>
+              </MudListItem>
+            }
+          </MudList>
+        </MudItem>
+        <MudItem xs="12" md="8">
+          <MudText Typo="Typo.subtitle2" Class="mb-1">Console Output</MudText>
+          <div style="background-color: #1e1e1e; color: #d4d4d4; font-family: monospace; padding: 16px; border-radius: 4px; height: 350px; overflow-y: auto; white-space: pre-wrap;">
+            @if (_selectedDeviceExecutionId.HasValue && _outputs.TryGetValue(_selectedDeviceExecutionId.Value, out var output))
+            {
+              @output.ToString()
+            }
+            else
+            {
+              <span style="color: #6a9955;">// Select a device to view output</span>
+            }
+          </div>
+        </MudItem>
+      </MudGrid>
+    }
+  </DialogContent>
+  <DialogActions>
+    @if (!_running)
+    {
+      <MudButton OnClick="Close" Variant="Variant.Outlined" Color="Color.Default">Cancel</MudButton>
+      <MudButton OnClick="Execute" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PlayArrow">Execute</MudButton>
+    }
+    else
+    {
+      <MudButton OnClick="Close" Variant="Variant.Filled" Color="Color.Primary">Close</MudButton>
+    }
+  </DialogActions>
+</MudDialog>

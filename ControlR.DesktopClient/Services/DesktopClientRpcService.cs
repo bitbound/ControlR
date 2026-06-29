@@ -1,9 +1,14 @@
+using System.IO;
+using System.Diagnostics;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Primitives;
+using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;
@@ -15,6 +20,7 @@ public class DesktopClientRpcService(
     IDesktopPreviewProvider desktopPreviewService,
     IRemoteControlHostManager remoteControlHostManager,
     IControlledApplicationLifetime appLifetime,
+    IIpcClientAccessor ipcClientAccessor,
     ILogger<DesktopClientRpcService> logger) : IDesktopClientRpcService
 {
   private readonly IControlledApplicationLifetime _appLifetime = appLifetime;
@@ -24,6 +30,7 @@ public class DesktopClientRpcService(
   private readonly ILogger<DesktopClientRpcService> _logger = logger;
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
+  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
 
   public async Task<CheckOsPermissionsResponseIpcDto> CheckOsPermissions(CheckOsPermissionsIpcDto dto)
   {
@@ -204,4 +211,218 @@ public class DesktopClientRpcService(
     }
   }
 
+  public async Task ExecuteScript(ExecuteScriptIpcDto dto)
+  {
+    Task.Run(async () =>
+    {
+      string? tempFilePath = null;
+      string? stdoutPath = null;
+      string? stderrPath = null;
+      try
+      {
+        var ext = dto.ShellType switch
+        {
+          ShellType.PowerShell => ".ps1",
+          ShellType.Cmd => ".bat",
+          ShellType.Bash => ".sh",
+          _ => ".txt"
+        };
+        tempFilePath = Path.Combine(Path.GetTempPath(), $"controlr_script_{dto.ExecutionId}{ext}");
+        await File.WriteAllTextAsync(tempFilePath, dto.ScriptContent);
+
+        var runElevated = dto.RunAs == ScriptRunAs.CurrentUserElevated;
+        var isWindows = OperatingSystem.IsWindows();
+
+        var isAlreadyElevated = false;
+        if (isWindows)
+        {
+#pragma warning disable CA1416
+          using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+          var principal = new System.Security.Principal.WindowsPrincipal(identity);
+          isAlreadyElevated = principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+#pragma warning restore CA1416
+        }
+
+        var needUacElevation = runElevated && isWindows && !isAlreadyElevated;
+
+        string fileName;
+        string arguments;
+
+        if (needUacElevation)
+        {
+          stdoutPath = Path.Combine(Path.GetTempPath(), $"controlr_script_{dto.ExecutionId}_out.txt");
+          stderrPath = Path.Combine(Path.GetTempPath(), $"controlr_script_{dto.ExecutionId}_err.txt");
+
+          if (dto.ShellType == ShellType.PowerShell)
+          {
+            fileName = "powershell.exe";
+            arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"& {{ & '{tempFilePath}' }} > '{stdoutPath}' 2> '{stderrPath}'\"";
+          }
+          else // Cmd
+          {
+            fileName = "cmd.exe";
+            arguments = $"/c \"\"{tempFilePath}\" > \"{stdoutPath}\" 2> \"{stderrPath}\"\"";
+          }
+        }
+        else
+        {
+          if (dto.ShellType == ShellType.PowerShell)
+          {
+            fileName = isWindows ? "powershell.exe" : "pwsh";
+            arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{tempFilePath}\"";
+          }
+          else if (dto.ShellType == ShellType.Cmd)
+          {
+            fileName = "cmd.exe";
+            arguments = $"/c \"{tempFilePath}\"";
+          }
+          else // Bash
+          {
+            fileName = "/bin/bash";
+            arguments = $"\"{tempFilePath}\"";
+          }
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+          FileName = fileName,
+          Arguments = arguments,
+          UseShellExecute = needUacElevation,
+          CreateNoWindow = true
+        };
+
+        if (needUacElevation)
+        {
+          startInfo.Verb = "runas";
+        }
+        else
+        {
+          startInfo.RedirectStandardOutput = true;
+          startInfo.RedirectStandardError = true;
+        }
+
+        using var process = new Process { StartInfo = startInfo };
+
+        if (!needUacElevation)
+        {
+          process.OutputDataReceived += async (sender, e) =>
+          {
+            if (e.Data != null)
+            {
+              await SendOutputChunk(dto.ExecutionId, e.Data + Environment.NewLine, string.Empty, false, null);
+            }
+          };
+
+          process.ErrorDataReceived += async (sender, e) =>
+          {
+            if (e.Data != null)
+            {
+              await SendOutputChunk(dto.ExecutionId, string.Empty, e.Data + Environment.NewLine, false, null);
+            }
+          };
+        }
+
+        process.Start();
+
+        if (!needUacElevation)
+        {
+          process.BeginOutputReadLine();
+          process.BeginErrorReadLine();
+        }
+
+        if (needUacElevation)
+        {
+          var stdoutFileOffset = 0L;
+          var stderrFileOffset = 0L;
+
+          while (!process.HasExited)
+          {
+            await Task.Delay(500);
+            stdoutFileOffset = await ReadNewFileContent(dto.ExecutionId, stdoutPath, stdoutFileOffset, isError: false);
+            stderrFileOffset = await ReadNewFileContent(dto.ExecutionId, stderrPath, stderrFileOffset, isError: true);
+          }
+
+          await Task.Delay(100);
+          stdoutFileOffset = await ReadNewFileContent(dto.ExecutionId, stdoutPath, stdoutFileOffset, isError: false);
+          stderrFileOffset = await ReadNewFileContent(dto.ExecutionId, stderrPath, stderrFileOffset, isError: true);
+        }
+        else
+        {
+          await process.WaitForExitAsync();
+        }
+
+        await SendOutputChunk(dto.ExecutionId, string.Empty, string.Empty, true, process.ExitCode);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error executing script {ExecutionId} on DesktopClient", dto.ExecutionId);
+        await SendOutputChunk(dto.ExecutionId, string.Empty, $"DesktopClient Error: {ex.Message}" + Environment.NewLine, true, -1);
+      }
+      finally
+      {
+        DeleteFileSafe(tempFilePath);
+        DeleteFileSafe(stdoutPath);
+        DeleteFileSafe(stderrPath);
+      }
+    }).Forget();
+  }
+
+  private async Task<long> ReadNewFileContent(Guid executionId, string? path, long offset, bool isError)
+  {
+    if (string.IsNullOrEmpty(path) || !File.Exists(path))
+    {
+      return offset;
+    }
+
+    try
+    {
+      using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+      if (fs.Length > offset)
+      {
+        fs.Seek(offset, SeekOrigin.Begin);
+        using var reader = new StreamReader(fs);
+        var content = await reader.ReadToEndAsync();
+        if (!string.IsNullOrEmpty(content))
+        {
+          if (isError)
+          {
+            await SendOutputChunk(executionId, string.Empty, content, false, null);
+          }
+          else
+          {
+            await SendOutputChunk(executionId, content, string.Empty, false, null);
+          }
+        }
+        return fs.Length;
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to read output file {Path}", path);
+    }
+    return offset;
+  }
+
+  private void DeleteFileSafe(string? path)
+  {
+    if (!string.IsNullOrEmpty(path) && File.Exists(path))
+    {
+      try { File.Delete(path); } catch { }
+    }
+  }
+
+  private async Task SendOutputChunk(Guid executionId, string stdout, string stderr, bool isFinished, int? exitCode)
+  {
+    if (_ipcClientAccessor.TryGetClient(out var connection))
+    {
+      try
+      {
+        await connection.Server.SendScriptOutput(new ScriptOutputIpcDto(executionId, stdout, stderr, isFinished, exitCode));
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to send script output chunk via IPC.");
+      }
+    }
+  }
 }

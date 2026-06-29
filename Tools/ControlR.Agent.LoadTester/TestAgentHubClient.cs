@@ -54,6 +54,12 @@ public class TestAgentHubClient : IAgentHubClient
     return HubResult.Ok().AsTaskResult();
   }
 
+  public Task ExecuteScript(Guid executionId, string scriptContent, ShellType shellType, ScriptRunAs runAs)
+  {
+    Console.WriteLine($"Executing script {executionId} using {shellType} runAs {runAs}");
+    return Task.CompletedTask;
+  }
+
   public Task<HubResult> DownloadFileFromViewer(FileUploadHubDto dto)
   {
     Console.WriteLine($"Received file upload request for {dto.FileName} to {dto.TargetDirectoryPath}");

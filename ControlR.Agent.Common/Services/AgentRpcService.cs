@@ -1,4 +1,5 @@
 using ControlR.Libraries.Ipc.Interfaces;
+using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
 namespace ControlR.Agent.Common.Services;
 
@@ -30,6 +31,18 @@ public class AgentRpcService(IHubConnection<IAgentHub> hubConnection, ILogger<Ag
         {
             _logger.LogError(ex, "Error while handling chat response for session {SessionId}.", dto.SessionId);
             return false;
+        }
+    }
+
+    public async Task SendScriptOutput(ScriptOutputIpcDto dto)
+    {
+        try
+        {
+            await _hubConnection.Server.SendScriptOutput(dto.ExecutionId, dto.StdOut, dto.StdErr, dto.IsFinished, dto.ExitCode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while forwarding script output for execution {ExecutionId} to server", dto.ExecutionId);
         }
     }
 }

@@ -11,6 +11,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Signalr.Client.Extensions;
 using Microsoft.AspNetCore.SignalR;
@@ -914,6 +915,141 @@ internal class AgentHubClient(
         dto.DirectoryPath);
       return new ValidateFilePathResponseDto(false, "An error occurred while validating file path.");
     }
+  }
+
+  public async Task ExecuteScript(Guid executionId, string scriptContent, ShellType shellType, ScriptRunAs runAs)
+  {
+    if (runAs == ScriptRunAs.CurrentUser || runAs == ScriptRunAs.CurrentUserElevated)
+    {
+      Task.Run(async () =>
+      {
+        try
+        {
+          var sessions = await _desktopSessionProvider.GetActiveDesktopClients();
+          if (sessions == null || sessions.Length == 0)
+          {
+            _logger.LogWarning("No active user session found to execute script {ExecutionId} as current user.", executionId);
+            await _hubConnection.Server.SendScriptOutput(executionId, string.Empty, "Agent Error: No active user session found to execute script as current user." + Environment.NewLine, true, -1);
+            return;
+          }
+
+          var session = sessions[0];
+          if (!_ipcServerStore.TryGetServer(session.ProcessId, out var ipcServer))
+          {
+            _logger.LogWarning("No IPC server found for process ID {ProcessId} for script {ExecutionId}.", session.ProcessId, executionId);
+            await _hubConnection.Server.SendScriptOutput(executionId, string.Empty, $"Agent Error: No IPC connection to interactive user session (Process {session.ProcessId})." + Environment.NewLine, true, -1);
+            return;
+          }
+
+          await ipcServer.Server.Client.ExecuteScript(new ExecuteScriptIpcDto(executionId, scriptContent, shellType, runAs));
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error forwarding script {ExecutionId} to desktop client", executionId);
+          await _hubConnection.Server.SendScriptOutput(executionId, string.Empty, $"Agent Error: {ex.Message}" + Environment.NewLine, true, -1);
+        }
+      }).Forget();
+      return;
+    }
+
+    Task.Run(async () =>
+    {
+      string? tempFilePath = null;
+      try
+      {
+        var ext = shellType switch
+        {
+          ShellType.PowerShell => ".ps1",
+          ShellType.Cmd => ".bat",
+          ShellType.Bash => ".sh",
+          _ => ".txt"
+        };
+        tempFilePath = Path.Combine(Path.GetTempPath(), $"controlr_script_{executionId}{ext}");
+        await File.WriteAllTextAsync(tempFilePath, scriptContent);
+
+        string fileName;
+        string arguments;
+
+        if (shellType == ShellType.PowerShell)
+        {
+          fileName = _systemEnvironment.IsWindows() ? "powershell.exe" : "pwsh";
+          arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{tempFilePath}\"";
+        }
+        else if (shellType == ShellType.Cmd)
+        {
+          fileName = "cmd.exe";
+          arguments = $"/c \"{tempFilePath}\"";
+        }
+        else // Bash
+        {
+          fileName = "/bin/bash";
+          arguments = $"\"{tempFilePath}\"";
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+          FileName = fileName,
+          Arguments = arguments,
+          RedirectStandardOutput = true,
+          RedirectStandardError = true,
+          UseShellExecute = false,
+          CreateNoWindow = true
+        };
+
+        using var process = new Process { StartInfo = startInfo };
+
+        process.OutputDataReceived += async (sender, e) =>
+        {
+          if (e.Data != null)
+          {
+            await _hubConnection.Server.SendScriptOutput(executionId, e.Data + Environment.NewLine, string.Empty, false, null);
+          }
+        };
+
+        process.ErrorDataReceived += async (sender, e) =>
+        {
+          if (e.Data != null)
+          {
+            await _hubConnection.Server.SendScriptOutput(executionId, string.Empty, e.Data + Environment.NewLine, false, null);
+          }
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        var completed = await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(5)).ContinueWith(t => t.IsCompletedSuccessfully);
+
+        if (!completed)
+        {
+          process.Kill(true);
+          await _hubConnection.Server.SendScriptOutput(executionId, string.Empty, "Script execution timed out.", true, -1);
+        }
+        else
+        {
+          await _hubConnection.Server.SendScriptOutput(executionId, string.Empty, string.Empty, true, process.ExitCode);
+        }
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error executing script {ExecutionId}", executionId);
+        await _hubConnection.Server.SendScriptOutput(executionId, string.Empty, $"Agent Error: {ex.Message}", true, -1);
+      }
+      finally
+      {
+        if (tempFilePath != null && File.Exists(tempFilePath))
+        {
+          try
+          {
+            File.Delete(tempFilePath);
+          }
+          catch
+          {
+            // Ignore
+          }
+        }
+      }
+    }).Forget();
   }
 
   private async Task<CheckOsPermissionsResponseIpcDto> EnsureDesktopClientPermissionGranted(

@@ -35,4 +35,5 @@ public interface IViewerHub
   Task<HubResult> TestVncConnection(Guid guid, int port);
   Task UninstallAgent(Guid deviceId, string reason);
   Task<HubResult> UploadFile(FileUploadMetadata metadata, ChannelReader<byte[]> fileStream);
+  Task WatchScriptExecution(Guid executionId);
 }

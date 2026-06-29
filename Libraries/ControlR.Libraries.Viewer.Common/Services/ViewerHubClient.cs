@@ -39,4 +39,9 @@ public class ViewerHubClient(IMessenger messenger, ILogger<ViewerHubClient> logg
   {
     await _messenger.Send(new DtoReceivedMessage<TerminalOutputDto>(output));
   }
+
+  public async Task ReceiveScriptOutput(Guid executionId, string stdoutChunk, string stderrChunk, bool isFinished, int? exitCode)
+  {
+    await _messenger.Send(new DtoReceivedMessage<(Guid ExecutionId, string StdOutChunk, string StdErrChunk, bool IsFinished, int? ExitCode)>((executionId, stdoutChunk, stderrChunk, isFinished, exitCode)));
+  }
 }

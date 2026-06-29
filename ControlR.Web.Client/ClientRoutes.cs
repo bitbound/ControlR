@@ -1,4 +1,4 @@
-﻿namespace ControlR.Web.Client;
+namespace ControlR.Web.Client;
 
 public static class ClientRoutes
 {
@@ -11,6 +11,7 @@ public static class ClientRoutes
   public const string DeviceAccessRemoteLogs = $"{DeviceAccess}/remote-logs";
   public const string DeviceAccessTerminal = $"{DeviceAccess}/terminal";
   public const string DeviceAccessVncRelay = $"{DeviceAccess}/vnc-relay";
+  public const string DeviceAccessScripts = $"{DeviceAccess}/scripts";
   public const string Home = "/";
   public const string InstallerKeys = "/installer-keys";
   public const string Invite = "/invite";
@@ -24,5 +25,7 @@ public static class ClientRoutes
   public const string ServerSettings = "/server-settings";
   public const string ServerStats = "/server-stats";
   public const string Settings = "/settings";
+  public const string Scripts = "/scripts";
+  public const string ScriptLogs = "/script-logs";
   public const string TenantSettings = "/tenant-settings";
 }

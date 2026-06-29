@@ -22,6 +22,8 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
   public DbSet<Device> Devices { get; init; }
   public DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
+  public DbSet<Script> Scripts { get; init; }
+  public DbSet<ScriptExecution> ScriptExecutions { get; init; }
   public DbSet<ServerAlert> ServerAlerts { get; init; }
   public DbSet<Tag> Tags { get; init; }
   public DbSet<TenantInvite> TenantInvites { get; init; }
@@ -47,6 +49,8 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureTenant(builder);
     ConfigureDevices(builder);
     ConfigureRoles(builder);
+    ConfigureScripts(builder);
+    ConfigureScriptExecutions(builder);
     ConfigureTags(builder);
     ConfigureTenantSettings(builder);
     ConfigureUsers(builder);
@@ -54,6 +58,48 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureTenantInvites(builder);
     ConfigureAgentInstallerKeys(builder);
     ConfigureAgentInstallerKeyUsages(builder);
+  }
+
+  private void ConfigureScripts(ModelBuilder builder)
+  {
+    builder
+      .Entity<Script>()
+      .HasKey(x => x.Id);
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<Script>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+
+  private void ConfigureScriptExecutions(ModelBuilder builder)
+  {
+    builder
+      .Entity<ScriptExecution>()
+      .HasKey(x => x.Id);
+
+    builder
+      .Entity<ScriptExecution>()
+      .HasOne(x => x.Script)
+      .WithMany()
+      .HasForeignKey(x => x.ScriptId)
+      .OnDelete(DeleteBehavior.SetNull);
+
+    builder
+      .Entity<ScriptExecution>()
+      .HasOne(x => x.Device)
+      .WithMany()
+      .HasForeignKey(x => x.DeviceId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    if (_tenantId is not null)
+    {
+      builder
+        .Entity<ScriptExecution>()
+        .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
   }
 
   private static void ConfigureRoles(ModelBuilder builder)
@@ -218,6 +264,18 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .HasMany(t => t.TenantInvites)
       .WithOne(invite => invite.Tenant)
       .HasForeignKey(invite => invite.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    builder.Entity<Tenant>()
+      .HasMany(t => t.Scripts)
+      .WithOne(s => s.Tenant)
+      .HasForeignKey(s => s.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    builder.Entity<Tenant>()
+      .HasMany(t => t.ScriptExecutions)
+      .WithOne(se => se.Tenant)
+      .HasForeignKey(se => se.TenantId)
       .OnDelete(DeleteBehavior.Cascade);
   }
 

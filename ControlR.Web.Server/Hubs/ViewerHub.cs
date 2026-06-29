@@ -99,6 +99,19 @@ public class ViewerHub(
     }
   }
 
+  public async Task WatchScriptExecution(
+    Guid executionId)
+  {
+    try
+    {
+      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.GetScriptExecutionGroupName(executionId));
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while watching script execution {ExecutionId}", executionId);
+    }
+  }
+
   public async Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId)
   {
     try

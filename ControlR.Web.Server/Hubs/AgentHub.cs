@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Libraries.Shared.Services.Encryption;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -232,6 +233,36 @@ public class AgentHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending terminal output to viewer.");
+    }
+  }
+
+  public async Task SendScriptOutput(Guid executionId, string stdoutChunk, string stderrChunk, bool isFinished, int? exitCode)
+  {
+    try
+    {
+      await _viewerHub.Clients
+        .Group(HubGroupNames.GetScriptExecutionGroupName(executionId))
+        .ReceiveScriptOutput(executionId, stdoutChunk, stderrChunk, isFinished, exitCode);
+
+      var execution = await _appDb.ScriptExecutions.FindAsync(executionId);
+      if (execution is not null)
+      {
+        execution.StdOut += stdoutChunk;
+        execution.StdErr += stderrChunk;
+
+        if (isFinished)
+        {
+          execution.FinishedAt = _timeProvider.GetLocalNow();
+          execution.ExitCode = exitCode;
+          execution.Status = (exitCode == 0) ? ScriptStatus.Succeeded : ScriptStatus.Failed;
+        }
+
+        await _appDb.SaveChangesAsync();
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error processing script output for execution {ExecutionId}", executionId);
     }
   }
 

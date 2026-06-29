@@ -1,4 +1,4 @@
-﻿@implements IDisposable
+@implements IDisposable
 
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager NavMan
@@ -38,6 +38,12 @@
     </div>
     <MudNavLink Href="@(ClientRoutes.Permissions)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupervisedUserCircle">
       Permissions
+    </MudNavLink>
+    <MudNavLink Href="@(ClientRoutes.Scripts)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Code">
+      Scripts
+    </MudNavLink>
+    <MudNavLink Href="@(ClientRoutes.ScriptLogs)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.History">
+      Script Logs
     </MudNavLink>
     <MudNavLink Href="@(ClientRoutes.Invite)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Email">
       Invite

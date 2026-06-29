@@ -1,4 +1,4 @@
-﻿namespace ControlR.Web.Server.Hubs;
+namespace ControlR.Web.Server.Hubs;
 
 public static class HubGroupNames
 {
@@ -21,5 +21,10 @@ public static class HubGroupNames
   public static string GetUserRoleGroupName(string roleName, Guid tenantId)
   {
     return $"tenant-{tenantId}-user-role-{roleName}";
+  }
+
+  public static string GetScriptExecutionGroupName(Guid executionId)
+  {
+    return $"script-execution-{executionId}";
   }
 }

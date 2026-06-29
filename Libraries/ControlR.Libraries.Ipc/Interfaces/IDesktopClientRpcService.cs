@@ -18,4 +18,5 @@ public partial interface IDesktopClientRpcService
     Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto);
     Task<CheckOsPermissionsResponseIpcDto> RequestRemoteControlPermission(RequestRemoteControlPermissionIpcDto dto);
     Task ShutdownDesktopClient(ShutdownCommandDto dto);
+    Task ExecuteScript(ExecuteScriptIpcDto dto);
 }

@@ -11,4 +11,5 @@ public interface IViewerHubClient
   Task ReceiveDeviceUpdate(DeviceResponseDto deviceDto);
   Task ReceiveServerStats(ServerStatsDto serverStats);
   Task ReceiveTerminalOutput(TerminalOutputDto output);
+  Task ReceiveScriptOutput(Guid executionId, string stdoutChunk, string stderrChunk, bool isFinished, int? exitCode);
 }

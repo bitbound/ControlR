@@ -1,4 +1,4 @@
-﻿@inject ILazyInjector<IDeviceState> DeviceAccessState
+@inject ILazyInjector<IDeviceState> DeviceAccessState
 
 <MudNavMenu>
   <MudNavLink Disabled="IsDisabled" Href='@($"/device-access?deviceId={GetDeviceId()}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Home">
@@ -27,6 +27,10 @@
 
   <MudNavLink Disabled="IsDisabled" Href='@($"/device-access/vnc-relay?deviceId={GetDeviceId()}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Cast">
     VNC Relay
+  </MudNavLink>
+
+  <MudNavLink Disabled="IsDisabled" Href='@($"/device-access/scripts?deviceId={GetDeviceId()}")' Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Code">
+    Run Script
   </MudNavLink>
 
   @*

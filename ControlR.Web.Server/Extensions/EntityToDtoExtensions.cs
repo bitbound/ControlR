@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 namespace ControlR.Web.Server.Extensions;
 
@@ -98,5 +98,34 @@ public static class EntityToDtoExtensions
       tag.Type,
       userIds,
       deviceIds);
+  }
+
+  public static ScriptDto ToDto(this Script script)
+  {
+    return new ScriptDto(
+      script.Id,
+      script.Name,
+      script.Description,
+      script.CodeContent,
+      script.ShellType,
+      script.TimeoutSeconds,
+      script.CreatedAt);
+  }
+
+  public static ScriptExecutionDto ToDto(this ScriptExecution execution)
+  {
+    return new ScriptExecutionDto(
+      execution.Id,
+      execution.ScriptId,
+      execution.Script?.Name ?? "Ad-hoc Script",
+      execution.DeviceId,
+      execution.Device?.Name ?? "Unknown Device",
+      execution.ExecutedByUserId,
+      execution.StartedAt,
+      execution.FinishedAt,
+      execution.Status,
+      execution.StdOut,
+      execution.StdErr,
+      execution.ExitCode);
   }
 }

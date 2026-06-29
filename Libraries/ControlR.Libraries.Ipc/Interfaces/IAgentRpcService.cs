@@ -9,4 +9,5 @@ namespace ControlR.Libraries.Ipc.Interfaces;
 public partial interface IAgentRpcService
 {
     Task<bool> SendChatResponse(ChatResponseIpcDto dto);
+    Task SendScriptOutput(ScriptOutputIpcDto dto);
 }
