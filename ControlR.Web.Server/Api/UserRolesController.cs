@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api;
 
@@ -15,9 +16,12 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     [FromServices] AppDb appDb,
     [FromBody] UserRoleAddRequestDto dto)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var user = await appDb.Users
@@ -29,7 +33,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
       return NotFound("User not found.");
     }
 
-    if (user.TenantId != tenantId)
+    if (user.TenantId != tenantId!.Value)
     {
       return Unauthorized();
     }
@@ -144,9 +148,12 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     [FromRoute] Guid userId,
     [FromRoute] Guid roleId)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     if (!User.TryGetUserId(out var callerUserId))
@@ -163,7 +170,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
       return NotFound("User not found.");
     }
 
-    if (user.TenantId != tenantId)
+    if (user.TenantId != tenantId!.Value)
     {
       return Unauthorized();
     }

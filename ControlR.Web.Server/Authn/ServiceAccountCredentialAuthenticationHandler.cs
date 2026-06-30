@@ -69,6 +69,11 @@ public class ServiceAccountCredentialAuthenticationHandler(
       new(PrincipalClaimTypes.CredentialId, credential.Id.ToString())
     };
 
+    if (account.Description is not null)
+    {
+      claims.Add(new Claim(ClaimTypes.Name, account.Description));
+    }
+
     var identity = new ClaimsIdentity(claims, Scheme.Name);
     var principal = new ClaimsPrincipal(identity);
     var ticket = new AuthenticationTicket(principal, Scheme.Name);

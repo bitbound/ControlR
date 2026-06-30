@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,14 +17,17 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult> DeleteSetting(string name)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var tenant = await _appDb.Tenants
       .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == tenantId);
+      .FirstOrDefaultAsync(x => x.Id == tenantId!.Value);
 
     if (tenant is null)
     {
@@ -46,12 +50,15 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   [Authorize]
   public async Task<ActionResult<TenantSettingsDto>> GetAll(CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
-    var settings = await _tenantSettingsManager.GetAllSettings(tenantId, cancellationToken);
+    var settings = await _tenantSettingsManager.GetAllSettings(tenantId!.Value, cancellationToken);
     return Ok(settings);
   }
 
@@ -59,15 +66,18 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   [Authorize]
   public async Task<ActionResult<TenantSettingResponseDto?>> GetSetting(string name)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var tenant = await _appDb.Tenants
       .AsNoTracking()
       .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == tenantId);
+      .FirstOrDefaultAsync(x => x.Id == tenantId!.Value);
 
     if (tenant is null)
     {
@@ -89,12 +99,15 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<TenantSettingResponseDto>> SetSetting([FromBody] TenantSettingRequestDto setting)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
-    var result = await _tenantSettingsManager.SetSetting(tenantId, setting);
+    var result = await _tenantSettingsManager.SetSetting(tenantId!.Value, setting);
     return result.ToActionResult();
   }
 
@@ -104,12 +117,15 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
     [FromBody] TenantSettingsDto settings,
     CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
-    var result = await _tenantSettingsManager.SetSettings(tenantId, settings, cancellationToken);
+    var result = await _tenantSettingsManager.SetSettings(tenantId!.Value, settings, cancellationToken);
     return result.ToActionResult();
   }
 }

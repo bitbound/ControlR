@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,9 +18,12 @@ public class LogonTokenController : ControllerBase
     [FromServices] IAuthorizationService authorizationService,
     [FromBody] LogonTokenRequestDto request)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("User tenant not found");
+      if (!User.TryGetTenantId(out var tid))
+        return BadRequest("User tenant not found");
+      tenantId = tid;
     }
 
     if (!User.TryGetUserId(out var userId))
@@ -28,7 +32,12 @@ public class LogonTokenController : ControllerBase
     }
 
     var device = await appDb.Devices.FindAsync(request.DeviceId);
-    if (device is null || device.TenantId != tenantId)
+    if (device is null)
+    {
+      return BadRequest("Device not found");
+    }
+
+    if (!User.IsServerPrincipal() && device.TenantId != tenantId!.Value)
     {
       return BadRequest("Device not found");
     }
@@ -36,7 +45,12 @@ public class LogonTokenController : ControllerBase
     // Validate that the user exists and belongs to the same tenant
 
     var user = await appDb.Users.FindAsync(userId);
-    if (user is null || user.TenantId != tenantId)
+    if (user is null)
+    {
+      return BadRequest("User not found or does not belong to this tenant");
+    }
+
+    if (!User.IsServerPrincipal() && user.TenantId != tenantId!.Value)
     {
       return BadRequest("User not found or does not belong to this tenant");
     }
@@ -49,7 +63,7 @@ public class LogonTokenController : ControllerBase
 
     var logonToken = await logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
-      tenantId,
+      tenantId!.Value,
       userId,
       request.ExpirationMinutes);
 

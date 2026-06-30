@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Libraries.Api.Contracts.Constants;
 
@@ -15,12 +16,15 @@ public class UsersController : ControllerBase
     [FromRoute] Guid userId,
     [FromServices] IPasswordManager passwordManager)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return BadRequest("User tenant not found.");
+      tenantId = tid;
     }
 
-    var result = await passwordManager.AdminResetPassword(tenantId, userId);
+    var result = await passwordManager.AdminResetPassword(tenantId!.Value, userId);
     if (!result.IsSuccess)
     {
       if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
@@ -42,9 +46,12 @@ public class UsersController : ControllerBase
     [FromServices] IUserCreator userCreator,
     [FromBody] CreateUserRequestDto request)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return BadRequest("User tenant not found.");
+      tenantId = tid;
     }
 
     var requestRoleIds = request.RoleIds?.ToArray();
@@ -83,7 +90,7 @@ public class UsersController : ControllerBase
     var createResult = await userCreator.CreateUser(
       string.IsNullOrWhiteSpace(request.Email) ? request.UserName : request.Email,
       request.Password ?? string.Empty,
-      tenantId,
+      tenantId!.Value,
       requestRoleIds,
       request.TagIds,
       cancellationToken: HttpContext.RequestAborted);
@@ -111,13 +118,16 @@ public class UsersController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] CreatePersonalAccessTokenRequestDto request)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return BadRequest("User tenant not found.");
+      tenantId = tid;
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
 
     if (!targetExists)
     {
@@ -140,14 +150,17 @@ public class UsersController : ControllerBase
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] AppDb appDb)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return BadRequest("User tenant not found.");
+      tenantId = tid;
     }
 
     var user = await appDb.Users
       .Include(x => x.UserPreferences)
-      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
 
     if (user == null)
     {
@@ -171,13 +184,16 @@ public class UsersController : ControllerBase
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return BadRequest("User tenant not found.");
+      tenantId = tid;
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
 
     if (!targetExists)
     {
@@ -210,13 +226,16 @@ public class UsersController : ControllerBase
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return BadRequest("User tenant not found.");
+      tenantId = tid;
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
 
     if (!targetExists)
     {
@@ -236,13 +255,16 @@ public class UsersController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] UpdatePersonalAccessTokenRequestDto request)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return BadRequest("User tenant not found.");
+      tenantId = tid;
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
 
     if (!targetExists)
     {

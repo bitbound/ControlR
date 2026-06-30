@@ -6,6 +6,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
+using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.Settings;
 
@@ -189,6 +190,12 @@ public class ViewerHub(
     try
     {
       await base.OnConnectedAsync();
+
+      if (Context.User?.IsServerPrincipal() == true)
+      {
+        _logger.LogInformation("Server service account connected, skipping tenant/user initialization.");
+        return;
+      }
 
       if (Context.User?.TryGetUserId(out var userId) != true)
       {
@@ -529,6 +536,9 @@ public class ViewerHub(
 
   public async Task SendDtoToUserGroups(DtoWrapper wrapper)
   {
+    if (Context.User?.IsServerPrincipal() == true)
+      return;
+
     if (!TryGetUserId(out var userId) ||
         !TryGetTenantId(out var tenantId))
     {

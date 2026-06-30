@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ControlR.Web.Server.Extensions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
@@ -28,15 +29,18 @@ public class InvitesController : ControllerBase
     [FromBody] TenantInviteRequestDto dto,
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var origin = Request.ToOrigin();
     var result = await tenantInvitesProvider.CreateInvite(
       dto.InviteeEmail,
-      tenantId,
+      tenantId!.Value,
       origin,
       HttpContext.RequestAborted);
 
@@ -48,12 +52,15 @@ public class InvitesController : ControllerBase
     [FromRoute] Guid inviteId,
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
-    var result = await tenantInvitesProvider.DeleteInvite(inviteId, tenantId);
+    var result = await tenantInvitesProvider.DeleteInvite(inviteId, tenantId!.Value);
 
     return result.ToActionResult();
   }
@@ -62,12 +69,15 @@ public class InvitesController : ControllerBase
   public async Task<ActionResult<TenantInviteResponseDto[]>> GetAll(
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var origin = Request.ToOrigin();
-    return await tenantInvitesProvider.GetAllInvites(tenantId, origin);
+    return await tenantInvitesProvider.GetAllInvites(tenantId!.Value, origin);
   }
 }

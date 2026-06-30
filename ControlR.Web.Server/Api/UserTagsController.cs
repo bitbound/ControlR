@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api;
 
@@ -13,9 +14,12 @@ public class UserTagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] UserTagAddRequestDto dto)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var user = await appDb.Users
@@ -27,7 +31,7 @@ public class UserTagsController : ControllerBase
       return NotFound("User not found.");
     }
 
-    if (user.TenantId != tenantId)
+    if (user.TenantId != tenantId!.Value)
     {
       return Unauthorized();
     }
@@ -38,7 +42,7 @@ public class UserTagsController : ControllerBase
     {
       return NotFound("Tag not found.");
     }
-    if (tag.TenantId != tenantId)
+    if (tag.TenantId != tenantId!.Value)
     {
       return Unauthorized();
     }
@@ -127,9 +131,12 @@ public class UserTagsController : ControllerBase
     [FromRoute] Guid userId,
     [FromRoute] Guid tagId)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var user = await appDb.Users
@@ -141,7 +148,7 @@ public class UserTagsController : ControllerBase
       return NotFound("User not found.");
     }
 
-    if (user.TenantId != tenantId)
+    if (user.TenantId != tenantId!.Value)
     {
       return Unauthorized();
     }

@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
@@ -14,14 +15,17 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] TagCreateRequestDto dto)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return NotFound("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return NotFound("User tenant not found.");
+      tenantId = tid;
     }
 
     var tag = new Tag
     {
-      TenantId = tenantId,
+      TenantId = tenantId!.Value,
       Name = dto.Name,
       Type = dto.Type,
     };
@@ -38,14 +42,17 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromRoute] Guid tagId)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return NotFound("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return NotFound("User tenant not found.");
+      tenantId = tid;
     }
 
     var tag = await appDb.Tags
       .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == tagId && x.TenantId == tenantId);
+      .FirstOrDefaultAsync(x => x.Id == tagId && x.TenantId == tenantId!.Value);
 
     if (tag == null)
     {
@@ -90,13 +97,16 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] TagRenameRequestDto dto)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return NotFound("User tenant not found.");
+      if (!User.TryGetTenantId(out var tid))
+        return NotFound("User tenant not found.");
+      tenantId = tid;
     }
 
     var tag = await appDb.Tags
-      .FirstOrDefaultAsync(x => x.Id == dto.TagId && x.TenantId == tenantId);
+      .FirstOrDefaultAsync(x => x.Id == dto.TagId && x.TenantId == tenantId!.Value);
     if (tag is null)
     {
       return NotFound();

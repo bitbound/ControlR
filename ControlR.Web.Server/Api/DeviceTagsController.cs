@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api;
 
@@ -15,9 +16,12 @@ public class DeviceTagsController : ControllerBase
     [FromServices] IHubContext<AgentHub> agentHub,
     [FromBody] DeviceTagAddRequestDto dto)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var device = await appDb.Devices
@@ -29,7 +33,7 @@ public class DeviceTagsController : ControllerBase
       return NotFound("Device not found.");
     }
 
-    if (device.TenantId != tenantId)
+    if (device.TenantId != tenantId!.Value)
     {
       return Unauthorized();
     }
@@ -40,7 +44,7 @@ public class DeviceTagsController : ControllerBase
     {
       return NotFound("Tag not found.");
     }
-    if (tag.TenantId != tenantId)
+    if (tag.TenantId != tenantId!.Value)
     {
       return Unauthorized();
     }
@@ -51,7 +55,7 @@ public class DeviceTagsController : ControllerBase
 
     await agentHub.Groups.RemoveFromGroupAsync(
         device.ConnectionId,
-        HubGroupNames.GetTagGroupName(dto.TagId, tenantId));
+        HubGroupNames.GetTagGroupName(dto.TagId, tenantId!.Value));
 
     return NoContent();
   }
@@ -64,9 +68,12 @@ public class DeviceTagsController : ControllerBase
     [FromRoute] Guid deviceId,
     [FromRoute] Guid tagId)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return Unauthorized();
+      if (!User.TryGetTenantId(out var tid))
+        return Unauthorized();
+      tenantId = tid;
     }
 
     var device = await appDb.Devices
@@ -78,7 +85,7 @@ public class DeviceTagsController : ControllerBase
       return NotFound("User not found.");
     }
 
-    if (device.TenantId != tenantId)
+    if (device.TenantId != tenantId!.Value)
     {
       return Unauthorized();
     }
@@ -94,7 +101,7 @@ public class DeviceTagsController : ControllerBase
 
     await agentHub.Groups.RemoveFromGroupAsync(
       device.ConnectionId,
-      HubGroupNames.GetTagGroupName(tagId, tenantId));
+      HubGroupNames.GetTagGroupName(tagId, tenantId!.Value));
 
     return NoContent();
   }

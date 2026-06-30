@@ -46,7 +46,7 @@ public class ServiceAccountsController(
       return BadRequest(result.Reason);
     }
 
-    return Ok(result.Value);
+    return CreatedAtAction(nameof(GetAll), new { }, result.Value);
   }
 
   [HttpPost("{serviceAccountId:guid}/credentials")]
@@ -63,7 +63,7 @@ public class ServiceAccountsController(
     var result = await _serviceAccountManager.AddCredentialAsync(serviceAccountId, request.Name, cancellationToken);
     if (!result.IsSuccess)
     {
-      return BadRequest(result.Reason);
+      return NotFound(result.Reason);
     }
 
     return Ok(result.Value);
@@ -83,7 +83,7 @@ public class ServiceAccountsController(
     var result = await _serviceAccountManager.RevokeCredentialAsync(serviceAccountId, credentialId, cancellationToken);
     if (!result.IsSuccess)
     {
-      return BadRequest(result.Reason);
+      return NotFound(result.Reason);
     }
 
     return NoContent();
@@ -102,7 +102,7 @@ public class ServiceAccountsController(
     var result = await _serviceAccountManager.DeleteAsync(serviceAccountId, cancellationToken);
     if (!result.IsSuccess)
     {
-      return BadRequest(result.Reason);
+      return NotFound(result.Reason);
     }
 
     return NoContent();
