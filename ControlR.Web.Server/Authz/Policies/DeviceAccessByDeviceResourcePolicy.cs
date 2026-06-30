@@ -20,6 +20,14 @@ public static class DeviceAccessByDeviceResourcePolicy
           return Fail("Resource must be a device.", handlerCtx, authzHandler, logger);
         }
 
+        // Server-scoped service accounts have unbound (cross-tenant) access in the interim
+        // authorization model. The full permission evaluator (Phase 2 PR 11) replaces this
+        // bypass with explicit server permission checks.
+        if (handlerCtx.User.IsServerPrincipal())
+        {
+          return true;
+        }
+
         if (!handlerCtx.User.TryGetTenantId(out var tenantId))
         {
           return Fail("Tenant ID claim is missing.", handlerCtx, authzHandler, logger);

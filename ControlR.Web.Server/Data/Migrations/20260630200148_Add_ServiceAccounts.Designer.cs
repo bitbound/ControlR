@@ -3,6 +3,7 @@ using System;
 using ControlR.Web.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ControlR.Web.Server.Data.Migrations
 {
     [DbContext(typeof(AppDb))]
-    partial class AppDbModelSnapshot : ModelSnapshot
+    [Migration("20260630200148_Add_ServiceAccounts")]
+    partial class Add_ServiceAccounts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -702,41 +705,6 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.ToTable("UserPreferences");
                 });
 
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.UserStorageItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("Key", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("UserStorageItems");
-                });
-
             modelBuilder.Entity("DeviceTag", b =>
                 {
                     b.Property<Guid>("DevicesId")
@@ -1076,17 +1044,6 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.UserStorageItem", b =>
-                {
-                    b.HasOne("ControlR.Web.Server.Data.Entities.AppUser", "User")
-                        .WithMany("UserStorageItems")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("DeviceTag", b =>
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.Device", null)
@@ -1221,8 +1178,6 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Navigation("UserPreferences");
 
                     b.Navigation("UserRoles");
-
-                    b.Navigation("UserStorageItems");
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ServiceAccount", b =>

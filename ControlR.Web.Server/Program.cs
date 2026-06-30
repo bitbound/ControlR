@@ -114,5 +114,6 @@ else
 }
 
 await app.BootstrapAdminUser();
+await app.BootstrapServerServiceAccount();
 
 await app.RunAsync();

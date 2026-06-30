@@ -119,13 +119,21 @@ public class DevicesController(
     [FromServices] IAuthorizationService authorizationService,
     [FromRoute] Guid deviceId)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    Guid? tenantId = null;
+    if (!User.IsServerPrincipal())
     {
-      return BadRequest("Tenant ID not found.");
+      if (!User.TryGetTenantId(out var tid))
+      {
+        return BadRequest("Tenant ID not found.");
+      }
+
+      tenantId = tid;
     }
 
+    // For server service accounts the EF query filter stays disabled (no tenant claim), so
+    // dropping the tenant predicate returns devices across all tenants.
     var device = await appDb.Devices.FirstOrDefaultAsync(
-        x => x.Id == deviceId && x.TenantId == tenantId);
+        x => x.Id == deviceId && (tenantId == null || x.TenantId == tenantId));
 
     if (device is null)
     {
@@ -151,26 +159,44 @@ public class DevicesController(
     [FromBody] DeleteDevicesRequestDto requestDto,
     CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    var isServerPrincipal = User.IsServerPrincipal();
+    Guid tenantId = Guid.Empty;
+    DeviceAccessScope? accessScope = null;
+
+    if (!isServerPrincipal)
     {
-      return BadRequest("Tenant ID not found.");
+      if (!User.TryGetTenantId(out tenantId))
+      {
+        return BadRequest("Tenant ID not found.");
+      }
+
+      accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
     }
 
-    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
-
-    // Authorized + existing devices (subset of input that user can delete).
-    var authorizedDeviceIds = await appDb.Devices
-      .ApplyAccessScope(tenantId, accessScope)
-      .Where(d => requestDto.DeviceIds.Contains(d.Id))
-      .Select(d => d.Id)
-      .ToListAsync(cancellationToken);
+    // Authorized + existing devices (subset of input that user can delete). Server service
+    // accounts have unbound access, so the authorized set is the full input set across tenants.
+    var authorizedDeviceIds = isServerPrincipal
+      ? await appDb.Devices
+        .Where(d => requestDto.DeviceIds.Contains(d.Id))
+        .Select(d => d.Id)
+        .ToListAsync(cancellationToken)
+      : await appDb.Devices
+        .ApplyAccessScope(tenantId, accessScope!)
+        .Where(d => requestDto.DeviceIds.Contains(d.Id))
+        .Select(d => d.Id)
+        .ToListAsync(cancellationToken);
 
     var authorizedIdSet = authorizedDeviceIds.ToHashSet();
 
-    // Bulk-delete authorized devices.
-    var deletedCount = await appDb.Devices
-      .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
-      .ExecuteDeleteAsync(cancellationToken);
+    // Bulk-delete authorized devices. Server principals match across tenants (no tenant predicate);
+    // tenant users are scoped by tenant.
+    var deletedCount = isServerPrincipal
+      ? await appDb.Devices
+        .Where(x => authorizedIdSet.Contains(x.Id))
+        .ExecuteDeleteAsync(cancellationToken)
+      : await appDb.Devices
+        .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
+        .ExecuteDeleteAsync(cancellationToken);
 
     if (deletedCount == authorizedDeviceIds.Count)
     {
@@ -181,10 +207,15 @@ public class DevicesController(
     }
 
     // Some failed to delete.  Find remaining.
-    var remainingIds = await appDb.Devices
-      .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
-      .Select(x => x.Id)
-      .ToListAsync(cancellationToken);
+    var remainingIds = isServerPrincipal
+      ? await appDb.Devices
+        .Where(x => authorizedIdSet.Contains(x.Id))
+        .Select(x => x.Id)
+        .ToListAsync(cancellationToken)
+      : await appDb.Devices
+        .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
+        .Select(x => x.Id)
+        .ToListAsync(cancellationToken);
 
     var successIds = authorizedIdSet.Except(remainingIds).ToImmutableList();
     var failureIds = remainingIds.Concat(requestDto.DeviceIds.Except(authorizedIdSet)).ToImmutableList();
@@ -197,19 +228,31 @@ public class DevicesController(
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    IQueryable<Device> query = appDb.Devices.Include(x => x.Tags);
+
+    if (User.IsServerPrincipal())
     {
-      yield break;
+      // No tenant claim => the EF query filter is disabled, so the unscoped query returns
+      // devices across all tenants. Do not apply the access scope (it would resolve to None).
+      query = query
+        .AsSplitQuery()
+        .OrderBy(x => x.CreatedAt);
+    }
+    else
+    {
+      if (!User.TryGetTenantId(out var tenantId))
+      {
+        yield break;
+      }
+
+      var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+      query = query
+        .ApplyAccessScope(tenantId, accessScope)
+        .AsSplitQuery()
+        .OrderBy(x => x.CreatedAt);
     }
 
-    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
-
-    var deviceStream = appDb.Devices
-      .ApplyAccessScope(tenantId, accessScope)
-      .Include(x => x.Tags)
-      .AsSplitQuery()
-      .OrderBy(x => x.CreatedAt)
-      .AsAsyncEnumerable();
+    var deviceStream = query.AsAsyncEnumerable();
 
     await foreach (var device in deviceStream)
     {
@@ -247,17 +290,24 @@ public class DevicesController(
   public async IAsyncEnumerable<DeviceSummaryDto> GetDeviceSummaries(
     [FromServices] AppDb appDb)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    IQueryable<Device> query = appDb.Devices;
+
+    if (User.IsServerPrincipal())
     {
-      yield break;
+      query = query.OrderBy(x => x.CreatedAt);
+    }
+    else
+    {
+      if (!User.TryGetTenantId(out var tenantId))
+      {
+        yield break;
+      }
+
+      var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+      query = query.ApplyAccessScope(tenantId, accessScope).OrderBy(x => x.CreatedAt);
     }
 
-    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
-
-    var deviceStream = appDb.Devices
-      .ApplyAccessScope(tenantId, accessScope)
-      .OrderBy(x => x.CreatedAt)
-      .AsAsyncEnumerable();
+    var deviceStream = query.AsAsyncEnumerable();
 
     await foreach (var device in deviceStream)
     {
@@ -272,17 +322,24 @@ public class DevicesController(
     [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] ILogger<DevicesController> logger)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    var isServerPrincipal = User.IsServerPrincipal();
+    Guid tenantId = Guid.Empty;
+    DeviceAccessScope? accessScope = null;
+
+    if (!isServerPrincipal)
     {
-      return BadRequest("Tenant ID not found.");
+      if (!User.TryGetTenantId(out tenantId))
+      {
+        return BadRequest("Tenant ID not found.");
+      }
+
+      accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
     }
 
     var isRelationalDatabase = appDb.Database.IsRelational();
-    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
-
-    var authorizedQuery = appDb.Devices
-      .ApplyAccessScope(tenantId, accessScope)
-      .AsQueryable();
+    var authorizedQuery = isServerPrincipal
+      ? appDb.Devices.AsQueryable()
+      : appDb.Devices.ApplyAccessScope(tenantId, accessScope!).AsQueryable();
 
     var anyDevices = await authorizedQuery.AnyAsync();
 

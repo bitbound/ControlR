@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Authz.Roles;
+using ControlR.Web.Server.Authn;
+using ControlR.Web.Server.Services.ServiceAccounts;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -183,6 +185,29 @@ public static class HostExtensions
     }
 
     logger.LogInformation("Bootstrap admin user setup completed successfully.");
+  }
+
+  /// <summary>
+  /// Bootstraps the server-scoped service account described by <see cref="BootstrapOptions"/>
+  /// (ServerServiceAccountName/TokenId/TokenSecret). No-op when unconfigured; throws on partial
+  /// configuration. Safe to call on every startup: creation is skipped when the named account
+  /// already exists.
+  /// </summary>
+  public static async Task BootstrapServerServiceAccount(this IHost host)
+  {
+    await using var scope = host.Services.CreateAsyncScope();
+    var sp = scope.ServiceProvider;
+
+    var bootstrapOptions = sp.GetRequiredService<IOptions<BootstrapOptions>>();
+    var logger = sp.GetRequiredService<ILogger<Program>>();
+    var serviceAccountManager = sp.GetRequiredService<IServiceAccountManager>();
+
+    var result = await serviceAccountManager.BootstrapServerServiceAccountAsync(bootstrapOptions.Value);
+    if (!result.IsSuccess)
+    {
+      logger.LogError("Bootstrap server service account failed: {Reason}", result.Reason);
+      throw new InvalidOperationException($"Bootstrap server service account failed: {result.Reason}");
+    }
   }
 
   public static async Task RemoveEmptyTenants(this IHost host)

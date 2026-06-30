@@ -23,6 +23,8 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   public DbSet<Device> Devices { get; init; }
   public DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
   public DbSet<ServerAlert> ServerAlerts { get; init; }
+  public DbSet<ServiceAccount> ServiceAccounts { get; init; }
+  public DbSet<ServiceAccountCredential> ServiceAccountCredentials { get; init; }
   public DbSet<Tag> Tags { get; init; }
   public DbSet<TenantInvite> TenantInvites { get; init; }
   public DbSet<Tenant> Tenants { get; init; }
@@ -56,6 +58,8 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureTenantInvites(builder);
     ConfigureAgentInstallerKeys(builder);
     ConfigureAgentInstallerKeyUsages(builder);
+    ConfigureServiceAccounts(builder);
+    ConfigureServiceAccountCredentials(builder);
   }
 
   private static void ConfigureRoles(ModelBuilder builder)
@@ -299,6 +303,46 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .Entity<AppUser>()
         .HasQueryFilter(x => x.TenantId == _tenantId);
     }
+  }
+
+  private void ConfigureServiceAccounts(ModelBuilder builder)
+  {
+    // Service accounts intentionally have NO tenant or user query filter. Authorization
+    // evaluation and admin services must never accidentally hide relevant rows, and
+    // server-scoped accounts do not map to the tenant filter model. Tenant-facing CRUD
+    // applies tenant predicates explicitly in service code.
+
+    builder
+      .Entity<ServiceAccount>()
+      .Property(x => x.Kind)
+      .HasConversion<string>()
+      .HasMaxLength(50);
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasIndex(x => new { x.Kind, x.TenantId, x.Name })
+      .IsUnique();
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasOne(x => x.Tenant)
+      .WithMany()
+      .HasForeignKey(x => x.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasMany(x => x.Credentials)
+      .WithOne(x => x.ServiceAccount)
+      .HasForeignKey(x => x.ServiceAccountId)
+      .OnDelete(DeleteBehavior.Cascade);
+  }
+
+  private void ConfigureServiceAccountCredentials(ModelBuilder builder)
+  {
+    builder
+      .Entity<ServiceAccountCredential>()
+      .HasIndex(x => x.Id);
   }
 
   private void ConfigureUserStorage(ModelBuilder builder)

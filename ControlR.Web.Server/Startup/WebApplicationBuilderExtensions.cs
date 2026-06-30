@@ -289,6 +289,12 @@ public static class WebApplicationBuilderExtensions
             return PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme;
           }
 
+          // If the request carries a service account api key, authenticate as a service account.
+          if (context.Request.Headers.ContainsKey(ServiceAccountCredentialAuthenticationSchemeOptions.DefaultHeaderName))
+          {
+            return ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme;
+          }
+
           // Otherwise, use Identity cookies for web UI
           return IdentityConstants.ApplicationScheme;
         };
@@ -322,6 +328,11 @@ public static class WebApplicationBuilderExtensions
     // Add logon token authentication.
     authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
       LogonTokenAuthenticationSchemeOptions.DefaultScheme,
+      _ => { });
+
+    // Add service account credential authentication (x-api-key).
+    authBuilder.AddScheme<ServiceAccountCredentialAuthenticationSchemeOptions, ServiceAccountCredentialAuthenticationHandler>(
+      ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme,
       _ => { });
 
     builder.Services
@@ -411,6 +422,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IUserStorageManager, UserStorageManager>();
     builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderServer>();
     builder.Services.AddScoped<ITenantInvitesProvider, TenantInvitesProvider>();
+    builder.Services.AddScoped<IServiceAccountManager, ServiceAccountManager>();
 
     return builder;
   }
