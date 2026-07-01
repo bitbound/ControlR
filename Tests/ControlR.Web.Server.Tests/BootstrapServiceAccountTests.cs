@@ -5,19 +5,15 @@ using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Extensions;
-using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Startup;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.DeviceResponseDto;
 
 namespace ControlR.Web.Server.Tests;
@@ -65,56 +61,6 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task Bootstrap_SkipsWhenAccountAlreadyExists()
-  {
-    var config = new Dictionary<string, string?>
-    {
-      ["Bootstrap:ServerServiceAccountName"] = AccountName,
-      ["Bootstrap:ServerServiceAccountTokenId"] = TokenId,
-      ["Bootstrap:ServerServiceAccountTokenSecret"] = TokenSecret,
-    };
-
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
-    await testApp.App.BootstrapServerServiceAccount();
-    await testApp.App.BootstrapServerServiceAccount();
-
-    using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
-
-    var count = await appDb.ServiceAccounts
-      .IgnoreQueryFilters()
-      .CountAsync(x => x.Name == AccountName, TestContext.Current.CancellationToken);
-
-    Assert.Equal(1, count);
-  }
-
-  [Fact]
-  public async Task Bootstrap_WithPartialConfig_Throws()
-  {
-    var config = new Dictionary<string, string?>
-    {
-      ["Bootstrap:ServerServiceAccountName"] = AccountName,
-    };
-
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
-    await Assert.ThrowsAsync<InvalidOperationException>(
-      () => testApp.App.BootstrapServerServiceAccount());
-  }
-
-  [Fact]
-  public async Task Bootstrap_WithNoConfig_DoesNothing()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    await testApp.App.BootstrapServerServiceAccount();
-
-    using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
-
-    var count = await appDb.ServiceAccounts.IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(0, count);
-  }
-
-  [Fact]
   public async Task Bootstrap_CredentialCanAuthenticate()
   {
     var config = new Dictionary<string, string?>
@@ -146,46 +92,107 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ServerPrincipalCanListDevicesAcrossTenants()
+  public async Task Bootstrap_SkipsWhenAccountAlreadyExists()
+  {
+    var config = new Dictionary<string, string?>
+    {
+      ["Bootstrap:ServerServiceAccountName"] = AccountName,
+      ["Bootstrap:ServerServiceAccountTokenId"] = TokenId,
+      ["Bootstrap:ServerServiceAccountTokenSecret"] = TokenSecret,
+    };
+
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
+    await testApp.App.BootstrapServerServiceAccount();
+    await testApp.App.BootstrapServerServiceAccount();
+
+    using var scope = testApp.CreateScope();
+    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+
+    var count = await appDb.ServiceAccounts
+      .IgnoreQueryFilters()
+      .CountAsync(x => x.Name == AccountName, TestContext.Current.CancellationToken);
+
+    Assert.Equal(1, count);
+  }
+
+  [Fact]
+  public async Task Bootstrap_WithKey_RawApiKeyHeaderRoundTrips()
+  {
+    var config = new Dictionary<string, string?>
+    {
+      ["Bootstrap:ServerServiceAccountName"] = AccountName,
+      ["Bootstrap:ServerServiceAccountTokenId"] = TokenId,
+      ["Bootstrap:ServerServiceAccountTokenSecret"] = TokenSecret,
+    };
+
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
+    await testApp.App.BootstrapServerServiceAccount();
+
+    using var scope = testApp.CreateScope();
+    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var credential = await appDb.ServiceAccountCredentials
+      .IgnoreQueryFilters()
+      .FirstAsync(TestContext.Current.CancellationToken);
+
+    var hexId = Convert.ToHexString(credential.Id.ToByteArray());
+    Assert.Equal(32, hexId.Length);
+
+    var configId = Guid.Parse(TokenId);
+    Assert.Equal(configId, credential.Id);
+
+    var apiKey = $"{hexId}:{TokenSecret}";
+    var manager = scope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
+    var result = await manager.ValidateCredentialAsync(apiKey, TestContext.Current.CancellationToken);
+    Assert.True(result.IsSuccess);
+  }
+
+  [Fact]
+  public async Task Bootstrap_WithNoConfig_DoesNothing()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    await testApp.App.BootstrapServerServiceAccount();
+
+    using var scope = testApp.CreateScope();
+    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+
+    var count = await appDb.ServiceAccounts.IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(0, count);
+  }
+
+  [Fact]
+  public async Task Bootstrap_WithPartialConfig_Throws()
+  {
+    var config = new Dictionary<string, string?>
+    {
+      ["Bootstrap:ServerServiceAccountName"] = AccountName,
+    };
+
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
+    await Assert.ThrowsAsync<InvalidOperationException>(
+      () => testApp.App.BootstrapServerServiceAccount());
+  }
+
+  [Fact]
+  public async Task NonServerPrincipal_DeniedServiceAccountManagement()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var appDb = services.GetRequiredService<AppDb>();
 
-    var tenantA = await services.CreateTestTenant("Tenant A");
-    var tenantB = await services.CreateTestTenant("Tenant B");
-    var deviceA = await services.CreateTestDevice(tenantA.Id);
-    var deviceB = await services.CreateTestDevice(tenantB.Id);
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, email: "denied@test.local",
+      roles: RoleNames.TenantAdministrator);
 
-    var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
-    var saResult = await serviceAccountManager.CreateServerAsync(
-      "CrossTenant SA",
-      null,
+    var controller = scope.CreateController<ServiceAccountsController>();
+    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
+
+    var manager = services.GetRequiredService<IServiceAccountManager>();
+
+    var createResult = await controller.Create(
+      new CreateServiceAccountRequestDto("Should Not Work", null),
       TestContext.Current.CancellationToken);
-    Assert.True(saResult.IsSuccess);
 
-    var serverPrincipal = new ClaimsPrincipal(new ClaimsIdentity(
-    [
-      new Claim(PrincipalClaimTypes.PrincipalType, PrincipalClaimTypes.ServerServiceAccount),
-      new Claim(PrincipalClaimTypes.PrincipalId, saResult.Value.ServiceAccount.Id.ToString()),
-      new Claim(UserClaimTypes.AuthenticationMethod, PrincipalClaimTypes.ServiceAccountCredentialMethod),
-      new Claim(PrincipalClaimTypes.CredentialId, saResult.Value.ServiceAccount.Credentials[0].Id.ToString()),
-    ], "TestAuth"));
-
-    var controller = scope.CreateController<DevicesController>();
-    controller.ControllerContext.HttpContext.User = serverPrincipal;
-
-    var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
-
-    var deviceDtos = new List<DeviceResponseDto>();
-    await foreach (var dto in controller.Get(appDb, agentVersionProvider))
-    {
-      deviceDtos.Add(dto);
-    }
-
-    Assert.Contains(deviceDtos, d => d.Id == deviceA.Id);
-    Assert.Contains(deviceDtos, d => d.Id == deviceB.Id);
+    var forbidResult = Assert.IsType<ForbidResult>(createResult.Result);
   }
 
   [Fact]
@@ -233,6 +240,49 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task ServerPrincipalCanListDevicesAcrossTenants()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var appDb = services.GetRequiredService<AppDb>();
+
+    var tenantA = await services.CreateTestTenant("Tenant A");
+    var tenantB = await services.CreateTestTenant("Tenant B");
+    var deviceA = await services.CreateTestDevice(tenantA.Id);
+    var deviceB = await services.CreateTestDevice(tenantB.Id);
+
+    var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
+    var saResult = await serviceAccountManager.CreateServerAsync(
+      "CrossTenant SA",
+      null,
+      TestContext.Current.CancellationToken);
+    Assert.True(saResult.IsSuccess);
+
+    var serverPrincipal = new ClaimsPrincipal(new ClaimsIdentity(
+    [
+      new Claim(PrincipalClaimTypes.PrincipalType, PrincipalClaimTypes.ServerServiceAccount),
+      new Claim(PrincipalClaimTypes.PrincipalId, saResult.Value.ServiceAccount.Id.ToString()),
+      new Claim(UserClaimTypes.AuthenticationMethod, PrincipalClaimTypes.ServiceAccountCredentialMethod),
+      new Claim(PrincipalClaimTypes.CredentialId, saResult.Value.ServiceAccount.Credentials[0].Id.ToString()),
+    ], "TestAuth"));
+
+    var controller = scope.CreateController<DevicesController>();
+    controller.ControllerContext.HttpContext.User = serverPrincipal;
+
+    var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
+
+    var deviceDtos = new List<DeviceResponseDto>();
+    await foreach (var dto in controller.Get(appDb, agentVersionProvider))
+    {
+      deviceDtos.Add(dto);
+    }
+
+    Assert.Contains(deviceDtos, d => d.Id == deviceA.Id);
+    Assert.Contains(deviceDtos, d => d.Id == deviceB.Id);
+  }
+
+  [Fact]
   public async Task ServiceAccountLifecycle_CreateRevokeDelete()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
@@ -273,59 +323,5 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
 
     var allAccounts = await manager.GetAllServerAsync(TestContext.Current.CancellationToken);
     Assert.DoesNotContain(allAccounts, a => a.Id == accountId);
-  }
-
-  [Fact]
-  public async Task NonServerPrincipal_DeniedServiceAccountManagement()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-
-    var tenant = await services.CreateTestTenant();
-    var user = await services.CreateTestUser(tenant.Id, email: "denied@test.local",
-      roles: RoleNames.TenantAdministrator);
-
-    var controller = scope.CreateController<ServiceAccountsController>();
-    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
-
-    var manager = services.GetRequiredService<IServiceAccountManager>();
-
-    var createResult = await controller.Create(
-      new CreateServiceAccountRequestDto("Should Not Work", null),
-      TestContext.Current.CancellationToken);
-
-    var forbidResult = Assert.IsType<ForbidResult>(createResult.Result);
-  }
-
-  [Fact]
-  public async Task Bootstrap_WithKey_RawApiKeyHeaderRoundTrips()
-  {
-    var config = new Dictionary<string, string?>
-    {
-      ["Bootstrap:ServerServiceAccountName"] = AccountName,
-      ["Bootstrap:ServerServiceAccountTokenId"] = TokenId,
-      ["Bootstrap:ServerServiceAccountTokenSecret"] = TokenSecret,
-    };
-
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
-    await testApp.App.BootstrapServerServiceAccount();
-
-    using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
-    var credential = await appDb.ServiceAccountCredentials
-      .IgnoreQueryFilters()
-      .FirstAsync(TestContext.Current.CancellationToken);
-
-    var hexId = Convert.ToHexString(credential.Id.ToByteArray());
-    Assert.Equal(32, hexId.Length);
-
-    var configId = Guid.Parse(TokenId);
-    Assert.Equal(configId, credential.Id);
-
-    var apiKey = $"{hexId}:{TokenSecret}";
-    var manager = scope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
-    var result = await manager.ValidateCredentialAsync(apiKey, TestContext.Current.CancellationToken);
-    Assert.True(result.IsSuccess);
   }
 }
