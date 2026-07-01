@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.ApiClient;

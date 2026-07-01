@@ -8,6 +8,7 @@ global using ControlR.Libraries.Api.Contracts.Hubs;
 global using ControlR.Libraries.Shared.Services;
 global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
 global using ControlR.Libraries.Signalr.Client;
 global using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 global using ControlR.Libraries.Api.Contracts.Constants;

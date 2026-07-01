@@ -1,5 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
 using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.ApiClient;
