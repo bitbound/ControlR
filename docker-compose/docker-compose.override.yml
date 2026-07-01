@@ -5,6 +5,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: 8080
       ASPNETCORE_HTTPS_PORTS: 8081
+      ControlR_AspireDashboard__Token: ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
     ports:
       - "5120:8080"
       - "7031:8081"

@@ -31,10 +31,11 @@ public static class Extensions
   public static IHostApplicationBuilder AddServiceDefaults(
     this IHostApplicationBuilder builder,
     string serviceName,
+    string? hostId = null,
     bool useServiceDiscovery = false,
     bool useResilience = false)
   {
-    builder.ConfigureOpenTelemetry(serviceName);
+    builder.ConfigureOpenTelemetry(serviceName, hostId);
 
     builder.AddDefaultHealthChecks();
 
@@ -63,12 +64,20 @@ public static class Extensions
 
   public static IHostApplicationBuilder ConfigureOpenTelemetry(
     this IHostApplicationBuilder builder,
-    string serviceName)
+    string serviceName,
+    string? hostId = null)
   {
     builder.Logging.AddOpenTelemetry(logging =>
     {
       var resourceBuilder = ResourceBuilder.CreateDefault();
-      resourceBuilder.AddService(serviceName, "controlr");
+      resourceBuilder.AddService(
+        serviceName: serviceName, 
+        serviceNamespace: "controlr");
+
+      if (hostId is not null)
+      {
+        resourceBuilder.AddAttributes([new KeyValuePair<string, object>("host.id", hostId)]);
+      }
 
       logging.IncludeFormattedMessage = true;
       logging.IncludeScopes = true;
@@ -78,7 +87,14 @@ public static class Extensions
     builder.Services.AddOpenTelemetry()
       .ConfigureResource(resourceBuilder =>
       {
-        resourceBuilder.AddService(serviceName, serviceNamespace: "controlr");
+        resourceBuilder.AddService(
+          serviceName: serviceName, 
+          serviceNamespace: "controlr");
+
+        if (hostId is not null)
+        {
+          resourceBuilder.AddAttributes([new KeyValuePair<string, object>("host.id", hostId)]);
+        }
       })
       .WithMetrics(metrics =>
       {

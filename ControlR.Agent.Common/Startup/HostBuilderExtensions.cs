@@ -24,7 +24,6 @@ using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Hosting;
 using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Shared.Services.FileSystem;
-using ControlR.Agent.Shared.Services;
 
 namespace ControlR.Agent.Common.Startup;
 
@@ -188,7 +187,11 @@ internal static class HostApplicationBuilderExtensions
       }
     }
 
-    builder.AddServiceDefaults(ServiceNames.ControlrAgent);
+    var deviceId = appOptions.DeviceId == Guid.Empty
+      ? null
+      : appOptions.DeviceId.ToString();
+
+    builder.AddServiceDefaults(ServiceNames.ControlrAgent, hostId: deviceId);
     builder.BootstrapSerilog(pathProvider.GetAgentLogFilePath(), TimeSpan.FromDays(7));
 
     return builder;
