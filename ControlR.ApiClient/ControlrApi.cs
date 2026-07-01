@@ -23,6 +23,7 @@ public interface IControlrApi
   IServerAlertApi ServerAlert { get; }
   IServerLogsApi ServerLogs { get; }
   IServerStatsApi ServerStats { get; }
+  IServiceAccountsApi ServiceAccounts { get; }
   ITagsApi Tags { get; }
   ITenantSettingsApi TenantSettings { get; }
   ITestEmailApi TestEmail { get; }
@@ -58,6 +59,7 @@ public partial class ControlrApi(
   IServerAlertApi,
   IServerLogsApi,
   IServerStatsApi,
+  IServiceAccountsApi,
   ITagsApi,
   ITenantSettingsApi,
   ITestEmailApi,
@@ -91,6 +93,7 @@ public partial class ControlrApi(
   public IServerAlertApi ServerAlert => this;
   public IServerLogsApi ServerLogs => this;
   public IServerStatsApi ServerStats => this;
+  public IServiceAccountsApi ServiceAccounts => this;
   public ITagsApi Tags => this;
   public ITenantSettingsApi TenantSettings => this;
   public ITestEmailApi TestEmail => this;
