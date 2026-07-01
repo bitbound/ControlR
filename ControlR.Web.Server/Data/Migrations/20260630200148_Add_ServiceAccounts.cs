@@ -68,21 +68,10 @@ public partial class Add_ServiceAccounts : Migration
         table: "ServiceAccountCredentials",
         column: "ServiceAccountId");
 
-    migrationBuilder.Sql(
-        "CREATE UNIQUE INDEX \"IX_ServiceAccounts_Kind_TenantId_Name\" " +
-        "ON \"ServiceAccounts\" (\"Kind\", \"TenantId\", \"Name\") " +
-        "NULLS NOT DISTINCT;");
-
     migrationBuilder.CreateIndex(
         name: "IX_ServiceAccounts_TenantId",
         table: "ServiceAccounts",
         column: "TenantId");
-
-    migrationBuilder.Sql(
-        "ALTER TABLE \"ServiceAccounts\" " +
-        "ADD CONSTRAINT \"CK_ServiceAccounts_Kind_TenantId\" " +
-        "CHECK (\"Kind\" = 'Server' AND \"TenantId\" IS NULL " +
-        "OR \"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL);");
   }
 
   /// <inheritdoc />

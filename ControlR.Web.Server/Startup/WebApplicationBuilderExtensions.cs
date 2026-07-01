@@ -111,6 +111,7 @@ public static class WebApplicationBuilderExtensions
 
         options.UseInMemoryDatabase(dbName);
         options.EnableDetailedErrors(appOptions.EnableDatabaseDetailedErrors);
+        options.AddInterceptors(new ServiceAccountInvariantInterceptor());
       }, lifetime: ServiceLifetime.Transient);
     }
     else
@@ -474,6 +475,7 @@ public static class WebApplicationBuilderExtensions
     {
       options.UseNpgsql(pgBuilder.ConnectionString);
       options.EnableDetailedErrors(appOptions.EnableDatabaseDetailedErrors);
+      options.AddInterceptors(new ServiceAccountInvariantInterceptor());
 
       var accessor = sp.GetRequiredService<IHttpContextAccessor>();
       if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)
