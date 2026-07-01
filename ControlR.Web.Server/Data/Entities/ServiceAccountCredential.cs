@@ -17,6 +17,6 @@ public class ServiceAccountCredential : EntityBase
   [StringLength(100)]
   public required string Name { get; set; }
   public DateTimeOffset? RevokedAt { get; set; }
-  public ServiceAccount ServiceAccount { get; set; } = null!;
+  public ServiceAccount? ServiceAccount { get; set; }
   public Guid ServiceAccountId { get; set; }
 }
