@@ -10,19 +10,13 @@ namespace ControlR.Web.Server.Data.Entities;
 /// </summary>
 public class ServiceAccountCredential : EntityBase
 {
-  public Guid ServiceAccountId { get; set; }
-
-  public ServiceAccount ServiceAccount { get; set; } = null!;
-
-  [StringLength(100)]
-  public required string Name { get; set; }
-
+  public DateTimeOffset? ExpiresAt { get; set; }
   [StringLength(256)]
   public required string HashedSecret { get; set; }
-
-  public DateTimeOffset? ExpiresAt { get; set; }
-
-  public DateTimeOffset? RevokedAt { get; set; }
-
   public DateTimeOffset? LastUsedAt { get; set; }
+  [StringLength(100)]
+  public required string Name { get; set; }
+  public DateTimeOffset? RevokedAt { get; set; }
+  public ServiceAccount ServiceAccount { get; set; } = null!;
+  public Guid ServiceAccountId { get; set; }
 }

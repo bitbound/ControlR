@@ -14,34 +14,29 @@ namespace ControlR.Web.Server.Services.ServiceAccounts;
 /// </summary>
 public interface IServiceAccountManager
 {
-  /// <summary>
-  /// Creates the bootstrapped server service account and its initial credential when the
-  /// bootstrap options are fully supplied. Skips creation when the named account already exists.
-  /// Throws when the bootstrap input is only partially configured.
-  /// </summary>
-  Task<Result> BootstrapServerServiceAccountAsync(BootstrapOptions options, CancellationToken cancellationToken = default);
-
-  /// <summary>Returns all server-scoped service accounts with their credential metadata.</summary>
-  Task<List<ServiceAccountDto>> GetAllServerAsync(CancellationToken cancellationToken = default);
-
-  /// <summary>
-  /// Creates a new server-scoped service account and its first credential. Returns the new
-  /// account and the plaintext secret, which is only exposed this once.
-  /// </summary>
-  Task<Result<CreateServiceAccountResponseDto>> CreateServerAsync(string name, string? description, CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Adds a new credential to an existing server service account. Returns the credential
   /// metadata and the plaintext secret, which is only exposed this once.
   /// </summary>
   Task<Result<CreateServiceAccountCredentialResponseDto>> AddCredentialAsync(Guid serviceAccountId, string name, CancellationToken cancellationToken = default);
-
-  /// <summary>Revokes a credential by setting <see cref="ServiceAccountCredential.RevokedAt"/>.</summary>
-  Task<Result> RevokeCredentialAsync(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken = default);
-
+  /// <summary>
+  /// Creates the bootstrapped server service account and its initial credential when the
+  /// bootstrap options are fully supplied. Skips creation when the named account already exists.
+  /// Throws when the bootstrap input is only partially configured.
+  /// </summary>
+  Task<Result> BootstrapServerServiceAccountAsync(BootstrapOptions options, CancellationToken cancellationToken = default);
+  /// <summary>
+  /// Creates a new server-scoped service account and its first credential. Returns the new
+  /// account and the plaintext secret, which is only exposed this once.
+  /// </summary>
+  Task<Result<CreateServiceAccountResponseDto>> CreateServerAsync(string name, string? description, CancellationToken cancellationToken = default);
   /// <summary>Deletes a server service account. Credentials cascade-delete.</summary>
   Task<Result> DeleteAsync(Guid serviceAccountId, CancellationToken cancellationToken = default);
-
+  /// <summary>Returns all server-scoped service accounts with their credential metadata.</summary>
+  Task<List<ServiceAccountDto>> GetAllServerAsync(CancellationToken cancellationToken = default);
+  /// <summary>Revokes a credential by setting <see cref="ServiceAccountCredential.RevokedAt"/>.</summary>
+  Task<Result> RevokeCredentialAsync(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken = default);
   /// <summary>
   /// Validates a <c>{hex_id}:{plaintext_secret}</c> API key against a service account credential.
   /// On success updates <see cref="ServiceAccountCredential.LastUsedAt"/> and returns the
@@ -62,6 +57,45 @@ public class ServiceAccountManager(
   ILogger<ServiceAccountManager> logger) : IServiceAccountManager
 {
   private const int MinimumSecretLength = 32;
+
+  public async Task<Result<CreateServiceAccountCredentialResponseDto>> AddCredentialAsync(
+    Guid serviceAccountId,
+    string name,
+    CancellationToken cancellationToken = default)
+  {
+    if (string.IsNullOrWhiteSpace(name))
+    {
+      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Credential name is required.");
+    }
+
+    var account = await appDb.ServiceAccounts
+      .Include(x => x.Credentials)
+      .FirstOrDefaultAsync(x => x.Id == serviceAccountId && x.Kind == ServiceAccountKind.Server, cancellationToken);
+
+    if (account is null)
+    {
+      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Server service account not found.");
+    }
+
+    if (!account.IsEnabled)
+    {
+      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Service account is disabled.");
+    }
+
+    var plainTextSecret = RandomGenerator.CreateApiKey();
+    var hashedSecret = passwordHasher.HashPassword(string.Empty, plainTextSecret);
+
+    var credential = new ServiceAccountCredential
+    {
+      Name = name,
+      HashedSecret = hashedSecret
+    };
+    account.Credentials.Add(credential);
+    await appDb.SaveChangesAsync(cancellationToken);
+
+    var apiKey = FormatApiKey(credential.Id, plainTextSecret);
+    return Result.Ok(new CreateServiceAccountCredentialResponseDto(MapCredentialToDto(credential), apiKey));
+  }
 
   public async Task<Result> BootstrapServerServiceAccountAsync(
     BootstrapOptions options,
@@ -153,17 +187,6 @@ public class ServiceAccountManager(
     return Result.Ok();
   }
 
-  public async Task<List<ServiceAccountDto>> GetAllServerAsync(CancellationToken cancellationToken = default)
-  {
-    var accounts = await appDb.ServiceAccounts
-      .Where(x => x.Kind == ServiceAccountKind.Server)
-      .Include(x => x.Credentials)
-      .OrderBy(x => x.Name)
-      .ToListAsync(cancellationToken);
-
-    return accounts.Select(MapToDto).ToList();
-  }
-
   public async Task<Result<CreateServiceAccountResponseDto>> CreateServerAsync(
     string name,
     string? description,
@@ -207,43 +230,30 @@ public class ServiceAccountManager(
     return Result.Ok(new CreateServiceAccountResponseDto(MapToDto(account), apiKey));
   }
 
-  public async Task<Result<CreateServiceAccountCredentialResponseDto>> AddCredentialAsync(
-    Guid serviceAccountId,
-    string name,
-    CancellationToken cancellationToken = default)
+  public async Task<Result> DeleteAsync(Guid serviceAccountId, CancellationToken cancellationToken = default)
   {
-    if (string.IsNullOrWhiteSpace(name))
-    {
-      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Credential name is required.");
-    }
-
     var account = await appDb.ServiceAccounts
-      .Include(x => x.Credentials)
       .FirstOrDefaultAsync(x => x.Id == serviceAccountId && x.Kind == ServiceAccountKind.Server, cancellationToken);
 
     if (account is null)
     {
-      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Server service account not found.");
+      return Result.Fail("Server service account not found.");
     }
 
-    if (!account.IsEnabled)
-    {
-      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Service account is disabled.");
-    }
-
-    var plainTextSecret = RandomGenerator.CreateApiKey();
-    var hashedSecret = passwordHasher.HashPassword(string.Empty, plainTextSecret);
-
-    var credential = new ServiceAccountCredential
-    {
-      Name = name,
-      HashedSecret = hashedSecret
-    };
-    account.Credentials.Add(credential);
+    appDb.ServiceAccounts.Remove(account);
     await appDb.SaveChangesAsync(cancellationToken);
+    return Result.Ok();
+  }
 
-    var apiKey = FormatApiKey(credential.Id, plainTextSecret);
-    return Result.Ok(new CreateServiceAccountCredentialResponseDto(MapCredentialToDto(credential), apiKey));
+  public async Task<List<ServiceAccountDto>> GetAllServerAsync(CancellationToken cancellationToken = default)
+  {
+    var accounts = await appDb.ServiceAccounts
+      .Where(x => x.Kind == ServiceAccountKind.Server)
+      .Include(x => x.Credentials)
+      .OrderBy(x => x.Name)
+      .ToListAsync(cancellationToken);
+
+    return accounts.Select(MapToDto).ToList();
   }
 
   public async Task<Result> RevokeCredentialAsync(
@@ -267,21 +277,6 @@ public class ServiceAccountManager(
     }
 
     credential.RevokedAt = timeProvider.GetUtcNow();
-    await appDb.SaveChangesAsync(cancellationToken);
-    return Result.Ok();
-  }
-
-  public async Task<Result> DeleteAsync(Guid serviceAccountId, CancellationToken cancellationToken = default)
-  {
-    var account = await appDb.ServiceAccounts
-      .FirstOrDefaultAsync(x => x.Id == serviceAccountId && x.Kind == ServiceAccountKind.Server, cancellationToken);
-
-    if (account is null)
-    {
-      return Result.Fail("Server service account not found.");
-    }
-
-    appDb.ServiceAccounts.Remove(account);
     await appDb.SaveChangesAsync(cancellationToken);
     return Result.Ok();
   }
@@ -375,6 +370,17 @@ public class ServiceAccountManager(
     return $"{hexId}:{plainTextSecret}";
   }
 
+  private static ServiceAccountCredentialDto MapCredentialToDto(ServiceAccountCredential credential)
+  {
+    return new ServiceAccountCredentialDto(
+      credential.Id,
+      credential.Name,
+      credential.CreatedAt,
+      credential.ExpiresAt,
+      credential.RevokedAt,
+      credential.LastUsedAt);
+  }
+
   private static ServiceAccountDto MapToDto(ServiceAccount account)
   {
     return new ServiceAccountDto(
@@ -388,16 +394,5 @@ public class ServiceAccountManager(
         .OrderBy(c => c.CreatedAt)
         .Select(MapCredentialToDto)
         .ToList());
-  }
-
-  private static ServiceAccountCredentialDto MapCredentialToDto(ServiceAccountCredential credential)
-  {
-    return new ServiceAccountCredentialDto(
-      credential.Id,
-      credential.Name,
-      credential.CreatedAt,
-      credential.ExpiresAt,
-      credential.RevokedAt,
-      credential.LastUsedAt);
   }
 }

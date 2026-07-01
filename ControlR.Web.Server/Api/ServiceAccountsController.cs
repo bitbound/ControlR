@@ -18,16 +18,24 @@ public class ServiceAccountsController(
 {
   private readonly IServiceAccountManager _serviceAccountManager = serviceAccountManager;
 
-  [HttpGet]
-  public async Task<ActionResult<List<ServiceAccountDto>>> GetAll(CancellationToken cancellationToken)
+  [HttpPost("{serviceAccountId:guid}/credentials")]
+  public async Task<ActionResult<CreateServiceAccountCredentialResponseDto>> AddCredential(
+    Guid serviceAccountId,
+    [FromBody] CreateServiceAccountCredentialRequestDto request,
+    CancellationToken cancellationToken)
   {
     if (!User.IsServerPrincipal())
     {
       return Forbid();
     }
 
-    var accounts = await _serviceAccountManager.GetAllServerAsync(cancellationToken);
-    return Ok(accounts);
+    var result = await _serviceAccountManager.AddCredentialAsync(serviceAccountId, request.Name, cancellationToken);
+    if (!result.IsSuccess)
+    {
+      return NotFound(result.Reason);
+    }
+
+    return Ok(result.Value);
   }
 
   [HttpPost]
@@ -49,10 +57,9 @@ public class ServiceAccountsController(
     return CreatedAtAction(nameof(GetAll), new { }, result.Value);
   }
 
-  [HttpPost("{serviceAccountId:guid}/credentials")]
-  public async Task<ActionResult<CreateServiceAccountCredentialResponseDto>> AddCredential(
+  [HttpDelete("{serviceAccountId:guid}")]
+  public async Task<IActionResult> Delete(
     Guid serviceAccountId,
-    [FromBody] CreateServiceAccountCredentialRequestDto request,
     CancellationToken cancellationToken)
   {
     if (!User.IsServerPrincipal())
@@ -60,13 +67,25 @@ public class ServiceAccountsController(
       return Forbid();
     }
 
-    var result = await _serviceAccountManager.AddCredentialAsync(serviceAccountId, request.Name, cancellationToken);
+    var result = await _serviceAccountManager.DeleteAsync(serviceAccountId, cancellationToken);
     if (!result.IsSuccess)
     {
       return NotFound(result.Reason);
     }
 
-    return Ok(result.Value);
+    return NoContent();
+  }
+
+  [HttpGet]
+  public async Task<ActionResult<List<ServiceAccountDto>>> GetAll(CancellationToken cancellationToken)
+  {
+    if (!User.IsServerPrincipal())
+    {
+      return Forbid();
+    }
+
+    var accounts = await _serviceAccountManager.GetAllServerAsync(cancellationToken);
+    return Ok(accounts);
   }
 
   [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}")]
@@ -81,25 +100,6 @@ public class ServiceAccountsController(
     }
 
     var result = await _serviceAccountManager.RevokeCredentialAsync(serviceAccountId, credentialId, cancellationToken);
-    if (!result.IsSuccess)
-    {
-      return NotFound(result.Reason);
-    }
-
-    return NoContent();
-  }
-
-  [HttpDelete("{serviceAccountId:guid}")]
-  public async Task<IActionResult> Delete(
-    Guid serviceAccountId,
-    CancellationToken cancellationToken)
-  {
-    if (!User.IsServerPrincipal())
-    {
-      return Forbid();
-    }
-
-    var result = await _serviceAccountManager.DeleteAsync(serviceAccountId, cancellationToken);
     if (!result.IsSuccess)
     {
       return NotFound(result.Reason);
