@@ -146,9 +146,6 @@ public class ServiceAccountManager(
       throw new InvalidOperationException($"Bootstrap server service account creation failed: ServerServiceAccountTokenSecret must be at least {MinimumSecretLength} characters.");
     }
 
-    // Skip if the named server account already exists (match by kind + name only). Server
-    // accounts have a null TenantId, so a unique index on name alone would suffice for
-    // server rows; matching by kind + name here is resilient for the future tenant case.
     var alreadyExists = await appDb.ServiceAccounts
       .AnyAsync(x => x.Kind == ServiceAccountKind.Server && x.Name == name, cancellationToken);
 
@@ -294,9 +291,7 @@ public class ServiceAccountManager(
       }
 
       // The header id is the credential Guid rendered via Convert.ToHexString on the
-      // Guid's byte array (the same convention the PAT handler uses). Reconstruct the Guid
-      // from the hex bytes rather than Guid.TryParse, which interprets the canonical layout
-      // and would not round-trip this byte order.
+      // Guid's byte array. Reconstruct the Guid from the hex bytes rather than Guid.TryParse.
       Guid credentialId;
       try
       {

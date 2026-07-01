@@ -57,10 +57,6 @@ public class ServiceAccountCredentialAuthenticationHandler(
 
     var (account, credential) = validationResult.Value;
 
-    // No controlr:tenant:id claim is emitted. This is the key design decision that keeps the
-    // AppDb query filter disabled for server service accounts (no tenant claim => no
-    // ClaimsDbContextOptionsExtension => no tenant HasQueryFilter), giving them unbound
-    // cross-tenant access in the interim model.
     var claims = new List<Claim>
     {
       new(PrincipalClaimTypes.PrincipalType, PrincipalClaimTypes.ServerServiceAccount),
