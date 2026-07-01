@@ -23,9 +23,14 @@ public class TagsController : ControllerBase
       tenantId = tid;
     }
 
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot create tags.");
+    }
+
     var tag = new Tag
     {
-      TenantId = tenantId!.Value,
+      TenantId = tenantId.Value,
       Name = dto.Name,
       Type = dto.Type,
     };
@@ -52,7 +57,7 @@ public class TagsController : ControllerBase
 
     var tag = await appDb.Tags
       .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == tagId && x.TenantId == tenantId!.Value);
+      .FirstOrDefaultAsync(x => x.Id == tagId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
 
     if (tag == null)
     {
@@ -106,7 +111,7 @@ public class TagsController : ControllerBase
     }
 
     var tag = await appDb.Tags
-      .FirstOrDefaultAsync(x => x.Id == dto.TagId && x.TenantId == tenantId!.Value);
+      .FirstOrDefaultAsync(x => x.Id == dto.TagId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
     if (tag is null)
     {
       return NotFound();

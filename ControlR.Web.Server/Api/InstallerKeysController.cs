@@ -29,9 +29,14 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
       creatorId = cid;
     }
 
+    if (!tenantId.HasValue || !creatorId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot create installer keys.");
+    }
+
     var dto = await _installerKeyManager.CreateKey(
-        tenantId!.Value,
-        creatorId!.Value,
+        tenantId.Value,
+        creatorId.Value,
         request.KeyType,
         request.AllowedUses,
         request.Expiration,
@@ -55,8 +60,13 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
       userId = uid;
     }
 
+    if (!tenantId.HasValue || !userId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot delete installer keys.");
+    }
+
     var isAdmin = User.IsInRole(RoleNames.TenantAdministrator);
-    var result = await _installerKeyManager.DeleteKey(id, userId!.Value, tenantId!.Value, isAdmin);
+    var result = await _installerKeyManager.DeleteKey(id, userId.Value, tenantId.Value, isAdmin);
     return result.ToActionResult();
   }
 
@@ -75,8 +85,13 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
       userId = uid;
     }
 
+    if (!tenantId.HasValue || !userId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot list installer keys.");
+    }
+
     var isAdmin = User.IsInRole(RoleNames.TenantAdministrator);
-    var keys = await _installerKeyManager.GetAllKeys(tenantId!.Value, userId!.Value, isAdmin);
+    var keys = await _installerKeyManager.GetAllKeys(tenantId.Value, userId.Value, isAdmin);
     return keys.ToList();
   }
 
@@ -95,8 +110,13 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
       userId = uid;
     }
 
+    if (!tenantId.HasValue || !userId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot view installer key usages.");
+    }
+
     var isAdmin = User.IsInRole(RoleNames.TenantAdministrator);
-    var result = await _installerKeyManager.GetKeyUsages(keyId, userId!.Value, tenantId!.Value, isAdmin);
+    var result = await _installerKeyManager.GetKeyUsages(keyId, userId.Value, tenantId.Value, isAdmin);
     return result.ToActionResult();
   }
 
@@ -126,8 +146,13 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
       userId = uid;
     }
 
+    if (!tenantId.HasValue || !userId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot rename installer keys.");
+    }
+
     var isAdmin = User.IsInRole(RoleNames.TenantAdministrator);
-    var result = await _installerKeyManager.RenameKey(request.Id, request.FriendlyName, userId!.Value, tenantId!.Value, isAdmin);
+    var result = await _installerKeyManager.RenameKey(request.Id, request.FriendlyName, userId.Value, tenantId.Value, isAdmin);
     return result.ToActionResult();
   }
 }

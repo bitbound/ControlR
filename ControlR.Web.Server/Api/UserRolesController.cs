@@ -33,7 +33,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
       return NotFound("User not found.");
     }
 
-    if (user.TenantId != tenantId!.Value)
+    if (tenantId.HasValue && user.TenantId != tenantId.Value)
     {
       return Unauthorized();
     }
@@ -170,7 +170,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
       return NotFound("User not found.");
     }
 
-    if (user.TenantId != tenantId!.Value)
+    if (tenantId.HasValue && user.TenantId != tenantId.Value)
     {
       return Unauthorized();
     }

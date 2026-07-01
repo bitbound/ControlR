@@ -25,9 +25,14 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
       tenantId = tid;
     }
 
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot delete tenant settings.");
+    }
+
     var tenant = await _appDb.Tenants
       .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == tenantId!.Value);
+      .FirstOrDefaultAsync(x => x.Id == tenantId.Value);
 
     if (tenant is null)
     {
@@ -58,7 +63,12 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
       tenantId = tid;
     }
 
-    var settings = await _tenantSettingsManager.GetAllSettings(tenantId!.Value, cancellationToken);
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot access tenant-scoped settings.");
+    }
+
+    var settings = await _tenantSettingsManager.GetAllSettings(tenantId.Value, cancellationToken);
     return Ok(settings);
   }
 
@@ -74,10 +84,15 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
       tenantId = tid;
     }
 
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot access tenant-scoped settings.");
+    }
+
     var tenant = await _appDb.Tenants
       .AsNoTracking()
       .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == tenantId!.Value);
+      .FirstOrDefaultAsync(x => x.Id == tenantId.Value);
 
     if (tenant is null)
     {
@@ -107,7 +122,12 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
       tenantId = tid;
     }
 
-    var result = await _tenantSettingsManager.SetSetting(tenantId!.Value, setting);
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot modify tenant settings.");
+    }
+
+    var result = await _tenantSettingsManager.SetSetting(tenantId.Value, setting);
     return result.ToActionResult();
   }
 
@@ -125,7 +145,12 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
       tenantId = tid;
     }
 
-    var result = await _tenantSettingsManager.SetSettings(tenantId!.Value, settings, cancellationToken);
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot modify tenant settings.");
+    }
+
+    var result = await _tenantSettingsManager.SetSettings(tenantId.Value, settings, cancellationToken);
     return result.ToActionResult();
   }
 }

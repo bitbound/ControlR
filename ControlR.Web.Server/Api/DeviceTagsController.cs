@@ -16,12 +16,11 @@ public class DeviceTagsController : ControllerBase
     [FromServices] IHubContext<AgentHub> agentHub,
     [FromBody] DeviceTagAddRequestDto dto)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    var isServerPrincipal = User.IsServerPrincipal();
+
+    if (!User.TryGetTenantId(out var tenantId) && !isServerPrincipal)
     {
-      if (!User.TryGetTenantId(out var tid))
-        return Unauthorized();
-      tenantId = tid;
+      return Unauthorized();
     }
 
     var device = await appDb.Devices
@@ -33,7 +32,7 @@ public class DeviceTagsController : ControllerBase
       return NotFound("Device not found.");
     }
 
-    if (device.TenantId != tenantId!.Value)
+    if (!isServerPrincipal && device.TenantId != tenantId)
     {
       return Unauthorized();
     }
@@ -44,7 +43,7 @@ public class DeviceTagsController : ControllerBase
     {
       return NotFound("Tag not found.");
     }
-    if (tag.TenantId != tenantId!.Value)
+    if (!isServerPrincipal && tag.TenantId != tenantId)
     {
       return Unauthorized();
     }
@@ -55,7 +54,7 @@ public class DeviceTagsController : ControllerBase
 
     await agentHub.Groups.RemoveFromGroupAsync(
         device.ConnectionId,
-        HubGroupNames.GetTagGroupName(dto.TagId, tenantId!.Value));
+        HubGroupNames.GetTagGroupName(dto.TagId, tag.TenantId));
 
     return NoContent();
   }
@@ -85,7 +84,7 @@ public class DeviceTagsController : ControllerBase
       return NotFound("User not found.");
     }
 
-    if (device.TenantId != tenantId!.Value)
+    if (tenantId.HasValue && device.TenantId != tenantId.Value)
     {
       return Unauthorized();
     }
@@ -101,7 +100,7 @@ public class DeviceTagsController : ControllerBase
 
     await agentHub.Groups.RemoveFromGroupAsync(
       device.ConnectionId,
-      HubGroupNames.GetTagGroupName(tagId, tenantId!.Value));
+      HubGroupNames.GetTagGroupName(tagId, tag.TenantId));
 
     return NoContent();
   }

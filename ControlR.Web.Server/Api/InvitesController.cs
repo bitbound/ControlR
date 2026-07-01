@@ -37,10 +37,15 @@ public class InvitesController : ControllerBase
       tenantId = tid;
     }
 
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot create tenant invites.");
+    }
+
     var origin = Request.ToOrigin();
     var result = await tenantInvitesProvider.CreateInvite(
       dto.InviteeEmail,
-      tenantId!.Value,
+      tenantId.Value,
       origin,
       HttpContext.RequestAborted);
 
@@ -60,7 +65,12 @@ public class InvitesController : ControllerBase
       tenantId = tid;
     }
 
-    var result = await tenantInvitesProvider.DeleteInvite(inviteId, tenantId!.Value);
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot delete tenant invites.");
+    }
+
+    var result = await tenantInvitesProvider.DeleteInvite(inviteId, tenantId.Value);
 
     return result.ToActionResult();
   }
@@ -77,7 +87,12 @@ public class InvitesController : ControllerBase
       tenantId = tid;
     }
 
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot list tenant invites.");
+    }
+
     var origin = Request.ToOrigin();
-    return await tenantInvitesProvider.GetAllInvites(tenantId!.Value, origin);
+    return await tenantInvitesProvider.GetAllInvites(tenantId.Value, origin);
   }
 }

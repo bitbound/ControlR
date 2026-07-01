@@ -31,7 +31,7 @@ public class UserTagsController : ControllerBase
       return NotFound("User not found.");
     }
 
-    if (user.TenantId != tenantId!.Value)
+    if (tenantId.HasValue && user.TenantId != tenantId.Value)
     {
       return Unauthorized();
     }
@@ -42,7 +42,7 @@ public class UserTagsController : ControllerBase
     {
       return NotFound("Tag not found.");
     }
-    if (tag.TenantId != tenantId!.Value)
+    if (tenantId.HasValue && tag.TenantId != tenantId.Value)
     {
       return Unauthorized();
     }
@@ -148,7 +148,7 @@ public class UserTagsController : ControllerBase
       return NotFound("User not found.");
     }
 
-    if (user.TenantId != tenantId!.Value)
+    if (tenantId.HasValue && user.TenantId != tenantId.Value)
     {
       return Unauthorized();
     }

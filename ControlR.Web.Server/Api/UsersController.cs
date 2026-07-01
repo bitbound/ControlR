@@ -24,7 +24,12 @@ public class UsersController : ControllerBase
       tenantId = tid;
     }
 
-    var result = await passwordManager.AdminResetPassword(tenantId!.Value, userId);
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot reset user passwords.");
+    }
+
+    var result = await passwordManager.AdminResetPassword(tenantId.Value, userId);
     if (!result.IsSuccess)
     {
       if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
@@ -87,10 +92,15 @@ public class UsersController : ControllerBase
       }
     }
 
+    if (!tenantId.HasValue)
+    {
+      return BadRequest("Server service accounts cannot create users.");
+    }
+
     var createResult = await userCreator.CreateUser(
       string.IsNullOrWhiteSpace(request.Email) ? request.UserName : request.Email,
       request.Password ?? string.Empty,
-      tenantId!.Value,
+      tenantId.Value,
       requestRoleIds,
       request.TagIds,
       cancellationToken: HttpContext.RequestAborted);
@@ -127,7 +137,7 @@ public class UsersController : ControllerBase
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
+      .AnyAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
 
     if (!targetExists)
     {
@@ -160,7 +170,7 @@ public class UsersController : ControllerBase
 
     var user = await appDb.Users
       .Include(x => x.UserPreferences)
-      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
+      .FirstOrDefaultAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
 
     if (user == null)
     {
@@ -193,7 +203,7 @@ public class UsersController : ControllerBase
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
+      .AnyAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
 
     if (!targetExists)
     {
@@ -235,7 +245,7 @@ public class UsersController : ControllerBase
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
+      .AnyAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
 
     if (!targetExists)
     {
@@ -264,7 +274,7 @@ public class UsersController : ControllerBase
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId!.Value);
+      .AnyAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
 
     if (!targetExists)
     {
