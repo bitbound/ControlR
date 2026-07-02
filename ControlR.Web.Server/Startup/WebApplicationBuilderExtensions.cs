@@ -267,7 +267,7 @@ public static class WebApplicationBuilderExtensions
         options.DefaultScheme = CustomSchemes.Dynamic;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
       })
-      .AddPolicyScheme(CustomSchemes.Dynamic, "Smart Authentication Scheme", options =>
+      .AddPolicyScheme(CustomSchemes.Dynamic, "Dynamic Authentication Scheme", options =>
       {
         options.ForwardDefaultSelector = context =>
         {
