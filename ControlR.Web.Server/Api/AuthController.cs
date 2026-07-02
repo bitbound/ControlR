@@ -52,7 +52,7 @@ public class AuthController : ControllerBase
     var user = await userManager.FindByEmailAsync(request.Email);
     if (user is null)
     {
-      return BadRequest("Email and current password are invalid.");
+      return Unauthorized();
     }
 
     var result = await signInManager.CheckPasswordSignInAsync(
@@ -62,13 +62,13 @@ public class AuthController : ControllerBase
 
     if (result.IsLockedOut)
     {
-      return BadRequest("This account is locked. Please try again later.");
+      return Unauthorized();
     }
 
     if (!result.Succeeded)
     {
       await userManager.AccessFailedAsync(user);
-      return BadRequest("Email and current password are invalid.");
+      return Unauthorized();
     }
 
     if (user.TwoFactorEnabled && string.IsNullOrWhiteSpace(request.TwoFactorCode))
