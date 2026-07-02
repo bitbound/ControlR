@@ -45,7 +45,7 @@ public class ServiceAccountCredentialAuthenticationHandler(
       return AuthenticateResult.Fail("Too many failed credential attempts. Try again later.");
     }
 
-    var validationResult = await serviceAccountManager.ValidateCredentialAsync(apiKey, Context.RequestAborted);
+    var validationResult = await serviceAccountManager.ValidateCredential(apiKey, Context.RequestAborted);
     if (!validationResult.IsSuccess)
     {
       var newCount = failureCount + 1;

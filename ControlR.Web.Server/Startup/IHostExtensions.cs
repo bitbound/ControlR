@@ -202,7 +202,7 @@ public static class HostExtensions
     var logger = sp.GetRequiredService<ILogger<Program>>();
     var serviceAccountManager = sp.GetRequiredService<IServiceAccountManager>();
 
-    var result = await serviceAccountManager.BootstrapServerServiceAccountAsync(bootstrapOptions.Value);
+    var result = await serviceAccountManager.BootstrapServerServiceAccount(bootstrapOptions.Value);
     if (!result.IsSuccess)
     {
       logger.LogError("Bootstrap server service account failed: {Reason}", result.Reason);

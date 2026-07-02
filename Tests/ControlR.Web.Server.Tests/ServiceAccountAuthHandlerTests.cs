@@ -39,7 +39,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
 
-    var createResult = await serviceAccountManager.CreateServerAsync(
+    var createResult = await serviceAccountManager.CreateServer(
       "Revocation Test SA",
       null,
       TestContext.Current.CancellationToken);
@@ -47,7 +47,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
 
     var accountId = createResult.Value.ServiceAccount.Id;
     var credentialId = createResult.Value.ServiceAccount.Credentials[0].Id;
-    await serviceAccountManager.RevokeCredentialAsync(
+    await serviceAccountManager.RevokeCredential(
       accountId,
       credentialId,
       TestContext.Current.CancellationToken);
@@ -101,7 +101,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
 
-    var createResult = await serviceAccountManager.CreateServerAsync(
+    var createResult = await serviceAccountManager.CreateServer(
       "AuthHandlerTest SA",
       null,
       TestContext.Current.CancellationToken);

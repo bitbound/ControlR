@@ -29,7 +29,7 @@ public class ServiceAccountsController(
       return Forbid();
     }
 
-    var result = await _serviceAccountManager.AddCredentialAsync(serviceAccountId, request.Name, cancellationToken);
+    var result = await _serviceAccountManager.AddCredential(serviceAccountId, request.Name, cancellationToken);
     if (!result.IsSuccess)
     {
       return NotFound(result.Reason);
@@ -48,7 +48,7 @@ public class ServiceAccountsController(
       return Forbid();
     }
 
-    var result = await _serviceAccountManager.CreateServerAsync(request.Name, request.Description, cancellationToken);
+    var result = await _serviceAccountManager.CreateServer(request.Name, request.Description, cancellationToken);
     if (!result.IsSuccess)
     {
       return BadRequest(result.Reason);
@@ -67,7 +67,7 @@ public class ServiceAccountsController(
       return Forbid();
     }
 
-    var result = await _serviceAccountManager.DeleteAsync(serviceAccountId, cancellationToken);
+    var result = await _serviceAccountManager.Delete(serviceAccountId, cancellationToken);
     if (!result.IsSuccess)
     {
       return NotFound(result.Reason);
@@ -84,7 +84,7 @@ public class ServiceAccountsController(
       return Forbid();
     }
 
-    var accounts = await _serviceAccountManager.GetAllServerAsync(cancellationToken);
+    var accounts = await _serviceAccountManager.GetAllServer(cancellationToken);
     return Ok(accounts);
   }
 
@@ -99,7 +99,7 @@ public class ServiceAccountsController(
       return Forbid();
     }
 
-    var result = await _serviceAccountManager.RevokeCredentialAsync(serviceAccountId, credentialId, cancellationToken);
+    var result = await _serviceAccountManager.RevokeCredential(serviceAccountId, credentialId, cancellationToken);
     if (!result.IsSuccess)
     {
       return NotFound(result.Reason);

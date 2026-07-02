@@ -72,6 +72,13 @@ public partial class Add_ServiceAccounts : Migration
         name: "IX_ServiceAccounts_TenantId",
         table: "ServiceAccounts",
         column: "TenantId");
+
+    migrationBuilder.CreateIndex(
+        name: "IX_ServiceAccounts_Kind_TenantId_Name",
+        table: "ServiceAccounts",
+        columns: ["Kind", "TenantId", "Name"],
+        unique: true,
+        filter: "\"TenantId\" IS NOT NULL");
   }
 
   /// <inheritdoc />

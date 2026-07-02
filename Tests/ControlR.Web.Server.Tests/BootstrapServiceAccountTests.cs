@@ -84,7 +84,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     var apiKey = $"{hexId}:{TokenSecret}";
 
     var serviceAccountManager = scope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
-    var validationResult = await serviceAccountManager.ValidateCredentialAsync(apiKey, TestContext.Current.CancellationToken);
+    var validationResult = await serviceAccountManager.ValidateCredential(apiKey, TestContext.Current.CancellationToken);
 
     Assert.True(validationResult.IsSuccess);
     Assert.NotNull(validationResult.Value);
@@ -143,7 +143,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
 
     var apiKey = $"{hexId}:{TokenSecret}";
     var manager = scope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
-    var result = await manager.ValidateCredentialAsync(apiKey, TestContext.Current.CancellationToken);
+    var result = await manager.ValidateCredential(apiKey, TestContext.Current.CancellationToken);
     Assert.True(result.IsSuccess);
   }
 
@@ -210,7 +210,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     var deviceB = await services.CreateTestDevice(tenantB.Id);
 
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
-    var saResult = await serviceAccountManager.CreateServerAsync(
+    var saResult = await serviceAccountManager.CreateServer(
       "CrossTenant SA 2",
       null,
       TestContext.Current.CancellationToken);
@@ -254,7 +254,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     var deviceB = await services.CreateTestDevice(tenantB.Id);
 
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
-    var saResult = await serviceAccountManager.CreateServerAsync(
+    var saResult = await serviceAccountManager.CreateServer(
       "CrossTenant SA",
       null,
       TestContext.Current.CancellationToken);
@@ -291,7 +291,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var manager = services.GetRequiredService<IServiceAccountManager>();
 
-    var createResult = await manager.CreateServerAsync(
+    var createResult = await manager.CreateServer(
       "Lifecycle SA",
       "Created by test",
       TestContext.Current.CancellationToken);
@@ -301,28 +301,28 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     var credentialId = createResult.Value.ServiceAccount.Credentials[0].Id;
     var apiKey = createResult.Value.PlainTextSecretKey;
 
-    var validateResult = await manager.ValidateCredentialAsync(apiKey, TestContext.Current.CancellationToken);
+    var validateResult = await manager.ValidateCredential(apiKey, TestContext.Current.CancellationToken);
     Assert.True(validateResult.IsSuccess);
     Assert.Equal(accountId, validateResult.Value.ServiceAccount.Id);
 
-    var addCredResult = await manager.AddCredentialAsync(
+    var addCredResult = await manager.AddCredential(
       accountId,
       "Secondary key",
       TestContext.Current.CancellationToken);
     Assert.True(addCredResult.IsSuccess);
     var secondApiKey = addCredResult.Value.PlainTextSecretKey;
 
-    await manager.RevokeCredentialAsync(accountId, credentialId, TestContext.Current.CancellationToken);
+    await manager.RevokeCredential(accountId, credentialId, TestContext.Current.CancellationToken);
 
-    var shouldFail = await manager.ValidateCredentialAsync(apiKey, TestContext.Current.CancellationToken);
+    var shouldFail = await manager.ValidateCredential(apiKey, TestContext.Current.CancellationToken);
     Assert.False(shouldFail.IsSuccess);
 
-    var shouldPass = await manager.ValidateCredentialAsync(secondApiKey, TestContext.Current.CancellationToken);
+    var shouldPass = await manager.ValidateCredential(secondApiKey, TestContext.Current.CancellationToken);
     Assert.True(shouldPass.IsSuccess);
 
-    await manager.DeleteAsync(accountId, TestContext.Current.CancellationToken);
+    await manager.Delete(accountId, TestContext.Current.CancellationToken);
 
-    var allAccounts = await manager.GetAllServerAsync(TestContext.Current.CancellationToken);
+    var allAccounts = await manager.GetAllServer(TestContext.Current.CancellationToken);
     Assert.DoesNotContain(allAccounts, a => a.Id == accountId);
   }
 }
