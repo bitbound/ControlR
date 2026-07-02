@@ -770,6 +770,20 @@ jobs:
         run: |
           Set-Content -Path "ControlR.Web.Server/wwwroot/downloads/Version.txt" -Value $env:VERSION -Force -Encoding UTF8
 
+      - name: Copy Release Notes
+        shell: pwsh
+        run: |
+          if (Test-Path ".release-notes/current.md") {
+            Copy-Item -Path ".release-notes/current.md" -Destination "ControlR.Web.Server/wwwroot/downloads/release-notes.md" -Force
+          } else {
+            Write-Host "No .release-notes/current.md found. Creating placeholder."
+            @"
+          ## $env:VERSION
+
+          _No release notes available yet._
+          "@ | Set-Content -Path "ControlR.Web.Server/wwwroot/downloads/release-notes.md" -Encoding UTF8
+          }
+
       - name: Build Web Server
         shell: pwsh
         run: |
@@ -802,6 +816,7 @@ jobs:
         run: |
           $TestPaths = @(
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/Version.txt",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/release-notes.md",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.Installer.exe",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.Installer.exe",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.bundle.zip",

@@ -2,6 +2,7 @@
 @attribute [Route(ClientRoutes.About)]
 @inject ILogger<About> Logger
 @inject ISnackbar Snackbar
+@inject IWhatsNewNotifier WhatsNewNotifier
 
 <PageTitle>About</PageTitle>
 
@@ -19,6 +20,14 @@
     <MudText>
       @(_currentVersion)
     </MudText>
+    <MudButton Variant="Variant.Text"
+               Size="Size.Small"
+               Color="Color.Info"
+               Class="ml-2 pa-0"
+               Style="min-width: auto; text-transform: none;"
+               OnClick="ShowWhatsNew">
+      See what's new
+    </MudButton>
   </div>
 
   <div>
@@ -151,5 +160,10 @@
       Snackbar.Add("Error determining version.", Severity.Error);
     }
     return Task.CompletedTask;
+  }
+
+  private async Task ShowWhatsNew()
+  {
+    await WhatsNewNotifier.ShowWhatsNew();
   }
 }

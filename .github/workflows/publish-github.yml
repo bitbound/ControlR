@@ -120,19 +120,50 @@ jobs:
           tag_name: v${{ steps.get-version.outputs.VERSION }}
           draft: true
           prerelease: ${{ inputs.prerelease }}
-          generate_release_notes: true
-          body: |
-            ## Breaking Changes:
-              - 
-
-            ## Changes:
-              - 
+          generate_release_notes: false
+          body_path: ./server-publish/wwwroot/downloads/release-notes.md 
           files: |
             server-linux-amd64.zip
             ControlR.Web.Server.json
             docker-compose.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Archive Release Notes
+        shell: bash
+        run: |
+          VERSION="${{ steps.get-version.outputs.VERSION }}"
+          cp ./server-publish/wwwroot/downloads/release-notes.md ".release-notes/v${VERSION}.md"
+          cat > .release-notes/current.md << 'TEMPLATE'
+          ## Breaking Changes
+
+          None.
+
+          ## Added
+
+          None.
+
+          ## Fixed
+
+          None.
+
+          ## Changed
+
+          None.
+
+          ## Removed
+
+          None.
+          TEMPLATE
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git add .release-notes/
+            git commit -m "chore: archive release notes for v${VERSION}"
+            git push
+          fi
 
       - name: Release Created
         run: |

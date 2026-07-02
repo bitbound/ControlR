@@ -22,4 +22,10 @@ public partial class ControlrApi
     return await ExecuteApiCall(async () =>
       await _client.GetFromJsonAsync<Version>($"{HttpConstants.VersionEndpoint}/server", cancellationToken));
   }
+
+  async Task<ApiResult<string>> IVersionApi.GetReleaseNotes(CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+      await _client.GetStringAsync($"{HttpConstants.VersionEndpoint}/release-notes", cancellationToken));
+  }
 }

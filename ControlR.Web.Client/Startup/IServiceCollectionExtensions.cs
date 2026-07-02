@@ -65,9 +65,11 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IUserStore, UserStore>();
     services.AddScoped<IRoleStore, RoleStore>();
     services.AddScoped<IInviteStore, InviteStore>();
+    services.AddScoped<IWhatsNewNotifier, WhatsNewNotifier>();
 
     services.AddTransient<IJsInterop, JsInterop>();
     services.AddTransient<IHubConnectionBuilder, HubConnectionBuilder>();
+    services.AddSingleton<IMarkdownParser, MarkdownParser>();
 
     return services;
   }

@@ -1,33 +1,32 @@
 @inherits BaseLayout
 @inject ILazyInjector<IHubConnector> HubConnector
+@inject ILazyInjector<IWhatsNewNotifier> WhatsNewNotifier
 
 <div class="@ThemeClass">
-	<ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
+  <ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
 
-		<MudLayout>
-			<MudAppBar Elevation="1">
+    <MudLayout>
+      <MudAppBar Elevation="1">
 
-				@if (RendererInfo.IsInteractive)
-				{
-					<MudIconButton Icon="@Icons.Material.Filled.Menu"
-												 Color="Color.Inherit" Edge="Edge.Start"
-												 OnClick="@(_ => ToggleNavDrawer())" />
-				}
-				else
-				{
-					<MudStaticNavDrawerToggle DrawerId="nav-drawer"
-																		Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
-																		Edge="Edge.Start" />
-				}
+        @if (RendererInfo.IsInteractive)
+        {
+          <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                         OnClick="@(_ => ToggleNavDrawer())" />
+        }
+        else
+        {
+          <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+                                    Edge="Edge.Start" />
+        }
 
-				<MudLink Href="/" Underline="Underline.None" Class="d-flex">
-				  <MudImage Src=@Assets["static/appicon-192.png"] Height="30" Class="mx-2" />
-					<MudText Typo="Typo.h6" Color="Color.Primary">
+        <MudLink Href="/" Underline="Underline.None" Class="d-flex">
+          <MudImage Src=@Assets["static/appicon-192.png"] Height="30" Class="mx-2" />
+          <MudText Typo="Typo.h6" Color="Color.Primary">
             @(BrandingConstants.BrandName)
           </MudText>
-				</MudLink>
+        </MudLink>
 
-				<MudSpacer />
+        <MudSpacer />
 
         @if (RendererInfo.IsInteractive)
         {
@@ -43,105 +42,115 @@
           <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
                          Href="https://github.com/bitbound/controlr/" Target="_blank" />
         </MudTooltip>
-			</MudAppBar>
-			<MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
+      </MudAppBar>
+      <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
 
-				<NavMenu />
-			</MudDrawer>
-			<MudMainContent Class="mt-16 pa-4">
-				@if (RendererInfo.IsInteractive)
-				{
-					<ServerAlertDisplay Class="mb-4" />
+        <NavMenu />
+      </MudDrawer>
+      <MudMainContent Class="mt-16 pa-4">
+        @if (RendererInfo.IsInteractive)
+        {
+          <ServerAlertDisplay Class="mb-4" />
 
-					@if (_isServerDecommissioned)
-					{
-						<MudAlert Severity="Severity.Error" Class="mb-4"
-							Icon="@(Icons.Material.Filled.Dangerous)">
-							<strong>Server Decommission Mode is active.</strong> When agents connect, they will automatically uninstall themselves.
-						</MudAlert>
-					}
-				}
+          @if (_isServerDecommissioned)
+          {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Icon="@(Icons.Material.Filled.Dangerous)">
+              <strong>Server Decommission Mode is active.</strong> When agents connect, they will automatically uninstall
+              themselves.
+            </MudAlert>
+          }
+        }
 
-				@if (!RendererInfo.IsInteractive && IsInteractiveRoutingPage)
-				{
-					<div class="w-100 text-center mt-8">
-						<div class="loading-progress-container">
-							<MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
-								Loading <span class="loading-progress-text"></span>
-							</MudText>
-							<MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
-						</div>
-					</div>
-				}
-				else
-				{
-					@Body
-				}
-			</MudMainContent>
-		</MudLayout>
+        @if (!RendererInfo.IsInteractive && IsInteractiveRoutingPage)
+        {
+          <div class="w-100 text-center mt-8">
+            <div class="loading-progress-container">
+              <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+                Loading <span class="loading-progress-text"></span>
+              </MudText>
+              <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+            </div>
+          </div>
+        }
+        else
+        {
+          @Body
+        }
+      </MudMainContent>
+    </MudLayout>
 
-		@if (RendererInfo.IsInteractive)
-		{
-			<DeviceContentHarness />
-		}
-	</ControlRLayoutProvider>
+    @if (RendererInfo.IsInteractive)
+    {
+      <DeviceContentHarness />
+    }
+  </ControlRLayoutProvider>
 </div>
 
 <div id="blazor-error-ui">
-	An unhandled error has occurred.
-	<a href="" class="reload">Reload</a>
-	<a class="dismiss">🗙</a>
+  An unhandled error has occurred.
+  <a href="" class="reload">Reload</a>
+  <a class="dismiss">🗙</a>
 </div>
 
 @code {
-	private bool _isServerDecommissioned;
+  private bool _isServerDecommissioned;
 
-	protected override async Task OnInitializedAsync()
-	{
-		await base.OnInitializedAsync();
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
 
-		if (RendererInfo.IsInteractive)
-		{
-			AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
+    if (RendererInfo.IsInteractive)
+    {
+      AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;
 
-			if (IsAuthenticated)
-			{
-				await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
-			}
+      if (IsAuthenticated)
+      {
+        await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+        await MaybeShowWhatsNew();
+      }
 
-			_isServerDecommissioned = PersistentState.Value.IsDecommissioned;
-		}
-	}
+      _isServerDecommissioned = PersistentState.Value.IsDecommissioned;
+    }
+  }
 
-	private async void HandleAuthenticationStateChanged(Task<AuthenticationState> taskState)
-	{
-		try
-		{
-			if (!RendererInfo.IsInteractive)
-			{
-				return;
-			}
+  private async void HandleAuthenticationStateChanged(Task<AuthenticationState> taskState)
+  {
+    try
+    {
+      if (!RendererInfo.IsInteractive)
+      {
+        return;
+      }
 
-			var state = await taskState;
-			IsAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
-			await InvokeAsync(StateHasChanged);
+      var state = await taskState;
+      IsAuthenticated = state.User.Identity?.IsAuthenticated ?? false;
+      await InvokeAsync(StateHasChanged);
 
-			if (IsAuthenticated)
-			{
-				await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
-			}
-		}
-		catch (Exception ex)
-		{
-			Logger.LogError(ex, "Error while handling authentication state change.");
-			Snackbar.Value.Add("Authentication state change error", Severity.Error);
-		}
-	}
+      if (IsAuthenticated)
+      {
+        await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while handling authentication state change.");
+      Snackbar.Value.Add("Authentication state change error", Severity.Error);
+    }
+  }
 
-	public override async ValueTask DisposeAsync()
-	{
-		AuthState.AuthenticationStateChanged -= HandleAuthenticationStateChanged;
-		await base.DisposeAsync();
-	}
+  private async Task MaybeShowWhatsNew()
+  {
+    if (!RendererInfo.IsInteractive || !IsAuthenticated || !WhatsNewNotifier.Exists)
+    {
+      return;
+    }
+    await WhatsNewNotifier.Value.CheckAndShowIfNeeded();
+  }
+
+  public override async ValueTask DisposeAsync()
+  {
+    AuthState.AuthenticationStateChanged -= HandleAuthenticationStateChanged;
+    await base.DisposeAsync();
+  }
 
 }

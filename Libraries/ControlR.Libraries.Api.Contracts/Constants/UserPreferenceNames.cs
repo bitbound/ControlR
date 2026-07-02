@@ -2,6 +2,7 @@ namespace ControlR.Libraries.Api.Contracts.Constants;
 
 public static class UserPreferenceNames
 {
+  public const string AcknowledgedNewVersion = "acknowledged-new-version";
   public const string AutoQualityLowerThresholdMbps = "auto-quality-lower-threshold-mbps";
   public const string AutoQualityMaximum = "auto-quality-maximum";
   public const string AutoQualityMinimum = "auto-quality-minimum";

@@ -569,7 +569,7 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
 		}
 	}
 
-	public Task<string> ReadAllTextAsync(string path)
+	public Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken = default)
 	{
 		lock (_syncRoot)
 		{

@@ -399,6 +399,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddHostedService<AgentInstallerKeyUsageCleanupBackgroundService>();
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IAgentVersionProvider, AgentVersionProvider>();
+    builder.Services.AddScoped<IReleaseNotesProvider, ReleaseNotesProvider>();
     builder.Services.AddScoped<IPasswordManager, PasswordManager>();
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();

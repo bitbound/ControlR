@@ -1,0 +1,44 @@
+.release-notes-content ::deep h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.release-notes-content ::deep h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+}
+
+.release-notes-content ::deep h4 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.release-notes-content ::deep p {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.release-notes-content ::deep ul,
+.release-notes-content ::deep ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.release-notes-content ::deep li {
+  margin-bottom: 0.25rem;
+  line-height: 1.5;
+}
+
+.release-notes-content ::deep code {
+  background-color: var(--mud-palette-action-default-hover);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}

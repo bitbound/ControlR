@@ -48,6 +48,7 @@
     <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />
     <Project Path="Tests/ControlR.Viewer.Avalonia.Tests/ControlR.Viewer.Avalonia.Tests.csproj" />
     <Project Path="Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj" />
+    <Project Path="Tests/ControlR.Web.Client.Tests/ControlR.Web.Client.Tests.csproj" />
     <Project Path="Tests/ControlR.Web.Server.UITests/ControlR.Web.Server.UITests.csproj" />
     <Project Path="Tests/ControlR.Solution.Tests/ControlR.Solution.Tests.csproj" />
   </Folder>

@@ -142,7 +142,7 @@ public class FakeFileSystemTests
     Assert.True(fileSystem.DirectoryExists("/dst/sub/deep"));
     Assert.True(fileSystem.FileExists("/dst/sub/deep/file.txt"));
 
-    var content = await fileSystem.ReadAllTextAsync("/dst/sub/deep/file.txt");
+    var content = await fileSystem.ReadAllTextAsync("/dst/sub/deep/file.txt", TestContext.Current.CancellationToken);
     Assert.Equal("deep-content", content);
   }
 
@@ -167,7 +167,7 @@ public class FakeFileSystemTests
 
     fileSystem.MoveDirectory("/src", "/dst");
 
-    var content = await fileSystem.ReadAllTextAsync("/dst/data.bin");
+    var content = await fileSystem.ReadAllTextAsync("/dst/data.bin", TestContext.Current.CancellationToken);
     Assert.Equal("binary-content", content);
   }
 
@@ -230,7 +230,7 @@ public class FakeFileSystemTests
       await stream.WriteAsync(bytes, TestContext.Current.CancellationToken);
     }
 
-    var content = await fileSystem.ReadAllTextAsync("/data/test.txt");
+    var content = await fileSystem.ReadAllTextAsync("/data/test.txt", TestContext.Current.CancellationToken);
 
     Assert.Equal("hello world", content);
   }

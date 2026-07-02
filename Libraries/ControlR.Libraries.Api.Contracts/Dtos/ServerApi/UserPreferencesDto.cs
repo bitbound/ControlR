@@ -20,4 +20,5 @@ public sealed record UserPreferencesDto(
   bool OpenDeviceInNewTab,
   ThemeMode ThemeMode,
   string UserDisplayName,
-  ViewMode ViewMode);
+  ViewMode ViewMode,
+  string AcknowledgedNewVersion);

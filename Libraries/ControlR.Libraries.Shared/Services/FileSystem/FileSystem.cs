@@ -37,7 +37,7 @@ public interface IFileSystem
   Task<byte[]> ReadAllBytesAsync(string path);
   Task<string[]> ReadAllLinesAsync(string path);
   string ReadAllText(string filePath);
-  Task<string> ReadAllTextAsync(string path);
+  Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken = default);
   Task ReplaceLineInFile(string filePath, string matchPattern, string replaceLineWith, int maxMatches = -1);
   /// <summary>
   /// Resolves the absolute file path for the specified file name using `which` on Unix-based systems or `where.exe` on Windows.
@@ -239,9 +239,9 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
     return File.ReadAllText(filePath);
   }
 
-  public Task<string> ReadAllTextAsync(string path)
+  public Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken = default)
   {
-    return File.ReadAllTextAsync(path);
+    return File.ReadAllTextAsync(path, cancellationToken);
   }
 
   public async Task ReplaceLineInFile(string filePath, string matchPattern, string replaceLineWith, int maxMatches = -1)

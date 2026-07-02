@@ -7,18 +7,24 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.VersionEndpoint)]
 [ApiController]
 [OutputCache(Duration = 60)]
-public class VersionController(IAgentVersionProvider agentVersionProvider) : ControllerBase
+public class VersionController(
+  IAgentVersionProvider agentVersionProvider,
+  IReleaseNotesProvider releaseNotesProvider) : ControllerBase
 {
   [HttpGet("agent")]
   [OutputCache]
-  public async Task<ActionResult<Version>> GetCurrentAgentVersion()
+  public async Task<ActionResult<Version>> GetCurrentAgentVersion(CancellationToken cancellationToken)
   {
-    var result = await agentVersionProvider.TryGetAgentVersion();
-    if (!result.IsSuccess)
-    {
-      return NotFound();
-    }
-    return Ok(result.Value);
+    var result = await agentVersionProvider.TryGetAgentVersion(cancellationToken);
+    return result.ToActionResult();
+  }
+
+  [HttpGet("release-notes")]
+  [OutputCache]
+  public async Task<ActionResult<string>> GetReleaseNotes(CancellationToken cancellationToken)
+  {
+    var result = await releaseNotesProvider.GetReleaseNotes(cancellationToken);
+    return result.ToActionResult();
   }
 
   [HttpGet("server")]

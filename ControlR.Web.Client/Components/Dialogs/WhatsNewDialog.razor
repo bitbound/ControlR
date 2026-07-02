@@ -1,0 +1,39 @@
+@inherits DisposableComponent
+
+<MudDialog>
+  <TitleContent>
+    <MudText Typo="Typo.h5" Color="Color.Primary" Inline>
+      🎉 What's New in @(BrandingConstants.BrandName)
+    </MudText>
+    <MudText Typo="Typo.body2" Color="Color.Default" Class="ms-2 align-self-start" Style="vertical-align: super" Inline>
+      (v@(CurrentVersion))
+    </MudText>
+  </TitleContent>
+  <DialogContent>
+    @if (_isLoading)
+    {
+      <div class="d-flex justify-center pa-8">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
+      </div>
+    }
+    else if (_hasError)
+    {
+      <MudAlert Severity="Severity.Warning" Class="ma-2">
+        Unable to load release notes. Please try again later.
+      </MudAlert>
+    }
+    else
+    {
+      <div class="release-notes-content">
+        @((MarkupString)_htmlContent)
+      </div>
+    }
+  </DialogContent>
+  <DialogActions>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="Dismiss">
+      Dismiss
+    </MudButton>
+  </DialogActions>
+</MudDialog>
+

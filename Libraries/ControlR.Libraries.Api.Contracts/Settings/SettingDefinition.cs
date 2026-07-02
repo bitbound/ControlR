@@ -17,7 +17,6 @@ public sealed class SettingDefinition<T>(
   string name,
   T defaultValue,
   Func<string, ParseResult<T>> parse,
-  Func<T, string?>? format = null,
   Func<T, string?>? validate = null,
   Func<string, string>? invalidValueMessageFactory = null) : ISettingDefinition
 {
@@ -41,11 +40,6 @@ public sealed class SettingDefinition<T>(
 
   public string? FormatValue(T value)
   {
-    if (format is not null)
-    {
-      return format(value);
-    }
-
     return value switch
     {
       null => null,
@@ -117,7 +111,6 @@ public static class SettingDefinition
       value => double.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var parsedValue)
         ? ParseResult<double>.Success(parsedValue)
         : ParseResult<double>.Failure(defaultValue),
-      format: value => value.ToString(CultureInfo.InvariantCulture),
       validate: value => value < minimum ? $"{name} must be greater than or equal to {minimum}." : null,
       invalidValueMessageFactory: settingName => $"{settingName} must be a valid number value.");
   }
@@ -131,7 +124,6 @@ public static class SettingDefinition
       value => Enum.TryParse<TEnum>(value, true, out var parsedValue) && Enum.IsDefined(parsedValue)
         ? ParseResult<TEnum>.Success(parsedValue)
         : ParseResult<TEnum>.Failure(defaultValue),
-      format: value => value.ToString(),
       invalidValueMessageFactory: settingName => $"{settingName} must be a valid {typeof(TEnum).Name} value.");
   }
 
@@ -143,7 +135,6 @@ public static class SettingDefinition
       value => int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedValue)
         ? ParseResult<int>.Success(parsedValue)
         : ParseResult<int>.Failure(defaultValue),
-      format: value => value.ToString(CultureInfo.InvariantCulture),
       validate: value => value < minimum || value > maximum
         ? $"{name} must be between {minimum} and {maximum}."
         : null,
