@@ -827,6 +827,7 @@ jobs:
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/$env:BRAND_KEY.Agent.bundle.zip",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/$env:BRAND_KEY.Agent.Installer",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/$env:BRAND_KEY.Agent.bundle.zip",
+            "ControlR.Web.Server/bin/publish/wwwroot/lib/monaco-editor/min/vs/editor/editor.main.js",
             "ControlR.Web.Server/bin/publish/novnc/vnc.html",
             "ControlR.Web.Server/bin/publish/Dockerfile"
           )

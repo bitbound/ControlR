@@ -54,6 +54,7 @@ else
 }
 
 app.MapStaticAssets();
+app.UseStaticFiles();
 
 app.UseStaticFiles(new StaticFileOptions
 {

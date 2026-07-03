@@ -36,7 +36,7 @@ public sealed class PersistentStateAccessor : IPersistentStateAccessor, IDisposa
 
     // Consumed by BaseLayout to seed IsDarkMode synchronously before the first await
     // in OnInitializedAsync, preventing a dark flash during SSR→WASM hydration.
-    // DO NOT REMOVE — see the early-set in BaseLayout.OnInitializedAsync.
+    // DO NOT REMOVE. See the early-set in BaseLayout.OnInitializedAsync.
     if (state.TryTakeFromJson<bool>(DarkModeKey, out var isDarkMode))
     {
       _logger.LogDebug("Loaded persisted dark mode state: {IsDarkMode}.", isDarkMode);

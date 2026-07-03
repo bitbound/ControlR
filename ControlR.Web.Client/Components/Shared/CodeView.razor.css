@@ -1,0 +1,20 @@
+.monaco-editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.monaco-editor-container .monaco-editor {
+  /* Monaco creates a split-view; ensure it fills the flex container */
+  overflow: hidden !important;
+}
+
+/* Ensure the Monaco overlayWidgets area doesn't break layout */
+.monaco-editor-container .monaco-editor .overflow-guard {
+  overflow: hidden !important;
+}
+
+.monaco-editor-container .monaco-editor .margin {
+  overflow: hidden;
+}

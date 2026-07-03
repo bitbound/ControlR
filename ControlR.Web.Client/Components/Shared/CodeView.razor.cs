@@ -4,8 +4,8 @@ namespace ControlR.Web.Client.Components.Shared;
 
 public partial class CodeView : JsInteropableComponent
 {
-  private ElementReference _codeElementRef;
-  private string? _lastFormattedContent;
+  private ElementReference _containerElementRef;
+  private string? _lastCodeContent;
 
   [Parameter]
   public string? CodeContent { get; set; }
@@ -15,21 +15,36 @@ public partial class CodeView : JsInteropableComponent
   public bool IsEditable { get; set; }
   [Parameter]
   public CodeViewLanguage Language { get; set; }
+  [Inject]
+  public required IMessenger Messenger { get; init; }
   [Parameter]
   public bool ScrollToBottomOnLoad { get; set; }
-  [Parameter]
-  public bool ShowLineBorders { get; set; } = true;
+  [Inject]
+  public required IThemeStateProvider ThemeState { get; init; }
 
-  private Guid CodeViewerId { get; } = Guid.NewGuid();
   private string LanguageString
   {
     get => Language switch
     {
-      CodeViewLanguage.CSharp => "language-csharp",
-      CodeViewLanguage.PowerShell => "language-powershell",
-      CodeViewLanguage.Log => "language-log",
-      _ => "language-plaintext"
+      CodeViewLanguage.CSharp => "csharp",
+      CodeViewLanguage.PowerShell => "powershell",
+      CodeViewLanguage.Log => "log",
+      _ => "plaintext"
     };
+  }
+
+  protected override async ValueTask DisposeAsync(bool disposing)
+  {
+    if (disposing)
+    {
+      Messenger.UnregisterAll(this);
+
+      if (IsJsModuleReady)
+      {
+        await JsModule.InvokeVoidAsync("disposeMonacoEditor", _containerElementRef);
+      }
+    }
+    await base.DisposeAsync(disposing);
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -41,42 +56,50 @@ public partial class CodeView : JsInteropableComponent
       return;
     }
 
-    if (CodeContent != _lastFormattedContent)
+    if (firstRender)
     {
       await WaitForJsModule();
-      await JsRuntime.InvokeVoidAsync("Prism.highlightElement", _codeElementRef);
-      if (ScrollToBottomOnLoad)
+
+      await JsModule.InvokeVoidAsync(
+        "initMonacoEditor",
+        _containerElementRef,
+        CodeContent ?? string.Empty,
+        LanguageString,
+        IsEditable,
+        ThemeState.CurrentThemeMode);
+
+
+      if (ScrollToBottomOnLoad && !string.IsNullOrEmpty(CodeContent))
       {
-        await JsModule.InvokeVoidAsync("scrollContainerToBottom", _codeElementRef);
+        await JsModule.InvokeVoidAsync("scrollMonacoToBottom", _containerElementRef);
       }
-      _lastFormattedContent = CodeContent;
+
+      _lastCodeContent = CodeContent;
+      return;
+    }
+
+    if (CodeContent != _lastCodeContent)
+    {
+      await WaitForJsModule();
+      await JsModule.InvokeVoidAsync("updateMonacoContent", _containerElementRef, CodeContent ?? string.Empty);
+      _lastCodeContent = CodeContent;
     }
   }
 
-  private async Task HandleCodeContentChanged()
+  protected override void OnInitialized()
   {
-    await UpdateCodeContent();
+    base.OnInitialized();
+    Messenger.Register<ThemeChangedMessage>(this, HandleThemeChanged);
   }
 
-  private async Task HandleCodeElementBlurred()
+  private async Task HandleThemeChanged(object subscriber, ThemeChangedMessage message)
   {
-    await UpdateCodeContent();
-  }
-
-  private async Task UpdateCodeContent()
-  {
-    if (!IsEditable)
+    if (!RendererInfo.IsInteractive || !IsJsModuleReady)
     {
       return;
     }
 
-    var updatedText = await JsModule.InvokeAsync<string?>("getElementText", _codeElementRef);
-
-    if (updatedText != CodeContent)
-    {
-      CodeContent = updatedText;
-      await CodeContentChanged.InvokeAsync(updatedText);
-    }
+    await JsModule.InvokeVoidAsync("updateMonacoTheme", message.ThemeMode);
   }
 }
 

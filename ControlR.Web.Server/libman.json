@@ -1,21 +1,17 @@
 {
   "version": "3.0",
-  "defaultProvider": "jsdelivr",
+  "defaultProvider": "unpkg",
   "libraries": [
     {
-      "provider": "jsdelivr",
-      "library": "prismjs@1.30.0",
+      "provider": "unpkg",
+      "library": "monaco-editor@0.55.1",
+      "destination": "wwwroot/lib/monaco-editor/",
       "files": [
-        "prism.min.js",
-        "components/prism-clike.min.js",
-        "themes/prism-tomorrow.min.css",
-        "components/prism-csharp.min.js",
-        "components/prism-powershell.min.js",
-        "components/prism-log.min.js",
-        "plugins/line-numbers/prism-line-numbers.min.css",
-        "plugins/line-numbers/prism-line-numbers.min.js"
+        "min/**"
       ],
-      "destination": "wwwroot/lib/prismjs/"
+      "ignore": [
+        "**/*.map"
+      ]
     }
   ]
 }

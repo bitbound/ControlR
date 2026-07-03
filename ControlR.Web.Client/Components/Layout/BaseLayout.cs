@@ -24,6 +24,8 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   [Inject]
   public required ILazyInjector<ISnackbar> Snackbar { get; set; }
   [Inject]
+  public required ILazyInjector<IThemeStateProvider> ThemeState { get; set; }
+  [Inject]
   public required IUserPreferencesProvider UserPreferences { get; set; }
 
   protected Palette CurrentPalette => IsDarkMode
@@ -68,6 +70,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   protected virtual async Task HandleThemeChanged(ThemeMode mode)
   {
     CurrentThemeMode = mode;
+    ThemeState.Value.SetThemeMode(mode);
     await UpdateIsDarkMode();
     await InvokeAsync(StateHasChanged);
   }
@@ -121,6 +124,8 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
 
     if (RendererInfo.IsInteractive)
     {
+      ThemeState.Value.SetThemeMode(CurrentThemeMode);
+      ThemeState.Value.SetIsDarkMode(IsDarkMode);
       Messenger.Value.Register<MudToastMessage>(this, HandleToastMessage);
       Messenger.Value.Register<ThemeChangedMessage>(this, HandleThemeChangedMessage);
     }
@@ -185,6 +190,10 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
       ThemeMode.Auto => await GetSystemDarkMode(),
       _ => true
     };
-  }
 
+    if (RendererInfo.IsInteractive)
+    {
+      ThemeState.Value.SetIsDarkMode(IsDarkMode);
+    }
+  }
 }

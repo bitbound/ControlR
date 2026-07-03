@@ -36,6 +36,7 @@ public static class ServiceCollectionExtensions
     services.AddSingleton(TimeProvider.System);
     services.AddSingleton<IPersistentStateAccessor, PersistentStateAccessor>();
 
+    services.AddScoped<IThemeStateProvider, ThemeStateProvider>();
     services.AddScoped<IUserPreferencesProvider, UserPreferencesProviderClient>();
     services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderClient>();
     services.AddScoped<IMessenger, WeakReferenceMessenger>();

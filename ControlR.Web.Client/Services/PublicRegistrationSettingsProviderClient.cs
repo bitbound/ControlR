@@ -1,4 +1,8 @@
 namespace ControlR.Web.Client.Services;
+public interface IPublicRegistrationSettingsProvider
+{
+  Task<bool> GetIsPublicRegistrationEnabled();
+}
 
 internal class PublicRegistrationSettingsProviderClient(
   IControlrApi controlrApi,

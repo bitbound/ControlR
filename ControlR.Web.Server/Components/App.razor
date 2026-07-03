@@ -16,8 +16,7 @@
   <link rel="apple-touch-icon" sizes="192x192" href="@Assets["static/appicon-192.png"]" />
   <link rel="stylesheet" href="@Assets["static/app.css"]" />
   <link rel="stylesheet" href="@Assets[$"{BrandingConstants.WebServerAssemblyName}.styles.css"]" />
-  <link rel="stylesheet" href="@Assets["lib/prismjs/themes/prism-tomorrow.min.css"]" />
-  <link rel="stylesheet" href="@Assets["lib/prismjs/plugins/line-numbers/prism-line-numbers.min.css"]" />
+  <link rel="stylesheet" href="@Assets["lib/monaco-editor/min/vs/editor/editor.main.css"]" />
   <ImportMap />
   <HeadOutlet @rendermode="PageRenderMode" />
 </head>
@@ -31,15 +30,15 @@
   <script src="@Assets["_framework/blazor.web.js"]"></script>
   <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
   <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
-  <script src="@Assets["_content/Extensions.MudBlazor.StaticInput/NavigationObserver.js"]"></script>
   <script src="@Assets["static/interop.js"]"></script>
   <script src="@Assets["static/customize.js"]"></script>
-  <script src="@Assets["lib/prismjs/prism.min.js"]"></script>
-  <script src="@Assets["lib/prismjs/components/prism-clike.min.js"]"></script>
-  <script src="@Assets["lib/prismjs/components/prism-csharp.min.js"]"></script>
-  <script src="@Assets["lib/prismjs/components/prism-powershell.min.js"]"></script>
-  <script src="@Assets["lib/prismjs/components/prism-log.min.js"]"></script>
-  <script src="@Assets["lib/prismjs/plugins/line-numbers/prism-line-numbers.min.js"]"></script>
+  <script src="@Assets["lib/monaco-editor/min/vs/loader.js"]"></script>
+  <script>
+    require.config({ 
+      paths: { vs: '/lib/monaco-editor/min/vs' },
+      ignoreScriptError: true
+    });
+  </script>
 </body>
 
 </html>
