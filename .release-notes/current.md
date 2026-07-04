@@ -4,10 +4,11 @@ None.
 
 ## Added
 
-- This **What's New** dialog that shows when starting a new version for the first time.
-- Ability to set deterministic `host.id` attribute for OpenTelemetry, if configured.
-  - This is particularly useful the agent's `DeviceId`, allowing you to filter/query by device in OTEL metrics/traces.
-- Monaco Editor for Remote Logs view (replaces PrismJS).
+- Added this **What's New** dialog that shows when starting a new version for the first time.
+- Devices now set their device ID as the `host.id` attribute for OpenTelemetry (if configured).
+  - This makes it easier to find device-specific metrics, logs, and traces in your OTEL backend.
+- Replaced PrismJS with Monaco Editor on Remote Logs page.
+  - Monaco will also be used in the upcoming scripting feature.
 
 ## Fixed
 
@@ -20,3 +21,7 @@ None.
 ## Removed
 
 None.
+
+## Internal
+
+- Added UserStorage key/value user-related data (e.g. "acknowledged version 0.25.50.0 updates").

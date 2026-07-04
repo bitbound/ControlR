@@ -16,7 +16,7 @@
       <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
     -->
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.5.0" />
-    <PackageVersion Include="Bitbound.Analyzers.MemberOrder" Version="1.0.48" />
+    <PackageVersion Include="Bitbound.Analyzers.MemberOrder" Version="1.0.52" />
     <PackageVersion Include="Bitbound.SimpleMessenger" Version="2.6.31" />
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />
     <PackageVersion Include="CommunityToolkit.Diagnostics" Version="8.4.2" />

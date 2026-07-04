@@ -30,6 +30,7 @@ public interface IControlrApi
   IUserRolesApi UserRoles { get; }
   IUsersApi Users { get; }
   IUserServerSettingsApi UserServerSettings { get; }
+  IUserStorageApi UserStorage { get; }
   IUserTagsApi UserTags { get; }
   IVersionApi Version { get; }
 }
@@ -62,6 +63,7 @@ public partial class ControlrApi(
   ITestEmailApi,
   IUserPreferencesApi,
   IUserRolesApi,
+  IUserStorageApi,
   IUserServerSettingsApi,
   IUserTagsApi,
   IUsersApi,
@@ -96,6 +98,7 @@ public partial class ControlrApi(
   public IUserRolesApi UserRoles => this;
   public IUsersApi Users => this;
   public IUserServerSettingsApi UserServerSettings => this;
+  public IUserStorageApi UserStorage => this;
   public IUserTagsApi UserTags => this;
   public IVersionApi Version => this;
 

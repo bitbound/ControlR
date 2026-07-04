@@ -28,6 +28,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   public DbSet<Tenant> Tenants { get; init; }
   public DbSet<TenantSetting> TenantSettings { get; init; }
   public DbSet<UserPreference> UserPreferences { get; init; }
+  public DbSet<UserStorageItem> UserStorageItems { get; init; }
 
   protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
   {
@@ -51,6 +52,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureTenantSettings(builder);
     ConfigureUsers(builder);
     ConfigureUserPreferences(builder);
+    ConfigureUserStorage(builder);
     ConfigureTenantInvites(builder);
     ConfigureAgentInstallerKeys(builder);
     ConfigureAgentInstallerKeyUsages(builder);
@@ -296,6 +298,39 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       builder
         .Entity<AppUser>()
         .HasQueryFilter(x => x.TenantId == _tenantId);
+    }
+  }
+
+  private void ConfigureUserStorage(ModelBuilder builder)
+  {
+    builder
+      .Entity<UserStorageItem>()
+      .HasIndex(x => new { x.Key, x.UserId })
+      .IsUnique();
+
+    builder
+      .Entity<UserStorageItem>()
+      .Property(x => x.Value)
+      .HasMaxLength(UserStorageItem.MaxValueLength);
+
+    builder
+      .Entity<UserStorageItem>()
+      .HasOne(x => x.User)
+      .WithMany(u => u.UserStorageItems)
+      .HasForeignKey(x => x.UserId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    if (_userId is not null)
+    {
+      builder
+        .Entity<UserStorageItem>()
+        .HasQueryFilter(x => x.UserId == _userId);
+    }
+    else if (_tenantId is not null)
+    {
+      builder
+        .Entity<UserStorageItem>()
+        .HasQueryFilter(x => x.User != null && x.User.TenantId == _tenantId);
     }
   }
 }

@@ -24,11 +24,6 @@ public static class UserPreferenceDefinitions
   public const bool DefaultNotifyUserOnSessionStart = true;
   public const bool DefaultOpenDeviceInNewTab = true;
 
-  public static SettingDefinition<string> AcknowledgedNewVersion { get; } =
-    new(
-      UserPreferenceNames.AcknowledgedNewVersion,
-      string.Empty,
-      value => ParseResult<string>.Success(value.Trim()));
   public static SettingDefinition<double> AutoQualityLowerThresholdMbps { get; } =
     SettingDefinition.CreateDouble(UserPreferenceNames.AutoQualityLowerThresholdMbps, DefaultAutoQualityLowerThresholdMbps, 0.1d);
   public static SettingDefinition<int> AutoQualityMaximum { get; } =

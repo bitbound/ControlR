@@ -144,7 +144,21 @@
     {
       return;
     }
-    await WhatsNewNotifier.Value.CheckAndShowIfNeeded();
+    try
+    {
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      await WhatsNewNotifier.Value.CheckAndShowIfNeeded(cts.Token);
+    }
+    catch (OperationCanceledException ex)
+    {
+      Logger.LogError(ex, "Timed out while checking release notes.");
+      Snackbar.Value.Add("Timed out while checking release notes.", Severity.Error);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while checking release notes.");
+      Snackbar.Value.Add("Error while checking release notes.", Severity.Error);
+    }
   }
 
   public override async ValueTask DisposeAsync()

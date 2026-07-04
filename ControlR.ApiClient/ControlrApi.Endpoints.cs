@@ -168,6 +168,13 @@ public interface IUserRolesApi
   Task<ApiResult> RemoveUserRole(Guid userId, Guid roleId, CancellationToken cancellationToken = default);
 }
 
+public interface IUserStorageApi
+{
+  Task<ApiResult> DeleteUserStorageItem(string key, CancellationToken cancellationToken = default);
+  Task<ApiResult<UserStorageResponseDto>> GetUserStorageItem(string key, CancellationToken cancellationToken = default);
+  Task<ApiResult<UserStorageResponseDto>> SetUserStorageItem(UserStorageRequestDto request, CancellationToken cancellationToken = default);
+}
+
 public interface IUserServerSettingsApi
 {
   Task<ApiResult<DecommissionServerResponseDto>> GetDecommissionStatus(CancellationToken cancellationToken = default);

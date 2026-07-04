@@ -2,7 +2,6 @@ using ControlR.Web.Client.Services;
 using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Data.Extensions;
 using ControlR.Web.Server.Primitives;
-using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Server.Services.Settings;

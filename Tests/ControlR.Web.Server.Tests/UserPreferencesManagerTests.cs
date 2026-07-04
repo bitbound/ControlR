@@ -135,8 +135,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         false,
         (ThemeMode)999,
         "Updated Name",
-        ViewMode.Stretch,
-        string.Empty),
+        ViewMode.Stretch),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -178,8 +177,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         false,
         ThemeMode.Light,
         string.Empty,
-        ViewMode.Stretch,
-        string.Empty),
+        ViewMode.Stretch),
       cancellationToken);
 
     Assert.True(result.IsSuccess);
@@ -235,8 +233,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         false,
         ThemeMode.Light,
         string.Empty,
-        ViewMode.Stretch,
-        string.Empty),
+        ViewMode.Stretch),
       cancellationToken);
 
     Assert.True(result.IsSuccess);

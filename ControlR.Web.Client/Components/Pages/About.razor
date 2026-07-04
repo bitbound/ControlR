@@ -1,4 +1,5 @@
 ﻿@using System.Reflection
+@inherits DisposableComponent
 @attribute [Route(ClientRoutes.About)]
 @inject ILogger<About> Logger
 @inject ISnackbar Snackbar
@@ -20,12 +21,8 @@
     <MudText>
       @(_currentVersion)
     </MudText>
-    <MudButton Variant="Variant.Text"
-               Size="Size.Small"
-               Color="Color.Info"
-               Class="ml-2 pa-0"
-               Style="min-width: auto; text-transform: none;"
-               OnClick="ShowWhatsNew">
+    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Info" Class="ml-2 pa-0"
+               Style="min-width: auto; text-transform: none;" OnClick="ShowWhatsNew">
       See what's new
     </MudButton>
   </div>
@@ -102,7 +99,8 @@
       <MudText>Avalonia UI</MudText>
       <div>
         <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/AvaloniaUI/Avalonia">source</MudLink>
-        <MudLink Color="Color.Info" Href="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md">license</MudLink>
+        <MudLink Color="Color.Info" Href="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md">license
+        </MudLink>
       </div>
 
       <MudText>Serilog</MudText>
@@ -113,36 +111,38 @@
 
       <MudText>OpenTelemetry</MudText>
       <div>
-        <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/open-telemetry/opentelemetry-dotnet">source</MudLink>
-        <MudLink Color="Color.Info" Href="https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/LICENSE.TXT">license</MudLink>
-      </div>
+        <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/open-telemetry/opentelemetry-dotnet">source
+        </MudLink>
+        <MudLink Color="Color.Info" Href="https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/LICENSE.TXT">
+          license</MudLink>
+        </div>
 
-      <MudText>QRCoder</MudText>
-      <div>
-        <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/Shane32/QRCoder">source</MudLink>
-        <MudLink Color="Color.Info" Href="https://github.com/Shane32/QRCoder/blob/master/LICENSE.txt">license</MudLink>
-      </div>
+        <MudText>QRCoder</MudText>
+        <div>
+          <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/Shane32/QRCoder">source</MudLink>
+          <MudLink Color="Color.Info" Href="https://github.com/Shane32/QRCoder/blob/master/LICENSE.txt">license</MudLink>
+        </div>
 
-      <MudText>Tmds.DBus</MudText>
-      <div>
-        <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/tmds/Tmds.DBus">source</MudLink>
-        <MudLink Color="Color.Info" Href="https://github.com/tmds/Tmds.DBus/blob/main/COPYING">license</MudLink>
-      </div>
+        <MudText>Tmds.DBus</MudText>
+        <div>
+          <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/tmds/Tmds.DBus">source</MudLink>
+          <MudLink Color="Color.Info" Href="https://github.com/tmds/Tmds.DBus/blob/main/COPYING">license</MudLink>
+        </div>
 
-      <MudText>.NET</MudText>
-      <div>
-        <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/dotnet">source</MudLink>
-        <MudLink Color="Color.Info" Href="https://github.com/dotnet/runtime/blob/main/LICENSE.TXT">license</MudLink>
-      </div>
+        <MudText>.NET</MudText>
+        <div>
+          <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/dotnet">source</MudLink>
+          <MudLink Color="Color.Info" Href="https://github.com/dotnet/runtime/blob/main/LICENSE.TXT">license</MudLink>
+        </div>
 
-      <MudText>Microsoft Libraries</MudText>
-      <div>
-        <MudLink Color="Color.Info" Href="https://github.com/microsoft">source</MudLink>
+        <MudText>Microsoft Libraries</MudText>
+        <div>
+          <MudLink Color="Color.Info" Href="https://github.com/microsoft">source</MudLink>
+        </div>
       </div>
     </div>
-  </div>
 
-</div>
+  </div>
 
 @code {
   private Version? _currentVersion = null;
@@ -170,6 +170,19 @@
 
   private async Task ShowWhatsNew()
   {
-    await WhatsNewNotifier.ShowWhatsNew();
+    try
+    {
+      await WhatsNewNotifier.ShowWhatsNew(ComponentClosing);
+    }
+    catch (OperationCanceledException ex)
+    {
+      Logger.LogError(ex, "Timed out while checking release notes.");
+      Snackbar.Add("Timed out while checking release notes.", Severity.Error);
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while checking release notes.");
+      Snackbar.Add("Error while checking release notes.", Severity.Error);
+    }
   }
 }

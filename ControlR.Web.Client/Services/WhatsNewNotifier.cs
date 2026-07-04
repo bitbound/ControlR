@@ -4,12 +4,12 @@ namespace ControlR.Web.Client.Services;
 
 public interface IWhatsNewNotifier
 {
-  Task CheckAndShowIfNeeded();
-  Task ShowWhatsNew();
+  Task CheckAndShowIfNeeded(CancellationToken cancellationToken);
+  Task ShowWhatsNew(CancellationToken cancellationToken);
 }
 
 public class WhatsNewNotifier(
-    IUserPreferencesProvider userPreferences,
+    IUserStorageClient userStorage,
     ISnackbar snackbar,
     IDialogService dialogService,
     ILogger<WhatsNewNotifier> logger) : IWhatsNewNotifier
@@ -17,11 +17,11 @@ public class WhatsNewNotifier(
   private readonly IDialogService _dialogService = dialogService;
   private readonly ILogger<WhatsNewNotifier> _logger = logger;
   private readonly ISnackbar _snackbar = snackbar;
-  private readonly IUserPreferencesProvider _userPreferences = userPreferences;
+  private readonly IUserStorageClient _userStorage = userStorage;
 
   private bool _checkInProgress;
 
-  public async Task CheckAndShowIfNeeded()
+  public async Task CheckAndShowIfNeeded(CancellationToken cancellationToken)
   {
     if (_checkInProgress)
       return;
@@ -38,17 +38,11 @@ public class WhatsNewNotifier(
         return;
       }
 
-      var prefs = await _userPreferences.GetPreferences();
-
-      if (prefs.AcknowledgedNewVersion == currentVersion)
+      var acknowledged = await _userStorage.GetItem(UserStorageKeys.AcknowledgedNewVersion, cancellationToken);
+      if (acknowledged == currentVersion)
         return;
 
-      await ShowWhatsNew(currentVersion);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while checking for What's New.");
-      _snackbar.Add("Error while checking release notes.", Severity.Error);
+      await ShowWhatsNew(currentVersion, cancellationToken);
     }
     finally
     {
@@ -56,7 +50,7 @@ public class WhatsNewNotifier(
     }
   }
 
-  public async Task ShowWhatsNew()
+  public async Task ShowWhatsNew(CancellationToken cancellationToken)
   {
     var currentVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
     if (string.IsNullOrWhiteSpace(currentVersion))
@@ -66,18 +60,10 @@ public class WhatsNewNotifier(
       return;
     }
 
-    try
-    {
-      await ShowWhatsNew(currentVersion);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while showing What's New.");
-      _snackbar.Add("Error while checking release notes.", Severity.Error);
-    }
+    await ShowWhatsNew(currentVersion, cancellationToken);
   }
 
-  private async Task ShowWhatsNew(string currentVersion)
+  private async Task ShowWhatsNew(string currentVersion, CancellationToken cancellationToken)
   {
     var options = new DialogOptions
     {
@@ -100,7 +86,7 @@ public class WhatsNewNotifier(
 
     if (result is { Canceled: false, Data: true })
     {
-      await _userPreferences.SetPreference(UserPreferenceNames.AcknowledgedNewVersion, currentVersion);
+      await _userStorage.SetItem(UserStorageKeys.AcknowledgedNewVersion, currentVersion, cancellationToken);
     }
   }
 }
