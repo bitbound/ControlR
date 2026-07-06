@@ -38,18 +38,10 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
-    <!--Condition
-    below is needed to remove Avalonia.Diagnostics package from build output in Release
-    configuration.-->
-    <PackageReference Include="Avalonia.Diagnostics">
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
-
-    <!-- 
-      TODO: Use this after migrating to Avalonia 12.
-      <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
-    -->
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Update="Bitbound.Analyzers.MemberOrder">
       <PrivateAssets>all</PrivateAssets>

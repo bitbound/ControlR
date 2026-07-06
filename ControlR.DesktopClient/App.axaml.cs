@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using ControlR.DesktopClient.Common.Startup;
@@ -89,10 +88,6 @@ public partial class App : Application
         .GetAwaiter()
         .GetResult();
 
-      // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
-      // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
-      DisableAvaloniaDataAnnotationValidation();
-
       // Set the DataContext for App.
       DataContext = StaticServiceProvider.Instance.GetRequiredService<IAppViewModel>();
     }
@@ -108,19 +103,6 @@ public partial class App : Application
     }
 
     base.OnFrameworkInitializationCompleted();
-  }
-
-  private static void DisableAvaloniaDataAnnotationValidation()
-  {
-    // Get an array of plugins to remove
-    var dataValidationPluginsToRemove =
-        BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
-
-    // remove each entry found
-    foreach (var plugin in dataValidationPluginsToRemove)
-    {
-      BindingPlugins.DataValidators.Remove(plugin);
-    }
   }
 
   private static void ReportAssemblyVersion()

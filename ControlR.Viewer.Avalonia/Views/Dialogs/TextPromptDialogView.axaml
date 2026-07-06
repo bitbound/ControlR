@@ -19,7 +19,7 @@
                  FontWeight="SemiBold" />
       <TextBox x:Name="PromptTextBox"
                Text="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-               Watermark="{Binding InputHint}"
+               PlaceholderText="{Binding InputHint}"
                KeyDown="PromptTextBox_OnKeyDown" />
         <TextBlock Text="{Binding ValidationMessage}"
                      IsVisible="{Binding HasValidationError}"

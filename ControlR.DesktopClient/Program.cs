@@ -17,8 +17,7 @@ internal sealed class Program
           .UsePlatformDetect()
           .WithInterFont()
 #if DEBUG
-          // TODO: Add after migration to v12.
-          //.WithDeveloperTools()
+          .WithDeveloperTools()
 #endif
           .LogToTrace()
           .With(new MacOSPlatformOptions()

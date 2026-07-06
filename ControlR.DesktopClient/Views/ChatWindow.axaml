@@ -100,7 +100,7 @@
                 <TextBox Grid.Column="0"
                          x:Name="_chatInputTextBox"
                          Text="{Binding NewMessage}"
-                         Watermark="{x:Static common:Localization.EnterMessagePlaceholder}"
+                         PlaceholderText="{x:Static common:Localization.EnterMessagePlaceholder}"
                          TextWrapping="Wrap"
                          MinHeight="40"
                          MaxHeight="120"

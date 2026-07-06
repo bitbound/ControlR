@@ -98,7 +98,7 @@
                    TextWrapping="Wrap"
                    Foreground="{Binding AlertSeverity,
                    Converter={StaticResource SeverityBrushConverter},
-                   ConverterParameter={Binding}}"
+                   ConverterParameter={Binding $self}}"
                    Text="{Binding AlertMessage}"
                    TextAlignment="Center"
                    IsVisible="{Binding HasAlertMessage}" />

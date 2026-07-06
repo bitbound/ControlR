@@ -28,7 +28,7 @@
       <TextBox x:Name="AddressBarTextBox"
                Grid.Column="0"
                Text="{Binding AddressBarValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-               Watermark="{x:Static assets:Resources.FileSystem_AddressLabel}"
+               PlaceholderText="{x:Static assets:Resources.FileSystem_AddressLabel}"
                KeyDown="AddressBarTextBox_OnKeyDown" />
       <cava:IconButton Grid.Column="1"
                        Click="NavigateButton_OnClick"
@@ -121,7 +121,7 @@
               </Button>
               <TextBox Grid.Column="1"
                        Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                       Watermark="{x:Static assets:Resources.FileSystem_SearchPlaceholder}" />
+                       PlaceholderText="{x:Static assets:Resources.FileSystem_SearchPlaceholder}" />
 
               <StackPanel Grid.Column="2"
                           Orientation="Horizontal"

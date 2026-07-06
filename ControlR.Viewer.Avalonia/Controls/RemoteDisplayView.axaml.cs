@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using ControlR.Viewer.Avalonia.Native;
 using Avalonia.Media.Imaging;
 using ControlR.Libraries.Api.Contracts.Enums;
+using Avalonia.Input.Platform;
 
 namespace ControlR.Viewer.Avalonia.Controls;
 
@@ -324,7 +325,7 @@ public partial class RemoteDisplayView : UserControl
       return;
     }
 
-    var text = await clipboard.GetTextAsync();
+    var text = await clipboard.TryGetTextAsync();
     await _viewModel.SendClipboardText(text ?? string.Empty);
   }
 
@@ -342,7 +343,7 @@ public partial class RemoteDisplayView : UserControl
       return;
     }
 
-    var text = await clipboard.GetTextAsync();
+    var text = await clipboard.TryGetTextAsync();
     await _viewModel.TypeClipboardText(text ?? string.Empty);
   }
 

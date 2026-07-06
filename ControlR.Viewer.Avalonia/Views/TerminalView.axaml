@@ -119,7 +119,7 @@
                Foreground="{DynamicResource DefaultColor}"
                CaretBrush="{DynamicResource DefaultColor}"
                BorderBrush="{DynamicResource DividerBrush}"
-               Watermark="{x:Static assets:Resources.Terminal_CommandWatermark}"
+               PlaceholderText="{x:Static assets:Resources.Terminal_CommandWatermark}"
                FontFamily="Cascadia Mono" />
 
       <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">

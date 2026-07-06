@@ -109,7 +109,7 @@
                      Width="220"
                      VerticalAlignment="Center"
                      Text="{Binding FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Watermark="{x:Static assets:Resources.RemoteLogs_FilterPlaceholder}"
+                     PlaceholderText="{x:Static assets:Resources.RemoteLogs_FilterPlaceholder}"
                      KeyDown="FilterTextBox_OnKeyDown" />
             <cava:IconButton Click="DownloadButton_OnClick"
                              Variant="Text"

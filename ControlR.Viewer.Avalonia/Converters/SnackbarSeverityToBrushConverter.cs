@@ -1,12 +1,10 @@
 using Avalonia;
 using Avalonia.Data.Converters;
-using Avalonia.Controls;
 using Avalonia.Media;
 using System.Globalization;
-using Avalonia.Markup.Xaml.MarkupExtensions;
-using Avalonia.VisualTree;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using System.Collections.Concurrent;
+using Avalonia.Controls;
 
 namespace ControlR.Viewer.Avalonia.Converters;
 
@@ -34,20 +32,26 @@ public class SnackbarSeverityToBrushConverter : IValueConverter
     var cacheKey = $"{Application.Current?.ActualThemeVariant.Key}-{colorKey}";
 
     if (_brushesCache.TryGetValue(cacheKey, out var cachedBrush))
+      return cachedBrush;
+
+    // Try control-level resource tree first (walks up to application resources)
+    if (parameter is StyledElement element
+        && element.TryFindResource(colorKey, out var controlResource)
+        && controlResource is IBrush controlBrush)
     {
-        return cachedBrush;
+      _brushesCache[cacheKey] = controlBrush;
+      return controlBrush;
     }
 
-    if (parameter is CompiledBindingExtension bindingExt &&
-        bindingExt.DefaultAnchor?.Target is Control control)
+    // Fallback to application-level resources
+    var app = Application.Current;
+
+    if (app?.ActualThemeVariant is { } themeVariant
+        && app.Resources.TryGetResource(colorKey, themeVariant, out var color)
+        && color is IBrush brush)
     {
-      var controlrViewer = control.FindAncestorOfType<ControlrViewer>();
-      if (controlrViewer?.TryFindResource(colorKey, controlrViewer.ActualThemeVariant, out var color) == true
-          && color is IBrush brush)
-      {
-        _brushesCache[cacheKey] = brush;
-        return brush;
-      }
+      _brushesCache[cacheKey] = brush;
+      return brush;
     }
 
     return AvaloniaProperty.UnsetValue;

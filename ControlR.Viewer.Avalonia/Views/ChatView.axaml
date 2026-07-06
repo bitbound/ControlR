@@ -201,7 +201,7 @@
                    Text="{Binding NewMessage}"
                    AcceptsReturn="{Binding EnableMultiline}"
                    Height="{Binding CommandInputHeight}"
-                   Watermark="{x:Static assets:Resources.Chat_MessagePlaceholder}"
+                   PlaceholderText="{x:Static assets:Resources.Chat_MessagePlaceholder}"
                    TextWrapping="Wrap"
                    HorizontalAlignment="Stretch"
                    Background="{DynamicResource SurfaceBrush}"

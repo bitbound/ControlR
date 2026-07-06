@@ -17,8 +17,8 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
-    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-    <PackageReference Include="Avalonia.Diagnostics">
+    <!--Condition below is needed to remove diagnostics package from build output in Release configuration.-->
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
@@ -36,7 +36,7 @@
 
   <!-- Use to reference NuGet package for testing -->
   <!-- <ItemGroup>
-    <PackageReference Include="ControlR.Viewer.Avalonia"/>
+    <PackageReference Include="ControlR.Viewer.Avalonia" VersionOverride="0.26.0-dev" />
   </ItemGroup> -->
 
   <ItemGroup>

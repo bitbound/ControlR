@@ -59,7 +59,7 @@
       <TextBlock Text="{Binding AlertMessage}"
                  Foreground="{Binding AlertSeverity,
                  Converter={StaticResource SeverityBrushConverter},
-                 ConverterParameter={Binding}}"
+                 ConverterParameter={Binding $self}}"
                  FontSize="24"
                  TextAlignment="Center"/>
 

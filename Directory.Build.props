@@ -13,8 +13,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <!-- TODO: Remove after update to Avalonia 12. -->
-    <AvaloniaCheckDiagnosticsConflict>false</AvaloniaCheckDiagnosticsConflict>
   </PropertyGroup>
 
   <!-- BrandPrefix is replaced by customize.ps1 for whitelabel builds. -->
