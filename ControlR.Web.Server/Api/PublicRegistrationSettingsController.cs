@@ -14,7 +14,9 @@ public class PublicRegistrationSettingsController : ControllerBase
     [FromServices] AppDb db,
     [FromServices] IOptionsMonitor<AppOptions> appOptions)
   {
-    var registrationEnabled = appOptions.CurrentValue.EnablePublicRegistration || !await db.Users.AnyAsync();
+    var hasUsers = await db.Users.AnyAsync();
+    var registrationEnabled = appOptions.CurrentValue.EnablePublicRegistration ||
+      (appOptions.CurrentValue.EnableFirstUserBootstrap && !hasUsers);
     return new PublicRegistrationSettings(registrationEnabled);
   }
 }

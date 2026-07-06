@@ -26,6 +26,8 @@ public partial class Add_ServiceAccounts : Migration
         constraints: table =>
         {
           table.PrimaryKey("PK_ServiceAccounts", x => x.Id);
+          table.CheckConstraint("CK_ServiceAccounts_Kind_Allowed", "\"Kind\" IN ('Server', 'Tenant')");
+          table.CheckConstraint("CK_ServiceAccounts_Kind_TenantId", "(\"Kind\" = 'Server' AND \"TenantId\" IS NULL) OR (\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL)");
           table.ForeignKey(
                     name: "FK_ServiceAccounts_Tenants_TenantId",
                     column: x => x.TenantId,
@@ -59,26 +61,23 @@ public partial class Add_ServiceAccounts : Migration
         });
 
     migrationBuilder.CreateIndex(
-        name: "IX_ServiceAccountCredentials_Id",
-        table: "ServiceAccountCredentials",
-        column: "Id");
-
-    migrationBuilder.CreateIndex(
         name: "IX_ServiceAccountCredentials_ServiceAccountId",
         table: "ServiceAccountCredentials",
         column: "ServiceAccountId");
 
     migrationBuilder.CreateIndex(
-        name: "IX_ServiceAccounts_TenantId",
+      name: "IX_ServiceAccounts_Server_Name",
         table: "ServiceAccounts",
-        column: "TenantId");
+      column: "Name",
+        unique: true,
+      filter: "\"Kind\" = 'Server' AND \"TenantId\" IS NULL");
 
     migrationBuilder.CreateIndex(
-        name: "IX_ServiceAccounts_Kind_TenantId_Name",
-        table: "ServiceAccounts",
-        columns: ["Kind", "TenantId", "Name"],
-        unique: true,
-        filter: "\"TenantId\" IS NOT NULL");
+      name: "IX_ServiceAccounts_TenantId_Name",
+      table: "ServiceAccounts",
+      columns: ["TenantId", "Name"],
+      unique: true,
+      filter: "\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL");
   }
 
   /// <inheritdoc />

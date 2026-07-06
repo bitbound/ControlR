@@ -16,6 +16,57 @@ namespace ControlR.Web.Server.Tests;
 public class ServiceAccountDbIndexTests(ITestOutputHelper testOutput)
 {
   [Fact]
+  public async Task RawSql_DuplicateServerName_ThrowsDbException()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      testOutput,
+      useInMemoryDatabase: false);
+
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var appDb = services.GetRequiredService<AppDb>();
+
+    var tenant = await services.CreateTestTenant("Server Test Tenant");
+
+    // Open a raw connection (independent of EF Core's connection management).
+    var connStr = appDb.Database.GetConnectionString()
+      ?? throw new InvalidOperationException("No connection string");
+
+    var conn = new NpgsqlConnection(connStr);
+    await conn.OpenAsync(TestContext.Current.CancellationToken);
+    await using var tx = await conn.BeginTransactionAsync(TestContext.Current.CancellationToken);
+
+    try
+    {
+      // Insert first server-scoped account via raw SQL.
+      await using var cmd1 = new NpgsqlCommand(
+        """
+        INSERT INTO "ServiceAccounts" ("Id", "Kind", "TenantId", "Name", "Description", "IsEnabled", "CreatedAt")
+        VALUES (gen_random_uuid(), 'Server', NULL, 'ServerDupName', NULL, true, CURRENT_TIMESTAMP)
+        """,
+        conn, tx);
+      await cmd1.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+
+      // Insert duplicate via raw SQL.
+      await using var cmd2 = new NpgsqlCommand(
+        """
+        INSERT INTO "ServiceAccounts" ("Id", "Kind", "TenantId", "Name", "Description", "IsEnabled", "CreatedAt")
+        VALUES (gen_random_uuid(), 'Server', NULL, 'ServerDupName', NULL, true, CURRENT_TIMESTAMP)
+        """,
+        conn, tx);
+      var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(
+        () => cmd2.ExecuteNonQueryAsync(TestContext.Current.CancellationToken));
+
+      Assert.Contains("IX_ServiceAccounts_Server_Name", ex.Message);
+    }
+    catch
+    {
+      await tx.RollbackAsync(TestContext.Current.CancellationToken);
+      throw;
+    }
+  }
+
+  [Fact]
   public async Task RawSql_DuplicateTenantScopedSameTenant_ThrowsDbException()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(
@@ -59,7 +110,7 @@ public class ServiceAccountDbIndexTests(ITestOutputHelper testOutput)
       var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(
         () => cmd2.ExecuteNonQueryAsync(TestContext.Current.CancellationToken));
 
-      Assert.Contains("IX_ServiceAccounts_Kind_TenantId_Name", ex.Message);
+      Assert.Contains("IX_ServiceAccounts_TenantId_Name", ex.Message);
     }
     catch
     {
@@ -69,7 +120,7 @@ public class ServiceAccountDbIndexTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task RawSql_InsertDuplicateServerName_Succeeds_BecausePartialIndexExcludesNulls()
+  public async Task RawSql_ServerAccountWithTenantId_ThrowsCheckConstraint()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(
       testOutput,
@@ -78,52 +129,26 @@ public class ServiceAccountDbIndexTests(ITestOutputHelper testOutput)
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var appDb = services.GetRequiredService<AppDb>();
+    var tenant = await services.CreateTestTenant("Constraint Tenant");
 
-    var tenant = await services.CreateTestTenant("Server Test Tenant");
-
-    // Open a raw connection (independent of EF Core's connection management).
     var connStr = appDb.Database.GetConnectionString()
       ?? throw new InvalidOperationException("No connection string");
 
-    var conn = new NpgsqlConnection(connStr);
+    await using var conn = new NpgsqlConnection(connStr);
     await conn.OpenAsync(TestContext.Current.CancellationToken);
-    await using var tx = await conn.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-    try
-    {
-      // Insert first server-scoped account via raw SQL.
-      await using var cmd1 = new NpgsqlCommand(
-        """
-        INSERT INTO "ServiceAccounts" ("Id", "Kind", "TenantId", "Name", "Description", "IsEnabled", "CreatedAt")
-        VALUES (gen_random_uuid(), 'Server', NULL, 'ServerDupName', NULL, true, CURRENT_TIMESTAMP)
-        """,
-        conn, tx);
-      await cmd1.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+    await using var cmd = new NpgsqlCommand(
+      """
+      INSERT INTO "ServiceAccounts" ("Id", "Kind", "TenantId", "Name", "Description", "IsEnabled", "CreatedAt")
+      VALUES (gen_random_uuid(), 'Server', @tenantId, 'InvalidServerScope', NULL, true, CURRENT_TIMESTAMP)
+      """,
+      conn);
+    cmd.Parameters.AddWithValue("tenantId", tenant.Id);
 
-      // Insert duplicate via raw SQL.
-      await using var cmd2 = new NpgsqlCommand(
-        """
-        INSERT INTO "ServiceAccounts" ("Id", "Kind", "TenantId", "Name", "Description", "IsEnabled", "CreatedAt")
-        VALUES (gen_random_uuid(), 'Server', NULL, 'ServerDupName', NULL, true, CURRENT_TIMESTAMP)
-        """,
-        conn, tx);
-      await cmd2.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+    var ex = await Assert.ThrowsAsync<Npgsql.PostgresException>(
+      () => cmd.ExecuteNonQueryAsync(TestContext.Current.CancellationToken));
 
-      await tx.CommitAsync(TestContext.Current.CancellationToken);
-    }
-    catch
-    {
-      await tx.RollbackAsync(TestContext.Current.CancellationToken);
-      throw;
-    }
-
-    // Verify both were inserted.
-    var count = await appDb.ServiceAccounts
-      .IgnoreQueryFilters()
-      .CountAsync(x => x.Name == "ServerDupName" && x.Kind == ServiceAccountKind.Server,
-        TestContext.Current.CancellationToken);
-
-    Assert.Equal(2, count);
+    Assert.Contains("CK_ServiceAccounts_Kind_TenantId", ex.Message);
   }
 
   [Fact]

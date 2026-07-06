@@ -12,7 +12,12 @@ public sealed class ServiceAccountInvariantInterceptor : SaveChangesInterceptor
     DbContextEventData eventData,
     InterceptionResult<int> result)
   {
-    ValidateKindTenantInvariant(eventData.Context);
+    if (eventData.Context is not null)
+    {
+      ValidateKindTenantInvariant(eventData.Context);
+      ValidateNameUniqueness(eventData.Context);
+    }
+
     return base.SavingChanges(eventData, result);
   }
 
@@ -24,7 +29,7 @@ public sealed class ServiceAccountInvariantInterceptor : SaveChangesInterceptor
     if (eventData.Context is not null)
     {
       ValidateKindTenantInvariant(eventData.Context);
-      await ValidateNameUniqueness(eventData.Context, cancellationToken);
+      await ValidateNameUniquenessAsync(eventData.Context, cancellationToken);
     }
     return await base.SavingChangesAsync(eventData, result, cancellationToken);
   }
@@ -34,6 +39,14 @@ public sealed class ServiceAccountInvariantInterceptor : SaveChangesInterceptor
     return a.Kind == b.Kind &&
            a.Name == b.Name &&
            (a.TenantId == b.TenantId || (a.TenantId is null && b.TenantId is null));
+  }
+
+  private static List<ServiceAccount> GetCandidateAccounts(DbContext context)
+  {
+    return context.ChangeTracker.Entries<ServiceAccount>()
+      .Where(e => e.State is EntityState.Added or EntityState.Modified)
+      .Select(e => e.Entity)
+      .ToList();
   }
 
   private static void ValidateKindTenantInvariant(DbContext? context)
@@ -53,16 +66,29 @@ public sealed class ServiceAccountInvariantInterceptor : SaveChangesInterceptor
     }
   }
 
-  private static async Task ValidateNameUniqueness(DbContext context, CancellationToken cancellationToken)
+  private static void ValidateNameUniqueness(DbContext context)
   {
-    var candidates = context.ChangeTracker.Entries<ServiceAccount>()
-      .Where(e => e.State is EntityState.Added or EntityState.Modified)
-      .Select(e => e.Entity)
-      .ToList();
+    var candidates = GetCandidateAccounts(context);
 
     if (candidates.Count == 0) return;
 
-    // Check for duplicate (Kind, TenantId, Name) within the same batch.
+    ValidateNameUniqueness(candidates, context.Set<ServiceAccount>()
+      .AsNoTracking()
+      .Where(x => candidates.Select(c => c.Name).Contains(x.Name) && !candidates.Select(c => c.Id).Contains(x.Id))
+      .Select(x => new ServiceAccount
+      {
+        Id = x.Id,
+        Kind = x.Kind,
+        TenantId = x.TenantId,
+        Name = x.Name,
+      })
+      .ToList());
+  }
+
+  private static void ValidateNameUniqueness(
+    IReadOnlyList<ServiceAccount> candidates,
+    IReadOnlyList<ServiceAccount> existingAccounts)
+  {
     for (var i = 0; i < candidates.Count; i++)
     {
       for (var j = i + 1; j < candidates.Count; j++)
@@ -75,24 +101,9 @@ public sealed class ServiceAccountInvariantInterceptor : SaveChangesInterceptor
       }
     }
 
-    // Check for conflicts with existing rows in the database.
-    var candidateNames = candidates.Select(a => a.Name).ToHashSet();
-
-    var conflicts = await context.Set<ServiceAccount>()
-      .AsNoTracking()
-      .Where(x => candidateNames.Contains(x.Name) && !candidates.Select(c => c.Id).Contains(x.Id))
-      .Select(x => new { x.Kind, x.TenantId, x.Name })
-      .ToListAsync(cancellationToken);
-
     foreach (var candidate in candidates)
     {
-      // using a local variable to avoid EF Core translating candidate.TenantId == null to client eval
-      var candidateTenantId = candidate.TenantId;
-
-      var found = conflicts.Any(c =>
-        c.Kind == candidate.Kind &&
-        (c.TenantId == null ? candidateTenantId == null : c.TenantId == candidateTenantId) &&
-        c.Name == candidate.Name);
+      var found = existingAccounts.Any(existing => Conflict(existing, candidate));
 
       if (found)
       {
@@ -100,5 +111,26 @@ public sealed class ServiceAccountInvariantInterceptor : SaveChangesInterceptor
           $"A service account named '{candidate.Name}' already exists for this kind and tenant.");
       }
     }
+  }
+
+  private static async Task ValidateNameUniquenessAsync(DbContext context, CancellationToken cancellationToken)
+  {
+    var candidates = GetCandidateAccounts(context);
+
+    if (candidates.Count == 0) return;
+
+    var candidateNames = candidates.Select(a => a.Name).ToHashSet();
+
+    ValidateNameUniqueness(candidates, await context.Set<ServiceAccount>()
+      .AsNoTracking()
+      .Where(x => candidateNames.Contains(x.Name) && !candidates.Select(c => c.Id).Contains(x.Id))
+      .Select(x => new ServiceAccount
+      {
+        Id = x.Id,
+        Kind = x.Kind,
+        TenantId = x.TenantId,
+        Name = x.Name,
+      })
+      .ToListAsync(cancellationToken));
   }
 }

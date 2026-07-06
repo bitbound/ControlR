@@ -349,8 +349,13 @@ public class ServiceAccountManager(
 
       return Result.Ok(new ServiceAccountCredentialValidationResult(account, credential));
     }
+    catch (OperationCanceledException)
+    {
+      throw;
+    }
     catch (Exception ex)
     {
+      logger.LogError(ex, "Failed to validate service account credential.");
       return Result.Fail<ServiceAccountCredentialValidationResult>(ex, "Failed to validate service account credential.");
     }
   }

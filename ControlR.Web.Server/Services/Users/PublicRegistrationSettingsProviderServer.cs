@@ -24,7 +24,9 @@ internal class PublicRegistrationSettingsProviderServer(
     try
     {
       await using var db = await _dbFactory.CreateDbContextAsync();
-      var registrationEnabled = _appOptions.CurrentValue.EnablePublicRegistration || !await db.Users.AnyAsync();
+      var hasUsers = await db.Users.AnyAsync();
+      var registrationEnabled = _appOptions.CurrentValue.EnablePublicRegistration ||
+        (_appOptions.CurrentValue.EnableFirstUserBootstrap && !hasUsers);
       _cachedValue = registrationEnabled;
       return registrationEnabled;
     }

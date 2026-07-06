@@ -66,6 +66,8 @@ public class UserCreator(
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IUserStore<AppUser> _userStore = userStore;
 
+  private bool EnableFirstUserBootstrap => _appOptions.CurrentValue.EnableFirstUserBootstrap;
+
   public async Task<CreateUserResult> CreateUser(
     string emailAddress,
     string password,
@@ -215,31 +217,27 @@ public class UserCreator(
     bool isPublicRegistration = false,
     CancellationToken cancellationToken = default)
   {
-    // Acquire the registration lock for ALL public registrations to prevent
-    // concurrent first-time registrations from both becoming server admins.
-    // The EnablePublicRegistration flag only controls whether to block the
-    // request when users already exist — not whether to serialize.
     if (isPublicRegistration)
     {
       using var gate = await _registrationProvider.AcquirePublicRegistrationLock(cancellationToken);
 
-      if (!_appOptions.CurrentValue.EnablePublicRegistration)
-      {
-        var hasExistingUsers = await _appDb.Users.AnyAsync(cancellationToken);
-        if (hasExistingUsers)
-        {
-          _logger.LogWarning(
-            "Public registration blocked for {Email}. Registration is disabled and users already exist.",
-            emailAddress);
+      var hasExistingUsers = await _appDb.Users.AnyAsync(cancellationToken);
+      var registrationEnabled = _appOptions.CurrentValue.EnablePublicRegistration ||
+        (EnableFirstUserBootstrap && !hasExistingUsers);
 
-          return new CreateUserResult(
-            false,
-            IdentityResult.Failed(new IdentityError
-            {
-              Code = "RegistrationDisabled",
-              Description = "Public registration is not currently enabled."
-            }));
-        }
+      if (!registrationEnabled)
+      {
+        _logger.LogWarning(
+          "Public registration blocked for {Email}. Registration is not enabled for this instance.",
+          emailAddress);
+
+        return new CreateUserResult(
+          false,
+          IdentityResult.Failed(new IdentityError
+          {
+            Code = "RegistrationDisabled",
+            Description = "Public registration is not currently enabled."
+          }));
       }
 
       return await CreateUserInternal(
@@ -304,7 +302,8 @@ public class UserCreator(
 
       _logger.LogInformation("Created new account: {Email}.", emailAddress);
 
-      var isServerAdmin = await _userManager.Users.CountAsync(cancellationToken: cancellationToken) == 1;
+      var isFirstUser = await _userManager.Users.CountAsync(cancellationToken: cancellationToken) == 1;
+      var isServerAdmin = EnableFirstUserBootstrap && isFirstUser;
       if (isServerAdmin)
       {
         _logger.LogInformation(

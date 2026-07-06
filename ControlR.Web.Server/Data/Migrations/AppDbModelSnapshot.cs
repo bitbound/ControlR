@@ -496,12 +496,22 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ServiceAccounts_Server_Name")
+                        .HasFilter("\"Kind\" = 'Server' AND \"TenantId\" IS NULL");
 
-                    b.HasIndex("Kind", "TenantId", "Name")
-                        .IsUnique();
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ServiceAccounts_TenantId_Name")
+                        .HasFilter("\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL");
 
-                    b.ToTable("ServiceAccounts");
+                    b.ToTable("ServiceAccounts", t =>
+                        {
+                            t.HasCheckConstraint("CK_ServiceAccounts_Kind_Allowed", "\"Kind\" IN ('Server', 'Tenant')");
+
+                            t.HasCheckConstraint("CK_ServiceAccounts_Kind_TenantId", "(\"Kind\" = 'Server' AND \"TenantId\" IS NULL) OR (\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ServiceAccountCredential", b =>
@@ -539,8 +549,6 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Id");
 
                     b.HasIndex("ServiceAccountId");
 

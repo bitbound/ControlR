@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Primitives;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
@@ -32,7 +33,17 @@ public class ServiceAccountsController(
     var result = await _serviceAccountManager.AddCredential(serviceAccountId, request.Name, cancellationToken);
     if (!result.IsSuccess)
     {
-      return NotFound(result.Reason);
+      if (string.Equals(result.Reason, "Server service account not found.", StringComparison.Ordinal))
+      {
+        return NotFound(result.Reason);
+      }
+
+      if (string.Equals(result.Reason, "Service account is disabled.", StringComparison.Ordinal))
+      {
+        return Conflict(result.Reason);
+      }
+
+      return BadRequest(result.Reason);
     }
 
     return Ok(result.Value);

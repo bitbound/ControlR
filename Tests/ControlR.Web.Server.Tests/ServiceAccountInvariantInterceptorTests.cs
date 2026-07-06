@@ -68,6 +68,37 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
   }
 
   [Fact]
+  public async Task SaveChanges_DuplicateNameExistingInDatabase_Sync_Throws()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+
+    using var scope = testApp.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+
+    db.ServiceAccounts.Add(new ServiceAccount
+    {
+      Kind = ServiceAccountKind.Server,
+      TenantId = null,
+      Name = "existing-sync",
+      IsEnabled = true,
+    });
+    db.SaveChanges();
+
+    using var scope2 = testApp.CreateScope();
+    var db2 = scope2.ServiceProvider.GetRequiredService<AppDb>();
+    db2.ServiceAccounts.Add(new ServiceAccount
+    {
+      Kind = ServiceAccountKind.Server,
+      TenantId = null,
+      Name = "existing-sync",
+      IsEnabled = true,
+    });
+
+    var ex = Assert.ThrowsAny<InvalidOperationException>(() => db2.SaveChanges());
+    Assert.Contains("already exists", ex.Message);
+  }
+
+  [Fact]
   public async Task SaveChanges_DuplicateNameExistingInDatabase_Throws()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);

@@ -7,6 +7,7 @@ using Npgsql;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz;
+using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Data.Configuration;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -30,6 +31,7 @@ using System.Threading.RateLimiting;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.ExceptionHandlers;
+using ControlR.Web.Server.RateLimiting;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -170,6 +172,8 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddRateLimiter(options =>
     {
       options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+      options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+        ServiceAccountAuthRateLimitPolicy.Create(appOptions));
       options.OnRejected = (context, cancellationToken) =>
       {
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfterValue)
@@ -230,6 +234,7 @@ public static class WebApplicationBuilderExtensions
         .AddAuthenticationSchemes(CustomSchemes.Dynamic)
         .RequireAuthenticatedUser()
         .Build())
+      .AddPolicy(RequireServerServiceAccountPolicy.PolicyName, RequireServerServiceAccountPolicy.Create())
       .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
       .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
 

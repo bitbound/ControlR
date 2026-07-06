@@ -32,9 +32,10 @@ public class UserRegistrationProvider(
       await using var scope = _scopeFactory.CreateAsyncScope();
       await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
-      return
-        _appOptions.CurrentValue.EnablePublicRegistration ||
-        await appDb.Users.AnyAsync() == false;
+      var hasUsers = await appDb.Users.AnyAsync();
+
+      return _appOptions.CurrentValue.EnablePublicRegistration ||
+        (_appOptions.CurrentValue.EnableFirstUserBootstrap && !hasUsers);
     }
     catch (Exception ex)
     {

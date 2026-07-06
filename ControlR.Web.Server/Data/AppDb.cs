@@ -180,9 +180,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
   private void ConfigureServiceAccountCredentials(ModelBuilder builder)
   {
-    builder
-      .Entity<ServiceAccountCredential>()
-      .HasIndex(x => x.Id);
   }
 
   private void ConfigureServiceAccounts(ModelBuilder builder)
@@ -200,8 +197,29 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
     builder
       .Entity<ServiceAccount>()
-      .HasIndex(x => new { x.Kind, x.TenantId, x.Name })
-      .IsUnique();
+      .ToTable(t =>
+      {
+        t.HasCheckConstraint(
+          "CK_ServiceAccounts_Kind_Allowed",
+          "\"Kind\" IN ('Server', 'Tenant')");
+        t.HasCheckConstraint(
+          "CK_ServiceAccounts_Kind_TenantId",
+          "(\"Kind\" = 'Server' AND \"TenantId\" IS NULL) OR (\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL)");
+      });
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasIndex(x => x.Name)
+      .HasDatabaseName("IX_ServiceAccounts_Server_Name")
+      .IsUnique()
+      .HasFilter("\"Kind\" = 'Server' AND \"TenantId\" IS NULL");
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasIndex(x => new { x.TenantId, x.Name })
+      .HasDatabaseName("IX_ServiceAccounts_TenantId_Name")
+      .IsUnique()
+      .HasFilter("\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL");
 
     builder
       .Entity<ServiceAccount>()

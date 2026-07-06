@@ -97,6 +97,13 @@ public class AppOptions
   public bool EnableDockerSecrets { get; init; }
 
   /// <summary>
+  /// Controls the legacy first-user bootstrap behavior.
+  /// When enabled, an empty instance temporarily treats public registration as available,
+  /// and the first tenantless user created by that flow is promoted to server administrator.
+  /// </summary>
+  public bool EnableFirstUserBootstrap { get; init; } = true;
+
+  /// <summary>
   /// Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
   /// </summary>
   public bool EnableInteractiveBearerLogin { get; init; }
@@ -198,6 +205,18 @@ public class AppOptions
   /// If true, you must also configure SMTP settings below.
   /// </summary>
   public bool RequireUserEmailConfirmation { get; init; }
+
+  /// <summary>
+  /// Maximum failed service-account authentication attempts allowed per limiter window.
+  /// Set to 0 or less to disable the pre-authentication limiter for x-api-key requests.
+  /// </summary>
+  public int ServiceAccountAuthFailureLimit { get; init; } = 5;
+
+  /// <summary>
+  /// Size of the fixed window used by the service-account authentication rate limiter.
+  /// Set to 0 or less to disable the pre-authentication limiter for x-api-key requests.
+  /// </summary>
+  public int ServiceAccountAuthFailureWindowMinutes { get; init; } = 5;
 
   /// <summary>
   /// Whether to check certificate revocation for SMTP connections.
