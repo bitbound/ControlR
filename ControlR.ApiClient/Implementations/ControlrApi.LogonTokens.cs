@@ -11,7 +11,7 @@ public partial class ControlrApi
 	{
 		return await ExecuteApiCall(async () =>
 		{
-			using var response = await _client.PostAsJsonAsync(HttpConstants.LogonTokensEndpoint, request, cancellationToken);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.Internal.LogonTokensEndpoint, request, cancellationToken);
      await response.EnsureSuccessStatusCodeWithDetails();
 			return await response.Content.ReadFromJsonAsync<LogonTokenResponseDto>(cancellationToken);
 		});
@@ -21,7 +21,7 @@ public partial class ControlrApi
 	{
 		return await ExecuteApiCall(async () =>
 		{
-			using var response = await _client.PostAsJsonAsync($"{HttpConstants.LogonTokensEndpoint}/issue", request, cancellationToken);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.V1.LogonTokensEndpoint, request, cancellationToken);
      await response.EnsureSuccessStatusCodeWithDetails();
 			return await response.Content.ReadFromJsonAsync<LogonTokenResponseDto>(cancellationToken);
 		});

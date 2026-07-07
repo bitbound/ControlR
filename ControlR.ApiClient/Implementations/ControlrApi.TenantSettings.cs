@@ -12,7 +12,7 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.DeleteAsync($"{HttpConstants.TenantSettingsEndpoint}/{settingName}", cancellationToken);
+      using var response = await _client.DeleteAsync($"{HttpConstants.Internal.TenantSettingsEndpoint}/{settingName}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -21,7 +21,7 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.GetAsync($"{HttpConstants.TenantSettingsEndpoint}/{settingName}", cancellationToken);
+      using var response = await _client.GetAsync($"{HttpConstants.Internal.TenantSettingsEndpoint}/{settingName}", cancellationToken);
       if (response.StatusCode == HttpStatusCode.NoContent)
       {
         return new TenantSettingResponseDto(Id: null, Name: settingName, Value: null);
@@ -36,14 +36,14 @@ public partial class ControlrApi
   async Task<ApiResult<TenantSettingsDto>> ITenantSettingsApi.GetTenantSettings(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
-      await _client.GetFromJsonAsync<TenantSettingsDto>(HttpConstants.TenantSettingsEndpoint, cancellationToken));
+      await _client.GetFromJsonAsync<TenantSettingsDto>(HttpConstants.Internal.TenantSettingsEndpoint, cancellationToken));
   }
 
   async Task<ApiResult<TenantSettingResponseDto>> ITenantSettingsApi.SetTenantSetting(TenantSettingRequestDto request, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.PostAsJsonAsync(HttpConstants.TenantSettingsEndpoint, request, cancellationToken);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.Internal.TenantSettingsEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<TenantSettingResponseDto>(cancellationToken);
     });
@@ -53,7 +53,7 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.PutAsJsonAsync(HttpConstants.TenantSettingsEndpoint, request, cancellationToken);
+      using var response = await _client.PutAsJsonAsync(HttpConstants.Internal.TenantSettingsEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<TenantSettingsDto>(cancellationToken);
     });

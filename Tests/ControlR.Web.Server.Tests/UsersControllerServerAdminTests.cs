@@ -1,6 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Api;
+using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Users;
@@ -25,7 +25,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
 
     // Create a tenant admin caller (not a server admin)
-    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
       roles: RoleNames.TenantAdministrator);
 
     await using var db = services.GetRequiredService<AppDb>();
@@ -57,7 +57,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
 
     // Create a server admin caller
-    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
       roles: RoleNames.ServerAdministrator);
 
     await using var db = services.GetRequiredService<AppDb>();

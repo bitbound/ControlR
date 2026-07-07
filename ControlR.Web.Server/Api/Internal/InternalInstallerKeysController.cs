@@ -3,21 +3,16 @@ using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Services.AgentInstaller;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.InstallerKeysEndpoint)]
+[Route(HttpConstants.Internal.InstallerKeysEndpoint)]
 [ApiController]
-[Authorize]
-public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
+[Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+public class InternalInstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
 {
   private readonly IAgentInstallerKeyManager _installerKeyManager = installerKeyManager;
 
-  /// <summary>
-  /// Creates an installer key from the authenticated user's context.
-  /// Tenant and creator are derived from claims.
-  /// </summary>
   [HttpPost]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<CreateInstallerKeyResponseDto>> Create(
       [FromBody] CreateInstallerKeyRequestDto request)
   {
@@ -39,7 +34,6 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
   }
 
   [HttpDelete("{id:guid}")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<IActionResult> Delete([FromRoute] Guid id)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
@@ -54,7 +48,6 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
   }
 
   [HttpGet]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<IEnumerable<AgentInstallerKeyDto>>> GetAll()
   {
     if (!User.TryGetTenantId(out var tenantId) ||
@@ -69,7 +62,6 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
   }
 
   [HttpGet("usages/{keyId:guid}")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<IReadOnlyList<AgentInstallerKeyUsageDto>>> GetUsages([FromRoute] Guid keyId)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
@@ -83,39 +75,7 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
     return result.ToActionResult();
   }
 
-  [HttpPost("increment-usage/{keyId:guid}")]
-  [AllowAnonymous]
-  public async Task<IActionResult> IncrementUsage(
-      [FromRoute] Guid keyId,
-      [FromQuery] Guid? deviceId)
-  {
-    var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
-    var result = await _installerKeyManager.IncrementUsage(keyId, deviceId, remoteIp);
-    return result.ToActionResult();
-  }
-
-  /// <summary>
-  /// Creates an installer key as a server principal.
-  /// All fields including TenantId and CreatorId must be provided in the request.
-  /// </summary>
-  [HttpPost("issue")]
-  [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-  public async Task<ActionResult<CreateInstallerKeyResponseDto>> Issue(
-      [FromBody] IssueInstallerKeyRequestDto request)
-  {
-    var dto = await _installerKeyManager.CreateKey(
-        request.TenantId,
-        request.CreatorId,
-        request.KeyType,
-        request.AllowedUses,
-        request.Expiration,
-        request.FriendlyName);
-
-    return Ok(dto);
-  }
-
   [HttpPut("rename")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<IActionResult> Rename(
       [FromBody] RenameInstallerKeyRequestDto request)
   {
@@ -130,4 +90,3 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
     return result.ToActionResult();
   }
 }
-

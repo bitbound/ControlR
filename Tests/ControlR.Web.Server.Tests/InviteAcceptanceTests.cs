@@ -1,6 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
-using ControlR.Web.Server.Api;
+using ControlR.Web.Server.Api.Internal;
+using ControlR.Web.Server.Api.Public;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
@@ -109,7 +110,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     // Step 5: AdminUser invites User2 to Tenant A (this creates user2 in Tenant A)
     using (var scope = testApp.CreateScope())
     {
-      var controller = await scope.CreateControllerWithUser<InvitesController>(adminUser);
+      var controller = await scope.CreateControllerWithUser<InternalInvitesController>(adminUser);
       controller.ControllerContext.HttpContext!.Request.Scheme = "https";
       controller.ControllerContext.HttpContext.Request.Host = new HostString("test.example.com");
 
@@ -195,7 +196,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     // Step 7: User2 accepts invite (moves back to Tenant A)
     using (var scope = testApp.CreateScope())
     {
-      var controller = scope.CreateController<InvitesController>();
+      var controller = scope.CreateController<PublicInvitesController>();
 
       var tenantInvitesProvider = scope.ServiceProvider.GetRequiredService<ITenantInvitesProvider>();
 

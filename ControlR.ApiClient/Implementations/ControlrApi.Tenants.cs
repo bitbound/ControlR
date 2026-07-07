@@ -11,7 +11,7 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.PostAsJsonAsync(HttpConstants.TenantsEndpoint, request, cancellationToken);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.V1.TenantsEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<CreateTenantResponseDto>(cancellationToken);
     });

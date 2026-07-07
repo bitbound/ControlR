@@ -30,4 +30,26 @@ public static class HttpConstants
   public const string UserStorageEndpoint = "/api/user-storage";
   public const string UserTagsEndpoint = "/api/user-tags";
   public const string VersionEndpoint = "/api/version";
+
+  public static class Internal
+  {
+    public const string InstallerKeysEndpoint = "/internal/installer-keys";
+    public const string InvitesEndpoint = "/internal/invites";
+    public const string LogonTokensEndpoint = "/internal/logon-tokens";
+    public const string TenantSettingsEndpoint = "/internal/tenant-settings";
+    public const string UsersEndpoint = "/internal/users";
+  }
+
+  public static class Public
+  {
+    public const string AgentUpdateEndpoint = "/public/agent-update";
+    public const string InvitesEndpoint = "/public/invites";
+  }
+
+  public static class V1
+  {
+    public const string InstallerKeysEndpoint = "/v1/installer-keys";
+    public const string LogonTokensEndpoint = "/v1/logon-tokens";
+    public const string TenantsEndpoint = "/v1/tenants";
+  }
 }

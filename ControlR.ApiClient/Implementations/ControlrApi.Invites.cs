@@ -15,7 +15,7 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.InvitesEndpoint}/accept", request, cancellationToken);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.Public.InvitesEndpoint}/accept", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AcceptInvitationResponseDto>(cancellationToken);
     });
@@ -25,7 +25,7 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.PostAsJsonAsync(HttpConstants.InvitesEndpoint, request, cancellationToken);
+      using var response = await _client.PostAsJsonAsync(HttpConstants.Internal.InvitesEndpoint, request, cancellationToken);
       if (response.StatusCode == HttpStatusCode.Conflict)
       {
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -43,7 +43,7 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.DeleteAsync($"{HttpConstants.InvitesEndpoint}/{inviteId}", cancellationToken);
+      using var response = await _client.DeleteAsync($"{HttpConstants.Internal.InvitesEndpoint}/{inviteId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -51,16 +51,8 @@ public partial class ControlrApi
   async Task<ApiResult<TenantInviteResponseDto[]>> IInvitesApi.GetPendingTenantInvites(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
-      await _client.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.InvitesEndpoint, cancellationToken));
+      await _client.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.Internal.InvitesEndpoint, cancellationToken));
   }
 
-  async Task<ApiResult<TenantInviteResponseDto>> IInvitesApi.IssueTenantInvite(IssueTenantInviteRequestDto request, CancellationToken cancellationToken)
-  {
-    return await ExecuteApiCall(async () =>
-    {
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.InvitesEndpoint}/issue", request, cancellationToken);
-      await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<TenantInviteResponseDto>(cancellationToken);
-    });
-  }
+
 }

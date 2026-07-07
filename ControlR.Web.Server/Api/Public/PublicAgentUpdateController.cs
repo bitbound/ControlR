@@ -1,20 +1,19 @@
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.Mvc;
 using ControlR.Libraries.Api.Contracts.Constants;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Public;
 
-[Obsolete("Use PublicAgentUpdateController under /public/agent-update instead.")]
 [ApiController]
-[Route(HttpConstants.AgentUpdateEndpoint)]
-public class AgentUpdateController(
-  ILogger<AgentUpdateController> logger,
+[Route(HttpConstants.Public.AgentUpdateEndpoint)]
+public class PublicAgentUpdateController(
+  ILogger<PublicAgentUpdateController> logger,
   IWebHostEnvironment webHostEnvironment) : ControllerBase
 {
   private const int CacheDurationSeconds = 600;
 
-  private readonly ILogger<AgentUpdateController> _logger = logger;
+  private readonly ILogger<PublicAgentUpdateController> _logger = logger;
   private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
 
   [OutputCache(Duration = CacheDurationSeconds)]
@@ -22,7 +21,7 @@ public class AgentUpdateController(
   [Produces("application/json")]
   [HttpGet("get-bundle-metadata/{runtime}")]
   public async Task<ActionResult<BundleMetadataDto>> GetBundleMetadata(
-    RuntimeId runtime, 
+    RuntimeId runtime,
     [FromServices] IAgentVersionProvider agentVersionProvider,
     CancellationToken cancellationToken)
   {
@@ -55,12 +54,10 @@ public class AgentUpdateController(
 
     _logger.LogDebug("Computing bundle and installer hashes for {Runtime}", runtime);
 
-    // Compute bundle hash
     await using var bundleStream = new FileStream(bundleFileInfo.PhysicalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
     var bundleHash = await SHA256.HashDataAsync(bundleStream, cancellationToken);
     var bundleSha256 = Convert.ToHexString(bundleHash);
 
-    // Compute installer hash
     await using var installerStream = new FileStream(installerFileInfo.PhysicalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
     var installerHash = await SHA256.HashDataAsync(installerStream, cancellationToken);
     var installerSha256 = Convert.ToHexString(installerHash);

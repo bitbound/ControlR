@@ -86,7 +86,6 @@ public interface IInvitesApi
   Task<ApiResult<TenantInviteResponseDto>> CreateTenantInvite(TenantInviteRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteTenantInvite(Guid inviteId, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantInviteResponseDto[]>> GetPendingTenantInvites(CancellationToken cancellationToken = default);
-  Task<ApiResult<TenantInviteResponseDto>> IssueTenantInvite(IssueTenantInviteRequestDto request, CancellationToken cancellationToken = default);
 }
 
 public interface ILogonTokensApi
@@ -201,14 +200,12 @@ public interface IUserTagsApi
 public interface IUsersApi
 {
   Task<ApiResult<AdminResetPasswordResponseDto>> AdminResetPassword(Guid userId, CancellationToken cancellationToken = default);
-  Task<ApiResult<AdminResetPasswordResponseDto>> AdminResetPasswordIssue(Guid userId, AdminResetPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto>> CreateUser(CreateUserRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(Guid userId, CreatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUser(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUserPersonalAccessToken(Guid userId, Guid tokenId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto[]>> GetAllUsers(CancellationToken cancellationToken = default);
   Task<ApiResult<PersonalAccessTokenDto[]>> GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken = default);
-  Task<ApiResult<UserResponseDto>> IssueUser(IssueCreateUserRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
 }
 

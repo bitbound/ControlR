@@ -1,19 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Authz.Policies;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.UsersEndpoint)]
+[Route(HttpConstants.Internal.UsersEndpoint)]
 [ApiController]
-[Authorize]
-public class UsersController : ControllerBase
+[Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+public class InternalUsersController : ControllerBase
 {
-  /// <summary>
-  /// Resets a user's password. Tenant is derived from the caller's claims.
-  /// </summary>
   [HttpPost("{userId:guid}/reset-password")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
     [FromRoute] Guid userId,
     [FromServices] IPasswordManager passwordManager)
@@ -37,36 +34,7 @@ public class UsersController : ControllerBase
     return Ok(result.Value);
   }
 
-  /// <summary>
-  /// Resets a user's password as a server principal.
-  /// TenantId must be provided in the request body.
-  /// </summary>
-  [HttpPost("{userId:guid}/reset-password/issue")]
-  [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-  public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPasswordIssue(
-    [FromRoute] Guid userId,
-    [FromServices] IPasswordManager passwordManager,
-    [FromBody] AdminResetPasswordRequestDto request)
-  {
-    var result = await passwordManager.AdminResetPassword(request.TenantId, userId);
-    if (!result.IsSuccess)
-    {
-      if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
-      {
-        return NotFound();
-      }
-
-      return BadRequest(result.Reason);
-    }
-
-    return Ok(result.Value);
-  }
-
-  /// <summary>
-  /// Creates a user within the caller's tenant.
-  /// </summary>
   [HttpPost]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<UserResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
@@ -133,7 +101,6 @@ public class UsersController : ControllerBase
   }
 
   [HttpPost("{userId:guid}/personal-access-tokens")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
@@ -163,7 +130,6 @@ public class UsersController : ControllerBase
   }
 
   [HttpDelete("{userId:guid}")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<IActionResult> Delete(
     [FromRoute] Guid userId,
     [FromServices] UserManager<AppUser> userManager,
@@ -193,7 +159,6 @@ public class UsersController : ControllerBase
   }
 
   [HttpDelete("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<IActionResult> DeleteUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromRoute] Guid tokenId,
@@ -223,7 +188,6 @@ public class UsersController : ControllerBase
   }
 
   [HttpGet]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<List<UserResponseDto>>> GetAll(
     [FromServices] AppDb appDb)
   {
@@ -239,7 +203,6 @@ public class UsersController : ControllerBase
   }
 
   [HttpGet("{userId:guid}/personal-access-tokens")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetUserPersonalAccessTokens(
     [FromRoute] Guid userId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
@@ -262,59 +225,7 @@ public class UsersController : ControllerBase
     return Ok(tokens);
   }
 
-  /// <summary>
-  /// Creates a user within an explicit tenant. For server service accounts only.
-  /// </summary>
-  [HttpPost("issue")]
-  [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-  public async Task<ActionResult<UserResponseDto>> Issue(
-    [FromServices] AppDb appDb,
-    [FromServices] UserManager<AppUser> userManager,
-    [FromServices] IUserCreator userCreator,
-    [FromBody] IssueCreateUserRequestDto request)
-  {
-    var requestRoleIds = request.RoleIds?.ToArray();
-    if (requestRoleIds is { Length: > 0 } roleIds)
-    {
-      var roles = await appDb.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
-      var foundRoleIds = roles.Select(r => r.Id).ToHashSet();
-      var missingRoleIds = roleIds.Except(foundRoleIds).ToList();
-      if (missingRoleIds.Count != 0)
-      {
-        return BadRequest($"Roles not found: {string.Join(',', missingRoleIds)}");
-      }
-
-      if (roles.Any(r => r.Name == RoleNames.ServerAdministrator))
-      {
-        return BadRequest("Server service accounts cannot assign the server administrator role.");
-      }
-    }
-
-    var createResult = await userCreator.CreateUser(
-      string.IsNullOrWhiteSpace(request.Email) ? request.UserName : request.Email,
-      request.Password ?? string.Empty,
-      request.TenantId,
-      requestRoleIds,
-      request.TagIds,
-      cancellationToken: HttpContext.RequestAborted);
-
-    if (!createResult.Succeeded)
-    {
-      return BadRequest(createResult.IdentityResult.Errors.Select(e => e.Description));
-    }
-
-    var user = createResult.User;
-    if (user is null)
-    {
-      return BadRequest("User creation failed");
-    }
-
-    var response = new UserResponseDto(user.Id, user.UserName, user.Email);
-    return CreatedAtAction(nameof(Issue), new { id = user.Id }, response);
-  }
-
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromRoute] Guid tokenId,

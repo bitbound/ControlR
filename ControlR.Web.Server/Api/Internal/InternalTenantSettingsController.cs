@@ -4,18 +4,17 @@ using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.TenantSettingsEndpoint)]
+[Route(HttpConstants.Internal.TenantSettingsEndpoint)]
 [ApiController]
-[Authorize]
-public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenantSettingsManager) : ControllerBase
+[Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+public class InternalTenantSettingsController(AppDb appDb, ITenantSettingsManager tenantSettingsManager) : ControllerBase
 {
   private readonly AppDb _appDb = appDb;
   private readonly ITenantSettingsManager _tenantSettingsManager = tenantSettingsManager;
 
   [HttpDelete("{name}")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult> DeleteSetting(string name)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -45,7 +44,6 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpGet]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<TenantSettingsDto>> GetAll(CancellationToken cancellationToken)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -58,7 +56,6 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpGet("{name}")]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<TenantSettingResponseDto?>> GetSetting(string name)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -88,7 +85,6 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPost]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<TenantSettingResponseDto>> SetSetting([FromBody] TenantSettingRequestDto setting)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -101,7 +97,6 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPut]
-  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<TenantSettingsDto>> SetSettings(
     [FromBody] TenantSettingsDto settings,
     CancellationToken cancellationToken)

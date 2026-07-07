@@ -1,18 +1,13 @@
 using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Api;
+using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Server.Services.ServiceAccounts;
-using ControlR.Web.Server.Services;
-using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -31,10 +26,10 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     var tenant = await services.CreateTestTenant();
     var creator = await services.CreateTestUser(tenant.Id, email: "creator@test.local");
-    var controller = scope.CreateController<InstallerKeysController>();
+    var controller = scope.CreateController<V1InstallerKeysController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
-    var result = await controller.Issue(new IssueInstallerKeyRequestDto(
+    var result = await controller.Create(new IssueInstallerKeyRequestDto(
       tenant.Id,
       creator.Id,
       InstallerKeyType.Persistent));
@@ -43,29 +38,6 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
     var response = Assert.IsType<CreateInstallerKeyResponseDto>(okResult.Value);
     Assert.NotEqual(Guid.Empty, response.Id);
-  }
-
-  [Fact]
-  public async Task ServerPrincipalCanCreateInviteWithExplicitTenant()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-
-    var tenant = await services.CreateTestTenant();
-    var controller = scope.CreateController<InvitesController>();
-    controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
-    controller.ControllerContext.HttpContext.Request.Scheme = "https";
-    controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
-
-    var result = await controller.Issue(
-      new IssueTenantInviteRequestDto(tenant.Id, "invitee@test.local"),
-      services.GetRequiredService<ITenantInvitesProvider>());
-
-    Assert.NotNull(result.Result);
-    var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var invite = Assert.IsType<TenantInviteResponseDto>(okResult.Value);
-    Assert.Equal("invitee@test.local", invite.InviteeEmail);
   }
 
   [Fact]
@@ -78,12 +50,12 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var tenant = await services.CreateTestTenant();
     var user = await services.CreateTestUser(tenant.Id, email: "viewer@test.local");
     var device = await services.CreateTestDevice(tenant.Id);
-    var controller = scope.CreateController<LogonTokenController>();
+    var controller = scope.CreateController<V1LogonTokensController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
     controller.ControllerContext.HttpContext.Request.Scheme = "https";
     controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
 
-    var result = await controller.IssueLogonToken(
+    var result = await controller.Create(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<ILogonTokenProvider>(),
       new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id));
@@ -92,33 +64,6 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
     var response = Assert.IsType<LogonTokenResponseDto>(okResult.Value);
     Assert.Contains($"deviceId={device.Id}", response.DeviceAccessUrl.Query, StringComparison.OrdinalIgnoreCase);
-  }
-
-  [Fact]
-  public async Task ServerPrincipalCanCreateUserWithExplicitTenant()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-
-    var tenant = await services.CreateTestTenant();
-    var controller = scope.CreateController<UsersController>();
-    controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
-
-    var result = await controller.Issue(
-      services.GetRequiredService<AppDb>(),
-      services.GetRequiredService<UserManager<AppUser>>(),
-      services.GetRequiredService<IUserCreator>(),
-      new IssueCreateUserRequestDto(
-        tenant.Id,
-        "server-created@test.local",
-        "server-created@test.local",
-        "T3stP@ssw0rd!"));
-
-    Assert.NotNull(result.Result);
-    var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-    var user = Assert.IsType<UserResponseDto>(createdResult.Value);
-    Assert.Equal("server-created@test.local", user.Email);
   }
 
   private static async Task<ClaimsPrincipal> CreateServerPrincipal(IServiceProvider services)

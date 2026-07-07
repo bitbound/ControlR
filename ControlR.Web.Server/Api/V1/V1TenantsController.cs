@@ -3,12 +3,12 @@ using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Services.Tenants;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.V1;
 
-[Route(HttpConstants.TenantsEndpoint)]
+[Route(HttpConstants.V1.TenantsEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-public class TenantsController(ITenantProvisioningService tenantProvisioningService) : ControllerBase
+public class V1TenantsController(ITenantProvisioningService tenantProvisioningService) : ControllerBase
 {
   [HttpPost]
   public async Task<ActionResult<CreateTenantResponseDto>> Create(
