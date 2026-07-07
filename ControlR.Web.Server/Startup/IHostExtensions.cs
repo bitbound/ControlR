@@ -191,10 +191,11 @@ public static class HostExtensions
     var sp = scope.ServiceProvider;
 
     var bootstrapOptions = sp.GetRequiredService<IOptions<BootstrapOptions>>();
+    var appLifetime = sp.GetRequiredService<IHostApplicationLifetime>();
     var logger = sp.GetRequiredService<ILogger<Program>>();
     var serviceAccountManager = sp.GetRequiredService<IServiceAccountManager>();
 
-    var result = await serviceAccountManager.BootstrapServerServiceAccount(bootstrapOptions.Value);
+    var result = await serviceAccountManager.BootstrapServerServiceAccount(bootstrapOptions.Value, appLifetime.ApplicationStopping);
     if (!result.IsSuccess)
     {
       logger.LogError("Bootstrap server service account failed: {Reason}", result.Reason);

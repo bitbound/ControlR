@@ -15,31 +15,31 @@ public interface IServiceAccountManager
   /// Adds a new credential to an existing server service account. Returns the credential
   /// metadata and the plaintext secret, which is only exposed this once.
   /// </summary>
-  Task<Result<CreateServiceAccountCredentialResponseDto>> AddCredential(Guid serviceAccountId, string name, CancellationToken cancellationToken = default);
+  Task<Result<CreateServiceAccountCredentialResponseDto>> AddCredential(Guid serviceAccountId, string name, CancellationToken cancellationToken);
   /// <summary>
   /// Creates the bootstrapped server service account and its initial credential when the
   /// bootstrap options are fully supplied. Skips creation when the named account already exists.
   /// Throws when the bootstrap input is only partially configured.
   /// </summary>
-  Task<Result> BootstrapServerServiceAccount(BootstrapOptions options, CancellationToken cancellationToken = default);
+  Task<Result> BootstrapServerServiceAccount(BootstrapOptions options, CancellationToken cancellationToken);
   /// <summary>
   /// Creates a new server-scoped service account and its first credential. Returns the new
   /// account and the plaintext secret, which is only exposed this once.
   /// </summary>
-  Task<Result<CreateServiceAccountResponseDto>> CreateServer(string name, string? description, CancellationToken cancellationToken = default);
+  Task<Result<CreateServiceAccountResponseDto>> CreateServer(string name, string? description, CancellationToken cancellationToken);
   /// <summary>Deletes a server service account. Credentials cascade-delete.</summary>
-  Task<Result> Delete(Guid serviceAccountId, CancellationToken cancellationToken = default);
+  Task<Result> Delete(Guid serviceAccountId, CancellationToken cancellationToken);
   /// <summary>Returns all server-scoped service accounts with their credential metadata.</summary>
-  Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken = default);
+  Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken);
   /// <summary>Revokes a credential by setting <see cref="ServiceAccountCredential.RevokedAt"/>.</summary>
-  Task<Result> RevokeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken = default);
+  Task<Result> RevokeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken);
   /// <summary>
   /// Validates a <c>{hex_id}:{plaintext_secret}</c> API key against a service account credential.
   /// On success updates <see cref="ServiceAccountCredential.LastUsedAt"/> and returns the
   /// owning service account and the credential. Revoked, expired, disabled-account, and
   /// nonexistent-or-invalid credentials all fail.
   /// </summary>
-  Task<Result<ServiceAccountCredentialValidationResult>> ValidateCredential(string apiKey, CancellationToken cancellationToken = default);
+  Task<Result<ServiceAccountCredentialValidationResult>> ValidateCredential(string apiKey, CancellationToken cancellationToken);
 }
 
 public sealed record ServiceAccountCredentialValidationResult(
@@ -57,7 +57,7 @@ public class ServiceAccountManager(
   public async Task<Result<CreateServiceAccountCredentialResponseDto>> AddCredential(
     Guid serviceAccountId,
     string name,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(name))
     {
@@ -95,7 +95,7 @@ public class ServiceAccountManager(
 
   public async Task<Result> BootstrapServerServiceAccount(
     BootstrapOptions options,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken)
   {
     var name = options.ServerServiceAccountName;
     var tokenId = options.ServerServiceAccountTokenId;
@@ -179,7 +179,7 @@ public class ServiceAccountManager(
   public async Task<Result<CreateServiceAccountResponseDto>> CreateServer(
     string name,
     string? description,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(name))
     {
@@ -219,7 +219,7 @@ public class ServiceAccountManager(
     return Result.Ok(new CreateServiceAccountResponseDto(MapToDto(account), apiKey));
   }
 
-  public async Task<Result> Delete(Guid serviceAccountId, CancellationToken cancellationToken = default)
+  public async Task<Result> Delete(Guid serviceAccountId, CancellationToken cancellationToken)
   {
     var account = await appDb.ServiceAccounts
       .FirstOrDefaultAsync(x => x.Id == serviceAccountId && x.Kind == ServiceAccountKind.Server, cancellationToken);
@@ -234,7 +234,7 @@ public class ServiceAccountManager(
     return Result.Ok();
   }
 
-  public async Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken = default)
+  public async Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken)
   {
     var accounts = await appDb.ServiceAccounts
       .Where(x => x.Kind == ServiceAccountKind.Server)
@@ -248,7 +248,7 @@ public class ServiceAccountManager(
   public async Task<Result> RevokeCredential(
     Guid serviceAccountId,
     Guid credentialId,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken)
   {
     var credential = await appDb.ServiceAccountCredentials
       .FirstOrDefaultAsync(
@@ -272,7 +272,7 @@ public class ServiceAccountManager(
 
   public async Task<Result<ServiceAccountCredentialValidationResult>> ValidateCredential(
     string apiKey,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken)
   {
     try
     {
