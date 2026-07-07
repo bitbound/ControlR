@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/user-tags")]
+[Route(HttpConstants.UserTagsEndpoint)]
 [ApiController]
 [Authorize]
 public class UserTagsController : ControllerBase

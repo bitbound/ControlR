@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/device-tags")]
+[Route(HttpConstants.DeviceTagsEndpoint)]
 [ApiController]
 [Authorize]
 public class DeviceTagsController : ControllerBase

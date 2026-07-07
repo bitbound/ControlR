@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-
+using ControlR.Libraries.Api.Contracts.Constants;
+ 
 namespace ControlR.Web.Server.Api;
-
-[Route("api/roles")]
+ 
+[Route(HttpConstants.RolesEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class RolesController : ControllerBase

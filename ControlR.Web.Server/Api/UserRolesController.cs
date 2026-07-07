@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/user-roles")]
+[Route(HttpConstants.UserRolesEndpoint)]
 [ApiController]
 [Authorize]
 public class UserRolesController(ILogger<UserRolesController> logger) : ControllerBase

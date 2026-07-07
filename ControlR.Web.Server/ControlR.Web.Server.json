@@ -2375,7 +2375,7 @@
         }
       }
     },
-    "/api/Invites/accept": {
+    "/api/invites/accept": {
       "post": {
         "tags": [
           "Invites"
@@ -2434,7 +2434,7 @@
         }
       }
     },
-    "/api/Invites": {
+    "/api/invites": {
       "post": {
         "tags": [
           "Invites"
@@ -2539,7 +2539,7 @@
         }
       }
     },
-    "/api/Invites/{inviteId}": {
+    "/api/invites/{inviteId}": {
       "delete": {
         "tags": [
           "Invites"

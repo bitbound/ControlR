@@ -1,9 +1,10 @@
 ﻿using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Api;
 
-[Route("api/[controller]")]
+[Route(HttpConstants.InvitesEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 public class InvitesController : ControllerBase
