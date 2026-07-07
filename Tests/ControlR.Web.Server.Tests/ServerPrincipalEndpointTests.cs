@@ -34,10 +34,10 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var controller = scope.CreateController<InstallerKeysController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
-    var result = await controller.Create(new CreateInstallerKeyRequestDto(
-      InstallerKeyType.Persistent,
-      TenantId: tenant.Id,
-      CreatorId: creator.Id));
+    var result = await controller.Issue(new IssueInstallerKeyRequestDto(
+      tenant.Id,
+      creator.Id,
+      InstallerKeyType.Persistent));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -58,8 +58,8 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     controller.ControllerContext.HttpContext.Request.Scheme = "https";
     controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
 
-    var result = await controller.Create(
-      new TenantInviteRequestDto("invitee@test.local", tenant.Id),
+    var result = await controller.Issue(
+      new IssueTenantInviteRequestDto(tenant.Id, "invitee@test.local"),
       services.GetRequiredService<ITenantInvitesProvider>());
 
     Assert.NotNull(result.Result);
@@ -105,41 +105,20 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var controller = scope.CreateController<UsersController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
-    var result = await controller.Create(
+    var result = await controller.Issue(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       services.GetRequiredService<IUserCreator>(),
-      new CreateUserRequestDto(
+      new IssueCreateUserRequestDto(
+        tenant.Id,
         "server-created@test.local",
         "server-created@test.local",
-        "T3stP@ssw0rd!",
-        null,
-        null,
-        tenant.Id));
+        "T3stP@ssw0rd!"));
 
     Assert.NotNull(result.Result);
     var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
     var user = Assert.IsType<UserResponseDto>(createdResult.Value);
     Assert.Equal("server-created@test.local", user.Email);
-  }
-
-  [Fact]
-  public async Task ServerPrincipalCanSetTenantSettingsWithExplicitTenant()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-
-    var tenant = await services.CreateTestTenant();
-    var controller = scope.CreateController<TenantSettingsController>();
-    controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
-
-    var result = await controller.SetSetting(new TenantSettingRequestDto("General:Timezone", "UTC", tenant.Id));
-
-    Assert.NotNull(result.Result);
-    var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var response = Assert.IsType<TenantSettingResponseDto>(okResult.Value);
-    Assert.Equal("General:Timezone", response.Name);
   }
 
   private static async Task<ClaimsPrincipal> CreateServerPrincipal(IServiceProvider services)

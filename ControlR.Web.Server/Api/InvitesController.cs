@@ -27,35 +27,14 @@ public class InvitesController : ControllerBase
   }
 
   [HttpPost]
-  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<TenantInviteResponseDto>> Create(
     [FromBody] TenantInviteRequestDto dto,
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
-    Guid tenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!dto.TenantId.HasValue || dto.TenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      tenantId = dto.TenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return Unauthorized();
-      }
-
-      if (dto.TenantId.HasValue && dto.TenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      tenantId = tid;
+      return Unauthorized();
     }
 
     var origin = Request.ToOrigin();
@@ -69,76 +48,48 @@ public class InvitesController : ControllerBase
   }
 
   [HttpDelete("{inviteId:guid}")]
-  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<IActionResult> Delete(
     [FromRoute] Guid inviteId,
-    [FromQuery] Guid? tenantId,
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
-    Guid effectiveTenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!tenantId.HasValue || tenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      effectiveTenantId = tenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return Unauthorized();
-      }
-
-      if (tenantId.HasValue && tenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      effectiveTenantId = tid;
+      return Unauthorized();
     }
 
-    var result = await tenantInvitesProvider.DeleteInvite(inviteId, effectiveTenantId);
+    var result = await tenantInvitesProvider.DeleteInvite(inviteId, tenantId);
 
     return result.ToActionResult();
   }
 
   [HttpGet]
-  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<TenantInviteResponseDto[]>> GetAll(
-    [FromQuery] Guid? tenantId,
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
-    Guid effectiveTenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!tenantId.HasValue || tenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      effectiveTenantId = tenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return Unauthorized();
-      }
-
-      if (tenantId.HasValue && tenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      effectiveTenantId = tid;
+      return Unauthorized();
     }
 
     var origin = Request.ToOrigin();
-    return await tenantInvitesProvider.GetAllInvites(effectiveTenantId, origin);
+    return await tenantInvitesProvider.GetAllInvites(tenantId, origin);
+  }
+
+  [HttpPost("issue")]
+  [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+  public async Task<ActionResult<TenantInviteResponseDto>> Issue(
+    [FromBody] IssueTenantInviteRequestDto dto,
+    [FromServices] ITenantInvitesProvider tenantInvitesProvider)
+  {
+    var origin = Request.ToOrigin();
+    var result = await tenantInvitesProvider.CreateInvite(
+      dto.InviteeEmail,
+      dto.TenantId,
+      origin,
+      HttpContext.RequestAborted);
+
+    return result.ToActionResult();
   }
 }

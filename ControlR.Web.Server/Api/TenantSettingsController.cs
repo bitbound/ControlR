@@ -15,38 +15,17 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   private readonly ITenantSettingsManager _tenantSettingsManager = tenantSettingsManager;
 
   [HttpDelete("{name}")]
-  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
-  public async Task<ActionResult> DeleteSetting(string name, [FromQuery] Guid? tenantId)
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+  public async Task<ActionResult> DeleteSetting(string name)
   {
-    Guid effectiveTenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!tenantId.HasValue || tenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      effectiveTenantId = tenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return Unauthorized();
-      }
-
-      if (tenantId.HasValue && tenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      effectiveTenantId = tid;
+      return Unauthorized();
     }
 
     var tenant = await _appDb.Tenants
       .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == effectiveTenantId);
+      .FirstOrDefaultAsync(x => x.Id == tenantId);
 
     if (tenant is null)
     {
@@ -66,73 +45,31 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpGet]
-  [Authorize]
-  public async Task<ActionResult<TenantSettingsDto>> GetAll([FromQuery] Guid? tenantId, CancellationToken cancellationToken)
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+  public async Task<ActionResult<TenantSettingsDto>> GetAll(CancellationToken cancellationToken)
   {
-    Guid effectiveTenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!tenantId.HasValue || tenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      effectiveTenantId = tenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return Unauthorized();
-      }
-
-      if (tenantId.HasValue && tenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      effectiveTenantId = tid;
+      return Unauthorized();
     }
 
-    var settings = await _tenantSettingsManager.GetAllSettings(effectiveTenantId, cancellationToken);
+    var settings = await _tenantSettingsManager.GetAllSettings(tenantId, cancellationToken);
     return Ok(settings);
   }
 
   [HttpGet("{name}")]
-  [Authorize]
-  public async Task<ActionResult<TenantSettingResponseDto?>> GetSetting(string name, [FromQuery] Guid? tenantId)
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+  public async Task<ActionResult<TenantSettingResponseDto?>> GetSetting(string name)
   {
-    Guid effectiveTenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!tenantId.HasValue || tenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      effectiveTenantId = tenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return Unauthorized();
-      }
-
-      if (tenantId.HasValue && tenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      effectiveTenantId = tid;
+      return Unauthorized();
     }
 
     var tenant = await _appDb.Tenants
       .AsNoTracking()
       .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == effectiveTenantId);
+      .FirstOrDefaultAsync(x => x.Id == tenantId);
 
     if (tenant is null)
     {
@@ -151,72 +88,30 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPost]
-  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<TenantSettingResponseDto>> SetSetting([FromBody] TenantSettingRequestDto setting)
   {
-    Guid effectiveTenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!setting.TenantId.HasValue || setting.TenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      effectiveTenantId = setting.TenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return Unauthorized();
-      }
-
-      if (setting.TenantId.HasValue && setting.TenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      effectiveTenantId = tid;
+      return Unauthorized();
     }
 
-    var result = await _tenantSettingsManager.SetSetting(effectiveTenantId, setting);
+    var result = await _tenantSettingsManager.SetSetting(tenantId, setting);
     return result.ToActionResult();
   }
 
   [HttpPut]
-  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<TenantSettingsDto>> SetSettings(
     [FromBody] TenantSettingsDto settings,
     CancellationToken cancellationToken)
   {
-    Guid effectiveTenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!settings.TenantId.HasValue || settings.TenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      effectiveTenantId = settings.TenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return Unauthorized();
-      }
-
-      if (settings.TenantId.HasValue && settings.TenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      effectiveTenantId = tid;
+      return Unauthorized();
     }
 
-    var result = await _tenantSettingsManager.SetSettings(effectiveTenantId, settings, cancellationToken);
+    var result = await _tenantSettingsManager.SetSettings(tenantId, settings, cancellationToken);
     return result.ToActionResult();
   }
 }

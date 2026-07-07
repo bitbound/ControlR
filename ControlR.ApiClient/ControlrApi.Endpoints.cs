@@ -72,10 +72,11 @@ public interface IDevicesApi
 public interface IInstallerKeysApi
 {
   Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
-  Task<ApiResult> DeleteInstallerKey(Guid keyId, Guid? tenantId = null, Guid? userId = null, bool? isTenantAdmin = null, CancellationToken cancellationToken = default);
-  Task<ApiResult<AgentInstallerKeyDto[]>> GetAllInstallerKeys(Guid? tenantId = null, Guid? userId = null, bool? isTenantAdmin = null, CancellationToken cancellationToken = default);
-  Task<ApiResult<AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId, Guid? tenantId = null, Guid? userId = null, bool? isTenantAdmin = null, CancellationToken cancellationToken = default);
+  Task<ApiResult> DeleteInstallerKey(Guid keyId, CancellationToken cancellationToken = default);
+  Task<ApiResult<AgentInstallerKeyDto[]>> GetAllInstallerKeys(CancellationToken cancellationToken = default);
+  Task<ApiResult<AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId, CancellationToken cancellationToken = default);
   Task<ApiResult> IncrementInstallerKeyUsage(Guid keyId, Guid? deviceId = null, CancellationToken cancellationToken = default);
+  Task<ApiResult<CreateInstallerKeyResponseDto>> IssueInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
   Task<ApiResult> RenameInstallerKey(RenameInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
 }
 
@@ -83,8 +84,9 @@ public interface IInvitesApi
 {
   Task<ApiResult<AcceptInvitationResponseDto>> AcceptInvitation(AcceptInvitationRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantInviteResponseDto>> CreateTenantInvite(TenantInviteRequestDto request, CancellationToken cancellationToken = default);
-  Task<ApiResult> DeleteTenantInvite(Guid inviteId, Guid? tenantId = null, CancellationToken cancellationToken = default);
-  Task<ApiResult<TenantInviteResponseDto[]>> GetPendingTenantInvites(Guid? tenantId = null, CancellationToken cancellationToken = default);
+  Task<ApiResult> DeleteTenantInvite(Guid inviteId, CancellationToken cancellationToken = default);
+  Task<ApiResult<TenantInviteResponseDto[]>> GetPendingTenantInvites(CancellationToken cancellationToken = default);
+  Task<ApiResult<TenantInviteResponseDto>> IssueTenantInvite(IssueTenantInviteRequestDto request, CancellationToken cancellationToken = default);
 }
 
 public interface ILogonTokensApi
@@ -142,9 +144,9 @@ public interface ITagsApi
 
 public interface ITenantSettingsApi
 {
-  Task<ApiResult> DeleteTenantSetting(string settingName, Guid? tenantId = null, CancellationToken cancellationToken = default);
-  Task<ApiResult<TenantSettingResponseDto>> GetTenantSetting(string settingName, Guid? tenantId = null, CancellationToken cancellationToken = default);
-  Task<ApiResult<TenantSettingsDto>> GetTenantSettings(Guid? tenantId = null, CancellationToken cancellationToken = default);
+  Task<ApiResult> DeleteTenantSetting(string settingName, CancellationToken cancellationToken = default);
+  Task<ApiResult<TenantSettingResponseDto>> GetTenantSetting(string settingName, CancellationToken cancellationToken = default);
+  Task<ApiResult<TenantSettingsDto>> GetTenantSettings(CancellationToken cancellationToken = default);
   Task<ApiResult<TenantSettingResponseDto>> SetTenantSetting(TenantSettingRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantSettingsDto>> SetTenantSettings(TenantSettingsDto request, CancellationToken cancellationToken = default);
 }
@@ -198,13 +200,15 @@ public interface IUserTagsApi
 
 public interface IUsersApi
 {
-  Task<ApiResult<AdminResetPasswordResponseDto>> AdminResetPassword(Guid userId, AdminResetPasswordRequestDto? request = null, CancellationToken cancellationToken = default);
+  Task<ApiResult<AdminResetPasswordResponseDto>> AdminResetPassword(Guid userId, CancellationToken cancellationToken = default);
+  Task<ApiResult<AdminResetPasswordResponseDto>> AdminResetPasswordIssue(Guid userId, AdminResetPasswordRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto>> CreateUser(CreateUserRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(Guid userId, CreatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUser(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUserPersonalAccessToken(Guid userId, Guid tokenId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto[]>> GetAllUsers(CancellationToken cancellationToken = default);
   Task<ApiResult<PersonalAccessTokenDto[]>> GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken = default);
+  Task<ApiResult<UserResponseDto>> IssueUser(IssueCreateUserRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
 }
 

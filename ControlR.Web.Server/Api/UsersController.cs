@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ControlR.Web.Server.Authz.Policies;
-using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Libraries.Api.Contracts.Constants;
 
@@ -11,37 +9,18 @@ namespace ControlR.Web.Server.Api;
 [Authorize]
 public class UsersController : ControllerBase
 {
+  /// <summary>
+  /// Resets a user's password. Tenant is derived from the caller's claims.
+  /// </summary>
   [HttpPost("{userId:guid}/reset-password")]
-  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
     [FromRoute] Guid userId,
-    [FromBody] AdminResetPasswordRequestDto? request,
     [FromServices] IPasswordManager passwordManager)
   {
-    Guid tenantId;
-
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (request?.TenantId is not Guid requestedTenantId || requestedTenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      tenantId = requestedTenantId;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return BadRequest("User tenant not found.");
-      }
-
-      if (request?.TenantId.HasValue == true && request.TenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      tenantId = tid;
+      return BadRequest("User tenant not found.");
     }
 
     var result = await passwordManager.AdminResetPassword(tenantId, userId);
@@ -58,41 +37,48 @@ public class UsersController : ControllerBase
     return Ok(result.Value);
   }
 
+  /// <summary>
+  /// Resets a user's password as a server principal.
+  /// TenantId must be provided in the request body.
+  /// </summary>
+  [HttpPost("{userId:guid}/reset-password/issue")]
+  [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+  public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPasswordIssue(
+    [FromRoute] Guid userId,
+    [FromServices] IPasswordManager passwordManager,
+    [FromBody] AdminResetPasswordRequestDto request)
+  {
+    var result = await passwordManager.AdminResetPassword(request.TenantId, userId);
+    if (!result.IsSuccess)
+    {
+      if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
+      {
+        return NotFound();
+      }
+
+      return BadRequest(result.Reason);
+    }
+
+    return Ok(result.Value);
+  }
+
+  /// <summary>
+  /// Creates a user within the caller's tenant.
+  /// </summary>
   [HttpPost]
-  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<UserResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] IUserCreator userCreator,
     [FromBody] CreateUserRequestDto request)
   {
-    Guid tenantId;
-    if (User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!request.TenantId.HasValue || request.TenantId == Guid.Empty)
-      {
-        return BadRequest("TenantId is required.");
-      }
-
-      tenantId = request.TenantId.Value;
-    }
-    else
-    {
-      if (!User.TryGetTenantId(out var tid))
-      {
-        return BadRequest("User tenant not found.");
-      }
-
-      if (request.TenantId.HasValue && request.TenantId.Value != tid)
-      {
-        return Forbid();
-      }
-
-      tenantId = tid;
+      return BadRequest("User tenant not found.");
     }
 
     var requestRoleIds = request.RoleIds?.ToArray();
-    // If roles include ServerAdministrator, ensure caller is also server admin.
     if (requestRoleIds is { Length: > 0 } roleIds)
     {
       var roles = await appDb.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
@@ -105,12 +91,6 @@ public class UsersController : ControllerBase
 
       if (roles.Any(r => r.Name == RoleNames.ServerAdministrator))
       {
-        if (User.IsServerPrincipal())
-        {
-          return BadRequest("Server service accounts cannot assign the server administrator role.");
-        }
-
-        // Resolve caller's user and check role via UserManager to avoid relying on ClaimsPrincipal state.
         if (!User.TryGetUserId(out var callerUserId))
         {
           return BadRequest("Caller user id not found");
@@ -153,7 +133,7 @@ public class UsersController : ControllerBase
   }
 
   [HttpPost("{userId:guid}/personal-access-tokens")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
@@ -183,7 +163,7 @@ public class UsersController : ControllerBase
   }
 
   [HttpDelete("{userId:guid}")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<IActionResult> Delete(
     [FromRoute] Guid userId,
     [FromServices] UserManager<AppUser> userManager,
@@ -213,7 +193,7 @@ public class UsersController : ControllerBase
   }
 
   [HttpDelete("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<IActionResult> DeleteUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromRoute] Guid tokenId,
@@ -243,17 +223,23 @@ public class UsersController : ControllerBase
   }
 
   [HttpGet]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<List<UserResponseDto>>> GetAll(
     [FromServices] AppDb appDb)
   {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
     return await appDb.Users
+      .Where(x => x.TenantId == tenantId)
       .Select(x => new UserResponseDto(x.Id, x.UserName, x.Email))
       .ToListAsync();
   }
 
   [HttpGet("{userId:guid}/personal-access-tokens")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetUserPersonalAccessTokens(
     [FromRoute] Guid userId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
@@ -276,8 +262,59 @@ public class UsersController : ControllerBase
     return Ok(tokens);
   }
 
+  /// <summary>
+  /// Creates a user within an explicit tenant. For server service accounts only.
+  /// </summary>
+  [HttpPost("issue")]
+  [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+  public async Task<ActionResult<UserResponseDto>> Issue(
+    [FromServices] AppDb appDb,
+    [FromServices] UserManager<AppUser> userManager,
+    [FromServices] IUserCreator userCreator,
+    [FromBody] IssueCreateUserRequestDto request)
+  {
+    var requestRoleIds = request.RoleIds?.ToArray();
+    if (requestRoleIds is { Length: > 0 } roleIds)
+    {
+      var roles = await appDb.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
+      var foundRoleIds = roles.Select(r => r.Id).ToHashSet();
+      var missingRoleIds = roleIds.Except(foundRoleIds).ToList();
+      if (missingRoleIds.Count != 0)
+      {
+        return BadRequest($"Roles not found: {string.Join(',', missingRoleIds)}");
+      }
+
+      if (roles.Any(r => r.Name == RoleNames.ServerAdministrator))
+      {
+        return BadRequest("Server service accounts cannot assign the server administrator role.");
+      }
+    }
+
+    var createResult = await userCreator.CreateUser(
+      string.IsNullOrWhiteSpace(request.Email) ? request.UserName : request.Email,
+      request.Password ?? string.Empty,
+      request.TenantId,
+      requestRoleIds,
+      request.TagIds,
+      cancellationToken: HttpContext.RequestAborted);
+
+    if (!createResult.Succeeded)
+    {
+      return BadRequest(createResult.IdentityResult.Errors.Select(e => e.Description));
+    }
+
+    var user = createResult.User;
+    if (user is null)
+    {
+      return BadRequest("User creation failed");
+    }
+
+    var response = new UserResponseDto(user.Id, user.UserName, user.Email);
+    return CreatedAtAction(nameof(Issue), new { id = user.Id }, response);
+  }
+
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   public async Task<ActionResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromRoute] Guid tokenId,

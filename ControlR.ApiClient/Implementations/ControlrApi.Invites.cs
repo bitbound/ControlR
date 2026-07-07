@@ -39,26 +39,28 @@ public partial class ControlrApi
     });
   }
 
-  async Task<ApiResult> IInvitesApi.DeleteTenantInvite(Guid inviteId, Guid? tenantId, CancellationToken cancellationToken)
+  async Task<ApiResult> IInvitesApi.DeleteTenantInvite(Guid inviteId, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
     {
-      var url = tenantId.HasValue
-        ? $"{HttpConstants.InvitesEndpoint}/{inviteId}?tenantId={tenantId.Value}"
-        : $"{HttpConstants.InvitesEndpoint}/{inviteId}";
-      using var response = await _client.DeleteAsync(url, cancellationToken);
+      using var response = await _client.DeleteAsync($"{HttpConstants.InvitesEndpoint}/{inviteId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
 
-  async Task<ApiResult<TenantInviteResponseDto[]>> IInvitesApi.GetPendingTenantInvites(Guid? tenantId, CancellationToken cancellationToken)
+  async Task<ApiResult<TenantInviteResponseDto[]>> IInvitesApi.GetPendingTenantInvites(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
-      {
-        var url = tenantId.HasValue
-          ? $"{HttpConstants.InvitesEndpoint}?tenantId={tenantId.Value}"
-          : HttpConstants.InvitesEndpoint;
-        return await _client.GetFromJsonAsync<TenantInviteResponseDto[]>(url, cancellationToken);
-      });
+      await _client.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.InvitesEndpoint, cancellationToken));
+  }
+
+  async Task<ApiResult<TenantInviteResponseDto>> IInvitesApi.IssueTenantInvite(IssueTenantInviteRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.InvitesEndpoint}/issue", request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<TenantInviteResponseDto>(cancellationToken);
+    });
   }
 }

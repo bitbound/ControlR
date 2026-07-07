@@ -2160,31 +2160,6 @@
         "tags": [
           "InstallerKeys"
         ],
-        "parameters": [
-          {
-            "name": "tenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "isTenantAdmin",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -2245,29 +2220,6 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "isTenantAdmin",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
           }
         ],
         "responses": {
@@ -2303,29 +2255,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "isTenantAdmin",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
             }
           }
         ],
@@ -2402,6 +2331,65 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/installer-keys/issue": {
+      "post": {
+        "tags": [
+          "InstallerKeys"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueInstallerKeyRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueInstallerKeyRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueInstallerKeyRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInstallerKeyResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInstallerKeyResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInstallerKeyResponseDto"
+                }
+              }
+            }
           },
           "500": {
             "description": "Internal Server Error",
@@ -2588,16 +2576,6 @@
         "tags": [
           "Invites"
         ],
-        "parameters": [
-          {
-            "name": "tenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -2658,19 +2636,73 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
           }
         ],
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/invites/issue": {
+      "post": {
+        "tags": [
+          "Invites"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueTenantInviteRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueTenantInviteRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueTenantInviteRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                }
+              }
+            }
           },
           "500": {
             "description": "Internal Server Error",
@@ -3909,14 +3941,6 @@
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
           }
         ],
         "responses": {
@@ -3950,14 +3974,6 @@
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "tenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
           }
         ],
         "responses": {
@@ -3991,7 +4007,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/tenant-settings": {
@@ -3999,16 +4018,6 @@
         "tags": [
           "TenantSettings"
         ],
-        "parameters": [
-          {
-            "name": "tenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -4040,7 +4049,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       },
       "post": {
         "tags": [
@@ -4609,45 +4621,78 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminResetPasswordResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/users/{userId}/reset-password/issue": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/AdminResetPasswordRequestDto"
-                  }
-                ]
+                "$ref": "#/components/schemas/AdminResetPasswordRequestDto"
               }
             },
             "text/json": {
               "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/AdminResetPasswordRequestDto"
-                  }
-                ]
+                "$ref": "#/components/schemas/AdminResetPasswordRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/AdminResetPasswordRequestDto"
-                  }
-                ]
+                "$ref": "#/components/schemas/AdminResetPasswordRequestDto"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -4791,7 +4836,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/users/{userId}/personal-access-tokens": {
@@ -4861,7 +4909,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       },
       "get": {
         "tags": [
@@ -4918,7 +4969,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/users/{userId}": {
@@ -4951,7 +5005,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/users/{userId}/personal-access-tokens/{tokenId}": {
@@ -4993,7 +5050,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       },
       "put": {
         "tags": [
@@ -5070,7 +5130,72 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/users/issue": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueCreateUserRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueCreateUserRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueCreateUserRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/user-server-settings/file-upload-max-size": {
@@ -5753,13 +5878,13 @@
         }
       },
       "AdminResetPasswordRequestDto": {
+        "required": [
+          "tenantId"
+        ],
         "type": "object",
         "properties": {
           "tenantId": {
-            "type": [
-              "null",
-              "string"
-            ],
+            "type": "string",
             "format": "uuid"
           }
         }
@@ -5999,20 +6124,6 @@
               "null",
               "string"
             ]
-          },
-          "tenantId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "creatorId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
           }
         }
       },
@@ -6257,13 +6368,6 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          "tenantId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
           }
         }
       },
@@ -7151,6 +7255,98 @@
           }
         }
       },
+      "IssueCreateUserRequestDto": {
+        "required": [
+          "tenantId",
+          "userName",
+          "email",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "roleIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "tagIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "IssueInstallerKeyRequestDto": {
+        "required": [
+          "tenantId",
+          "creatorId",
+          "keyType"
+        ],
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creatorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "keyType": {
+            "$ref": "#/components/schemas/InstallerKeyType"
+          },
+          "allowedUses": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "expiration": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "friendlyName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "IssueLogonTokenRequestDto": {
         "required": [
           "deviceId",
@@ -7176,6 +7372,22 @@
             "type": "integer",
             "format": "int32",
             "default": 15
+          }
+        }
+      },
+      "IssueTenantInviteRequestDto": {
+        "required": [
+          "tenantId",
+          "inviteeEmail"
+        ],
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inviteeEmail": {
+            "type": "string"
           }
         }
       },
@@ -7393,26 +7605,6 @@
           },
           "friendlyName": {
             "type": "string"
-          },
-          "tenantId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "userId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "isTenantAdmin": {
-            "type": [
-              "null",
-              "boolean"
-            ]
           }
         }
       },
@@ -7769,13 +7961,6 @@
         "properties": {
           "inviteeEmail": {
             "type": "string"
-          },
-          "tenantId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
           }
         }
       },
@@ -7816,13 +8001,6 @@
           },
           "value": {
             "type": "string"
-          },
-          "tenantId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
           }
         }
       },
@@ -7877,13 +8055,6 @@
               "null",
               "boolean"
             ]
-          },
-          "tenantId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
           }
         }
       },

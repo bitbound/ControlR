@@ -7,11 +7,21 @@ namespace ControlR.ApiClient;
 
 public partial class ControlrApi
 {
-  async Task<ApiResult<AdminResetPasswordResponseDto>> IUsersApi.AdminResetPassword(Guid userId, AdminResetPasswordRequestDto? request, CancellationToken cancellationToken)
+  async Task<ApiResult<AdminResetPasswordResponseDto>> IUsersApi.AdminResetPassword(Guid userId, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UsersEndpoint}/{userId}/reset-password", request ?? new AdminResetPasswordRequestDto(), cancellationToken);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UsersEndpoint}/{userId}/reset-password", new { }, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<AdminResetPasswordResponseDto>(cancellationToken);
+    });
+  }
+
+  async Task<ApiResult<AdminResetPasswordResponseDto>> IUsersApi.AdminResetPasswordIssue(Guid userId, AdminResetPasswordRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UsersEndpoint}/{userId}/reset-password/issue", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AdminResetPasswordResponseDto>(cancellationToken);
     });
@@ -65,6 +75,16 @@ public partial class ControlrApi
   {
     return await ExecuteApiCall(async () =>
       await _client.GetFromJsonAsync<PersonalAccessTokenDto[]>($"{HttpConstants.UsersEndpoint}/{userId}/personal-access-tokens", cancellationToken));
+  }
+
+  async Task<ApiResult<UserResponseDto>> IUsersApi.IssueUser(IssueCreateUserRequestDto request, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UsersEndpoint}/issue", request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<UserResponseDto>(cancellationToken);
+    });
   }
 
   async Task<ApiResult<PersonalAccessTokenDto>> IUsersApi.UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken)

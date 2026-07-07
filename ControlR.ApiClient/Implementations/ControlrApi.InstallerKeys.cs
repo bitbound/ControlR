@@ -1,24 +1,12 @@
 using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 
 namespace ControlR.ApiClient;
 
 public partial class ControlrApi
 {
-  private static string AppendQueryParameter(string url, string name, object? value)
-  {
-    if (value is null)
-    {
-      return url;
-    }
-
-    var separator = url.Contains('?') ? '&' : '?';
-    return $"{url}{separator}{name}={Uri.EscapeDataString(value.ToString() ?? string.Empty)}";
-  }
-
   async Task<ApiResult<CreateInstallerKeyResponseDto>> IInstallerKeysApi.CreateInstallerKey(CreateInstallerKeyRequestDto dto, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
@@ -29,41 +17,25 @@ public partial class ControlrApi
     });
   }
 
-  async Task<ApiResult> IInstallerKeysApi.DeleteInstallerKey(Guid keyId, Guid? tenantId, Guid? userId, bool? isTenantAdmin, CancellationToken cancellationToken)
+  async Task<ApiResult> IInstallerKeysApi.DeleteInstallerKey(Guid keyId, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
     {
-      var url = $"{HttpConstants.InstallerKeysEndpoint}/{keyId}";
-      url = AppendQueryParameter(url, nameof(tenantId), tenantId);
-      url = AppendQueryParameter(url, nameof(userId), userId);
-      url = AppendQueryParameter(url, nameof(isTenantAdmin), isTenantAdmin);
-      using var response = await _client.DeleteAsync(url, cancellationToken);
+      using var response = await _client.DeleteAsync($"{HttpConstants.InstallerKeysEndpoint}/{keyId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
 
-  async Task<ApiResult<AgentInstallerKeyDto[]>> IInstallerKeysApi.GetAllInstallerKeys(Guid? tenantId, Guid? userId, bool? isTenantAdmin, CancellationToken cancellationToken)
+  async Task<ApiResult<AgentInstallerKeyDto[]>> IInstallerKeysApi.GetAllInstallerKeys(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
-      {
-        var url = HttpConstants.InstallerKeysEndpoint;
-        url = AppendQueryParameter(url, nameof(tenantId), tenantId);
-        url = AppendQueryParameter(url, nameof(userId), userId);
-        url = AppendQueryParameter(url, nameof(isTenantAdmin), isTenantAdmin);
-        return await _client.GetFromJsonAsync<AgentInstallerKeyDto[]>(url, cancellationToken);
-      });
+      await _client.GetFromJsonAsync<AgentInstallerKeyDto[]>(HttpConstants.InstallerKeysEndpoint, cancellationToken));
   }
 
-  async Task<ApiResult<AgentInstallerKeyUsageDto[]>> IInstallerKeysApi.GetInstallerKeyUsages(Guid keyId, Guid? tenantId, Guid? userId, bool? isTenantAdmin, CancellationToken cancellationToken)
+  async Task<ApiResult<AgentInstallerKeyUsageDto[]>> IInstallerKeysApi.GetInstallerKeyUsages(Guid keyId, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
-      {
-        var url = $"{HttpConstants.InstallerKeysEndpoint}/usages/{keyId}";
-        url = AppendQueryParameter(url, nameof(tenantId), tenantId);
-        url = AppendQueryParameter(url, nameof(userId), userId);
-        url = AppendQueryParameter(url, nameof(isTenantAdmin), isTenantAdmin);
-        return await _client.GetFromJsonAsync<AgentInstallerKeyUsageDto[]>(url, cancellationToken);
-      });
+      await _client.GetFromJsonAsync<AgentInstallerKeyUsageDto[]>($"{HttpConstants.InstallerKeysEndpoint}/usages/{keyId}", cancellationToken));
   }
 
   async Task<ApiResult> IInstallerKeysApi.IncrementInstallerKeyUsage(Guid keyId, Guid? deviceId, CancellationToken cancellationToken)
@@ -76,6 +48,16 @@ public partial class ControlrApi
 
       using var response = await _client.PostAsync(url, null, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
+  async Task<ApiResult<CreateInstallerKeyResponseDto>> IInstallerKeysApi.IssueInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken)
+  {
+    return await ExecuteApiCall(async () =>
+    {
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.InstallerKeysEndpoint}/issue", dto, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<CreateInstallerKeyResponseDto>(cancellationToken);
     });
   }
 

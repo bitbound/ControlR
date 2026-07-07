@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +9,9 @@ namespace ControlR.Web.Server.Api;
 [Authorize]
 public class LogonTokenController : ControllerBase
 {
-  /// <summary>Creates a logon token for the authenticated user's device. The token enables device access from the web viewer.</summary>
+  /// <summary>
+  /// Creates a logon token for the authenticated user's device. The token enables device access from the web viewer.
+  /// </summary>
   [HttpPost]
   [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
   [ProducesResponseType<LogonTokenResponseDto>(StatusCodes.Status200OK)]
@@ -79,7 +80,9 @@ public class LogonTokenController : ControllerBase
     return Ok(response);
   }
 
-  /// <summary>Issues a logon token as a server service account. All fields are required; the caller has no user or tenant claims.</summary>
+  /// <summary>
+  /// Issues a logon token as a server service account. All fields are required; the caller has no user or tenant claims.
+  /// </summary>
   [HttpPost("issue")]
   [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
   [ProducesResponseType<LogonTokenResponseDto>(StatusCodes.Status200OK)]

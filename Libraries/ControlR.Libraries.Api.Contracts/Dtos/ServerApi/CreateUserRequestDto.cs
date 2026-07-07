@@ -5,5 +5,4 @@ public record CreateUserRequestDto(
   string? Email,
   string? Password,
   IEnumerable<Guid>? RoleIds,
-  IEnumerable<Guid>? TagIds,
-  Guid? TenantId = null);
+  IEnumerable<Guid>? TagIds);

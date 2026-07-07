@@ -33,7 +33,6 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
 
     var result = await controller.AdminResetPassword(
       targetUser.Id,
-      new AdminResetPasswordRequestDto(),
       services.GetRequiredService<IPasswordManager>());
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -70,7 +69,6 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
 
     var result = await controller.AdminResetPassword(
       targetUser.Id,
-      new AdminResetPasswordRequestDto(),
       services.GetRequiredService<IPasswordManager>());
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);

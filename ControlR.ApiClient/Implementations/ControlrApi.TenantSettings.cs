@@ -8,26 +8,20 @@ namespace ControlR.ApiClient;
 
 public partial class ControlrApi
 {
-  async Task<ApiResult> ITenantSettingsApi.DeleteTenantSetting(string settingName, Guid? tenantId, CancellationToken cancellationToken)
+  async Task<ApiResult> ITenantSettingsApi.DeleteTenantSetting(string settingName, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
     {
-      var url = tenantId.HasValue
-        ? $"{HttpConstants.TenantSettingsEndpoint}/{settingName}?tenantId={tenantId.Value}"
-        : $"{HttpConstants.TenantSettingsEndpoint}/{settingName}";
-      using var response = await _client.DeleteAsync(url, cancellationToken);
+      using var response = await _client.DeleteAsync($"{HttpConstants.TenantSettingsEndpoint}/{settingName}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
 
-  async Task<ApiResult<TenantSettingResponseDto>> ITenantSettingsApi.GetTenantSetting(string settingName, Guid? tenantId, CancellationToken cancellationToken)
+  async Task<ApiResult<TenantSettingResponseDto>> ITenantSettingsApi.GetTenantSetting(string settingName, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
     {
-      var url = tenantId.HasValue
-        ? $"{HttpConstants.TenantSettingsEndpoint}/{settingName}?tenantId={tenantId.Value}"
-        : $"{HttpConstants.TenantSettingsEndpoint}/{settingName}";
-      using var response = await _client.GetAsync(url, cancellationToken);
+      using var response = await _client.GetAsync($"{HttpConstants.TenantSettingsEndpoint}/{settingName}", cancellationToken);
       if (response.StatusCode == HttpStatusCode.NoContent)
       {
         return new TenantSettingResponseDto(Id: null, Name: settingName, Value: null);
@@ -39,15 +33,10 @@ public partial class ControlrApi
     });
   }
 
-  async Task<ApiResult<TenantSettingsDto>> ITenantSettingsApi.GetTenantSettings(Guid? tenantId, CancellationToken cancellationToken)
+  async Task<ApiResult<TenantSettingsDto>> ITenantSettingsApi.GetTenantSettings(CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
-      {
-        var url = tenantId.HasValue
-          ? $"{HttpConstants.TenantSettingsEndpoint}?tenantId={tenantId.Value}"
-          : HttpConstants.TenantSettingsEndpoint;
-        return await _client.GetFromJsonAsync<TenantSettingsDto>(url, cancellationToken);
-      });
+      await _client.GetFromJsonAsync<TenantSettingsDto>(HttpConstants.TenantSettingsEndpoint, cancellationToken));
   }
 
   async Task<ApiResult<TenantSettingResponseDto>> ITenantSettingsApi.SetTenantSetting(TenantSettingRequestDto request, CancellationToken cancellationToken)
