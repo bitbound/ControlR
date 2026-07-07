@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +10,13 @@ namespace ControlR.Web.Server.Api;
 [Authorize]
 public class LogonTokenController : ControllerBase
 {
+  /// <summary>Creates a logon token for the authenticated user's device. The token enables device access from the web viewer.</summary>
   [HttpPost]
+  [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+  [ProducesResponseType<LogonTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
   public async Task<ActionResult<LogonTokenResponseDto>> CreateLogonToken(
     [FromServices] AppDb appDb,
     [FromServices] ILogonTokenProvider logonTokenProvider,
@@ -18,34 +25,34 @@ public class LogonTokenController : ControllerBase
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
-      return BadRequest("User tenant not found");
+      return BadRequest("User tenant not found.");
     }
 
     if (!User.TryGetUserId(out var userId))
     {
-      return BadRequest("User ID not found");
+      return BadRequest("User ID not found.");
     }
 
     var device = await appDb.Devices.FindAsync(request.DeviceId);
     if (device is null)
     {
-      return BadRequest("Device not found");
+      return BadRequest("Device not found.");
     }
 
     if (device.TenantId != tenantId)
     {
-      return BadRequest("Device not found");
+      return BadRequest("Device not found.");
     }
 
     var user = await appDb.Users.FindAsync(userId);
     if (user is null)
     {
-      return BadRequest("User not found or does not belong to this tenant");
+      return BadRequest("User not found or does not belong to this tenant.");
     }
 
     if (user.TenantId != tenantId)
     {
-      return BadRequest("User not found or does not belong to this tenant");
+      return BadRequest("User not found or does not belong to this tenant.");
     }
 
     var authResult = await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
@@ -72,8 +79,12 @@ public class LogonTokenController : ControllerBase
     return Ok(response);
   }
 
+  /// <summary>Issues a logon token as a server service account. All fields are required; the caller has no user or tenant claims.</summary>
   [HttpPost("issue")]
   [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+  [ProducesResponseType<LogonTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   public async Task<ActionResult<LogonTokenResponseDto>> IssueLogonToken(
     [FromServices] AppDb appDb,
     [FromServices] ILogonTokenProvider logonTokenProvider,

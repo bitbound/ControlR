@@ -2,8 +2,8 @@ namespace ControlR.Web.Server.Authz.Policies;
 
 public static class CombinedAuthorizationPolicies
 {
-  public const string RequireServerOrTenantAdminPolicy = nameof(RequireServerOrTenantAdminPolicy);
   public const string RequireServerOrTenantAdminOrInstallerKeyManagerPolicy = nameof(RequireServerOrTenantAdminOrInstallerKeyManagerPolicy);
+  public const string RequireServerOrTenantAdminPolicy = nameof(RequireServerOrTenantAdminPolicy);
 
   public static AuthorizationPolicy CreateServerOrTenantAdmin()
   {

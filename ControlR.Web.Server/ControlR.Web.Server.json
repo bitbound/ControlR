@@ -2151,7 +2151,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       },
       "get": {
         "tags": [
@@ -2222,7 +2225,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/installer-keys/{id}": {
@@ -2278,7 +2284,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/installer-keys/usages/{keyId}": {
@@ -2360,7 +2369,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/installer-keys/increment-usage/{keyId}": {
@@ -2401,7 +2413,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/installer-keys/rename": {
@@ -2443,7 +2458,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/invites/accept": {
@@ -2561,7 +2579,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       },
       "get": {
         "tags": [
@@ -2617,7 +2638,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/invites/{inviteId}": {
@@ -2658,7 +2682,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/logon-tokens": {
@@ -2707,6 +2734,66 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal Server Error",
             "content": {
@@ -2717,7 +2804,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/logon-tokens/issue": {
@@ -2766,6 +2856,46 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal Server Error",
             "content": {
@@ -2776,7 +2906,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/personal-access-tokens": {
@@ -3757,7 +3890,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/tenant-settings/{name}": {
@@ -3797,7 +3933,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       },
       "get": {
         "tags": [
@@ -3958,7 +4097,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       },
       "put": {
         "tags": [
@@ -4015,7 +4157,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/test-email": {
@@ -4535,7 +4680,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       }
     },
     "/api/users": {
@@ -4594,7 +4742,10 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          { }
+        ]
       },
       "get": {
         "tags": [
@@ -8076,6 +8227,26 @@
       },
       "ViewMode": {
         "type": "integer"
+      }
+    },
+    "securitySchemes": {
+      "Cookie": {
+        "type": "apiKey",
+        "description": "Interactive browser session cookie",
+        "name": ".AspNetCore.Identity.Application",
+        "in": "cookie"
+      },
+      "PersonalAccessToken": {
+        "type": "apiKey",
+        "description": "Personal access token",
+        "name": "x-personal-token",
+        "in": "header"
+      },
+      "ServiceAccountCredential": {
+        "type": "apiKey",
+        "description": "Service account API key",
+        "name": "x-api-key",
+        "in": "header"
       }
     }
   },
