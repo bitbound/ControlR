@@ -156,31 +156,23 @@ public static class HostExtensions
       throw new InvalidOperationException($"Bootstrap admin email confirmation failed: {string.Join("; ", confirmResult.Errors.Select(e => e.Description))}");
     }
 
-    if (string.IsNullOrWhiteSpace(options.AdminPatTokenId) || string.IsNullOrWhiteSpace(options.AdminPatSecret))
+    if (options.AdminPatTokenId is null || string.IsNullOrWhiteSpace(options.AdminPatSecret))
     {
       logger.LogInformation("Bootstrap admin PAT creation skipped: AdminPatTokenId and AdminPatSecret must both be set.");
     }
     else
     {
-      if (!Guid.TryParse(options.AdminPatTokenId, out var tokenId))
-      {
-        logger.LogError("Bootstrap admin PAT creation skipped: AdminPatTokenId is not a valid GUID.");
-        throw new InvalidOperationException("Bootstrap admin PAT creation failed: AdminPatTokenId must be a valid GUID.");
-      }
-      else
-      {
-        var patManager = sp.GetRequiredService<IPersonalAccessTokenManager>();
-        var patResult = await patManager.CreateTokenWithKey(
-          tokenId,
-          options.AdminPatSecret,
-          "Bootstrap Admin PAT",
-          user.Id);
+      var patManager = sp.GetRequiredService<IPersonalAccessTokenManager>();
+      var patResult = await patManager.CreateTokenWithKey(
+        options.AdminPatTokenId.Value,
+        options.AdminPatSecret,
+        "Bootstrap Admin PAT",
+        user.Id);
 
-        if (!patResult.IsSuccess)
-        {
-          logger.LogError(patResult.Exception, "Failed to create bootstrap PAT: {Error}", patResult.Reason);
-          throw new InvalidOperationException($"Bootstrap PAT creation failed: {patResult.Reason}");
-        }
+      if (!patResult.IsSuccess)
+      {
+        logger.LogError(patResult.Exception, "Failed to create bootstrap PAT: {Error}", patResult.Reason);
+        throw new InvalidOperationException($"Bootstrap PAT creation failed: {patResult.Reason}");
       }
     }
 

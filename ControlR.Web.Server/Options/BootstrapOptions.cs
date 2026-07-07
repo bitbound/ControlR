@@ -37,7 +37,7 @@ public class BootstrapOptions
   /// Must be supplied alongside <see cref="AdminPatSecret"/> for the PAT to be created.
   /// </summary>
   [ProtectedDataClassification]
-  public string? AdminPatTokenId { get; init; }
+  public Guid? AdminPatTokenId { get; init; }
 
   /// <summary>
   /// Human-readable description for the bootstrapped server service account.
@@ -57,7 +57,7 @@ public class BootstrapOptions
   /// The resulting <c>x-api-key</c> header is <c>{hex-guid}:{ServerServiceAccountTokenSecret}</c>.
   /// </summary>
   [ProtectedDataClassification]
-  public string? ServerServiceAccountTokenId { get; init; }
+  public Guid? ServerServiceAccountTokenId { get; init; }
 
   /// <summary>
   /// Pre-shared secret for the bootstrap server service account credential.

@@ -67,6 +67,10 @@ services:
       # Allows devices to self-register without requiring an installer key.
       ControlR_AppOptions__AllowAgentsToSelfBootstrap: false
 
+      # When enabled, an empty server instance temporarily treats public registration as available,
+      # and the first tenantless user created by that flow is promoted to server administrator.
+      ControlR_AppOptions__EnableFirstUserBootstrap: true
+
       # The number of days to retain installer key usage history.
       # Usage entries older than this are excluded from installer key history queries and cleaned up by a background service.
       # Set this to 0 or a negative value to disable history expiration.
@@ -232,6 +236,14 @@ services:
       #ControlR_Bootstrap__AdminPassword: "change-me-now"
       #ControlR_Bootstrap__AdminPatTokenId: "11111111-2222-3333-4444-555555555555"
       #ControlR_Bootstrap__AdminPatSecret: "a-very-strong-and-long-pat-secret-key"
+
+      # Bootstrap a server-scoped service account on first startup.
+      # Provide a display name, account name, and optionally a pre-assigned token ID and secret.
+      # The resulting x-api-key header value is {hex-guid}:{ServerServiceAccountTokenSecret}.
+      #ControlR_Bootstrap__ServerServiceAccountName: "server-svc"
+      #ControlR_Bootstrap__ServerServiceAccountDescription: "Server-scoped service account for inter-service communication"
+      #ControlR_Bootstrap__ServerServiceAccountTokenId: "11111111-2222-3333-4444-666666666666"
+      #ControlR_Bootstrap__ServerServiceAccountTokenSecret: "a-very-strong-and-long-service-account-secret"
 
   postgres:
     image: postgres:18

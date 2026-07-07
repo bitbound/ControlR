@@ -103,7 +103,7 @@ public class ServiceAccountManager(
     var description = options.ServerServiceAccountDescription;
 
     var nameSet = !string.IsNullOrWhiteSpace(name);
-    var tokenIdSet = !string.IsNullOrWhiteSpace(tokenId);
+    var tokenIdSet = tokenId.HasValue;
     var secretSet = !string.IsNullOrWhiteSpace(secret);
 
     if (!nameSet && !tokenIdSet && !secretSet)
@@ -130,11 +130,7 @@ public class ServiceAccountManager(
     Guard.IsNotNull(tokenId);
     Guard.IsNotNull(secret);
 
-    if (!Guid.TryParse(tokenId, out var credentialId) || credentialId == Guid.Empty)
-    {
-      logger.LogError("Bootstrap server service account creation failed: ServerServiceAccountTokenId is not a valid GUID.");
-      throw new InvalidOperationException("Bootstrap server service account creation failed: ServerServiceAccountTokenId must be a valid GUID.");
-    }
+    var credentialId = tokenId.Value;
 
     if (secret.Length < MinimumSecretLength)
     {
