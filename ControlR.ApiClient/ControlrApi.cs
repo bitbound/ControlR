@@ -21,15 +21,11 @@ public interface IControlrApi
   IPublicRegistrationSettingsApi PublicRegistrationSettings { get; }
   IRolesApi Roles { get; }
   IServerAlertApi ServerAlert { get; }
-  IServerInstallerKeysApi ServerInstallerKeys { get; }
-  IServerInvitesApi ServerInvites { get; }
-  IServerLogonTokensApi ServerLogonTokens { get; }
-  IServerTenantSettingsApi ServerTenantSettings { get; }
-  IServerUsersApi ServerUsers { get; }
   IServerLogsApi ServerLogs { get; }
   IServerStatsApi ServerStats { get; }
   IServiceAccountsApi ServiceAccounts { get; }
   ITagsApi Tags { get; }
+  ITenantsApi Tenants { get; }
   ITenantSettingsApi TenantSettings { get; }
   ITestEmailApi TestEmail { get; }
   IUserPreferencesApi UserPreferences { get; }
@@ -62,15 +58,11 @@ public partial class ControlrApi(
   IPublicRegistrationSettingsApi,
   IRolesApi,
   IServerAlertApi,
-  IServerInstallerKeysApi,
-  IServerInvitesApi,
-  IServerLogonTokensApi,
   IServerLogsApi,
   IServerStatsApi,
-  IServerTenantSettingsApi,
-  IServerUsersApi,
   IServiceAccountsApi,
   ITagsApi,
+  ITenantsApi,
   ITenantSettingsApi,
   ITestEmailApi,
   IUserPreferencesApi,
@@ -101,15 +93,11 @@ public partial class ControlrApi(
   public IPublicRegistrationSettingsApi PublicRegistrationSettings => this;
   public IRolesApi Roles => this;
   public IServerAlertApi ServerAlert => this;
-  public IServerInstallerKeysApi ServerInstallerKeys => this;
-  public IServerInvitesApi ServerInvites => this;
-  public IServerLogonTokensApi ServerLogonTokens => this;
   public IServerLogsApi ServerLogs => this;
   public IServerStatsApi ServerStats => this;
-  public IServerTenantSettingsApi ServerTenantSettings => this;
-  public IServerUsersApi ServerUsers => this;
   public IServiceAccountsApi ServiceAccounts => this;
   public ITagsApi Tags => this;
+  public ITenantsApi Tenants => this;
   public ITenantSettingsApi TenantSettings => this;
   public ITestEmailApi TestEmail => this;
   public IUserPreferencesApi UserPreferences => this;

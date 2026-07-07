@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
@@ -14,25 +15,38 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   private readonly ITenantSettingsManager _tenantSettingsManager = tenantSettingsManager;
 
   [HttpDelete("{name}")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult> DeleteSetting(string name)
+  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
+  public async Task<ActionResult> DeleteSetting(string name, [FromQuery] Guid? tenantId)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    Guid effectiveTenantId;
+
+    if (User.IsServerPrincipal())
+    {
+      if (!tenantId.HasValue || tenantId == Guid.Empty)
+      {
+        return BadRequest("TenantId is required.");
+      }
+
+      effectiveTenantId = tenantId.Value;
+    }
+    else
     {
       if (!User.TryGetTenantId(out var tid))
+      {
         return Unauthorized();
-      tenantId = tid;
-    }
+      }
 
-    if (!tenantId.HasValue)
-    {
-      return BadRequest("Server service accounts cannot delete tenant settings.");
+      if (tenantId.HasValue && tenantId.Value != tid)
+      {
+        return Forbid();
+      }
+
+      effectiveTenantId = tid;
     }
 
     var tenant = await _appDb.Tenants
       .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == tenantId.Value);
+      .FirstOrDefaultAsync(x => x.Id == effectiveTenantId);
 
     if (tenant is null)
     {
@@ -53,46 +67,72 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
 
   [HttpGet]
   [Authorize]
-  public async Task<ActionResult<TenantSettingsDto>> GetAll(CancellationToken cancellationToken)
+  public async Task<ActionResult<TenantSettingsDto>> GetAll([FromQuery] Guid? tenantId, CancellationToken cancellationToken)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    Guid effectiveTenantId;
+
+    if (User.IsServerPrincipal())
+    {
+      if (!tenantId.HasValue || tenantId == Guid.Empty)
+      {
+        return BadRequest("TenantId is required.");
+      }
+
+      effectiveTenantId = tenantId.Value;
+    }
+    else
     {
       if (!User.TryGetTenantId(out var tid))
+      {
         return Unauthorized();
-      tenantId = tid;
+      }
+
+      if (tenantId.HasValue && tenantId.Value != tid)
+      {
+        return Forbid();
+      }
+
+      effectiveTenantId = tid;
     }
 
-    if (!tenantId.HasValue)
-    {
-      return BadRequest("Server service accounts cannot access tenant-scoped settings.");
-    }
-
-    var settings = await _tenantSettingsManager.GetAllSettings(tenantId.Value, cancellationToken);
+    var settings = await _tenantSettingsManager.GetAllSettings(effectiveTenantId, cancellationToken);
     return Ok(settings);
   }
 
   [HttpGet("{name}")]
   [Authorize]
-  public async Task<ActionResult<TenantSettingResponseDto?>> GetSetting(string name)
+  public async Task<ActionResult<TenantSettingResponseDto?>> GetSetting(string name, [FromQuery] Guid? tenantId)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    Guid effectiveTenantId;
+
+    if (User.IsServerPrincipal())
+    {
+      if (!tenantId.HasValue || tenantId == Guid.Empty)
+      {
+        return BadRequest("TenantId is required.");
+      }
+
+      effectiveTenantId = tenantId.Value;
+    }
+    else
     {
       if (!User.TryGetTenantId(out var tid))
+      {
         return Unauthorized();
-      tenantId = tid;
-    }
+      }
 
-    if (!tenantId.HasValue)
-    {
-      return BadRequest("Server service accounts cannot access tenant-scoped settings.");
+      if (tenantId.HasValue && tenantId.Value != tid)
+      {
+        return Forbid();
+      }
+
+      effectiveTenantId = tid;
     }
 
     var tenant = await _appDb.Tenants
       .AsNoTracking()
       .Include(x => x.TenantSettings)
-      .FirstOrDefaultAsync(x => x.Id == tenantId.Value);
+      .FirstOrDefaultAsync(x => x.Id == effectiveTenantId);
 
     if (tenant is null)
     {
@@ -111,46 +151,72 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPost]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
   public async Task<ActionResult<TenantSettingResponseDto>> SetSetting([FromBody] TenantSettingRequestDto setting)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    Guid effectiveTenantId;
+
+    if (User.IsServerPrincipal())
+    {
+      if (!setting.TenantId.HasValue || setting.TenantId == Guid.Empty)
+      {
+        return BadRequest("TenantId is required.");
+      }
+
+      effectiveTenantId = setting.TenantId.Value;
+    }
+    else
     {
       if (!User.TryGetTenantId(out var tid))
+      {
         return Unauthorized();
-      tenantId = tid;
+      }
+
+      if (setting.TenantId.HasValue && setting.TenantId.Value != tid)
+      {
+        return Forbid();
+      }
+
+      effectiveTenantId = tid;
     }
 
-    if (!tenantId.HasValue)
-    {
-      return BadRequest("Server service accounts cannot modify tenant settings.");
-    }
-
-    var result = await _tenantSettingsManager.SetSetting(tenantId.Value, setting);
+    var result = await _tenantSettingsManager.SetSetting(effectiveTenantId, setting);
     return result.ToActionResult();
   }
 
   [HttpPut]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
   public async Task<ActionResult<TenantSettingsDto>> SetSettings(
     [FromBody] TenantSettingsDto settings,
     CancellationToken cancellationToken)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    Guid effectiveTenantId;
+
+    if (User.IsServerPrincipal())
+    {
+      if (!settings.TenantId.HasValue || settings.TenantId == Guid.Empty)
+      {
+        return BadRequest("TenantId is required.");
+      }
+
+      effectiveTenantId = settings.TenantId.Value;
+    }
+    else
     {
       if (!User.TryGetTenantId(out var tid))
+      {
         return Unauthorized();
-      tenantId = tid;
+      }
+
+      if (settings.TenantId.HasValue && settings.TenantId.Value != tid)
+      {
+        return Forbid();
+      }
+
+      effectiveTenantId = tid;
     }
 
-    if (!tenantId.HasValue)
-    {
-      return BadRequest("Server service accounts cannot modify tenant settings.");
-    }
-
-    var result = await _tenantSettingsManager.SetSettings(tenantId.Value, settings, cancellationToken);
+    var result = await _tenantSettingsManager.SetSettings(effectiveTenantId, settings, cancellationToken);
     return result.ToActionResult();
   }
 }

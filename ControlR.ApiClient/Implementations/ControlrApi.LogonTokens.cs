@@ -16,4 +16,14 @@ public partial class ControlrApi
 			return await response.Content.ReadFromJsonAsync<LogonTokenResponseDto>(cancellationToken);
 		});
 	}
+
+	async Task<ApiResult<LogonTokenResponseDto>> ILogonTokensApi.IssueLogonToken(IssueLogonTokenRequestDto request, CancellationToken cancellationToken)
+	{
+		return await ExecuteApiCall(async () =>
+		{
+			using var response = await _client.PostAsJsonAsync($"{HttpConstants.LogonTokensEndpoint}/issue", request, cancellationToken);
+     await response.EnsureSuccessStatusCodeWithDetails();
+			return await response.Content.ReadFromJsonAsync<LogonTokenResponseDto>(cancellationToken);
+		});
+	}
 }

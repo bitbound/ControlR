@@ -18,6 +18,7 @@ using MudBlazor.Services;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
+using ControlR.Web.Server.Services.Tenants;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Services;
 using ControlR.Web.Server.Middleware;
@@ -235,6 +236,8 @@ public static class WebApplicationBuilderExtensions
         .RequireAuthenticatedUser()
         .Build())
       .AddPolicy(RequireServerServiceAccountPolicy.PolicyName, RequireServerServiceAccountPolicy.Create())
+      .AddPolicy(CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy, CombinedAuthorizationPolicies.CreateServerOrTenantAdmin())
+      .AddPolicy(CombinedAuthorizationPolicies.RequireServerOrTenantAdminOrInstallerKeyManagerPolicy, CombinedAuthorizationPolicies.CreateServerOrTenantAdminOrInstallerKeyManager())
       .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
       .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
 
@@ -424,6 +427,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IEffectiveUserPreferencesResolver, EffectiveUserPreferencesResolver>();
     builder.Services.AddScoped<IUserPreferencesManager, UserPreferencesManager>();
     builder.Services.AddScoped<ITenantSettingsManager, TenantSettingsManager>();
+    builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
     builder.Services.AddScoped<IUserPreferencesProvider>(services => services.GetRequiredService<IUserPreferencesManager>());
     builder.Services.AddScoped<IUserStorageManager, UserStorageManager>();
     builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderServer>();

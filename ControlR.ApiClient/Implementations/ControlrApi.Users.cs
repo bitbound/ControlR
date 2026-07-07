@@ -7,11 +7,11 @@ namespace ControlR.ApiClient;
 
 public partial class ControlrApi
 {
-  async Task<ApiResult<AdminResetPasswordResponseDto>> IUsersApi.AdminResetPassword(Guid userId, CancellationToken cancellationToken)
+  async Task<ApiResult<AdminResetPasswordResponseDto>> IUsersApi.AdminResetPassword(Guid userId, AdminResetPasswordRequestDto? request, CancellationToken cancellationToken)
   {
     return await ExecuteApiCall(async () =>
     {
-      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UsersEndpoint}/{userId}/reset-password", new { }, cancellationToken);
+      using var response = await _client.PostAsJsonAsync($"{HttpConstants.UsersEndpoint}/{userId}/reset-password", request ?? new AdminResetPasswordRequestDto(), cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AdminResetPasswordResponseDto>(cancellationToken);
     });

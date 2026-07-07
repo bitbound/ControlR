@@ -10,6 +10,7 @@ using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -30,13 +31,13 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     var tenant = await services.CreateTestTenant();
     var creator = await services.CreateTestUser(tenant.Id, email: "creator@test.local");
-    var controller = scope.CreateController<ServerInstallerKeysController>();
+    var controller = scope.CreateController<InstallerKeysController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
-    var result = await controller.Create(new ServerCreateInstallerKeyRequestDto(
-      tenant.Id,
-      creator.Id,
-      InstallerKeyType.Persistent));
+    var result = await controller.Create(new CreateInstallerKeyRequestDto(
+      InstallerKeyType.Persistent,
+      TenantId: tenant.Id,
+      CreatorId: creator.Id));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -52,13 +53,13 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
 
     var tenant = await services.CreateTestTenant();
-    var controller = scope.CreateController<ServerInvitesController>();
+    var controller = scope.CreateController<InvitesController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
     controller.ControllerContext.HttpContext.Request.Scheme = "https";
     controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
 
     var result = await controller.Create(
-      new ServerTenantInviteRequestDto(tenant.Id, "invitee@test.local"),
+      new TenantInviteRequestDto("invitee@test.local", tenant.Id),
       services.GetRequiredService<ITenantInvitesProvider>());
 
     Assert.NotNull(result.Result);
@@ -77,15 +78,15 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var tenant = await services.CreateTestTenant();
     var user = await services.CreateTestUser(tenant.Id, email: "viewer@test.local");
     var device = await services.CreateTestDevice(tenant.Id);
-    var controller = scope.CreateController<ServerLogonTokensController>();
+    var controller = scope.CreateController<LogonTokenController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
     controller.ControllerContext.HttpContext.Request.Scheme = "https";
     controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
 
-    var result = await controller.CreateLogonToken(
+    var result = await controller.IssueLogonToken(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<ILogonTokenProvider>(),
-      new ServerLogonTokenRequestDto(device.Id, tenant.Id, user.Id));
+      new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -101,20 +102,20 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
 
     var tenant = await services.CreateTestTenant();
-    var controller = scope.CreateController<ServerUsersController>();
+    var controller = scope.CreateController<UsersController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
     var result = await controller.Create(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       services.GetRequiredService<IUserCreator>(),
-      new ServerCreateUserRequestDto(
-        tenant.Id,
+      new CreateUserRequestDto(
         "server-created@test.local",
         "server-created@test.local",
         "T3stP@ssw0rd!",
         null,
-        null));
+        null,
+        tenant.Id));
 
     Assert.NotNull(result.Result);
     var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
@@ -130,12 +131,10 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
 
     var tenant = await services.CreateTestTenant();
-    var controller = scope.CreateController<ServerTenantSettingsController>();
+    var controller = scope.CreateController<TenantSettingsController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
-    var result = await controller.SetSetting(
-      tenant.Id,
-      new TenantSettingRequestDto("General:Timezone", "UTC"));
+    var result = await controller.SetSetting(new TenantSettingRequestDto("General:Timezone", "UTC", tenant.Id));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Libraries.Api.Contracts.Constants;
@@ -7,29 +8,43 @@ namespace ControlR.Web.Server.Api;
 
 [Route(HttpConstants.UsersEndpoint)]
 [ApiController]
-[Authorize(Roles = RoleNames.TenantAdministrator)]
+[Authorize]
 public class UsersController : ControllerBase
 {
   [HttpPost("{userId:guid}/reset-password")]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
   public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
     [FromRoute] Guid userId,
+    [FromBody] AdminResetPasswordRequestDto? request,
     [FromServices] IPasswordManager passwordManager)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    Guid tenantId;
+
+    if (User.IsServerPrincipal())
+    {
+      if (request?.TenantId is not Guid requestedTenantId || requestedTenantId == Guid.Empty)
+      {
+        return BadRequest("TenantId is required.");
+      }
+
+      tenantId = requestedTenantId;
+    }
+    else
     {
       if (!User.TryGetTenantId(out var tid))
+      {
         return BadRequest("User tenant not found.");
+      }
+
+      if (request?.TenantId.HasValue == true && request.TenantId.Value != tid)
+      {
+        return Forbid();
+      }
+
       tenantId = tid;
     }
 
-    if (!tenantId.HasValue)
-    {
-      return BadRequest("Server service accounts cannot reset user passwords.");
-    }
-
-    var result = await passwordManager.AdminResetPassword(tenantId.Value, userId);
+    var result = await passwordManager.AdminResetPassword(tenantId, userId);
     if (!result.IsSuccess)
     {
       if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
@@ -44,18 +59,35 @@ public class UsersController : ControllerBase
   }
 
   [HttpPost]
-  [Authorize(Roles = RoleNames.TenantAdministrator)]
+  [Authorize(Policy = CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy)]
   public async Task<ActionResult<UserResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] IUserCreator userCreator,
     [FromBody] CreateUserRequestDto request)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    Guid tenantId;
+    if (User.IsServerPrincipal())
+    {
+      if (!request.TenantId.HasValue || request.TenantId == Guid.Empty)
+      {
+        return BadRequest("TenantId is required.");
+      }
+
+      tenantId = request.TenantId.Value;
+    }
+    else
     {
       if (!User.TryGetTenantId(out var tid))
+      {
         return BadRequest("User tenant not found.");
+      }
+
+      if (request.TenantId.HasValue && request.TenantId.Value != tid)
+      {
+        return Forbid();
+      }
+
       tenantId = tid;
     }
 
@@ -73,6 +105,11 @@ public class UsersController : ControllerBase
 
       if (roles.Any(r => r.Name == RoleNames.ServerAdministrator))
       {
+        if (User.IsServerPrincipal())
+        {
+          return BadRequest("Server service accounts cannot assign the server administrator role.");
+        }
+
         // Resolve caller's user and check role via UserManager to avoid relying on ClaimsPrincipal state.
         if (!User.TryGetUserId(out var callerUserId))
         {
@@ -92,15 +129,10 @@ public class UsersController : ControllerBase
       }
     }
 
-    if (!tenantId.HasValue)
-    {
-      return BadRequest("Server service accounts cannot create users.");
-    }
-
     var createResult = await userCreator.CreateUser(
       string.IsNullOrWhiteSpace(request.Email) ? request.UserName : request.Email,
       request.Password ?? string.Empty,
-      tenantId.Value,
+      tenantId,
       requestRoleIds,
       request.TagIds,
       cancellationToken: HttpContext.RequestAborted);
@@ -128,16 +160,13 @@ public class UsersController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] CreatePersonalAccessTokenRequestDto request)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return BadRequest("User tenant not found.");
-      tenantId = tid;
+      return BadRequest("User tenant not found.");
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (!targetExists)
     {
@@ -160,17 +189,14 @@ public class UsersController : ControllerBase
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] AppDb appDb)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return BadRequest("User tenant not found.");
-      tenantId = tid;
+      return BadRequest("User tenant not found.");
     }
 
     var user = await appDb.Users
       .Include(x => x.UserPreferences)
-      .FirstOrDefaultAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (user == null)
     {
@@ -194,16 +220,13 @@ public class UsersController : ControllerBase
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return BadRequest("User tenant not found.");
-      tenantId = tid;
+      return BadRequest("User tenant not found.");
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (!targetExists)
     {
@@ -236,16 +259,13 @@ public class UsersController : ControllerBase
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return BadRequest("User tenant not found.");
-      tenantId = tid;
+      return BadRequest("User tenant not found.");
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (!targetExists)
     {
@@ -265,16 +285,13 @@ public class UsersController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] UpdatePersonalAccessTokenRequestDto request)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return BadRequest("User tenant not found.");
-      tenantId = tid;
+      return BadRequest("User tenant not found.");
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
+      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (!targetExists)
     {
