@@ -1,7 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
 
 namespace ControlR.Web.Server.Api;
 

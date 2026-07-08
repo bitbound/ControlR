@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Authz.Policies;
 
 namespace ControlR.Web.Server.Api.Internal;
 

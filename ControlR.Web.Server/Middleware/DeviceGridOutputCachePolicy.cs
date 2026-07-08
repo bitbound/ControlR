@@ -1,4 +1,3 @@
-using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Middleware;

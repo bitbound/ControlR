@@ -1,6 +1,4 @@
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Web.Server.Extensions;
-using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Primitives;
 
 namespace ControlR.Web.Server.Services.AgentInstaller;

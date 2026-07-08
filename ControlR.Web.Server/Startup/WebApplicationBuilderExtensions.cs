@@ -7,7 +7,6 @@ using Npgsql;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz;
-using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Data.Configuration;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -32,7 +31,6 @@ using System.Threading.RateLimiting;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.ExceptionHandlers;
-using ControlR.Web.Server.RateLimiting;
 
 namespace ControlR.Web.Server.Startup;
 

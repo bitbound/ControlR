@@ -1,6 +1,4 @@
 using ControlR.Web.Server.Authn;
-using ControlR.Web.Server.Options;
-using Microsoft.AspNetCore.Http;
 using System.Threading.RateLimiting;
 
 namespace ControlR.Web.Server.RateLimiting;

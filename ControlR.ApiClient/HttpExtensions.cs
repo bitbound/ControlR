@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.Api.Contracts.Dtos;
-using System.Reflection.Metadata;
 using System.Text.Json;
 
 namespace ControlR.ApiClient;

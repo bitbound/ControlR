@@ -1,5 +1,4 @@
 using ControlR.Web.Client.Services;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Web.Server.Services.Users;
 

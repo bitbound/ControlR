@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Public;
 
 namespace ControlR.Agent.Common.Services;
 

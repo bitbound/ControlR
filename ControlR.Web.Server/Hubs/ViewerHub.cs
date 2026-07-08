@@ -6,7 +6,6 @@ using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
-using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.Settings;
 

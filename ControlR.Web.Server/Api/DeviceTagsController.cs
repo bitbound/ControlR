@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api;
 

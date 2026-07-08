@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;

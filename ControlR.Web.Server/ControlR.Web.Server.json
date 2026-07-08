@@ -4035,10 +4035,10 @@
         }
       }
     },
-    "/v1/installer-keys": {
+    "/v0/installer-keys": {
       "post": {
         "tags": [
-          "V1InstallerKeys"
+          "V0InstallerKeys"
         ],
         "requestBody": {
           "content": {
@@ -4089,10 +4089,10 @@
         ]
       }
     },
-    "/v1/logon-tokens": {
+    "/v0/logon-tokens": {
       "post": {
         "tags": [
-          "V1LogonTokens"
+          "V0LogonTokens"
         ],
         "requestBody": {
           "content": {
@@ -4143,10 +4143,10 @@
         ]
       }
     },
-    "/v1/tenants": {
+    "/v0/tenants": {
       "post": {
         "tags": [
-          "V1Tenants"
+          "V0Tenants"
         ],
         "requestBody": {
           "content": {
@@ -7948,13 +7948,13 @@
       "name": "Version"
     },
     {
-      "name": "V1InstallerKeys"
+      "name": "V0InstallerKeys"
     },
     {
-      "name": "V1LogonTokens"
+      "name": "V0LogonTokens"
     },
     {
-      "name": "V1Tenants"
+      "name": "V0Tenants"
     },
     {
       "name": "PublicAgentUpdate"

@@ -1,4 +1,3 @@
-using System;
 using Microsoft.AspNetCore.Authentication;
 
 namespace ControlR.Web.Server.Components.Account;

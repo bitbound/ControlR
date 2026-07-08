@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Public;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Api.Public;

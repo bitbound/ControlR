@@ -1,5 +1,3 @@
-using ControlR.Web.Server.Options;
-
 namespace ControlR.Web.Server.Services.AgentInstaller;
 
 public class AgentInstallerKeyUsageCleaner(

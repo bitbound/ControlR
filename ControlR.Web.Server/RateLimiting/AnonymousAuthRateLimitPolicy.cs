@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using Microsoft.AspNetCore.Http;
 using System.Threading.RateLimiting;
 
 namespace ControlR.Web.Server.RateLimiting;

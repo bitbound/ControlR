@@ -46,10 +46,10 @@ public static class HttpConstants
     public const string InvitesEndpoint = "/public/invites";
   }
 
-  public static class V1
+  public static class V0
   {
-    public const string InstallerKeysEndpoint = "/v1/installer-keys";
-    public const string LogonTokensEndpoint = "/v1/logon-tokens";
-    public const string TenantsEndpoint = "/v1/tenants";
+    public const string InstallerKeysEndpoint = "/v0/installer-keys";
+    public const string LogonTokensEndpoint = "/v0/logon-tokens";
+    public const string TenantsEndpoint = "/v0/tenants";
   }
 }

@@ -9,7 +9,7 @@ public interface IControlrApi
 {
   IControlrInternalApi Internal { get; }
   IControlrPublicApi Public { get; }
-  IControlrV1Api V1 { get; }
+  IControlrV0Api V0 { get; }
 }
 
 public interface IControlrInternalApi
@@ -42,11 +42,11 @@ public interface IControlrInternalApi
   IVersionApi Version { get; }
 }
 
-public interface IControlrV1Api
+public interface IControlrV0Api
 {
-  IV1InstallerKeysApi InstallerKeys { get; }
-  IV1LogonTokensApi LogonTokens { get; }
-  IV1TenantsApi Tenants { get; }
+  IV0InstallerKeysApi InstallerKeys { get; }
+  IV0LogonTokensApi LogonTokens { get; }
+  IV0TenantsApi Tenants { get; }
 }
 
 public interface IControlrPublicApi
@@ -71,18 +71,18 @@ public partial class ControlrApi(
 
   private InternalApi? _internal;
   private PublicApi? _public;
-  private V1Api? _v1;
+  private V0Api? _v0;
 
   internal HttpClient HttpClient => _client;
   internal InternalApi InternalApi => _internal ??= new(this);
   internal ILogger<ControlrApi> Logger => _logger;
   internal IOptions<ControlrApiClientOptions> Options => _options;
   internal PublicApi PublicApi => _public ??= new(this);
-  internal V1Api V1Api => _v1 ??= new(this);
+  internal V0Api V0 => _v0 ??= new(this);
 
   IControlrInternalApi IControlrApi.Internal => InternalApi;
   IControlrPublicApi IControlrApi.Public => PublicApi;
-  IControlrV1Api IControlrApi.V1 => V1Api;
+  IControlrV0Api IControlrApi.V0 => V0;
 
   internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
   {

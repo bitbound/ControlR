@@ -1,8 +1,6 @@
 ﻿using System.Security.Claims;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Authz.Roles;
-using ControlR.Web.Server.Authn;
-using ControlR.Web.Server.Services.ServiceAccounts;
 
 namespace ControlR.Web.Server.Startup;
 

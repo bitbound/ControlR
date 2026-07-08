@@ -173,7 +173,7 @@ public partial class ControlrApiContractSyncTests
     foreach (var type in new[]
     {
       typeof(ControlR.ApiClient.IControlrInternalApi),
-      typeof(ControlR.ApiClient.IControlrV1Api),
+      typeof(ControlR.ApiClient.IControlrV0Api),
       typeof(ControlR.ApiClient.IControlrPublicApi),
     })
     {
@@ -224,7 +224,7 @@ public partial class ControlrApiContractSyncTests
       {
         var fileName = Path.GetFileName(path);
         return fileName.StartsWith("InternalApi", StringComparison.OrdinalIgnoreCase) ||
-          fileName.StartsWith("V1Api", StringComparison.OrdinalIgnoreCase) ||
+          fileName.StartsWith("V0Api", StringComparison.OrdinalIgnoreCase) ||
           fileName.StartsWith("PublicApi", StringComparison.OrdinalIgnoreCase);
       })
       .ToArray();

@@ -1,6 +1,9 @@
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Public;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.ApiClient;
@@ -78,7 +81,7 @@ public interface IInstallerKeysApi
   Task<ApiResult> RenameInstallerKey(RenameInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
 }
 
-public interface IV1InstallerKeysApi
+public interface IV0InstallerKeysApi
 {
   Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
 }
@@ -105,7 +108,7 @@ public interface ILogonTokensApi
   Task<ApiResult<LogonTokenResponseDto>> CreateLogonToken(LogonTokenRequestDto request, CancellationToken cancellationToken = default);
 }
 
-public interface IV1LogonTokensApi
+public interface IV0LogonTokensApi
 {
   Task<ApiResult<LogonTokenResponseDto>> CreateLogonToken(IssueLogonTokenRequestDto request, CancellationToken cancellationToken = default);
 }
@@ -166,7 +169,7 @@ public interface ITenantSettingsApi
   Task<ApiResult<TenantSettingsDto>> SetTenantSettings(TenantSettingsDto request, CancellationToken cancellationToken = default);
 }
 
-public interface IV1TenantsApi
+public interface IV0TenantsApi
 {
   Task<ApiResult<CreateTenantResponseDto>> CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken = default);
 }

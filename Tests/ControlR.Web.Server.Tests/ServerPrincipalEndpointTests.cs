@@ -1,7 +1,8 @@
 using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Api.V1;
+using ControlR.Web.Server.Api.V0;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Services.LogonTokens;
@@ -26,7 +27,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     var tenant = await services.CreateTestTenant();
     var creator = await services.CreateTestUser(tenant.Id, email: "creator@test.local");
-    var controller = scope.CreateController<V1InstallerKeysController>();
+    var controller = scope.CreateController<V0InstallerKeysController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
     var result = await controller.Create(new IssueInstallerKeyRequestDto(
@@ -50,7 +51,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var tenant = await services.CreateTestTenant();
     var user = await services.CreateTestUser(tenant.Id, email: "viewer@test.local");
     var device = await services.CreateTestDevice(tenant.Id);
-    var controller = scope.CreateController<V1LogonTokensController>();
+    var controller = scope.CreateController<V0LogonTokensController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
     controller.ControllerContext.HttpContext.Request.Scheme = "https";
     controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");

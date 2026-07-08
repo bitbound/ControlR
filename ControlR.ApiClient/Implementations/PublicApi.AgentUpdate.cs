@@ -1,6 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Public;
 using ControlR.Libraries.Api.Contracts.Enums;
 using System.Net.Http.Json;
 
