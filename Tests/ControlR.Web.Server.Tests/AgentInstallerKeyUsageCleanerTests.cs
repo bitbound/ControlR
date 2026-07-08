@@ -1,5 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Tests.Helpers;

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using System.Net;
 using System.Net.Http.Json;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Tests.Helpers;
@@ -16,7 +15,6 @@ using Microsoft.Extensions.Logging;
 using ControlR.Web.Server.Options;
 using Microsoft.Extensions.Options;
 using Moq;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 

@@ -8,7 +8,7 @@ public static class RequireServerServiceAccountPolicy
   {
     return new AuthorizationPolicyBuilder()
       .RequireAuthenticatedUser()
-      .RequireAssertion(context => context.User.IsServerPrincipal())
+      .RequireAssertion(context => context.User.IsServerPrincipal() || context.User.IsInRole(RoleNames.ServerAdministrator))
       .Build();
   }
 }

@@ -4,11 +4,9 @@ using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.AspNetCore.Components;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 

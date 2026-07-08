@@ -1,5 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Public;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Api.Public;
@@ -13,7 +11,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 

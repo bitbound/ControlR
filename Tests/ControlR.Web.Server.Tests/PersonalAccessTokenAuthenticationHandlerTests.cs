@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using Xunit;
 using Microsoft.AspNetCore.Identity;
 using ControlR.Web.Server.Data.Entities;
 

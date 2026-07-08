@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Libraries.Shared.Helpers;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -10,7 +11,8 @@ public interface ILogonTokenProvider
   Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
-    Guid userId,
+    Guid? userId,
+    LogonTokenKind kind,
     int expirationMinutes = 5);
 
   Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId);
@@ -33,19 +35,27 @@ public class LogonTokenProvider(
   public async Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
-    Guid userId,
+    Guid? userId,
+    LogonTokenKind kind,
     int expirationMinutes = 5)
   {
-    // Validate that the user exists and belongs to the tenant
-    await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-    var exists = await dbContext.Users
-      .Where(u => u.Id == userId && u.TenantId == tenantId)
-      .Select(u => new { u.Id, u.UserName, u.Email })
-      .AnyAsync();
-
-    if (!exists)
+    if (kind == LogonTokenKind.User)
     {
-      throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
+      if (!userId.HasValue)
+      {
+        throw new InvalidOperationException("UserId is required for user logon tokens.");
+      }
+
+      await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+      var exists = await dbContext.Users
+        .Where(u => u.Id == userId.Value && u.TenantId == tenantId)
+        .Select(u => new { u.Id, u.UserName, u.Email })
+        .AnyAsync();
+
+      if (!exists)
+      {
+        throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
+      }
     }
 
     var token = RandomGenerator.CreateAccessToken();
@@ -57,19 +67,28 @@ public class LogonTokenProvider(
       Token = token,
       DeviceId = deviceId,
       ExpiresAt = expiresAt,
+      Kind = kind,
       UserId = userId,
       TenantId = tenantId,
       CreatedAt = now,
       IsConsumed = false
     };
 
-    // Store in cache with expiration
     var cacheKey = GetCacheKey(token);
     _cache.Set(cacheKey, logonToken, expiresAt.DateTime);
 
-    _logger.LogInformation(
-      "Created logon token for user {UserId} on device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
-      userId, deviceId, tenantId, expiresAt);
+    if (kind == LogonTokenKind.User)
+    {
+      _logger.LogInformation(
+        "Created logon token for user {UserId} on device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
+        userId, deviceId, tenantId, expiresAt);
+    }
+    else
+    {
+      _logger.LogInformation(
+        "Created service logon token for device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
+        deviceId, tenantId, expiresAt);
+    }
 
     return logonToken;
   }
@@ -80,7 +99,6 @@ public class LogonTokenProvider(
     await semaphore.WaitAsync();
     try
     {
-      // Re-validate inside critical section to avoid TOCTOU race
       var validationResult = await ValidateTokenInternalAsync(token);
       if (!validationResult.IsSuccess)
       {
@@ -102,26 +120,33 @@ public class LogonTokenProvider(
         return LogonTokenValidationResult.Failure("Token has already been used");
       }
 
-      // Mark token as consumed and update cache atomically
       logonToken.IsConsumed = true;
       var cacheKey = GetCacheKey(token);
       _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
 
-      _logger.LogInformation(
-        "Successfully validated and consumed logon token for user {UserId} on device {DeviceId}",
-        logonToken.UserId, deviceId);
+      if (logonToken.Kind == LogonTokenKind.User)
+      {
+        _logger.LogInformation(
+          "Successfully validated and consumed logon token for user {UserId} on device {DeviceId}",
+          logonToken.UserId, deviceId);
 
-      return LogonTokenValidationResult.Success(
-        validationResult.User.Id,
-        logonToken.TenantId,
-        validationResult.User.UserName,
-        validationResult.User.UserName,
-        validationResult.User.Email);
+        return LogonTokenValidationResult.UserSuccess(
+          validationResult.User!.Id,
+          logonToken.TenantId,
+          validationResult.User.UserName,
+          validationResult.User.UserName,
+          validationResult.User.Email);
+      }
+
+      _logger.LogInformation(
+        "Successfully validated and consumed service logon token for device {DeviceId}",
+        deviceId);
+
+      return LogonTokenValidationResult.ServiceSuccess(logonToken.TenantId);
     }
     finally
     {
       semaphore.Release();
-      // Cleanup dictionary to prevent unbounded growth
       if (semaphore.CurrentCount == 1)
       {
         _tokenLocks.TryRemove(token, out _);
@@ -139,18 +164,27 @@ public class LogonTokenProvider(
         return Result.Fail<LogonTokenValidationResult>(validationResult.ErrorMessage!);
       }
 
+      if (validationResult.Token.Kind == LogonTokenKind.User)
+      {
+        _logger.LogInformation(
+          "Successfully validated logon token for user {UserId}",
+          validationResult.User!.Id);
+
+        var result = LogonTokenValidationResult.UserSuccess(
+          validationResult.User.Id,
+          validationResult.Token.TenantId,
+          validationResult.User.UserName,
+          validationResult.User.UserName,
+          validationResult.User.Email);
+
+        return Result.Ok(result);
+      }
+
       _logger.LogInformation(
-        "Successfully validated logon token for user {UserId}",
-        validationResult.User.Id);
+        "Successfully validated service logon token");
 
-      var result = LogonTokenValidationResult.Success(
-        validationResult.User.Id,
-        validationResult.Token.TenantId,
-        validationResult.User.UserName,
-        validationResult.User.UserName,
-        validationResult.User.Email);
-
-      return Result.Ok(result);
+      return Result.Ok(LogonTokenValidationResult.ServiceSuccess(
+        validationResult.Token.TenantId));
     }
     catch (Exception ex)
     {
@@ -171,14 +205,12 @@ public class LogonTokenProvider(
       return new TokenValidationResult(false, "Invalid or expired token", null, null);
     }
 
-    // Check if token is already consumed
     if (logonToken.IsConsumed)
     {
       _logger.LogWarning("Token has already been consumed: {Token}", token);
       return new TokenValidationResult(false, "Token has already been used", logonToken, null);
     }
 
-    // Check if token is expired
     var now = _timeProvider.GetUtcNow();
     if (now > logonToken.ExpiresAt)
     {
@@ -187,7 +219,11 @@ public class LogonTokenProvider(
       return new TokenValidationResult(false, "Token has expired", logonToken, null);
     }
 
-    // Validate the user exists in the database
+    if (logonToken.Kind == LogonTokenKind.Service)
+    {
+      return new TokenValidationResult(true, null, logonToken, null);
+    }
+
     await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
     var user = await dbContext.Users
       .Where(u => u.Id == logonToken.UserId && u.TenantId == logonToken.TenantId)
@@ -210,15 +246,8 @@ public class LogonTokenProvider(
   
   private class TokenValidationResult
   {
-
     public TokenValidationResult(bool isSuccess, string? errorMessage, LogonTokenModel? token, UserInfo? user)
     {
-      if (isSuccess)
-      {
-        ArgumentNullException.ThrowIfNull(token);
-        ArgumentNullException.ThrowIfNull(user);
-      }
-
       IsSuccess = isSuccess;
       ErrorMessage = errorMessage;
       Token = token;
@@ -227,7 +256,7 @@ public class LogonTokenProvider(
 
     public string? ErrorMessage { get; }
 
-    [MemberNotNullWhen(true, nameof(Token), nameof(User))]
+    [MemberNotNullWhen(true, nameof(Token))]
     public bool IsSuccess { get; }
     public LogonTokenModel? Token { get; }
 

@@ -1,6 +1,5 @@
 using System.Globalization;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Data;
@@ -9,7 +8,6 @@ using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 using ControlR.Web.Server.Services.Settings;
 
 namespace ControlR.Web.Server.Tests;

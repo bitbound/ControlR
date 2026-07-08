@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;

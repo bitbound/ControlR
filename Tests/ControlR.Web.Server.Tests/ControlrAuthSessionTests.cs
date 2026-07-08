@@ -4,7 +4,6 @@ using ControlR.ApiClient;
 using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.TestingUtilities;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 

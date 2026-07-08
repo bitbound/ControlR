@@ -1,7 +1,6 @@
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -22,7 +21,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
 
     // Act
-    var result = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
+    var result = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, LogonTokenKind.User);
     
     // Assert
     Assert.NotNull(result);
@@ -48,7 +47,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
 
     // Act & Assert
     await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-      await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, invalidUserId));
+      await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, invalidUserId, LogonTokenKind.User));
   }
 
   [Fact]
@@ -64,7 +63,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
 
     // Create a token
-    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, LogonTokenKind.User);
     
     // Act - First consumption should succeed
     var firstValidation = await logonTokenProvider.ValidateAndConsumeTokenAsync(token.Token, deviceId);
@@ -92,7 +91,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var expirationMinutes = 15;
 
     // Create a token that will expire soon
-    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, expirationMinutes);
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, LogonTokenKind.User, expirationMinutes);
     
     // Act - Advance time past expiration
     testApp.TimeProvider.Advance(TimeSpan.FromMinutes(expirationMinutes + 1));
@@ -134,7 +133,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
 
     // Create a token
-    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, LogonTokenKind.User);
     
     // Act
     var validateResult = await logonTokenProvider.ValidateTokenAsync(token.Token);

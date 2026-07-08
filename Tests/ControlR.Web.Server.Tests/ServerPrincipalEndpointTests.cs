@@ -1,6 +1,4 @@
 using System.Security.Claims;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.V0;
 using ControlR.Web.Server.Authn;
@@ -59,7 +57,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var result = await controller.Create(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<ILogonTokenProvider>(),
-      new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id));
+      new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id, LogonTokenKind.User));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);

@@ -21,16 +21,25 @@ public class V0LogonTokensController : ControllerBase
       return BadRequest("Device not found");
     }
 
-    var user = await appDb.Users.FindAsync(request.UserId);
-    if (user is null || user.TenantId != request.TenantId)
+    if (request.Kind == LogonTokenKind.User)
     {
-      return BadRequest("User not found or does not belong to this tenant.");
+      if (!request.UserId.HasValue)
+      {
+        return BadRequest("UserId is required for user logon tokens.");
+      }
+
+      var user = await appDb.Users.FindAsync(request.UserId.Value);
+      if (user is null || user.TenantId != request.TenantId)
+      {
+        return BadRequest("User not found or does not belong to this tenant.");
+      }
     }
 
     var logonToken = await logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
       request.TenantId,
       request.UserId,
+      request.Kind,
       request.ExpirationMinutes);
 
     var deviceAccessUrl = new Uri(

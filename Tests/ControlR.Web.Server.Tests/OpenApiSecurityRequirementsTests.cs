@@ -1,8 +1,5 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 

@@ -1,7 +1,5 @@
 using System.Text.Json;
-using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Web.Server.ExceptionHandlers;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 

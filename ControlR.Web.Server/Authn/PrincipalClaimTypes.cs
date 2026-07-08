@@ -18,4 +18,6 @@ public static class PrincipalClaimTypes
   public const string ServerServiceAccount = "server-service-account";
   /// <summary>Authentication method value for a service-account credential.</summary>
   public const string ServiceAccountCredentialMethod = "service-account-credential";
+  /// <summary>Principal-type value for a service (userless) logon token.</summary>
+  public const string ServiceToken = "service-token";
 }

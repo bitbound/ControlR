@@ -7,7 +7,6 @@ using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 

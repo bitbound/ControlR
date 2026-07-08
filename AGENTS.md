@@ -42,6 +42,18 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 - `ServerApi/` — REST API
 - `RemoteControlDtos/` — remote control, routed through websocket relay
 
+### Route Root DTO Convention
+
+The server API has three route roots, each in its own `Api/{RouteRoot}/` directory with a corresponding namespace `ControlR.Web.Server.Api.{RouteRoot}`:
+
+| Route Root | Policy | Consumer |
+|---|---|---|
+| `Internal` | `RequireUserPrincipalPolicy` | BFF (Blazor UI) |
+| `V0` | `RequireServerServiceAccountPolicy` | M2M automation |
+| `Public` | `AllowAnonymous` | Unauthenticated callers |
+
+Every DTO belongs to exactly one route root and lives in `Dtos/ServerApi/{RouteRoot}/` with namespace `ControlR.Libraries.Api.Contracts.Dtos.ServerApi.{RouteRoot}`. There is no shared DTO folder — each root owns its contract independently. If two roots need the same shape, duplicate it under both namespaces. Route roots have different lifecycle commitments; coupling them through a shared DTO breaks that isolation.
+
 ## Cross-Platform
 
 - Platform implementations in `ControlR.Agent.Common` under `Services.Windows/`, `Services.Linux/`, `Services.Mac/`.

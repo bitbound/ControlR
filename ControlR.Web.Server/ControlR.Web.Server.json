@@ -6823,7 +6823,8 @@
         "required": [
           "deviceId",
           "tenantId",
-          "userId"
+          "userId",
+          "kind"
         ],
         "type": "object",
         "properties": {
@@ -6836,8 +6837,14 @@
             "format": "uuid"
           },
           "userId": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LogonTokenKind"
           },
           "expirationMinutes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -6903,6 +6910,9 @@
             ]
           }
         }
+      },
+      "LogonTokenKind": {
+        "type": "integer"
       },
       "LogonTokenRequestDto": {
         "required": [
