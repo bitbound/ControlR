@@ -8,8 +8,8 @@ namespace ControlR.ApiClient;
 public interface IControlrApi
 {
   IControlrInternalApi Internal { get; }
-  IControlrV1Api V1 { get; }
   IControlrPublicApi Public { get; }
+  IControlrV1Api V1 { get; }
 }
 
 public interface IControlrInternalApi
@@ -70,20 +70,19 @@ public partial class ControlrApi(
   private readonly IOptions<ControlrApiClientOptions> _options = options;
 
   private InternalApi? _internal;
-  private V1Api? _v1;
   private PublicApi? _public;
+  private V1Api? _v1;
 
   internal HttpClient HttpClient => _client;
+  internal InternalApi InternalApi => _internal ??= new(this);
   internal ILogger<ControlrApi> Logger => _logger;
   internal IOptions<ControlrApiClientOptions> Options => _options;
-
-  internal InternalApi InternalApi => _internal ??= new(this);
-  internal V1Api V1Api => _v1 ??= new(this);
   internal PublicApi PublicApi => _public ??= new(this);
+  internal V1Api V1Api => _v1 ??= new(this);
 
   IControlrInternalApi IControlrApi.Internal => InternalApi;
-  IControlrV1Api IControlrApi.V1 => V1Api;
   IControlrPublicApi IControlrApi.Public => PublicApi;
+  IControlrV1Api IControlrApi.V1 => V1Api;
 
   internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
   {

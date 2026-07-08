@@ -17,8 +17,8 @@ public class RemoteLogsViewModelTests
   private readonly TestUiDispatcher _dispatcher;
   private readonly XunitLogger<RemoteLogsViewModel> _logger;
   private readonly Mock<IControlrApi> _mockApi;
-  private readonly Mock<IControlrInternalApi> _mockInternalApi;
   private readonly Mock<IDeviceFileSystemApi> _mockFileSystemApi;
+  private readonly Mock<IControlrInternalApi> _mockInternalApi;
   private readonly FakeSnackbar _snackbar;
   private readonly FakeTimeProvider _timeProvider;
 

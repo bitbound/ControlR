@@ -110,27 +110,6 @@ public partial class ControlrApiContractSyncTests
     }
   }
 
-  private static HashSet<string> GetAllSubInterfacePropertyNames()
-  {
-    var propertyNames = new HashSet<string>(StringComparer.Ordinal);
-
-    foreach (var type in new[]
-    {
-      typeof(ControlR.ApiClient.IControlrInternalApi),
-      typeof(ControlR.ApiClient.IControlrV1Api),
-      typeof(ControlR.ApiClient.IControlrPublicApi),
-    })
-    {
-      foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-        .Select(p => p.Name))
-      {
-        propertyNames.Add(propertyName);
-      }
-    }
-
-    return propertyNames;
-  }
-
   private static Dictionary<string, string> CreateEndpointPropertyMap()
   {
     var propertyNames = GetAllSubInterfacePropertyNames();
@@ -187,6 +166,26 @@ public partial class ControlrApiContractSyncTests
     throw new DirectoryNotFoundException("Could not locate repository root containing ControlR.slnx.");
   }
 
+  private static HashSet<string> GetAllSubInterfacePropertyNames()
+  {
+    var propertyNames = new HashSet<string>(StringComparer.Ordinal);
+
+    foreach (var type in new[]
+    {
+      typeof(ControlR.ApiClient.IControlrInternalApi),
+      typeof(ControlR.ApiClient.IControlrV1Api),
+      typeof(ControlR.ApiClient.IControlrPublicApi),
+    })
+    {
+      foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+        .Select(p => p.Name))
+      {
+        propertyNames.Add(propertyName);
+      }
+    }
+
+    return propertyNames;
+  }
 
   private static string[] GetHttpConstantValues()
   {
