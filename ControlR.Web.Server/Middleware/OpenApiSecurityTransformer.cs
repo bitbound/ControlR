@@ -74,7 +74,7 @@ public class OpenApiSecurityTransformer : IOpenApiDocumentTransformer, IOpenApiO
     var requirement = new OpenApiSecurityRequirement();
     foreach (var scheme in schemes)
     {
-      requirement[new OpenApiSecuritySchemeReference(scheme)] = [];
+      requirement[new OpenApiSecuritySchemeReference(scheme, context.Document)] = [];
     }
 
     operation.Security.Add(requirement);

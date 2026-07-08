@@ -4083,7 +4083,9 @@
           }
         },
         "security": [
-          { }
+          {
+            "ServiceAccountCredential": [ ]
+          }
         ]
       }
     },
@@ -4135,7 +4137,9 @@
           }
         },
         "security": [
-          { }
+          {
+            "ServiceAccountCredential": [ ]
+          }
         ]
       }
     },
@@ -4187,7 +4191,9 @@
           }
         },
         "security": [
-          { }
+          {
+            "ServiceAccountCredential": [ ]
+          }
         ]
       }
     },
@@ -4348,7 +4354,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       },
       "get": {
@@ -4387,7 +4396,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4413,7 +4425,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4465,7 +4480,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4500,7 +4518,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4552,7 +4573,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       },
       "get": {
@@ -4591,7 +4615,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4617,7 +4644,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4669,7 +4699,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4694,7 +4727,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       },
       "get": {
@@ -4734,7 +4770,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4766,7 +4805,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       },
       "post": {
@@ -4816,7 +4858,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       },
       "put": {
@@ -4866,7 +4911,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4909,7 +4957,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -4961,7 +5012,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       },
       "get": {
@@ -5000,7 +5054,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -5063,7 +5120,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       },
       "get": {
@@ -5113,7 +5173,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -5139,7 +5202,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     },
@@ -5174,7 +5240,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       },
       "put": {
@@ -5244,7 +5313,10 @@
           }
         },
         "security": [
-          { }
+          {
+            "Cookie": [ ],
+            "PersonalAccessToken": [ ]
+          }
         ]
       }
     }
