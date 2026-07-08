@@ -18,6 +18,7 @@ public class OpenApiSecurityRequirementsTests(ITestOutputHelper testOutput)
       settings: new Dictionary<string, string?>
       {
         { "AppOptions:EnableScalarUi", "true" },
+        { "AppOptions:EnableInteractiveBearerLogin", "true" },
       });
 
     var response = await testServer.Factory.CreateClient()
