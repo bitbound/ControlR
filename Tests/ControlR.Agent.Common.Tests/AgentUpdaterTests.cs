@@ -199,9 +199,14 @@ public class AgentMaintenanceServiceTests
   {
     public AgentMaintenanceServiceFixture()
     {
-      ControlrApi
+      var mockPublicApi = new Mock<IControlrPublicApi>();
+      mockPublicApi
         .SetupGet(x => x.AgentUpdate)
         .Returns(AgentUpdateApi.Object);
+
+      ControlrApi
+        .SetupGet(x => x.Public)
+        .Returns(mockPublicApi.Object);
 
       HostApplicationLifetime
         .SetupGet(x => x.ApplicationStopping)

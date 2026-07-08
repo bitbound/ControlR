@@ -13,9 +13,7 @@ public partial class ControlrApiContractSyncTests
     var endpointPropertyMap = CreateEndpointPropertyMap();
     var constantValues = GetHttpConstantValues();
 
-    var actualPropertyNames = typeof(ControlR.ApiClient.IControlrApi)
-      .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-      .Select(property => property.Name)
+    var actualPropertyNames = GetAllSubInterfacePropertyNames()
       .OrderBy(name => name)
       .ToArray();
 
@@ -88,10 +86,7 @@ public partial class ControlrApiContractSyncTests
     var apiPaths = LoadOpenApiApiPaths();
     var constantValues = GetHttpConstantValues();
     var endpointPropertyMap = CreateEndpointPropertyMap();
-    var actualPropertyNames = typeof(ControlR.ApiClient.IControlrApi)
-      .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-      .Select(property => property.Name)
-      .ToHashSet(StringComparer.Ordinal);
+    var actualPropertyNames = GetAllSubInterfacePropertyNames();
 
     foreach (var apiPath in apiPaths)
     {
@@ -111,16 +106,34 @@ public partial class ControlrApiContractSyncTests
 
       Assert.True(
         actualPropertyNames.Contains(propertyName ?? string.Empty),
-        $"Mapped sub-client '{propertyName}' for route '{matchedConstant}' is not present on IControlrApi.");
+        $"Mapped sub-client '{propertyName}' for route '{matchedConstant}' is not present on any sub-interface.");
     }
+  }
+
+  private static HashSet<string> GetAllSubInterfacePropertyNames()
+  {
+    var propertyNames = new HashSet<string>(StringComparer.Ordinal);
+
+    foreach (var type in new[]
+    {
+      typeof(ControlR.ApiClient.IControlrInternalApi),
+      typeof(ControlR.ApiClient.IControlrV1Api),
+      typeof(ControlR.ApiClient.IControlrPublicApi),
+    })
+    {
+      foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+        .Select(p => p.Name))
+      {
+        propertyNames.Add(propertyName);
+      }
+    }
+
+    return propertyNames;
   }
 
   private static Dictionary<string, string> CreateEndpointPropertyMap()
   {
-    var propertyNames = typeof(ControlR.ApiClient.IControlrApi)
-      .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-      .Select(property => property.Name)
-      .ToHashSet(StringComparer.Ordinal);
+    var propertyNames = GetAllSubInterfacePropertyNames();
 
     var mappedConstants = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     var endpointPropertyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -148,7 +161,7 @@ public partial class ControlrApiContractSyncTests
 
       Assert.True(
         propertyNames.Contains(propertyName),
-        $"HttpConstants field '{field.Name}' inferred IControlrApi property '{propertyName}', but that property was not found.");
+        $"HttpConstants field '{field.Name}' inferred property '{propertyName}', but that property was not found on any sub-interface.");
 
       endpointPropertyMap[constantValue] = propertyName;
     }
@@ -207,8 +220,14 @@ public partial class ControlrApiContractSyncTests
     var repositoryRoot = FindRepositoryRoot();
     var apiClientDirectory = Path.Combine(repositoryRoot, "ControlR.ApiClient", "Implementations");
     var sourceFiles = Directory
-      .EnumerateFiles(apiClientDirectory, "ControlrApi*.cs", SearchOption.TopDirectoryOnly)
-      .Where(path => !path.EndsWith("ControlrApi.cs", StringComparison.OrdinalIgnoreCase))
+      .EnumerateFiles(apiClientDirectory, "*.cs", SearchOption.TopDirectoryOnly)
+      .Where(path =>
+      {
+        var fileName = Path.GetFileName(path);
+        return fileName.StartsWith("InternalApi", StringComparison.OrdinalIgnoreCase) ||
+          fileName.StartsWith("V1Api", StringComparison.OrdinalIgnoreCase) ||
+          fileName.StartsWith("PublicApi", StringComparison.OrdinalIgnoreCase);
+      })
       .ToArray();
 
     var templates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -65,7 +65,7 @@ public partial class InstallerKeys
       {
         return;
       }
-      var apiResult = await ControlrApi.InstallerKeys.DeleteInstallerKey(key.Id);
+      var apiResult = await ControlrApi.Internal.InstallerKeys.DeleteInstallerKey(key.Id);
       if (apiResult.IsSuccess)
       {
         Snackbar.Add("Key deleted.", Severity.Success);
@@ -89,7 +89,7 @@ public partial class InstallerKeys
       _loading = true;
       await InvokeAsync(StateHasChanged);
 
-      var result = await ControlrApi.InstallerKeys.GetAllInstallerKeys();
+      var result = await ControlrApi.Internal.InstallerKeys.GetAllInstallerKeys();
       if (result.IsSuccess)
       {
         _keys = result.Value;
@@ -148,7 +148,7 @@ public partial class InstallerKeys
       }
 
       var dto = new RenameInstallerKeyRequestDto(key.Id, newName);
-      var result = await ControlrApi.InstallerKeys.RenameInstallerKey(dto);
+      var result = await ControlrApi.Internal.InstallerKeys.RenameInstallerKey(dto);
 
       if (result.IsSuccess)
       {
@@ -170,7 +170,7 @@ public partial class InstallerKeys
   {
     try
     {
-      var result = await ControlrApi.InstallerKeys.GetInstallerKeyUsages(key.Id);
+      var result = await ControlrApi.Internal.InstallerKeys.GetInstallerKeyUsages(key.Id);
       if (!result.IsSuccess)
       {
         Snackbar.Add($"Failed to load key usages: {result.Reason}", Severity.Error);

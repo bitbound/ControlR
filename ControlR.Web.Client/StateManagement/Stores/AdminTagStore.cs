@@ -18,7 +18,7 @@ public class AdminTagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger
 
   protected override async Task RefreshImpl()
   {
-    var getResult = await ControlrApi.Tags.GetAllTags(includeLinkedIds: true);
+    var getResult = await ControlrApi.Internal.Tags.GetAllTags(includeLinkedIds: true);
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

@@ -2,7 +2,7 @@
 @attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
 
 @inject IMessenger Messenger;
-@inject IControlrApi ControlrApi;
+@inject IControlrInternalApi ControlrApi;
 @inject ISnackbar Snackbar;
 @inject ILogger<ServerStats> Logger;
 

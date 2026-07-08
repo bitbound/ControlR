@@ -75,23 +75,39 @@ public interface IInstallerKeysApi
   Task<ApiResult> DeleteInstallerKey(Guid keyId, CancellationToken cancellationToken = default);
   Task<ApiResult<AgentInstallerKeyDto[]>> GetAllInstallerKeys(CancellationToken cancellationToken = default);
   Task<ApiResult<AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId, CancellationToken cancellationToken = default);
-  Task<ApiResult> IncrementInstallerKeyUsage(Guid keyId, Guid? deviceId = null, CancellationToken cancellationToken = default);
-  Task<ApiResult<CreateInstallerKeyResponseDto>> IssueInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
   Task<ApiResult> RenameInstallerKey(RenameInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
+}
+
+public interface IV1InstallerKeysApi
+{
+  Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
+}
+
+public interface IPublicInstallerKeysApi
+{
+  Task<ApiResult> IncrementInstallerKeyUsage(Guid keyId, Guid? deviceId = null, CancellationToken cancellationToken = default);
 }
 
 public interface IInvitesApi
 {
-  Task<ApiResult<AcceptInvitationResponseDto>> AcceptInvitation(AcceptInvitationRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantInviteResponseDto>> CreateTenantInvite(TenantInviteRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteTenantInvite(Guid inviteId, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantInviteResponseDto[]>> GetPendingTenantInvites(CancellationToken cancellationToken = default);
 }
 
+public interface IPublicInvitesApi
+{
+  Task<ApiResult<AcceptInvitationResponseDto>> AcceptInvitation(AcceptInvitationRequestDto request, CancellationToken cancellationToken = default);
+}
+
 public interface ILogonTokensApi
 {
   Task<ApiResult<LogonTokenResponseDto>> CreateLogonToken(LogonTokenRequestDto request, CancellationToken cancellationToken = default);
-  Task<ApiResult<LogonTokenResponseDto>> IssueLogonToken(IssueLogonTokenRequestDto request, CancellationToken cancellationToken = default);
+}
+
+public interface IV1LogonTokensApi
+{
+  Task<ApiResult<LogonTokenResponseDto>> CreateLogonToken(IssueLogonTokenRequestDto request, CancellationToken cancellationToken = default);
 }
 
 public interface IPersonalAccessTokensApi
@@ -150,7 +166,7 @@ public interface ITenantSettingsApi
   Task<ApiResult<TenantSettingsDto>> SetTenantSettings(TenantSettingsDto request, CancellationToken cancellationToken = default);
 }
 
-public interface ITenantsApi
+public interface IV1TenantsApi
 {
   Task<ApiResult<CreateTenantResponseDto>> CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken = default);
 }

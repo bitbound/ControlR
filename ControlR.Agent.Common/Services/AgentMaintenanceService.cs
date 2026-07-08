@@ -81,7 +81,7 @@ internal class AgentMaintenanceService(
     {
       _logger.LogInformation("Beginning version check.");
 
-      var metadataResult = await _controlrApi.AgentUpdate.GetBundleMetadata(_systemEnvironment.Runtime, linkedCts.Token);
+      var metadataResult = await _controlrApi.Public.AgentUpdate.GetBundleMetadata(_systemEnvironment.Runtime, linkedCts.Token);
       if (!metadataResult.IsSuccess || metadataResult.Value is null)
       {
         _logger.LogErrorDeduped(
@@ -142,7 +142,7 @@ internal class AgentMaintenanceService(
     {
       _logger.LogWarning("Desktop client repair requested. Reason: {Reason}", reason);
 
-      var metadataResult = await _controlrApi.AgentUpdate.GetBundleMetadata(_systemEnvironment.Runtime, linkedCts.Token);
+      var metadataResult = await _controlrApi.Public.AgentUpdate.GetBundleMetadata(_systemEnvironment.Runtime, linkedCts.Token);
       if (!metadataResult.IsSuccess || metadataResult.Value is null)
       {
         _logger.LogError(

@@ -102,7 +102,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       {
         return;
       }
-      var deleteResult = await ControlrApi.Users.DeleteUser(_selectedUser.Id);
+      var deleteResult = await ControlrApi.Internal.Users.DeleteUser(_selectedUser.Id);
       if (!deleteResult.IsSuccess)
       {
         Snackbar.Add(deleteResult.Reason, Severity.Error);
@@ -128,7 +128,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       if (isToggled)
       {
         var addRequest = new UserRoleAddRequestDto(user.Id, role.Id);
-        var addResult = await ControlrApi.UserRoles.AddUserRole(addRequest);
+        var addResult = await ControlrApi.Internal.UserRoles.AddUserRole(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -138,7 +138,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.UserRoles.RemoveUserRole(user.Id, role.Id);
+        var removeResult = await ControlrApi.Internal.UserRoles.RemoveUserRole(user.Id, role.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);
@@ -167,7 +167,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       if (isToggled)
       {
         var addRequest = new UserTagAddRequestDto(user.Id, tag.Id);
-        var addResult = await ControlrApi.UserTags.AddUserTag(addRequest);
+        var addResult = await ControlrApi.Internal.UserTags.AddUserTag(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -177,7 +177,7 @@ public partial class UsersTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.UserTags.RemoveUserTag(user.Id, tag.Id);
+        var removeResult = await ControlrApi.Internal.UserTags.RemoveUserTag(user.Id, tag.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);

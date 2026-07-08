@@ -16,7 +16,7 @@ public class UserStore(
 
   protected override async Task RefreshImpl()
   {
-    var getResult = await ControlrApi.Users.GetAllUsers();
+    var getResult = await ControlrApi.Internal.Users.GetAllUsers();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

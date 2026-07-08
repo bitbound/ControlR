@@ -119,7 +119,7 @@ public partial class RemoteLogs : JsInteropableComponent
       await InvokeAsync(StateHasChanged);
 
       var request = new GetLogFileContentsRequestDto(_selectedNode.Path);
-      var result = await ControlrApi.DeviceFileSystem.GetLogFileContents(DeviceId, request);
+      var result = await ControlrApi.Internal.DeviceFileSystem.GetLogFileContents(DeviceId, request);
 
       if (!result.IsSuccess)
       {
@@ -154,7 +154,7 @@ public partial class RemoteLogs : JsInteropableComponent
       IsLoading = true;
       await InvokeAsync(StateHasChanged);
 
-      var result = await ControlrApi.DeviceFileSystem.GetLogFiles(DeviceId);
+      var result = await ControlrApi.Internal.DeviceFileSystem.GetLogFiles(DeviceId);
 
       if (!result.IsSuccess || result.Value is null)
       {

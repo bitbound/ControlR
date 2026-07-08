@@ -31,7 +31,7 @@ public partial class PersonalAccessTokens
     try
     {
       var request = new CreatePersonalAccessTokenRequestDto(_newTokenName.Trim());
-      var result = await ControlrApi.PersonalAccessTokens.CreatePersonalAccessToken(request);
+      var result = await ControlrApi.Internal.PersonalAccessTokens.CreatePersonalAccessToken(request);
 
       if (result.IsSuccess)
       {
@@ -83,7 +83,7 @@ public partial class PersonalAccessTokens
     {
       try
       {
-        var result = await ControlrApi.PersonalAccessTokens.DeletePersonalAccessToken(personalAccessToken.Id);
+        var result = await ControlrApi.Internal.PersonalAccessTokens.DeletePersonalAccessToken(personalAccessToken.Id);
         if (result.IsSuccess)
         {
           await LoadPersonalAccessTokens();
@@ -106,7 +106,7 @@ public partial class PersonalAccessTokens
     _isLoading = true;
     try
     {
-      var result = await ControlrApi.PersonalAccessTokens.GetPersonalAccessTokens();
+      var result = await ControlrApi.Internal.PersonalAccessTokens.GetPersonalAccessTokens();
       if (result.IsSuccess)
       {
         _personalAccessTokens = result.Value;
@@ -159,7 +159,7 @@ public partial class PersonalAccessTokens
     try
     {
       var updateRequest = new UpdatePersonalAccessTokenRequestDto(newTokenName.Trim());
-      var updateResult = await ControlrApi.PersonalAccessTokens.UpdatePersonalAccessToken(personalAccessToken.Id, updateRequest);
+      var updateResult = await ControlrApi.Internal.PersonalAccessTokens.UpdatePersonalAccessToken(personalAccessToken.Id, updateRequest);
       if (updateResult.IsSuccess)
       {
         await LoadPersonalAccessTokens();

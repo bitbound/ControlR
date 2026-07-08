@@ -17,6 +17,7 @@ public class RemoteLogsViewModelTests
   private readonly TestUiDispatcher _dispatcher;
   private readonly XunitLogger<RemoteLogsViewModel> _logger;
   private readonly Mock<IControlrApi> _mockApi;
+  private readonly Mock<IControlrInternalApi> _mockInternalApi;
   private readonly Mock<IDeviceFileSystemApi> _mockFileSystemApi;
   private readonly FakeSnackbar _snackbar;
   private readonly FakeTimeProvider _timeProvider;
@@ -29,9 +30,12 @@ public class RemoteLogsViewModelTests
     _dispatcher = new TestUiDispatcher();
     _logger = new XunitLogger<RemoteLogsViewModel>(testOutputHelper);
 
-    _mockApi = new Mock<IControlrApi>(MockBehavior.Loose) { DefaultValue = DefaultValue.Mock };
     _mockFileSystemApi = new Mock<IDeviceFileSystemApi>();
-    _mockApi.SetupGet(x => x.DeviceFileSystem).Returns(_mockFileSystemApi.Object);
+    _mockInternalApi = new Mock<IControlrInternalApi>(MockBehavior.Loose) { DefaultValue = DefaultValue.Mock };
+    _mockInternalApi.SetupGet(x => x.DeviceFileSystem).Returns(_mockFileSystemApi.Object);
+
+    _mockApi = new Mock<IControlrApi>(MockBehavior.Loose) { DefaultValue = DefaultValue.Mock };
+    _mockApi.SetupGet(x => x.Internal).Returns(_mockInternalApi.Object);
   }
 
   [Fact]

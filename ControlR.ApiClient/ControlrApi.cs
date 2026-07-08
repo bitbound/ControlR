@@ -7,7 +7,13 @@ namespace ControlR.ApiClient;
 
 public interface IControlrApi
 {
-  IAgentUpdateApi AgentUpdate { get; }
+  IControlrInternalApi Internal { get; }
+  IControlrV1Api V1 { get; }
+  IControlrPublicApi Public { get; }
+}
+
+public interface IControlrInternalApi
+{
   IAuthApi Auth { get; }
   IDesktopPreviewApi DesktopPreview { get; }
   IDeviceFileSystemApi DeviceFileSystem { get; }
@@ -25,7 +31,6 @@ public interface IControlrApi
   IServerStatsApi ServerStats { get; }
   IServiceAccountsApi ServiceAccounts { get; }
   ITagsApi Tags { get; }
-  ITenantsApi Tenants { get; }
   ITenantSettingsApi TenantSettings { get; }
   ITestEmailApi TestEmail { get; }
   IUserPreferencesApi UserPreferences { get; }
@@ -37,41 +42,26 @@ public interface IControlrApi
   IVersionApi Version { get; }
 }
 
+public interface IControlrV1Api
+{
+  IV1InstallerKeysApi InstallerKeys { get; }
+  IV1LogonTokensApi LogonTokens { get; }
+  IV1TenantsApi Tenants { get; }
+}
+
+public interface IControlrPublicApi
+{
+  IAgentUpdateApi AgentUpdate { get; }
+  IPublicInstallerKeysApi InstallerKeys { get; }
+  IPublicInvitesApi Invites { get; }
+}
+
 public partial class ControlrApi(
   HttpClient httpClient,
   ControlrApiClientAuthState authState,
   IBearerTokenRefresher bearerTokenRefresher,
   ILogger<ControlrApi> logger,
-  IOptions<ControlrApiClientOptions> options) :
-  IControlrApi,
-  IAgentUpdateApi,
-  IAuthApi,
-  IDesktopPreviewApi,
-  IDeviceFileSystemApi,
-  IDeviceTagsApi,
-  IDevicesApi,
-  IEffectiveUserPreferencesApi,
-  IInstallerKeysApi,
-  IInvitesApi,
-  ILogonTokensApi,
-  IPersonalAccessTokensApi,
-  IPublicRegistrationSettingsApi,
-  IRolesApi,
-  IServerAlertApi,
-  IServerLogsApi,
-  IServerStatsApi,
-  IServiceAccountsApi,
-  ITagsApi,
-  ITenantsApi,
-  ITenantSettingsApi,
-  ITestEmailApi,
-  IUserPreferencesApi,
-  IUserRolesApi,
-  IUserStorageApi,
-  IUserServerSettingsApi,
-  IUserTagsApi,
-  IUsersApi,
-  IVersionApi
+  IOptions<ControlrApiClientOptions> options) : IControlrApi
 {
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
@@ -79,36 +69,23 @@ public partial class ControlrApi(
   private readonly ILogger<ControlrApi> _logger = logger;
   private readonly IOptions<ControlrApiClientOptions> _options = options;
 
-  public IAgentUpdateApi AgentUpdate => this;
-  public IAuthApi Auth => this;
-  public IDesktopPreviewApi DesktopPreview => this;
-  public IDeviceFileSystemApi DeviceFileSystem => this;
-  public IDevicesApi Devices => this;
-  public IDeviceTagsApi DeviceTags => this;
-  public IEffectiveUserPreferencesApi EffectiveUserPreferences => this;
-  public IInstallerKeysApi InstallerKeys => this;
-  public IInvitesApi Invites => this;
-  public ILogonTokensApi LogonTokens => this;
-  public IPersonalAccessTokensApi PersonalAccessTokens => this;
-  public IPublicRegistrationSettingsApi PublicRegistrationSettings => this;
-  public IRolesApi Roles => this;
-  public IServerAlertApi ServerAlert => this;
-  public IServerLogsApi ServerLogs => this;
-  public IServerStatsApi ServerStats => this;
-  public IServiceAccountsApi ServiceAccounts => this;
-  public ITagsApi Tags => this;
-  public ITenantsApi Tenants => this;
-  public ITenantSettingsApi TenantSettings => this;
-  public ITestEmailApi TestEmail => this;
-  public IUserPreferencesApi UserPreferences => this;
-  public IUserRolesApi UserRoles => this;
-  public IUsersApi Users => this;
-  public IUserServerSettingsApi UserServerSettings => this;
-  public IUserStorageApi UserStorage => this;
-  public IUserTagsApi UserTags => this;
-  public IVersionApi Version => this;
+  private InternalApi? _internal;
+  private V1Api? _v1;
+  private PublicApi? _public;
 
-  private async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
+  internal HttpClient HttpClient => _client;
+  internal ILogger<ControlrApi> Logger => _logger;
+  internal IOptions<ControlrApiClientOptions> Options => _options;
+
+  internal InternalApi InternalApi => _internal ??= new(this);
+  internal V1Api V1Api => _v1 ??= new(this);
+  internal PublicApi PublicApi => _public ??= new(this);
+
+  IControlrInternalApi IControlrApi.Internal => InternalApi;
+  IControlrV1Api IControlrApi.V1 => V1Api;
+  IControlrPublicApi IControlrApi.Public => PublicApi;
+
+  internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
   {
     try
     {
@@ -156,7 +133,7 @@ public partial class ControlrApi(
     }
   }
 
-  private async Task<ApiResult<T>> ExecuteApiCall<T>(Func<Task<T?>> func, bool allowAutoRefresh = true)
+  internal async Task<ApiResult<T>> ExecuteApiCall<T>(Func<Task<T?>> func, bool allowAutoRefresh = true)
   {
     try
     {

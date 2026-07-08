@@ -294,7 +294,7 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
     {
       IsLoadingContents = true;
       var request = new GetLogFileContentsRequestDto(node.FullPath);
-      var result = await _controlrApi.DeviceFileSystem.GetLogFileContents(_deviceState.CurrentDevice.Id, request);
+      var result = await _controlrApi.Internal.DeviceFileSystem.GetLogFileContents(_deviceState.CurrentDevice.Id, request);
 
       if (token.IsCancellationRequested)
       {
@@ -353,7 +353,7 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
       OnPropertyChanged(nameof(IsRefreshContentsButtonEnabled));
       OnPropertyChanged(nameof(SelectedFileName));
 
-      var result = await _controlrApi.DeviceFileSystem.GetLogFiles(_deviceState.CurrentDevice.Id);
+      var result = await _controlrApi.Internal.DeviceFileSystem.GetLogFiles(_deviceState.CurrentDevice.Id);
       if (!result.IsSuccess || result.Value is null)
       {
         _logger.LogError("Failed to load log files: {Error}", result.Reason);

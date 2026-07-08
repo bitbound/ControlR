@@ -16,7 +16,7 @@ internal class RoleStore(
 
   protected override async Task RefreshImpl()
   {
-    var getResult = await ControlrApi.Roles.GetAllRoles();
+    var getResult = await ControlrApi.Internal.Roles.GetAllRoles();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

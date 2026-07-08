@@ -3,7 +3,7 @@
 @attribute [Authorize(Roles = RoleNames.TenantAdministrator)]
 @inject ILogger<Invite> Logger
 @inject IInviteStore InviteStore
-@inject IControlrApi ControlrApi
+@inject IControlrInternalApi ControlrApi
 @inject ISnackbar Snackbar
 @inject IClipboardManager ClipboardManager
 @inject IDialogService DialogService

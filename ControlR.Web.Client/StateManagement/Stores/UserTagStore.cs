@@ -17,7 +17,7 @@ public class UserTagStore(IControlrApi controlrApi, ISnackbar snackbar, ILogger<
 
   protected override async Task RefreshImpl()
   {
-    var getResult = await ControlrApi.UserTags.GetAllowedTags();
+    var getResult = await ControlrApi.Internal.UserTags.GetAllowedTags();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

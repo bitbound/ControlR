@@ -178,10 +178,10 @@ public class ControlrAuthSessionIntegrationTests(ITestOutputHelper testOutput)
         AuthState,
         bearerTokenRefresher,
         NullLogger<ControlrApi>.Instance,
-        new OptionsWrapper<ControlrApiClientOptions>(options));
+        new OptionsWrapper<ControlrApiClientOptions>(options)).InternalApi;
     }
 
-    public IControlrApi Api { get; }
+    public IControlrInternalApi Api { get; }
     public ControlrAuthSession AuthSession { get; }
     public ControlrApiClientAuthState AuthState { get; }
 

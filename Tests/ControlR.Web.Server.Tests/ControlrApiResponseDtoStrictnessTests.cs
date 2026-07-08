@@ -170,7 +170,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
     Assert.Contains(nameof(DeviceResponseDto.Name), result.Reason, StringComparison.Ordinal);
   }
 
-  private static ControlrApi CreateClient(
+  private static IControlrInternalApi CreateClient(
     string jsonResponse,
     bool disableResponseDtoStrictness,
     bool disableStreamingResponseDtoStrictness)
@@ -190,12 +190,14 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
     var authState = new ControlrApiClientAuthState();
     var httpClientFactory = new StaticHttpClientFactory(httpClient);
 
-    return new ControlrApi(
+    var controlrApi = new ControlrApi(
       httpClient,
       authState,
       new BearerTokenRefresher(authState, httpClientFactory, TimeProvider.System),
       NullLogger<ControlrApi>.Instance,
       options);
+
+    return controlrApi.InternalApi;
   }
 
   private static DeviceResponseDto CreateDeviceResponseDto(int index)
