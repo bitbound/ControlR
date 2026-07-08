@@ -260,7 +260,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     client.DefaultRequestHeaders.Remove(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName);
     client.DefaultRequestHeaders.Add(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName, fullToken);
 
-    var response = await client.GetAsync("/api/users", TestContext.Current.CancellationToken);
+    var response = await client.GetAsync("/internal/users", TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
   }

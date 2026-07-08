@@ -37,7 +37,7 @@ public class LogonTokenDeviceScopeTests(ITestOutputHelper testOutput)
     // Request logon token for primary device
     httpClient.DefaultRequestHeaders.Add(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName, pat);
     var logonTokenRequest = new LogonTokenRequestDto(primaryDeviceId, ExpirationMinutes: 5);
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest, cancellationToken: TestContext.Current.CancellationToken);
+    var logonTokenResponse = await httpClient.PostAsJsonAsync("/internal/logon-tokens", logonTokenRequest, cancellationToken: TestContext.Current.CancellationToken);
     logonTokenResponse.EnsureSuccessStatusCode();
     var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>(TestContext.Current.CancellationToken);
     Assert.NotNull(logonTokenResult);
