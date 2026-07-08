@@ -3,6 +3,7 @@ using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Common.Services;
 using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Dtos;
+using ControlR.Libraries.Api.Contracts.Dtos.Public;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Primitives;

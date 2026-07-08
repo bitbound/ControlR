@@ -1,3 +1,5 @@
+using ControlR.Libraries.Api.Contracts.Dtos.Internal;
+
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 
 public record CreateInstallerKeyResponseDto(
