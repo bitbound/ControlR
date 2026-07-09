@@ -250,7 +250,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services
       .AddIdentityApiEndpoints<AppUser>(options =>
       {
-        options.User.RequireUniqueEmail = true;
+        options.User.RequireUniqueEmail = appOptions.RequireUserUniqueEmail;
         options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
         options.Password.RequiredLength = 8;
         options.Password.RequireNonAlphanumeric = false;

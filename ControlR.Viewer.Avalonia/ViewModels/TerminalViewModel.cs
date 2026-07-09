@@ -195,7 +195,7 @@ public partial class TerminalViewModel : ViewModelBase<TerminalView>, ITerminalV
       }
 
       _currentCompletionResponse = new PwshCompletionsResponseDto(
-        lastResponse!.ReplacementIndex,
+        lastResponse.ReplacementIndex,
         lastResponse.ReplacementLength,
         [.. allMatches],
         false,

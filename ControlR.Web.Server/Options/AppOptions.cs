@@ -207,6 +207,13 @@ public class AppOptions
   public bool RequireUserEmailConfirmation { get; init; }
 
   /// <summary>
+  /// Whether each user must have a unique email address.
+  /// When set to false, multiple accounts can share the same email, or they can have no email at all.
+  /// Defaults to true in production, false in development.
+  /// </summary>
+  public bool RequireUserUniqueEmail { get; init; } = true;
+
+  /// <summary>
   /// Maximum failed service-account authentication attempts allowed per limiter window.
   /// Set to 0 or less to disable the pre-authentication limiter for x-api-key requests.
   /// </summary>

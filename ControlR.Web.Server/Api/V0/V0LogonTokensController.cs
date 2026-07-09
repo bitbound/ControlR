@@ -12,6 +12,7 @@ public class V0LogonTokensController : ControllerBase
   [HttpPost]
   public async Task<ActionResult<LogonTokenResponseDto>> Create(
     [FromServices] AppDb appDb,
+    [FromServices] UserManager<AppUser> userManager,
     [FromServices] ILogonTokenProvider logonTokenProvider,
     [FromBody] IssueLogonTokenRequestDto request)
   {
@@ -21,7 +22,37 @@ public class V0LogonTokensController : ControllerBase
       return BadRequest("Device not found");
     }
 
-    if (request.Kind == LogonTokenKind.User)
+    Guid? userId = request.UserId;
+
+    if (request.Kind == LogonTokenKind.Service)
+    {
+      if (string.IsNullOrWhiteSpace(request.UserCorrelationId))
+      {
+        return BadRequest("UserCorrelationId is required for service logon tokens.");
+      }
+
+      var username = $"svc-{request.UserCorrelationId.Trim()}";
+      var guestUser = await userManager.Users
+        .FirstOrDefaultAsync(u => u.UserName == username && u.TenantId == request.TenantId);
+
+      if (guestUser is null)
+      {
+        guestUser = new AppUser
+        {
+          UserName = username,
+          Email = $"{username}@controlr.local",
+          TenantId = request.TenantId
+        };
+        var createResult = await userManager.CreateAsync(guestUser);
+        if (!createResult.Succeeded)
+        {
+          return BadRequest("Failed to create guest user.");
+        }
+      }
+
+      userId = guestUser.Id;
+    }
+    else if (request.Kind == LogonTokenKind.User)
     {
       if (!request.UserId.HasValue)
       {
@@ -38,7 +69,7 @@ public class V0LogonTokensController : ControllerBase
     var logonToken = await logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
       request.TenantId,
-      request.UserId,
+      userId,
       request.Kind,
       request.ExpirationMinutes);
 

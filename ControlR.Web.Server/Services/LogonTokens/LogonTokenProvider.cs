@@ -124,25 +124,16 @@ public class LogonTokenProvider(
       var cacheKey = GetCacheKey(token);
       _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
 
-      if (logonToken.Kind == LogonTokenKind.User)
-      {
-        _logger.LogInformation(
-          "Successfully validated and consumed logon token for user {UserId} on device {DeviceId}",
-          logonToken.UserId, deviceId);
-
-        return LogonTokenValidationResult.UserSuccess(
-          validationResult.User!.Id,
-          logonToken.TenantId,
-          validationResult.User.UserName,
-          validationResult.User.UserName,
-          validationResult.User.Email);
-      }
-
       _logger.LogInformation(
-        "Successfully validated and consumed service logon token for device {DeviceId}",
-        deviceId);
+        "Validated and consumed {Kind} logon token for user {UserId} on device {DeviceId}",
+        logonToken.Kind, logonToken.UserId, deviceId);
 
-      return LogonTokenValidationResult.ServiceSuccess(logonToken.TenantId);
+      return LogonTokenValidationResult.Success(
+        validationResult.User.Id,
+        logonToken.TenantId,
+        validationResult.User.UserName,
+        validationResult.User.UserName,
+        validationResult.User.Email);
     }
     finally
     {
@@ -164,27 +155,18 @@ public class LogonTokenProvider(
         return Result.Fail<LogonTokenValidationResult>(validationResult.ErrorMessage!);
       }
 
-      if (validationResult.Token.Kind == LogonTokenKind.User)
-      {
-        _logger.LogInformation(
-          "Successfully validated logon token for user {UserId}",
-          validationResult.User!.Id);
-
-        var result = LogonTokenValidationResult.UserSuccess(
-          validationResult.User.Id,
-          validationResult.Token.TenantId,
-          validationResult.User.UserName,
-          validationResult.User.UserName,
-          validationResult.User.Email);
-
-        return Result.Ok(result);
-      }
-
       _logger.LogInformation(
-        "Successfully validated service logon token");
+        "Validated {Kind} logon token for user {UserId}",
+        validationResult.Token.Kind, validationResult.User.Id);
 
-      return Result.Ok(LogonTokenValidationResult.ServiceSuccess(
-        validationResult.Token.TenantId));
+      var result = LogonTokenValidationResult.Success(
+        validationResult.User.Id,
+        validationResult.Token.TenantId,
+        validationResult.User.UserName,
+        validationResult.User.UserName,
+        validationResult.User.Email);
+
+      return Result.Ok(result);
     }
     catch (Exception ex)
     {
@@ -219,11 +201,6 @@ public class LogonTokenProvider(
       return new TokenValidationResult(false, "Token has expired", logonToken, null);
     }
 
-    if (logonToken.Kind == LogonTokenKind.Service)
-    {
-      return new TokenValidationResult(true, null, logonToken, null);
-    }
-
     await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
     var user = await dbContext.Users
       .Where(u => u.Id == logonToken.UserId && u.TenantId == logonToken.TenantId)
@@ -244,22 +221,19 @@ public class LogonTokenProvider(
 
   private record UserInfo(Guid Id, string? UserName, string? Email);
   
-  private class TokenValidationResult
+  private class TokenValidationResult(
+    bool isSuccess, 
+    string? errorMessage, 
+    LogonTokenModel? token, 
+    UserInfo? user)
   {
-    public TokenValidationResult(bool isSuccess, string? errorMessage, LogonTokenModel? token, UserInfo? user)
-    {
-      IsSuccess = isSuccess;
-      ErrorMessage = errorMessage;
-      Token = token;
-      User = user;
-    }
 
-    public string? ErrorMessage { get; }
+    public string? ErrorMessage { get; } = errorMessage;
 
-    [MemberNotNullWhen(true, nameof(Token))]
-    public bool IsSuccess { get; }
-    public LogonTokenModel? Token { get; }
+    [MemberNotNullWhen(true, nameof(Token), nameof(User))]
+    public bool IsSuccess { get; } = isSuccess;
+    public LogonTokenModel? Token { get; } = token;
 
-    public UserInfo? User { get; }
+    public UserInfo? User { get; } = user;
   }
 }

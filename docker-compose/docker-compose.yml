@@ -189,6 +189,8 @@ services:
       # Whether users must confirm their email address before being allowed to log in.
       # If true, you must also configure SMTP settings below.
       ControlR_AppOptions__RequireUserEmailConfirmation: true
+      # Whether each user must have a unique email address.
+      ControlR_AppOptions__RequireUserUniqueEmail: true
 
       # Disable all email sending from the application.
       ControlR_AppOptions__DisableEmailSending: false

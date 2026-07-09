@@ -6824,6 +6824,7 @@
           "deviceId",
           "tenantId",
           "userId",
+          "userCorrelationId",
           "kind"
         ],
         "type": "object",
@@ -6842,6 +6843,12 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "userCorrelationId": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "kind": {
             "$ref": "#/components/schemas/LogonTokenKind"

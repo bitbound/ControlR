@@ -3,10 +3,12 @@ using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.V0;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
+using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -56,8 +58,9 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     var result = await controller.Create(
       services.GetRequiredService<AppDb>(),
+      services.GetRequiredService<UserManager<AppUser>>(),
       services.GetRequiredService<ILogonTokenProvider>(),
-      new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id, LogonTokenKind.User));
+      new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, LogonTokenKind.User));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);

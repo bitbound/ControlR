@@ -8,7 +8,7 @@ public class LogonTokenValidationResult
   public string? DisplayName { get; set; }
   public string? Email { get; set; }
   public string? ErrorMessage { get; set; }
-  [MemberNotNullWhen(true, nameof(TenantId))]
+  [MemberNotNullWhen(true, nameof(UserId), nameof(UserName), nameof(TenantId))]
   public bool IsValid { get; set; }
   public LogonTokenKind Kind { get; set; }
   public Guid? TenantId { get; set; }
@@ -25,7 +25,7 @@ public class LogonTokenValidationResult
     };
   }
 
-  public static LogonTokenValidationResult UserSuccess(
+  public static LogonTokenValidationResult Success(
     Guid userId,
     Guid tenantId,
     string? userName,
@@ -35,21 +35,10 @@ public class LogonTokenValidationResult
     return new LogonTokenValidationResult
     {
       IsValid = true,
-      Kind = LogonTokenKind.User,
       UserId = userId,
       UserName = userName,
       DisplayName = displayName,
       Email = email,
-      TenantId = tenantId
-    };
-  }
-
-  public static LogonTokenValidationResult ServiceSuccess(Guid tenantId)
-  {
-    return new LogonTokenValidationResult
-    {
-      IsValid = true,
-      Kind = LogonTokenKind.Service,
       TenantId = tenantId
     };
   }

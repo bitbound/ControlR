@@ -39,17 +39,12 @@ public class LogonTokenAuthenticationHandler(
       return AuthenticateResult.Fail(tokenValidation.ErrorMessage ?? "Invalid logon token.");
     }
 
-    if (tokenValidation.Kind == LogonTokenKind.Service)
-    {
-      return await AuthenticateServiceToken(tokenValidation, deviceId);
-    }
-
     if (!tokenValidation.UserId.HasValue)
     {
-      return AuthenticateResult.Fail("User ID is required for user logon token.");
+      return AuthenticateResult.Fail("User ID is required for logon token.");
     }
 
-    var user = await _userManager.FindByIdAsync(tokenValidation.UserId!.Value.ToString());
+    var user = await _userManager.FindByIdAsync(tokenValidation.UserId.Value.ToString());
     if (user is null)
     {
       return AuthenticateResult.Fail("User not found for logon token.");
@@ -65,6 +60,11 @@ public class LogonTokenAuthenticationHandler(
       new(UserClaimTypes.DeviceSessionScope, deviceId.ToString()),
     };
 
+    if (tokenValidation.Kind == LogonTokenKind.Service)
+    {
+      claims.Add(new Claim(PrincipalClaimTypes.PrincipalType, PrincipalClaimTypes.ServiceToken));
+    }
+
     if (!string.IsNullOrWhiteSpace(user.Email))
     {
       claims.Add(new Claim(ClaimTypes.Email, user.Email));
@@ -75,28 +75,6 @@ public class LogonTokenAuthenticationHandler(
     {
       claims.Add(new Claim(ClaimTypes.Role, role));
     }
-
-    var identity = new ClaimsIdentity(claims, Scheme.Name);
-    var principal = new ClaimsPrincipal(identity);
-    var ticket = new AuthenticationTicket(principal, Scheme.Name);
-
-    await Context.SignInAsync(IdentityConstants.ApplicationScheme, principal);
-
-    return AuthenticateResult.Success(ticket);
-  }
-
-  private async Task<AuthenticateResult> AuthenticateServiceToken(
-    LogonTokenValidationResult tokenValidation,
-    Guid deviceId)
-  {
-    var claims = new List<Claim>
-    {
-      new(UserClaimTypes.TenantId, tokenValidation.TenantId!.Value.ToString()),
-      new(ClaimTypes.Name, "Service"),
-      new(UserClaimTypes.AuthenticationMethod, LogonTokenAuthenticationSchemeOptions.DefaultScheme),
-      new(UserClaimTypes.DeviceSessionScope, deviceId.ToString()),
-      new(PrincipalClaimTypes.PrincipalType, PrincipalClaimTypes.ServiceToken),
-    };
 
     var identity = new ClaimsIdentity(claims, Scheme.Name);
     var principal = new ClaimsPrincipal(identity);
