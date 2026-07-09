@@ -82,7 +82,10 @@ app.MapControllers();
 
 if (appOptions.EnableInteractiveBearerLogin || isOpenApiBuild)
 {
-  var authGroup = app.MapGroup(HttpConstants.AuthEndpoint);
+  var authGroup = app
+    .MapGroup(HttpConstants.AuthEndpoint)
+    .WithTags("Auth");
+
   authGroup
     .MapIdentityApi<AppUser>()
     .AddEndpointFilter<IEndpointConventionBuilder, IdentityApiRegisterFilter>();
@@ -97,7 +100,9 @@ app.UseWhen(
       .AddAdditionalAssemblies(typeof(MainLayout).Assembly);
   });
 
-app.MapAdditionalIdentityEndpoints();
+app
+  .MapAdditionalIdentityEndpoints()
+  .WithTags("Account");
 
 app.MapHub<ViewerHub>(AppConstants.ViewerHubPath);
 

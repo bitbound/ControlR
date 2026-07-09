@@ -8,7 +8,7 @@
     "/api/auth/register": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "requestBody": {
           "content": {
@@ -53,7 +53,7 @@
     "/api/auth/login": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "parameters": [
           {
@@ -108,7 +108,7 @@
     "/api/auth/refresh": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "requestBody": {
           "content": {
@@ -147,7 +147,7 @@
     "/api/auth/confirmEmail": {
       "get": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "operationId": "MapIdentityApi-/api/auth/confirmEmail",
         "parameters": [
@@ -195,7 +195,7 @@
     "/api/auth/resendConfirmationEmail": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "requestBody": {
           "content": {
@@ -227,7 +227,7 @@
     "/api/auth/forgotPassword": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "requestBody": {
           "content": {
@@ -269,7 +269,7 @@
     "/api/auth/resetPassword": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "requestBody": {
           "content": {
@@ -311,7 +311,7 @@
     "/api/auth/manage/2fa": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "requestBody": {
           "content": {
@@ -363,7 +363,7 @@
     "/api/auth/manage/info": {
       "get": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "responses": {
           "200": {
@@ -403,7 +403,7 @@
       },
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Auth"
         ],
         "requestBody": {
           "content": {
@@ -455,7 +455,7 @@
     "/Account/PerformExternalLogin": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Account"
         ],
         "requestBody": {
           "content": {
@@ -526,7 +526,7 @@
     "/Account/Logout": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Account"
         ],
         "requestBody": {
           "content": {
@@ -569,7 +569,7 @@
     "/Account/PasskeyCreationOptions": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Account"
         ],
         "responses": {
           "200": {
@@ -581,7 +581,7 @@
     "/Account/PasskeyRequestOptions": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Account"
         ],
         "parameters": [
           {
@@ -602,7 +602,7 @@
     "/Account/Manage/LinkExternalLogin": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Account"
         ],
         "requestBody": {
           "content": {
@@ -645,7 +645,7 @@
     "/Account/Manage/DownloadPersonalData": {
       "post": {
         "tags": [
-          "ControlR.Web.Server"
+          "Account"
         ],
         "responses": {
           "200": {
@@ -8157,10 +8157,10 @@
   },
   "tags": [
     {
-      "name": "ControlR.Web.Server"
+      "name": "Auth"
     },
     {
-      "name": "Auth"
+      "name": "Account"
     },
     {
       "name": "DesktopPreview"
