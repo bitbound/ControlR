@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Public;
+namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 public record AcceptInvitationResponseDto(
   [property: MemberNotNullWhen(false, nameof(AcceptInvitationResponseDto.ErrorMessage))]

@@ -25,4 +25,15 @@ public class V0InstallerKeysController(IAgentInstallerKeyManager installerKeyMan
 
     return Ok(dto);
   }
+
+  [HttpPost("increment-usage/{keyId:guid}")]
+  [AllowAnonymous]
+  public async Task<IActionResult> IncrementUsage(
+      [FromRoute] Guid keyId,
+      [FromQuery] Guid? deviceId)
+  {
+    var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+    var result = await _installerKeyManager.IncrementUsage(keyId, deviceId, remoteIp);
+    return result.ToActionResult();
+  }
 }

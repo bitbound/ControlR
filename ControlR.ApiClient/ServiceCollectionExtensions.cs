@@ -14,8 +14,8 @@ public static class ServiceCollectionExtensions
   /// </para>
   /// <para>
   ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
-  ///   It provides <see cref="IControlrInternalApi"/>, <see cref="IControlrV0Api"/>, and <see cref="IControlrPublicApi"/>
-  ///   via the <c>Internal</c>, <c>V0</c>, and <c>Public</c> properties.
+  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV0Api"/>
+  ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
   ///   The sub-interfaces are also registered individually for backward compatibility.
@@ -72,7 +72,6 @@ public static class ServiceCollectionExtensions
     services.TryAddTransient<IControlrApi>(sp => sp.GetRequiredService<ControlrApi>());
     services.TryAddTransient<IControlrInternalApi>(sp => sp.GetRequiredService<IControlrApi>().Internal);
     services.TryAddTransient<IControlrV0Api>(sp => sp.GetRequiredService<IControlrApi>().V0);
-    services.TryAddTransient<IControlrPublicApi>(sp => sp.GetRequiredService<IControlrApi>().Public);
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
     return services;
@@ -87,8 +86,8 @@ public static class ServiceCollectionExtensions
   /// </para>
   /// <para>
   ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
-  ///   It provides <see cref="IControlrInternalApi"/>, <see cref="IControlrV0Api"/>, and <see cref="IControlrPublicApi"/>
-  ///   via the <c>Internal</c>, <c>V0</c>, and <c>Public</c> properties.
+  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV0Api"/>
+  ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
   ///   The sub-interfaces are also registered individually for backward compatibility.
@@ -149,7 +148,6 @@ public static class ServiceCollectionExtensions
     services.TryAddTransient<IControlrApi>(sp => sp.GetRequiredService<ControlrApi>());
     services.TryAddTransient<IControlrInternalApi>(sp => sp.GetRequiredService<IControlrApi>().Internal);
     services.TryAddTransient<IControlrV0Api>(sp => sp.GetRequiredService<IControlrApi>().V0);
-    services.TryAddTransient<IControlrPublicApi>(sp => sp.GetRequiredService<IControlrApi>().Public);
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
 
@@ -165,8 +163,8 @@ public static class ServiceCollectionExtensions
   /// </para>
   /// <para>
   ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
-  ///   It provides <see cref="IControlrInternalApi"/>, <see cref="IControlrV0Api"/>, and <see cref="IControlrPublicApi"/>
-  ///   via the <c>Internal</c>, <c>V0</c>, and <c>Public</c> properties.
+  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV0Api"/>
+  ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
   ///   The sub-interfaces are also registered individually for backward compatibility.

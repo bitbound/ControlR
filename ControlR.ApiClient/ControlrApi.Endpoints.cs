@@ -1,14 +1,13 @@
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Public;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.ApiClient;
 
-public interface IAgentUpdateApi
+public interface IInternalAgentUpdateApi
 {
   Task<ApiResult<BundleMetadataDto>> GetBundleMetadata(RuntimeId runtime, CancellationToken cancellationToken = default);
 }
@@ -84,10 +83,6 @@ public interface IInstallerKeysApi
 public interface IV0InstallerKeysApi
 {
   Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
-}
-
-public interface IPublicInstallerKeysApi
-{
   Task<ApiResult> IncrementInstallerKeyUsage(Guid keyId, Guid? deviceId = null, CancellationToken cancellationToken = default);
 }
 
@@ -96,10 +91,6 @@ public interface IInvitesApi
   Task<ApiResult<TenantInviteResponseDto>> CreateTenantInvite(TenantInviteRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteTenantInvite(Guid inviteId, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantInviteResponseDto[]>> GetPendingTenantInvites(CancellationToken cancellationToken = default);
-}
-
-public interface IPublicInvitesApi
-{
   Task<ApiResult<AcceptInvitationResponseDto>> AcceptInvitation(AcceptInvitationRequestDto request, CancellationToken cancellationToken = default);
 }
 

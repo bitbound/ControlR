@@ -33,6 +33,7 @@ public static class HttpConstants
 
   public static class Internal
   {
+    public const string AgentUpdateEndpoint = "/internal/agent-update";
     public const string InstallerKeysEndpoint = "/internal/installer-keys";
     public const string InvitesEndpoint = "/internal/invites";
     public const string LogonTokensEndpoint = "/internal/logon-tokens";
@@ -40,14 +41,9 @@ public static class HttpConstants
     public const string UsersEndpoint = "/internal/users";
   }
 
-  public static class Public
-  {
-    public const string AgentUpdateEndpoint = "/public/agent-update";
-    public const string InvitesEndpoint = "/public/invites";
-  }
-
   public static class V0
   {
+    public const string DevicesEndpoint = "/v0/devices";
     public const string InstallerKeysEndpoint = "/v0/installer-keys";
     public const string LogonTokensEndpoint = "/v0/logon-tokens";
     public const string TenantsEndpoint = "/v0/tenants";

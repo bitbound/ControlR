@@ -5,19 +5,16 @@ using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.V0;
 
-[Route(HttpConstants.DevicesEndpoint)]
+[Route(HttpConstants.V0.DevicesEndpoint)]
 [ApiController]
-[Authorize]
-public class DevicesController(
-  IDeviceAccessScopeResolver deviceAccessScopeResolver) : ControllerBase
+[Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+public class V0DevicesController() : ControllerBase
 {
-  private readonly IDeviceAccessScopeResolver _deviceAccessScopeResolver = deviceAccessScopeResolver;
 
   [HttpPost]
   [AllowAnonymous]
-  [Obsolete("Use /public/devices endpoint instead.")]
   public async Task<ActionResult<DeviceResponseDto>> CreateDevice(
     [FromBody] CreateDeviceRequestDto requestDto,
     [FromServices] AppDb appDb,
@@ -25,7 +22,7 @@ public class DevicesController(
     [FromServices] IAgentInstallerKeyManager keyManager,
     [FromServices] IDeviceManager deviceManager,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<DevicesController> logger,
+    [FromServices] ILogger<V0DevicesController> logger,
     [FromServices] IEd25519KeyProvider keyProvider)
   {
     using var logScope = logger.BeginScope(requestDto);
@@ -37,7 +34,6 @@ public class DevicesController(
       return BadRequest();
     }
 
-    // Validate public key format if provided.
     if (!string.IsNullOrWhiteSpace(requestDto.PublicKey))
     {
       var keyValidationResult = keyProvider.ValidatePublicKeyBase64(requestDto.PublicKey);
@@ -51,7 +47,6 @@ public class DevicesController(
       }
     }
 
-    // Validate key without consuming usage. We'll consume at the end if all checks pass.
     var keyResult = await keyManager.ValidateKey(requestDto.InstallerKeyId, requestDto.InstallerKeySecret);
     if (!keyResult.IsSuccess)
     {
@@ -89,7 +84,6 @@ public class DevicesController(
       }
     }
 
-    // All checks passed - now consume the key usage
     var consumeResult = await keyManager.ValidateAndConsumeKey(
       requestDto.InstallerKeyId,
       requestDto.InstallerKeySecret,
@@ -117,28 +111,12 @@ public class DevicesController(
   [HttpDelete("{deviceId:guid}")]
   public async Task<IActionResult> DeleteDevice(
     [FromServices] AppDb appDb,
-    [FromServices] IAuthorizationService authorizationService,
     [FromRoute] Guid deviceId)
   {
-    if (!User.TryGetTenantId(out var tenantId))
-    {
-      return BadRequest("Tenant ID not found.");
-    }
-
-    var device = await appDb.Devices.FirstOrDefaultAsync(
-        x => x.Id == deviceId && x.TenantId == tenantId);
-
+    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
     if (device is null)
     {
       return NotFound();
-    }
-
-    // Single-device operations use the resource policy directly.
-    var authResult =
-      await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
-    if (!authResult.Succeeded)
-    {
-      return Forbid();
     }
 
     appDb.Devices.Remove(device);
@@ -152,16 +130,7 @@ public class DevicesController(
     [FromBody] DeleteDevicesRequestDto requestDto,
     CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
-    {
-      return BadRequest("Tenant ID not found.");
-    }
-
-    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId, cancellationToken);
-
-    // Authorized + existing devices (subset of input that user can delete).
     var authorizedDeviceIds = await appDb.Devices
-      .ApplyAccessScope(tenantId, accessScope)
       .Where(d => requestDto.DeviceIds.Contains(d.Id))
       .Select(d => d.Id)
       .ToListAsync(cancellationToken);
@@ -169,19 +138,18 @@ public class DevicesController(
     var authorizedIdSet = authorizedDeviceIds.ToHashSet();
 
     var deletedCount = await appDb.Devices
-      .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
+      .Where(x => authorizedIdSet.Contains(x.Id))
       .ExecuteDeleteAsync(cancellationToken);
 
     if (deletedCount == authorizedDeviceIds.Count)
     {
-      // All authorized devices were deleted.
       return new DeleteManyDevicesResponseDto(
         SuccessIds: [.. authorizedDeviceIds],
         FailureIds: [.. requestDto.DeviceIds.Except(authorizedIdSet)]);
     }
 
     var remainingIds = await appDb.Devices
-      .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
+      .Where(x => authorizedIdSet.Contains(x.Id))
       .Select(x => x.Id)
       .ToListAsync(cancellationToken);
 
@@ -196,25 +164,15 @@ public class DevicesController(
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider)
   {
-    IQueryable<Device> query = appDb.Devices.Include(x => x.Tags);
-
-    if (!User.TryGetTenantId(out var tenantId))
-    {
-      yield break;
-    }
-
-    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
-    query = query
-      .ApplyAccessScope(tenantId, accessScope)
+    var query = appDb.Devices
+      .Include(x => x.Tags)
       .AsSplitQuery()
       .OrderBy(x => x.CreatedAt);
 
-    var deviceStream = query.AsAsyncEnumerable();
-
-    await foreach (var device in deviceStream)
+    await foreach (var device in query.AsAsyncEnumerable())
     {
       var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-      yield return device.ToDto(isOutdated);
+      yield return device.ToV0Dto(isOutdated);
     }
   }
 
@@ -233,35 +191,24 @@ public class DevicesController(
 
     var authResult =
       await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
-
     if (!authResult.Succeeded)
     {
       return Forbid();
     }
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-    return device.ToDto(isOutdated);
+    return device.ToV0Dto(isOutdated);
   }
 
   [HttpGet("summary")]
   public async IAsyncEnumerable<DeviceSummaryDto> GetDeviceSummaries(
     [FromServices] AppDb appDb)
   {
-    IQueryable<Device> query = appDb.Devices;
+    var query = appDb.Devices.OrderBy(x => x.CreatedAt);
 
-    if (!User.TryGetTenantId(out var tenantId))
+    await foreach (var device in query.AsAsyncEnumerable())
     {
-      yield break;
-    }
-
-    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
-    query = query.ApplyAccessScope(tenantId, accessScope).OrderBy(x => x.CreatedAt);
-
-    var deviceStream = query.AsAsyncEnumerable();
-
-    await foreach (var device in deviceStream)
-    {
-      yield return device.ToSummaryDto();
+      yield return device.ToV0SummaryDto();
     }
   }
 
@@ -270,18 +217,10 @@ public class DevicesController(
     [FromBody] DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<DevicesController> logger)
+    [FromServices] ILogger<V0DevicesController> logger)
   {
-    if (!User.TryGetTenantId(out var tenantId))
-    {
-      return BadRequest("Tenant ID not found.");
-    }
-
-    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
-
     var isRelationalDatabase = appDb.Database.IsRelational();
-    var authorizedQuery = appDb.Devices.ApplyAccessScope(tenantId, accessScope!).AsQueryable();
-
+    var authorizedQuery = appDb.Devices.AsQueryable();
     var anyDevices = await authorizedQuery.AnyAsync();
 
     var filteredQuery = authorizedQuery
@@ -309,7 +248,7 @@ public class DevicesController(
     foreach (var device in devices)
     {
       var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-      pagedDtos.Add(device.ToDto(isOutdated));
+      pagedDtos.Add(device.ToV0Dto(isOutdated));
     }
 
     var response = new DeviceSearchResponseDto
@@ -325,14 +264,13 @@ public class DevicesController(
   }
 
   [HttpPatch("{deviceId:guid}/alias")]
-  [Authorize]
   public async Task<ActionResult<DeviceResponseDto>> UpdateDeviceAlias(
     [FromRoute] Guid deviceId,
     [FromBody] UpdateDeviceAliasRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<DevicesController> logger)
+    [FromServices] ILogger<V0DevicesController> logger)
   {
     if (deviceId != requestDto.DeviceId)
     {
@@ -363,7 +301,7 @@ public class DevicesController(
     await appDb.SaveChangesAsync();
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-    return device.ToDto(isOutdated);
+    return device.ToV0Dto(isOutdated);
   }
 
   private static async Task<DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)

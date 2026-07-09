@@ -1,6 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Api.Internal;
-using ControlR.Web.Server.Api.Public;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
@@ -194,7 +193,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     // Step 7: User2 accepts invite (moves back to Tenant A)
     using (var scope = testApp.CreateScope())
     {
-      var controller = scope.CreateController<PublicInvitesController>();
+      var controller = scope.CreateController<InternalInvitesController>();
 
       var tenantInvitesProvider = scope.ServiceProvider.GetRequiredService<ITenantInvitesProvider>();
 

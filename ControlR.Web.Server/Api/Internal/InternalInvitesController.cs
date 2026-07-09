@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.Internal;
@@ -8,6 +9,22 @@ namespace ControlR.Web.Server.Api.Internal;
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
 public class InternalInvitesController : ControllerBase
 {
+  [HttpPost("accept")]
+  [AllowAnonymous]
+  public async Task<ActionResult<AcceptInvitationResponseDto>> AcceptInvite(
+    [FromBody] AcceptInvitationRequestDto dto,
+    [FromServices] ITenantInvitesProvider tenantInvitesProvider)
+  {
+    var result = await tenantInvitesProvider.AcceptInvite(dto);
+
+    if (!result.IsSuccess)
+    {
+      return new AcceptInvitationResponseDto(false, result.Reason);
+    }
+
+    return result.Value;
+  }
+
   [HttpPost]
   public async Task<ActionResult<TenantInviteResponseDto>> Create(
     [FromBody] TenantInviteRequestDto dto,

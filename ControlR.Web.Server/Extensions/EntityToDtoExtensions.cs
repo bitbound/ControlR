@@ -113,4 +113,47 @@ public static class EntityToDtoExtensions
       device.LastSeen,
       device.AgentVersion);
   }
+
+  public static DeviceResponseDto ToV0Dto(this Device device, bool isOutdated)
+  {
+    return new DeviceResponseDto(
+      device.Name,
+      device.AgentVersion,
+      device.CpuUtilization,
+      device.Id,
+      device.Is64Bit,
+      device.IsOnline,
+      device.LastSeen,
+      device.OsArchitecture,
+      device.Platform,
+      device.ProcessorCount,
+      device.ConnectionId,
+      device.OsDescription,
+      device.TenantId,
+      device.TotalMemory,
+      device.TotalStorage,
+      device.UsedMemory,
+      device.UsedStorage,
+      device.CurrentUsers,
+      device.MacAddresses,
+      device.PublicIpV4,
+      device.PublicIpV6,
+      device.LocalIpV4,
+      device.LocalIpV6,
+      device.Drives,
+      isOutdated,
+      device.DnsHostName)
+    {
+      Alias = device.Alias,
+      TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray()
+    };
+  }
+
+  public static DeviceSummaryDto ToV0SummaryDto(this Device device)
+  {
+    return new DeviceSummaryDto(
+      device.Id,
+      device.LastSeen,
+      device.AgentVersion);
+  }
 }

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Api;
 
-[Obsolete("Use PublicAgentUpdateController under /public/agent-update instead.")]
+[Obsolete("Use InternalAgentUpdateController under /internal/agent-update instead.")]
 [ApiController]
 [Route(HttpConstants.AgentUpdateEndpoint)]
 public class AgentUpdateController(

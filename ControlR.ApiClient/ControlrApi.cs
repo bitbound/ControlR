@@ -8,12 +8,12 @@ namespace ControlR.ApiClient;
 public interface IControlrApi
 {
   IControlrInternalApi Internal { get; }
-  IControlrPublicApi Public { get; }
   IControlrV0Api V0 { get; }
 }
 
 public interface IControlrInternalApi
 {
+  IInternalAgentUpdateApi AgentUpdate { get; }
   IAuthApi Auth { get; }
   IDesktopPreviewApi DesktopPreview { get; }
   IDeviceFileSystemApi DeviceFileSystem { get; }
@@ -49,13 +49,6 @@ public interface IControlrV0Api
   IV0TenantsApi Tenants { get; }
 }
 
-public interface IControlrPublicApi
-{
-  IAgentUpdateApi AgentUpdate { get; }
-  IPublicInstallerKeysApi InstallerKeys { get; }
-  IPublicInvitesApi Invites { get; }
-}
-
 public partial class ControlrApi(
   HttpClient httpClient,
   ControlrApiClientAuthState authState,
@@ -70,18 +63,15 @@ public partial class ControlrApi(
   private readonly IOptions<ControlrApiClientOptions> _options = options;
 
   private InternalApi? _internal;
-  private PublicApi? _public;
   private V0Api? _v0;
 
   internal HttpClient HttpClient => _client;
   internal InternalApi InternalApi => _internal ??= new(this);
   internal ILogger<ControlrApi> Logger => _logger;
   internal IOptions<ControlrApiClientOptions> Options => _options;
-  internal PublicApi PublicApi => _public ??= new(this);
   internal V0Api V0 => _v0 ??= new(this);
 
   IControlrInternalApi IControlrApi.Internal => InternalApi;
-  IControlrPublicApi IControlrApi.Public => PublicApi;
   IControlrV0Api IControlrApi.V0 => V0;
 
   internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)

@@ -212,7 +212,7 @@ static async Task<int> RunInstall(AgentInstallRequest request, string? instanceI
     var runtime = systemEnvironment.Runtime;
     logger.LogInformation("Detected runtime: {Runtime}", runtime);
 
-    var metadataResult = await api.Public.AgentUpdate.GetBundleMetadata(runtime);
+    var metadataResult = await api.Internal.AgentUpdate.GetBundleMetadata(runtime);
     if (!metadataResult.IsSuccess || metadataResult.Value is null)
     {
       logger.LogError("Failed to fetch bundle metadata. Reason: {Reason}", metadataResult.Reason);
@@ -304,7 +304,7 @@ static async Task<int> RunRepairDesktop(string? instanceId)
     var runtime = systemEnvironment.Runtime;
     logger.LogInformation("Detected runtime: {Runtime}", runtime);
 
-    var metadataResult = await api.Public.AgentUpdate.GetBundleMetadata(runtime);
+    var metadataResult = await api.Internal.AgentUpdate.GetBundleMetadata(runtime);
     if (!metadataResult.IsSuccess || metadataResult.Value is null)
     {
       logger.LogError("Failed to fetch bundle metadata. Reason: {Reason}", metadataResult.Reason);

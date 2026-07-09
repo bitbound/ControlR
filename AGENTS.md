@@ -50,7 +50,6 @@ The server API has three route roots, each in its own `Api/{RouteRoot}/` directo
 |---|---|---|
 | `Internal` | `RequireUserPrincipalPolicy` | BFF (Blazor UI) |
 | `V0` | `RequireServerServiceAccountPolicy` | M2M automation |
-| `Public` | `AllowAnonymous` | Unauthenticated callers |
 
 Every DTO belongs to exactly one route root and lives in `Dtos/ServerApi/{RouteRoot}/` with namespace `ControlR.Libraries.Api.Contracts.Dtos.ServerApi.{RouteRoot}`. There is no shared DTO folder — each root owns its contract independently. If two roots need the same shape, duplicate it under both namespaces. Route roots have different lifecycle commitments; coupling them through a shared DTO breaks that isolation.
 

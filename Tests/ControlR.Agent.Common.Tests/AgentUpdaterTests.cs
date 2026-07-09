@@ -3,7 +3,7 @@ using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Common.Services;
 using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Public;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
@@ -199,14 +199,14 @@ public class AgentMaintenanceServiceTests
   {
     public AgentMaintenanceServiceFixture()
     {
-      var mockPublicApi = new Mock<IControlrPublicApi>();
-      mockPublicApi
+      var mockInternalApi = new Mock<IControlrInternalApi>();
+      mockInternalApi
         .SetupGet(x => x.AgentUpdate)
         .Returns(AgentUpdateApi.Object);
 
       ControlrApi
-        .SetupGet(x => x.Public)
-        .Returns(mockPublicApi.Object);
+        .SetupGet(x => x.Internal)
+        .Returns(mockInternalApi.Object);
 
       HostApplicationLifetime
         .SetupGet(x => x.ApplicationStopping)
@@ -234,7 +234,7 @@ public class AgentMaintenanceServiceTests
         .Returns(BundleHashPath);
     }
 
-    public Mock<IAgentUpdateApi> AgentUpdateApi { get; } = new();
+    public Mock<IInternalAgentUpdateApi> AgentUpdateApi { get; } = new();
     public string BundleHashPath { get; } = @"C:\ControlR\.controlr-bundle.sha256";
     public Mock<IControlrApi> ControlrApi { get; } = new();
     public Mock<IDownloadsApi> DownloadsApi { get; } = new();
