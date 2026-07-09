@@ -2,7 +2,7 @@
   "openapi": "3.1.1",
   "info": {
     "title": "ControlR | S2S API v0",
-    "description": "Versioned server-to-server S2S API",
+    "description": "Versioned server-to-server (S2S) API",
     "version": "0.0"
   },
   "paths": {

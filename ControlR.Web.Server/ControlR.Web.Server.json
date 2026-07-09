@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.1",
   "info": {
-    "title": "ControlR | Internal API",
-    "description": "First-class, dynamically-evolving internal API",
-    "version": "1.0"
+    "title": "ControlR | Legacy API",
+    "description": "ControlR's legacy API.  This API is deprecated and will be removed in a future release.",
+    "version": "0.1.0"
   },
   "paths": {
     "/api/auth/change-password": {

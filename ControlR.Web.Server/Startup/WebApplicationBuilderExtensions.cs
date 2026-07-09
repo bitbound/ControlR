@@ -148,56 +148,8 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddExceptionHandler<ApiExceptionHandler>();
     builder.Services.AddExceptionHandler<UiExceptionHandler>();
 
-    builder.Services.AddApiVersioning()
-      .AddApiExplorer(options => { options.GroupNameFormat = "'v'VVV"; })
-      .AddMvc()
-      .AddOpenApi(options =>
-      {
-        if (options.Description.GroupName == "v0")
-        {
-          options.Document.AddDocumentTransformer<V0ApiDocumentInfoTransformer>();
-        }
-        else
-        {
-          options.Document.AddDocumentTransformer<InternalApiDocumentInfoTransformer>();
-        }
-      });
+    builder.AddControlrOpenApi();
 
-    builder.Services.AddOpenApi(options =>
-    {
-      options.AddDocumentTransformer<FileUploadTransformer>();
-      options.AddDocumentTransformer<IdentityApiOpenApiTransformer>();
-      options.AddDocumentTransformer<ApiProblemDetailsTransformer>();
-      options.AddDocumentTransformer<OpenApiSecurityTransformer>();
-      options.AddOperationTransformer<OpenApiSecurityTransformer>();
-      options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
-    });
-
-    builder.Services.AddOpenApi("internal", options =>
-    {
-      options.ShouldInclude = desc => desc.GroupName == "Internal";
-      options.AddDocumentTransformer<InternalApiDocumentInfoTransformer>();
-      options.AddDocumentTransformer<FileUploadTransformer>();
-      options.AddDocumentTransformer<IdentityApiOpenApiTransformer>();
-      options.AddDocumentTransformer<ApiProblemDetailsTransformer>();
-      options.AddDocumentTransformer<OpenApiSecurityTransformer>();
-      options.AddOperationTransformer<OpenApiSecurityTransformer>();
-      options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
-    });
-
-    builder.Services.AddOpenApi("v0", options =>
-    {
-      options.ShouldInclude = desc => desc.GroupName == "v0";
-      options.AddDocumentTransformer<V0ApiDocumentInfoTransformer>();
-      options.AddDocumentTransformer<FileUploadTransformer>();
-      options.AddDocumentTransformer<IdentityApiOpenApiTransformer>();
-      options.AddDocumentTransformer<ApiProblemDetailsTransformer>();
-      options.AddDocumentTransformer<OpenApiSecurityTransformer>();
-      options.AddOperationTransformer<OpenApiSecurityTransformer>();
-      options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
-    });
-
-    builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddCors(options =>
     {
       if (appOptions.EnableCors && appOptions.CorsAllowedOrigins is { Length: > 0 } origins)
