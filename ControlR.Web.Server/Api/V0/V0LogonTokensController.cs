@@ -1,4 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Data.Enums;
+using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,6 +14,7 @@ public class V0LogonTokensController : ControllerBase
   [HttpPost]
   public async Task<ActionResult<LogonTokenResponseDto>> Create(
     [FromServices] AppDb appDb,
+    [FromServices] TimeProvider timeProvider,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] ILogonTokenProvider logonTokenProvider,
     [FromBody] IssueLogonTokenRequestDto request)
@@ -31,7 +34,7 @@ public class V0LogonTokensController : ControllerBase
         return BadRequest("UserCorrelationId is required for service logon tokens.");
       }
 
-      var username = $"svc-{request.UserCorrelationId.Trim()}";
+      var username = $"ext-{request.UserCorrelationId.Trim()}";
       var guestUser = await userManager.Users
         .FirstOrDefaultAsync(u => u.UserName == username && u.TenantId == request.TenantId);
 
@@ -41,7 +44,8 @@ public class V0LogonTokensController : ControllerBase
         {
           UserName = username,
           Email = $"{username}@controlr.local",
-          TenantId = request.TenantId
+          TenantId = request.TenantId,
+          AccountType = AccountType.ExternalUser
         };
         var createResult = await userManager.CreateAsync(guestUser);
         if (!createResult.Succeeded)
@@ -49,6 +53,8 @@ public class V0LogonTokensController : ControllerBase
           return BadRequest("Failed to create guest user.");
         }
       }
+
+      await userManager.UpdateLastLoginAsync(guestUser);
 
       userId = guestUser.Id;
     }

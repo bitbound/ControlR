@@ -93,6 +93,7 @@
       return;
     }
 
+    await UserManager.UpdateLastLoginAsync(createResult.User);
     await SignInManager.SignInAsync(createResult.User, false);
     RedirectManager.RedirectTo(ReturnUrl);
   }

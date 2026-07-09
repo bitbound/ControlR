@@ -13,6 +13,7 @@ namespace ControlR.Web.Server.Hubs;
 
 [Authorize]
 public class ViewerHub(
+  TimeProvider timeProvider,
   UserManager<AppUser> userManager,
   AppDb appDb,
   IAuthorizationService authorizationService,
@@ -30,6 +31,7 @@ public class ViewerHub(
   private readonly IEffectiveUserPreferencesResolver _effectiveUserPreferencesResolver = effectiveUserPreferencesResolver;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<ViewerHub> _logger = logger;
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   public async Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
@@ -219,6 +221,7 @@ public class ViewerHub(
       }
 
       user.IsOnline = true;
+      user.LastLogin = _timeProvider.GetUtcNow();
       await _appDb.SaveChangesAsync();
 
       if (Context.User.IsInRole(RoleNames.ServerAdministrator))

@@ -117,6 +117,15 @@
             "{Name} logged in with {LoginProvider} provider.",
             _externalLoginInfo.Principal.Identity?.Name,
             _externalLoginInfo.LoginProvider);
+
+            var externalUser = await UserManager.FindByLoginAsync(
+                _externalLoginInfo.LoginProvider,
+                _externalLoginInfo.ProviderKey);
+            if (externalUser is not null)
+            {
+                await UserManager.UpdateLastLoginAsync(externalUser);
+            }
+
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.IsLockedOut)
@@ -159,6 +168,7 @@
             RedirectManager.RedirectTo("Account/RegisterConfirmation", new Dictionary<string, object?> { ["email"] = Input.Email });
         }
 
+        await UserManager.UpdateLastLoginAsync(createUserResult.User);
         await SignInManager.SignInAsync(createUserResult.User, false, _externalLoginInfo.LoginProvider);
         RedirectManager.RedirectTo(ReturnUrl);
     }

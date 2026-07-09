@@ -185,6 +185,11 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -203,6 +208,9 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.Property<bool>("IsOnline")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastLogin")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");

@@ -339,6 +339,12 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   {
     builder
       .Entity<AppUser>()
+      .Property(x => x.AccountType)
+      .HasConversion<string>()
+      .HasMaxLength(50);
+
+    builder
+      .Entity<AppUser>()
       .Property(x => x.CreatedAt)
       .HasDefaultValueSql("CURRENT_TIMESTAMP");
 

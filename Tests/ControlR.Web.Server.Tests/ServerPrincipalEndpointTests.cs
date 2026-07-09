@@ -58,6 +58,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     var result = await controller.Create(
       services.GetRequiredService<AppDb>(),
+      services.GetRequiredService<TimeProvider>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       services.GetRequiredService<ILogonTokenProvider>(),
       new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, LogonTokenKind.User));

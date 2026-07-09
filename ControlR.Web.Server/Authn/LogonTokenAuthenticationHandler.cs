@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.LogonTokens;
 
 namespace ControlR.Web.Server.Authn;
@@ -75,6 +76,8 @@ public class LogonTokenAuthenticationHandler(
     {
       claims.Add(new Claim(ClaimTypes.Role, role));
     }
+
+    await _userManager.UpdateLastLoginAsync(user);
 
     var identity = new ClaimsIdentity(claims, Scheme.Name);
     var principal = new ClaimsPrincipal(identity);

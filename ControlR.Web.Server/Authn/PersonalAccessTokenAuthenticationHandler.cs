@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using ControlR.Web.Server.Extensions;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Authn;
@@ -74,6 +75,8 @@ public class PersonalAccessTokenAuthenticationHandler(
 
     // Successful auth resets failure counter
     _failureCache.Remove(failureKey);
+
+    await _userManager.UpdateLastLoginAsync(user);
 
     var claims = new List<Claim>
     {

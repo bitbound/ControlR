@@ -3,6 +3,7 @@
 @using ControlR.Web.Server.Components.Account.Shared
 
 @inject SignInManager<AppUser> SignInManager
+@inject UserManager<AppUser> UserManager
 @inject PasskeySignInManager PasskeySignInManager
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
@@ -142,6 +143,12 @@
       else
       {
         Logger.LogInformation("User '{Email}' logged in with a password.", Input.Email);
+      }
+
+      var user = await UserManager.FindByEmailAsync(Input.Email);
+      if (user is not null)
+      {
+        await UserManager.UpdateLastLoginAsync(user);
       }
       
       RedirectManager.RedirectTo(ReturnUrl);

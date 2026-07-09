@@ -232,10 +232,11 @@ public class AuthController : ControllerBase
         }
       }
 
-      if (result.Succeeded)
-      {
-        await userManager.ResetAccessFailedCountAsync(user);
-      }
+    if (result.Succeeded)
+    {
+      await userManager.ResetAccessFailedCountAsync(user);
+      await userManager.UpdateLastLoginAsync(user);
+    }
     }
 
     if (!result.Succeeded)

@@ -25,6 +25,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
+using ControlR.Web.Server.Services.ExternalUsers;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using System.Globalization;
 using System.Threading.RateLimiting;
@@ -418,6 +419,8 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
     builder.Services.AddSingleton<AgentInstallerKeyUsageCleaner>();
     builder.Services.AddHostedService<AgentInstallerKeyUsageCleanupBackgroundService>();
+    builder.Services.AddSingleton<ExternalUserCleanupService>();
+    builder.Services.AddHostedService<ExternalUserCleanupBackgroundService>();
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IAgentVersionProvider, AgentVersionProvider>();
     builder.Services.AddScoped<IReleaseNotesProvider, ReleaseNotesProvider>();

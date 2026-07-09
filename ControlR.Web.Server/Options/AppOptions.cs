@@ -135,6 +135,14 @@ public class AppOptions
   public bool EnableSignalrDetailedErrors { get; init; }
 
   /// <summary>
+  /// Number of days after which external user accounts with no recent login activity are cleaned up.
+  /// External accounts whose <see cref="AppUser.LastLogin"/> is older than this
+  /// threshold are removed by a background service. Accounts that have never logged in are not removed.
+  /// Set to 0 or less to disable external user cleanup.
+  /// </summary>
+  public int ExternalUserCleanupAfterDays { get; init; } = 30;
+
+  /// <summary>
   /// The client ID for GitHub OAuth authentication.
   /// Create an OAuth app in GitHub and set this value to enable GitHub login.
   /// </summary>
