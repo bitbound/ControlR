@@ -1,7 +1,6 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 
 public record CreateTenantRequestDto(
-  string Name,
-  string UserName,
-  string? Email,
-  string? Password);
+  [property: StringLength(100)] string Name);

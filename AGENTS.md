@@ -16,6 +16,11 @@ Cross-platform remote access and control. .NET 10 backend (ASP.NET Core), Blazor
 
 - Exclude `ControlR.Web.Server/novnc/` and any `node_modules/` directories from context.
 
+## General Instructions
+
+- `semantic_search` is available for searching the codebase. It's local and free. Use it for codebase searches and questions.
+- `brave-search_brave_web_search` is available for web searches. Use when external data is needed.
+
 ## Service Registration Locations
 
 Services use extension methods, not direct `Program.cs` registrations:
@@ -127,11 +132,6 @@ Every DTO belongs to exactly one route root and lives in `Dtos/ServerApi/{RouteR
 - Use central package management via `Directory.Packages.props`.
 - Don't add `Version` attributes to `<PackageReference>` elements in csproj files. `Version` attributes go in `Directory.Packages.props`.
 - Use `dotnet add <project> package <name>` to add packages.
-
-## Agent Hints
-
-- `semantic_search` is available for searching the codebase. Use when information is needed about the codebase.
-- `brave-search_brave_web_search` is available for web searches. Use when external data is needed.
 
 ## Planning
 

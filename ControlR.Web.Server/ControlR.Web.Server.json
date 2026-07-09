@@ -6119,40 +6119,21 @@
       },
       "CreateTenantRequestDto": {
         "required": [
-          "name",
-          "userName",
-          "email",
-          "password"
+          "name"
         ],
         "type": "object",
         "properties": {
           "name": {
+            "maxLength": 100,
+            "minLength": 0,
             "type": "string"
-          },
-          "userName": {
-            "type": "string"
-          },
-          "email": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "password": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
       "CreateTenantResponseDto": {
         "required": [
           "tenantId",
-          "tenantName",
-          "userId",
-          "userName",
-          "email"
+          "tenantName"
         ],
         "type": "object",
         "properties": {
@@ -6162,19 +6143,6 @@
           },
           "tenantName": {
             "type": "string"
-          },
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "userName": {
-            "type": "string"
-          },
-          "email": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
