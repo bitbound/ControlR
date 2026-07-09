@@ -26,7 +26,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.Services.CreateScope();
-    var controller = scope.CreateController<Api.Internal.InternalDevicesController>();
+    var controller = scope.CreateController<Api.Internal.DevicesController>();
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
     var outputCacheStore = scope.ServiceProvider.GetRequiredService<IOutputCacheStore>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
@@ -98,7 +98,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         request,
         db,
         scope.ServiceProvider.GetRequiredService<IAgentVersionProvider>(),
-        scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
+        scope.ServiceProvider.GetRequiredService<ILogger<Api.Internal.DevicesController>>());
 
     // Create new device to test cache invalidation
     var newDeviceId = Guid.NewGuid();
@@ -139,7 +139,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
       request,
       db,
       scope.ServiceProvider.GetRequiredService<IAgentVersionProvider>(),
-      scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
+      scope.ServiceProvider.GetRequiredService<ILogger<Api.Internal.DevicesController>>());
 
     // Assert
     Assert.NotNull(result1.Value);

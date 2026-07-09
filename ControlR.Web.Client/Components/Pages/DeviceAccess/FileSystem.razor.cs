@@ -211,7 +211,7 @@ public partial class FileSystem : JsInteropableComponent
   private async Task DownloadMultipleItems(IReadOnlyCollection<FileSystemEntryViewModel> items)
   {
     var archiveFileName = GetArchiveFileName();
-    var downloadUrl = $"{HttpConstants.DeviceFileSystemEndpoint}/download-archive/{DeviceId}/form";
+    var downloadUrl = $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/download-archive/{DeviceId}/form";
 
     await JsModule.InvokeVoidAsync(
       "downloadArchive",
@@ -227,7 +227,7 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       var downloadUrl =
-        $"{HttpConstants.DeviceFileSystemEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
+        $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
 
       await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
       Snackbar.Add($"Started download of '{item.Name}'", Severity.Success);

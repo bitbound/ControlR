@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.UserServerSettingsEndpoint)]
+[Route(HttpConstants.Internal.UserServerSettingsEndpoint)]
 [ApiController]
 [Authorize]
 [OutputCache(Duration = 30)]

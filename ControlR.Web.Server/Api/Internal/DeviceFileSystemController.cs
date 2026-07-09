@@ -9,7 +9,7 @@ using Microsoft.Net.Http.Headers;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.DeviceFileSystemEndpoint)]
+[Route(HttpConstants.Internal.DeviceFileSystemEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

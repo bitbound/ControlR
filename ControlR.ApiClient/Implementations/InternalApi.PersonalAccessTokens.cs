@@ -11,7 +11,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.PersonalAccessTokensEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.Internal.PersonalAccessTokensEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<CreatePersonalAccessTokenResponseDto>(cancellationToken);
     });
@@ -21,7 +21,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.PersonalAccessTokensEndpoint}/{personalAccessTokenId}", cancellationToken);
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.Internal.PersonalAccessTokensEndpoint}/{personalAccessTokenId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -29,14 +29,14 @@ internal partial class InternalApi
   async Task<ApiResult<PersonalAccessTokenDto[]>> IPersonalAccessTokensApi.GetPersonalAccessTokens(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<PersonalAccessTokenDto[]>(HttpConstants.PersonalAccessTokensEndpoint, cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<PersonalAccessTokenDto[]>(HttpConstants.Internal.PersonalAccessTokensEndpoint, cancellationToken));
   }
 
   async Task<ApiResult<PersonalAccessTokenDto>> IPersonalAccessTokensApi.UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PutAsJsonAsync($"{HttpConstants.PersonalAccessTokensEndpoint}/{personalAccessTokenId}", request, cancellationToken);
+      using var response = await _client.HttpClient.PutAsJsonAsync($"{HttpConstants.Internal.PersonalAccessTokensEndpoint}/{personalAccessTokenId}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<PersonalAccessTokenDto>(cancellationToken);
     });

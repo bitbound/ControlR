@@ -11,7 +11,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.UserServerSettingsEndpoint}/decommission-status", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.UserServerSettingsEndpoint}/decommission-status", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<DecommissionServerResponseDto>(cancellationToken)
         ?? throw new HttpRequestException("The server response was empty.");
@@ -22,7 +22,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.UserServerSettingsEndpoint}/file-upload-max-size", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.UserServerSettingsEndpoint}/file-upload-max-size", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       var dto = await response.Content.ReadFromJsonAsync<FileUploadMaxSizeResponseDto>(cancellationToken)
         ?? throw new HttpRequestException("The server response was empty.");

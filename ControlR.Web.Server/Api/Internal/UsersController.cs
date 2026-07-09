@@ -8,7 +8,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class InternalUsersController : ControllerBase
+public class UsersController : ControllerBase
 {
   [HttpPost("{userId:guid}/reset-password")]
   public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(

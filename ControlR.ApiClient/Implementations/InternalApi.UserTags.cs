@@ -11,7 +11,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.UserTagsEndpoint}", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.UserTagsEndpoint}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -19,14 +19,14 @@ internal partial class InternalApi
   async Task<ApiResult<TagResponseDto[]>> IUserTagsApi.GetAllowedTags(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<TagResponseDto[]>(HttpConstants.UserTagsEndpoint, cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<TagResponseDto[]>(HttpConstants.Internal.UserTagsEndpoint, cancellationToken));
   }
 
   async Task<ApiResult<TagResponseDto[]>> IUserTagsApi.GetUserTags(Guid userId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
       await _client.HttpClient.GetFromJsonAsync<TagResponseDto[]>(
-        $"{HttpConstants.UserTagsEndpoint}/{userId}",
+        $"{HttpConstants.Internal.UserTagsEndpoint}/{userId}",
         cancellationToken));
   }
 
@@ -34,7 +34,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.UserTagsEndpoint}/{userId}/{tagId}", cancellationToken);
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.Internal.UserTagsEndpoint}/{userId}/{tagId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }

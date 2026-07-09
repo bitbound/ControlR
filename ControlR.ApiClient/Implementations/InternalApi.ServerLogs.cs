@@ -11,7 +11,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.ServerLogsEndpoint}/get-aspire-url", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.ServerLogsEndpoint}/get-aspire-url", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<GetAspireUrlResponseDto>(cancellationToken);
     });

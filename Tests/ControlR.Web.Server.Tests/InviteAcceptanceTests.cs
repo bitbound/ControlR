@@ -107,7 +107,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     // Step 5: AdminUser invites User2 to Tenant A (this creates user2 in Tenant A)
     using (var scope = testApp.CreateScope())
     {
-      var controller = await scope.CreateControllerWithUser<InternalInvitesController>(adminUser);
+      var controller = await scope.CreateControllerWithUser<InvitesController>(adminUser);
       controller.ControllerContext.HttpContext!.Request.Scheme = "https";
       controller.ControllerContext.HttpContext.Request.Host = new HostString("test.example.com");
 
@@ -193,7 +193,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     // Step 7: User2 accepts invite (moves back to Tenant A)
     using (var scope = testApp.CreateScope())
     {
-      var controller = scope.CreateController<InternalInvitesController>();
+      var controller = scope.CreateController<InvitesController>();
 
       var tenantInvitesProvider = scope.ServiceProvider.GetRequiredService<ITenantInvitesProvider>();
 

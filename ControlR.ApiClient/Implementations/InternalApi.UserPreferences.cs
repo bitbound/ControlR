@@ -12,7 +12,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.UserPreferencesEndpoint}/{preferenceName}", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.UserPreferencesEndpoint}/{preferenceName}", cancellationToken);
       if (response.StatusCode == HttpStatusCode.NoContent)
       {
         return new UserPreferenceResponseDto(Id: null, Name: preferenceName, Value: null);
@@ -27,14 +27,14 @@ internal partial class InternalApi
   async Task<ApiResult<UserPreferencesDto>> IUserPreferencesApi.GetUserPreferences(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<UserPreferencesDto>(HttpConstants.UserPreferencesEndpoint, cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<UserPreferencesDto>(HttpConstants.Internal.UserPreferencesEndpoint, cancellationToken));
   }
 
   async Task<ApiResult<UserPreferenceResponseDto>> IUserPreferencesApi.SetUserPreference(UserPreferenceRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.Internal.UserPreferencesEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<UserPreferenceResponseDto>(cancellationToken);
     });
@@ -44,7 +44,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PutAsJsonAsync(HttpConstants.UserPreferencesEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PutAsJsonAsync(HttpConstants.Internal.UserPreferencesEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<UserPreferencesDto>(cancellationToken);
     });

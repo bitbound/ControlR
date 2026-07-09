@@ -9,13 +9,13 @@ namespace ControlR.Web.Server.Api.Internal;
 [Route(HttpConstants.Internal.AgentUpdateEndpoint)]
 [AllowAnonymous]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class InternalAgentUpdateController(
-  ILogger<InternalAgentUpdateController> logger,
+public class AgentUpdateController(
+  ILogger<AgentUpdateController> logger,
   IWebHostEnvironment webHostEnvironment) : ControllerBase
 {
   private const int CacheDurationSeconds = 600;
 
-  private readonly ILogger<InternalAgentUpdateController> _logger = logger;
+  private readonly ILogger<AgentUpdateController> _logger = logger;
   private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
 
   [OutputCache(Duration = CacheDurationSeconds)]

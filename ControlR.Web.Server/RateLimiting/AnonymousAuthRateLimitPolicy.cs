@@ -12,7 +12,7 @@ public static class AnonymousAuthRateLimitPolicy
     return httpContext =>
     {
       var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-      var path = httpContext.Request.Path.Value ?? HttpConstants.AuthEndpoint;
+      var path = httpContext.Request.Path.Value ?? HttpConstants.Internal.AuthEndpoint;
       var partitionKey = $"{remoteIp}:{path}";
 
       return RateLimitPartition.GetFixedWindowLimiter(

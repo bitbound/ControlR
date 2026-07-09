@@ -7,11 +7,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.DevicesEndpoint)]
+[Route(HttpConstants.Internal.DevicesEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class InternalDevicesController(
+public class DevicesController(
   IDeviceAccessScopeResolver deviceAccessScopeResolver) : ControllerBase
 {
   private readonly IDeviceAccessScopeResolver _deviceAccessScopeResolver = deviceAccessScopeResolver;

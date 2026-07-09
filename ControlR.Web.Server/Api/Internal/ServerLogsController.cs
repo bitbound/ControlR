@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.ServerLogsEndpoint)]
+[Route(HttpConstants.Internal.ServerLogsEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.ServerAdministrator)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

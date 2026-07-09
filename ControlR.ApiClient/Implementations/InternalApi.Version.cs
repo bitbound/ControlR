@@ -11,7 +11,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      var version = await _client.HttpClient.GetFromJsonAsync<Version>($"{HttpConstants.VersionEndpoint}/agent", cancellationToken);
+      var version = await _client.HttpClient.GetFromJsonAsync<Version>($"{HttpConstants.Internal.VersionEndpoint}/agent", cancellationToken);
       _client.Logger.LogInformation("Latest Agent version on server: {LatestAgentVersion}", version);
       return version;
     });
@@ -20,12 +20,12 @@ internal partial class InternalApi
   async Task<ApiResult<Version>> IVersionApi.GetCurrentServerVersion(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<Version>($"{HttpConstants.VersionEndpoint}/server", cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<Version>($"{HttpConstants.Internal.VersionEndpoint}/server", cancellationToken));
   }
 
   async Task<ApiResult<string>> IVersionApi.GetReleaseNotes(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetStringAsync($"{HttpConstants.VersionEndpoint}/release-notes", cancellationToken));
+      await _client.HttpClient.GetStringAsync($"{HttpConstants.Internal.VersionEndpoint}/release-notes", cancellationToken));
   }
 }

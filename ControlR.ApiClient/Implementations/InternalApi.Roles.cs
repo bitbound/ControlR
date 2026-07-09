@@ -10,6 +10,6 @@ internal partial class InternalApi
   async Task<ApiResult<RoleResponseDto[]>> IRolesApi.GetAllRoles(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<RoleResponseDto[]>(HttpConstants.RolesEndpoint, cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<RoleResponseDto[]>(HttpConstants.Internal.RolesEndpoint, cancellationToken));
   }
 }

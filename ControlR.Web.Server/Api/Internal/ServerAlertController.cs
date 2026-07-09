@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.ServerAlertEndpoint)]
+[Route(HttpConstants.Internal.ServerAlertEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

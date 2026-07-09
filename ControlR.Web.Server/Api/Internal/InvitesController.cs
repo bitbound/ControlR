@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class InternalInvitesController : ControllerBase
+public class InvitesController : ControllerBase
 {
   [HttpPost("accept")]
   [AllowAnonymous]

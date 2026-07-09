@@ -2,12 +2,12 @@ using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api.Internal;
+namespace ControlR.Web.Server.Api.V0;
 
-[Route(HttpConstants.ServiceAccountsEndpoint)]
+[Route(HttpConstants.Internal.ServiceAccountsEndpoint)]
 [ApiController]
-[Authorize]
-[ApiVersion(OpenApiConstants.CurrentApiVersion)]
+[Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+[ApiVersion(ApiVersions.V0)]
 public class ServiceAccountsController(
   IServiceAccountManager serviceAccountManager) : ControllerBase
 {

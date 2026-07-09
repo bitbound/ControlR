@@ -12,7 +12,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/create-directory/{request.DeviceId}", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/create-directory/{request.DeviceId}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -21,7 +21,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var requestMessage = new HttpRequestMessage(HttpMethod.Delete, $"{HttpConstants.DeviceFileSystemEndpoint}/delete-path/{request.DeviceId}")
+      using var requestMessage = new HttpRequestMessage(HttpMethod.Delete, $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/delete-path/{request.DeviceId}")
       {
         Content = JsonContent.Create(request)
       };
@@ -34,7 +34,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{HttpConstants.DeviceFileSystemEndpoint}/download-archive/{deviceId}")
+      using var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/download-archive/{deviceId}")
       {
         Content = JsonContent.Create(request)
       };
@@ -52,7 +52,7 @@ internal partial class InternalApi
     return await _client.ExecuteApiCall(async () =>
     {
       var response = await _client.HttpClient.GetAsync(
-        $"{HttpConstants.DeviceFileSystemEndpoint}/download/{deviceId}?filePath={Uri.EscapeDataString(filePath)}",
+        $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/download/{deviceId}?filePath={Uri.EscapeDataString(filePath)}",
         HttpCompletionOption.ResponseHeadersRead,
         cancellationToken);
 
@@ -67,7 +67,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/contents", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/contents", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<GetDirectoryContentsResponseDto>(cancellationToken);
     });
@@ -78,7 +78,7 @@ internal partial class InternalApi
     return await _client.ExecuteApiCall(async () =>
     {
       var encodedPath = Uri.EscapeDataString(request.FilePath);
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.DeviceFileSystemEndpoint}/logs/{deviceId}/contents?filePath={encodedPath}", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/logs/{deviceId}/contents?filePath={encodedPath}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadAsStringAsync(cancellationToken);
     });
@@ -88,7 +88,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.DeviceFileSystemEndpoint}/logs/{deviceId}", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/logs/{deviceId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<GetLogFilesResponseDto>(cancellationToken);
     });
@@ -98,7 +98,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/path-segments", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/path-segments", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<PathSegmentsResponseDto>(cancellationToken);
     });
@@ -108,7 +108,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/root-drives", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/root-drives", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<GetRootDrivesResponseDto>(cancellationToken);
     });
@@ -118,7 +118,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/subdirectories", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/subdirectories", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<GetSubdirectoriesResponseDto>(cancellationToken);
     });
@@ -142,7 +142,7 @@ internal partial class InternalApi
       form.Add(new StringContent(targetSaveDirectory), "targetSaveDirectory");
       form.Add(new StringContent(overwrite.ToString()), "overwrite");
 
-      using var response = await _client.HttpClient.PostAsync($"{HttpConstants.DeviceFileSystemEndpoint}/upload/{deviceId}", form, cancellationToken);
+      using var response = await _client.HttpClient.PostAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/upload/{deviceId}", form, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -151,7 +151,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.DeviceFileSystemEndpoint}/validate-path/{request.DeviceId}", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/validate-path/{request.DeviceId}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<ValidateFilePathResponseDto>(cancellationToken) ??
         new ValidateFilePathResponseDto(false, "Failed to deserialize response");

@@ -12,7 +12,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.GetAsync(HttpConstants.ServerAlertEndpoint, cancellationToken);
+      using var response = await _client.HttpClient.GetAsync(HttpConstants.Internal.ServerAlertEndpoint, cancellationToken);
       if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.NotFound)
       {
         return ServerAlertResponseDto.Empty;
@@ -27,7 +27,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.ServerAlertEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.Internal.ServerAlertEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<ServerAlertResponseDto>(cancellationToken);
     });

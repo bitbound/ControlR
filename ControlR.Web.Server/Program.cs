@@ -97,7 +97,7 @@ app.MapControllers();
 if (appOptions.EnableInteractiveBearerLogin || isOpenApiBuild)
 {
   var authGroup = app
-    .MapGroup(HttpConstants.AuthEndpoint)
+    .MapGroup(HttpConstants.Internal.AuthEndpoint)
     .WithTags("Auth");
 
   authGroup

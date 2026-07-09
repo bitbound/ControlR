@@ -6,7 +6,6 @@ using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
@@ -36,7 +35,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, useInMemoryDatabase: false);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var tenant = await services.CreateTestTenant();
@@ -98,7 +97,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, useInMemoryDatabase: false);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var tenant = await services.CreateTestTenant();
@@ -232,7 +231,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
 
     var request = new DeleteDevicesRequestDto([Guid.NewGuid()]);
 
@@ -253,7 +252,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, useInMemoryDatabase: false);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var tenant = await services.CreateTestTenant();
@@ -332,7 +331,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -420,7 +419,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -508,7 +507,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -625,7 +624,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -764,7 +763,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -875,7 +874,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -1028,7 +1027,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -1120,7 +1119,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -1215,7 +1214,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -1326,7 +1325,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -1569,7 +1568,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var tenant = await services.CreateTestTenant();
@@ -1625,7 +1624,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var tenant = await services.CreateTestTenant();
@@ -1650,7 +1649,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
@@ -1729,7 +1728,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
@@ -1824,7 +1823,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceManager = services.GetRequiredService<IDeviceManager>();
@@ -1916,7 +1915,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceId = Guid.NewGuid();
@@ -1940,7 +1939,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceId = Guid.NewGuid();
@@ -1963,7 +1962,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
@@ -2024,7 +2023,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var routeId = Guid.NewGuid();
@@ -2048,7 +2047,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
@@ -2111,7 +2110,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var controller = scope.CreateController<InternalDevicesController>();
+    var controller = scope.CreateController<DevicesController>();
     await using var db = services.GetRequiredService<AppDb>();
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();

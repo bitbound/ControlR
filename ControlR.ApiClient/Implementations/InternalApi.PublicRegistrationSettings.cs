@@ -10,6 +10,6 @@ internal partial class InternalApi
   async Task<ApiResult<PublicRegistrationSettings>> IPublicRegistrationSettingsApi.GetPublicRegistrationSettings(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<PublicRegistrationSettings>(HttpConstants.PublicRegistrationSettingsEndpoint, cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<PublicRegistrationSettings>(HttpConstants.Internal.PublicRegistrationSettingsEndpoint, cancellationToken));
   }
 }

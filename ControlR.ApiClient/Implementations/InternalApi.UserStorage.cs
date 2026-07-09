@@ -12,7 +12,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.UserStorageEndpoint}/{key}", cancellationToken);
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.Internal.UserStorageEndpoint}/{key}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return;
     });
@@ -22,7 +22,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.UserStorageEndpoint}/{key}", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.UserStorageEndpoint}/{key}", cancellationToken);
       if (response.StatusCode == HttpStatusCode.NoContent)
       {
         return new UserStorageResponseDto(key, null);
@@ -38,7 +38,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.UserStorageEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.Internal.UserStorageEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<UserStorageResponseDto>(cancellationToken);
     });

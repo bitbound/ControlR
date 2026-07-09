@@ -17,7 +17,7 @@ internal partial class InternalApi
     return await _client.ExecuteApiCall(async () =>
     {
       using var response = await _client.HttpClient.PostAsJsonAsync(
-        $"{HttpConstants.ServiceAccountsEndpoint}/{serviceAccountId}/credentials", request, cancellationToken);
+        $"{HttpConstants.Internal.ServiceAccountsEndpoint}/{serviceAccountId}/credentials", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<CreateServiceAccountCredentialResponseDto>(cancellationToken);
     });
@@ -29,7 +29,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.ServiceAccountsEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.Internal.ServiceAccountsEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<CreateServiceAccountResponseDto>(cancellationToken);
     });
@@ -39,7 +39,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.ServiceAccountsEndpoint}/{serviceAccountId}", cancellationToken);
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.Internal.ServiceAccountsEndpoint}/{serviceAccountId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -47,7 +47,7 @@ internal partial class InternalApi
   async IAsyncEnumerable<ServiceAccountDto> IServiceAccountsApi.GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<ServiceAccountDto>(
-      HttpConstants.ServiceAccountsEndpoint,
+      HttpConstants.Internal.ServiceAccountsEndpoint,
       cancellationToken: cancellationToken);
 
     await foreach (var account in stream.WithCancellation(cancellationToken))
@@ -85,7 +85,7 @@ internal partial class InternalApi
     return await _client.ExecuteApiCall(async () =>
     {
       using var response = await _client.HttpClient.DeleteAsync(
-        $"{HttpConstants.ServiceAccountsEndpoint}/{serviceAccountId}/credentials/{credentialId}", cancellationToken);
+        $"{HttpConstants.Internal.ServiceAccountsEndpoint}/{serviceAccountId}/credentials/{credentialId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }

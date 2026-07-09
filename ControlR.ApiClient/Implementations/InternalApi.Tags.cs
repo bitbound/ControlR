@@ -11,7 +11,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.TagsEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.Internal.TagsEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<TagResponseDto>(cancellationToken);
     });
@@ -21,7 +21,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.TagsEndpoint}/{tagId}", cancellationToken);
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.Internal.TagsEndpoint}/{tagId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -30,7 +30,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
       await _client.HttpClient.GetFromJsonAsync<TagResponseDto[]>(
-        $"{HttpConstants.TagsEndpoint}?includeLinkedIds={includeLinkedIds}",
+        $"{HttpConstants.Internal.TagsEndpoint}?includeLinkedIds={includeLinkedIds}",
         cancellationToken));
   }
 
@@ -38,7 +38,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PutAsJsonAsync($"{HttpConstants.TagsEndpoint}", request, cancellationToken);
+      using var response = await _client.HttpClient.PutAsJsonAsync($"{HttpConstants.Internal.TagsEndpoint}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<TagResponseDto>(cancellationToken);
     });

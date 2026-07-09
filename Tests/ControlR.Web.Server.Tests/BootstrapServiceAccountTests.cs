@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.DeviceResponseDto;
-using ControlR.Web.Server.Api.Internal;
 
 namespace ControlR.Web.Server.Tests;
 

@@ -13,6 +13,7 @@ public static class OpenApiExtensions
       {
         options.AssumeDefaultVersionWhenUnspecified = true;
         options.DefaultApiVersion = new ApiVersion(0, 0);
+        options.ReportApiVersions = true;
       })
       .AddApiExplorer(options => 
       {

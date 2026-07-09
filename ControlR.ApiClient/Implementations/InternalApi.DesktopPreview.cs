@@ -9,7 +9,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.DesktopPreviewEndpoint}/{deviceId}/{targetProcessId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     });

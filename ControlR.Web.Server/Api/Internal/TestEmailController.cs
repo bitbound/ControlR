@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.TestEmailEndpoint)]
+[Route(HttpConstants.Internal.TestEmailEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.ServerAdministrator)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

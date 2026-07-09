@@ -24,7 +24,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var (controller, tenant, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.TenantAdministrator);
     var targetUser = await services.CreateTestUser(tenant.Id, "target@t.local");
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
@@ -61,7 +61,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
     identityOptions.Password.RequireDigit = true;
     identityOptions.Password.RequireNonAlphanumeric = true;
 
-    var (controller, tenant, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.TenantAdministrator);
     var targetUser = await services.CreateTestUser(tenant.Id, "short-policy@t.local");
 
@@ -82,7 +82,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var (controller, _, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.TenantAdministrator);
     var otherTenant = await services.CreateTestTenant("Other Tenant");
     var otherUser = await services.CreateTestUser(otherTenant.Id, "other@t.local");
@@ -104,7 +104,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
     // Arrange: create tenant, admin user and test role/tag
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var (controller, tenant, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
       "Tenant1",
       "admin@t.local",
       RoleNames.TenantAdministrator);
@@ -161,7 +161,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
 
-    var (controller, _, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.TenantAdministrator);
 
     var missingRoleId = Guid.NewGuid();
@@ -189,7 +189,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
 
-    var (controller, _, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.TenantAdministrator);
 
     var missingTagId = Guid.NewGuid();
@@ -217,7 +217,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var (controller, tenant, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.TenantAdministrator);
     var targetUser = await services.CreateTestUser(tenant.Id, "pat-target@t.local");
 

@@ -23,7 +23,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
 
     // Create a tenant admin caller (not a server admin)
-    var (controller, _, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.TenantAdministrator);
 
     await using var db = services.GetRequiredService<AppDb>();
@@ -55,7 +55,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
 
     // Create a server admin caller
-    var (controller, _, _) = await scope.CreateControllerWithTestData<InternalUsersController>(
+    var (controller, _, _) = await scope.CreateControllerWithTestData<UsersController>(
       roles: RoleNames.ServerAdministrator);
 
     await using var db = services.GetRequiredService<AppDb>();

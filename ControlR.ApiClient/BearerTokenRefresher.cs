@@ -38,7 +38,7 @@ public sealed class BearerTokenRefresher(
   IHttpClientFactory httpClientFactory,
   TimeProvider timeProvider) : IBearerTokenRefresher
 {
-  private const string RefreshEndpoint = $"{HttpConstants.AuthEndpoint}/refresh";
+  private const string RefreshEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/refresh";
 
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;

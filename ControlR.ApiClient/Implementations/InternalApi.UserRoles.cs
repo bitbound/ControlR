@@ -11,7 +11,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.UserRolesEndpoint}", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.UserRolesEndpoint}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -19,20 +19,20 @@ internal partial class InternalApi
   async Task<ApiResult<RoleResponseDto[]>> IUserRolesApi.GetOwnRoles(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<RoleResponseDto[]>(HttpConstants.UserRolesEndpoint, cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<RoleResponseDto[]>(HttpConstants.Internal.UserRolesEndpoint, cancellationToken));
   }
 
   async Task<ApiResult<RoleResponseDto[]>> IUserRolesApi.GetUserRoles(Guid userId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<RoleResponseDto[]>($"{HttpConstants.UserRolesEndpoint}/{userId}", cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<RoleResponseDto[]>($"{HttpConstants.Internal.UserRolesEndpoint}/{userId}", cancellationToken));
   }
 
   async Task<ApiResult> IUserRolesApi.RemoveUserRole(Guid userId, Guid roleId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.UserRolesEndpoint}/{userId}/{roleId}", cancellationToken);
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.Internal.UserRolesEndpoint}/{userId}/{roleId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }

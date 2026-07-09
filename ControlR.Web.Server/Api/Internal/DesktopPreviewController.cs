@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.DesktopPreviewEndpoint)]
+[Route(HttpConstants.Internal.DesktopPreviewEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

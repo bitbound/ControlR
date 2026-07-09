@@ -54,9 +54,26 @@ The server API has three route roots, each in its own `Api/{RouteRoot}/` directo
 | Route Root | Policy | Consumer |
 |---|---|---|
 | `Internal` | `RequireUserPrincipalPolicy` | BFF (Blazor UI) |
-| `V0` | `RequireServerServiceAccountPolicy` | M2M automation |
+| `V0` | `RequireServerServiceAccountPolicy` | S2S (server-to-server) automation |
 
 Every DTO belongs to exactly one route root and lives in `Dtos/ServerApi/{RouteRoot}/` with namespace `ControlR.Libraries.Api.Contracts.Dtos.ServerApi.{RouteRoot}`. There is no shared DTO folder — each root owns its contract independently. If two roots need the same shape, duplicate it under both namespaces. Route roots have different lifecycle commitments; coupling them through a shared DTO breaks that isolation.
+
+## API Routing & Versioning
+
+**Three route roots, three stability levels** — never cross them:
+
+| Root | URL prefix | Policy | Stability | Consumer |
+|---|---|---|---|---|
+| `Internal` | `/api/internal/*` | `RequireUserPrincipalPolicy` | Unversioned, volatile | BFF (Blazor UI) |
+| `V0` | `/api/v0/*` | `RequireServerServiceAccountPolicy` | Stable contract | S2S automation |
+| `Legacy` | `/api/devices`, `/api/agent-update` | — | Frozen, no new endpoints | Being phased out |
+
+- Controllers live in `Api/{Root}/` with namespace `ControlR.Web.Server.Api.{Root}`.
+- Controller class names carry **no** version or audience prefix. The namespace + `[ApiVersion]` attribute convey that.
+  - ✅ `Api/V0/DevicesController.cs` — namespace `Api.V0`
+  - ❌ `V0DevicesController.cs` — version noise in the class name
+- Every DTO belongs to exactly one route root (`Dtos/ServerApi/{Root}/`). If two roots need the same shape, duplicate it. Route roots have different lifecycle commitments; coupling through a shared DTO breaks that isolation.
+- Only add controllers to a new version when stakeholders request them. Don't pre-build.
 
 ## Cross-Platform
 

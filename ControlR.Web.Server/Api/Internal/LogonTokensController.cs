@@ -8,7 +8,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class InternalLogonTokenController : ControllerBase
+public class LogonTokenController : ControllerBase
 {
   [HttpPost]
   public async Task<ActionResult<LogonTokenResponseDto>> CreateLogonToken(

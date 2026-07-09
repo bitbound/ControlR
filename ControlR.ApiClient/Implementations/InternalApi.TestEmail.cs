@@ -9,7 +9,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsync(HttpConstants.TestEmailEndpoint, null, cancellationToken);
+      using var response = await _client.HttpClient.PostAsync(HttpConstants.Internal.TestEmailEndpoint, null, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }

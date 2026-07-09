@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.UserPreferencesEndpoint)]
+[Route(HttpConstants.Internal.UserPreferencesEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

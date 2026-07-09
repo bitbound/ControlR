@@ -13,7 +13,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.DevicesEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.Internal.DevicesEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -22,7 +22,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.DevicesEndpoint}/{deviceId}", cancellationToken);
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.Internal.DevicesEndpoint}/{deviceId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -39,7 +39,7 @@ internal partial class InternalApi
     return await _client.ExecuteApiCall(async () =>
     {
       using var response = await _client.HttpClient.PostAsJsonAsync(
-        $"{HttpConstants.DevicesEndpoint}/delete-many", request, cancellationToken);
+        $"{HttpConstants.Internal.DevicesEndpoint}/delete-many", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content
         .ReadFromJsonAsync<DeleteManyDevicesResponseDto>(cancellationToken);
@@ -49,7 +49,7 @@ internal partial class InternalApi
   async IAsyncEnumerable<DeviceResponseDto> IDevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<DeviceResponseDto>(
-      HttpConstants.DevicesEndpoint,
+      HttpConstants.Internal.DevicesEndpoint,
       cancellationToken: cancellationToken);
 
     await foreach (var device in stream.WithCancellation(cancellationToken))
@@ -82,13 +82,13 @@ internal partial class InternalApi
   async Task<ApiResult<DeviceResponseDto>> IDevicesApi.GetDevice(Guid deviceId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<DeviceResponseDto>($"{HttpConstants.DevicesEndpoint}/{deviceId}", cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<DeviceResponseDto>($"{HttpConstants.Internal.DevicesEndpoint}/{deviceId}", cancellationToken));
   }
 
   async IAsyncEnumerable<DeviceSummaryDto> IDevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<DeviceSummaryDto>(
-      $"{HttpConstants.DevicesEndpoint}/summary",
+      $"{HttpConstants.Internal.DevicesEndpoint}/summary",
       cancellationToken: cancellationToken);
 
     await foreach (var device in stream.WithCancellation(cancellationToken))
@@ -122,7 +122,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.DevicesEndpoint}/search", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DevicesEndpoint}/search", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>(cancellationToken);
     });
@@ -133,7 +133,7 @@ internal partial class InternalApi
     return await _client.ExecuteApiCall(async () =>
     {
       using var content = JsonContent.Create(request);
-      using var response = await _client.HttpClient.PatchAsync($"{HttpConstants.DevicesEndpoint}/{request.DeviceId}/alias", content, cancellationToken);
+      using var response = await _client.HttpClient.PatchAsync($"{HttpConstants.Internal.DevicesEndpoint}/{request.DeviceId}/alias", content, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<DeviceResponseDto>(cancellationToken);
     });

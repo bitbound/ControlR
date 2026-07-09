@@ -9,7 +9,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class InternalInstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
+public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
 {
   private readonly IAgentInstallerKeyManager _installerKeyManager = installerKeyManager;
 

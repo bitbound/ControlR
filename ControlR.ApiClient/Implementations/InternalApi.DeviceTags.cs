@@ -11,7 +11,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.DeviceTagsEndpoint}", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DeviceTagsEndpoint}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -20,7 +20,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.DeviceTagsEndpoint}/{deviceId}/{tagId}", cancellationToken);
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.Internal.DeviceTagsEndpoint}/{deviceId}/{tagId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }

@@ -3,7 +3,7 @@ using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Api.Internal;
 
-[Route(HttpConstants.UserTagsEndpoint)]
+[Route(HttpConstants.Internal.UserTagsEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

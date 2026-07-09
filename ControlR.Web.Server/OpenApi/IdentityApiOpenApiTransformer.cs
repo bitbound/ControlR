@@ -8,7 +8,7 @@ public class IdentityApiOpenApiTransformer : IOpenApiDocumentTransformer
 {
   public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
   {
-    const string registerPath = $"{HttpConstants.AuthEndpoint}/register";
+    const string registerPath = $"{HttpConstants.Internal.AuthEndpoint}/register";
     if (!document.Paths.TryGetValue(registerPath, out var pathItem))
     {
       return Task.CompletedTask;

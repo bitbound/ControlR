@@ -7,18 +7,18 @@ namespace ControlR.ApiClient;
 
 internal partial class InternalApi
 {
-  private const string ChangePasswordEndpoint = $"{HttpConstants.AuthEndpoint}/change-password";
-  private const string ChangePasswordWithCredentialsEndpoint = $"{HttpConstants.AuthEndpoint}/change-password-with-credentials";
-  private const string CompletePasswordResetEndpoint = $"{HttpConstants.AuthEndpoint}/complete-password-reset";
-  private const string ConfirmEmailEndpoint = $"{HttpConstants.AuthEndpoint}/confirmEmail";
-  private const string CurrentUserEndpoint = $"{HttpConstants.AuthEndpoint}/me";
-  private const string ForgotPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/forgotPassword";
-  private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
-  private const string ManageInfoEndpoint = $"{HttpConstants.AuthEndpoint}/manage/info";
-  private const string RegisterEndpoint = $"{HttpConstants.AuthEndpoint}/register";
-  private const string ResendConfirmationEmailEndpoint = $"{HttpConstants.AuthEndpoint}/resendConfirmationEmail";
-  private const string ResetPasswordEndpoint = $"{HttpConstants.AuthEndpoint}/resetPassword";
-  private const string TwoFactorEndpoint = $"{HttpConstants.AuthEndpoint}/manage/2fa";
+  private const string ChangePasswordEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/change-password";
+  private const string ChangePasswordWithCredentialsEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/change-password-with-credentials";
+  private const string CompletePasswordResetEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/complete-password-reset";
+  private const string ConfirmEmailEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/confirmEmail";
+  private const string CurrentUserEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/me";
+  private const string ForgotPasswordEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/forgotPassword";
+  private const string InteractiveLoginEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/interactive-login";
+  private const string ManageInfoEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/manage/info";
+  private const string RegisterEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/register";
+  private const string ResendConfirmationEmailEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/resendConfirmationEmail";
+  private const string ResetPasswordEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/resetPassword";
+  private const string TwoFactorEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/manage/2fa";
 
   async Task<ApiResult> IAuthApi.ChangePassword(ChangePasswordRequestDto request, CancellationToken cancellationToken)
   {
@@ -96,7 +96,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.AuthEndpoint}/login?useCookies=false", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.AuthEndpoint}/login?useCookies=false", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(cancellationToken);
     }, allowAutoRefresh: false);
@@ -116,7 +116,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.AuthEndpoint}/logout", new { }, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.AuthEndpoint}/logout", new { }, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
@@ -135,7 +135,7 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.AuthEndpoint}/refresh", request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.AuthEndpoint}/refresh", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(cancellationToken);
     }, allowAutoRefresh: false);
