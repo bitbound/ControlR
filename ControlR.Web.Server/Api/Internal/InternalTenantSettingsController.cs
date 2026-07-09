@@ -7,6 +7,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [Route(HttpConstants.Internal.TenantSettingsEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+[EndpointGroupName("Internal")]
 public class InternalTenantSettingsController(AppDb appDb, ITenantSettingsManager tenantSettingsManager) : ControllerBase
 {
   private readonly AppDb _appDb = appDb;

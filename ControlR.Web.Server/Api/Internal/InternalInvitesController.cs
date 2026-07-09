@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.Internal;
@@ -7,6 +6,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [Route(HttpConstants.Internal.InvitesEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+[EndpointGroupName("Internal")]
 public class InternalInvitesController : ControllerBase
 {
   [HttpPost("accept")]

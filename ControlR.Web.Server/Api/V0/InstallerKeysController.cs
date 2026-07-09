@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Services.AgentInstaller;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.InstallerKeysEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+[ApiVersion(0)]
 public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
 {
   private readonly IAgentInstallerKeyManager _installerKeyManager = installerKeyManager;

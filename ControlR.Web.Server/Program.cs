@@ -1,3 +1,5 @@
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Client.Components.Layout;
 using ControlR.Web.Server.Components;
@@ -36,8 +38,20 @@ app.MapDefaultEndpoints();
 
 if (appOptions.EnableScalarUi)
 {
-  app.MapScalarApiReference();
-  app.MapOpenApi();
+  var versionDescriptions = app.DescribeApiVersions();
+  app
+    .MapScalarApiReference(options =>
+    {
+      foreach (var version in versionDescriptions)
+      {
+        options.AddDocument(version.GroupName.ToLowerInvariant(), version.GroupName);
+      }
+    })
+    .WithDocumentPerVersion();
+
+  app
+    .MapOpenApi()
+    .WithDocumentPerVersion();
 }
 
 // Configure the HTTP request pipeline.

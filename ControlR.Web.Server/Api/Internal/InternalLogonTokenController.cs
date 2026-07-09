@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,6 +7,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [Route(HttpConstants.Internal.LogonTokensEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+[EndpointGroupName("Internal")]
 public class InternalLogonTokenController : ControllerBase
 {
   [HttpPost]

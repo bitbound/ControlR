@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Services.LogonTokens;
@@ -8,6 +9,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.LogonTokensEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+[ApiVersion(0)]
 public class LogonTokensController : ControllerBase
 {
   [HttpPost]

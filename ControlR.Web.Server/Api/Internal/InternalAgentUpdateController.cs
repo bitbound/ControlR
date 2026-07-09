@@ -8,6 +8,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [ApiController]
 [Route(HttpConstants.Internal.AgentUpdateEndpoint)]
 [AllowAnonymous]
+[EndpointGroupName("Internal")]
 public class InternalAgentUpdateController(
   ILogger<InternalAgentUpdateController> logger,
   IWebHostEnvironment webHostEnvironment) : ControllerBase

@@ -143,10 +143,26 @@ public static class WebApplicationBuilderExtensions
         options.MultipartBodyLengthLimit = appOptions.MaxFileTransferSize;
       }
     });
-    builder.Services.AddControllers();
+    
     builder.Services.AddProblemDetails();
     builder.Services.AddExceptionHandler<ApiExceptionHandler>();
     builder.Services.AddExceptionHandler<UiExceptionHandler>();
+
+    builder.Services.AddApiVersioning()
+      .AddApiExplorer(options => { options.GroupNameFormat = "'v'VVV"; })
+      .AddMvc()
+      .AddOpenApi(options =>
+      {
+        if (options.Description.GroupName == "v0")
+        {
+          options.Document.AddDocumentTransformer<V0ApiDocumentInfoTransformer>();
+        }
+        else
+        {
+          options.Document.AddDocumentTransformer<InternalApiDocumentInfoTransformer>();
+        }
+      });
+
     builder.Services.AddOpenApi(options =>
     {
       options.AddDocumentTransformer<FileUploadTransformer>();
@@ -156,6 +172,31 @@ public static class WebApplicationBuilderExtensions
       options.AddOperationTransformer<OpenApiSecurityTransformer>();
       options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
     });
+
+    builder.Services.AddOpenApi("internal", options =>
+    {
+      options.ShouldInclude = desc => desc.GroupName == "Internal";
+      options.AddDocumentTransformer<InternalApiDocumentInfoTransformer>();
+      options.AddDocumentTransformer<FileUploadTransformer>();
+      options.AddDocumentTransformer<IdentityApiOpenApiTransformer>();
+      options.AddDocumentTransformer<ApiProblemDetailsTransformer>();
+      options.AddDocumentTransformer<OpenApiSecurityTransformer>();
+      options.AddOperationTransformer<OpenApiSecurityTransformer>();
+      options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
+    });
+
+    builder.Services.AddOpenApi("v0", options =>
+    {
+      options.ShouldInclude = desc => desc.GroupName == "v0";
+      options.AddDocumentTransformer<V0ApiDocumentInfoTransformer>();
+      options.AddDocumentTransformer<FileUploadTransformer>();
+      options.AddDocumentTransformer<IdentityApiOpenApiTransformer>();
+      options.AddDocumentTransformer<ApiProblemDetailsTransformer>();
+      options.AddDocumentTransformer<OpenApiSecurityTransformer>();
+      options.AddOperationTransformer<OpenApiSecurityTransformer>();
+      options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
+    });
+
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddCors(options =>
     {
@@ -173,7 +214,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddRateLimiter(options =>
     {
       options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-      options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+      options.GlobalLimiter = PartitionedRateLimiter.Create(
         ServiceAccountAuthRateLimitPolicy.Create(appOptions));
       options.OnRejected = (context, cancellationToken) =>
       {
@@ -188,7 +229,7 @@ public static class WebApplicationBuilderExtensions
 
         return ValueTask.CompletedTask;
       };
-      options.AddPolicy<string>(
+      options.AddPolicy(
         AnonymousAuthRateLimitPolicy.PolicyName,
         AnonymousAuthRateLimitPolicy.Create());
     });

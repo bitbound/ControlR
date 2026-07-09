@@ -32,19 +32,19 @@ public static class HttpConstants
 
   public static class Internal
   {
-    public const string AgentUpdateEndpoint = "/internal/agent-update";
-    public const string InstallerKeysEndpoint = "/internal/installer-keys";
-    public const string InvitesEndpoint = "/internal/invites";
-    public const string LogonTokensEndpoint = "/internal/logon-tokens";
-    public const string TenantSettingsEndpoint = "/internal/tenant-settings";
-    public const string UsersEndpoint = "/internal/users";
+    public const string AgentUpdateEndpoint = "/api/internal/agent-update";
+    public const string InstallerKeysEndpoint = "/api/internal/installer-keys";
+    public const string InvitesEndpoint = "/api/internal/invites";
+    public const string LogonTokensEndpoint = "/api/internal/logon-tokens";
+    public const string TenantSettingsEndpoint = "/api/internal/tenant-settings";
+    public const string UsersEndpoint = "/api/internal/users";
   }
 
   public static class V0
   {
-    public const string DevicesEndpoint = "/v0/devices";
-    public const string InstallerKeysEndpoint = "/v0/installer-keys";
-    public const string LogonTokensEndpoint = "/v0/logon-tokens";
-    public const string TenantsEndpoint = "/v0/tenants";
+    public const string DevicesEndpoint = "/api/v0/devices";
+    public const string InstallerKeysEndpoint = "/api/v0/installer-keys";
+    public const string LogonTokensEndpoint = "/api/v0/logon-tokens";
+    public const string TenantsEndpoint = "/api/v0/tenants";
   }
 }

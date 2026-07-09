@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.AgentInstaller;
@@ -10,6 +11,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.DevicesEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
+[ApiVersion(0)]
 public class DevicesController() : ControllerBase
 {
 
