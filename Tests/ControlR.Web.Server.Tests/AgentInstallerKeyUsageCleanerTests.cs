@@ -20,7 +20,7 @@ public class AgentInstallerKeyUsageCleanerTests(ITestOutputHelper testOutput)
         { "AppOptions:AgentInstallerKeyHistoryDays", "1" }
       });
 
-    var cleaner = testApp.Services.GetRequiredService<AgentInstallerKeyUsageCleaner>();
+    var backgroundService = testApp.Services.GetRequiredService<AgentInstallerKeyUsageCleanupBackgroundService>();
     var keyManager = testApp.Services.GetRequiredService<IAgentInstallerKeyManager>();
     var tenant = await testApp.Services.CreateTestTenant();
     var user = await testApp.Services.CreateTestUser(tenant.Id);
@@ -40,7 +40,7 @@ public class AgentInstallerKeyUsageCleanerTests(ITestOutputHelper testOutput)
 
     await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
 
-    var removedCount = await cleaner.CleanExpiredUsages(TestContext.Current.CancellationToken);
+    var removedCount = await backgroundService.CleanExpiredUsages(TestContext.Current.CancellationToken);
 
     Assert.Equal(2, removedCount);
 
@@ -63,7 +63,7 @@ public class AgentInstallerKeyUsageCleanerTests(ITestOutputHelper testOutput)
         { "AppOptions:AgentInstallerKeyHistoryDays", "0" }
       });
 
-    var cleaner = testApp.Services.GetRequiredService<AgentInstallerKeyUsageCleaner>();
+    var backgroundService = testApp.Services.GetRequiredService<AgentInstallerKeyUsageCleanupBackgroundService>();
     var keyManager = testApp.Services.GetRequiredService<IAgentInstallerKeyManager>();
     var tenant = await testApp.Services.CreateTestTenant();
     var user = await testApp.Services.CreateTestUser(tenant.Id);
@@ -79,7 +79,7 @@ public class AgentInstallerKeyUsageCleanerTests(ITestOutputHelper testOutput)
     await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
     testApp.TimeProvider.Advance(TimeSpan.FromDays(10));
 
-    var removedCount = await cleaner.CleanExpiredUsages(TestContext.Current.CancellationToken);
+    var removedCount = await backgroundService.CleanExpiredUsages(TestContext.Current.CancellationToken);
 
     Assert.Equal(0, removedCount);
   }

@@ -417,10 +417,10 @@ public static class WebApplicationBuilderExtensions
       options.RequireAuthenticationForRequester = true;
     });
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
-    builder.Services.AddSingleton<AgentInstallerKeyUsageCleaner>();
-    builder.Services.AddHostedService<AgentInstallerKeyUsageCleanupBackgroundService>();
-    builder.Services.AddSingleton<ExternalUserCleanupService>();
-    builder.Services.AddHostedService<ExternalUserCleanupBackgroundService>();
+    builder.Services.AddSingleton<AgentInstallerKeyUsageCleanupBackgroundService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<AgentInstallerKeyUsageCleanupBackgroundService>());
+    builder.Services.AddSingleton<ExternalUserCleanupBackgroundService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<ExternalUserCleanupBackgroundService>());
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IAgentVersionProvider, AgentVersionProvider>();
     builder.Services.AddScoped<IReleaseNotesProvider, ReleaseNotesProvider>();
