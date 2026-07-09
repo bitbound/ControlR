@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Api.V0;
+using V0DevicesController = ControlR.Web.Server.Api.V0.DevicesController;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
@@ -223,7 +224,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
       new Claim(PrincipalClaimTypes.CredentialId, saResult.Value.ServiceAccount.Credentials[0].Id.ToString()),
     ], "TestAuth"));
 
-    var controller = scope.CreateController<DevicesController>();
+    var controller = scope.CreateController<V0DevicesController>();
     controller.ControllerContext.HttpContext.User = serverPrincipal;
     var authorizationService = services.GetRequiredService<IAuthorizationService>();
     var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();

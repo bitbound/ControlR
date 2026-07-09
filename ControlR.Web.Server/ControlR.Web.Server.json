@@ -654,45 +654,6 @@
         }
       }
     },
-    "/api/agent-update/get-bundle-metadata/{runtime}": {
-      "get": {
-        "tags": [
-          "AgentUpdate"
-        ],
-        "parameters": [
-          {
-            "name": "runtime",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/RuntimeId"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BundleMetadataDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/auth/change-password": {
       "post": {
         "tags": [
@@ -4038,7 +3999,7 @@
     "/v0/devices": {
       "post": {
         "tags": [
-          "V0Devices"
+          "Devices"
         ],
         "requestBody": {
           "content": {
@@ -4090,7 +4051,7 @@
       },
       "get": {
         "tags": [
-          "V0Devices"
+          "Devices"
         ],
         "responses": {
           "200": {
@@ -4133,7 +4094,7 @@
     "/v0/devices/{deviceId}": {
       "delete": {
         "tags": [
-          "V0Devices"
+          "Devices"
         ],
         "parameters": [
           {
@@ -4159,7 +4120,7 @@
       },
       "get": {
         "tags": [
-          "V0Devices"
+          "Devices"
         ],
         "parameters": [
           {
@@ -4204,7 +4165,7 @@
     "/v0/devices/delete-many": {
       "post": {
         "tags": [
-          "V0Devices"
+          "Devices"
         ],
         "requestBody": {
           "content": {
@@ -4258,7 +4219,7 @@
     "/v0/devices/summary": {
       "get": {
         "tags": [
-          "V0Devices"
+          "Devices"
         ],
         "responses": {
           "200": {
@@ -4301,7 +4262,7 @@
     "/v0/devices/search": {
       "post": {
         "tags": [
-          "V0Devices"
+          "Devices"
         ],
         "requestBody": {
           "content": {
@@ -4355,7 +4316,7 @@
     "/v0/devices/{deviceId}/alias": {
       "patch": {
         "tags": [
-          "V0Devices"
+          "Devices"
         ],
         "parameters": [
           {
@@ -4420,7 +4381,7 @@
     "/v0/installer-keys": {
       "post": {
         "tags": [
-          "V0InstallerKeys"
+          "InstallerKeys"
         ],
         "requestBody": {
           "content": {
@@ -4471,46 +4432,10 @@
         ]
       }
     },
-    "/v0/installer-keys/increment-usage/{keyId}": {
-      "post": {
-        "tags": [
-          "V0InstallerKeys"
-        ],
-        "parameters": [
-          {
-            "name": "keyId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "deviceId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
-        "security": [
-          {
-            "ServiceAccountCredential": [ ]
-          }
-        ]
-      }
-    },
     "/v0/logon-tokens": {
       "post": {
         "tags": [
-          "V0LogonTokens"
+          "LogonTokens"
         ],
         "requestBody": {
           "content": {
@@ -4564,7 +4489,7 @@
     "/v0/tenants": {
       "post": {
         "tags": [
-          "V0Tenants"
+          "Tenants"
         ],
         "requestBody": {
           "content": {
@@ -8292,9 +8217,6 @@
       "name": "ControlR.Web.Server"
     },
     {
-      "name": "AgentUpdate"
-    },
-    {
       "name": "Auth"
     },
     {
@@ -8358,16 +8280,13 @@
       "name": "Version"
     },
     {
-      "name": "V0Devices"
+      "name": "InstallerKeys"
     },
     {
-      "name": "V0InstallerKeys"
+      "name": "LogonTokens"
     },
     {
-      "name": "V0LogonTokens"
-    },
-    {
-      "name": "V0Tenants"
+      "name": "Tenants"
     },
     {
       "name": "InternalAgentUpdate"

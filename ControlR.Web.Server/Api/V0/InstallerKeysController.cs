@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.InstallerKeysEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-public class V0InstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
+public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
 {
   private readonly IAgentInstallerKeyManager _installerKeyManager = installerKeyManager;
 
@@ -24,16 +24,5 @@ public class V0InstallerKeysController(IAgentInstallerKeyManager installerKeyMan
         request.FriendlyName);
 
     return Ok(dto);
-  }
-
-  [HttpPost("increment-usage/{keyId:guid}")]
-  [AllowAnonymous]
-  public async Task<IActionResult> IncrementUsage(
-      [FromRoute] Guid keyId,
-      [FromQuery] Guid? deviceId)
-  {
-    var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
-    var result = await _installerKeyManager.IncrementUsage(keyId, deviceId, remoteIp);
-    return result.ToActionResult();
   }
 }

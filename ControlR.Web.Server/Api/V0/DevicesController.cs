@@ -10,7 +10,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.DevicesEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-public class V0DevicesController() : ControllerBase
+public class DevicesController() : ControllerBase
 {
 
   [HttpPost]
@@ -22,7 +22,7 @@ public class V0DevicesController() : ControllerBase
     [FromServices] IAgentInstallerKeyManager keyManager,
     [FromServices] IDeviceManager deviceManager,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<V0DevicesController> logger,
+    [FromServices] ILogger<DevicesController> logger,
     [FromServices] IEd25519KeyProvider keyProvider)
   {
     using var logScope = logger.BeginScope(requestDto);
@@ -217,7 +217,7 @@ public class V0DevicesController() : ControllerBase
     [FromBody] DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<V0DevicesController> logger)
+    [FromServices] ILogger<DevicesController> logger)
   {
     var isRelationalDatabase = appDb.Database.IsRelational();
     var authorizedQuery = appDb.Devices.AsQueryable();
@@ -270,7 +270,7 @@ public class V0DevicesController() : ControllerBase
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<V0DevicesController> logger)
+    [FromServices] ILogger<DevicesController> logger)
   {
     if (deviceId != requestDto.DeviceId)
     {

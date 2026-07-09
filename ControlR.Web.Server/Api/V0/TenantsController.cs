@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.TenantsEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-public class V0TenantsController(ITenantProvisioningService tenantProvisioningService) : ControllerBase
+public class TenantsController(ITenantProvisioningService tenantProvisioningService) : ControllerBase
 {
   [HttpPost]
   public async Task<ActionResult<CreateTenantResponseDto>> Create(

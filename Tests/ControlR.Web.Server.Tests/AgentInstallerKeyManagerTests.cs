@@ -344,7 +344,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
   }
 
   [Fact]
-  public async Task IncrementUsage_DoesNotShowExpiredUsageEntries()
+  public async Task ValidateAndConsumeKey_DoesNotShowExpiredUsageEntries()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput,
       testDatabaseName: $"{Guid.NewGuid()}",
@@ -366,12 +366,12 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
         expiration: null,
         friendlyName: "Test Key");
 
-    await keyManager.IncrementUsage(dto.Id, Guid.NewGuid());
-    await keyManager.IncrementUsage(dto.Id, Guid.NewGuid());
+    await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
+    await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
 
     timeProvider.Advance(TimeSpan.FromDays(2));
 
-    await keyManager.IncrementUsage(dto.Id, Guid.NewGuid());
+    await keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
 
     var result = await keyManager.GetKeyUsages(dto.Id, user.Id, tenant.Id, isTenantAdmin: true);
     Assert.True(result.IsSuccess);
@@ -379,26 +379,7 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
   }
 
   [Fact]
-  public async Task IncrementUsage_UsageBasedKey_ExpiredAfter24Hours_Fails()
-  {
-    var dto = await _keyManager.CreateKey(
-        tenantId: _tenantId,
-        creatorId: _creatorId,
-        keyType: InstallerKeyType.UsageBased,
-        allowedUses: 10,
-        expiration: null,
-        friendlyName: "Test Key");
-
-    _timeProvider.Advance(TimeSpan.FromHours(25));
-
-    var result = await _keyManager.IncrementUsage(dto.Id);
-    Assert.False(result.IsSuccess);
-    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
-    Assert.Contains("expired", result.Reason, StringComparison.OrdinalIgnoreCase);
-  }
-
-  [Fact]
-  public async Task IncrementUsage_WhenTimeBasedKeyExpired_RemovesKey()
+  public async Task ValidateAndConsumeKey_WhenTimeBasedKeyExpired_RemovesKey()
   {
     var dto = await _keyManager.CreateKey(
         tenantId: _tenantId,
@@ -408,15 +389,13 @@ public class AgentInstallerKeyManagerTests(ITestOutputHelper testOutput) : IAsyn
         expiration: _timeProvider.GetLocalNow().AddHours(1),
         friendlyName: "Test Key");
 
-    // Advance time past expiration
     _timeProvider.Advance(TimeSpan.FromHours(2));
 
-    var result = await _keyManager.IncrementUsage(dto.Id);
+    var result = await _keyManager.ValidateAndConsumeKey(dto.Id, dto.KeySecret, Guid.NewGuid());
     Assert.False(result.IsSuccess);
     Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
     Assert.Contains("expired", result.Reason, StringComparison.OrdinalIgnoreCase);
 
-    // Verify key was removed by trying to validate it
     var validateResult = await _keyManager.ValidateKey(dto.Id, dto.KeySecret);
     Assert.False(validateResult.IsSuccess);
   }

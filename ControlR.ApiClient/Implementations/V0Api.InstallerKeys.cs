@@ -17,17 +17,4 @@ internal partial class V0Api
       return await response.Content.ReadFromJsonAsync<CreateInstallerKeyResponseDto>(cancellationToken);
     });
   }
-
-  async Task<ApiResult> IV0InstallerKeysApi.IncrementInstallerKeyUsage(Guid keyId, Guid? deviceId, CancellationToken cancellationToken)
-  {
-    return await _client.ExecuteApiCall(async () =>
-    {
-      var url = deviceId.HasValue
-        ? $"{HttpConstants.V0.InstallerKeysEndpoint}/increment-usage/{keyId}?deviceId={deviceId.Value}"
-        : $"{HttpConstants.V0.InstallerKeysEndpoint}/increment-usage/{keyId}";
-
-      using var response = await _client.HttpClient.PostAsync(url, null, cancellationToken);
-      await response.EnsureSuccessStatusCodeWithDetails();
-    });
-  }
 }

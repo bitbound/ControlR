@@ -15,7 +15,6 @@ public interface IAgentInstallerKeyManager
   Task<HttpResult> DeleteKey(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin);
   Task<IReadOnlyList<AgentInstallerKeyDto>> GetAllKeys(Guid tenantId, Guid userId, bool isTenantAdmin);
   Task<HttpResult<IReadOnlyList<AgentInstallerKeyUsageDto>>> GetKeyUsages(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin);
-  Task<HttpResult> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null);
   Task<HttpResult> RenameKey(Guid keyId, string friendlyName, Guid userId, Guid tenantId, bool isTenantAdmin);
   Task<HttpResult<AgentInstallerKey>> TryGetKey(Guid keyId, Guid tenantId);
   /// <summary>
@@ -181,46 +180,6 @@ public class AgentInstallerKeyManager(
       .ToListAsync();
 
     return HttpResult.Ok<IReadOnlyList<AgentInstallerKeyUsageDto>>(usages);
-  }
-
-  public async Task<HttpResult> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null)
-  {
-    await using var db = await _dbContextFactory.CreateDbContextAsync();
-    var installerKey = await db.AgentInstallerKeys
-        .FirstOrDefaultAsync(x => x.Id == keyId);
-
-    if (installerKey is null)
-    {
-      return HttpResult.Fail(HttpResultErrorCode.NotFound, "Installer key not found");
-    }
-
-    var now = _timeProvider.GetUtcNow();
-
-    if (installerKey.KeyType == InstallerKeyType.TimeBased ||
-        installerKey.KeyType == InstallerKeyType.UsageBased)
-    {
-      var isExpired = !installerKey.Expiration.HasValue || installerKey.Expiration.Value < now;
-      if (isExpired)
-      {
-        db.AgentInstallerKeys.Remove(installerKey);
-        await db.SaveChangesAsync();
-        return HttpResult.Fail(HttpResultErrorCode.BadRequest, "Key has expired");
-      }
-    }
-
-    var usageCount = 0;
-    if (installerKey.KeyType == InstallerKeyType.UsageBased)
-    {
-      usageCount = await db.AgentInstallerKeyUsages
-          .CountAsync(u => u.AgentInstallerKeyId == keyId);
-      if (usageCount >= installerKey.AllowedUses)
-      {
-        return HttpResult.Fail(HttpResultErrorCode.BadRequest, "Key usage limit reached");
-      }
-    }
-
-    _ = await AddUsageAndUpdateKey(db, installerKey, usageCount, deviceId, remoteIpAddress);
-    return HttpResult.Ok();
   }
 
   public async Task<HttpResult> RenameKey(Guid keyId, string friendlyName, Guid userId, Guid tenantId, bool isTenantAdmin)

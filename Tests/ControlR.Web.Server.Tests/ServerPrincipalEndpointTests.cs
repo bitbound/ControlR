@@ -27,7 +27,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     var tenant = await services.CreateTestTenant();
     var creator = await services.CreateTestUser(tenant.Id, email: "creator@test.local");
-    var controller = scope.CreateController<V0InstallerKeysController>();
+    var controller = scope.CreateController<InstallerKeysController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
     var result = await controller.Create(new IssueInstallerKeyRequestDto(
@@ -51,14 +51,13 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var tenant = await services.CreateTestTenant();
     var user = await services.CreateTestUser(tenant.Id, email: "viewer@test.local");
     var device = await services.CreateTestDevice(tenant.Id);
-    var controller = scope.CreateController<V0LogonTokensController>();
+    var controller = scope.CreateController<LogonTokensController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
     controller.ControllerContext.HttpContext.Request.Scheme = "https";
     controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
 
     var result = await controller.Create(
       services.GetRequiredService<AppDb>(),
-      services.GetRequiredService<TimeProvider>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       services.GetRequiredService<ILogonTokenProvider>(),
       new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, LogonTokenKind.User));

@@ -1,6 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Data.Enums;
-using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,12 +8,11 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.LogonTokensEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-public class V0LogonTokensController : ControllerBase
+public class LogonTokensController : ControllerBase
 {
   [HttpPost]
   public async Task<ActionResult<LogonTokenResponseDto>> Create(
     [FromServices] AppDb appDb,
-    [FromServices] TimeProvider timeProvider,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] ILogonTokenProvider logonTokenProvider,
     [FromBody] IssueLogonTokenRequestDto request)

@@ -83,15 +83,14 @@ public interface IInstallerKeysApi
 public interface IV0InstallerKeysApi
 {
   Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
-  Task<ApiResult> IncrementInstallerKeyUsage(Guid keyId, Guid? deviceId = null, CancellationToken cancellationToken = default);
 }
 
 public interface IInvitesApi
 {
+  Task<ApiResult<AcceptInvitationResponseDto>> AcceptInvitation(AcceptInvitationRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantInviteResponseDto>> CreateTenantInvite(TenantInviteRequestDto request, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteTenantInvite(Guid inviteId, CancellationToken cancellationToken = default);
   Task<ApiResult<TenantInviteResponseDto[]>> GetPendingTenantInvites(CancellationToken cancellationToken = default);
-  Task<ApiResult<AcceptInvitationResponseDto>> AcceptInvitation(AcceptInvitationRequestDto request, CancellationToken cancellationToken = default);
 }
 
 public interface ILogonTokensApi

@@ -2,7 +2,6 @@ namespace ControlR.Libraries.Api.Contracts.Constants;
 
 public static class HttpConstants
 {
-  public const string AgentUpdateEndpoint = "/api/agent-update";
   public const string AuthEndpoint = "/api/auth";
   public const string DesktopPreviewEndpoint = "/api/desktop-preview";
   public const string DeviceFileSystemEndpoint = "/api/device-file-system";

@@ -17,7 +17,6 @@ public class DevicesController(
 
   [HttpPost]
   [AllowAnonymous]
-  [Obsolete("Use /public/devices endpoint instead.")]
   public async Task<ActionResult<DeviceResponseDto>> CreateDevice(
     [FromBody] CreateDeviceRequestDto requestDto,
     [FromServices] AppDb appDb,
