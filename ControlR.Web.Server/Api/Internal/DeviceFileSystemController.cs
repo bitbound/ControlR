@@ -7,12 +7,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Net.Http.Headers;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.DeviceFileSystemEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class DeviceFileSystemController : ControllerBase
 {
   [HttpPost("create-directory/{deviceId:guid}")]

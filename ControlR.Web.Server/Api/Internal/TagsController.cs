@@ -1,12 +1,12 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.TagsEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class TagsController : ControllerBase
 {
   [HttpPost]

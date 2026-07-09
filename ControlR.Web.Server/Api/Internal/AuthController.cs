@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-namespace ControlR.Web.Server.Api;
+
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.AuthEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class AuthController : ControllerBase
 {
   [Authorize]

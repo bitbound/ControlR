@@ -2,12 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.VersionEndpoint)]
 [ApiController]
 [OutputCache(Duration = 60)]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class VersionController(
   IAgentVersionProvider agentVersionProvider,
   IReleaseNotesProvider releaseNotesProvider) : ControllerBase

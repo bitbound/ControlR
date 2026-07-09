@@ -2,12 +2,12 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.PublicRegistrationSettingsEndpoint)]
 [ApiController]
 [OutputCache(Duration = 60)]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class PublicRegistrationSettingsController : ControllerBase
 {
   [HttpGet]

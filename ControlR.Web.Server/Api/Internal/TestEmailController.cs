@@ -1,12 +1,12 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.TestEmailEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.ServerAdministrator)]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class TestEmailController() : ControllerBase
 {
 

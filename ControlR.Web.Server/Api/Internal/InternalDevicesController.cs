@@ -10,7 +10,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [Route(HttpConstants.DevicesEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class InternalDevicesController(
   IDeviceAccessScopeResolver deviceAccessScopeResolver) : ControllerBase
 {

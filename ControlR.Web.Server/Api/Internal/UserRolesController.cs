@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ControlR.Libraries.Api.Contracts.Constants;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.UserRolesEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class UserRolesController(ILogger<UserRolesController> logger) : ControllerBase
 {
   private readonly ILogger<UserRolesController> _logger = logger;

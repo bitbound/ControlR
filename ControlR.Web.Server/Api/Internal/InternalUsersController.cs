@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [Route(HttpConstants.Internal.UsersEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class InternalUsersController : ControllerBase
 {
   [HttpPost("{userId:guid}/reset-password")]

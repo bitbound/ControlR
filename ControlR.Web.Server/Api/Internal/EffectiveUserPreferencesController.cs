@@ -2,12 +2,12 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.EffectiveUserPreferencesEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class EffectiveUserPreferencesController(IEffectiveUserPreferencesResolver effectiveUserPreferencesResolver) : ControllerBase
 {
   private readonly IEffectiveUserPreferencesResolver _effectiveUserPreferencesResolver = effectiveUserPreferencesResolver;

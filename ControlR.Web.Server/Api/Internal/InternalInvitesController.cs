@@ -6,7 +6,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [Route(HttpConstants.Internal.InvitesEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class InternalInvitesController : ControllerBase
 {
   [HttpPost("accept")]

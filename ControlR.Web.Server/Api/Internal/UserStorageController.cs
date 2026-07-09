@@ -2,12 +2,12 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.UserStorageEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class UserStorageController(IUserStorageManager userStorageManager) : ControllerBase
 {
   private readonly IUserStorageManager _userStorageManager = userStorageManager;

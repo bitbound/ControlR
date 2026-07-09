@@ -9,7 +9,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.InstallerKeysEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-[ApiVersion(0)]
+[ApiVersion(OpenApiConstants.CurrentApiVersion)]
 public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
 {
   private readonly IAgentInstallerKeyManager _installerKeyManager = installerKeyManager;

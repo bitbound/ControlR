@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ControlR.Libraries.Api.Contracts.Constants;
  
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
  
 [Route(HttpConstants.RolesEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class RolesController : ControllerBase
 {
   [HttpGet]

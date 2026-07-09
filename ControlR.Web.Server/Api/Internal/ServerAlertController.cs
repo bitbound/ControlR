@@ -1,12 +1,12 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.ServerAlertEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class ServerAlertController(AppDb appDb) : ControllerBase
 {
   private static readonly Guid _singletonId = Guid.Parse("00000000-0000-0000-0000-000000000001");

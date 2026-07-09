@@ -4,12 +4,12 @@ using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.DesktopPreviewEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class DesktopPreviewController : ControllerBase
 {
   [HttpGet("{deviceId:guid}/{targetProcessId:int}")]

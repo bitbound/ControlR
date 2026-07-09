@@ -8,7 +8,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.TenantsEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-[ApiVersion(0)]
+[ApiVersion(OpenApiConstants.CurrentApiVersion)]
 public class TenantsController(ITenantProvisioningService tenantProvisioningService) : ControllerBase
 {
   [HttpPost]

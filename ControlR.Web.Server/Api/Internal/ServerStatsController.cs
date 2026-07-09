@@ -1,12 +1,12 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.ServerStatsEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.ServerAdministrator)]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class ServerStatsController(IServerStatsProvider serverStatsProvider) : ControllerBase
 {
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;

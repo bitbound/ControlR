@@ -2,12 +2,12 @@
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Libraries.Api.Contracts.Constants;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.DeviceTagsEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class DeviceTagsController : ControllerBase
 {
   [HttpPost]

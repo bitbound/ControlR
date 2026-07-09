@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using ControlR.Web.Server.Options;
 using Microsoft.Extensions.Options;
 using Moq;
+using ControlR.Web.Server.Api.Internal;
 
 namespace ControlR.Web.Server.Tests;
 

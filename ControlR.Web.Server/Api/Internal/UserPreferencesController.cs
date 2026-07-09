@@ -2,12 +2,12 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.UserPreferencesEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class UserPreferencesController(AppDb appDb, IUserPreferencesManager userPreferencesManager) : ControllerBase
 {
   private readonly AppDb _appDb = appDb;

@@ -2,13 +2,13 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
-namespace ControlR.Web.Server.Api;
+namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.UserServerSettingsEndpoint)]
 [ApiController]
 [Authorize]
 [OutputCache(Duration = 30)]
-[EndpointGroupName("Internal")]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class UserServerSettingsController : ControllerBase
 {
   [HttpGet("file-upload-max-size")]

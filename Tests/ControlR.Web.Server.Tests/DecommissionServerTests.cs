@@ -1,7 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
-using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Options;
@@ -18,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using ControlR.Libraries.Shared.Services.Encryption;
+using ControlR.Web.Server.Api.Internal;
 
 namespace ControlR.Web.Server.Tests;
 

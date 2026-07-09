@@ -26,3 +26,4 @@ global using ControlR.Web.Server.Hubs;
 global using ControlR.Libraries.Api.Contracts.Enums;
 global using ControlR.Web.Server.RateLimiting;
 global using ControlR.Web.Client.Extensions;
+global using ControlR.Web.Server.OpenApi;

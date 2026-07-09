@@ -11,7 +11,7 @@ namespace ControlR.Web.Server.Api.V0;
 [Route(HttpConstants.V0.DevicesEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
-[ApiVersion(0)]
+[ApiVersion(OpenApiConstants.CurrentApiVersion)]
 public class DevicesController() : ControllerBase
 {
 
