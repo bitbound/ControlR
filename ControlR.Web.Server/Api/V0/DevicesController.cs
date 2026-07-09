@@ -5,6 +5,7 @@ using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
+using CreateDeviceRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.CreateDeviceRequestDto;
 
 namespace ControlR.Web.Server.Api.V0;
 
