@@ -32,7 +32,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
 
     var patManager = services.GetRequiredService<IPersonalAccessTokenManager>();
 
-    var createRequest = new Libraries.Api.Contracts.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, serverAdmin.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
@@ -72,7 +72,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var personalAccessTokenManager = services.GetRequiredService<IPersonalAccessTokenManager>();
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var createRequest = new Libraries.Api.Contracts.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await personalAccessTokenManager.CreateToken(createRequest, user.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
@@ -184,7 +184,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var timeProvider = testApp.TimeProvider;
     await using var db = services.GetRequiredService<AppDb>();
 
-    var createRequest = new Libraries.Api.Contracts.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, user.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 
@@ -228,7 +228,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
 
     var patManager = services.GetRequiredService<IPersonalAccessTokenManager>();
 
-    var createRequest = new Libraries.Api.Contracts.Dtos.ServerApi.CreatePersonalAccessTokenRequestDto("Test Key");
+    var createRequest = new CreatePersonalAccessTokenRequestDto("Test Key");
     var createResult = await patManager.CreateToken(createRequest, normalUser.Id);
     var plainTextToken = createResult.Value!.PlainTextToken;
 

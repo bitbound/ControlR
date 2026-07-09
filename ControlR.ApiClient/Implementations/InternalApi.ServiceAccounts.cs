@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.ServiceAccounts;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.ApiClient;

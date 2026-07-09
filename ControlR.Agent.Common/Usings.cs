@@ -21,3 +21,4 @@ global using ControlR.Agent.Shared.Services.Linux;
 global using ControlR.Agent.Shared.Services.Mac;
 global using ControlR.Agent.Shared.Services.Windows;
 global using ControlR.Agent.Shared.Startup;
+global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;

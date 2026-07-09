@@ -11,7 +11,7 @@ global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Shared.Extensions;
 global using ControlR.Libraries.Shared.Services.Http;
 global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
+global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.ServiceAccounts;
 global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 global using ControlR.Libraries.Signalr.Client;
 global using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;

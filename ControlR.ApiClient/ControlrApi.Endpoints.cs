@@ -1,7 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.ServiceAccounts;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Libraries.Api.Contracts.Enums;
 using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;

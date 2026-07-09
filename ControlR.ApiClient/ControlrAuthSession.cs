@@ -4,6 +4,7 @@ using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

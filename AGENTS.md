@@ -49,14 +49,19 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 
 ### Route Root DTO Convention
 
-The server API has three route roots, each in its own `Api/{RouteRoot}/` directory with a corresponding namespace `ControlR.Web.Server.Api.{RouteRoot}`:
+DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.ServerApi`:
 
-| Route Root | Policy | Consumer |
+| Location | Contents | Lifecycle |
 |---|---|---|
-| `Internal` | `RequireUserPrincipalPolicy` | BFF (Blazor UI) |
-| `V0` | `RequireServerServiceAccountPolicy` | S2S (server-to-server) automation |
+| `Dtos/ServerApi/` (root) | DTOs shared across route roots | Changing affects both Internal and V0 |
+| `Dtos/ServerApi/Internal/` | Internal (BFF) only | Dynamic, changes freely |
+| `Dtos/ServerApi/V0/` | V0 (S2S) only | Stable contract |
+| `Dtos/ServerApi/V1/` | V1 (S2S, future) | Stable contract |
 
-Every DTO belongs to exactly one route root and lives in `Dtos/ServerApi/{RouteRoot}/` with namespace `ControlR.Libraries.Api.Contracts.Dtos.ServerApi.{RouteRoot}`. There is no shared DTO folder — each root owns its contract independently. If two roots need the same shape, duplicate it under both namespaces. Route roots have different lifecycle commitments; coupling them through a shared DTO breaks that isolation.
+**Rules:**
+- If a DTO is used by **only one** route root → place it in that root's folder (`Internal/`, `V0/`, …).
+- If a DTO is used by **more than one** route root → keep it in the root `Dtos/ServerApi/` folder. If the contract needs to diverge between versions, duplicate it into each version folder and remove the shared version.
+- When sun-setting a version, its DTO folder can be deleted independently.
 
 ## API Routing & Versioning
 
@@ -72,7 +77,6 @@ Every DTO belongs to exactly one route root and lives in `Dtos/ServerApi/{RouteR
 - Controller class names carry **no** version or audience prefix. The namespace + `[ApiVersion]` attribute convey that.
   - ✅ `Api/V0/DevicesController.cs` — namespace `Api.V0`
   - ❌ `V0DevicesController.cs` — version noise in the class name
-- Every DTO belongs to exactly one route root (`Dtos/ServerApi/{Root}/`). If two roots need the same shape, duplicate it. Route roots have different lifecycle commitments; coupling through a shared DTO breaks that isolation.
 - Only add controllers to a new version when stakeholders request them. Don't pre-build.
 
 ## Cross-Platform
