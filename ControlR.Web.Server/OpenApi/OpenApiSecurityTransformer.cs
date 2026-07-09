@@ -2,7 +2,7 @@ using ControlR.Web.Server.Authn;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
-namespace ControlR.Web.Server.Middleware;
+namespace ControlR.Web.Server.OpenApi;
 
 public class OpenApiSecurityTransformer : IOpenApiDocumentTransformer, IOpenApiOperationTransformer
 {

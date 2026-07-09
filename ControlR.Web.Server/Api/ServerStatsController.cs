@@ -6,6 +6,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.ServerStatsEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.ServerAdministrator)]
+[EndpointGroupName("Internal")]
 public class ServerStatsController(IServerStatsProvider serverStatsProvider) : ControllerBase
 {
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;

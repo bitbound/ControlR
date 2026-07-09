@@ -7,6 +7,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.PublicRegistrationSettingsEndpoint)]
 [ApiController]
 [OutputCache(Duration = 60)]
+[EndpointGroupName("Internal")]
 public class PublicRegistrationSettingsController : ControllerBase
 {
   [HttpGet]

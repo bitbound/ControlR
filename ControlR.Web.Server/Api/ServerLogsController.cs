@@ -6,6 +6,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.ServerLogsEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.ServerAdministrator)]
+[EndpointGroupName("Internal")]
 public class ServerLogsController(
   IWebHostEnvironment webHostEnvironment,
   IOptionsMonitor<AspireDashboardOptions> aspireOptions) : ControllerBase

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
-namespace ControlR.Web.Server.Middleware;
+namespace ControlR.Web.Server.OpenApi;
 
 public class OpenApiSchemaTypeTransformer : IOpenApiSchemaTransformer
 {

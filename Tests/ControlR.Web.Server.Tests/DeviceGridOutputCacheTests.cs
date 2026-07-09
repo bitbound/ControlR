@@ -26,7 +26,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.Services.CreateScope();
-    var controller = scope.CreateController<Api.DevicesController>();
+    var controller = scope.CreateController<Api.Internal.InternalDevicesController>();
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
     var outputCacheStore = scope.ServiceProvider.GetRequiredService<IOutputCacheStore>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();

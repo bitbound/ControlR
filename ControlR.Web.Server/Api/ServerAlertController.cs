@@ -6,6 +6,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.ServerAlertEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class ServerAlertController(AppDb appDb) : ControllerBase
 {
   private static readonly Guid _singletonId = Guid.Parse("00000000-0000-0000-0000-000000000001");

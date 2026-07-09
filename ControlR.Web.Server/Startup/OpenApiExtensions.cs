@@ -1,6 +1,5 @@
 using Asp.Versioning;
-using Asp.Versioning.ApiExplorer;
-using ControlR.Web.Server.Middleware;
+using ControlR.Web.Server.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 
 namespace ControlR.Web.Server.Startup;
@@ -9,8 +8,16 @@ public static class OpenApiExtensions
 {
   public static void AddControlrOpenApi(this IHostApplicationBuilder builder)
   {
-    builder.Services.AddApiVersioning()
-      .AddApiExplorer(options => { options.GroupNameFormat = "'v'VVV"; })
+    builder.Services
+      .AddApiVersioning(options =>
+      {
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.DefaultApiVersion = new ApiVersion(0, 0);
+      })
+      .AddApiExplorer(options => 
+      {
+        options.GroupNameFormat = "'v'VVV"; 
+      })
       .AddMvc()
       .AddOpenApi(options =>
       {
@@ -22,7 +29,7 @@ public static class OpenApiExtensions
           case "Internal":
             options.Document.AddDocumentTransformer<InternalApiDocumentInfoTransformer>();
             break;
-          case "v1":
+          case "Legacy":
             options.Document.AddDocumentTransformer<LegacyApiDocumentInfoTransformer>();
             break;
           default:
@@ -30,7 +37,12 @@ public static class OpenApiExtensions
         }
       });
 
-    builder.Services.AddOpenApi(AddSharedTransformers);
+    builder.Services.AddOpenApi("legacy", options =>
+    {
+      options.ShouldInclude = desc => desc.GroupName == "Legacy";
+      options.AddDocumentTransformer<LegacyApiDocumentInfoTransformer>();
+      AddSharedTransformers(options);
+    });
 
     builder.Services.AddOpenApi("internal", options =>
     {

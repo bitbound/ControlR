@@ -3,20 +3,19 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
-namespace ControlR.Web.Server.Api.Internal;
+namespace ControlR.Web.Server.Api;
 
 [ApiController]
-[Route(HttpConstants.Internal.AgentUpdateEndpoint)]
+[Route(HttpConstants.AgentUpdateEndpoint)]
 [AllowAnonymous]
-[EndpointGroupName("Internal")]
-[Tags("AgentUpdateController")]
-public class InternalAgentUpdateController(
-  ILogger<InternalAgentUpdateController> logger,
+[EndpointGroupName("Legacy")]
+public class AgentUpdateController(
+  ILogger<AgentUpdateController> logger,
   IWebHostEnvironment webHostEnvironment) : ControllerBase
 {
   private const int CacheDurationSeconds = 600;
 
-  private readonly ILogger<InternalAgentUpdateController> _logger = logger;
+  private readonly ILogger<AgentUpdateController> _logger = logger;
   private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
 
   [OutputCache(Duration = CacheDurationSeconds)]

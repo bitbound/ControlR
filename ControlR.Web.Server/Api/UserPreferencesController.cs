@@ -7,6 +7,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.UserPreferencesEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class UserPreferencesController(AppDb appDb, IUserPreferencesManager userPreferencesManager) : ControllerBase
 {
   private readonly AppDb _appDb = appDb;

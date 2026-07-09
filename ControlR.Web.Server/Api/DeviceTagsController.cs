@@ -7,6 +7,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.DeviceTagsEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class DeviceTagsController : ControllerBase
 {
   [HttpPost]

@@ -6,6 +6,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.UserRolesEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class UserRolesController(ILogger<UserRolesController> logger) : ControllerBase
 {
   private readonly ILogger<UserRolesController> _logger = logger;

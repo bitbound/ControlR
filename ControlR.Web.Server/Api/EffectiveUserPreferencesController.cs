@@ -7,6 +7,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.EffectiveUserPreferencesEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class EffectiveUserPreferencesController(IEffectiveUserPreferencesResolver effectiveUserPreferencesResolver) : ControllerBase
 {
   private readonly IEffectiveUserPreferencesResolver _effectiveUserPreferencesResolver = effectiveUserPreferencesResolver;

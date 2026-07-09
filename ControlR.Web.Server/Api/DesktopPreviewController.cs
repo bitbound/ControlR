@@ -9,6 +9,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.DesktopPreviewEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class DesktopPreviewController : ControllerBase
 {
   [HttpGet("{deviceId:guid}/{targetProcessId:int}")]

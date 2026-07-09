@@ -1,18 +1,13 @@
+using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api;
 
-/// <summary>
-/// Server-scoped service account management. All endpoints require a server service account
-/// principal (the bootstrapped account is the sole manager of subsequent server accounts in
-/// the interim authorization model). The full permission evaluator (Phase 2 PR 11) replaces
-/// the <see cref="ServerPrincipalExtensions.IsServerPrincipal"/> check with explicit
-/// <c>server.service-accounts.read/write</c> permission checks.
-/// </summary>
 [Route(HttpConstants.ServiceAccountsEndpoint)]
 [ApiController]
 [Authorize]
+[ApiVersion(0)]
 public class ServiceAccountsController(
   IServiceAccountManager serviceAccountManager) : ControllerBase
 {

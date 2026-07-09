@@ -7,6 +7,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.UserStorageEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class UserStorageController(IUserStorageManager userStorageManager) : ControllerBase
 {
   private readonly IUserStorageManager _userStorageManager = userStorageManager;

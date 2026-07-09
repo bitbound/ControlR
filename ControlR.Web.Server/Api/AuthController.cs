@@ -9,6 +9,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.AuthEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class AuthController : ControllerBase
 {
   [Authorize]

@@ -12,6 +12,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.DeviceFileSystemEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class DeviceFileSystemController : ControllerBase
 {
   [HttpPost("create-directory/{deviceId:guid}")]

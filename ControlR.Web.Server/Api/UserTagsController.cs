@@ -6,6 +6,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.UserTagsEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class UserTagsController : ControllerBase
 {
   [HttpPost]

@@ -7,6 +7,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.VersionEndpoint)]
 [ApiController]
 [OutputCache(Duration = 60)]
+[EndpointGroupName("Internal")]
 public class VersionController(
   IAgentVersionProvider agentVersionProvider,
   IReleaseNotesProvider releaseNotesProvider) : ControllerBase

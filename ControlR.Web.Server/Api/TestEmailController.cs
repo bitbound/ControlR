@@ -6,6 +6,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.TestEmailEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.ServerAdministrator)]
+[EndpointGroupName("Internal")]
 public class TestEmailController() : ControllerBase
 {
 

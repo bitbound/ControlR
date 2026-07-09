@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
 
-namespace ControlR.Web.Server.Middleware;
+namespace ControlR.Web.Server.OpenApi;
 
 public class ApiProblemDetailsTransformer : IOpenApiDocumentTransformer
 {

@@ -6,6 +6,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.RolesEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
+[EndpointGroupName("Internal")]
 public class RolesController : ControllerBase
 {
   [HttpGet]

@@ -6,6 +6,7 @@ namespace ControlR.Web.Server.Api;
 [Route(HttpConstants.PersonalAccessTokensEndpoint)]
 [ApiController]
 [Authorize]
+[EndpointGroupName("Internal")]
 public class PersonalAccessTokensController : ControllerBase
 {
 

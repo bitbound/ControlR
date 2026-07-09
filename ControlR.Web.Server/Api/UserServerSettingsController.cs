@@ -8,6 +8,7 @@ namespace ControlR.Web.Server.Api;
 [ApiController]
 [Authorize]
 [OutputCache(Duration = 30)]
+[EndpointGroupName("Internal")]
 public class UserServerSettingsController : ControllerBase
 {
   [HttpGet("file-upload-max-size")]
