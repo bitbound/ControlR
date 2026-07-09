@@ -25,7 +25,6 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
-using ControlR.Web.Server.Services.ExternalUsers;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using System.Globalization;
 using System.Threading.RateLimiting;

@@ -8,6 +8,7 @@ public interface IAgentInstallerKeyManager
   Task<CreateInstallerKeyResponseDto> CreateKey(
       Guid tenantId,
       Guid creatorId,
+      CreatorKind creatorKind,
       InstallerKeyType keyType,
       uint? allowedUses,
       DateTimeOffset? expiration,
@@ -45,6 +46,7 @@ public class AgentInstallerKeyManager(
   public async Task<CreateInstallerKeyResponseDto> CreateKey(
       Guid tenantId,
       Guid creatorId,
+      CreatorKind creatorKind,
       InstallerKeyType keyType,
       uint? allowedUses,
       DateTimeOffset? expiration,
@@ -61,6 +63,7 @@ public class AgentInstallerKeyManager(
     {
       TenantId = tenantId,
       CreatorId = creatorId,
+      CreatorKind = creatorKind,
       HashedKey = hashedKey,
       KeyType = keyType,
       AllowedUses = allowedUses,

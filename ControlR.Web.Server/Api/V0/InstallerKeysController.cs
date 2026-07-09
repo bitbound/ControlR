@@ -1,6 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Services.AgentInstaller;
 using Microsoft.AspNetCore.Mvc;
+using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.CreateInstallerKeyRequestDto;
 
 namespace ControlR.Web.Server.Api.V0;
 
@@ -13,11 +14,12 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
 
   [HttpPost]
   public async Task<ActionResult<CreateInstallerKeyResponseDto>> Create(
-      [FromBody] IssueInstallerKeyRequestDto request)
+      [FromBody] CreateInstallerKeyRequestDto request)
   {
     var dto = await _installerKeyManager.CreateKey(
         request.TenantId,
         request.CreatorId,
+        request.CreatorKind,
         request.KeyType,
         request.AllowedUses,
         request.Expiration,

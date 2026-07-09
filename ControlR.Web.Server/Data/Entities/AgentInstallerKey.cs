@@ -7,6 +7,7 @@ public class AgentInstallerKey : TenantEntityBase
 {
     public uint? AllowedUses { get; set; }
     public Guid CreatorId { get; set; }
+    public CreatorKind CreatorKind { get; set; }
     public DateTimeOffset? Expiration { get; set; }
 
     [StringLength(200)]

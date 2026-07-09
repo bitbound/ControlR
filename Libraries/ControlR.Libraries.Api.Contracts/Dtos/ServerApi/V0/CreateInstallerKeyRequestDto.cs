@@ -2,10 +2,11 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 
-public record IssueInstallerKeyRequestDto(
+public record CreateInstallerKeyRequestDto(
   Guid TenantId,
   Guid CreatorId,
+  CreatorKind CreatorKind,
   InstallerKeyType KeyType,
+  string? FriendlyName = null,
   uint? AllowedUses = null,
-  DateTimeOffset? Expiration = null,
-  string? FriendlyName = null);
+  DateTimeOffset? Expiration = null);

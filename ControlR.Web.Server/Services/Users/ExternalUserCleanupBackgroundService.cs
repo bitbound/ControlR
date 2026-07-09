@@ -1,8 +1,7 @@
 using ControlR.Libraries.Hosting;
 using ControlR.Web.Server.Data.Enums;
-using Microsoft.Extensions.Options;
 
-namespace ControlR.Web.Server.Services.ExternalUsers;
+namespace ControlR.Web.Server.Services.Users;
 
 public class ExternalUserCleanupBackgroundService(
   IDbContextFactory<AppDb> dbContextFactory,

@@ -55,6 +55,9 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<Guid>("CreatorId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("CreatorKind")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset?>("Expiration")
                         .HasColumnType("timestamp with time zone");
 

@@ -1,7 +1,7 @@
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Data.Enums;
-using ControlR.Web.Server.Services.ExternalUsers;
+using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

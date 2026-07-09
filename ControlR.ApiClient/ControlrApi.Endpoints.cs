@@ -4,6 +4,8 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.ServiceAccounts;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Libraries.Api.Contracts.Enums;
+using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using V0Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 
 namespace ControlR.ApiClient;
 
@@ -73,7 +75,7 @@ public interface IDevicesApi
 
 public interface IInstallerKeysApi
 {
-  Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(CreateInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
+  Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(InternalDtos.CreateInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteInstallerKey(Guid keyId, CancellationToken cancellationToken = default);
   Task<ApiResult<AgentInstallerKeyDto[]>> GetAllInstallerKeys(CancellationToken cancellationToken = default);
   Task<ApiResult<AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId, CancellationToken cancellationToken = default);
@@ -82,7 +84,7 @@ public interface IInstallerKeysApi
 
 public interface IV0InstallerKeysApi
 {
-  Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
+  Task<ApiResult<CreateInstallerKeyResponseDto>> CreateInstallerKey(V0Dtos.CreateInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
 }
 
 public interface IInvitesApi

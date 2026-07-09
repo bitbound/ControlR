@@ -8,6 +8,18 @@ namespace ControlR.ApiClient;
 
 internal partial class InternalApi
 {
+  async Task<ApiResult<AcceptInvitationResponseDto>> IInvitesApi.AcceptInvitation(
+    AcceptInvitationRequestDto request,
+    CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.InvitesEndpoint}/accept", request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<AcceptInvitationResponseDto>(cancellationToken);
+    });
+  }
+
   async Task<ApiResult<TenantInviteResponseDto>> IInvitesApi.CreateTenantInvite(TenantInviteRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
@@ -39,17 +51,5 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
       await _client.HttpClient.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.Internal.InvitesEndpoint, cancellationToken));
-  }
-
-  async Task<ApiResult<AcceptInvitationResponseDto>> IInvitesApi.AcceptInvitation(
-    AcceptInvitationRequestDto request,
-    CancellationToken cancellationToken)
-  {
-    return await _client.ExecuteApiCall(async () =>
-    {
-      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.InvitesEndpoint}/accept", request, cancellationToken);
-      await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<AcceptInvitationResponseDto>(cancellationToken);
-    });
   }
 }

@@ -32,8 +32,8 @@ internal partial class InternalApi(ControlrApi client) :
 {
   private readonly ControlrApi _client = client;
 
-  public IAuthApi Auth => this;
   public IInternalAgentUpdateApi AgentUpdate => this;
+  public IAuthApi Auth => this;
   public IDesktopPreviewApi DesktopPreview => this;
   public IDeviceFileSystemApi DeviceFileSystem => this;
   public IDevicesApi Devices => this;

@@ -68,19 +68,22 @@ public class DevicesController() : ControllerBase
     {
       logger.LogInformation("Device already exists.  Verifying user authorization.");
 
-      var keyCreator = await userManager.FindByIdAsync($"{installerKey.CreatorId}");
-      if (keyCreator is null)
+      if (installerKey.CreatorKind == CreatorKind.User)
       {
-        logger.LogWarning("User not found.");
-        return BadRequest();
-      }
+        var keyCreator = await userManager.FindByIdAsync($"{installerKey.CreatorId}");
+        if (keyCreator is null)
+        {
+          logger.LogWarning("User not found.");
+          return BadRequest();
+        }
 
-      var authResult = await deviceManager.CanInstallAgentOnDevice(keyCreator, existingDevice);
+        var authResult = await deviceManager.CanInstallAgentOnDevice(keyCreator, existingDevice);
 
-      if (!authResult)
-      {
-        logger.LogCritical("User is not authorized to install an agent on this device.");
-        return Unauthorized();
+        if (!authResult)
+        {
+          logger.LogCritical("User is not authorized to install an agent on this device.");
+          return Forbid();
+        }
       }
     }
 

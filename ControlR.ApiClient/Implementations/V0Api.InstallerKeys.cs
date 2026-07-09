@@ -8,7 +8,7 @@ namespace ControlR.ApiClient;
 
 internal partial class V0Api
 {
-  async Task<ApiResult<CreateInstallerKeyResponseDto>> IV0InstallerKeysApi.CreateInstallerKey(IssueInstallerKeyRequestDto dto, CancellationToken cancellationToken)
+  async Task<ApiResult<CreateInstallerKeyResponseDto>> IV0InstallerKeysApi.CreateInstallerKey(CreateInstallerKeyRequestDto dto, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {

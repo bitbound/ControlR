@@ -4387,17 +4387,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IssueInstallerKeyRequestDto"
+                "$ref": "#/components/schemas/CreateInstallerKeyRequestDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/IssueInstallerKeyRequestDto"
+                "$ref": "#/components/schemas/CreateInstallerKeyRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/IssueInstallerKeyRequestDto"
+                "$ref": "#/components/schemas/CreateInstallerKeyRequestDto"
               }
             }
           },
@@ -5937,12 +5937,32 @@
       },
       "CreateInstallerKeyRequestDto": {
         "required": [
+          "tenantId",
+          "creatorId",
+          "creatorKind",
           "keyType"
         ],
         "type": "object",
         "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creatorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creatorKind": {
+            "$ref": "#/components/schemas/CreatorKind"
+          },
           "keyType": {
             "$ref": "#/components/schemas/InstallerKeyType"
+          },
+          "friendlyName": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "allowedUses": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -5958,12 +5978,6 @@
               "string"
             ],
             "format": "date-time"
-          },
-          "friendlyName": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -6210,6 +6224,9 @@
             }
           }
         }
+      },
+      "CreatorKind": {
+        "type": "integer"
       },
       "CredentialPasswordChangeRequestDto": {
         "required": [
@@ -7091,48 +7108,6 @@
               {
                 "$ref": "#/components/schemas/AccessTokenResponseDto"
               }
-            ]
-          }
-        }
-      },
-      "IssueInstallerKeyRequestDto": {
-        "required": [
-          "tenantId",
-          "creatorId",
-          "keyType"
-        ],
-        "type": "object",
-        "properties": {
-          "tenantId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "creatorId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "keyType": {
-            "$ref": "#/components/schemas/InstallerKeyType"
-          },
-          "allowedUses": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer"
-            ],
-            "format": "int32"
-          },
-          "expiration": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "friendlyName": {
-            "type": [
-              "null",
-              "string"
             ]
           }
         }

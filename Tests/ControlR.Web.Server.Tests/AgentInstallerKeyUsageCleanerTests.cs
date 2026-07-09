@@ -28,6 +28,7 @@ public class AgentInstallerKeyUsageCleanerTests(ITestOutputHelper testOutput)
     var dto = await keyManager.CreateKey(
       tenantId: tenant.Id,
       creatorId: user.Id,
+        creatorKind: CreatorKind.User,
       keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
@@ -71,6 +72,7 @@ public class AgentInstallerKeyUsageCleanerTests(ITestOutputHelper testOutput)
     var dto = await keyManager.CreateKey(
       tenantId: tenant.Id,
       creatorId: user.Id,
+        creatorKind: CreatorKind.User,
       keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,

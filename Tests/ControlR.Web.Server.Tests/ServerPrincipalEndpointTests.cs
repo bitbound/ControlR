@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.CreateInstallerKeyRequestDto;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -30,9 +31,10 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var controller = scope.CreateController<InstallerKeysController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
 
-    var result = await controller.Create(new IssueInstallerKeyRequestDto(
+    var result = await controller.Create(new CreateInstallerKeyRequestDto(
       tenant.Id,
       creator.Id,
+      CreatorKind.User,
       InstallerKeyType.Persistent));
 
     Assert.NotNull(result.Result);

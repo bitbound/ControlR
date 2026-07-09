@@ -1,6 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Services.AgentInstaller;
 using Microsoft.AspNetCore.Mvc;
+using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.CreateInstallerKeyRequestDto;
 
 namespace ControlR.Web.Server.Api.Internal;
 
@@ -24,6 +25,7 @@ public class InternalInstallerKeysController(IAgentInstallerKeyManager installer
     var dto = await _installerKeyManager.CreateKey(
         tenantId,
         creatorId,
+        CreatorKind.User,
         request.KeyType,
         request.AllowedUses,
         request.Expiration,
