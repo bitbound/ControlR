@@ -5,7 +5,7 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests.V0;
 
 public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutput)
 {

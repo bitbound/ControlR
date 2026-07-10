@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests.V0;
 
 /// <summary>
 /// Verifies database-level unique index behavior for ServiceAccounts.

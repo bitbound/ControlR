@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.CreateInstallerKeyRequestDto;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests.V0;
 
 public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 {

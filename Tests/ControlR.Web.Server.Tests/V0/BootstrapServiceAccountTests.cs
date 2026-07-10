@@ -17,7 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.DeviceResponseDto;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests.V0;
 
 public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
 {

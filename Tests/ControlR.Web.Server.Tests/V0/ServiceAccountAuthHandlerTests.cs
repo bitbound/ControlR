@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests.V0;
 
 public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
 {

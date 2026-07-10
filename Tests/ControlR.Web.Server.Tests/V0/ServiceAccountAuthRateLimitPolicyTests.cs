@@ -4,7 +4,7 @@ using ControlR.Web.Server.RateLimiting;
 using Microsoft.AspNetCore.Http;
 using System.Threading.RateLimiting;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests.V0;
 
 public class ServiceAccountAuthRateLimitPolicyTests
 {
