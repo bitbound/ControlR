@@ -192,12 +192,6 @@ public class ViewerHub(
     {
       await base.OnConnectedAsync();
 
-      if (Context.User?.IsServerPrincipal() == true)
-      {
-        _logger.LogInformation("Server service account connected, skipping tenant/user initialization.");
-        return;
-      }
-
       if (Context.User?.TryGetUserId(out var userId) != true)
       {
         _logger.LogCritical("User is null.  Authorize tag should have prevented this.");

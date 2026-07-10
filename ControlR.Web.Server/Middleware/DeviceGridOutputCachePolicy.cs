@@ -33,8 +33,7 @@ public class DeviceGridOutputCachePolicy : IOutputCachePolicy
     context.Tags.Add($"user-{userId}");
 
     // Add tenant-specific tag
-    if (!context.HttpContext.User.IsServerPrincipal() &&
-        context.HttpContext.User.TryGetTenantId(out var tenantId))
+    if (context.HttpContext.User.TryGetTenantId(out var tenantId))
     {
       context.Tags.Add($"device-grid-tenant-{tenantId}");
     }

@@ -23,6 +23,20 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
       return BadRequest(result.Reason);
     }
 
-    return CreatedAtAction(nameof(Create), new { id = result.Value.TenantId }, result.Value);
+    return CreatedAtAction(nameof(Get), new { id = result.Value.TenantId }, result.Value);
+  }
+
+  [HttpGet("{id:guid}")]
+  public async Task<ActionResult<GetTenantResponseDto>> Get(
+    [FromRoute] Guid id,
+    CancellationToken cancellationToken)
+  {
+    var result = await tenantProvisioningService.GetTenant(id, cancellationToken);
+    if (!result.IsSuccess)
+    {
+      return NotFound();
+    }
+
+    return Ok(result.Value);
   }
 }

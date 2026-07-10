@@ -8,5 +8,4 @@ public class ServiceAccountCredentialAuthenticationSchemeOptions : Authenticatio
   public const string DefaultScheme = "ServiceAccountCredential";
 
   public string HeaderName { get; set; } = DefaultHeaderName;
-  public string Scheme => DefaultScheme;
 }

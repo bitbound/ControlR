@@ -1,6 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Data.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace ControlR.Web.Server.Services.ServiceAccounts;
 
@@ -303,6 +304,7 @@ public class ServiceAccountManager(
 
       var credential = await appDb.ServiceAccountCredentials
         .IgnoreQueryFilters()
+        .Include(x => x.ServiceAccount)
         .FirstOrDefaultAsync(x => x.Id == credentialId, cancellationToken);
 
       if (credential is null)
@@ -310,10 +312,7 @@ public class ServiceAccountManager(
         return Result.Fail<ServiceAccountCredentialValidationResult>("Invalid service account credential.");
       }
 
-      var account = await appDb.ServiceAccounts
-        .IgnoreQueryFilters()
-        .FirstOrDefaultAsync(x => x.Id == credential.ServiceAccountId, cancellationToken);
-
+      var account = credential.ServiceAccount;
       if (account is null || !account.IsEnabled)
       {
         return Result.Fail<ServiceAccountCredentialValidationResult>("Service account is not available.");
