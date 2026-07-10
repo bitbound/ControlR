@@ -1,10 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;

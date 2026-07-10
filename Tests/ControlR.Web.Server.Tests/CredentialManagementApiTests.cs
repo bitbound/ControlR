@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;

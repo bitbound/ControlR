@@ -1,4 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Services.AgentInstaller;

@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authn;
+using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
@@ -14,12 +15,50 @@ namespace ControlR.Web.Server.Tests.V0;
 
 public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
 {
-  private readonly ITestOutputHelper _testOutputHelper = testOutput;
+  [Fact]
+  public async Task HandleAuthenticateAsync_ShouldFail_WithExpiredCredential()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    var plainTextSecretKey = string.Empty;
+
+    using (var scope = testApp.CreateScope())
+    {
+      var services = scope.ServiceProvider;
+      var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
+
+      var createResult = await serviceAccountManager.CreateServer(
+        "Expired Credential SA",
+        null,
+        TestContext.Current.CancellationToken);
+      Assert.True(createResult.IsSuccess);
+
+      var credentialId = createResult.Value.ServiceAccount.Credentials[0].Id;
+      plainTextSecretKey = createResult.Value.PlainTextSecretKey;
+
+      await using var appDb = services.GetRequiredService<AppDb>();
+      var credential = await appDb.ServiceAccountCredentials.FindAsync([credentialId], TestContext.Current.CancellationToken);
+      Assert.NotNull(credential);
+      credential.ExpiresAt = testApp.TimeProvider.GetUtcNow().AddDays(-1);
+      await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    using (var scope = testApp.CreateScope())
+    {
+      var services = scope.ServiceProvider;
+      
+      var context = CreateHttpContext(plainTextSecretKey);
+      var handler = await CreateHandler(services, context);
+
+      var result = await handler.AuthenticateAsync();
+
+      Assert.False(result.Succeeded);
+    }
+  }
 
   [Fact]
   public async Task HandleAuthenticateAsync_ShouldFail_WithInvalidApiKey()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
 
@@ -34,7 +73,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task HandleAuthenticateAsync_ShouldFail_WithRevokedCredential()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
@@ -64,7 +103,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task HandleAuthenticateAsync_ShouldReturnNoResult_WithEmptyHeader()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
 
@@ -80,7 +119,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task HandleAuthenticateAsync_ShouldReturnNoResult_WithMissingHeader()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
 
@@ -96,7 +135,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task HandleAuthenticateAsync_ShouldSucceed_WithValidApiKey()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();

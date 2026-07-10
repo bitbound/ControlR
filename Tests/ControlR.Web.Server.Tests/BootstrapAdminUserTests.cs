@@ -1,5 +1,4 @@
 using System.Net;
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;

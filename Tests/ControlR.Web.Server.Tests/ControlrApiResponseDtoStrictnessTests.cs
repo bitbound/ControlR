@@ -6,7 +6,6 @@ using System.Text.Json;
 using ControlR.ApiClient;
 using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
-using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.DeviceResponseDto;

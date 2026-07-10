@@ -6,4 +6,5 @@ namespace ControlR.ApiClient.Interfaces.V0;
 public interface IV0TenantsApi
 {
   Task<ApiResult<CreateTenantResponseDto>> CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<GetTenantResponseDto>> GetTenant(Guid tenantId, CancellationToken cancellationToken = default);
 }

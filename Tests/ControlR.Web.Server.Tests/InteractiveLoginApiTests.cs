@@ -2,7 +2,6 @@ using System.Security.Claims;
 using System.Net;
 using System.Net.Http.Json;
 using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -16,7 +15,6 @@ using ControlR.Web.Server.Options;
 using Microsoft.Extensions.Options;
 using Moq;
 using ControlR.Web.Server.Api.Internal;
-using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Tests;
 

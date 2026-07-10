@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using ControlR.ApiClient;
 using ControlR.ApiClient.Auth;
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Logging.Abstractions;

@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.V0;
 using ControlR.Web.Server.Authn;

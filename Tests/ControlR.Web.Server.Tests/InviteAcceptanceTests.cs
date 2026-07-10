@@ -1,4 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
