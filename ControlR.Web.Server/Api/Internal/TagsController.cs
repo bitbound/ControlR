@@ -15,22 +15,14 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] TagCreateRequestDto dto)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return NotFound("User tenant not found.");
-      tenantId = tid;
-    }
-
-    if (!tenantId.HasValue)
-    {
-      return BadRequest("Server service accounts cannot create tags.");
+      return NotFound("User tenant not found.");
     }
 
     var tag = new Tag
     {
-      TenantId = tenantId.Value,
+      TenantId = tenantId,
       Name = dto.Name,
       Type = dto.Type,
     };
@@ -47,17 +39,14 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromRoute] Guid tagId)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return NotFound("User tenant not found.");
-      tenantId = tid;
+      return NotFound("User tenant not found.");
     }
 
     var tag = await appDb.Tags
       .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == tagId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
+      .FirstOrDefaultAsync(x => x.Id == tagId && x.TenantId == tenantId);
 
     if (tag == null)
     {
@@ -76,7 +65,14 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromQuery] bool includeLinkedIds = false)
   {
-    var query = appDb.Tags.AsNoTracking();
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return NotFound("User tenant not found.");
+    }
+
+    var query = appDb.Tags
+      .AsNoTracking()
+      .Where(x => x.TenantId == tenantId);
 
     if (includeLinkedIds)
     {
@@ -102,16 +98,13 @@ public class TagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] TagRenameRequestDto dto)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return NotFound("User tenant not found.");
-      tenantId = tid;
+      return NotFound("User tenant not found.");
     }
 
     var tag = await appDb.Tags
-      .FirstOrDefaultAsync(x => x.Id == dto.TagId && (!tenantId.HasValue || x.TenantId == tenantId.Value));
+      .FirstOrDefaultAsync(x => x.Id == dto.TagId && x.TenantId == tenantId);
     if (tag is null)
     {
       return NotFound();

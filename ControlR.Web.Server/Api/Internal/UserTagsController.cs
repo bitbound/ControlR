@@ -15,37 +15,25 @@ public class UserTagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromBody] UserTagAddRequestDto dto)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return Unauthorized();
-      tenantId = tid;
+      return Unauthorized();
     }
 
     var user = await appDb.Users
       .Include(x => x.Tags)
-      .FirstOrDefaultAsync(x => x.Id == dto.UserId);
+      .FirstOrDefaultAsync(x => x.Id == dto.UserId && x.TenantId == tenantId);
 
     if (user is null)
     {
       return NotFound("User not found.");
     }
 
-    if (tenantId.HasValue && user.TenantId != tenantId.Value)
-    {
-      return Unauthorized();
-    }
-
-    var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId);
+    var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId && x.TenantId == tenantId);
 
     if (tag is null)
     {
       return NotFound("Tag not found.");
-    }
-    if (tenantId.HasValue && tag.TenantId != tenantId.Value)
-    {
-      return Unauthorized();
     }
 
     user.Tags ??= [];
@@ -58,10 +46,16 @@ public class UserTagsController : ControllerBase
   public async Task<ActionResult<TagResponseDto[]>> GetAllowedTags(
     [FromServices] AppDb appDb)
   {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return Unauthorized();
+    }
+
     if (User.IsInRole(RoleNames.TenantAdministrator))
     {
       var tags = await appDb.Tags
         .AsNoTracking()
+        .Where(x => x.TenantId == tenantId)
         .ToListAsync();
 
       return Ok(tags
@@ -77,7 +71,7 @@ public class UserTagsController : ControllerBase
     var user = await appDb.Users
       .AsNoTracking()
       .Include(x => x.Tags)
-      .FirstOrDefaultAsync(x => x.Id == userId);
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (user is null)
     {
@@ -103,10 +97,15 @@ public class UserTagsController : ControllerBase
     [FromRoute] Guid userId,
     [FromServices] AppDb appDb)
   {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return Unauthorized();
+    }
+
     var user = await appDb.Users
       .AsNoTracking()
       .Include(x => x.Tags)
-      .FirstOrDefaultAsync(x => x.Id == userId);
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (user is null)
     {
@@ -132,26 +131,18 @@ public class UserTagsController : ControllerBase
     [FromRoute] Guid userId,
     [FromRoute] Guid tagId)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return Unauthorized();
-      tenantId = tid;
+      return Unauthorized();
     }
 
     var user = await appDb.Users
       .Include(x => x.Tags)
-      .FirstOrDefaultAsync(x => x.Id == userId);
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (user is null)
     {
       return NotFound("User not found.");
-    }
-
-    if (tenantId.HasValue && user.TenantId != tenantId.Value)
-    {
-      return Unauthorized();
     }
 
     user.Tags ??= [];

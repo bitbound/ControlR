@@ -17,36 +17,25 @@ public class DeviceTagsController : ControllerBase
     [FromServices] IHubContext<AgentHub> agentHub,
     [FromBody] DeviceTagAddRequestDto dto)
   {
-    var isServerPrincipal = User.IsServerPrincipal();
-
-    if (!User.TryGetTenantId(out var tenantId) && !isServerPrincipal)
+    if (!User.TryGetTenantId(out var tenantId))
     {
       return Unauthorized();
     }
 
     var device = await appDb.Devices
       .Include(x => x.Tags)
-      .FirstOrDefaultAsync(x => x.Id == dto.DeviceId);
+      .FirstOrDefaultAsync(x => x.Id == dto.DeviceId && x.TenantId == tenantId);
 
     if (device is null)
     {
       return NotFound("Device not found.");
     }
 
-    if (!isServerPrincipal && device.TenantId != tenantId)
-    {
-      return Unauthorized();
-    }
-
-    var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId);
+    var tag = await appDb.Tags.FirstOrDefaultAsync(x => x.Id == dto.TagId && x.TenantId == tenantId);
 
     if (tag is null)
     {
       return NotFound("Tag not found.");
-    }
-    if (!isServerPrincipal && tag.TenantId != tenantId)
-    {
-      return Unauthorized();
     }
 
     device.Tags ??= [];
@@ -68,33 +57,25 @@ public class DeviceTagsController : ControllerBase
     [FromRoute] Guid deviceId,
     [FromRoute] Guid tagId)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return Unauthorized();
-      tenantId = tid;
+      return Unauthorized();
     }
 
     var device = await appDb.Devices
       .Include(x => x.Tags)
-      .FirstOrDefaultAsync(x => x.Id == deviceId);
+      .FirstOrDefaultAsync(x => x.Id == deviceId && x.TenantId == tenantId);
 
     if (device is null)
     {
-      return NotFound("User not found.");
-    }
-
-    if (tenantId.HasValue && device.TenantId != tenantId.Value)
-    {
-      return Unauthorized();
+      return NotFound("Device not found.");
     }
 
     device.Tags ??= [];
     var tag = device.Tags.Find(x => x.Id == tagId);
     if (tag is null)
     {
-      return NotFound("Tag not found on user.");
+      return NotFound("Tag not found on device.");
     }
     device.Tags.Remove(tag);
     await appDb.SaveChangesAsync();

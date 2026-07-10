@@ -17,26 +17,18 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     [FromServices] AppDb appDb,
     [FromBody] UserRoleAddRequestDto dto)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return Unauthorized();
-      tenantId = tid;
+      return Unauthorized();
     }
 
     var user = await appDb.Users
       .Include(x => x.UserRoles)
-      .FirstOrDefaultAsync(x => x.Id == dto.UserId);
+      .FirstOrDefaultAsync(x => x.Id == dto.UserId && x.TenantId == tenantId);
 
     if (user is null)
     {
       return NotFound("User not found.");
-    }
-
-    if (tenantId.HasValue && user.TenantId != tenantId.Value)
-    {
-      return Unauthorized();
     }
 
     var role = await appDb.Roles.FirstOrDefaultAsync(x => x.Id == dto.RoleId);
@@ -149,12 +141,9 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     [FromRoute] Guid userId,
     [FromRoute] Guid roleId)
   {
-    Guid? tenantId = null;
-    if (!User.IsServerPrincipal())
+    if (!User.TryGetTenantId(out var tenantId))
     {
-      if (!User.TryGetTenantId(out var tid))
-        return Unauthorized();
-      tenantId = tid;
+      return Unauthorized();
     }
 
     if (!User.TryGetUserId(out var callerUserId))
@@ -164,16 +153,11 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
 
     var user = await appDb.Users
       .Include(x => x.UserRoles)
-      .FirstOrDefaultAsync(x => x.Id == userId);
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
 
     if (user is null)
     {
       return NotFound("User not found.");
-    }
-
-    if (tenantId.HasValue && user.TenantId != tenantId.Value)
-    {
-      return Unauthorized();
     }
 
     var role = await appDb.Roles.FindAsync(roleId);
