@@ -35,7 +35,7 @@ public class UserRegistrationProvider(
       var hasUsers = await appDb.Users.AnyAsync();
 
       return _appOptions.CurrentValue.EnablePublicRegistration ||
-        (_appOptions.CurrentValue.EnableFirstUserBootstrap && !hasUsers);
+        (_appOptions.CurrentValue.EnableFirstUserSelfRegistration && !hasUsers);
     }
     catch (Exception ex)
     {

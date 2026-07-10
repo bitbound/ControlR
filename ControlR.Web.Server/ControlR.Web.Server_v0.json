@@ -6,147 +6,6 @@
     "version": "v0"
   },
   "paths": {
-    "/api/v0/devices": {
-      "post": {
-        "tags": [
-          "Devices"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "0.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDeviceRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDeviceRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDeviceRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ServiceAccountCredential": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "Devices"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "0.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DeviceResponseDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DeviceResponseDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DeviceResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ServiceAccountCredential": [ ]
-          }
-        ]
-      }
-    },
     "/api/v0/devices/{deviceId}": {
       "delete": {
         "tags": [
@@ -315,6 +174,72 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeleteManyDevicesResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ServiceAccountCredential": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v0/devices": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "parameters": [
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The requested API version",
+            "schema": {
+              "enum": [
+                "0.0"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceResponseDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceResponseDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceResponseDto"
+                  }
                 }
               }
             }
@@ -1137,42 +1062,6 @@
       "Architecture": {
         "type": "integer"
       },
-      "CreateDeviceRequestDto": {
-        "required": [
-          "device",
-          "installerKeyId",
-          "installerKeySecret"
-        ],
-        "type": "object",
-        "properties": {
-          "device": {
-            "$ref": "#/components/schemas/DeviceUpdateRequestDto"
-          },
-          "installerKeyId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "installerKeySecret": {
-            "type": "string"
-          },
-          "tagIds": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "publicKey": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "CreateInstallerKeyRequestDto": {
         "required": [
           "tenantId",
@@ -1763,116 +1652,6 @@
           },
           "agentVersion": {
             "type": "string"
-          }
-        }
-      },
-      "DeviceUpdateRequestDto": {
-        "required": [
-          "id",
-          "tenantId",
-          "name",
-          "agentVersion",
-          "is64Bit",
-          "osArchitecture",
-          "osDescription",
-          "platform",
-          "processorCount",
-          "cpuUtilization",
-          "totalMemory",
-          "totalStorage",
-          "usedMemory",
-          "usedStorage",
-          "currentUsers",
-          "macAddresses",
-          "localIpV4",
-          "localIpV6",
-          "drives"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenantId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "agentVersion": {
-            "type": "string"
-          },
-          "is64Bit": {
-            "type": "boolean"
-          },
-          "osArchitecture": {
-            "$ref": "#/components/schemas/Architecture"
-          },
-          "osDescription": {
-            "type": "string"
-          },
-          "platform": {
-            "$ref": "#/components/schemas/SystemPlatform"
-          },
-          "processorCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          },
-          "cpuUtilization": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": "number",
-            "format": "double"
-          },
-          "totalMemory": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": "number",
-            "format": "double"
-          },
-          "totalStorage": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": "number",
-            "format": "double"
-          },
-          "usedMemory": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": "number",
-            "format": "double"
-          },
-          "usedStorage": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": "number",
-            "format": "double"
-          },
-          "currentUsers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "macAddresses": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "localIpV4": {
-            "type": "string"
-          },
-          "localIpV6": {
-            "type": "string"
-          },
-          "drives": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Drive"
-            }
-          },
-          "dnsHostName": {
-            "type": "string",
-            "default": ""
           }
         }
       },

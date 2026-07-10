@@ -66,7 +66,7 @@ public class UserCreator(
   private readonly UserManager<AppUser> _userManager = userManager;
   private readonly IUserStore<AppUser> _userStore = userStore;
 
-  private bool EnableFirstUserBootstrap => _appOptions.CurrentValue.EnableFirstUserBootstrap;
+  private bool EnableFirstUserSelfRegistration => _appOptions.CurrentValue.EnableFirstUserSelfRegistration;
 
   public async Task<CreateUserResult> CreateUser(
     string emailAddress,
@@ -223,7 +223,7 @@ public class UserCreator(
 
       var hasExistingUsers = await _appDb.Users.AnyAsync(cancellationToken);
       var registrationEnabled = _appOptions.CurrentValue.EnablePublicRegistration ||
-        (EnableFirstUserBootstrap && !hasExistingUsers);
+        (EnableFirstUserSelfRegistration && !hasExistingUsers);
 
       if (!registrationEnabled)
       {
@@ -303,7 +303,7 @@ public class UserCreator(
       _logger.LogInformation("Created new account: {Email}.", emailAddress);
 
       var isFirstUser = await _userManager.Users.CountAsync(cancellationToken: cancellationToken) == 1;
-      var isServerAdmin = EnableFirstUserBootstrap && isFirstUser;
+      var isServerAdmin = EnableFirstUserSelfRegistration && isFirstUser;
       if (isServerAdmin)
       {
         _logger.LogInformation(

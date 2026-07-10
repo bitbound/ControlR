@@ -1,7 +1,7 @@
 ## Breaking Changes
 
 - In a traditional, interactive server deployment, the first registered user automatically becomes a server administrator.
-  - This behavior now requires explicit opt-in via the `AppOptions__EnableFirstUserBootstrap` configuration option.
+  - This behavior now requires explicit opt-in via the `AppOptions__EnableFirstUserSelfRegistration` configuration option.
 
 ## Added
 

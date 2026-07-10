@@ -97,11 +97,11 @@ public class AppOptions
   public bool EnableDockerSecrets { get; init; }
 
   /// <summary>
-  /// Controls the first-user auto-promotion behavior.
+  /// Controls the first-user self-registration behavior.
   /// When enabled, an empty server instance temporarily treats public registration as available,
-  /// and the first tenantless user created by that flow is promoted to server administrator.
+  /// and the first user created by that flow is promoted to server administrator.
   /// </summary>
-  public bool EnableFirstUserBootstrap { get; init; }
+  public bool EnableFirstUserSelfRegistration { get; init; }
 
   /// <summary>
   /// Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.

@@ -9,15 +9,6 @@ namespace ControlR.ApiClient;
 
 internal partial class V0Api
 {
-  async Task<ApiResult> IV0DevicesApi.CreateDevice(V0Dtos.CreateDeviceRequestDto request, CancellationToken cancellationToken)
-  {
-    return await _client.ExecuteApiCall(async () =>
-    {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.V0.DevicesEndpoint, request, cancellationToken);
-      await response.EnsureSuccessStatusCodeWithDetails();
-    });
-  }
-
   async Task<ApiResult> IV0DevicesApi.DeleteDevice(Guid deviceId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
