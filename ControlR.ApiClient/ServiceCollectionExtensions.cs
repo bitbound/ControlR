@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using ControlR.ApiClient.Interfaces.Internal;
+using ControlR.ApiClient.Interfaces.V0;
 
 namespace ControlR.ApiClient;
 

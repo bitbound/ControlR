@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
+using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 namespace ControlR.ApiClient;

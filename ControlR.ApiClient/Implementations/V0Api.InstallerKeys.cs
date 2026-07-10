@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using ControlR.ApiClient.Interfaces.V0;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using Microsoft.Extensions.Logging;

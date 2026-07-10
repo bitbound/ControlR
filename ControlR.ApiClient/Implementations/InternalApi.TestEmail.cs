@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.Libraries.Api.Contracts.Dtos;
 
 namespace ControlR.ApiClient;

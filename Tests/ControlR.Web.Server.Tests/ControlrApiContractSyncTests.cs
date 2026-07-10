@@ -172,8 +172,8 @@ public partial class ControlrApiContractSyncTests
 
     foreach (var type in new[]
     {
-      typeof(ControlR.ApiClient.IControlrInternalApi),
-      typeof(ControlR.ApiClient.IControlrV0Api),
+      typeof(ControlR.ApiClient.Interfaces.Internal.IControlrInternalApi),
+      typeof(ControlR.ApiClient.Interfaces.V0.IControlrV0Api),
     })
     {
       foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)

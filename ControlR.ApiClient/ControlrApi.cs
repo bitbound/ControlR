@@ -1,4 +1,6 @@
 using System.Net;
+using ControlR.ApiClient.Interfaces.Internal;
+using ControlR.ApiClient.Interfaces.V0;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,44 +13,6 @@ public interface IControlrApi
   IControlrV0Api V0 { get; }
 }
 
-public interface IControlrInternalApi
-{
-  IInternalAgentUpdateApi AgentUpdate { get; }
-  IAuthApi Auth { get; }
-  IDesktopPreviewApi DesktopPreview { get; }
-  IDeviceFileSystemApi DeviceFileSystem { get; }
-  IDevicesApi Devices { get; }
-  IDeviceTagsApi DeviceTags { get; }
-  IEffectiveUserPreferencesApi EffectiveUserPreferences { get; }
-  IInstallerKeysApi InstallerKeys { get; }
-  IInvitesApi Invites { get; }
-  ILogonTokensApi LogonTokens { get; }
-  IPersonalAccessTokensApi PersonalAccessTokens { get; }
-  IPublicRegistrationSettingsApi PublicRegistrationSettings { get; }
-  IRolesApi Roles { get; }
-  IServerAlertApi ServerAlert { get; }
-  IServerLogsApi ServerLogs { get; }
-  IServerStatsApi ServerStats { get; }
-  IServiceAccountsApi ServiceAccounts { get; }
-  ITagsApi Tags { get; }
-  ITenantSettingsApi TenantSettings { get; }
-  ITestEmailApi TestEmail { get; }
-  IUserPreferencesApi UserPreferences { get; }
-  IUserRolesApi UserRoles { get; }
-  IUsersApi Users { get; }
-  IUserServerSettingsApi UserServerSettings { get; }
-  IUserStorageApi UserStorage { get; }
-  IUserTagsApi UserTags { get; }
-  IVersionApi Version { get; }
-}
-
-public interface IControlrV0Api
-{
-  IV0DevicesApi Devices { get; }
-  IV0InstallerKeysApi InstallerKeys { get; }
-  IV0LogonTokensApi LogonTokens { get; }
-  IV0TenantsApi Tenants { get; }
-}
 
 public partial class ControlrApi(
   HttpClient httpClient,

@@ -1,3 +1,5 @@
+using ControlR.ApiClient.Interfaces.V0;
+
 namespace ControlR.ApiClient;
 
 internal partial class V0Api(ControlrApi client) :

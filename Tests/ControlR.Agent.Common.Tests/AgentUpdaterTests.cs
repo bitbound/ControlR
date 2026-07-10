@@ -2,6 +2,7 @@ using ControlR.Agent.Shared.Options;
 using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Common.Services;
 using ControlR.ApiClient;
+using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Api.Contracts.Enums;
