@@ -665,17 +665,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/IssueLogonTokenRequestDto"
+                "$ref": "#/components/schemas/CreateLogonTokenRequestDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/IssueLogonTokenRequestDto"
+                "$ref": "#/components/schemas/CreateLogonTokenRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/IssueLogonTokenRequestDto"
+                "$ref": "#/components/schemas/CreateLogonTokenRequestDto"
               }
             }
           },
@@ -720,7 +720,7 @@
         ]
       }
     },
-    "/api/internal/service-accounts/{serviceAccountId}/credentials": {
+    "/api/v0/service-accounts/{serviceAccountId}/credentials": {
       "post": {
         "tags": [
           "ServiceAccounts"
@@ -806,7 +806,7 @@
         ]
       }
     },
-    "/api/internal/service-accounts": {
+    "/api/v0/service-accounts": {
       "post": {
         "tags": [
           "ServiceAccounts"
@@ -947,7 +947,7 @@
         ]
       }
     },
-    "/api/internal/service-accounts/{serviceAccountId}": {
+    "/api/v0/service-accounts/{serviceAccountId}": {
       "delete": {
         "tags": [
           "ServiceAccounts"
@@ -996,7 +996,7 @@
         ]
       }
     },
-    "/api/internal/service-accounts/{serviceAccountId}/credentials/{credentialId}": {
+    "/api/v0/service-accounts/{serviceAccountId}/credentials/{credentialId}": {
       "delete": {
         "tags": [
           "ServiceAccounts"
@@ -1267,6 +1267,48 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CreateLogonTokenRequestDto": {
+        "required": [
+          "deviceId",
+          "tenantId",
+          "userId",
+          "userCorrelationId",
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "userCorrelationId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LogonTokenKind"
+          },
+          "expirationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32",
+            "default": 15
           }
         }
       },
@@ -1877,48 +1919,6 @@
       },
       "InstallerKeyType": {
         "type": "integer"
-      },
-      "IssueLogonTokenRequestDto": {
-        "required": [
-          "deviceId",
-          "tenantId",
-          "userId",
-          "userCorrelationId",
-          "kind"
-        ],
-        "type": "object",
-        "properties": {
-          "deviceId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tenantId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "userId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "userCorrelationId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "kind": {
-            "$ref": "#/components/schemas/LogonTokenKind"
-          },
-          "expirationMinutes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32",
-            "default": 15
-          }
-        }
       },
       "LogonTokenKind": {
         "type": "integer"

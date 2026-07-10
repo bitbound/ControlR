@@ -65,7 +65,7 @@ public class UserTagsController : ControllerBase
         .ToListAsync();
 
       return Ok(tags
-        .Select(x => x.ToDto())
+        .Select(x => x.ToInternalResponseDto())
         .ToArray());
     }
 
@@ -91,7 +91,7 @@ public class UserTagsController : ControllerBase
 
     var userTags = user.Tags
       .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-      .Select(x => x.ToDto())
+      .Select(x => x.ToInternalResponseDto())
       .ToArray();
 
     return Ok(userTags);
@@ -119,7 +119,7 @@ public class UserTagsController : ControllerBase
     }
 
     var userTags = user.Tags
-      .Select(x => x.ToDto())
+      .Select(x => x.ToInternalResponseDto())
       .ToArray();
 
     return Ok(userTags);

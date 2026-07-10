@@ -7,6 +7,7 @@ internal partial class V0Api(ControlrApi client) :
   IV0DevicesApi,
   IV0InstallerKeysApi,
   IV0LogonTokensApi,
+  IServiceAccountsApi,
   IV0TenantsApi
 {
   private readonly ControlrApi _client = client;
@@ -14,5 +15,6 @@ internal partial class V0Api(ControlrApi client) :
   public IV0DevicesApi Devices => this;
   public IV0InstallerKeysApi InstallerKeys => this;
   public IV0LogonTokensApi LogonTokens => this;
+  public IServiceAccountsApi ServiceAccounts => this;
   public IV0TenantsApi Tenants => this;
 }

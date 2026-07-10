@@ -2,9 +2,9 @@
 
 namespace ControlR.Web.Server.Extensions;
 
-public static class EntityToDtoExtensions
+public static class EntityToInternalDtoExtensions
 {
-  public static CreateInstallerKeyResponseDto ToCreateResponseDto(this AgentInstallerKey key, string plaintextKey)
+  public static CreateInstallerKeyResponseDto ToInternalResponseDto(this AgentInstallerKey key, string plaintextKey)
   {
     return new CreateInstallerKeyResponseDto(
       key.Id,
@@ -17,7 +17,7 @@ public static class EntityToDtoExtensions
       key.FriendlyName);
   }
 
-  public static DeviceResponseDto ToDto(this Device device, bool isOutdated)
+  public static DeviceResponseDto ToInternalResponseDto(this Device device, bool isOutdated)
   {
     return new DeviceResponseDto(
       device.Name,
@@ -52,7 +52,7 @@ public static class EntityToDtoExtensions
     };
   }
 
-  public static RoleResponseDto ToDto(this AppRole role)
+  public static RoleResponseDto ToInternalResponseDto(this AppRole role)
   {
     var userIds = role
       .UserRoles
@@ -65,12 +65,12 @@ public static class EntityToDtoExtensions
       userIds);
   }
 
-  public static UserPreferenceResponseDto ToDto(this UserPreference userPreference)
+  public static UserPreferenceResponseDto ToInternalResponseDto(this UserPreference userPreference)
   {
     return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
   }
 
-  public static ServerAlertResponseDto ToDto(this ServerAlert serverAlert)
+  public static ServerAlertResponseDto ToInternalResponseDto(this ServerAlert serverAlert)
   {
     return new ServerAlertResponseDto(
       serverAlert.Id,
@@ -81,12 +81,12 @@ public static class EntityToDtoExtensions
       serverAlert.IsEnabled);
   }
 
-  public static TenantSettingResponseDto ToDto(this TenantSetting tenantSetting)
+  public static TenantSettingResponseDto ToInternalResponseDto(this TenantSetting tenantSetting)
   {
     return new TenantSettingResponseDto(tenantSetting.Id, tenantSetting.Name, tenantSetting.Value);
   }
 
-  public static TagResponseDto ToDto(this Tag tag)
+  public static TagResponseDto ToInternalResponseDto(this Tag tag)
   {
     var userIds = tag
       .Users?
@@ -106,50 +106,7 @@ public static class EntityToDtoExtensions
       deviceIds);
   }
 
-  public static DeviceSummaryDto ToSummaryDto(this Device device)
-  {
-    return new DeviceSummaryDto(
-      device.Id,
-      device.LastSeen,
-      device.AgentVersion);
-  }
-
-  public static DeviceResponseDto ToV0Dto(this Device device, bool isOutdated)
-  {
-    return new DeviceResponseDto(
-      device.Name,
-      device.AgentVersion,
-      device.CpuUtilization,
-      device.Id,
-      device.Is64Bit,
-      device.IsOnline,
-      device.LastSeen,
-      device.OsArchitecture,
-      device.Platform,
-      device.ProcessorCount,
-      device.ConnectionId,
-      device.OsDescription,
-      device.TenantId,
-      device.TotalMemory,
-      device.TotalStorage,
-      device.UsedMemory,
-      device.UsedStorage,
-      device.CurrentUsers,
-      device.MacAddresses,
-      device.PublicIpV4,
-      device.PublicIpV6,
-      device.LocalIpV4,
-      device.LocalIpV6,
-      device.Drives,
-      isOutdated,
-      device.DnsHostName)
-    {
-      Alias = device.Alias,
-      TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray()
-    };
-  }
-
-  public static DeviceSummaryDto ToV0SummaryDto(this Device device)
+  public static DeviceSummaryDto ToInternalSummaryDto(this Device device)
   {
     return new DeviceSummaryDto(
       device.Id,

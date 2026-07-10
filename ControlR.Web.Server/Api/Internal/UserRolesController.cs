@@ -101,7 +101,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     }
 
     var userRoles = user.Roles
-      .Select(x => x.ToDto())
+      .Select(x => x.ToInternalResponseDto())
       .ToArray();
 
     return Ok(userRoles);
@@ -136,7 +136,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
     }
 
     var userRoles = user.Roles
-      .Select(x => x.ToDto())
+      .Select(x => x.ToInternalResponseDto())
       .ToArray();
 
     return Ok(userRoles);

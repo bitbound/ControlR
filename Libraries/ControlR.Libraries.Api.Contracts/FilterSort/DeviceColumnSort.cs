@@ -1,4 +1,4 @@
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+namespace ControlR.Libraries.Api.Contracts.FilterSort;
 
 public class DeviceColumnSort
 {

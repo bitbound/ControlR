@@ -1,7 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.ServiceAccounts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 
-namespace ControlR.ApiClient.Interfaces.Internal;
+namespace ControlR.ApiClient.Interfaces.V0;
 
 public interface IServiceAccountsApi
 {

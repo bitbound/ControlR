@@ -75,7 +75,7 @@ public class AgentInstallerKeyManager(
     db.AgentInstallerKeys.Add(installerKey);
     await db.SaveChangesAsync();
 
-    return installerKey.ToCreateResponseDto(plaintextKey);
+    return installerKey.ToInternalResponseDto(plaintextKey);
   }
 
   public async Task<HttpResult> DeleteKey(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin)

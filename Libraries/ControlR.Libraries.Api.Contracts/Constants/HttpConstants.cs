@@ -23,7 +23,6 @@ public static class HttpConstants
     public const string ServerAlertEndpoint = "/api/internal/server-alert";
     public const string ServerLogsEndpoint = "/api/internal/server-logs";
     public const string ServerStatsEndpoint = "/api/internal/server-stats";
-    public const string ServiceAccountsEndpoint = "/api/internal/service-accounts";
     public const string TagsEndpoint = "/api/internal/tags";
     public const string TenantsEndpoint = "/api/internal/tenants";
     public const string TenantSettingsEndpoint = "/api/internal/tenant-settings";
@@ -41,6 +40,7 @@ public static class HttpConstants
     public const string DevicesEndpoint = "/api/v0/devices";
     public const string InstallerKeysEndpoint = "/api/v0/installer-keys";
     public const string LogonTokensEndpoint = "/api/v0/logon-tokens";
+    public const string ServiceAccountsEndpoint = "/api/v0/service-accounts";
     public const string TenantsEndpoint = "/api/v0/tenants";
   }
 }

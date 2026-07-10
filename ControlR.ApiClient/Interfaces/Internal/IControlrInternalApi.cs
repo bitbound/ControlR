@@ -18,7 +18,6 @@ public interface IControlrInternalApi
   IServerAlertApi ServerAlert { get; }
   IServerLogsApi ServerLogs { get; }
   IServerStatsApi ServerStats { get; }
-  IServiceAccountsApi ServiceAccounts { get; }
   ITagsApi Tags { get; }
   ITenantSettingsApi TenantSettings { get; }
   ITestEmailApi TestEmail { get; }

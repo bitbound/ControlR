@@ -1,4 +1,4 @@
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 

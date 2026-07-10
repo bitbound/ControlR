@@ -1,3 +1,5 @@
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
+
 namespace ControlR.Web.Server.Services.Tenants;
 
 public interface ITenantProvisioningService

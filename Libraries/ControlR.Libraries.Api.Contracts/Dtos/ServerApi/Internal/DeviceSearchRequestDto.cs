@@ -1,4 +1,6 @@
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.FilterSort;
+
+namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 public class DeviceSearchRequestDto
 {
@@ -11,4 +13,3 @@ public class DeviceSearchRequestDto
   public List<DeviceColumnSort>? SortDefinitions { get; set; }
   public List<Guid>? TagIds { get; set; }
 }
-

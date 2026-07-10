@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.V0;
 using ControlR.Web.Server.Authn;
@@ -39,7 +41,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var response = Assert.IsType<CreateInstallerKeyResponseDto>(okResult.Value);
+    var response = Assert.IsType<V0Dtos.CreateInstallerKeyResponseDto>(okResult.Value);
     Assert.NotEqual(Guid.Empty, response.Id);
   }
 
@@ -62,11 +64,11 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       services.GetRequiredService<ILogonTokenProvider>(),
-      new IssueLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, LogonTokenKind.User));
+      new CreateLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, LogonTokenKind.User));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var response = Assert.IsType<LogonTokenResponseDto>(okResult.Value);
+    var response = Assert.IsType<V0Dtos.LogonTokenResponseDto>(okResult.Value);
     Assert.Contains($"deviceId={device.Id}", response.DeviceAccessUrl.Query, StringComparison.OrdinalIgnoreCase);
   }
 

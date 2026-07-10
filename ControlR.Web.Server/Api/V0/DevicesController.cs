@@ -6,6 +6,7 @@ using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
 using CreateDeviceRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.CreateDeviceRequestDto;
+using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.DeviceResponseDto;
 
 namespace ControlR.Web.Server.Api.V0;
 
@@ -111,7 +112,7 @@ public class DevicesController() : ControllerBase
     var entity = await deviceManager.AddOrUpdate(deviceDto, connectionContext, requestDto.TagIds, requestDto.PublicKey);
 
     var isOutdated = await GetIsOutdated(entity, agentVersionProvider);
-    return entity.ToDto(isOutdated);
+    return entity.ToV0ResponseDto(isOutdated);
   }
 
   [HttpDelete("{deviceId:guid}")]
@@ -178,7 +179,7 @@ public class DevicesController() : ControllerBase
     await foreach (var device in query.AsAsyncEnumerable())
     {
       var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-      yield return device.ToV0Dto(isOutdated);
+      yield return device.ToV0ResponseDto(isOutdated);
     }
   }
 
@@ -203,11 +204,11 @@ public class DevicesController() : ControllerBase
     }
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-    return device.ToV0Dto(isOutdated);
+    return device.ToV0ResponseDto(isOutdated);
   }
 
   [HttpGet("summary")]
-  public async IAsyncEnumerable<DeviceSummaryDto> GetDeviceSummaries(
+  public async IAsyncEnumerable<V0Dtos.DeviceSummaryDto> GetDeviceSummaries(
     [FromServices] AppDb appDb)
   {
     var query = appDb.Devices.OrderBy(x => x.CreatedAt);
@@ -219,8 +220,8 @@ public class DevicesController() : ControllerBase
   }
 
   [HttpPost("search")]
-  public async Task<ActionResult<DeviceSearchResponseDto>> SearchDevices(
-    [FromBody] DeviceSearchRequestDto requestDto,
+  public async Task<ActionResult<V0Dtos.DeviceSearchResponseDto>> SearchDevices(
+    [FromBody] V0Dtos.DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] ILogger<DevicesController> logger)
@@ -254,10 +255,10 @@ public class DevicesController() : ControllerBase
     foreach (var device in devices)
     {
       var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-      pagedDtos.Add(device.ToV0Dto(isOutdated));
+      pagedDtos.Add(device.ToV0ResponseDto(isOutdated));
     }
 
-    var response = new DeviceSearchResponseDto
+    var response = new V0Dtos.DeviceSearchResponseDto
     {
       AnyDevicesForUser = anyDevices,
       FilterCounts = filterCounts,
@@ -272,7 +273,7 @@ public class DevicesController() : ControllerBase
   [HttpPatch("{deviceId:guid}/alias")]
   public async Task<ActionResult<DeviceResponseDto>> UpdateDeviceAlias(
     [FromRoute] Guid deviceId,
-    [FromBody] UpdateDeviceAliasRequestDto requestDto,
+    [FromBody] V0Dtos.UpdateDeviceAliasRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentVersionProvider agentVersionProvider,
@@ -307,15 +308,15 @@ public class DevicesController() : ControllerBase
     await appDb.SaveChangesAsync();
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-    return device.ToV0Dto(isOutdated);
+    return device.ToV0ResponseDto(isOutdated);
   }
 
-  private static async Task<DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)
+  private static async Task<V0Dtos.DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)
   {
     return await query
       .Select(x => new { IsTagged = x.Tags!.Any(), x.IsOnline })
       .GroupBy(_ => 1)
-      .Select(group => new DeviceSearchFilterCountsDto
+      .Select(group => new V0Dtos.DeviceSearchFilterCountsDto
       {
         TaggedDevices = group.Count(x => x.IsTagged),
         UntaggedDevices = group.Count(x => !x.IsTagged),
@@ -323,7 +324,7 @@ public class DevicesController() : ControllerBase
         OfflineDevices = group.Count(x => !x.IsOnline)
       })
       .FirstOrDefaultAsync()
-      ?? new DeviceSearchFilterCountsDto();
+      ?? new V0Dtos.DeviceSearchFilterCountsDto();
   }
 
   private static async Task<bool> GetIsOutdated(Device entity, IAgentVersionProvider agentVersionProvider)

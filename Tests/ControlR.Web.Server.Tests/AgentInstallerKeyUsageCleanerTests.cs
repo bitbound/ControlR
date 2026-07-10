@@ -1,3 +1,4 @@
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Tests.Helpers;

@@ -1,10 +1,11 @@
 using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.V0;
 
-[Route(HttpConstants.Internal.ServiceAccountsEndpoint)]
+[Route(HttpConstants.V0.ServiceAccountsEndpoint)]
 [ApiController]
 [Authorize(Policy = RequireServerServiceAccountPolicy.PolicyName)]
 [ApiVersion(ApiVersions.V0)]

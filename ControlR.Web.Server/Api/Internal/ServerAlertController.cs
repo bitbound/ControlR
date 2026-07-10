@@ -26,7 +26,7 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
       return NotFound();
     }
 
-    return alert.ToDto();
+    return alert.ToInternalResponseDto();
   }
 
   [HttpPost]
@@ -62,6 +62,6 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
     }
 
     await _appDb.SaveChangesAsync();
-    return alert.ToDto();
+    return alert.ToInternalResponseDto();
   }
 }

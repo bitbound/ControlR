@@ -98,7 +98,7 @@ public class TenantSettingsManager(
       .AsNoTracking()
       .SingleAsync(x => x.TenantId == tenantId && x.Name == setting.Name, cancellationToken);
 
-    return HttpResult.Ok(savedSetting.ToDto());
+    return HttpResult.Ok(savedSetting.ToInternalResponseDto());
   }
 
   public async Task<HttpResult<TenantSettingsDto>> SetSettings(

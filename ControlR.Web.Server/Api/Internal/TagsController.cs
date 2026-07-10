@@ -38,7 +38,7 @@ public class TagsController : ControllerBase
     await appDb.Tags.AddAsync(tag);
     await appDb.SaveChangesAsync();
 
-    return Ok(tag.ToDto());
+    return Ok(tag.ToInternalResponseDto());
   }
 
   [HttpDelete("{tagId:guid}")]
@@ -89,7 +89,7 @@ public class TagsController : ControllerBase
     var tags = await query.ToListAsync();
 
     var dtos = tags
-      .Select(x => x.ToDto())
+      .Select(x => x.ToInternalResponseDto())
       .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
       .ToArray();
 
@@ -119,6 +119,6 @@ public class TagsController : ControllerBase
 
     tag.Name = dto.NewTagName;
     await appDb.SaveChangesAsync();
-    return tag.ToDto();
+    return tag.ToInternalResponseDto();
   }
 }

@@ -296,7 +296,7 @@ public class AgentHub(
       await AddToGroups(deviceEntity);
 
       var isOutdated = await GetIsAgentOutdated(deviceEntity);
-      Device = deviceEntity.ToDto(isOutdated);
+      Device = deviceEntity.ToInternalResponseDto(isOutdated);
 
       await SendDeviceUpdate(deviceEntity, Device);
 
@@ -406,7 +406,7 @@ public class AgentHub(
       await AddToGroups(deviceEntity);
 
       var isOutdated = await GetIsAgentOutdated(deviceEntity);
-      Device = deviceEntity.ToDto(isOutdated);
+      Device = deviceEntity.ToInternalResponseDto(isOutdated);
 
       await SendDeviceUpdate(deviceEntity, Device);
 

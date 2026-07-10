@@ -115,7 +115,7 @@ public class DevicesController(
     var entity = await deviceManager.AddOrUpdate(deviceDto, connectionContext, requestDto.TagIds, requestDto.PublicKey);
 
     var isOutdated = await GetIsOutdated(entity, agentVersionProvider);
-    return entity.ToDto(isOutdated);
+    return entity.ToInternalResponseDto(isOutdated);
   }
 
   [HttpDelete("{deviceId:guid}")]
@@ -218,7 +218,7 @@ public class DevicesController(
     await foreach (var device in deviceStream)
     {
       var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-      yield return device.ToDto(isOutdated);
+      yield return device.ToInternalResponseDto(isOutdated);
     }
   }
 
@@ -244,7 +244,7 @@ public class DevicesController(
     }
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-    return device.ToDto(isOutdated);
+    return device.ToInternalResponseDto(isOutdated);
   }
 
   [HttpGet("summary")]
@@ -265,7 +265,7 @@ public class DevicesController(
 
     await foreach (var device in deviceStream)
     {
-      yield return device.ToSummaryDto();
+      yield return device.ToInternalSummaryDto();
     }
   }
 
@@ -313,7 +313,7 @@ public class DevicesController(
     foreach (var device in devices)
     {
       var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-      pagedDtos.Add(device.ToDto(isOutdated));
+      pagedDtos.Add(device.ToInternalResponseDto(isOutdated));
     }
 
     var response = new DeviceSearchResponseDto
@@ -367,7 +367,7 @@ public class DevicesController(
     await appDb.SaveChangesAsync();
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
-    return device.ToDto(isOutdated);
+    return device.ToInternalResponseDto(isOutdated);
   }
 
   private static async Task<DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)

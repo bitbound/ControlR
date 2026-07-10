@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 
 [MessagePackObject(keyAsPropertyName: true)]
 public record DeleteDevicesRequestDto(Guid[] DeviceIds)

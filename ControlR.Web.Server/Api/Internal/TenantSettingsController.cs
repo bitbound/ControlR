@@ -80,7 +80,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
       return NoContent();
     }
 
-    return setting.ToDto();
+    return setting.ToInternalResponseDto();
   }
 
   [HttpPost]

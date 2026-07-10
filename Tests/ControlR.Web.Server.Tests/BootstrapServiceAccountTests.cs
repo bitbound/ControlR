@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Api;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Web.Server.Api.V0;
 using V0DevicesController = ControlR.Web.Server.Api.V0.DevicesController;
 using ControlR.Web.Server.Authn;
@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.DeviceResponseDto;
+using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.DeviceResponseDto;
 
 namespace ControlR.Web.Server.Tests;
 

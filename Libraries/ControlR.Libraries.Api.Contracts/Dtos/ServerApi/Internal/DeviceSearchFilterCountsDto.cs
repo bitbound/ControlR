@@ -1,4 +1,4 @@
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 public class DeviceSearchFilterCountsDto
 {
@@ -7,4 +7,3 @@ public class DeviceSearchFilterCountsDto
   public int TaggedDevices { get; set; }
   public int UntaggedDevices { get; set; }
 }
-

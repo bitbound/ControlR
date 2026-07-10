@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Web.Server.Services.Tenants;
 using Microsoft.AspNetCore.Mvc;
 

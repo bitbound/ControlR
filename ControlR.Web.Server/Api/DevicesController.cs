@@ -112,7 +112,7 @@ public class DevicesController : ControllerBase
     var entity = await deviceManager.AddOrUpdate(deviceDto, connectionContext, requestDto.TagIds, requestDto.PublicKey);
 
     var isOutdated = await GetIsOutdated(entity, agentVersionProvider);
-    return entity.ToDto(isOutdated);
+    return entity.ToInternalResponseDto(isOutdated);
   }
 
   private static async Task<bool> GetIsOutdated(Device entity, IAgentVersionProvider agentVersionProvider)

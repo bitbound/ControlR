@@ -13,11 +13,11 @@ namespace ControlR.Web.Server.Api.V0;
 public class LogonTokensController : ControllerBase
 {
   [HttpPost]
-  public async Task<ActionResult<LogonTokenResponseDto>> Create(
+  public async Task<ActionResult<V0Dtos.LogonTokenResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] ILogonTokenProvider logonTokenProvider,
-    [FromBody] IssueLogonTokenRequestDto request)
+    [FromBody] V0Dtos.CreateLogonTokenRequestDto request)
   {
     var device = await appDb.Devices.FindAsync(request.DeviceId);
     if (device is null || device.TenantId != request.TenantId)
@@ -27,7 +27,7 @@ public class LogonTokensController : ControllerBase
 
     Guid? userId = request.UserId;
 
-    if (request.Kind == LogonTokenKind.Service)
+    if (request.Kind == Libraries.Api.Contracts.Enums.LogonTokenKind.Service)
     {
       if (string.IsNullOrWhiteSpace(request.UserCorrelationId))
       {
@@ -58,7 +58,7 @@ public class LogonTokensController : ControllerBase
 
       userId = guestUser.Id;
     }
-    else if (request.Kind == LogonTokenKind.User)
+    else if (request.Kind == Libraries.Api.Contracts.Enums.LogonTokenKind.User)
     {
       if (!request.UserId.HasValue)
       {

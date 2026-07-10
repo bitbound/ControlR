@@ -3,7 +3,6 @@ using ControlR.ApiClient.Interfaces.V0;
 using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using V0Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 
 namespace ControlR.ApiClient;
@@ -28,8 +27,8 @@ internal partial class V0Api
     });
   }
 
-  async Task<ApiResult<DeleteManyDevicesResponseDto>> IV0DevicesApi.DeleteManyDevices(
-    DeleteDevicesRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.DeleteManyDevicesResponseDto>> IV0DevicesApi.DeleteManyDevices(
+    V0Dtos.DeleteDevicesRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
@@ -37,13 +36,13 @@ internal partial class V0Api
         $"{HttpConstants.V0.DevicesEndpoint}/delete-many", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content
-        .ReadFromJsonAsync<DeleteManyDevicesResponseDto>(cancellationToken);
+        .ReadFromJsonAsync<V0Dtos.DeleteManyDevicesResponseDto>(cancellationToken);
     });
   }
 
-  async IAsyncEnumerable<DeviceResponseDto> IV0DevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
+  async IAsyncEnumerable<V0Dtos.DeviceResponseDto> IV0DevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
   {
-    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<DeviceResponseDto>(
+    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<V0Dtos.DeviceResponseDto>(
       HttpConstants.V0.DevicesEndpoint,
       cancellationToken: cancellationToken);
 
@@ -58,15 +57,15 @@ internal partial class V0Api
     }
   }
 
-  async Task<ApiResult<DeviceResponseDto>> IV0DevicesApi.GetDevice(Guid deviceId, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.DeviceResponseDto>> IV0DevicesApi.GetDevice(Guid deviceId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<DeviceResponseDto>($"{HttpConstants.V0.DevicesEndpoint}/{deviceId}", cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<V0Dtos.DeviceResponseDto>($"{HttpConstants.V0.DevicesEndpoint}/{deviceId}", cancellationToken));
   }
 
-  async IAsyncEnumerable<DeviceSummaryDto> IV0DevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
+  async IAsyncEnumerable<V0Dtos.DeviceSummaryDto> IV0DevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
   {
-    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<DeviceSummaryDto>(
+    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<V0Dtos.DeviceSummaryDto>(
       $"{HttpConstants.V0.DevicesEndpoint}/summary",
       cancellationToken: cancellationToken);
 
@@ -81,24 +80,24 @@ internal partial class V0Api
     }
   }
 
-  async Task<ApiResult<DeviceSearchResponseDto>> IV0DevicesApi.SearchDevices(DeviceSearchRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.DeviceSearchResponseDto>> IV0DevicesApi.SearchDevices(V0Dtos.DeviceSearchRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
       using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.V0.DevicesEndpoint}/search", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>(cancellationToken);
+      return await response.Content.ReadFromJsonAsync<V0Dtos.DeviceSearchResponseDto>(cancellationToken);
     });
   }
 
-  async Task<ApiResult<DeviceResponseDto>> IV0DevicesApi.UpdateDeviceAlias(UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.DeviceResponseDto>> IV0DevicesApi.UpdateDeviceAlias(V0Dtos.UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
       using var content = JsonContent.Create(request);
       using var response = await _client.HttpClient.PatchAsync($"{HttpConstants.V0.DevicesEndpoint}/{request.DeviceId}/alias", content, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<DeviceResponseDto>(cancellationToken);
+      return await response.Content.ReadFromJsonAsync<V0Dtos.DeviceResponseDto>(cancellationToken);
     });
   }
 }

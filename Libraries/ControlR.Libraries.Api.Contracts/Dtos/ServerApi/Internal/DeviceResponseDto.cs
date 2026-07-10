@@ -1,11 +1,11 @@
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Enums;
+using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using System.Collections.Immutable;
-using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 [MessagePackObject(keyAsPropertyName: true)]
 public record DeviceResponseDto(

@@ -51,7 +51,7 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
       return NoContent();
     }
 
-    return preference.ToDto();
+    return preference.ToInternalResponseDto();
   }
 
   [HttpPost]

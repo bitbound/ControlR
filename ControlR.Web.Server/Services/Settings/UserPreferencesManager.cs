@@ -117,7 +117,7 @@ public class UserPreferencesManager(
       .AsNoTracking()
       .SingleAsync(x => x.UserId == userId && x.Name == preference.Name, cancellationToken);
 
-    return HttpResult.Ok(savedPreference.ToDto());
+    return HttpResult.Ok(savedPreference.ToInternalResponseDto());
   }
 
   public async Task SetPreference<T>(string preferenceName, T value)
