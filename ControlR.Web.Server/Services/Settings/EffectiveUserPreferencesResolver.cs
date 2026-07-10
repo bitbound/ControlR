@@ -4,7 +4,7 @@ namespace ControlR.Web.Server.Services.Settings;
 
 public interface IEffectiveUserPreferencesResolver
 {
-  Task<EffectiveUserPreferencesDto> GetEffectiveUserPreferences(
+  Task<InternalDtos.EffectiveUserPreferencesDto> GetEffectiveUserPreferences(
     Guid tenantId,
     Guid userId,
     CancellationToken cancellationToken = default);
@@ -22,7 +22,7 @@ internal sealed class EffectiveUserPreferencesResolver(
   private readonly AppDb _appDb = appDb;
   private readonly ILogger<EffectiveUserPreferencesResolver> _logger = logger;
 
-  public async Task<EffectiveUserPreferencesDto> GetEffectiveUserPreferences(
+  public async Task<InternalDtos.EffectiveUserPreferencesDto> GetEffectiveUserPreferences(
     Guid tenantId,
     Guid userId,
     CancellationToken cancellationToken = default)
@@ -45,7 +45,7 @@ internal sealed class EffectiveUserPreferencesResolver(
 
     if (tenantOverride.HasValue)
     {
-      return new EffectiveUserPreferencesDto(tenantOverride.Value, true);
+      return new InternalDtos.EffectiveUserPreferencesDto(tenantOverride.Value, true);
     }
 
     var userPreference = ParseBoolean(
@@ -54,7 +54,7 @@ internal sealed class EffectiveUserPreferencesResolver(
       userId,
       "user preference");
 
-    return new EffectiveUserPreferencesDto(userPreference, false);
+    return new InternalDtos.EffectiveUserPreferencesDto(userPreference, false);
   }
 
   public async Task<bool> GetNotifyUserOnSessionStart(

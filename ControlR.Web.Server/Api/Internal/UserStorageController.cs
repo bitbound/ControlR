@@ -27,9 +27,9 @@ public class UserStorageController(IUserStorageManager userStorageManager) : Con
   }
 
   [HttpGet("{key}")]
-  [ProducesResponseType(typeof(UserStorageResponseDto), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(InternalDtos.UserStorageResponseDto), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
-  public async Task<ActionResult<UserStorageResponseDto>> GetItem(string key, CancellationToken cancellationToken)
+  public async Task<ActionResult<InternalDtos.UserStorageResponseDto>> GetItem(string key, CancellationToken cancellationToken)
   {
     if (!User.TryGetUserId(out var userId))
     {
@@ -42,9 +42,9 @@ public class UserStorageController(IUserStorageManager userStorageManager) : Con
   }
 
   [HttpPost]
-  [ProducesResponseType(typeof(UserStorageResponseDto), StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(InternalDtos.UserStorageResponseDto), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
-  public async Task<ActionResult<UserStorageResponseDto>> SetItem([FromBody] UserStorageRequestDto request, CancellationToken cancellationToken)
+  public async Task<ActionResult<InternalDtos.UserStorageResponseDto>> SetItem([FromBody] InternalDtos.UserStorageRequestDto request, CancellationToken cancellationToken)
   {
     if (!User.TryGetUserId(out var userId))
     {

@@ -19,7 +19,7 @@ public class DevicesController(
 
   [HttpPost]
   [AllowAnonymous]
-  public async Task<ActionResult<DeviceResponseDto>> CreateDevice(
+  public async Task<ActionResult<InternalDtos.DeviceResponseDto>> CreateDevice(
     [FromBody] CreateDeviceRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
@@ -151,9 +151,9 @@ public class DevicesController(
   }
 
   [HttpPost("delete-many")]
-  public async Task<ActionResult<DeleteManyDevicesResponseDto>> DeleteMany(
+  public async Task<ActionResult<InternalDtos.DeleteManyDevicesResponseDto>> DeleteMany(
     [FromServices] AppDb appDb,
-    [FromBody] DeleteDevicesRequestDto requestDto,
+    [FromBody] InternalDtos.DeleteDevicesRequestDto requestDto,
     CancellationToken cancellationToken)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -179,7 +179,7 @@ public class DevicesController(
     if (deletedCount == authorizedDeviceIds.Count)
     {
       // All authorized devices were deleted.
-      return new DeleteManyDevicesResponseDto(
+      return new InternalDtos.DeleteManyDevicesResponseDto(
         SuccessIds: [.. authorizedDeviceIds],
         FailureIds: [.. requestDto.DeviceIds.Except(authorizedIdSet)]);
     }
@@ -192,11 +192,11 @@ public class DevicesController(
     var successIds = authorizedIdSet.Except(remainingIds).ToImmutableList();
     var failureIds = remainingIds.Concat(requestDto.DeviceIds.Except(authorizedIdSet)).ToImmutableList();
 
-    return new DeleteManyDevicesResponseDto(successIds, failureIds);
+    return new InternalDtos.DeleteManyDevicesResponseDto(successIds, failureIds);
   }
 
   [HttpGet]
-  public async IAsyncEnumerable<DeviceResponseDto> Get(
+  public async IAsyncEnumerable<InternalDtos.DeviceResponseDto> Get(
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider)
   {
@@ -223,7 +223,7 @@ public class DevicesController(
   }
 
   [HttpGet("{deviceId:guid}")]
-  public async Task<ActionResult<DeviceResponseDto>> GetDevice(
+  public async Task<ActionResult<InternalDtos.DeviceResponseDto>> GetDevice(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentVersionProvider agentVersionProvider,
@@ -248,7 +248,7 @@ public class DevicesController(
   }
 
   [HttpGet("summary")]
-  public async IAsyncEnumerable<DeviceSummaryDto> GetDeviceSummaries(
+  public async IAsyncEnumerable<InternalDtos.DeviceSummaryDto> GetDeviceSummaries(
     [FromServices] AppDb appDb)
   {
     IQueryable<Device> query = appDb.Devices;
@@ -270,8 +270,8 @@ public class DevicesController(
   }
 
   [HttpPost("search")]
-  public async Task<ActionResult<DeviceSearchResponseDto>> SearchDevices(
-    [FromBody] DeviceSearchRequestDto requestDto,
+  public async Task<ActionResult<InternalDtos.DeviceSearchResponseDto>> SearchDevices(
+    [FromBody] InternalDtos.DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] ILogger<DevicesController> logger)
@@ -309,14 +309,14 @@ public class DevicesController(
       .Take(requestDto.PageSize)
       .ToListAsync();
 
-    var pagedDtos = new List<DeviceResponseDto>(devices.Count);
+    var pagedDtos = new List<InternalDtos.DeviceResponseDto>(devices.Count);
     foreach (var device in devices)
     {
       var isOutdated = await GetIsOutdated(device, agentVersionProvider);
       pagedDtos.Add(device.ToInternalResponseDto(isOutdated));
     }
 
-    var response = new DeviceSearchResponseDto
+    var response = new InternalDtos.DeviceSearchResponseDto
     {
       AnyDevicesForUser = anyDevices,
       FilterCounts = filterCounts,
@@ -330,9 +330,9 @@ public class DevicesController(
 
   [HttpPatch("{deviceId:guid}/alias")]
   [Authorize]
-  public async Task<ActionResult<DeviceResponseDto>> UpdateDeviceAlias(
+  public async Task<ActionResult<InternalDtos.DeviceResponseDto>> UpdateDeviceAlias(
     [FromRoute] Guid deviceId,
-    [FromBody] UpdateDeviceAliasRequestDto requestDto,
+    [FromBody] InternalDtos.UpdateDeviceAliasRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentVersionProvider agentVersionProvider,
@@ -370,12 +370,12 @@ public class DevicesController(
     return device.ToInternalResponseDto(isOutdated);
   }
 
-  private static async Task<DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)
+  private static async Task<InternalDtos.DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)
   {
     return await query
       .Select(x => new { IsTagged = x.Tags!.Any(), x.IsOnline })
       .GroupBy(_ => 1)
-      .Select(group => new DeviceSearchFilterCountsDto
+      .Select(group => new InternalDtos.DeviceSearchFilterCountsDto
       {
         TaggedDevices = group.Count(x => x.IsTagged),
         UntaggedDevices = group.Count(x => !x.IsTagged),
@@ -383,7 +383,7 @@ public class DevicesController(
         OfflineDevices = group.Count(x => !x.IsOnline)
       })
       .FirstOrDefaultAsync()
-      ?? new DeviceSearchFilterCountsDto();
+      ?? new InternalDtos.DeviceSearchFilterCountsDto();
   }
 
   private static async Task<bool> GetIsOutdated(Device entity, IAgentVersionProvider agentVersionProvider)

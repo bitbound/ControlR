@@ -11,11 +11,11 @@ namespace ControlR.Web.Server.Api.Internal;
 public class LogonTokenController : ControllerBase
 {
   [HttpPost]
-  public async Task<ActionResult<LogonTokenResponseDto>> CreateLogonToken(
+  public async Task<ActionResult<InternalDtos.LogonTokenResponseDto>> CreateLogonToken(
     [FromServices] AppDb appDb,
     [FromServices] ILogonTokenProvider logonTokenProvider,
     [FromServices] IAuthorizationService authorizationService,
-    [FromBody] LogonTokenRequestDto request)
+    [FromBody] InternalDtos.LogonTokenRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -66,7 +66,7 @@ public class LogonTokenController : ControllerBase
       Request.ToOrigin(),
       $"/device-access?deviceId={request.DeviceId}&logonToken={logonToken.Token}");
 
-    var response = new LogonTokenResponseDto(
+    var response = new InternalDtos.LogonTokenResponseDto(
       DeviceAccessUrl: deviceAccessUrl,
       ExpiresAt: logonToken.ExpiresAt,
       Token: logonToken.Token);

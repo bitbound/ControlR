@@ -114,11 +114,11 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
       var tenantInvitesProvider = scope.ServiceProvider.GetRequiredService<ITenantInvitesProvider>();
 
       var result = await controller.Create(
-        new TenantInviteRequestDto("user2@example.com"),
+        new InternalDtos.TenantInviteRequestDto("user2@example.com"),
         tenantInvitesProvider);
 
       var okResult = Assert.IsType<OkObjectResult>(result.Result);
-      var inviteResponse = Assert.IsType<TenantInviteResponseDto>(okResult.Value);
+      var inviteResponse = Assert.IsType<InternalDtos.TenantInviteResponseDto>(okResult.Value);
       activationCode = inviteResponse.InviteUrl.Segments[^1];
     }
 
@@ -198,10 +198,10 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
       var tenantInvitesProvider = scope.ServiceProvider.GetRequiredService<ITenantInvitesProvider>();
 
       var acceptResult = await controller.AcceptInvite(
-        new AcceptInvitationRequestDto(activationCode, "user2@example.com", "NewPassword123!"),
+        new InternalDtos.AcceptInvitationRequestDto(activationCode, "user2@example.com", "NewPassword123!"),
         tenantInvitesProvider);
 
-      var acceptResponse = Assert.IsType<AcceptInvitationResponseDto>(acceptResult.Value);
+      var acceptResponse = Assert.IsType<InternalDtos.AcceptInvitationResponseDto>(acceptResult.Value);
       Assert.True(acceptResponse.IsSuccessful);
     }
 

@@ -11,7 +11,7 @@ namespace ControlR.Web.Server.Api.Internal;
 public class UsersController : ControllerBase
 {
   [HttpPost("{userId:guid}/reset-password")]
-  public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
+  public async Task<ActionResult<InternalDtos.AdminResetPasswordResponseDto>> AdminResetPassword(
     [FromRoute] Guid userId,
     [FromServices] IPasswordManager passwordManager)
   {
@@ -35,11 +35,11 @@ public class UsersController : ControllerBase
   }
 
   [HttpPost]
-  public async Task<ActionResult<UserResponseDto>> Create(
+  public async Task<ActionResult<InternalDtos.UserResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] IUserCreator userCreator,
-    [FromBody] CreateUserRequestDto request)
+    [FromBody] InternalDtos.CreateUserRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -96,16 +96,16 @@ public class UsersController : ControllerBase
       return BadRequest("User creation failed");
     }
 
-    var response = new UserResponseDto(user.Id, user.UserName, user.Email);
+    var response = new InternalDtos.UserResponseDto(user.Id, user.UserName, user.Email);
     return CreatedAtAction(nameof(GetAll), new { id = user.Id }, response);
   }
 
   [HttpPost("{userId:guid}/personal-access-tokens")]
-  public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
+  public async Task<ActionResult<InternalDtos.CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb,
-    [FromBody] CreatePersonalAccessTokenRequestDto request)
+    [FromBody] InternalDtos.CreatePersonalAccessTokenRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -188,7 +188,7 @@ public class UsersController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<List<UserResponseDto>>> GetAll(
+  public async Task<ActionResult<List<InternalDtos.UserResponseDto>>> GetAll(
     [FromServices] AppDb appDb)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -198,12 +198,12 @@ public class UsersController : ControllerBase
 
     return await appDb.Users
       .Where(x => x.TenantId == tenantId)
-      .Select(x => new UserResponseDto(x.Id, x.UserName, x.Email))
+      .Select(x => new InternalDtos.UserResponseDto(x.Id, x.UserName, x.Email))
       .ToListAsync();
   }
 
   [HttpGet("{userId:guid}/personal-access-tokens")]
-  public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetUserPersonalAccessTokens(
+  public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenDto>>> GetUserPersonalAccessTokens(
     [FromRoute] Guid userId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb)
@@ -226,12 +226,12 @@ public class UsersController : ControllerBase
   }
 
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
-  public async Task<ActionResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(
+  public async Task<ActionResult<InternalDtos.PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromRoute] Guid tokenId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb,
-    [FromBody] UpdatePersonalAccessTokenRequestDto request)
+    [FromBody] InternalDtos.UpdatePersonalAccessTokenRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {

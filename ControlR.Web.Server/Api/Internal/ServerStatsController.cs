@@ -12,7 +12,7 @@ public class ServerStatsController(IServerStatsProvider serverStatsProvider) : C
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
 
   [HttpGet]
-  public async Task<ActionResult<ServerStatsDto>> GetServerStats()
+  public async Task<ActionResult<InternalDtos.ServerStatsDto>> GetServerStats()
   {
     var result = await _serverStatsProvider.GetServerStats();
     if (result.IsSuccess)

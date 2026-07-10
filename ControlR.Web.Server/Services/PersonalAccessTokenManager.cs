@@ -14,7 +14,7 @@ public interface IPersonalAccessTokenManager
   /// <param name="request">The request containing the token name.</param>
   /// <param name="userId">The ID of the user who owns the token.</param>
   /// <returns>The created token and its plaintext secret, or a failure result.</returns>
-  Task<Result<CreatePersonalAccessTokenResponseDto>> CreateToken(CreatePersonalAccessTokenRequestDto request, Guid userId);
+  Task<Result<InternalDtos.CreatePersonalAccessTokenResponseDto>> CreateToken(InternalDtos.CreatePersonalAccessTokenRequestDto request, Guid userId);
 
   /// <summary>
   /// Creates a personal access token with a pre-specified secret and entity ID.
@@ -26,7 +26,7 @@ public interface IPersonalAccessTokenManager
   /// <param name="name">The display name for the token.</param>
   /// <param name="userId">The ID of the user who owns the token.</param>
   /// <returns>The created token, or a failure result.</returns>
-  Task<Result<PersonalAccessTokenDto>> CreateTokenWithKey(Guid tokenId, string secret, string name, Guid userId);
+  Task<Result<InternalDtos.PersonalAccessTokenDto>> CreateTokenWithKey(Guid tokenId, string secret, string name, Guid userId);
 
   /// <summary>
   /// Deletes a personal access token.
@@ -41,7 +41,7 @@ public interface IPersonalAccessTokenManager
   /// </summary>
   /// <param name="userId">The ID of the user whose tokens to retrieve.</param>
   /// <returns>A collection of token DTOs.</returns>
-  Task<IEnumerable<PersonalAccessTokenDto>> GetForUser(Guid userId);
+  Task<IEnumerable<InternalDtos.PersonalAccessTokenDto>> GetForUser(Guid userId);
 
   /// <summary>
   /// Updates a personal access token's name.
@@ -50,7 +50,7 @@ public interface IPersonalAccessTokenManager
   /// <param name="request">The request containing the new name.</param>
   /// <param name="userId">The ID of the user who owns the token.</param>
   /// <returns>The updated token, or a failure result.</returns>
-  Task<Result<PersonalAccessTokenDto>> Update(Guid id, UpdatePersonalAccessTokenRequestDto request, Guid userId);
+  Task<Result<InternalDtos.PersonalAccessTokenDto>> Update(Guid id, InternalDtos.UpdatePersonalAccessTokenRequestDto request, Guid userId);
 
   /// <summary>
   /// Validates the provided personal access token and returns the associated user and tenant ID if valid.
@@ -69,7 +69,7 @@ public class PersonalAccessTokenManager(
   private readonly IPasswordHasher<string> _passwordHasher = passwordHasher;
   private readonly TimeProvider _timeProvider = timeProvider;
 
-  public async Task<Result<CreatePersonalAccessTokenResponseDto>> CreateToken(CreatePersonalAccessTokenRequestDto request, Guid userId)
+  public async Task<Result<InternalDtos.CreatePersonalAccessTokenResponseDto>> CreateToken(InternalDtos.CreatePersonalAccessTokenRequestDto request, Guid userId)
   {
     try
     {
@@ -88,30 +88,30 @@ public class PersonalAccessTokenManager(
 
       var hexId = Convert.ToHexString(personalAccessToken.Id.ToByteArray());
       var combinedKey = $"{hexId}:{plainTextKey}";
-      var response = new CreatePersonalAccessTokenResponseDto(MapToDto(personalAccessToken), combinedKey);
+      var response = new InternalDtos.CreatePersonalAccessTokenResponseDto(MapToDto(personalAccessToken), combinedKey);
       return Result.Ok(response);
     }
     catch (Exception ex)
     {
-      return Result.Fail<CreatePersonalAccessTokenResponseDto>(ex, "Failed to create personal access token.");
+      return Result.Fail<InternalDtos.CreatePersonalAccessTokenResponseDto>(ex, "Failed to create personal access token.");
     }
   }
 
-  public async Task<Result<PersonalAccessTokenDto>> CreateTokenWithKey(Guid tokenId, string secret, string name, Guid userId)
+  public async Task<Result<InternalDtos.PersonalAccessTokenDto>> CreateTokenWithKey(Guid tokenId, string secret, string name, Guid userId)
   {
     if (tokenId == Guid.Empty)
     {
-      return Result.Fail<PersonalAccessTokenDto>("Token ID cannot be empty.");
+      return Result.Fail<InternalDtos.PersonalAccessTokenDto>("Token ID cannot be empty.");
     }
 
     if (string.IsNullOrWhiteSpace(secret))
     {
-      return Result.Fail<PersonalAccessTokenDto>("Secret cannot be empty.");
+      return Result.Fail<InternalDtos.PersonalAccessTokenDto>("Secret cannot be empty.");
     }
 
     if (secret.Length < 32)
     {
-      return Result.Fail<PersonalAccessTokenDto>("PAT secret must be at least 32 characters.");
+      return Result.Fail<InternalDtos.PersonalAccessTokenDto>("PAT secret must be at least 32 characters.");
     }
 
     try
@@ -132,7 +132,7 @@ public class PersonalAccessTokenManager(
     }
     catch (Exception ex)
     {
-      return Result.Fail<PersonalAccessTokenDto>(ex, "Failed to create personal access token with pre-keyed secret.");
+      return Result.Fail<InternalDtos.PersonalAccessTokenDto>(ex, "Failed to create personal access token with pre-keyed secret.");
     }
   }
 
@@ -160,7 +160,7 @@ public class PersonalAccessTokenManager(
     }
   }
 
-  public async Task<IEnumerable<PersonalAccessTokenDto>> GetForUser(Guid userId)
+  public async Task<IEnumerable<InternalDtos.PersonalAccessTokenDto>> GetForUser(Guid userId)
   {
     var personalAccessTokens = await _appDb.PersonalAccessTokens
       .IgnoreQueryFilters()
@@ -171,7 +171,7 @@ public class PersonalAccessTokenManager(
     return personalAccessTokens.Select(MapToDto);
   }
 
-  public async Task<Result<PersonalAccessTokenDto>> Update(Guid id, UpdatePersonalAccessTokenRequestDto request, Guid userId)
+  public async Task<Result<InternalDtos.PersonalAccessTokenDto>> Update(Guid id, InternalDtos.UpdatePersonalAccessTokenRequestDto request, Guid userId)
   {
     try
     {
@@ -181,7 +181,7 @@ public class PersonalAccessTokenManager(
 
       if (personalAccessToken is null)
       {
-        return Result.Fail<PersonalAccessTokenDto>("Personal access token not found.");
+        return Result.Fail<InternalDtos.PersonalAccessTokenDto>("Personal access token not found.");
       }
 
       personalAccessToken.Name = request.Name;
@@ -191,7 +191,7 @@ public class PersonalAccessTokenManager(
     }
     catch (Exception ex)
     {
-      return Result.Fail<PersonalAccessTokenDto>(ex, "Failed to update personal access token.");
+      return Result.Fail<InternalDtos.PersonalAccessTokenDto>(ex, "Failed to update personal access token.");
     }
   }
 
@@ -237,9 +237,9 @@ public class PersonalAccessTokenManager(
     }
   }
 
-  private static PersonalAccessTokenDto MapToDto(PersonalAccessToken personalAccessToken)
+  private static InternalDtos.PersonalAccessTokenDto MapToDto(PersonalAccessToken personalAccessToken)
   {
-    return new PersonalAccessTokenDto(
+    return new InternalDtos.PersonalAccessTokenDto(
       personalAccessToken.Id,
       personalAccessToken.Name,
       personalAccessToken.CreatedAt,

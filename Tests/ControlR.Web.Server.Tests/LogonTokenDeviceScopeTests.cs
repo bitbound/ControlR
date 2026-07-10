@@ -27,16 +27,16 @@ public class LogonTokenDeviceScopeTests(ITestOutputHelper testOutput)
 
     // Create PAT
     var patManager = testApp.TestServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
-    var patCreate = await patManager.CreateToken(new CreatePersonalAccessTokenRequestDto("ScopeTest PAT"), user.Id);
+    var patCreate = await patManager.CreateToken(new InternalDtos.CreatePersonalAccessTokenRequestDto("ScopeTest PAT"), user.Id);
     Assert.True(patCreate.IsSuccess, patCreate.Reason);
     var pat = patCreate.Value.PlainTextToken;
 
     // Request logon token for primary device
     httpClient.DefaultRequestHeaders.Add(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName, pat);
-    var logonTokenRequest = new LogonTokenRequestDto(primaryDeviceId, ExpirationMinutes: 5);
+    var logonTokenRequest = new InternalDtos.LogonTokenRequestDto(primaryDeviceId, ExpirationMinutes: 5);
     var logonTokenResponse = await httpClient.PostAsJsonAsync(HttpConstants.Internal.LogonTokensEndpoint, logonTokenRequest, cancellationToken: TestContext.Current.CancellationToken);
     logonTokenResponse.EnsureSuccessStatusCode();
-    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>(TestContext.Current.CancellationToken);
+    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<InternalDtos.LogonTokenResponseDto>(TestContext.Current.CancellationToken);
     Assert.NotNull(logonTokenResult);
 
     // Consume logon token (first access) to establish cookie session

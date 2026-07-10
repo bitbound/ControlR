@@ -11,10 +11,10 @@ public class PersonalAccessTokensController : ControllerBase
 {
 
   [HttpPost]
-  public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(
+  public async Task<ActionResult<InternalDtos.CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] UserManager<AppUser> userManager,
-    [FromBody] CreatePersonalAccessTokenRequestDto request)
+    [FromBody] InternalDtos.CreatePersonalAccessTokenRequestDto request)
   {
     var user = await userManager.GetUserAsync(User);
     if (user is null || user.TenantId == Guid.Empty)
@@ -53,7 +53,7 @@ public class PersonalAccessTokensController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<PersonalAccessTokenDto>>> GetPersonalAccessTokens(
+  public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenDto>>> GetPersonalAccessTokens(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] UserManager<AppUser> userManager)
   {
@@ -68,11 +68,11 @@ public class PersonalAccessTokensController : ControllerBase
   }
 
   [HttpPut("{id}")]
-  public async Task<ActionResult<PersonalAccessTokenDto>> UpdatePersonalAccessToken(
+  public async Task<ActionResult<InternalDtos.PersonalAccessTokenDto>> UpdatePersonalAccessToken(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] UserManager<AppUser> userManager,
     Guid id,
-    [FromBody] UpdatePersonalAccessTokenRequestDto request)
+    [FromBody] InternalDtos.UpdatePersonalAccessTokenRequestDto request)
   {
     var user = await userManager.GetUserAsync(User);
     if (user is null)

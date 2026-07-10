@@ -11,9 +11,9 @@ public class TagsController : ControllerBase
 {
   [HttpPost]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<TagResponseDto>> CreateTag(
+  public async Task<ActionResult<InternalDtos.TagResponseDto>> CreateTag(
     [FromServices] AppDb appDb,
-    [FromBody] TagCreateRequestDto dto)
+    [FromBody] InternalDtos.TagCreateRequestDto dto)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -61,7 +61,7 @@ public class TagsController : ControllerBase
 
   [HttpGet]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<TagResponseDto[]>> GetAllTags(
+  public async Task<ActionResult<InternalDtos.TagResponseDto[]>> GetAllTags(
     [FromServices] AppDb appDb,
     [FromQuery] bool includeLinkedIds = false)
   {
@@ -94,9 +94,9 @@ public class TagsController : ControllerBase
 
   [HttpPut]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<TagResponseDto>> RenameTag(
+  public async Task<ActionResult<InternalDtos.TagResponseDto>> RenameTag(
     [FromServices] AppDb appDb,
-    [FromBody] TagRenameRequestDto dto)
+    [FromBody] InternalDtos.TagRenameRequestDto dto)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {

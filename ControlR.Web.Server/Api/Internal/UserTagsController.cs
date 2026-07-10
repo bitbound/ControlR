@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Api.Internal;
@@ -13,7 +13,7 @@ public class UserTagsController : ControllerBase
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<IActionResult> AddTag(
     [FromServices] AppDb appDb,
-    [FromBody] UserTagAddRequestDto dto)
+    [FromBody] InternalDtos.UserTagAddRequestDto dto)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -43,7 +43,7 @@ public class UserTagsController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<TagResponseDto[]>> GetAllowedTags(
+  public async Task<ActionResult<InternalDtos.TagResponseDto[]>> GetAllowedTags(
     [FromServices] AppDb appDb)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -80,7 +80,7 @@ public class UserTagsController : ControllerBase
 
     if (user.Tags is not { Count: > 0 })
     {
-      return Ok(Array.Empty<TagResponseDto>());
+      return Ok(Array.Empty<InternalDtos.TagResponseDto>());
     }
 
     var userTags = user.Tags
@@ -93,7 +93,7 @@ public class UserTagsController : ControllerBase
 
   [HttpGet("{userId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<TagResponseDto[]>> GetUserTags(
+  public async Task<ActionResult<InternalDtos.TagResponseDto[]>> GetUserTags(
     [FromRoute] Guid userId,
     [FromServices] AppDb appDb)
   {
@@ -114,7 +114,7 @@ public class UserTagsController : ControllerBase
 
     if (user.Tags is not { Count: > 0 })
     {
-      return Ok(Array.Empty<TagResponseDto>());
+      return Ok(Array.Empty<InternalDtos.TagResponseDto>());
     }
 
     var userTags = user.Tags
@@ -126,7 +126,7 @@ public class UserTagsController : ControllerBase
 
   [HttpDelete("{userId:guid}/{tagId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<TagResponseDto>> RemoveTag(
+  public async Task<ActionResult<InternalDtos.TagResponseDto>> RemoveTag(
     [FromServices] AppDb appDb,
     [FromRoute] Guid userId,
     [FromRoute] Guid tagId)

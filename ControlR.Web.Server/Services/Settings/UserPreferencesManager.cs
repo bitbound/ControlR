@@ -8,16 +8,16 @@ namespace ControlR.Web.Server.Services.Settings;
 
 public interface IUserPreferencesManager : IUserPreferencesProvider
 {
-  Task<UserPreferencesDto> GetAllPreferences(
+  Task<InternalDtos.UserPreferencesDto> GetAllPreferences(
     Guid userId,
     CancellationToken cancellationToken = default);
-  Task<HttpResult<UserPreferenceResponseDto>> SetPreference(
+  Task<HttpResult<InternalDtos.UserPreferenceResponseDto>> SetPreference(
     Guid userId,
-    UserPreferenceRequestDto preference,
+    InternalDtos.UserPreferenceRequestDto preference,
     CancellationToken cancellationToken = default);
-  Task<HttpResult<UserPreferencesDto>> SetPreferences(
+  Task<HttpResult<InternalDtos.UserPreferencesDto>> SetPreferences(
     Guid userId,
-    UserPreferencesDto preferences,
+    InternalDtos.UserPreferencesDto preferences,
     CancellationToken cancellationToken = default);
 }
 
@@ -30,7 +30,7 @@ public class UserPreferencesManager(
   private readonly IDbContextFactory<AppDb> _dbFactory = dbFactory;
   private readonly ILogger<UserPreferencesManager> _logger = logger;
 
-  public async Task<UserPreferencesDto> GetAllPreferences(
+  public async Task<InternalDtos.UserPreferencesDto> GetAllPreferences(
     Guid userId,
     CancellationToken cancellationToken = default)
   {
@@ -49,7 +49,7 @@ public class UserPreferencesManager(
         value));
   }
 
-  public async Task<UserPreferencesDto> GetPreferences()
+  public async Task<InternalDtos.UserPreferencesDto> GetPreferences()
   {
     var authState = await _authStateProvider.GetAuthenticationStateAsync();
     if (!authState.User.TryGetUserId(out var userId) || !await _authStateProvider.IsAuthenticated())
@@ -61,9 +61,9 @@ public class UserPreferencesManager(
     return await GetAllPreferences(userId);
   }
 
-  public async Task<HttpResult<UserPreferenceResponseDto>> SetPreference(
+  public async Task<HttpResult<InternalDtos.UserPreferenceResponseDto>> SetPreference(
     Guid userId,
-    UserPreferenceRequestDto preference,
+    InternalDtos.UserPreferenceRequestDto preference,
     CancellationToken cancellationToken = default)
   {
     await using var appDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -73,7 +73,7 @@ public class UserPreferencesManager(
 
     if (user is null)
     {
-      return HttpResult.Fail<UserPreferenceResponseDto>(HttpResultErrorCode.NotFound, "User not found.");
+      return HttpResult.Fail<InternalDtos.UserPreferenceResponseDto>(HttpResultErrorCode.NotFound, "User not found.");
     }
 
     user.UserPreferences ??= [];
@@ -87,7 +87,7 @@ public class UserPreferencesManager(
         await appDb.SaveChangesAsync(cancellationToken);
       }
 
-      return HttpResult.Ok(new UserPreferenceResponseDto(null, preference.Name, null));
+      return HttpResult.Ok(new InternalDtos.UserPreferenceResponseDto(null, preference.Name, null));
     }
 
     var normalizationResult = UserPreferenceDefinitions.Normalize(preference.Name, preference.Value);
@@ -98,7 +98,7 @@ public class UserPreferencesManager(
         preference.Name,
         normalizationResult.ErrorMessage);
 
-      return HttpResult.Fail<UserPreferenceResponseDto>(
+      return HttpResult.Fail<InternalDtos.UserPreferenceResponseDto>(
         HttpResultErrorCode.ValidationFailed,
         normalizationResult.ErrorMessage ?? "Preference value is invalid.");
     }
@@ -136,7 +136,7 @@ public class UserPreferencesManager(
       return;
     }
 
-    var result = await SetPreference(userId, new UserPreferenceRequestDto(preferenceName, stringValue));
+    var result = await SetPreference(userId, new InternalDtos.UserPreferenceRequestDto(preferenceName, stringValue));
     if (!result.IsSuccess)
     {
       _logger.LogError(
@@ -146,9 +146,9 @@ public class UserPreferencesManager(
     }
   }
 
-  public async Task<HttpResult<UserPreferencesDto>> SetPreferences(
+  public async Task<HttpResult<InternalDtos.UserPreferencesDto>> SetPreferences(
     Guid userId,
-    UserPreferencesDto preferences,
+    InternalDtos.UserPreferencesDto preferences,
     CancellationToken cancellationToken = default)
   {
     await using var appDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -159,13 +159,13 @@ public class UserPreferencesManager(
 
     if (user is null)
     {
-      return HttpResult.Fail<UserPreferencesDto>(HttpResultErrorCode.NotFound, "User not found.");
+      return HttpResult.Fail<InternalDtos.UserPreferencesDto>(HttpResultErrorCode.NotFound, "User not found.");
     }
 
     user.UserPreferences ??= [];
 
     var normalizationResults = new List<(string Name, string? Value)>();
-    foreach (var preference in UserPreferenceDefinitions.GetValues(preferences).Select(x => new UserPreferenceRequestDto(x.Name, x.Value ?? string.Empty)))
+    foreach (var preference in UserPreferenceDefinitions.GetValues(preferences).Select(x => new InternalDtos.UserPreferenceRequestDto(x.Name, x.Value ?? string.Empty)))
     {
       if (string.IsNullOrWhiteSpace(preference.Value))
       {
@@ -181,7 +181,7 @@ public class UserPreferencesManager(
           preference.Name,
           normalizationResult.ErrorMessage);
 
-        return HttpResult.Fail<UserPreferencesDto>(
+        return HttpResult.Fail<InternalDtos.UserPreferencesDto>(
           HttpResultErrorCode.ValidationFailed,
           normalizationResult.ErrorMessage ?? "Preference value is invalid.");
       }

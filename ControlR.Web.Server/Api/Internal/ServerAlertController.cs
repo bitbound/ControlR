@@ -15,7 +15,7 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
 
 
   [HttpGet]
-  public async Task<ActionResult<ServerAlertResponseDto>> GetAlert()
+  public async Task<ActionResult<InternalDtos.ServerAlertResponseDto>> GetAlert()
   {
     var alert = await _appDb.ServerAlerts
       .AsNoTracking()
@@ -31,7 +31,7 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
 
   [HttpPost]
   [Authorize(Roles = RoleNames.ServerAdministrator)]
-  public async Task<ActionResult<ServerAlertResponseDto>> UpdateAlert([FromBody] ServerAlertRequestDto request)
+  public async Task<ActionResult<InternalDtos.ServerAlertResponseDto>> UpdateAlert([FromBody] InternalDtos.ServerAlertRequestDto request)
   {
     var alert = await _appDb
       .ServerAlerts

@@ -30,7 +30,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
 
     var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator, TestContext.Current.CancellationToken);
 
-    var request = new CreateUserRequestDto(
+    var request = new InternalDtos.CreateUserRequestDto(
       UserName: "evil",
       Email: "evil@t.local",
       Password: "P@ssw0rd!",
@@ -63,7 +63,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     // Ensure the ServerAdministrator role exists using RoleManager
     var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator, TestContext.Current.CancellationToken);
 
-    var request = new CreateUserRequestDto(
+    var request = new InternalDtos.CreateUserRequestDto(
       UserName: "super",
       Email: "super@t.local",
       Password: "P@ssw0rd!",

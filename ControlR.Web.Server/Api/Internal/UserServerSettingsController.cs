@@ -12,20 +12,20 @@ namespace ControlR.Web.Server.Api.Internal;
 public class UserServerSettingsController : ControllerBase
 {
   [HttpGet("file-upload-max-size")]
-  public ActionResult<FileUploadMaxSizeResponseDto> Get(
+  public ActionResult<InternalDtos.FileUploadMaxSizeResponseDto> Get(
     [FromServices] IOptionsMonitor<AppOptions> appOptions
   )
   {
     var maxFileSize = appOptions.CurrentValue.MaxFileTransferSize;
-    return Ok(new FileUploadMaxSizeResponseDto(maxFileSize));
+    return Ok(new InternalDtos.FileUploadMaxSizeResponseDto(maxFileSize));
   }
 
   [HttpGet("decommission-status")]
-  public ActionResult<DecommissionServerResponseDto> GetDecommissionStatus(
+  public ActionResult<InternalDtos.DecommissionServerResponseDto> GetDecommissionStatus(
     [FromServices] IOptionsMonitor<ServerLifecycleOptions> serverLifecycleOptions
   )
   {
     var isEnabled = serverLifecycleOptions.CurrentValue.DecommissionServer;
-    return Ok(new DecommissionServerResponseDto(isEnabled));
+    return Ok(new InternalDtos.DecommissionServerResponseDto(isEnabled));
   }
 }

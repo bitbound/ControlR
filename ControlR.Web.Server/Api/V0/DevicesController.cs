@@ -132,9 +132,9 @@ public class DevicesController() : ControllerBase
   }
 
   [HttpPost("delete-many")]
-  public async Task<ActionResult<DeleteManyDevicesResponseDto>> DeleteMany(
+  public async Task<ActionResult<V0Dtos.DeleteManyDevicesResponseDto>> DeleteMany(
     [FromServices] AppDb appDb,
-    [FromBody] DeleteDevicesRequestDto requestDto,
+    [FromBody] V0Dtos.DeleteDevicesRequestDto requestDto,
     CancellationToken cancellationToken)
   {
     var authorizedDeviceIds = await appDb.Devices
@@ -150,7 +150,7 @@ public class DevicesController() : ControllerBase
 
     if (deletedCount == authorizedDeviceIds.Count)
     {
-      return new DeleteManyDevicesResponseDto(
+      return new V0Dtos.DeleteManyDevicesResponseDto(
         SuccessIds: [.. authorizedDeviceIds],
         FailureIds: [.. requestDto.DeviceIds.Except(authorizedIdSet)]);
     }
@@ -163,7 +163,7 @@ public class DevicesController() : ControllerBase
     var successIds = authorizedIdSet.Except(remainingIds).ToImmutableList();
     var failureIds = remainingIds.Concat(requestDto.DeviceIds.Except(authorizedIdSet)).ToImmutableList();
 
-    return new DeleteManyDevicesResponseDto(successIds, failureIds);
+    return new V0Dtos.DeleteManyDevicesResponseDto(successIds, failureIds);
   }
 
   [HttpGet]

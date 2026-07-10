@@ -87,7 +87,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, userManager);
 
     // Create the request
-    var request = new DeviceSearchRequestDto
+    var request = new InternalDtos.DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 10

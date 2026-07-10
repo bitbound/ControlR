@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Api.Internal;
@@ -15,7 +15,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
   [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<IActionResult> AddRole(
     [FromServices] AppDb appDb,
-    [FromBody] UserRoleAddRequestDto dto)
+    [FromBody] InternalDtos.UserRoleAddRequestDto dto)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -61,7 +61,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
   }
 
   [HttpGet]
-  public async Task<ActionResult<RoleResponseDto[]>> GetOwnRoles(
+  public async Task<ActionResult<InternalDtos.RoleResponseDto[]>> GetOwnRoles(
     [FromServices] AppDb appDb)
   {
 
@@ -89,7 +89,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
 
     if (user.Roles is not { Count: > 0 })
     {
-      return Ok(Array.Empty<RoleResponseDto>());
+      return Ok(Array.Empty<InternalDtos.RoleResponseDto>());
     }
 
     var userRoles = user.Roles
@@ -101,7 +101,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
 
   [HttpGet("{userId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<RoleResponseDto[]>> GetUserRoles(
+  public async Task<ActionResult<InternalDtos.RoleResponseDto[]>> GetUserRoles(
     [FromRoute] Guid userId,
     [FromServices] AppDb appDb)
   {
@@ -124,7 +124,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
 
     if (user.Roles is not { Count: > 0 })
     {
-      return Ok(Array.Empty<RoleResponseDto>());
+      return Ok(Array.Empty<InternalDtos.RoleResponseDto>());
     }
 
     var userRoles = user.Roles
@@ -136,7 +136,7 @@ public class UserRolesController(ILogger<UserRolesController> logger) : Controll
 
   [HttpDelete("{userId:guid}/{roleId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<RoleResponseDto>> RemoveRole(
+  public async Task<ActionResult<InternalDtos.RoleResponseDto>> RemoveRole(
     [FromServices] AppDb appDb,
     [FromRoute] Guid userId,
     [FromRoute] Guid roleId)

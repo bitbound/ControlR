@@ -14,7 +14,7 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
   private readonly IAgentInstallerKeyManager _installerKeyManager = installerKeyManager;
 
   [HttpPost]
-  public async Task<ActionResult<CreateInstallerKeyResponseDto>> Create(
+  public async Task<ActionResult<InternalDtos.CreateInstallerKeyResponseDto>> Create(
       [FromBody] CreateInstallerKeyRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
@@ -50,7 +50,7 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
   }
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<AgentInstallerKeyDto>>> GetAll()
+  public async Task<ActionResult<IEnumerable<InternalDtos.AgentInstallerKeyDto>>> GetAll()
   {
     if (!User.TryGetTenantId(out var tenantId) ||
         !User.TryGetUserId(out var userId))
@@ -64,7 +64,7 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
   }
 
   [HttpGet("usages/{keyId:guid}")]
-  public async Task<ActionResult<IReadOnlyList<AgentInstallerKeyUsageDto>>> GetUsages([FromRoute] Guid keyId)
+  public async Task<ActionResult<IReadOnlyList<InternalDtos.AgentInstallerKeyUsageDto>>> GetUsages([FromRoute] Guid keyId)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
         !User.TryGetUserId(out var userId))
@@ -79,7 +79,7 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
 
   [HttpPut("rename")]
   public async Task<IActionResult> Rename(
-      [FromBody] RenameInstallerKeyRequestDto request)
+      [FromBody] InternalDtos.RenameInstallerKeyRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
         !User.TryGetUserId(out var userId))

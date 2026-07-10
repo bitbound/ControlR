@@ -13,7 +13,7 @@ public class EffectiveUserPreferencesController(IEffectiveUserPreferencesResolve
   private readonly IEffectiveUserPreferencesResolver _effectiveUserPreferencesResolver = effectiveUserPreferencesResolver;
 
   [HttpGet]
-  public async Task<ActionResult<EffectiveUserPreferencesDto>> GetAll(CancellationToken cancellationToken)
+  public async Task<ActionResult<InternalDtos.EffectiveUserPreferencesDto>> GetAll(CancellationToken cancellationToken)
   {
     if (!User.TryGetTenantId(out var tenantId) || !User.TryGetUserId(out var userId))
     {

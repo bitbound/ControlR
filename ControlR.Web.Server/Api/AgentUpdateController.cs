@@ -22,7 +22,7 @@ public class AgentUpdateController(
   [ResponseCache(Duration = CacheDurationSeconds, Location = ResponseCacheLocation.Any)]
   [Produces("application/json")]
   [HttpGet("get-bundle-metadata/{runtime}")]
-  public async Task<ActionResult<BundleMetadataDto>> GetBundleMetadata(
+  public async Task<ActionResult<InternalDtos.BundleMetadataDto>> GetBundleMetadata(
     RuntimeId runtime,
     [FromServices] IAgentVersionProvider agentVersionProvider,
     CancellationToken cancellationToken)
@@ -64,7 +64,7 @@ public class AgentUpdateController(
     var installerHash = await SHA256.HashDataAsync(installerStream, cancellationToken);
     var installerSha256 = Convert.ToHexString(installerHash);
 
-    var metadata = new BundleMetadataDto
+    var metadata = new InternalDtos.BundleMetadataDto
     {
       Runtime = runtime,
       Version = agentVersionResult.Value,

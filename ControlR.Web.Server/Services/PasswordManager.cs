@@ -17,7 +17,7 @@ public interface IPasswordManager
   /// A result containing the generated temporary password when the reset succeeds.
   /// The target user is marked as requiring a password change on next sign-in.
   /// </returns>
-  Task<Result<AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId);
+  Task<Result<InternalDtos.AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId);
 
   /// <summary>
   /// Changes the password for a currently authenticated user who knows their existing password.
@@ -26,7 +26,7 @@ public interface IPasswordManager
   /// <param name="user">The user whose password is being changed.</param>
   /// <param name="request">The current-password and new-password payload.</param>
   /// <returns>A result indicating whether the password change succeeded.</returns>
-  Task<Result> ChangePassword(AppUser user, ChangePasswordRequestDto request);
+  Task<Result> ChangePassword(AppUser user, InternalDtos.ChangePasswordRequestDto request);
 
   /// <summary>
   /// Completes an end-user password reset by applying a reset token or reset-link code that was issued earlier.
@@ -34,7 +34,7 @@ public interface IPasswordManager
   /// </summary>
   /// <param name="request">The email, reset code, and new password payload.</param>
   /// <returns>A result indicating whether the reset token was accepted and the new password was applied.</returns>
-  Task<Result> CompletePasswordReset(ResetPasswordRequestDto request);
+  Task<Result> CompletePasswordReset(InternalDtos.ResetPasswordRequestDto request);
 
   /// <summary>
   /// Initiates a forgot-password flow for an end user who cannot sign in and needs to reset their password via email.
@@ -42,7 +42,7 @@ public interface IPasswordManager
   /// </summary> <param name="request">The email address payload.</param>
   /// <param name="resetPasswordUrl">The URL to include in the password reset email that the user can click to reach the password reset page. The reset code will be appended as a query parameter.</param>
   /// <returns>A result indicating whether the forgot-password email was sent. Always returns success to avoid leaking user existence information, but may fail if email sending is enabled and an error occurs during sending.</returns>
-  Task<Result> ForgotPassword(ForgotPasswordRequestDto request, string resetPasswordUrl);
+  Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request, string resetPasswordUrl);
 }
 
 public class PasswordManager(
@@ -58,13 +58,13 @@ public class PasswordManager(
   private readonly IOptions<IdentityOptions> _identityOptions = identityOptions;
   private readonly UserManager<AppUser> _userManager = userManager;
 
-  public async Task<Result<AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId)
+  public async Task<Result<InternalDtos.AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId)
   {
     var targetUser =await _userManager.FindByIdAsync(targetUserId.ToString());
 
     if (targetUser?.TenantId != tenantId)
     {
-      return Result.Fail<AdminResetPasswordResponseDto>("User not found.");
+      return Result.Fail<InternalDtos.AdminResetPasswordResponseDto>("User not found.");
     }
 
     var passwordOptions = _identityOptions.Value.Password;
@@ -85,15 +85,15 @@ public class PasswordManager(
     var resetResult = await _userManager.ResetPasswordAsync(targetUser, resetToken, temporaryPassword);
     if (!resetResult.Succeeded)
     {
-      return Result.Fail<AdminResetPasswordResponseDto>(JoinErrors(resetResult.Errors));
+      return Result.Fail<InternalDtos.AdminResetPasswordResponseDto>(JoinErrors(resetResult.Errors));
     }
 
     await SetRequirePasswordChange(targetUser.Id, true);
 
-    return Result.Ok(new AdminResetPasswordResponseDto(temporaryPassword));
+    return Result.Ok(new InternalDtos.AdminResetPasswordResponseDto(temporaryPassword));
   }
 
-  public async Task<Result> ChangePassword(AppUser user, ChangePasswordRequestDto request)
+  public async Task<Result> ChangePassword(AppUser user, InternalDtos.ChangePasswordRequestDto request)
   {
     var changeResult = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
     if (!changeResult.Succeeded)
@@ -106,7 +106,7 @@ public class PasswordManager(
     return Result.Ok();
   }
 
-  public async Task<Result> CompletePasswordReset(ResetPasswordRequestDto request)
+  public async Task<Result> CompletePasswordReset(InternalDtos.ResetPasswordRequestDto request)
   {
     var user = await _userManager.FindByEmailAsync(request.Email);
     if (user is null)
@@ -137,7 +137,7 @@ public class PasswordManager(
     return Result.Ok();
   }
 
-  public async Task<Result> ForgotPassword(ForgotPasswordRequestDto request, string resetPasswordUrl)
+  public async Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request, string resetPasswordUrl)
   {
     if (_appOptions.CurrentValue.DisableEmailSending)
     {

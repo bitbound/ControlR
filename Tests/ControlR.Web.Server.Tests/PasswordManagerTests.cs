@@ -22,7 +22,7 @@ public class PasswordManagerTests(ITestOutputHelper testOutput)
     var passwordManager = services.GetRequiredService<IPasswordManager>();
 
     var result = await passwordManager.ForgotPassword(
-      new ForgotPasswordRequestDto("missing@example.com"),
+      new InternalDtos.ForgotPasswordRequestDto("missing@example.com"),
       "https://controlr.test/Account/ResetPassword");
 
     Assert.True(result.IsSuccess);
@@ -46,7 +46,7 @@ public class PasswordManagerTests(ITestOutputHelper testOutput)
     await userManager.UpdateAsync(user);
 
     var resetCode = await userManager.GeneratePasswordResetTokenAsync(user);
-    var request = new ResetPasswordRequestDto(user.Email!, resetCode, "N3wP@ssw0rd!");
+    var request = new InternalDtos.ResetPasswordRequestDto(user.Email!, resetCode, "N3wP@ssw0rd!");
 
     var result = await passwordManager.CompletePasswordReset(request);
 
@@ -78,7 +78,7 @@ public class PasswordManagerTests(ITestOutputHelper testOutput)
     var rawToken = await userManager.GeneratePasswordResetTokenAsync(user);
     var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(rawToken));
 
-    var request = new ResetPasswordRequestDto(user.Email, encodedToken, "N3wP@ssw0rd!");
+    var request = new InternalDtos.ResetPasswordRequestDto(user.Email, encodedToken, "N3wP@ssw0rd!");
 
     var result = await passwordManager.CompletePasswordReset(request);
 

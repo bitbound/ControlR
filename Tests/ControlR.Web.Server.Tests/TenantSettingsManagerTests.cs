@@ -90,12 +90,12 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.AppendInstanceId, bool.TrueString),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.AppendInstanceId, bool.TrueString),
       cancellationToken);
 
     var result = await _tenantSettingsManager.SetSettings(
       tenant.Id,
-      new TenantSettingsDto(true, "default", false),
+      new InternalDtos.TenantSettingsDto(true, "default", false),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -115,12 +115,12 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.InstanceId, "existing-instance"),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.InstanceId, "existing-instance"),
       cancellationToken);
 
     var result = await _tenantSettingsManager.SetSettings(
       tenant.Id,
-      new TenantSettingsDto(true, null, false),
+      new InternalDtos.TenantSettingsDto(true, null, false),
       cancellationToken);
 
     Assert.True(result.IsSuccess);
@@ -145,7 +145,7 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     var result = await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.AppendInstanceId, "not-a-bool"),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.AppendInstanceId, "not-a-bool"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -172,7 +172,7 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     var result = await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.InstanceId, "   "),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.InstanceId, "   "),
       cancellationToken);
 
     Assert.True(result.IsSuccess);
@@ -195,7 +195,7 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     var result = await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.InstanceId, "DeFaUlT"),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.InstanceId, "DeFaUlT"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -211,7 +211,7 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     var result = await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.InstanceId, "bad id"),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.InstanceId, "bad id"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -226,7 +226,7 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     var result = await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.NotifyUserOnSessionStart, "not-a-bool"),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.NotifyUserOnSessionStart, "not-a-bool"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -241,12 +241,12 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.AppendInstanceId, bool.TrueString),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.AppendInstanceId, bool.TrueString),
       cancellationToken);
 
     var result = await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.AppendInstanceId, bool.FalseString),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.AppendInstanceId, bool.FalseString),
       cancellationToken);
 
     Assert.True(result.IsSuccess);
@@ -271,7 +271,7 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
 
     var result = await _tenantSettingsManager.SetSetting(
       tenant.Id,
-      new TenantSettingRequestDto(TenantSettingNames.InstanceId, "server-alpha"),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.InstanceId, "server-alpha"),
       cancellationToken);
 
     Assert.True(result.IsSuccess);
@@ -293,7 +293,7 @@ public class TenantSettingsManagerTests(ITestOutputHelper testOutput) : IAsyncLi
     var cancellationToken = TestContext.Current.CancellationToken;
     var result = await _tenantSettingsManager.SetSetting(
       Guid.NewGuid(),
-      new TenantSettingRequestDto(TenantSettingNames.InstanceId, "server-alpha"),
+      new InternalDtos.TenantSettingRequestDto(TenantSettingNames.InstanceId, "server-alpha"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);

@@ -1,12 +1,12 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 namespace ControlR.Web.Server.Extensions;
 
 public static class EntityToInternalDtoExtensions
 {
-  public static CreateInstallerKeyResponseDto ToInternalResponseDto(this AgentInstallerKey key, string plaintextKey)
+  public static InternalDtos.CreateInstallerKeyResponseDto ToInternalResponseDto(this AgentInstallerKey key, string plaintextKey)
   {
-    return new CreateInstallerKeyResponseDto(
+    return new InternalDtos.CreateInstallerKeyResponseDto(
       key.Id,
       key.CreatorId,
       key.KeyType,
@@ -17,9 +17,9 @@ public static class EntityToInternalDtoExtensions
       key.FriendlyName);
   }
 
-  public static DeviceResponseDto ToInternalResponseDto(this Device device, bool isOutdated)
+  public static InternalDtos.DeviceResponseDto ToInternalResponseDto(this Device device, bool isOutdated)
   {
-    return new DeviceResponseDto(
+    return new InternalDtos.DeviceResponseDto(
       device.Name,
       device.AgentVersion,
       device.CpuUtilization,
@@ -52,27 +52,27 @@ public static class EntityToInternalDtoExtensions
     };
   }
 
-  public static RoleResponseDto ToInternalResponseDto(this AppRole role)
+  public static InternalDtos.RoleResponseDto ToInternalResponseDto(this AppRole role)
   {
     var userIds = role
       .UserRoles
       ?.Select(x => x.UserId)
       ?.ToList() ?? [];
 
-    return new RoleResponseDto(
+    return new InternalDtos.RoleResponseDto(
       role.Id,
       role.Name ?? string.Empty,
       userIds);
   }
 
-  public static UserPreferenceResponseDto ToInternalResponseDto(this UserPreference userPreference)
+  public static InternalDtos.UserPreferenceResponseDto ToInternalResponseDto(this UserPreference userPreference)
   {
-    return new UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
+    return new InternalDtos.UserPreferenceResponseDto(userPreference.Id, userPreference.Name, userPreference.Value);
   }
 
-  public static ServerAlertResponseDto ToInternalResponseDto(this ServerAlert serverAlert)
+  public static InternalDtos.ServerAlertResponseDto ToInternalResponseDto(this ServerAlert serverAlert)
   {
-    return new ServerAlertResponseDto(
+    return new InternalDtos.ServerAlertResponseDto(
       serverAlert.Id,
       serverAlert.Message,
       serverAlert.Severity,
@@ -81,12 +81,12 @@ public static class EntityToInternalDtoExtensions
       serverAlert.IsEnabled);
   }
 
-  public static TenantSettingResponseDto ToInternalResponseDto(this TenantSetting tenantSetting)
+  public static InternalDtos.TenantSettingResponseDto ToInternalResponseDto(this TenantSetting tenantSetting)
   {
-    return new TenantSettingResponseDto(tenantSetting.Id, tenantSetting.Name, tenantSetting.Value);
+    return new InternalDtos.TenantSettingResponseDto(tenantSetting.Id, tenantSetting.Name, tenantSetting.Value);
   }
 
-  public static TagResponseDto ToInternalResponseDto(this Tag tag)
+  public static InternalDtos.TagResponseDto ToInternalResponseDto(this Tag tag)
   {
     var userIds = tag
       .Users?
@@ -98,7 +98,7 @@ public static class EntityToInternalDtoExtensions
       .Select(x => x.Id)
       .ToList() ?? [];
 
-    return new TagResponseDto(
+    return new InternalDtos.TagResponseDto(
       tag.Id,
       tag.Name,
       tag.Type,
@@ -106,9 +106,9 @@ public static class EntityToInternalDtoExtensions
       deviceIds);
   }
 
-  public static DeviceSummaryDto ToInternalSummaryDto(this Device device)
+  public static InternalDtos.DeviceSummaryDto ToInternalSummaryDto(this Device device)
   {
-    return new DeviceSummaryDto(
+    return new InternalDtos.DeviceSummaryDto(
       device.Id,
       device.LastSeen,
       device.AgentVersion);

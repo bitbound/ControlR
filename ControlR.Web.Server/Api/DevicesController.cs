@@ -16,7 +16,7 @@ public class DevicesController : ControllerBase
 
   [HttpPost]
   [AllowAnonymous]
-  public async Task<ActionResult<DeviceResponseDto>> CreateDevice(
+  public async Task<ActionResult<InternalDtos.DeviceResponseDto>> CreateDevice(
     [FromBody] CreateDeviceRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,

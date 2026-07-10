@@ -38,7 +38,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     var result = controller.GetDecommissionStatus(serverOptions);
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var dto = Assert.IsType<DecommissionServerResponseDto>(okResult.Value);
+    var dto = Assert.IsType<InternalDtos.DecommissionServerResponseDto>(okResult.Value);
     Assert.False(dto.IsEnabled);
   }
 
@@ -62,7 +62,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     var result = controller.GetDecommissionStatus(serverOptions);
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var dto = Assert.IsType<DecommissionServerResponseDto>(okResult.Value);
+    var dto = Assert.IsType<InternalDtos.DecommissionServerResponseDto>(okResult.Value);
     Assert.True(dto.IsEnabled);
   }
 

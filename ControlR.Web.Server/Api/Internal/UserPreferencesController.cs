@@ -14,7 +14,7 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   private readonly IUserPreferencesManager _userPreferencesManager = userPreferencesManager;
 
   [HttpGet]
-  public async Task<ActionResult<UserPreferencesDto>> GetAll(CancellationToken cancellationToken)
+  public async Task<ActionResult<InternalDtos.UserPreferencesDto>> GetAll(CancellationToken cancellationToken)
   {
     if (!User.TryGetUserId(out var userId))
     {
@@ -26,7 +26,7 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   }
 
   [HttpGet("{name}")]
-  public async Task<ActionResult<UserPreferenceResponseDto?>> GetPreference(string name)
+  public async Task<ActionResult<InternalDtos.UserPreferenceResponseDto?>> GetPreference(string name)
   {
     if (User.Identity is null)
     {
@@ -55,7 +55,7 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   }
 
   [HttpPost]
-  public async Task<ActionResult<UserPreferenceResponseDto>> SetPreference([FromBody] UserPreferenceRequestDto preference)
+  public async Task<ActionResult<InternalDtos.UserPreferenceResponseDto>> SetPreference([FromBody] InternalDtos.UserPreferenceRequestDto preference)
   {
     if (!User.TryGetUserId(out var userId))
     {
@@ -67,8 +67,8 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   }
 
   [HttpPut]
-  public async Task<ActionResult<UserPreferencesDto>> SetPreferences(
-    [FromBody] UserPreferencesDto preferences,
+  public async Task<ActionResult<InternalDtos.UserPreferencesDto>> SetPreferences(
+    [FromBody] InternalDtos.UserPreferencesDto preferences,
     CancellationToken cancellationToken)
   {
     if (!User.TryGetUserId(out var userId))

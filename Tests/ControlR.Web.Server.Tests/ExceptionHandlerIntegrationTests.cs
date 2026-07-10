@@ -24,7 +24,7 @@ public class ExceptionHandlerIntegrationTests(ITestOutputHelper testOutput)
 
     var patManager = testServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
     var patResult = await patManager.CreateToken(
-      new CreatePersonalAccessTokenRequestDto("404 Test PAT"),
+      new InternalDtos.CreatePersonalAccessTokenRequestDto("404 Test PAT"),
       user.Id);
     Assert.True(patResult.IsSuccess, patResult.Reason);
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ControlR.Libraries.Api.Contracts.Constants;
  
 namespace ControlR.Web.Server.Api.Internal;
@@ -10,7 +10,7 @@ namespace ControlR.Web.Server.Api.Internal;
 public class RolesController : ControllerBase
 {
   [HttpGet]
-  public async Task<ActionResult<RoleResponseDto[]>> GetAll(
+  public async Task<ActionResult<InternalDtos.RoleResponseDto[]>> GetAll(
     [FromServices] RoleManager<AppRole> roleManager)
   {
     var roles = await roleManager.Roles
@@ -24,7 +24,7 @@ public class RolesController : ControllerBase
       })
       .ToListAsync();
 
-    var dtos = roles.Select(x => new RoleResponseDto(x.Id, x.Name, [.. x.UserIds]));
+    var dtos = roles.Select(x => new InternalDtos.RoleResponseDto(x.Id, x.Name, [.. x.UserIds]));
     return Ok(dtos);
   }
 }

@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -18,7 +18,7 @@ public class AuthController : ControllerBase
   public async Task<IActionResult> ChangePassword(
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] IPasswordManager passwordManager,
-    [FromBody] ChangePasswordRequestDto request)
+    [FromBody] InternalDtos.ChangePasswordRequestDto request)
   {
     var user = await userManager.GetUserAsync(User);
     if (user is null)
@@ -42,7 +42,7 @@ public class AuthController : ControllerBase
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] SignInManager<AppUser> signInManager,
     [FromServices] IPasswordManager passwordManager,
-    [FromBody] CredentialPasswordChangeRequestDto request)
+    [FromBody] InternalDtos.CredentialPasswordChangeRequestDto request)
   {
     if (string.IsNullOrWhiteSpace(request.Email) ||
         string.IsNullOrWhiteSpace(request.CurrentPassword) ||
@@ -95,7 +95,7 @@ public class AuthController : ControllerBase
 
     await userManager.ResetAccessFailedCountAsync(user);
 
-    var resetResult = await passwordManager.ChangePassword(user, new ChangePasswordRequestDto(
+    var resetResult = await passwordManager.ChangePassword(user, new InternalDtos.ChangePasswordRequestDto(
       request.CurrentPassword,
       request.NewPassword));
 
@@ -112,7 +112,7 @@ public class AuthController : ControllerBase
   [HttpPost("complete-password-reset")]
   public async Task<IActionResult> CompletePasswordReset(
     [FromServices] IPasswordManager passwordManager,
-    [FromBody] ResetPasswordRequestDto request)
+    [FromBody] InternalDtos.ResetPasswordRequestDto request)
   {
     var result = await passwordManager.CompletePasswordReset(request);
     if (!result.IsSuccess)
@@ -125,7 +125,7 @@ public class AuthController : ControllerBase
 
   [Authorize]
   [HttpGet("me")]
-  public async Task<ActionResult<CurrentUserResponseDto>> GetCurrentUser(
+  public async Task<ActionResult<InternalDtos.CurrentUserResponseDto>> GetCurrentUser(
     [FromServices] UserManager<AppUser> userManager)
   {
     var user = await userManager.GetUserAsync(User);
@@ -137,7 +137,7 @@ public class AuthController : ControllerBase
     ArgumentException.ThrowIfNullOrWhiteSpace(user.UserName);
     ArgumentException.ThrowIfNullOrWhiteSpace(user.Email);
 
-    return Ok(new CurrentUserResponseDto(
+    return Ok(new InternalDtos.CurrentUserResponseDto(
       user.Id,
       user.UserName,
       user.Email,
@@ -152,13 +152,13 @@ public class AuthController : ControllerBase
   [AllowAnonymous]
   [EnableRateLimiting(AnonymousAuthRateLimitPolicy.PolicyName)]
   [HttpPost("interactive-login")]
-  public async Task<ActionResult<InteractiveLoginResponseDto>> InteractiveLogin(
+  public async Task<ActionResult<InternalDtos.InteractiveLoginResponseDto>> InteractiveLogin(
     [FromServices] SignInManager<AppUser> signInManager,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] TimeProvider timeProvider,
     [FromServices] IOptionsMonitor<AppOptions> appOptions,
     [FromServices] IOptionsMonitor<BearerTokenOptions> bearerTokenOptions,
-    [FromBody] LoginRequestDto request)
+    [FromBody] InternalDtos.LoginRequestDto request)
   {
     if (!appOptions.CurrentValue.EnableInteractiveBearerLogin)
     {
@@ -178,13 +178,13 @@ public class AuthController : ControllerBase
 
     if (result.IsLockedOut)
     {
-      return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));
+      return Ok(new InternalDtos.InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));
     }
 
     if (result.Succeeded && user.RequirePasswordChange)
     {
       await userManager.ResetAccessFailedCountAsync(user);
-      return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: true));
+      return Ok(new InternalDtos.InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: true));
     }
 
     var requiresTwoFactor = result.Succeeded && user.TwoFactorEnabled;
@@ -193,7 +193,7 @@ public class AuthController : ControllerBase
         string.IsNullOrWhiteSpace(request.TwoFactorCode) &&
         string.IsNullOrWhiteSpace(request.TwoFactorRecoveryCode))
     {
-      return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: true));
+      return Ok(new InternalDtos.InteractiveLoginResponseDto(RequiresTwoFactor: true));
     }
 
     if (requiresTwoFactor)
@@ -247,7 +247,7 @@ public class AuthController : ControllerBase
 
       if (await userManager.IsLockedOutAsync(user))
       {
-        return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));
+        return Ok(new InternalDtos.InteractiveLoginResponseDto(RequiresTwoFactor: false, IsLockedOut: true));
       }
 
       return Unauthorized();
@@ -259,7 +259,7 @@ public class AuthController : ControllerBase
       bearerTokenOptions.Get(IdentityConstants.BearerScheme),
       timeProvider);
 
-    return Ok(new InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: user.RequirePasswordChange, Tokens: tokens));
+    return Ok(new InternalDtos.InteractiveLoginResponseDto(RequiresTwoFactor: false, RequiresPasswordChange: user.RequirePasswordChange, Tokens: tokens));
   }
 
   // This is used by web frontend, which uses cookie authentication.
@@ -272,7 +272,7 @@ public class AuthController : ControllerBase
     return NoContent();
   }
 
-  private static AccessTokenResponseDto CreateInteractiveLoginTokens(
+  private static InternalDtos.AccessTokenResponseDto CreateInteractiveLoginTokens(
     ClaimsPrincipal principal,
     BearerTokenOptions options,
     TimeProvider timeProvider)
@@ -294,7 +294,7 @@ public class AuthController : ControllerBase
       },
       $"{IdentityConstants.BearerScheme}:RefreshToken");
 
-    return new AccessTokenResponseDto(
+    return new InternalDtos.AccessTokenResponseDto(
       TokenType: "Bearer",
       AccessToken: options.BearerTokenProtector.Protect(bearerTicket),
       ExpiresInSeconds: (int)options.BearerTokenExpiration.TotalSeconds,

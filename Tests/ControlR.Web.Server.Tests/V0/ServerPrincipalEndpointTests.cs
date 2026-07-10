@@ -37,7 +37,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
       tenant.Id,
       creator.Id,
       CreatorKind.User,
-      InstallerKeyType.Persistent));
+      InternalDtos.InstallerKeyType.Persistent));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);

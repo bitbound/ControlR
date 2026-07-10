@@ -35,7 +35,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
       $"{HttpConstants.Internal.AuthEndpoint}/change-password-with-credentials",
-      new CredentialPasswordChangeRequestDto(user.Email!, "T3stP@ssw0rd!", "B3tt3rP@ssw0rd!"),
+      new InternalDtos.CredentialPasswordChangeRequestDto(user.Email!, "T3stP@ssw0rd!", "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -71,7 +71,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
       $"{HttpConstants.Internal.AuthEndpoint}/complete-password-reset",
-      new ResetPasswordRequestDto(user.Email!, resetCode, "B3tt3rP@ssw0rd!"),
+      new InternalDtos.ResetPasswordRequestDto(user.Email!, resetCode, "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -96,7 +96,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
     var passwordManager = services.GetRequiredService<IPasswordManager>();
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var patResult = await patManager.CreateToken(new CreatePersonalAccessTokenRequestDto("Credential Test PAT"), user.Id);
+    var patResult = await patManager.CreateToken(new InternalDtos.CreatePersonalAccessTokenRequestDto("Credential Test PAT"), user.Id);
     var personalAccessToken = patResult.Value!.PlainTextToken;
 
     var resetResult = await passwordManager.AdminResetPassword(tenant.Id, user.Id);
@@ -111,7 +111,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
 
     var changePasswordResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.Internal.AuthEndpoint}/change-password",
-      new ChangePasswordRequestDto(temporaryPassword, "B3tt3rP@ssw0rd!"),
+      new InternalDtos.ChangePasswordRequestDto(temporaryPassword, "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, changePasswordResponse.StatusCode);
 

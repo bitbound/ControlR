@@ -18,7 +18,7 @@ public class DeviceFileSystemController : ControllerBase
   [HttpPost("create-directory/{deviceId:guid}")]
   public async Task<IActionResult> CreateDirectory(
     [FromRoute] Guid deviceId,
-    [FromBody] CreateDirectoryRequestDto request,
+    [FromBody] InternalDtos.CreateDirectoryRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IAuthorizationService authorizationService,
@@ -82,7 +82,7 @@ public class DeviceFileSystemController : ControllerBase
   [HttpDelete("delete-path/{deviceId:guid}")]
   public async Task<IActionResult> DeletePath(
     [FromRoute] Guid deviceId,
-    [FromBody] FileDeleteRequestDto request,
+    [FromBody] InternalDtos.FileDeleteRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IAuthorizationService authorizationService,
@@ -147,7 +147,7 @@ public class DeviceFileSystemController : ControllerBase
   [DisableRequestTimeout]
   public async Task<IActionResult> DownloadArchive(
     [FromRoute] Guid deviceId,
-    [FromBody] DownloadArchiveRequestDto request,
+    [FromBody] InternalDtos.DownloadArchiveRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
@@ -174,7 +174,7 @@ public class DeviceFileSystemController : ControllerBase
     CancellationToken cancellationToken)
   {
     var form = await Request.ReadFormAsync(cancellationToken);
-    var request = new DownloadArchiveRequestDto(
+    var request = new InternalDtos.DownloadArchiveRequestDto(
       form["archiveFileName"].ToString(),
       form["targetPaths"]
         .Select(path => path ?? string.Empty)
@@ -287,7 +287,7 @@ public class DeviceFileSystemController : ControllerBase
 
   [HttpPost("contents")]
   public async Task<IActionResult> GetDirectoryContents(
-    [FromBody] GetDirectoryContentsRequestDto request,
+    [FromBody] InternalDtos.GetDirectoryContentsRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
@@ -324,7 +324,7 @@ public class DeviceFileSystemController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<FileSystemEntryDto[]>(streamId);
+    using var signaler = hubStreamStore.GetOrCreate<InternalDtos.FileSystemEntryDto[]>(streamId);
     try
     {
       var streamRequest = new DirectoryContentsStreamRequestHubDto(streamId, request.DeviceId, request.DirectoryPath);
@@ -339,14 +339,14 @@ public class DeviceFileSystemController : ControllerBase
         return BadRequest(result.Reason);
       }
 
-      var entries = new List<FileSystemEntryDto>();
+      var entries = new List<InternalDtos.FileSystemEntryDto>();
       await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
       {
         entries.AddRange(chunk);
       }
 
       var directoryExists = signaler.Metadata is bool b && b;
-      return Ok(new GetDirectoryContentsResponseDto([.. entries], directoryExists));
+      return Ok(new InternalDtos.GetDirectoryContentsResponseDto([.. entries], directoryExists));
     }
     catch (OperationCanceledException)
     {
@@ -522,7 +522,7 @@ public class DeviceFileSystemController : ControllerBase
 
   [HttpPost("path-segments")]
   public async Task<IActionResult> GetPathSegments(
-    [FromBody] GetPathSegmentsRequestDto request,
+    [FromBody] InternalDtos.GetPathSegmentsRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IAuthorizationService authorizationService,
@@ -580,7 +580,7 @@ public class DeviceFileSystemController : ControllerBase
 
   [HttpPost("root-drives")]
   public async Task<IActionResult> GetRootDrives(
-    [FromBody] GetRootDrivesRequestDto request,
+    [FromBody] InternalDtos.GetRootDrivesRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IAuthorizationService authorizationService,
@@ -638,7 +638,7 @@ public class DeviceFileSystemController : ControllerBase
 
   [HttpPost("subdirectories")]
   public async Task<IActionResult> GetSubdirectories(
-    [FromBody] GetSubdirectoriesRequestDto request,
+    [FromBody] InternalDtos.GetSubdirectoriesRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
   [FromServices] IHubStreamStore hubStreamStore,
@@ -675,7 +675,7 @@ public class DeviceFileSystemController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<FileSystemEntryDto[]>(streamId);
+    using var signaler = hubStreamStore.GetOrCreate<InternalDtos.FileSystemEntryDto[]>(streamId);
     try
     {
       var streamRequest = new SubdirectoriesStreamRequestHubDto(streamId, request.DeviceId, request.DirectoryPath);
@@ -689,13 +689,13 @@ public class DeviceFileSystemController : ControllerBase
         return BadRequest(result.Reason);
       }
 
-      var entries = new List<FileSystemEntryDto>();
+      var entries = new List<InternalDtos.FileSystemEntryDto>();
       await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
       {
         entries.AddRange(chunk);
       }
 
-      return Ok(new GetSubdirectoriesResponseDto(entries.ToArray()));
+      return Ok(new InternalDtos.GetSubdirectoriesResponseDto(entries.ToArray()));
     }
     catch (OperationCanceledException)
     {
@@ -828,7 +828,7 @@ public class DeviceFileSystemController : ControllerBase
   [HttpPost("validate-path/{deviceId:guid}")]
   public async Task<IActionResult> ValidateFilePath(
     [FromRoute] Guid deviceId,
-    [FromBody] ValidateFilePathRequestDto request,
+    [FromBody] InternalDtos.ValidateFilePathRequestDto request,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IAuthorizationService authorizationService,
@@ -892,7 +892,7 @@ public class DeviceFileSystemController : ControllerBase
 
   private async Task<IActionResult> ExecuteDownloadArchive(
     Guid deviceId,
-    DownloadArchiveRequestDto request,
+    InternalDtos.DownloadArchiveRequestDto request,
     AppDb appDb,
     IHubContext<AgentHub, IAgentHubClient> agentHub,
     IHubStreamStore hubStreamStore,

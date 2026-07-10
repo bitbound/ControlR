@@ -30,7 +30,7 @@ public class AgentInstallerKeyUsageCleanerTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
         creatorKind: CreatorKind.User,
-      keyType: InstallerKeyType.Persistent,
+      keyType: InternalDtos.InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");
@@ -74,7 +74,7 @@ public class AgentInstallerKeyUsageCleanerTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
         creatorKind: CreatorKind.User,
-      keyType: InstallerKeyType.Persistent,
+      keyType: InternalDtos.InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");

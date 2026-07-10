@@ -106,10 +106,10 @@ public class ControlrAuthSessionTests
     var options = CreateOptions();
     var handler = new BlockingRefreshMessageHandler(
       [
-        CreateJsonResponse(new InteractiveLoginResponseDto(
+        CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(
           RequiresTwoFactor: false,
           Tokens: CreateTokenResponse("first-token", "first-refresh", expiresInSeconds: 1))),
-        CreateJsonResponse(new InteractiveLoginResponseDto(
+        CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(
           RequiresTwoFactor: false,
           Tokens: CreateTokenResponse("second-token", "second-refresh", expiresInSeconds: 300)))
       ],
@@ -169,7 +169,7 @@ public class ControlrAuthSessionTests
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
     var options = CreateOptions();
     var responseQueue = new Queue<HttpResponseMessage>([
-      CreateJsonResponse(new InteractiveLoginResponseDto(
+      CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(
         RequiresTwoFactor: false,
         Tokens: CreateTokenResponse("access-token", "refresh-token", expiresInSeconds: 1))),
       new HttpResponseMessage(HttpStatusCode.Unauthorized)
@@ -343,7 +343,7 @@ public class ControlrAuthSessionTests
     var options = CreateOptions();
 
     var sessionAResponses = new Queue<HttpResponseMessage>([
-      CreateJsonResponse(new InteractiveLoginResponseDto(
+      CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(
         RequiresTwoFactor: false,
         Tokens: CreateTokenResponse("session-a-bearer", "session-a-refresh", expiresInSeconds: 300)))
     ]);
@@ -465,8 +465,8 @@ public class ControlrAuthSessionTests
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
     var options = CreateOptions();
     var responseQueue = new Queue<HttpResponseMessage>([
-      CreateJsonResponse(new InteractiveLoginResponseDto(RequiresTwoFactor: true)),
-      CreateJsonResponse(new InteractiveLoginResponseDto(
+      CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(RequiresTwoFactor: true)),
+      CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(
         RequiresTwoFactor: false,
         Tokens: CreateTokenResponse("access-token", "refresh-token", expiresInSeconds: 300)))
     ]);
@@ -510,8 +510,8 @@ public class ControlrAuthSessionTests
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
     var options = CreateOptions();
     var responseQueue = new Queue<HttpResponseMessage>([
-      CreateJsonResponse(new InteractiveLoginResponseDto(RequiresTwoFactor: true)),
-      CreateJsonResponse(new InteractiveLoginResponseDto(
+      CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(RequiresTwoFactor: true)),
+      CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(
         RequiresTwoFactor: false,
         Tokens: CreateTokenResponse("access-token", "refresh-token", expiresInSeconds: 300)))
     ]);
@@ -557,8 +557,8 @@ public class ControlrAuthSessionTests
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
     var options = CreateOptions();
     var responseQueue = new Queue<HttpResponseMessage>([
-      CreateJsonResponse(new InteractiveLoginResponseDto(RequiresTwoFactor: true)),
-      CreateJsonResponse(new InteractiveLoginResponseDto(
+      CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(RequiresTwoFactor: true)),
+      CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(
         RequiresTwoFactor: false,
         Tokens: CreateTokenResponse("access-token", "refresh-token", expiresInSeconds: 300)))
     ]);
@@ -634,7 +634,7 @@ public class ControlrAuthSessionTests
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
     var options = CreateOptions();
     var handler = new BlockingRefreshMessageHandler(
-      [CreateJsonResponse(new InteractiveLoginResponseDto(
+      [CreateJsonResponse(new InternalDtos.InteractiveLoginResponseDto(
         RequiresTwoFactor: false,
         Tokens: CreateTokenResponse("access-token", "refresh-token", expiresInSeconds: 1)))],
       CreateJsonResponse(CreateTokenResponse("late-token", "late-refresh", expiresInSeconds: 600)));
@@ -703,9 +703,9 @@ public class ControlrAuthSessionTests
       timeProvider);
   }
 
-  private static AccessTokenResponseDto CreateTokenResponse(string accessToken, string refreshToken, int expiresInSeconds)
+  private static InternalDtos.AccessTokenResponseDto CreateTokenResponse(string accessToken, string refreshToken, int expiresInSeconds)
   {
-    return new AccessTokenResponseDto(
+    return new InternalDtos.AccessTokenResponseDto(
       TokenType: "Bearer",
       AccessToken: accessToken,
       ExpiresInSeconds: expiresInSeconds,

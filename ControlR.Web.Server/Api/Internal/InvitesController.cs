@@ -11,23 +11,23 @@ public class InvitesController : ControllerBase
 {
   [HttpPost("accept")]
   [AllowAnonymous]
-  public async Task<ActionResult<AcceptInvitationResponseDto>> AcceptInvite(
-    [FromBody] AcceptInvitationRequestDto dto,
+  public async Task<ActionResult<InternalDtos.AcceptInvitationResponseDto>> AcceptInvite(
+    [FromBody] InternalDtos.AcceptInvitationRequestDto dto,
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
     var result = await tenantInvitesProvider.AcceptInvite(dto);
 
     if (!result.IsSuccess)
     {
-      return new AcceptInvitationResponseDto(false, result.Reason);
+      return new InternalDtos.AcceptInvitationResponseDto(false, result.Reason);
     }
 
     return result.Value;
   }
 
   [HttpPost]
-  public async Task<ActionResult<TenantInviteResponseDto>> Create(
-    [FromBody] TenantInviteRequestDto dto,
+  public async Task<ActionResult<InternalDtos.TenantInviteResponseDto>> Create(
+    [FromBody] InternalDtos.TenantInviteRequestDto dto,
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -61,7 +61,7 @@ public class InvitesController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<TenantInviteResponseDto[]>> GetAll(
+  public async Task<ActionResult<InternalDtos.TenantInviteResponseDto[]>> GetAll(
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
     if (!User.TryGetTenantId(out var tenantId))

@@ -2,7 +2,7 @@ namespace ControlR.Web.Server.Services;
 
 public interface IServerStatsProvider
 {
-  Task<Result<ServerStatsDto>> GetServerStats();
+  Task<Result<InternalDtos.ServerStatsDto>> GetServerStats();
 }
 
 public class ServerStatsProvider(
@@ -11,7 +11,7 @@ public class ServerStatsProvider(
 {
   private readonly AppDb _appDb = appDb;
 
-  public async Task<Result<ServerStatsDto>> GetServerStats()
+  public async Task<Result<InternalDtos.ServerStatsDto>> GetServerStats()
   {
     try
     {
@@ -35,7 +35,7 @@ public class ServerStatsProvider(
       var totalUsers = users.Count;
       var onlineUsers = users.Count(x => x.IsOnline);
 
-      var dto = new ServerStatsDto(
+      var dto = new InternalDtos.ServerStatsDto(
         totalTenants,
         onlineAgents,
         totalAgents,
@@ -47,7 +47,7 @@ public class ServerStatsProvider(
     catch (Exception ex)
     {
       return Result
-        .Fail<ServerStatsDto>(ex, "Error while getting server stats.")
+        .Fail<InternalDtos.ServerStatsDto>(ex, "Error while getting server stats.")
         .Log(logger);
     }
   }

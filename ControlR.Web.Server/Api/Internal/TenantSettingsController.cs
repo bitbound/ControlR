@@ -43,7 +43,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpGet]
-  public async Task<ActionResult<TenantSettingsDto>> GetAll(CancellationToken cancellationToken)
+  public async Task<ActionResult<InternalDtos.TenantSettingsDto>> GetAll(CancellationToken cancellationToken)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -55,7 +55,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpGet("{name}")]
-  public async Task<ActionResult<TenantSettingResponseDto?>> GetSetting(string name)
+  public async Task<ActionResult<InternalDtos.TenantSettingResponseDto?>> GetSetting(string name)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -84,7 +84,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPost]
-  public async Task<ActionResult<TenantSettingResponseDto>> SetSetting([FromBody] TenantSettingRequestDto setting)
+  public async Task<ActionResult<InternalDtos.TenantSettingResponseDto>> SetSetting([FromBody] InternalDtos.TenantSettingRequestDto setting)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -96,8 +96,8 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPut]
-  public async Task<ActionResult<TenantSettingsDto>> SetSettings(
-    [FromBody] TenantSettingsDto settings,
+  public async Task<ActionResult<InternalDtos.TenantSettingsDto>> SetSettings(
+    [FromBody] InternalDtos.TenantSettingsDto settings,
     CancellationToken cancellationToken)
   {
     if (!User.TryGetTenantId(out var tenantId))

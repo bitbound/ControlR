@@ -118,7 +118,7 @@ public class EffectiveUserPreferencesResolverTests(ITestOutputHelper testOutput)
     _testApp = await TestAppBuilder.CreateTestApp(_testOutput, testDatabaseName: $"{Guid.NewGuid()}");
   }
 
-  private async Task<EffectiveUserPreferencesDto> ResolveEffectivePreferences(Guid tenantId, Guid userId)
+  private async Task<InternalDtos.EffectiveUserPreferencesDto> ResolveEffectivePreferences(Guid tenantId, Guid userId)
   {
     await using var scope = _testApp.Services.CreateAsyncScope();
     var resolver = scope.ServiceProvider.GetRequiredService<IEffectiveUserPreferencesResolver>();

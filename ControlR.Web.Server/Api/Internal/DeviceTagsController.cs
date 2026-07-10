@@ -15,7 +15,7 @@ public class DeviceTagsController : ControllerBase
   public async Task<IActionResult> AddTag(
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub> agentHub,
-    [FromBody] DeviceTagAddRequestDto dto)
+    [FromBody] InternalDtos.DeviceTagAddRequestDto dto)
   {
     if (!User.TryGetTenantId(out var tenantId))
     {
@@ -51,7 +51,7 @@ public class DeviceTagsController : ControllerBase
 
   [HttpDelete("{deviceId:guid}/{tagId:guid}")]
   [Authorize(Roles = RoleNames.TenantAdministrator)]
-  public async Task<ActionResult<TagResponseDto>> RemoveTag(
+  public async Task<ActionResult<InternalDtos.TagResponseDto>> RemoveTag(
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub> agentHub,
     [FromRoute] Guid deviceId,
