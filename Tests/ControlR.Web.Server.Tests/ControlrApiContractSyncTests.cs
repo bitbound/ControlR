@@ -109,10 +109,6 @@ public partial class ControlrApiContractSyncTests
     }
   }
 
-  private record OpenApiTestData(
-    string[] AllPaths,
-    string[] NonLegacyPaths);
-
   private static Dictionary<string, string> CreateEndpointPropertyMap()
   {
     var propertyNames = GetAllSubInterfacePropertyNames();
@@ -422,4 +418,8 @@ public partial class ControlrApiContractSyncTests
     value = stringValue;
     return true;
   }
+
+  private record OpenApiTestData(
+    string[] AllPaths,
+    string[] NonLegacyPaths);
 }
