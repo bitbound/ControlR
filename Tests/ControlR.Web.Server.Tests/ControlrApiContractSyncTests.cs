@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -34,11 +33,11 @@ public partial class ControlrApiContractSyncTests
   [Fact]
   public void OpenApiApiPaths_AreCoveredByClientRouteTemplates()
   {
-    var apiPaths = LoadOpenApiApiPaths();
+    var apiData = LoadOpenApiTestData();
     var constantValues = GetHttpConstantValues();
     var clientTemplates = LoadClientRouteTemplates(constantValues);
 
-    var missingPaths = apiPaths
+    var missingPaths = apiData.NonLegacyPaths
       .Where(path => !clientTemplates.Contains(path))
       .OrderBy(path => path)
       .ToArray();
@@ -67,10 +66,10 @@ public partial class ControlrApiContractSyncTests
   [Fact]
   public void OpenApiApiPaths_AreCoveredByHttpConstants()
   {
-    var apiPaths = LoadOpenApiApiPaths();
+    var apiData = LoadOpenApiTestData();
     var constantValues = GetHttpConstantValues();
 
-    foreach (var apiPath in apiPaths)
+    foreach (var apiPath in apiData.AllPaths)
     {
       var hasMatchingConstant = TryGetLongestMatchingConstant(apiPath, constantValues, out _);
 
@@ -83,12 +82,12 @@ public partial class ControlrApiContractSyncTests
   [Fact]
   public void OpenApiApiPaths_MapToKnownIControlrApiSubClients()
   {
-    var apiPaths = LoadOpenApiApiPaths();
+    var apiData = LoadOpenApiTestData();
     var constantValues = GetHttpConstantValues();
     var endpointPropertyMap = CreateEndpointPropertyMap();
     var actualPropertyNames = GetAllSubInterfacePropertyNames();
 
-    foreach (var apiPath in apiPaths)
+    foreach (var apiPath in apiData.AllPaths)
     {
       var hasMatchingConstant = TryGetLongestMatchingConstant(apiPath, constantValues, out var matchedConstant);
 
@@ -110,20 +109,16 @@ public partial class ControlrApiContractSyncTests
     }
   }
 
+  private record OpenApiTestData(
+    string[] AllPaths,
+    string[] NonLegacyPaths);
+
   private static Dictionary<string, string> CreateEndpointPropertyMap()
   {
     var propertyNames = GetAllSubInterfacePropertyNames();
-
-    var mappedConstants = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     var endpointPropertyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-    var constantFields = typeof(HttpConstants)
-      .GetFields(BindingFlags.Public | BindingFlags.Static)
-      .Where(field => field.FieldType == typeof(string))
-      .OrderBy(field => field.Name)
-      .ToArray();
-
-    foreach (var field in constantFields)
+    foreach (var field in GetAllHttpConstantFields().OrderBy(field => field.Name))
     {
       var constantValue = field.GetValue(null) as string;
 
@@ -132,15 +127,13 @@ public partial class ControlrApiContractSyncTests
         continue;
       }
 
-      mappedConstants.Add(field.Name);
-
       var propertyName = field.Name.EndsWith("Endpoint", StringComparison.Ordinal)
         ? field.Name[..^"Endpoint".Length]
         : field.Name;
 
       Assert.True(
         propertyNames.Contains(propertyName),
-        $"HttpConstants field '{field.Name}' inferred property '{propertyName}', but that property was not found on any sub-interface.");
+        $"HttpConstants field '{field.Name}' (declared by '{field.DeclaringType?.Name}') inferred property '{propertyName}', but that property was not found on any sub-interface.");
 
       endpointPropertyMap[constantValue] = propertyName;
     }
@@ -166,14 +159,36 @@ public partial class ControlrApiContractSyncTests
     throw new DirectoryNotFoundException("Could not locate repository root containing ControlR.slnx.");
   }
 
+  private static IEnumerable<FieldInfo> GetAllHttpConstantFields()
+  {
+    static IEnumerable<FieldInfo> GetFieldsRecursive(Type type)
+    {
+      foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static)
+        .Where(f => f.FieldType == typeof(string) && f.IsLiteral))
+      {
+        yield return field;
+      }
+
+      foreach (var nested in type.GetNestedTypes(BindingFlags.Public | BindingFlags.Static))
+      {
+        foreach (var field in GetFieldsRecursive(nested))
+        {
+          yield return field;
+        }
+      }
+    }
+
+    return GetFieldsRecursive(typeof(HttpConstants));
+  }
+
   private static HashSet<string> GetAllSubInterfacePropertyNames()
   {
     var propertyNames = new HashSet<string>(StringComparer.Ordinal);
 
     foreach (var type in new[]
     {
-      typeof(ControlR.ApiClient.Interfaces.Internal.IControlrInternalApi),
-      typeof(ControlR.ApiClient.Interfaces.V0.IControlrV0Api),
+      typeof(IControlrInternalApi),
+      typeof(IControlrV0Api),
     })
     {
       foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
@@ -188,26 +203,23 @@ public partial class ControlrApiContractSyncTests
 
   private static string[] GetHttpConstantValues()
   {
-    var values = typeof(HttpConstants)
-      .GetFields(BindingFlags.Public | BindingFlags.Static)
-      .Where(field => field.FieldType == typeof(string))
+    var values = GetAllHttpConstantFields()
       .Select(field => field.GetValue(null) as string)
       .Where(value => !string.IsNullOrWhiteSpace(value))
       .Select(value => value ?? string.Empty)
-      .Where(value => value.Length > 0)
       .Distinct(StringComparer.OrdinalIgnoreCase)
       .ToArray();
 
     return values;
   }
 
-  [GeneratedRegex("HttpConstants\\.(?<name>[A-Za-z0-9_]+)")]
+  [GeneratedRegex("HttpConstants\\.(?<name>[A-Za-z0-9_.]+)")]
   private static partial Regex HttpConstantRegex();
 
-  [GeneratedRegex("\\{HttpConstants\\.(?<name>[A-Za-z0-9_]+)\\}")]
+  [GeneratedRegex("\\{HttpConstants\\.(?<name>[A-Za-z0-9_.]+)\\}")]
   private static partial Regex InterpolatedConstantRegex();
 
-  [GeneratedRegex("\\$\\\"(?<value>[^\\\"]*HttpConstants\\.[A-Za-z0-9_]+[^\\\"]*)\\\"")]
+  [GeneratedRegex("\\$\\\"(?<value>[^\\\"]*HttpConstants\\.[A-Za-z0-9_.]+[^\\\"]*)\\\"")]
   private static partial Regex InterpolatedStringRegex();
 
   [GeneratedRegex("\\{[^{}]+\\}")]
@@ -269,29 +281,50 @@ public partial class ControlrApiContractSyncTests
     return templates;
   }
 
-  private static string[] LoadOpenApiApiPaths()
+  private static OpenApiTestData LoadOpenApiTestData()
   {
     var repositoryRoot = FindRepositoryRoot();
-    var openApiPath = Path.Combine(repositoryRoot, "ControlR.Web.Server", "ControlR.Web.Server.json");
+    var serverDirectory = Path.Combine(repositoryRoot, "ControlR.Web.Server");
 
-    Assert.True(File.Exists(openApiPath), $"OpenAPI file not found: '{openApiPath}'.");
+    var jsonFiles = Directory.GetFiles(serverDirectory, "ControlR.Web.Server_*.json");
+    Assert.True(jsonFiles.Length > 0, $"No OpenAPI JSON files found in '{serverDirectory}'.");
 
-    using var stream = File.OpenRead(openApiPath);
-    using var document = JsonDocument.Parse(stream);
+    var allPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var nonLegacyPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-    var root = document.RootElement;
-    Assert.True(root.TryGetProperty("paths", out var pathsElement), "OpenAPI document does not contain a 'paths' object.");
+    foreach (var jsonFile in jsonFiles)
+    {
+      var isLegacy = Path.GetFileName(jsonFile).Contains("legacy", StringComparison.OrdinalIgnoreCase);
 
-    var normalizedPaths = pathsElement
-      .EnumerateObject()
-      .Select(property => property.Name)
-      .Where(path => path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-      .Select(NormalizePathTemplate)
-      .Distinct(StringComparer.OrdinalIgnoreCase)
-      .OrderBy(path => path)
-      .ToArray();
+      using var stream = File.OpenRead(jsonFile);
+      using var document = JsonDocument.Parse(stream);
 
-    return normalizedPaths;
+      var root = document.RootElement;
+      if (!root.TryGetProperty("paths", out var pathsElement))
+      {
+        continue;
+      }
+
+      var paths = pathsElement
+        .EnumerateObject()
+        .Select(property => property.Name)
+        .Where(path => path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        .Select(NormalizePathTemplate)
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+
+      foreach (var path in paths)
+      {
+        allPaths.Add(path);
+        if (!isLegacy)
+        {
+          nonLegacyPaths.Add(path);
+        }
+      }
+    }
+
+    return new OpenApiTestData(
+      allPaths.OrderBy(p => p).ToArray(),
+      nonLegacyPaths.OrderBy(p => p).ToArray());
   }
 
   private static string NormalizePathTemplate(string pathTemplate)
@@ -365,7 +398,20 @@ public partial class ControlrApiContractSyncTests
 
   private static bool TryResolveHttpConstantValue(string constantName, out string value)
   {
-    var field = typeof(HttpConstants).GetField(constantName, BindingFlags.Public | BindingFlags.Static);
+    var parts = constantName.Split('.');
+    Type? currentType = typeof(HttpConstants);
+
+    for (var i = 0; i < parts.Length - 1; i++)
+    {
+      currentType = currentType?.GetNestedType(parts[i], BindingFlags.Public | BindingFlags.Static);
+      if (currentType is null)
+      {
+        value = string.Empty;
+        return false;
+      }
+    }
+
+    var field = currentType?.GetField(parts[^1], BindingFlags.Public | BindingFlags.Static);
 
     if (field?.GetValue(null) is not string stringValue || string.IsNullOrWhiteSpace(stringValue))
     {
