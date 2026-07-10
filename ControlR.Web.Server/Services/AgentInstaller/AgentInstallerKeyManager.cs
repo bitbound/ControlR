@@ -9,7 +9,7 @@ public interface IAgentInstallerKeyManager
       Guid tenantId,
       Guid creatorId,
       CreatorKind creatorKind,
-      InternalDtos.InstallerKeyType keyType,
+      InstallerKeyType keyType,
       uint? allowedUses,
       DateTimeOffset? expiration,
       string? friendlyName);
@@ -47,7 +47,7 @@ public class AgentInstallerKeyManager(
       Guid tenantId,
       Guid creatorId,
       CreatorKind creatorKind,
-      InternalDtos.InstallerKeyType keyType,
+      InstallerKeyType keyType,
       uint? allowedUses,
       DateTimeOffset? expiration,
       string? friendlyName)
@@ -55,7 +55,7 @@ public class AgentInstallerKeyManager(
     var plaintextKey = RandomGenerator.CreateAccessToken();
     var hashedKey = _passwordHasher.HashPassword(string.Empty, plaintextKey);
 
-    var effectiveExpiration = keyType == InternalDtos.InstallerKeyType.UsageBased
+    var effectiveExpiration = keyType == InstallerKeyType.UsageBased
       ? _timeProvider.GetUtcNow() + TimeSpan.FromHours(24)
       : expiration;
 
@@ -117,7 +117,7 @@ public class AgentInstallerKeyManager(
     var cutoff = GetUsageHistoryCutoff();
 
     query = query.Where(x =>
-        x.KeyType == InternalDtos.InstallerKeyType.Persistent ||
+        x.KeyType == InstallerKeyType.Persistent ||
         (x.Expiration.HasValue && x.Expiration.Value >= now));
 
     var keyData = await query
@@ -140,7 +140,7 @@ public class AgentInstallerKeyManager(
                 (!cutoff.HasValue || u.CreatedAt >= cutoff.Value))
         })
         .Where(x =>
-          x.KeyType != InternalDtos.InstallerKeyType.UsageBased ||
+          x.KeyType != InstallerKeyType.UsageBased ||
           (x.AllowedUses.HasValue && x.UsageCount < x.AllowedUses.Value))
         .ToListAsync();
 
@@ -253,7 +253,7 @@ public class AgentInstallerKeyManager(
   }
 
   private static bool IsExpired(
-    InternalDtos.InstallerKeyType keyType,
+    InstallerKeyType keyType,
     DateTimeOffset? expiration,
     uint? allowedUses,
     int usageCount,
@@ -261,8 +261,8 @@ public class AgentInstallerKeyManager(
   {
     return keyType switch
     {
-      InternalDtos.InstallerKeyType.TimeBased => !expiration.HasValue || expiration.Value < now,
-      InternalDtos.InstallerKeyType.UsageBased => !expiration.HasValue || expiration.Value < now || usageCount >= allowedUses,
+      InstallerKeyType.TimeBased => !expiration.HasValue || expiration.Value < now,
+      InstallerKeyType.UsageBased => !expiration.HasValue || expiration.Value < now || usageCount >= allowedUses,
       _ => false
     };
   }
@@ -282,7 +282,7 @@ public class AgentInstallerKeyManager(
       DeviceId = deviceId ?? Guid.Empty,
       RemoteIpAddress = remoteIpAddress
     });
-    if (installerKey.KeyType == InternalDtos.InstallerKeyType.UsageBased && currentUsageCount + 1 >= installerKey.AllowedUses)
+    if (installerKey.KeyType == InstallerKeyType.UsageBased && currentUsageCount + 1 >= installerKey.AllowedUses)
     {
       db.AgentInstallerKeys.Remove(installerKey);
       await db.SaveChangesAsync();
@@ -335,7 +335,7 @@ public class AgentInstallerKeyManager(
     var now = _timeProvider.GetUtcNow();
 
     var usageCount = 0;
-    if (installerKey.KeyType == InternalDtos.InstallerKeyType.UsageBased)
+    if (installerKey.KeyType == InstallerKeyType.UsageBased)
     {
       usageCount = await db.AgentInstallerKeyUsages
           .CountAsync(u => u.AgentInstallerKeyId == keyId);
@@ -343,18 +343,18 @@ public class AgentInstallerKeyManager(
 
     var isValid = installerKey.KeyType switch
     {
-      InternalDtos.InstallerKeyType.Persistent => true,
-      InternalDtos.InstallerKeyType.UsageBased =>
+      InstallerKeyType.Persistent => true,
+      InstallerKeyType.UsageBased =>
         !IsExpired(installerKey.KeyType, installerKey.Expiration, installerKey.AllowedUses, usageCount, now) &&
         installerKey.Expiration.HasValue && installerKey.Expiration.Value >= now,
-      InternalDtos.InstallerKeyType.TimeBased => installerKey.Expiration.HasValue && installerKey.Expiration.Value >= now,
+      InstallerKeyType.TimeBased => installerKey.Expiration.HasValue && installerKey.Expiration.Value >= now,
       _ => false
     };
 
     if (!isValid)
     {
-      if (installerKey.KeyType == InternalDtos.InstallerKeyType.TimeBased ||
-          installerKey.KeyType == InternalDtos.InstallerKeyType.UsageBased)
+      if (installerKey.KeyType == InstallerKeyType.TimeBased ||
+          installerKey.KeyType == InstallerKeyType.UsageBased)
       {
         db.AgentInstallerKeys.Remove(installerKey);
         await db.SaveChangesAsync();

@@ -16,6 +16,6 @@ public class AgentInstallerKey : TenantEntityBase
     [ProtectedPersonalData]
     public required string HashedKey { get; set; }
 
-    public InternalDtos.InstallerKeyType KeyType { get; set; }
+    public InstallerKeyType KeyType { get; set; }
     public ICollection<AgentInstallerKeyUsage> Usages { get; set; } = [];
 }

@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+namespace ControlR.Libraries.Api.Contracts.Enums;
 
 [DataContract]
 public enum InstallerKeyType

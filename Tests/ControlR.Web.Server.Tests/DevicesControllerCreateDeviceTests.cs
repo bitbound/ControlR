@@ -38,7 +38,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.UsageBased,
+      keyType: InstallerKeyType.UsageBased,
       allowedUses: 1,
       expiration: null,
       friendlyName: "Single Use Key");
@@ -79,7 +79,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");
@@ -121,7 +121,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");
@@ -153,7 +153,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");
@@ -194,7 +194,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: unauthorizedUser.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Unauthorized Key");
@@ -221,7 +221,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.UsageBased,
+      keyType: InstallerKeyType.UsageBased,
       allowedUses: 5,
       expiration: null,
       friendlyName: "Multi-Use Key");
@@ -259,7 +259,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");
@@ -296,7 +296,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");
@@ -323,7 +323,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.UsageBased,
+      keyType: InstallerKeyType.UsageBased,
       allowedUses: 1,
       expiration: null,
       friendlyName: "Single Use Key");
@@ -354,7 +354,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.TimeBased,
+      keyType: InstallerKeyType.TimeBased,
       allowedUses: null,
       expiration: testServer.TimeProvider.GetUtcNow().AddHours(1),
       friendlyName: "Time Based Key");
@@ -383,7 +383,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");
@@ -429,7 +429,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Persistent Key");
@@ -466,7 +466,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.UsageBased,
+      keyType: InstallerKeyType.UsageBased,
       allowedUses: 1,
       expiration: null,
       friendlyName: "Single Use Key");
@@ -509,7 +509,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Test Key");
@@ -550,7 +550,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.TimeBased,
+      keyType: InstallerKeyType.TimeBased,
       allowedUses: null,
       expiration: testServer.TimeProvider.GetUtcNow().AddHours(1),
       friendlyName: "Time Based Key");
@@ -580,7 +580,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.UsageBased,
+      keyType: InstallerKeyType.UsageBased,
       allowedUses: 3,
       expiration: null,
       friendlyName: "Test Usage Key");
@@ -617,7 +617,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       tenantId: tenant.Id,
       creatorId: user.Id,
       creatorKind: CreatorKind.User,
-      keyType: InternalDtos.InstallerKeyType.Persistent,
+      keyType: InstallerKeyType.Persistent,
       allowedUses: null,
       expiration: null,
       friendlyName: "Persistent Key");

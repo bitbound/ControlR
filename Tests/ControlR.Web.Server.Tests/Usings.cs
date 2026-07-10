@@ -1,3 +1,4 @@
+global using ControlR.Libraries.Api.Contracts.Enums;
 global using ControlR.Libraries.Api.Contracts.Dtos;
 global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 global using V0Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
