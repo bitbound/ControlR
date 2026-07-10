@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.InstallerKeysEndpoint)]
 [ApiController]
-[Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+[Authorize(Roles = $"{RoleNames.TenantAdministrator},{RoleNames.InstallerKeyManager}")]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManager) : ControllerBase
 {

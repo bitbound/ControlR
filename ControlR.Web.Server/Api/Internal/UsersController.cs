@@ -6,7 +6,7 @@ namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.UsersEndpoint)]
 [ApiController]
-[Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+[Authorize(Roles = RoleNames.TenantAdministrator)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class UsersController : ControllerBase
 {

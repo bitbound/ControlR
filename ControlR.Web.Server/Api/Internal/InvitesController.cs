@@ -5,7 +5,7 @@ namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.InvitesEndpoint)]
 [ApiController]
-[Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+[Authorize(Roles = RoleNames.TenantAdministrator)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class InvitesController : ControllerBase
 {

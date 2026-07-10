@@ -59,30 +59,31 @@ public class OpenApiSecurityTransformer : IOpenApiDocumentTransformer, IOpenApiO
       .Select(p => p!)
       .ToHashSet();
 
-    if (policyNames.Count == 0)
-    {
-      return Task.CompletedTask;
-    }
+    var groupName = context.Description.ActionDescriptor.EndpointMetadata
+      .OfType<EndpointGroupNameAttribute>()
+      .Select(e => e.EndpointGroupName)
+      .FirstOrDefault();
 
-    var schemes = ResolveSecuritySchemes(policyNames);
+    var schemes = ResolveSecuritySchemes(policyNames, groupName);
     if (schemes.Count == 0)
     {
       return Task.CompletedTask;
     }
 
     operation.Security ??= [];
-    var requirement = new OpenApiSecurityRequirement();
     foreach (var scheme in schemes)
     {
-      requirement[new OpenApiSecuritySchemeReference(scheme, context.Document)] = [];
+      var requirement = new OpenApiSecurityRequirement
+      {
+        [new OpenApiSecuritySchemeReference(scheme, context.Document)] = []
+      };
+      operation.Security.Add(requirement);
     }
-
-    operation.Security.Add(requirement);
 
     return Task.CompletedTask;
   }
 
-  private static HashSet<string> ResolveSecuritySchemes(HashSet<string> policyNames)
+  private static HashSet<string> ResolveSecuritySchemes(HashSet<string> policyNames, string? groupName)
   {
     var schemes = new HashSet<string>();
 
@@ -91,7 +92,7 @@ public class OpenApiSecurityTransformer : IOpenApiDocumentTransformer, IOpenApiO
       schemes.Add(ServiceAccountScheme);
     }
 
-    if (policyNames.Contains(RequireUserPrincipalPolicy.PolicyName))
+    if (groupName == OpenApiConstants.InternalGroupName)
     {
       schemes.Add(CookieScheme);
       schemes.Add(PatScheme);

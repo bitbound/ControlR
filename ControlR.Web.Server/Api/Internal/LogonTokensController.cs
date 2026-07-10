@@ -6,7 +6,7 @@ namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.LogonTokensEndpoint)]
 [ApiController]
-[Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+[Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class LogonTokenController : ControllerBase
 {

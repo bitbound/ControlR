@@ -6,7 +6,7 @@ namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.TenantSettingsEndpoint)]
 [ApiController]
-[Authorize(Policy = RequireUserPrincipalPolicy.PolicyName)]
+[Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenantSettingsManager) : ControllerBase
 {
@@ -14,6 +14,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   private readonly ITenantSettingsManager _tenantSettingsManager = tenantSettingsManager;
 
   [HttpDelete("{name}")]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult> DeleteSetting(string name)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -84,6 +85,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPost]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<InternalDtos.TenantSettingResponseDto>> SetSetting([FromBody] InternalDtos.TenantSettingRequestDto setting)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -96,6 +98,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPut]
+  [Authorize(Roles = RoleNames.TenantAdministrator)]
   public async Task<ActionResult<InternalDtos.TenantSettingsDto>> SetSettings(
     [FromBody] InternalDtos.TenantSettingsDto settings,
     CancellationToken cancellationToken)

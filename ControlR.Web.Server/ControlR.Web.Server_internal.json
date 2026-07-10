@@ -108,7 +108,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/auth/change-password-with-credentials": {
@@ -163,7 +171,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/auth/complete-password-reset": {
@@ -218,7 +234,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/auth/me": {
@@ -270,7 +294,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/auth/interactive-login": {
@@ -342,7 +374,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/auth/logout": {
@@ -377,7 +417,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/desktop-preview/{deviceId}/{targetProcessId}": {
@@ -431,7 +479,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/create-directory/{deviceId}": {
@@ -495,7 +551,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/delete-path/{deviceId}": {
@@ -559,7 +623,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/download-archive/{deviceId}": {
@@ -623,7 +695,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/download/{deviceId}": {
@@ -674,7 +754,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/contents": {
@@ -729,7 +817,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/logs/{deviceId}/contents": {
@@ -780,7 +876,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/logs/{deviceId}": {
@@ -824,7 +928,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/path-segments": {
@@ -879,7 +991,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/root-drives": {
@@ -934,7 +1054,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/subdirectories": {
@@ -989,7 +1117,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/upload/{deviceId}": {
@@ -1058,7 +1194,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-file-system/validate-path/{deviceId}": {
@@ -1122,7 +1266,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/devices": {
@@ -1194,7 +1346,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -1253,7 +1413,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/devices/{deviceId}": {
@@ -1297,7 +1465,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -1356,7 +1532,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/devices/delete-many": {
@@ -1428,7 +1612,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/devices/summary": {
@@ -1489,7 +1681,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/devices/search": {
@@ -1561,7 +1761,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/devices/{deviceId}/alias": {
@@ -1642,7 +1850,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-tags": {
@@ -1697,7 +1913,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/device-tags/{deviceId}/{tagId}": {
@@ -1767,7 +1991,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/effective-user-preferences": {
@@ -1819,7 +2051,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/installer-keys": {
@@ -1894,7 +2134,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -1959,7 +2201,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2009,7 +2253,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2085,7 +2331,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2146,7 +2394,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2224,7 +2474,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2302,7 +2554,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2367,7 +2621,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2417,7 +2673,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2495,7 +2753,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -2570,7 +2830,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -2629,7 +2897,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/personal-access-tokens/{id}": {
@@ -2673,7 +2949,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "put": {
         "tags": [
@@ -2752,7 +3036,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/public-registration-settings": {
@@ -2865,7 +3157,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/server-alert": {
@@ -2917,7 +3217,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -2987,7 +3295,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/server-logs/get-aspire-url": {
@@ -3039,7 +3355,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/server-stats": {
@@ -3091,7 +3415,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/tags": {
@@ -3163,7 +3495,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -3230,7 +3570,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "put": {
         "tags": [
@@ -3300,7 +3648,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/tags/{tagId}": {
@@ -3344,7 +3700,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/tenant-settings/{name}": {
@@ -3390,7 +3754,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -3454,7 +3820,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -3512,7 +3880,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -3588,7 +3958,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -3664,7 +4036,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -3702,7 +4076,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-preferences": {
@@ -3754,7 +4136,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -3824,7 +4214,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "put": {
         "tags": [
@@ -3894,7 +4292,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-preferences/{name}": {
@@ -3954,7 +4360,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-roles": {
@@ -4009,7 +4423,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -4068,7 +4490,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-roles/{userId}": {
@@ -4138,7 +4568,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-roles/{userId}/{roleId}": {
@@ -4208,7 +4646,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/users/{userId}/reset-password": {
@@ -4272,7 +4718,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -4350,7 +4798,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -4415,7 +4865,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -4502,7 +4954,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -4576,7 +5030,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -4626,7 +5082,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -4685,7 +5143,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -4779,7 +5239,9 @@
         },
         "security": [
           {
-            "Cookie": [ ],
+            "Cookie": [ ]
+          },
+          {
             "PersonalAccessToken": [ ]
           }
         ]
@@ -4834,7 +5296,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-server-settings/decommission-status": {
@@ -4886,7 +5356,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-storage/{key}": {
@@ -4949,7 +5427,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -5010,7 +5496,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-storage": {
@@ -5102,7 +5596,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-tags": {
@@ -5157,7 +5659,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -5216,7 +5726,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-tags/{userId}": {
@@ -5286,7 +5804,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/user-tags/{userId}/{tagId}": {
@@ -5356,7 +5882,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/version/agent": {
@@ -5873,7 +6407,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/api/internal/auth/manage/info": {
@@ -5915,7 +6457,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -5965,7 +6515,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/Account/PerformExternalLogin": {
@@ -6155,7 +6713,15 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     },
     "/Account/Manage/DownloadPersonalData": {
@@ -6167,7 +6733,15 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
       }
     }
   },
