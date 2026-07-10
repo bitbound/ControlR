@@ -15,10 +15,10 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
   private readonly IAgentInstallerKeyManager _installerKeyManager = installerKeyManager;
 
   [HttpPost]
-  public async Task<ActionResult<CreateInstallerKeyResponseDto>> Create(
+  public async Task<ActionResult<V0Dtos.CreateInstallerKeyResponseDto>> Create(
       [FromBody] CreateInstallerKeyRequestDto request)
   {
-    var dto = await _installerKeyManager.CreateKey(
+    var internalDto = await _installerKeyManager.CreateKey(
         request.TenantId,
         request.CreatorId,
         request.CreatorKind,
@@ -26,6 +26,8 @@ public class InstallerKeysController(IAgentInstallerKeyManager installerKeyManag
         request.AllowedUses,
         request.Expiration,
         request.FriendlyName);
+
+    var dto = V0Dtos.CreateInstallerKeyResponseDto.From(internalDto);
 
     return Ok(dto);
   }

@@ -10,4 +10,18 @@ public record CreateInstallerKeyResponseDto(
     DateTimeOffset CreatedAt,
     uint? AllowedUses = null,
     DateTimeOffset? Expiration = null,
-    string? FriendlyName = null);
+    string? FriendlyName = null)
+{
+  public static CreateInstallerKeyResponseDto From(InternalDtos.CreateInstallerKeyResponseDto internalDto)
+  {
+    return new(
+      internalDto.Id,
+      internalDto.CreatorId,
+      internalDto.KeyType,
+      internalDto.KeySecret,
+      internalDto.CreatedAt,
+      internalDto.AllowedUses,
+      internalDto.Expiration,
+      internalDto.FriendlyName);
+  }
+}

@@ -98,6 +98,7 @@ if (appOptions.EnableInteractiveBearerLogin || isOpenApiBuild)
 {
   var authGroup = app
     .MapGroup(HttpConstants.Internal.AuthEndpoint)
+    .WithGroupName(OpenApiConstants.InternalGroupName)
     .WithTags("Auth");
 
   authGroup
@@ -116,6 +117,7 @@ app.UseWhen(
 
 app
   .MapAdditionalIdentityEndpoints()
+  .WithGroupName(OpenApiConstants.InternalGroupName)
   .WithTags("Account");
 
 app.MapHub<ViewerHub>(AppConstants.ViewerHubPath);

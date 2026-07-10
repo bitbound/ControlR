@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
@@ -34,7 +35,7 @@ public class ExceptionHandlerIntegrationTests(ITestOutputHelper testOutput)
 
     var randomGuid = Guid.NewGuid();
     using var response = await client.GetAsync(
-      $"/api/devices/{randomGuid}",
+      $"{HttpConstants.Internal.DevicesEndpoint}/{randomGuid}",
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

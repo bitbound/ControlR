@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using ControlR.ApiClient;
 using ControlR.ApiClient.Auth;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -725,7 +726,8 @@ public class ControlrAuthSessionTests
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
       var path = request.RequestUri?.AbsolutePath;
-      if (string.Equals(path, "/api/auth/interactive-login", StringComparison.Ordinal))
+      
+      if (string.Equals(path, $"{HttpConstants.Internal.AuthEndpoint}/interactive-login", StringComparison.Ordinal))
       {
         if (_interactiveLoginResponses.Count == 0)
         {
@@ -735,7 +737,7 @@ public class ControlrAuthSessionTests
         return _interactiveLoginResponses.Dequeue();
       }
 
-      if (string.Equals(path, "/api/auth/refresh", StringComparison.Ordinal))
+      if (string.Equals(path, $"{HttpConstants.Internal.AuthEndpoint}/refresh", StringComparison.Ordinal))
       {
         RefreshStarted.TrySetResult();
         await ReleaseRefresh.Task.WaitAsync(TestContext.Current.CancellationToken);

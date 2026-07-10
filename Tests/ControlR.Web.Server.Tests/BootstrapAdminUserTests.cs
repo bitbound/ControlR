@@ -1,4 +1,5 @@
 using System.Net;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
@@ -259,7 +260,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     client.DefaultRequestHeaders.Remove(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName);
     client.DefaultRequestHeaders.Add(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName, fullToken);
 
-    var response = await client.GetAsync("/internal/users", TestContext.Current.CancellationToken);
+    var response = await client.GetAsync(HttpConstants.Internal.UsersEndpoint, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
   }

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
@@ -33,7 +34,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
 
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
-      "/api/auth/change-password-with-credentials",
+      $"{HttpConstants.Internal.AuthEndpoint}/change-password-with-credentials",
       new CredentialPasswordChangeRequestDto(user.Email!, "T3stP@ssw0rd!", "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 
@@ -69,7 +70,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
 
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
-      "/api/auth/complete-password-reset",
+      $"{HttpConstants.Internal.AuthEndpoint}/complete-password-reset",
       new ResetPasswordRequestDto(user.Email!, resetCode, "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 
@@ -105,16 +106,16 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
     using var client = testServer.Factory.CreateClient();
     client.DefaultRequestHeaders.Add(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName, personalAccessToken);
 
-    var blockedResponse = await client.GetAsync("/api/personal-access-tokens", TestContext.Current.CancellationToken);
+    var blockedResponse = await client.GetAsync(HttpConstants.Internal.PersonalAccessTokensEndpoint, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Forbidden, blockedResponse.StatusCode);
 
     var changePasswordResponse = await client.PostAsJsonAsync(
-      "/api/auth/change-password",
+      $"{HttpConstants.Internal.AuthEndpoint}/change-password",
       new ChangePasswordRequestDto(temporaryPassword, "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, changePasswordResponse.StatusCode);
 
-    var allowedResponse = await client.GetAsync("/api/personal-access-tokens", TestContext.Current.CancellationToken);
+    var allowedResponse = await client.GetAsync(HttpConstants.Internal.PersonalAccessTokensEndpoint, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, allowedResponse.StatusCode);
 
     using var verificationScope = services.CreateScope();

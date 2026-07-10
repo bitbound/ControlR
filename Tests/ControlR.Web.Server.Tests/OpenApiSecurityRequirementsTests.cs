@@ -19,7 +19,7 @@ public class OpenApiSecurityRequirementsTests(ITestOutputHelper testOutput)
       });
 
     var response = await testServer.Factory.CreateClient()
-      .GetStringAsync("/openapi/v1.json", TestContext.Current.CancellationToken);
+      .GetStringAsync("/openapi/internal.json", TestContext.Current.CancellationToken);
     var doc = JsonDocument.Parse(response).RootElement;
 
     Assert.True(doc.TryGetProperty("paths", out var paths));
@@ -36,7 +36,7 @@ public class OpenApiSecurityRequirementsTests(ITestOutputHelper testOutput)
 
   private void AssertAuthEndpoints(JsonElement paths)
   {
-    Assert.True(paths.TryGetProperty("/api/auth/register", out var registerEndpoint));
+    Assert.True(paths.TryGetProperty($"{HttpConstants.Internal.AuthEndpoint}/register", out var registerEndpoint));
     Assert.True(registerEndpoint.TryGetProperty("post", out var registerPost));
     if (registerPost.TryGetProperty("security", out var registerSecurity))
     {

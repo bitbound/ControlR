@@ -27,7 +27,7 @@ public class LogonTokensController : ControllerBase
 
     Guid? userId = request.UserId;
 
-    if (request.Kind == Libraries.Api.Contracts.Enums.LogonTokenKind.Service)
+    if (request.Kind == LogonTokenKind.Service)
     {
       if (string.IsNullOrWhiteSpace(request.UserCorrelationId))
       {
@@ -58,7 +58,7 @@ public class LogonTokensController : ControllerBase
 
       userId = guestUser.Id;
     }
-    else if (request.Kind == Libraries.Api.Contracts.Enums.LogonTokenKind.User)
+    else if (request.Kind == LogonTokenKind.User)
     {
       if (!request.UserId.HasValue)
       {
@@ -83,7 +83,7 @@ public class LogonTokensController : ControllerBase
       Request.ToOrigin(),
       $"/device-access?deviceId={request.DeviceId}&logonToken={logonToken.Token}");
 
-    var response = new LogonTokenResponseDto(
+    var response = new V0Dtos.LogonTokenResponseDto(
       DeviceAccessUrl: deviceAccessUrl,
       ExpiresAt: logonToken.ExpiresAt,
       Token: logonToken.Token);

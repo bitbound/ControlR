@@ -16,6 +16,7 @@ using ControlR.Web.Server.Options;
 using Microsoft.Extensions.Options;
 using Moq;
 using ControlR.Web.Server.Api.Internal;
+using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -274,7 +275,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     {
       lastResponse?.Dispose();
       lastResponse = await client.PostAsJsonAsync(
-        "/api/auth/interactive-login",
+        $"{HttpConstants.Internal.AuthEndpoint}/interactive-login",
         new LoginRequestDto(user.Email!, "wrong-password"),
         TestContext.Current.CancellationToken);
     }
@@ -471,7 +472,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
-      "/api/auth/interactive-login",
+      $"{HttpConstants.Internal.AuthEndpoint}/interactive-login",
       new LoginRequestDto(user.Email!, "T3stP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 

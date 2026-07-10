@@ -44,7 +44,7 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName,
       pat);
 
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/internal/logon-tokens", logonTokenRequest, TestContext.Current.CancellationToken);
+    var logonTokenResponse = await httpClient.PostAsJsonAsync(HttpConstants.Internal.LogonTokensEndpoint, logonTokenRequest, TestContext.Current.CancellationToken);
 
     // Assert logon token creation succeeded
     logonTokenResponse.EnsureSuccessStatusCode();
@@ -100,7 +100,7 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName,
       pat);
 
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/internal/logon-tokens", logonTokenRequest, TestContext.Current.CancellationToken);
+    var logonTokenResponse = await httpClient.PostAsJsonAsync(HttpConstants.Internal.LogonTokensEndpoint, logonTokenRequest, TestContext.Current.CancellationToken);
 
     // Assert logon token creation succeeded
     logonTokenResponse.EnsureSuccessStatusCode();

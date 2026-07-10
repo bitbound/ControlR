@@ -1,2 +1,4 @@
 global using MessagePack;
 global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+global using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+global using V0Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
