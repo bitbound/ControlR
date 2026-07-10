@@ -51,9 +51,9 @@ public class OpenApiSecurityRequirementsTests(ITestOutputHelper testOutput)
 
   private void AssertLogonTokenEndpoints(JsonElement paths)
   {
-    var logonPost = paths.GetProperty("/internal/logon-tokens").GetProperty("post");
+    var logonPost = paths.GetProperty(HttpConstants.Internal.LogonTokensEndpoint).GetProperty("post");
 
-    _testOutput.WriteLine($"POST /internal/logon-tokens JSON: {logonPost.GetRawText()}");
+    _testOutput.WriteLine($"POST /api/internal/logon-tokens JSON: {logonPost.GetRawText()}");
 
     Assert.True(logonPost.TryGetProperty("security", out var logonSecurity), "security property should be present on the endpoint");
 
