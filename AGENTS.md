@@ -53,15 +53,14 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 
 | Location | Contents | Lifecycle |
 |---|---|---|
-| `Dtos/ServerApi/` (root) | DTOs shared across route roots | Changing affects both Internal and V0 |
 | `Dtos/ServerApi/Internal/` | Internal (BFF) only | Dynamic, changes freely |
 | `Dtos/ServerApi/V0/` | V0 (S2S) only | Stable contract |
 | `Dtos/ServerApi/V1/` | V1 (S2S, future) | Stable contract |
 
 **Rules:**
-- If a DTO is used by **only one** route root → place it in that root's folder (`Internal/`, `V0/`, …).
-- If a DTO is used by **more than one** route root → keep it in the root `Dtos/ServerApi/` folder. If the contract needs to diverge between versions, duplicate it into each version folder and remove the shared version.
-- When sun-setting a version, its DTO folder can be deleted independently.
+- Every DTO belongs to exactly one route root's folder (`Internal/`, `V0/`, …). There is no shared root `Dtos/ServerApi/` folder for DTOs.
+- If two route roots need a structurally identical shape, **duplicate it** into each folder. The same class name with a different namespace is intentional — each copy has an independent lifecycle commitment and can evolve separately.
+- When sun-setting a version, its DTO folder can be deleted independently with no risk of breaking other API surfaces.
 
 ## API Routing & Versioning
 
