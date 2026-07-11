@@ -1,7 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Data.Enums;
-using Microsoft.EntityFrameworkCore;
+using ControlR.Web.Server.Primitives;
 
 namespace ControlR.Web.Server.Services.ServiceAccounts;
 
@@ -17,31 +17,31 @@ public interface IServiceAccountManager
   /// Adds a new credential to an existing server service account. Returns the credential
   /// metadata and the plaintext secret, which is only exposed this once.
   /// </summary>
-  Task<Result<CreateServiceAccountCredentialResponseDto>> AddCredential(Guid serviceAccountId, string name, CancellationToken cancellationToken);
+  Task<HttpResult<CreateServiceAccountCredentialResponseDto>> AddCredential(Guid serviceAccountId, string name, CancellationToken cancellationToken);
   /// <summary>
   /// Creates the bootstrapped server service account and its initial credential when the
   /// bootstrap options are fully supplied. Skips creation when the named account already exists.
   /// Throws when the bootstrap input is only partially configured.
   /// </summary>
-  Task<Result> BootstrapServerServiceAccount(BootstrapOptions options, CancellationToken cancellationToken);
+  Task<HttpResult> BootstrapServerServiceAccount(BootstrapOptions options, CancellationToken cancellationToken);
   /// <summary>
   /// Creates a new server-scoped service account and its first credential. Returns the new
   /// account and the plaintext secret, which is only exposed this once.
   /// </summary>
-  Task<Result<CreateServiceAccountResponseDto>> CreateServer(string name, string? description, CancellationToken cancellationToken);
+  Task<HttpResult<CreateServiceAccountResponseDto>> CreateForServer(string name, string? description, CancellationToken cancellationToken);
   /// <summary>Deletes a server service account. Credentials cascade-delete.</summary>
-  Task<Result> Delete(Guid serviceAccountId, CancellationToken cancellationToken);
+  Task<HttpResult> Delete(Guid serviceAccountId, CancellationToken cancellationToken);
   /// <summary>Returns all server-scoped service accounts with their credential metadata.</summary>
   Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken);
   /// <summary>Revokes a credential by setting <see cref="ServiceAccountCredential.RevokedAt"/>.</summary>
-  Task<Result> RevokeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken);
+  Task<HttpResult> RevokeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken);
   /// <summary>
   /// Validates a <c>{hex_id}:{plaintext_secret}</c> API key against a service account credential.
   /// On success updates <see cref="ServiceAccountCredential.LastUsedAt"/> and returns the
   /// owning service account and the credential. Revoked, expired, disabled-account, and
   /// nonexistent-or-invalid credentials all fail.
   /// </summary>
-  Task<Result<ServiceAccountCredentialValidationResult>> ValidateCredential(string apiKey, CancellationToken cancellationToken);
+  Task<HttpResult<ServiceAccountCredentialValidationResult>> ValidateCredential(string apiKey, CancellationToken cancellationToken);
 }
 
 public sealed record ServiceAccountCredentialValidationResult(
@@ -56,14 +56,14 @@ public class ServiceAccountManager(
 {
   private const int MinimumSecretLength = 32;
 
-  public async Task<Result<CreateServiceAccountCredentialResponseDto>> AddCredential(
+  public async Task<HttpResult<CreateServiceAccountCredentialResponseDto>> AddCredential(
     Guid serviceAccountId,
     string name,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(name))
     {
-      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Credential name is required.");
+      return HttpResult.Fail<CreateServiceAccountCredentialResponseDto>(HttpResultErrorCode.BadRequest, "Credential name is required.");
     }
 
     var account = await appDb.ServiceAccounts
@@ -72,12 +72,12 @@ public class ServiceAccountManager(
 
     if (account is null)
     {
-      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Server service account not found.");
+      return HttpResult.Fail<CreateServiceAccountCredentialResponseDto>(HttpResultErrorCode.NotFound, "Server service account not found.");
     }
 
     if (!account.IsEnabled)
     {
-      return Result.Fail<CreateServiceAccountCredentialResponseDto>("Service account is disabled.");
+      return HttpResult.Fail<CreateServiceAccountCredentialResponseDto>(HttpResultErrorCode.Conflict, "Service account is disabled.");
     }
 
     var plainTextSecret = RandomGenerator.CreateApiKey();
@@ -92,10 +92,10 @@ public class ServiceAccountManager(
     await appDb.SaveChangesAsync(cancellationToken);
 
     var apiKey = FormatApiKey(credential.Id, plainTextSecret);
-    return Result.Ok(new CreateServiceAccountCredentialResponseDto(MapCredentialToDto(credential), apiKey));
+    return HttpResult.Ok(new CreateServiceAccountCredentialResponseDto(MapCredentialToDto(credential), apiKey));
   }
 
-  public async Task<Result> BootstrapServerServiceAccount(
+  public async Task<HttpResult> BootstrapServerServiceAccount(
     BootstrapOptions options,
     CancellationToken cancellationToken)
   {
@@ -111,7 +111,7 @@ public class ServiceAccountManager(
     if (!nameSet && !tokenIdSet && !secretSet)
     {
       logger.LogInformation("Bootstrap server service account skipped: not configured.");
-      return Result.Ok();
+      return HttpResult.Ok();
     }
 
     // Any subset configured is a partial configuration error.
@@ -146,7 +146,7 @@ public class ServiceAccountManager(
     if (alreadyExists)
     {
       logger.LogInformation("Bootstrap server service account skipped: account '{Name}' already exists.", name);
-      return Result.Ok();
+      return HttpResult.Ok();
     }
 
     var account = new ServiceAccount
@@ -175,24 +175,24 @@ public class ServiceAccountManager(
       "Bootstrap server service account '{Name}' created with credential id {CredentialId}.",
       name,
       credential.Id);
-    return Result.Ok();
+    return HttpResult.Ok();
   }
 
-  public async Task<Result<CreateServiceAccountResponseDto>> CreateServer(
+  public async Task<HttpResult<CreateServiceAccountResponseDto>> CreateForServer(
     string name,
     string? description,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(name))
     {
-      return Result.Fail<CreateServiceAccountResponseDto>("Name is required.");
+      return HttpResult.Fail<CreateServiceAccountResponseDto>(HttpResultErrorCode.BadRequest, "Name is required.");
     }
 
     var nameConflict = await appDb.ServiceAccounts
       .AnyAsync(x => x.Kind == ServiceAccountKind.Server && x.Name == name, cancellationToken);
     if (nameConflict)
     {
-      return Result.Fail<CreateServiceAccountResponseDto>("A server service account with that name already exists.");
+      return HttpResult.Fail<CreateServiceAccountResponseDto>(HttpResultErrorCode.Conflict, "A server service account with that name already exists.");
     }
 
     var plainTextSecret = RandomGenerator.CreateApiKey();
@@ -218,22 +218,22 @@ public class ServiceAccountManager(
     await appDb.SaveChangesAsync(cancellationToken);
 
     var apiKey = FormatApiKey(credential.Id, plainTextSecret);
-    return Result.Ok(new CreateServiceAccountResponseDto(MapToDto(account), apiKey));
+    return HttpResult.Ok(new CreateServiceAccountResponseDto(MapToDto(account), apiKey));
   }
 
-  public async Task<Result> Delete(Guid serviceAccountId, CancellationToken cancellationToken)
+  public async Task<HttpResult> Delete(Guid serviceAccountId, CancellationToken cancellationToken)
   {
     var account = await appDb.ServiceAccounts
       .FirstOrDefaultAsync(x => x.Id == serviceAccountId && x.Kind == ServiceAccountKind.Server, cancellationToken);
 
     if (account is null)
     {
-      return Result.Fail("Server service account not found.");
+      return HttpResult.Fail(HttpResultErrorCode.NotFound, "Server service account not found.");
     }
 
     appDb.ServiceAccounts.Remove(account);
     await appDb.SaveChangesAsync(cancellationToken);
-    return Result.Ok();
+    return HttpResult.Ok();
   }
 
   public async Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken)
@@ -247,7 +247,7 @@ public class ServiceAccountManager(
     return accounts.Select(MapToDto).ToList();
   }
 
-  public async Task<Result> RevokeCredential(
+  public async Task<HttpResult> RevokeCredential(
     Guid serviceAccountId,
     Guid credentialId,
     CancellationToken cancellationToken)
@@ -259,20 +259,20 @@ public class ServiceAccountManager(
 
     if (credential is null)
     {
-      return Result.Fail("Credential not found.");
+      return HttpResult.Fail(HttpResultErrorCode.NotFound, "Credential not found.");
     }
 
     if (credential.RevokedAt is not null)
     {
-      return Result.Ok(); // Idempotent.
+      return HttpResult.Ok(); // Idempotent.
     }
 
     credential.RevokedAt = timeProvider.GetUtcNow();
     await appDb.SaveChangesAsync(cancellationToken);
-    return Result.Ok();
+    return HttpResult.Ok();
   }
 
-  public async Task<Result<ServiceAccountCredentialValidationResult>> ValidateCredential(
+  public async Task<HttpResult<ServiceAccountCredentialValidationResult>> ValidateCredential(
     string apiKey,
     CancellationToken cancellationToken)
   {
@@ -281,7 +281,7 @@ public class ServiceAccountManager(
       var parts = apiKey.Split(':', 2);
       if (parts.Length != 2)
       {
-        return Result.Fail<ServiceAccountCredentialValidationResult>("Invalid service account API key format.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, "Invalid service account API key format.");
       }
 
       // The header id is the credential Guid rendered via Convert.ToHexString on the
@@ -294,12 +294,12 @@ public class ServiceAccountManager(
       }
       catch
       {
-        return Result.Fail<ServiceAccountCredentialValidationResult>("Invalid service account API key format.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, "Invalid service account API key format.");
       }
 
       if (credentialId == Guid.Empty)
       {
-        return Result.Fail<ServiceAccountCredentialValidationResult>("Invalid service account API key format.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, "Invalid service account API key format.");
       }
 
       var credential = await appDb.ServiceAccountCredentials
@@ -309,29 +309,29 @@ public class ServiceAccountManager(
 
       if (credential is null)
       {
-        return Result.Fail<ServiceAccountCredentialValidationResult>("Invalid service account credential.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.NotFound, "Invalid service account credential.");
       }
 
       var account = credential.ServiceAccount;
       if (account is null || !account.IsEnabled)
       {
-        return Result.Fail<ServiceAccountCredentialValidationResult>("Service account is not available.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account is not available.");
       }
 
       if (credential.RevokedAt is not null)
       {
-        return Result.Fail<ServiceAccountCredentialValidationResult>("Service account credential has been revoked.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account credential has been revoked.");
       }
 
       if (credential.ExpiresAt is not null && credential.ExpiresAt <= timeProvider.GetUtcNow())
       {
-        return Result.Fail<ServiceAccountCredentialValidationResult>("Service account credential has expired.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account credential has expired.");
       }
 
       var verification = passwordHasher.VerifyHashedPassword(string.Empty, credential.HashedSecret, parts[1]);
       if (verification == PasswordVerificationResult.Failed)
       {
-        return Result.Fail<ServiceAccountCredentialValidationResult>("Invalid service account credential.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, "Invalid service account credential.");
       }
 
       // Update last-used timestamp. Rehash on the off chance the hasher signals an upgrade.
@@ -343,7 +343,7 @@ public class ServiceAccountManager(
       credential.LastUsedAt = timeProvider.GetUtcNow();
       await appDb.SaveChangesAsync(cancellationToken);
 
-      return Result.Ok(new ServiceAccountCredentialValidationResult(account, credential));
+      return HttpResult.Ok(new ServiceAccountCredentialValidationResult(account, credential));
     }
     catch (OperationCanceledException)
     {
@@ -352,7 +352,7 @@ public class ServiceAccountManager(
     catch (Exception ex)
     {
       logger.LogError(ex, "Failed to validate service account credential.");
-      return Result.Fail<ServiceAccountCredentialValidationResult>(ex, "Failed to validate service account credential.");
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(ex, HttpResultErrorCode.InternalServerError, "Failed to validate service account credential.");
     }
   }
 

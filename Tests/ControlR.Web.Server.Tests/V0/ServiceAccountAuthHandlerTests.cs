@@ -26,7 +26,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
       var services = scope.ServiceProvider;
       var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
 
-      var createResult = await serviceAccountManager.CreateServer(
+      var createResult = await serviceAccountManager.CreateForServer(
         "Expired Credential SA",
         null,
         TestContext.Current.CancellationToken);
@@ -78,7 +78,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
 
-    var createResult = await serviceAccountManager.CreateServer(
+    var createResult = await serviceAccountManager.CreateForServer(
       "Revocation Test SA",
       null,
       TestContext.Current.CancellationToken);
@@ -140,7 +140,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
 
-    var createResult = await serviceAccountManager.CreateServer(
+    var createResult = await serviceAccountManager.CreateForServer(
       "AuthHandlerTest SA",
       null,
       TestContext.Current.CancellationToken);

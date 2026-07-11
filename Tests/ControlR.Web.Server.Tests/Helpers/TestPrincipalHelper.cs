@@ -37,7 +37,7 @@ internal static class TestPrincipalHelper
     CancellationToken cancellationToken = default)
   {
     var manager = services.GetRequiredService<IServiceAccountManager>();
-    var account = await manager.CreateServer(accountName ?? $"test-sa-{Guid.NewGuid():N}", null, cancellationToken);
+    var account = await manager.CreateForServer(accountName ?? $"test-sa-{Guid.NewGuid():N}", null, cancellationToken);
 
     if (!account.IsSuccess)
     {

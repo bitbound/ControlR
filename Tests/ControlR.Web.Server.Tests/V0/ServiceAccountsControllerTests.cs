@@ -21,7 +21,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
       var manager = scope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
       var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
-      var saResult = await manager.CreateServer("Disabled SA", null, TestContext.Current.CancellationToken);
+      var saResult = await manager.CreateForServer("Disabled SA", null, TestContext.Current.CancellationToken);
       Assert.True(saResult.IsSuccess);
       accountId = saResult.Value.ServiceAccount.Id;
 
@@ -42,7 +42,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
         new CreateServiceAccountCredentialRequestDto("New Credential"),
         TestContext.Current.CancellationToken);
 
-      var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+      var conflict = Assert.IsType<ObjectResult>(result.Result);
       Assert.Equal(409, conflict.StatusCode);
     }
   }
@@ -55,7 +55,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var manager = services.GetRequiredService<IServiceAccountManager>();
 
-    var saResult = await manager.CreateServer("Add Credential SA", null, TestContext.Current.CancellationToken);
+    var saResult = await manager.CreateForServer("Add Credential SA", null, TestContext.Current.CancellationToken);
     Assert.True(saResult.IsSuccess);
     var accountId = saResult.Value.ServiceAccount.Id;
 
@@ -67,7 +67,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
       new CreateServiceAccountCredentialRequestDto(""),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var badRequest = Assert.IsType<ObjectResult>(result.Result);
     Assert.Equal(400, badRequest.StatusCode);
   }
 
@@ -85,7 +85,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
       new CreateServiceAccountCredentialRequestDto("New Credential"),
       TestContext.Current.CancellationToken);
 
-    var notFound = Assert.IsType<NotFoundObjectResult>(result.Result);
+    var notFound = Assert.IsType<ObjectResult>(result.Result);
     Assert.Equal(404, notFound.StatusCode);
   }
 
@@ -102,7 +102,8 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
       new CreateServiceAccountRequestDto("", null),
       TestContext.Current.CancellationToken);
 
-    Assert.IsType<BadRequestObjectResult>(result.Result);
+    var problem = Assert.IsType<ObjectResult>(result.Result);
+    Assert.Equal(400, problem.StatusCode);
   }
 
   [Fact]
@@ -132,7 +133,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var manager = services.GetRequiredService<IServiceAccountManager>();
 
-    var saResult = await manager.CreateServer(
+    var saResult = await manager.CreateForServer(
       "Delete Me",
       null,
       TestContext.Current.CancellationToken);
@@ -160,7 +161,8 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
       ServiceAccountsController>(scope, cancellationToken: TestContext.Current.CancellationToken);
 
     var result = await controller.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
-    Assert.IsType<NotFoundObjectResult>(result);
+    var notFound = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(404, notFound.StatusCode);
   }
 
   [Fact]
@@ -175,7 +177,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     var manager = services.GetRequiredService<IServiceAccountManager>();
 
     // Create another account.
-    await manager.CreateServer("Additional Account", null, TestContext.Current.CancellationToken);
+    await manager.CreateForServer("Additional Account", null, TestContext.Current.CancellationToken);
 
     var result = await controller.GetAll(TestContext.Current.CancellationToken);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -191,7 +193,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var manager = services.GetRequiredService<IServiceAccountManager>();
 
-    var saResult = await manager.CreateServer("Revoke Credential SA", null, TestContext.Current.CancellationToken);
+    var saResult = await manager.CreateForServer("Revoke Credential SA", null, TestContext.Current.CancellationToken);
     Assert.True(saResult.IsSuccess);
     var accountId = saResult.Value.ServiceAccount.Id;
     var credentialId = saResult.Value.ServiceAccount.Credentials[0].Id;
@@ -220,11 +222,12 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
       ServiceAccountsController>(scope, cancellationToken: TestContext.Current.CancellationToken);
     var manager = scope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
 
-    var saResult = await manager.CreateServer("Revoke NonExistent SA", null, TestContext.Current.CancellationToken);
+    var saResult = await manager.CreateForServer("Revoke NonExistent SA", null, TestContext.Current.CancellationToken);
     Assert.True(saResult.IsSuccess);
     var accountId = saResult.Value.ServiceAccount.Id;
 
     var result = await controller.RevokeCredential(accountId, Guid.NewGuid(), TestContext.Current.CancellationToken);
-    Assert.IsType<NotFoundObjectResult>(result);
+    var notFound = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(404, notFound.StatusCode);
   }
 }

@@ -74,7 +74,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
   private static async Task<ClaimsPrincipal> CreateServerPrincipal(IServiceProvider services)
   {
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
-    var saResult = await serviceAccountManager.CreateServer(
+    var saResult = await serviceAccountManager.CreateForServer(
       $"server-principal-{Guid.NewGuid():N}",
       null,
       TestContext.Current.CancellationToken);

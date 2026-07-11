@@ -20,7 +20,7 @@ public class AddCredentialResponseCodeTests(ITestOutputHelper testOutput)
       var services = scope.ServiceProvider;
       var manager = services.GetRequiredService<IServiceAccountManager>();
 
-      var saResult = await manager.CreateServer("Disabled SA", null, TestContext.Current.CancellationToken);
+      var saResult = await manager.CreateForServer("Disabled SA", null, TestContext.Current.CancellationToken);
       Assert.True(saResult.IsSuccess);
       accountId = saResult.Value.ServiceAccount.Id;
 
@@ -43,7 +43,7 @@ public class AddCredentialResponseCodeTests(ITestOutputHelper testOutput)
         new CreateServiceAccountCredentialRequestDto("New Credential"),
         TestContext.Current.CancellationToken);
 
-      var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+      var conflict = Assert.IsType<ObjectResult>(result.Result);
       Assert.Equal(409, conflict.StatusCode);
     }
   }
@@ -56,7 +56,7 @@ public class AddCredentialResponseCodeTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var manager = services.GetRequiredService<IServiceAccountManager>();
 
-    var saResult = await manager.CreateServer("Empty Name SA", null, TestContext.Current.CancellationToken);
+    var saResult = await manager.CreateForServer("Empty Name SA", null, TestContext.Current.CancellationToken);
     Assert.True(saResult.IsSuccess);
     var accountId = saResult.Value.ServiceAccount.Id;
 
@@ -68,7 +68,7 @@ public class AddCredentialResponseCodeTests(ITestOutputHelper testOutput)
       new CreateServiceAccountCredentialRequestDto("   "),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var badRequest = Assert.IsType<ObjectResult>(result.Result);
     Assert.Equal(400, badRequest.StatusCode);
   }
 
@@ -86,7 +86,7 @@ public class AddCredentialResponseCodeTests(ITestOutputHelper testOutput)
       new CreateServiceAccountCredentialRequestDto("New Credential"),
       TestContext.Current.CancellationToken);
 
-    var notFound = Assert.IsType<NotFoundObjectResult>(result.Result);
+    var notFound = Assert.IsType<ObjectResult>(result.Result);
     Assert.Equal(404, notFound.StatusCode);
   }
 
@@ -98,7 +98,7 @@ public class AddCredentialResponseCodeTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var manager = services.GetRequiredService<IServiceAccountManager>();
 
-    var saResult = await manager.CreateServer("Success SA", null, TestContext.Current.CancellationToken);
+    var saResult = await manager.CreateForServer("Success SA", null, TestContext.Current.CancellationToken);
     Assert.True(saResult.IsSuccess);
     var accountId = saResult.Value.ServiceAccount.Id;
 

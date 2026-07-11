@@ -209,7 +209,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     var deviceB = await services.CreateTestDevice(tenantB.Id);
 
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
-    var saResult = await serviceAccountManager.CreateServer(
+    var saResult = await serviceAccountManager.CreateForServer(
       "CrossTenant SA 2",
       null,
       TestContext.Current.CancellationToken);
@@ -253,7 +253,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     var deviceB = await services.CreateTestDevice(tenantB.Id);
 
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
-    var saResult = await serviceAccountManager.CreateServer(
+    var saResult = await serviceAccountManager.CreateForServer(
       "CrossTenant SA",
       null,
       TestContext.Current.CancellationToken);
@@ -290,7 +290,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     var services = scope.ServiceProvider;
     var manager = services.GetRequiredService<IServiceAccountManager>();
 
-    var createResult = await manager.CreateServer(
+    var createResult = await manager.CreateForServer(
       "Lifecycle SA",
       "Created by test",
       TestContext.Current.CancellationToken);

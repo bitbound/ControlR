@@ -2,6 +2,7 @@ using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 using Microsoft.AspNetCore.Mvc;
+using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api.V0;
 
@@ -28,17 +29,7 @@ public class ServiceAccountsController(
     var result = await _serviceAccountManager.AddCredential(serviceAccountId, request.Name, cancellationToken);
     if (!result.IsSuccess)
     {
-      if (string.Equals(result.Reason, "Server service account not found.", StringComparison.Ordinal))
-      {
-        return NotFound(result.Reason);
-      }
-
-      if (string.Equals(result.Reason, "Service account is disabled.", StringComparison.Ordinal))
-      {
-        return Conflict(result.Reason);
-      }
-
-      return BadRequest(result.Reason);
+      return result.ToActionResult();
     }
 
     return Ok(result.Value);
@@ -54,10 +45,10 @@ public class ServiceAccountsController(
       return Forbid();
     }
 
-    var result = await _serviceAccountManager.CreateServer(request.Name, request.Description, cancellationToken);
+    var result = await _serviceAccountManager.CreateForServer(request.Name, request.Description, cancellationToken);
     if (!result.IsSuccess)
     {
-      return BadRequest(result.Reason);
+      return result.ToActionResult();
     }
 
     return CreatedAtAction(nameof(GetAll), new { }, result.Value);
@@ -76,7 +67,7 @@ public class ServiceAccountsController(
     var result = await _serviceAccountManager.Delete(serviceAccountId, cancellationToken);
     if (!result.IsSuccess)
     {
-      return NotFound(result.Reason);
+      return result.ToActionResult();
     }
 
     return NoContent();
@@ -108,7 +99,7 @@ public class ServiceAccountsController(
     var result = await _serviceAccountManager.RevokeCredential(serviceAccountId, credentialId, cancellationToken);
     if (!result.IsSuccess)
     {
-      return NotFound(result.Reason);
+      return result.ToActionResult();
     }
 
     return NoContent();
