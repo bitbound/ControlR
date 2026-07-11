@@ -1,50 +1,51 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
+using ControlR.Web.Server.Primitives;
 
 namespace ControlR.Web.Server.Services.Tenants;
 
 public interface ITenantProvisioningService
 {
-  Task<Result<CreateTenantResponseDto>> CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken);
-  Task<Result<GetTenantResponseDto>> GetTenant(Guid id, CancellationToken cancellationToken);
+  Task<HttpResult<CreateTenantResponseDto>> CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken);
+  Task<HttpResult<GetTenantResponseDto>> GetTenant(Guid id, CancellationToken cancellationToken);
 }
 
 public class TenantProvisioningService(
   IDbContextFactory<AppDb> dbContextFactory,
   ILogger<TenantProvisioningService> logger) : ITenantProvisioningService
 {
-  public async Task<Result<CreateTenantResponseDto>> CreateTenant(
+  public async Task<HttpResult<CreateTenantResponseDto>> CreateTenant(
     CreateTenantRequestDto request,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(request.Name))
     {
-      return Result.Fail<CreateTenantResponseDto>("Tenant name is required.");
+      return HttpResult.Fail<CreateTenantResponseDto>(HttpResultErrorCode.BadRequest, "Tenant name is required.");
     }
 
     try
     {
       await using var appDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-      
+
       var tenant = new Tenant
       {
         Name = request.Name
       };
-        
+
       appDb.Tenants.Add(tenant);
       await appDb.SaveChangesAsync(cancellationToken);
 
-      return Result.Ok(new CreateTenantResponseDto(
+      return HttpResult.Ok(new CreateTenantResponseDto(
         tenant.Id,
         tenant.Name ?? string.Empty));
     }
     catch (Exception ex)
     {
       logger.LogError(ex, "Failed to provision tenant {TenantName}.", request.Name);
-      return Result.Fail<CreateTenantResponseDto>(ex, "Failed to provision tenant.");
+      return HttpResult.Fail<CreateTenantResponseDto>(ex, HttpResultErrorCode.InternalServerError, "Failed to provision tenant.");
     }
   }
 
-  public async Task<Result<GetTenantResponseDto>> GetTenant(Guid id, CancellationToken cancellationToken)
+  public async Task<HttpResult<GetTenantResponseDto>> GetTenant(Guid id, CancellationToken cancellationToken)
   {
     await using var appDb = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
@@ -54,10 +55,10 @@ public class TenantProvisioningService(
 
     if (tenant is null)
     {
-      return Result.Fail<GetTenantResponseDto>("Tenant not found.");
+      return HttpResult.Fail<GetTenantResponseDto>(HttpResultErrorCode.NotFound, "Tenant not found.");
     }
 
-    return Result.Ok(new GetTenantResponseDto(
+    return HttpResult.Ok(new GetTenantResponseDto(
       tenant.Id,
       tenant.Name ?? string.Empty));
   }

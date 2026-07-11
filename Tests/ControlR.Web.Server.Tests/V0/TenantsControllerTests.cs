@@ -23,7 +23,7 @@ public class TenantsControllerTests(ITestOutputHelper testOutput)
       new CreateTenantRequestDto(""),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+    var badRequest = Assert.IsType<ObjectResult>(result.Result);
     Assert.Equal(400, badRequest.StatusCode);
   }
 
@@ -56,7 +56,8 @@ public class TenantsControllerTests(ITestOutputHelper testOutput)
       TenantsController>(scope, cancellationToken: TestContext.Current.CancellationToken);
 
     var result = await controller.Get(Guid.NewGuid(), TestContext.Current.CancellationToken);
-    Assert.IsType<NotFoundResult>(result.Result);
+    var notFound = Assert.IsType<ObjectResult>(result.Result);
+    Assert.Equal(404, notFound.StatusCode);
   }
 
   [Fact]

@@ -20,7 +20,7 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
     var result = await tenantProvisioningService.CreateTenant(request, cancellationToken);
     if (!result.IsSuccess)
     {
-      return BadRequest(result.Reason);
+      return result.ToActionResult();
     }
 
     return CreatedAtAction(nameof(Get), new { id = result.Value.TenantId }, result.Value);
@@ -34,7 +34,7 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
     var result = await tenantProvisioningService.GetTenant(id, cancellationToken);
     if (!result.IsSuccess)
     {
-      return NotFound();
+      return result.ToActionResult();
     }
 
     return Ok(result.Value);
