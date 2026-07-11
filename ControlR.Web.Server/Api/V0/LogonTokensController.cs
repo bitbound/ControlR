@@ -25,6 +25,11 @@ public class LogonTokensController : ControllerBase
       return BadRequest("Device not found");
     }
 
+    if (request.ExpirationMinutes < 1 || request.ExpirationMinutes > 1440)
+    {
+      return BadRequest("ExpirationMinutes must be between 1 and 1440.");
+    }
+
     Guid? userId = request.UserId;
 
     if (request.Kind == LogonTokenKind.Service)
