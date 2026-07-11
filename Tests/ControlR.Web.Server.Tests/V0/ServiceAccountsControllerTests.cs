@@ -1,9 +1,12 @@
+using System.Reflection;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.V0;
+using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -93,24 +96,12 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task Create_ByNonServerPrincipal_ReturnsForbid()
+  public void Create_RequiresServerServiceAccountPolicy()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-
-    var tenant = await services.CreateTestTenant();
-    var user = await services.CreateTestUser(tenant.Id, email: "denied@test.local",
-      roles: RoleNames.TenantAdministrator);
-
-    var controller = scope.CreateController<ServiceAccountsController>();
-    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
-
-    var createResult = await controller.Create(
-      new CreateServiceAccountRequestDto("Should Not Work", null),
-      TestContext.Current.CancellationToken);
-
-    Assert.IsType<ForbidResult>(createResult.Result);
+    var attribute = typeof(ServiceAccountsController)
+      .GetCustomAttribute<AuthorizeAttribute>();
+    Assert.NotNull(attribute);
+    Assert.Equal(RequireServerServiceAccountPolicy.PolicyName, attribute.Policy);
   }
 
   [Fact]

@@ -12,15 +12,6 @@ public static class DeviceAccessByDeviceResourcePolicy
       .RequireAuthenticatedUser()
       .RequireServiceProviderAssertion(async (sp, handlerCtx, authzHandler) =>
       {
-        // Server-scoped service accounts have unbound (cross-tenant) access in the interim
-        // authorization model. The full permission evaluator (Phase 2 PR 11) replaces this
-        // bypass with explicit server permission checks.
-        if (handlerCtx.User.IsServerPrincipal())
-        {
-          handlerCtx.Succeed(handlerCtx.Requirements.OfType<IAuthorizationRequirement>().First());
-          return true;
-        }
-
         var logger = sp.GetRequiredService<ILogger<AuthorizationPolicyBuilder>>();
 
         if (handlerCtx.Resource is not Device device)

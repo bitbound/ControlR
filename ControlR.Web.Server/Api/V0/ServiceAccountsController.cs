@@ -2,7 +2,6 @@ using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 using Microsoft.AspNetCore.Mvc;
-using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Api.V0;
 
@@ -21,11 +20,6 @@ public class ServiceAccountsController(
     [FromBody] CreateServiceAccountCredentialRequestDto request,
     CancellationToken cancellationToken)
   {
-    if (!User.IsServerPrincipal())
-    {
-      return Forbid();
-    }
-
     var result = await _serviceAccountManager.AddCredential(serviceAccountId, request.Name, cancellationToken);
     if (!result.IsSuccess)
     {
@@ -40,11 +34,6 @@ public class ServiceAccountsController(
     [FromBody] CreateServiceAccountRequestDto request,
     CancellationToken cancellationToken)
   {
-    if (!User.IsServerPrincipal())
-    {
-      return Forbid();
-    }
-
     var result = await _serviceAccountManager.CreateForServer(request.Name, request.Description, cancellationToken);
     if (!result.IsSuccess)
     {
@@ -59,11 +48,6 @@ public class ServiceAccountsController(
     Guid serviceAccountId,
     CancellationToken cancellationToken)
   {
-    if (!User.IsServerPrincipal())
-    {
-      return Forbid();
-    }
-
     var result = await _serviceAccountManager.Delete(serviceAccountId, cancellationToken);
     if (!result.IsSuccess)
     {
@@ -76,11 +60,6 @@ public class ServiceAccountsController(
   [HttpGet]
   public async Task<ActionResult<List<ServiceAccountDto>>> GetAll(CancellationToken cancellationToken)
   {
-    if (!User.IsServerPrincipal())
-    {
-      return Forbid();
-    }
-
     var accounts = await _serviceAccountManager.GetAllServer(cancellationToken);
     return Ok(accounts);
   }
@@ -91,11 +70,6 @@ public class ServiceAccountsController(
     Guid credentialId,
     CancellationToken cancellationToken)
   {
-    if (!User.IsServerPrincipal())
-    {
-      return Forbid();
-    }
-
     var result = await _serviceAccountManager.RevokeCredential(serviceAccountId, credentialId, cancellationToken);
     if (!result.IsSuccess)
     {

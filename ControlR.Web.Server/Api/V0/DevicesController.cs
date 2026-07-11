@@ -83,7 +83,6 @@ public class DevicesController() : ControllerBase
   [HttpGet("{deviceId:guid}")]
   public async Task<ActionResult<DeviceResponseDto>> GetDevice(
     [FromServices] AppDb appDb,
-    [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromRoute] Guid deviceId)
   {
@@ -91,13 +90,6 @@ public class DevicesController() : ControllerBase
     if (device is null)
     {
       return NotFound();
-    }
-
-    var authResult =
-      await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
-    if (!authResult.Succeeded)
-    {
-      return Forbid();
     }
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
@@ -172,7 +164,6 @@ public class DevicesController() : ControllerBase
     [FromRoute] Guid deviceId,
     [FromBody] V0Dtos.UpdateDeviceAliasRequestDto requestDto,
     [FromServices] AppDb appDb,
-    [FromServices] IAuthorizationService authorizationService,
     [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromServices] ILogger<DevicesController> logger)
   {
@@ -191,14 +182,6 @@ public class DevicesController() : ControllerBase
     {
       logger.LogWarning("Device {DeviceId} not found for alias update.", deviceId);
       return NotFound();
-    }
-
-    var authResult =
-      await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
-    if (!authResult.Succeeded)
-    {
-      logger.LogWarning("User {UserName} denied access to update alias for device {DeviceId}.", User.Identity?.Name, deviceId);
-      return Forbid();
     }
 
     device.Alias = requestDto.Alias ?? string.Empty;

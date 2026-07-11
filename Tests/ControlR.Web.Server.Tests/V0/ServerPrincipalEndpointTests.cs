@@ -89,15 +89,14 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     var controller = scope.CreateController<DevicesController>();
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
-    var authorizationService = services.GetRequiredService<IAuthorizationService>();
     var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
 
-    var resultA = await controller.GetDevice(appDb, authorizationService, agentVersionProvider, deviceA.Id);
+    var resultA = await controller.GetDevice(appDb, agentVersionProvider, deviceA.Id);
     var okResultA = Assert.IsType<ActionResult<DeviceResponseDto>>(resultA);
     Assert.NotNull(okResultA.Value);
     Assert.Equal(deviceA.Id, okResultA.Value.Id);
 
-    var resultB = await controller.GetDevice(appDb, authorizationService, agentVersionProvider, deviceB.Id);
+    var resultB = await controller.GetDevice(appDb, agentVersionProvider, deviceB.Id);
     var okResultB = Assert.IsType<ActionResult<DeviceResponseDto>>(resultB);
     Assert.NotNull(okResultB.Value);
     Assert.Equal(deviceB.Id, okResultB.Value.Id);
