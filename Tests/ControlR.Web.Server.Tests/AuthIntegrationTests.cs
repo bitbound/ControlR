@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests;
 
-public class AuthFlowRegressionTests(ITestOutputHelper testOutput)
+public class AuthIntegrationTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutput = testOutput;
 

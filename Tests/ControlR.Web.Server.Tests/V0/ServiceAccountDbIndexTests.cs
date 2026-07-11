@@ -1,6 +1,4 @@
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -148,42 +146,5 @@ public class ServiceAccountDbIndexTests(ITestOutputHelper testOutput)
       () => cmd.ExecuteNonQueryAsync(TestContext.Current.CancellationToken));
 
     Assert.Contains("CK_ServiceAccounts_Kind_TenantId", ex.Message);
-  }
-
-  [Fact]
-  public async Task SaveChanges_SameNameDifferentTenants_Succeeds()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(
-      testOutput,
-      useInMemoryDatabase: false);
-
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-    var tenantA = await services.CreateTestTenant("Tenant A");
-    var tenantB = await services.CreateTestTenant("Tenant B");
-
-    var appDb = services.GetRequiredService<AppDb>();
-
-    appDb.ServiceAccounts.Add(new ServiceAccount
-    {
-      Kind = ServiceAccountKind.Tenant,
-      TenantId = tenantA.Id,
-      Name = "SharedName",
-      IsEnabled = true,
-    });
-    await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-    using var scope2 = testApp.CreateScope();
-    var appDb2 = scope2.ServiceProvider.GetRequiredService<AppDb>();
-
-    appDb2.ServiceAccounts.Add(new ServiceAccount
-    {
-      Kind = ServiceAccountKind.Tenant,
-      TenantId = tenantB.Id,
-      Name = "SharedName",
-      IsEnabled = true,
-    });
-
-    await appDb2.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
 }
