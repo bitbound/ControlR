@@ -6,7 +6,7 @@ public record CreateLogonTokenRequestDto(
   Guid DeviceId,
   Guid TenantId,
   Guid? UserId,
-  [StringLength(512)]
+  [StringLength(252)]
   string? UserCorrelationId,
   LogonTokenKind Kind,
   [Range(1, 1440)]
