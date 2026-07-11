@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Tests.V0;
 public class ServiceAccountManagerTests(ITestOutputHelper testOutput)
 {
   [Fact]
-  public async Task ServiceAccountLifecycle_CreateRevokeDelete()
+  public async Task ServiceAccountLifecycle_Full_Succeeds()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();

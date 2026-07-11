@@ -11,7 +11,7 @@ namespace ControlR.Web.Server.Tests.V0;
 public class TenantsControllerTests(ITestOutputHelper testOutput)
 {
   [Fact]
-  public async Task Create_ReturnsBadRequest_OnEmptyName()
+  public async Task Create_OnEmptyName_ReturnsBadRequest()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
@@ -47,20 +47,6 @@ public class TenantsControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task Get_ReturnsNotFound_WhenNotFound()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
-    using var scope = testApp.CreateScope();
-
-    var controller = await TestPrincipalHelper.CreateControllerWithServerServiceAccountAsync<
-      TenantsController>(scope, cancellationToken: TestContext.Current.CancellationToken);
-
-    var result = await controller.Get(Guid.NewGuid(), TestContext.Current.CancellationToken);
-    var notFound = Assert.IsType<ObjectResult>(result.Result);
-    Assert.Equal(404, notFound.StatusCode);
-  }
-
-  [Fact]
   public async Task Get_ReturnsOk()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
@@ -80,5 +66,19 @@ public class TenantsControllerTests(ITestOutputHelper testOutput)
     var dto = Assert.IsType<GetTenantResponseDto>(okResult.Value);
     Assert.Equal(tenant.Id, dto.TenantId);
     Assert.Equal("Get Test Tenant", dto.TenantName);
+  }
+
+  [Fact]
+  public async Task Get_WhenNotFound_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+
+    var controller = await TestPrincipalHelper.CreateControllerWithServerServiceAccountAsync<
+      TenantsController>(scope, cancellationToken: TestContext.Current.CancellationToken);
+
+    var result = await controller.Get(Guid.NewGuid(), TestContext.Current.CancellationToken);
+    var notFound = Assert.IsType<ObjectResult>(result.Result);
+    Assert.Equal(404, notFound.StatusCode);
   }
 }

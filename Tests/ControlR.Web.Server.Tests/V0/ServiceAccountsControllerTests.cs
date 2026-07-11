@@ -93,6 +93,27 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task Create_ByNonServerPrincipal_ReturnsForbid()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, email: "denied@test.local",
+      roles: RoleNames.TenantAdministrator);
+
+    var controller = scope.CreateController<ServiceAccountsController>();
+    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
+
+    var createResult = await controller.Create(
+      new CreateServiceAccountRequestDto("Should Not Work", null),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(createResult.Result);
+  }
+
+  [Fact]
   public async Task Create_ReturnsBadRequest_OnMissingName()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
@@ -186,27 +207,6 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
     var list = Assert.IsType<List<ServiceAccountDto>>(okResult.Value);
     Assert.True(list.Count >= 2, "Should have at least 2 accounts");
-  }
-
-  [Fact]
-  public async Task NonServerPrincipal_DeniedServiceAccountManagement()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-
-    var tenant = await services.CreateTestTenant();
-    var user = await services.CreateTestUser(tenant.Id, email: "denied@test.local",
-      roles: RoleNames.TenantAdministrator);
-
-    var controller = scope.CreateController<ServiceAccountsController>();
-    await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
-
-    var createResult = await controller.Create(
-      new CreateServiceAccountRequestDto("Should Not Work", null),
-      TestContext.Current.CancellationToken);
-
-    Assert.IsType<ForbidResult>(createResult.Result);
   }
 
   [Fact]

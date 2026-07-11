@@ -10,7 +10,7 @@ namespace ControlR.Web.Server.Tests.V0;
 public class V0ApiIntegrationTests(ITestOutputHelper testOutput)
 {
   [Fact]
-  public async Task ServerPrincipal_CreateInstallerKey_ViaHttp()
+  public async Task CreateInstallerKey_ViaHttp_ReturnsOk()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(testOutput);
     using var httpClient = await testServer.GetHttpClient();
@@ -42,7 +42,7 @@ public class V0ApiIntegrationTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ServerPrincipal_CreateLogonToken_ViaHttp()
+  public async Task CreateLogonToken_ViaHttp_ReturnsOk()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(testOutput);
     using var httpClient = await testServer.GetHttpClient();

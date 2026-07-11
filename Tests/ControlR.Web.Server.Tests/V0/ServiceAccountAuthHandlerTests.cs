@@ -16,7 +16,23 @@ namespace ControlR.Web.Server.Tests.V0;
 public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
 {
   [Fact]
-  public async Task HandleAuthenticateAsync_ShouldFail_WithExpiredCredential()
+  public async Task HandleAuthenticateAsync_WithEmptyHeader_ShouldReturnNoResult()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var context = CreateHttpContext("");
+    var handler = await CreateHandler(services, context);
+
+    var result = await handler.AuthenticateAsync();
+
+    Assert.False(result.Succeeded);
+    Assert.Null(result.Failure);
+  }
+
+  [Fact]
+  public async Task HandleAuthenticateAsync_WithExpiredCredential_ShouldFail()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     var plainTextSecretKey = string.Empty;
@@ -56,7 +72,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task HandleAuthenticateAsync_ShouldFail_WithInvalidApiKey()
+  public async Task HandleAuthenticateAsync_WithInvalidApiKey_ShouldFail()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
@@ -71,7 +87,23 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task HandleAuthenticateAsync_ShouldFail_WithRevokedCredential()
+  public async Task HandleAuthenticateAsync_WithMissingHeader_ShouldReturnNoResult()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var context = new DefaultHttpContext();
+    var handler = await CreateHandler(services, context);
+
+    var result = await handler.AuthenticateAsync();
+
+    Assert.False(result.Succeeded);
+    Assert.Null(result.Failure);
+  }
+
+  [Fact]
+  public async Task HandleAuthenticateAsync_WithRevokedCredential_ShouldFail()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
@@ -101,39 +133,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task HandleAuthenticateAsync_ShouldReturnNoResult_WithEmptyHeader()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-
-    var context = CreateHttpContext("");
-    var handler = await CreateHandler(services, context);
-
-    var result = await handler.AuthenticateAsync();
-
-    Assert.False(result.Succeeded);
-    Assert.Null(result.Failure);
-  }
-
-  [Fact]
-  public async Task HandleAuthenticateAsync_ShouldReturnNoResult_WithMissingHeader()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
-    using var scope = testApp.CreateScope();
-    var services = scope.ServiceProvider;
-
-    var context = new DefaultHttpContext();
-    var handler = await CreateHandler(services, context);
-
-    var result = await handler.AuthenticateAsync();
-
-    Assert.False(result.Succeeded);
-    Assert.Null(result.Failure);
-  }
-
-  [Fact]
-  public async Task HandleAuthenticateAsync_ShouldSucceed_WithValidApiKey()
+  public async Task HandleAuthenticateAsync_WithValidApiKey_ShouldSucceed()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();

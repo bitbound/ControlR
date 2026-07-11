@@ -9,7 +9,30 @@ namespace ControlR.Web.Server.Tests.V0;
 public class ServiceAccountAuthRateLimitPolicyTests
 {
   [Fact]
-  public async Task DifferentCredentialPrefixes_GetIndependentRateLimits()
+  public async Task GlobalLimiter_LimitsRepeatedServiceAccountHeaderRequests()
+  {
+    var limiter = PartitionedRateLimiter.Create<HttpContext, string>(
+      ServiceAccountAuthRateLimitPolicy.Create(new AppOptions
+      {
+        ServiceAccountAuthFailureLimit = 2,
+        ServiceAccountAuthFailureWindowMinutes = 1,
+      }));
+
+    var context = new DefaultHttpContext();
+    context.Connection.RemoteIpAddress = System.Net.IPAddress.Loopback;
+    context.Request.Headers[ServiceAccountCredentialAuthenticationSchemeOptions.DefaultHeaderName] = "abc123:secret";
+
+    using var lease1 = await limiter.AcquireAsync(context, 1, TestContext.Current.CancellationToken);
+    using var lease2 = await limiter.AcquireAsync(context, 1, TestContext.Current.CancellationToken);
+    using var lease3 = await limiter.AcquireAsync(context, 1, TestContext.Current.CancellationToken);
+
+    Assert.True(lease1.IsAcquired);
+    Assert.True(lease2.IsAcquired);
+    Assert.False(lease3.IsAcquired);
+  }
+
+  [Fact]
+  public async Task RateLimiter_DifferentCredentialPrefixes_GetIndependentLimits()
   {
     var limiter = PartitionedRateLimiter.Create<HttpContext, string>(
       ServiceAccountAuthRateLimitPolicy.Create(new AppOptions
@@ -46,7 +69,7 @@ public class ServiceAccountAuthRateLimitPolicyTests
   }
 
   [Fact]
-  public async Task DifferentIps_GetIndependentRateLimits()
+  public async Task RateLimiter_DifferentIps_GetIndependentLimits()
   {
     var limiter = PartitionedRateLimiter.Create<HttpContext, string>(
       ServiceAccountAuthRateLimitPolicy.Create(new AppOptions
@@ -84,28 +107,5 @@ public class ServiceAccountAuthRateLimitPolicyTests
     Assert.True(lease2a.IsAcquired);
     Assert.True(lease2b.IsAcquired);
     Assert.False(lease2c.IsAcquired);
-  }
-
-  [Fact]
-  public async Task GlobalLimiter_LimitsRepeatedServiceAccountHeaderRequests()
-  {
-    var limiter = PartitionedRateLimiter.Create<HttpContext, string>(
-      ServiceAccountAuthRateLimitPolicy.Create(new AppOptions
-      {
-        ServiceAccountAuthFailureLimit = 2,
-        ServiceAccountAuthFailureWindowMinutes = 1,
-      }));
-
-    var context = new DefaultHttpContext();
-    context.Connection.RemoteIpAddress = System.Net.IPAddress.Loopback;
-    context.Request.Headers[ServiceAccountCredentialAuthenticationSchemeOptions.DefaultHeaderName] = "abc123:secret";
-
-    using var lease1 = await limiter.AcquireAsync(context, 1, TestContext.Current.CancellationToken);
-    using var lease2 = await limiter.AcquireAsync(context, 1, TestContext.Current.CancellationToken);
-    using var lease3 = await limiter.AcquireAsync(context, 1, TestContext.Current.CancellationToken);
-
-    Assert.True(lease1.IsAcquired);
-    Assert.True(lease2.IsAcquired);
-    Assert.False(lease3.IsAcquired);
   }
 }

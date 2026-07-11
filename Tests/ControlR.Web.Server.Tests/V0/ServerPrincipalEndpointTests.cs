@@ -24,7 +24,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
   private readonly ITestOutputHelper _testOutput = testOutput;
 
   [Fact]
-  public async Task ServerPrincipalCanCreateInstallerKeyWithExplicitContext()
+  public async Task CreateInstallerKey_WithExplicitContext_ReturnsOk()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -48,7 +48,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ServerPrincipalCanCreateLogonTokenWithExplicitUserAndTenant()
+  public async Task CreateLogonToken_WithExplicitUserAndTenant_ReturnsOk()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -75,7 +75,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ServerPrincipalCanGetSingleDeviceFromAnyTenant()
+  public async Task GetDevice_CrossTenant_ReturnsOk()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -104,7 +104,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ServerPrincipalCanListDevicesAcrossTenants()
+  public async Task Get_CrossTenant_ReturnsOk()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
