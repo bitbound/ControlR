@@ -1,4 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.FileSystem;
@@ -8,7 +7,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 namespace ControlR.Agent.Common.Services;
 
