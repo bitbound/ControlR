@@ -65,13 +65,13 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 
 ## API Routing & Versioning
 
-**Three route roots, three stability levels** — never cross them:
+**Two route roots, two stability levels** — never cross them:
 
-| Root | URL prefix | Policy | Stability | Consumer |
+| Root | URL prefix | Stability | Consumer |
 |---|---|---|---|---|
-| `Internal` | `/api/internal/*` | `RequireUserPrincipalPolicy` | Unversioned, volatile | BFF (Blazor UI) |
-| `V0` | `/api/v0/*` | `RequireServerServiceAccountPolicy` | Stable contract | S2S automation |
-| `Legacy` | `/api/devices`, `/api/agent-update` | — | Frozen, no new endpoints | Being phased out |
+| `Api/Internal` | `/api/internal/*` | Unversioned, volatile | BFF (Blazor UI) |
+| `Api/V0` | `/api/v0/*` | Stable contract | S2S automation |
+| `Api` | `/api/devices`, `/api/agent-update` | Frozen, no new endpoints | Being phased out |
 
 - Controllers live in `Api/{Root}/` with namespace `ControlR.Web.Server.Api.{Root}`.
 - Controller class names carry **no** version or audience prefix. The namespace + `[ApiVersion]` attribute convey that.
