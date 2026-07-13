@@ -1,10 +1,8 @@
-using System.Runtime.CompilerServices;
 using ControlR.ApiClient.Interfaces.V0;
 using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
-using Microsoft.Extensions.Logging;
 
 namespace ControlR.ApiClient;
 
@@ -45,37 +43,16 @@ internal partial class V0Api
     });
   }
 
-  async IAsyncEnumerable<ServiceAccountDto> IServiceAccountsApi.GetAll([EnumeratorCancellation] CancellationToken cancellationToken)
+  async Task<ApiResult<List<ServiceAccountDto>>> IServiceAccountsApi.GetAll(CancellationToken cancellationToken)
   {
-    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<ServiceAccountDto>(
-      HttpConstants.V0.ServiceAccountsEndpoint,
-      cancellationToken: cancellationToken);
-
-    await foreach (var account in stream.WithCancellation(cancellationToken))
+    return await _client.ExecuteApiCall(async () =>
     {
-      if (account is null)
-      {
-        continue;
-      }
-
-      if (!_client.Options.Value.DisableStreamingResponseDtoStrictness)
-      {
-        var validationErrors = DtoValidatorFactory.Validate(account);
-        if (validationErrors is not null)
-        {
-          if (_client.Options.Value.DisableResponseDtoStrictness)
-          {
-            _client.Logger.LogWarning("Streaming response DTO validation failed but strictness is disabled: {Reason}", validationErrors);
-          }
-          else
-          {
-            throw new InvalidDataException($"DTO validation failed: {validationErrors}");
-          }
-        }
-      }
-
-      yield return account;
-    }
+      using var response = await _client.HttpClient.GetAsync(
+        HttpConstants.V0.ServiceAccountsEndpoint,
+        cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<List<ServiceAccountDto>>(cancellationToken) ?? [];
+    });
   }
 
   async Task<ApiResult> IServiceAccountsApi.RevokeCredential(
