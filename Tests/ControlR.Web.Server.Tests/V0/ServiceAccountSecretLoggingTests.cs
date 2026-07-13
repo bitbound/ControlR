@@ -104,7 +104,7 @@ public class ServiceAccountSecretLoggingTests(ITestOutputHelper testOutput)
       extraConfiguration: config,
       configureLogging: builder => builder.AddProvider(_loggerProvider));
 
-    await testApp.App.BootstrapServerServiceAccount();
+    await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     var plaintextSecret = config["Bootstrap:ServerServiceAccountTokenSecret"]!;
     var capturedMessages = _loggerProvider.Logs.Select(l => l.Message).ToList();

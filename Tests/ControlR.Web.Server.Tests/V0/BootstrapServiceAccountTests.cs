@@ -26,7 +26,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     };
 
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
-    await testApp.App.BootstrapServerServiceAccount();
+    await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
     var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
@@ -60,7 +60,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     };
 
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
-    await testApp.App.BootstrapServerServiceAccount();
+    await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
     var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
@@ -91,8 +91,8 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     };
 
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
-    await testApp.App.BootstrapServerServiceAccount();
-    await testApp.App.BootstrapServerServiceAccount();
+    await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
+    await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
     var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
@@ -115,7 +115,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     };
 
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
-    await testApp.App.BootstrapServerServiceAccount();
+    await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
     var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
@@ -139,7 +139,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
   public async Task Bootstrap_WithNoConfig_DoesNothing()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
-    await testApp.App.BootstrapServerServiceAccount();
+    await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
     var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
@@ -158,7 +158,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
 
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper, extraConfiguration: config);
     await Assert.ThrowsAsync<InvalidOperationException>(
-      () => testApp.App.BootstrapServerServiceAccount());
+      () => testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken));
   }
 
 }

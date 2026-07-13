@@ -183,17 +183,16 @@ public static class HostExtensions
   /// configuration. Safe to call on every startup: creation is skipped when the named account
   /// already exists.
   /// </summary>
-  public static async Task BootstrapServerServiceAccount(this IHost host)
+  public static async Task BootstrapServerServiceAccount(this IHost host, CancellationToken cancellationToken = default)
   {
     await using var scope = host.Services.CreateAsyncScope();
     var sp = scope.ServiceProvider;
 
     var bootstrapOptions = sp.GetRequiredService<IOptions<BootstrapOptions>>();
-    var appLifetime = sp.GetRequiredService<IHostApplicationLifetime>();
     var logger = sp.GetRequiredService<ILogger<Program>>();
     var serviceAccountManager = sp.GetRequiredService<IServiceAccountManager>();
 
-    var result = await serviceAccountManager.BootstrapServerServiceAccount(bootstrapOptions.Value, appLifetime.ApplicationStopping);
+    var result = await serviceAccountManager.BootstrapServerServiceAccount(bootstrapOptions.Value, cancellationToken);
     if (!result.IsSuccess)
     {
       logger.LogError("Bootstrap server service account failed: {Reason}", result.Reason);

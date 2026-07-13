@@ -54,6 +54,8 @@ public class ServiceAccountManager(
   IPasswordHasher<string> passwordHasher,
   ILogger<ServiceAccountManager> logger) : IServiceAccountManager
 {
+  private const string InvalidApiKeyFormatMessage = "Invalid service account API key format.";
+  private const string InvalidCredentialMessage = "Invalid service account credential.";
   private const int MinimumSecretLength = 32;
 
   public async Task<HttpResult<CreateServiceAccountCredentialResponseDto>> AddCredential(
@@ -244,7 +246,7 @@ public class ServiceAccountManager(
       .OrderBy(x => x.Name)
       .ToListAsync(cancellationToken);
 
-    return accounts.Select(MapToDto).ToList();
+    return [.. accounts.Select(MapToDto)];
   }
 
   public async Task<HttpResult> RevokeCredential(
@@ -281,7 +283,7 @@ public class ServiceAccountManager(
       var parts = apiKey.Split(':', 2);
       if (parts.Length != 2)
       {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, "Invalid service account API key format.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
       }
 
       // The header id is the credential Guid rendered via Convert.ToHexString on the
@@ -294,12 +296,12 @@ public class ServiceAccountManager(
       }
       catch
       {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, "Invalid service account API key format.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
       }
 
       if (credentialId == Guid.Empty)
       {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, "Invalid service account API key format.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
       }
 
       var credential = await appDb.ServiceAccountCredentials
@@ -309,7 +311,7 @@ public class ServiceAccountManager(
 
       if (credential is null)
       {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.NotFound, "Invalid service account credential.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.NotFound, InvalidCredentialMessage);
       }
 
       var account = credential.ServiceAccount;
@@ -331,7 +333,7 @@ public class ServiceAccountManager(
       var verification = passwordHasher.VerifyHashedPassword(string.Empty, credential.HashedSecret, parts[1]);
       if (verification == PasswordVerificationResult.Failed)
       {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, "Invalid service account credential.");
+        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidCredentialMessage);
       }
 
       // Update last-used timestamp. Rehash on the off chance the hasher signals an upgrade.
@@ -384,6 +386,7 @@ public class ServiceAccountManager(
       account.CreatedAt,
       account.Credentials
         .OrderBy(c => c.CreatedAt)
+        .ThenBy(c => c.Id)
         .Select(MapCredentialToDto)
         .ToList());
   }
