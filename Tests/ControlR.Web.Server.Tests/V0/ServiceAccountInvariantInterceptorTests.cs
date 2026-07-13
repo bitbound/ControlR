@@ -153,6 +153,9 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
     });
 
     await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+    var count = await db.ServiceAccounts.IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(2, count);
   }
 
   [Fact]
@@ -172,7 +175,7 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
     };
     db.ServiceAccounts.Add(badAccount);
 
-    var ex = await Assert.ThrowsAnyAsync<Exception>(
+    var ex = await Assert.ThrowsAnyAsync<InvalidOperationException>(
       () => db.SaveChangesAsync(TestContext.Current.CancellationToken));
     Assert.IsType<InvalidOperationException>(ex.InnerException ?? ex);
     Assert.Contains("Server-scoped service accounts must have a null TenantId", ex.Message);
@@ -228,7 +231,7 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
     };
     db.ServiceAccounts.Add(badAccount);
 
-    var ex = await Assert.ThrowsAnyAsync<Exception>(
+    var ex = await Assert.ThrowsAnyAsync<InvalidOperationException>(
       () => db.SaveChangesAsync(TestContext.Current.CancellationToken));
     Assert.IsType<InvalidOperationException>(ex.InnerException ?? ex);
     Assert.Contains("Tenant-scoped service accounts must have a non-null TenantId", ex.Message);
@@ -285,7 +288,7 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
 
     account.TenantId = Guid.NewGuid();
 
-    var ex = await Assert.ThrowsAnyAsync<Exception>(
+    var ex = await Assert.ThrowsAnyAsync<InvalidOperationException>(
       () => appDb.SaveChangesAsync(TestContext.Current.CancellationToken));
     Assert.IsType<InvalidOperationException>(ex.InnerException ?? ex);
     Assert.Contains("Server-scoped service accounts must have a null TenantId", ex.Message);
@@ -315,7 +318,7 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
 
     account.TenantId = null;
 
-    var ex = await Assert.ThrowsAnyAsync<Exception>(
+    var ex = await Assert.ThrowsAnyAsync<InvalidOperationException>(
       () => db.SaveChangesAsync(TestContext.Current.CancellationToken));
     Assert.IsType<InvalidOperationException>(ex.InnerException ?? ex);
     Assert.Contains("Tenant-scoped service accounts must have a non-null TenantId", ex.Message);

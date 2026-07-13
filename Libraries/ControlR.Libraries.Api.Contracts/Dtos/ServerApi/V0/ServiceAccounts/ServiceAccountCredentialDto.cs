@@ -7,3 +7,4 @@ public record ServiceAccountCredentialDto(
   DateTimeOffset? ExpiresAt,
   DateTimeOffset? RevokedAt,
   DateTimeOffset? LastUsedAt);
+

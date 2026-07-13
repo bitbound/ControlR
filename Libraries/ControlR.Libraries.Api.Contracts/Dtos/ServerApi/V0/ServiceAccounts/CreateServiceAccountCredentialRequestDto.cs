@@ -6,3 +6,4 @@ public record CreateServiceAccountCredentialRequestDto(
   [Required]
   [StringLength(100, MinimumLength = 1)]
   string Name);
+

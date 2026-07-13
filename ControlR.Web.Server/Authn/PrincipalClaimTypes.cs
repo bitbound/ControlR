@@ -7,7 +7,6 @@ namespace ControlR.Web.Server.Authn;
 /// </summary>
 public static class PrincipalClaimTypes
 {
-
   /// <summary>The credential id when the principal authenticated via a credential (PAT, logon token, service account credential).</summary>
   public const string CredentialId = "controlr:credential:id";
   /// <summary>The stable id of the principal (AppUser.Id or ServiceAccount.Id).</summary>

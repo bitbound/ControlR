@@ -8,3 +8,4 @@ public record ServiceAccountDto(
   bool IsEnabled,
   DateTimeOffset CreatedAt,
   IReadOnlyList<ServiceAccountCredentialDto> Credentials);
+

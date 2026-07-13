@@ -4,7 +4,7 @@ using ControlR.Web.Server.Authn;
 namespace ControlR.Web.Server.Extensions;
 
 /// <summary>
-/// 
+/// Extension methods for identifying server service account principals.
 /// </summary>
 public static class ServerPrincipalExtensions
 {
