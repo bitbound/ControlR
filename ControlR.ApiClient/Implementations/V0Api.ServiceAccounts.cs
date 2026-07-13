@@ -43,6 +43,20 @@ internal partial class V0Api
     });
   }
 
+  async Task<ApiResult<ServiceAccountDto>> IServiceAccountsApi.Get(
+    Guid serviceAccountId,
+    CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.GetAsync(
+        $"{HttpConstants.V0.ServiceAccountsEndpoint}/{serviceAccountId}",
+        cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<ServiceAccountDto>(cancellationToken);
+    });
+  }
+
   async Task<ApiResult<List<ServiceAccountDto>>> IServiceAccountsApi.GetAll(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>

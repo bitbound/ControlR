@@ -31,6 +31,8 @@ public interface IServiceAccountManager
   Task<HttpResult<CreateServiceAccountResponseDto>> CreateForServer(string name, string? description, CancellationToken cancellationToken);
   /// <summary>Deletes a server service account. Credentials cascade-delete.</summary>
   Task<HttpResult> Delete(Guid serviceAccountId, CancellationToken cancellationToken);
+  /// <summary>Returns a single server-scoped service account with its credential metadata.</summary>
+  Task<HttpResult<ServiceAccountDto>> Get(Guid serviceAccountId, CancellationToken cancellationToken);
   /// <summary>Returns all server-scoped service accounts with their credential metadata.</summary>
   Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken);
   /// <summary>Revokes a credential by setting <see cref="ServiceAccountCredential.RevokedAt"/>.</summary>
@@ -238,6 +240,22 @@ public class ServiceAccountManager(
     return HttpResult.Ok();
   }
 
+  public async Task<HttpResult<ServiceAccountDto>> Get(
+    Guid serviceAccountId,
+    CancellationToken cancellationToken)
+  {
+    var account = await appDb.ServiceAccounts
+      .Include(x => x.Credentials)
+      .FirstOrDefaultAsync(x => x.Id == serviceAccountId && x.Kind == ServiceAccountKind.Server, cancellationToken);
+
+    if (account is null)
+    {
+      return HttpResult.Fail<ServiceAccountDto>(HttpResultErrorCode.NotFound, "Server service account not found.");
+    }
+
+    return HttpResult.Ok(MapToDto(account));
+  }
+
   public async Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken)
   {
     var accounts = await appDb.ServiceAccounts
@@ -266,7 +284,7 @@ public class ServiceAccountManager(
 
     if (credential.RevokedAt is not null)
     {
-      return HttpResult.Ok(); // Idempotent.
+      return HttpResult.Ok();
     }
 
     credential.RevokedAt = timeProvider.GetUtcNow();

@@ -138,6 +138,8 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     var dto = Assert.IsType<CreateServiceAccountResponseDto>(createdResult.Value);
     Assert.Equal("New Test Account", dto.ServiceAccount.Name);
     Assert.NotNull(dto.PlainTextSecretKey);
+    Assert.Equal(nameof(ServiceAccountsController.Get), createdResult.ActionName);
+    Assert.Equal(dto.ServiceAccount.Id, (Guid)createdResult.RouteValues!["serviceAccountId"]!);
   }
 
   [Fact]
@@ -198,6 +200,43 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
     var list = Assert.IsType<List<ServiceAccountDto>>(okResult.Value);
     Assert.True(list.Count >= 2, "Should have at least 2 accounts");
+  }
+
+  [Fact]
+  public async Task Get_ReturnsAccount()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var manager = services.GetRequiredService<IServiceAccountManager>();
+
+    var saResult = await manager.CreateForServer("Get Me", "Get description", TestContext.Current.CancellationToken);
+    Assert.True(saResult.IsSuccess);
+    var accountId = saResult.Value.ServiceAccount.Id;
+
+    var controller = await TestPrincipalHelper.CreateControllerWithServerServiceAccountAsync<
+      ServiceAccountsController>(scope, accountName: "Controller SA", cancellationToken: TestContext.Current.CancellationToken);
+
+    var result = await controller.Get(accountId, TestContext.Current.CancellationToken);
+    var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    var dto = Assert.IsType<ServiceAccountDto>(okResult.Value);
+    Assert.Equal(accountId, dto.Id);
+    Assert.Equal("Get Me", dto.Name);
+    Assert.Equal("Get description", dto.Description);
+  }
+
+  [Fact]
+  public async Task Get_ReturnsNotFound_WhenNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+
+    var controller = await TestPrincipalHelper.CreateControllerWithServerServiceAccountAsync<
+      ServiceAccountsController>(scope, cancellationToken: TestContext.Current.CancellationToken);
+
+    var result = await controller.Get(Guid.NewGuid(), TestContext.Current.CancellationToken);
+    var notFound = Assert.IsType<ObjectResult>(result.Result);
+    Assert.Equal(404, notFound.StatusCode);
   }
 
   [Fact]

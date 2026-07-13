@@ -40,7 +40,7 @@ public class ServiceAccountsController(
       return result.ToActionResult();
     }
 
-    return CreatedAtAction(nameof(GetAll), new { }, result.Value);
+    return CreatedAtAction(nameof(Get), new { serviceAccountId = result.Value.ServiceAccount.Id }, result.Value);
   }
 
   [HttpDelete("{serviceAccountId:guid}")]
@@ -57,6 +57,20 @@ public class ServiceAccountsController(
     return NoContent();
   }
 
+  [HttpGet("{serviceAccountId:guid}")]
+  public async Task<ActionResult<ServiceAccountDto>> Get(
+    Guid serviceAccountId,
+    CancellationToken cancellationToken)
+  {
+    var result = await _serviceAccountManager.Get(serviceAccountId, cancellationToken);
+    if (!result.IsSuccess)
+    {
+      return result.ToActionResult();
+    }
+
+    return Ok(result.Value);
+  }
+
   [HttpGet]
   public async Task<ActionResult<List<ServiceAccountDto>>> GetAll(CancellationToken cancellationToken)
   {
@@ -65,6 +79,8 @@ public class ServiceAccountsController(
   }
 
   [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> RevokeCredential(
     Guid serviceAccountId,
     Guid credentialId,
