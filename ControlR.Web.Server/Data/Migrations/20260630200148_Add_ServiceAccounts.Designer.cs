@@ -550,8 +550,6 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Id");
-
                     b.HasIndex("ServiceAccountId");
 
                     b.ToTable("ServiceAccountCredentials");

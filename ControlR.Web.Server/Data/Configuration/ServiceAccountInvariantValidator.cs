@@ -38,7 +38,7 @@ public sealed class ServiceAccountInvariantInterceptor : SaveChangesInterceptor
   {
     return a.Kind == b.Kind &&
            a.Name == b.Name &&
-           (a.TenantId == b.TenantId || (a.TenantId is null && b.TenantId is null));
+           a.TenantId == b.TenantId;
   }
 
   private static List<ServiceAccount> GetCandidateAccounts(DbContext context)
