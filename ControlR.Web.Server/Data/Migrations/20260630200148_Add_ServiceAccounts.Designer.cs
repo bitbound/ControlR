@@ -501,8 +501,15 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("Kind", "TenantId", "Name")
-                        .IsUnique();
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ServiceAccounts_Server_Name")
+                        .HasFilter("\"Kind\" = 'Server' AND \"TenantId\" IS NULL");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ServiceAccounts_TenantId_Name")
+                        .HasFilter("\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL");
 
                     b.ToTable("ServiceAccounts");
                 });
