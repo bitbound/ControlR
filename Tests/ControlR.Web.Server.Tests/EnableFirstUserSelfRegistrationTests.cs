@@ -108,7 +108,7 @@ public class EnableFirstUserSelfRegistrationTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
 
     var tenant = await services.CreateTestTenant("Seed Tenant");
     await services.CreateTestUser(tenant.Id, email: "seed@existing.local");

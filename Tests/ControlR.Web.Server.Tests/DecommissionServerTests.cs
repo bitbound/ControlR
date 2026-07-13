@@ -97,7 +97,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     var deviceId = Guid.NewGuid();
     _ = await services.CreateTestDevice(tenant.Id, deviceId);
 
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
     var timeProvider = services.GetRequiredService<TimeProvider>();
     var appOptions = services.GetRequiredService<IOptions<AppOptions>>();
 
@@ -204,7 +204,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     var deviceId = Guid.NewGuid();
     _ = await services.CreateTestDevice(tenant.Id, deviceId);
 
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
     var timeProvider = services.GetRequiredService<TimeProvider>();
     var appOptions = services.GetRequiredService<IOptions<AppOptions>>();
 

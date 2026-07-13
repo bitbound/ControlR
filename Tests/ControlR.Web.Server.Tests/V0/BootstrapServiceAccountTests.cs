@@ -29,7 +29,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var account = await appDb.ServiceAccounts
       .IgnoreQueryFilters()
@@ -63,7 +63,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
     var credential = await appDb.ServiceAccountCredentials
       .IgnoreQueryFilters()
       .FirstAsync(TestContext.Current.CancellationToken);
@@ -95,7 +95,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var count = await appDb.ServiceAccounts
       .IgnoreQueryFilters()
@@ -118,7 +118,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
     var credential = await appDb.ServiceAccountCredentials
       .IgnoreQueryFilters()
       .FirstAsync(TestContext.Current.CancellationToken);
@@ -142,7 +142,7 @@ public class BootstrapServiceAccountTests(ITestOutputHelper testOutput)
     await testApp.App.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var count = await appDb.ServiceAccounts.IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken);
     Assert.Equal(0, count);

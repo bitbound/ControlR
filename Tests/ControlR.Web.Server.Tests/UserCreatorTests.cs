@@ -78,7 +78,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         using var scope = testApp.CreateScope();
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
-        var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+        await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
         // Create first user so next one isn't server admin
         await userCreator.CreateUser("admin@example.com", "Password123!", null, cancellationToken: TestContext.Current.CancellationToken);
@@ -115,7 +115,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         await using var testApp = await TestAppBuilder.CreateTestApp(output);
         using var scope = testApp.CreateScope();
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
-        var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+        await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
         var tenant = new Tenant { Name = "Test Tenant" };
         appDb.Tenants.Add(tenant);
@@ -144,7 +144,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         await using var testApp = await TestAppBuilder.CreateTestApp(output);
         using var scope = testApp.CreateScope();
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
-        var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+        await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
         var tenant = new Tenant { Name = "Test Tenant" };
         appDb.Tenants.Add(tenant);
@@ -243,7 +243,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         await using var testApp = await TestAppBuilder.CreateTestApp(output);
         using var scope = testApp.CreateScope();
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
-        var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+        await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<AppRole>>();
 
         // Create tenant
@@ -294,7 +294,7 @@ public class UserCreatorTests(ITestOutputHelper output)
         await using var testApp = await TestAppBuilder.CreateTestApp(output);
         using var scope = testApp.CreateScope();
         var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
-        var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+        await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
         // Create a tenant first
         var tenant = new Tenant { Name = "Test Tenant" };

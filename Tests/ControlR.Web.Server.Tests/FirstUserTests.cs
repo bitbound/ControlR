@@ -37,7 +37,7 @@ public class FirstUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
     var user = await appDb.Users

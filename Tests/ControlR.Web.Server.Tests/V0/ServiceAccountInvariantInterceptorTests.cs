@@ -15,7 +15,7 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var serverAccount = new ServiceAccount
     {
@@ -255,7 +255,7 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
       IsEnabled = true,
     };
 
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
     appDb.ServiceAccounts.Add(tenantAccount);
     await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -274,7 +274,7 @@ public class ServiceAccountInvariantInterceptorTests(ITestOutputHelper testOutpu
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var account = new ServiceAccount
     {

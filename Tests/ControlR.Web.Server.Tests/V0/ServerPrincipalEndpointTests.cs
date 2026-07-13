@@ -80,7 +80,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
 
     var tenantA = await services.CreateTestTenant("Tenant A");
     var tenantB = await services.CreateTestTenant("Tenant B");
@@ -108,7 +108,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
 
     var tenantA = await services.CreateTestTenant("Tenant A");
     var tenantB = await services.CreateTestTenant("Tenant B");

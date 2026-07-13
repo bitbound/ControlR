@@ -25,7 +25,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var manager = scope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
-      var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+      await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
       var saResult = await manager.CreateForServer("Disabled SA", null, TestContext.Current.CancellationToken);
       Assert.True(saResult.IsSuccess);
@@ -259,7 +259,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     Assert.IsType<NoContentResult>(result);
 
     // Verify the credential is revoked.
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
     var credential = await appDb.ServiceAccountCredentials
       .FirstOrDefaultAsync(x => x.Id == credentialId, TestContext.Current.CancellationToken);
     Assert.NotNull(credential);

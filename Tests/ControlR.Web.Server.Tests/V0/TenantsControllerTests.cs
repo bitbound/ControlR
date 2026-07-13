@@ -52,7 +52,7 @@ public class TenantsControllerTests(ITestOutputHelper testOutput)
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
 
     var tenant = new Tenant { Id = Guid.NewGuid(), Name = "Get Test Tenant" };
     appDb.Tenants.Add(tenant);

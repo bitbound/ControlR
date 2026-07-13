@@ -21,7 +21,7 @@ public class ServiceAccountDbIndexTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
 
     var tenant = await services.CreateTestTenant("Server Test Tenant");
 
@@ -72,7 +72,7 @@ public class ServiceAccountDbIndexTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
 
     var tenant = await services.CreateTestTenant("Target Tenant");
 
@@ -125,7 +125,7 @@ public class ServiceAccountDbIndexTests(ITestOutputHelper testOutput)
 
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
-    var appDb = services.GetRequiredService<AppDb>();
+    await using var appDb = services.GetRequiredService<AppDb>();
     var tenant = await services.CreateTestTenant("Constraint Tenant");
 
     var connStr = appDb.Database.GetConnectionString()
