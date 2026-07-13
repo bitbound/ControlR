@@ -13,6 +13,8 @@ namespace ControlR.Web.Server.Api.V0;
 public class DevicesController() : ControllerBase
 {
   [HttpDelete("{deviceId:guid}")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> DeleteDevice(
     [FromServices] AppDb appDb,
     [FromRoute] Guid deviceId)
@@ -81,6 +83,8 @@ public class DevicesController() : ControllerBase
   }
 
   [HttpGet("{deviceId:guid}")]
+  [ProducesResponseType<DeviceResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<DeviceResponseDto>> GetDevice(
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider,
@@ -160,6 +164,9 @@ public class DevicesController() : ControllerBase
   }
 
   [HttpPatch("{deviceId:guid}/alias")]
+  [ProducesResponseType<DeviceResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<DeviceResponseDto>> UpdateDeviceAlias(
     [FromRoute] Guid deviceId,
     [FromBody] V0Dtos.UpdateDeviceAliasRequestDto requestDto,

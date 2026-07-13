@@ -13,6 +13,8 @@ namespace ControlR.Web.Server.Api.V0;
 public class LogonTokensController : ControllerBase
 {
   [HttpPost]
+  [ProducesResponseType<V0Dtos.LogonTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
   public async Task<ActionResult<V0Dtos.LogonTokenResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,

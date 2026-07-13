@@ -13,6 +13,9 @@ namespace ControlR.Web.Server.Api.V0;
 public class TenantsController(ITenantProvisioningService tenantProvisioningService) : ControllerBase
 {
   [HttpPost]
+  [ProducesResponseType<CreateTenantResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<CreateTenantResponseDto>> Create(
     [FromBody] CreateTenantRequestDto request,
     CancellationToken cancellationToken)
@@ -27,6 +30,8 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
   }
 
   [HttpGet("{id:guid}")]
+  [ProducesResponseType<GetTenantResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<GetTenantResponseDto>> Get(
     [FromRoute] Guid id,
     CancellationToken cancellationToken)

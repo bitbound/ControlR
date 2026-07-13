@@ -15,6 +15,10 @@ public class ServiceAccountsController(
   private readonly IServiceAccountManager _serviceAccountManager = serviceAccountManager;
 
   [HttpPost("{serviceAccountId:guid}/credentials")]
+  [ProducesResponseType<CreateServiceAccountCredentialResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  [ProducesResponseType(StatusCodes.Status409Conflict)]
   public async Task<ActionResult<CreateServiceAccountCredentialResponseDto>> AddCredential(
     Guid serviceAccountId,
     [FromBody] CreateServiceAccountCredentialRequestDto request,
@@ -30,6 +34,9 @@ public class ServiceAccountsController(
   }
 
   [HttpPost]
+  [ProducesResponseType<CreateServiceAccountResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status409Conflict)]
   public async Task<ActionResult<CreateServiceAccountResponseDto>> Create(
     [FromBody] CreateServiceAccountRequestDto request,
     CancellationToken cancellationToken)
@@ -44,6 +51,8 @@ public class ServiceAccountsController(
   }
 
   [HttpDelete("{serviceAccountId:guid}")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> Delete(
     Guid serviceAccountId,
     CancellationToken cancellationToken)
@@ -58,6 +67,8 @@ public class ServiceAccountsController(
   }
 
   [HttpGet("{serviceAccountId:guid}")]
+  [ProducesResponseType<ServiceAccountDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<ServiceAccountDto>> Get(
     Guid serviceAccountId,
     CancellationToken cancellationToken)
