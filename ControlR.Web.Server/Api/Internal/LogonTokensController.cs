@@ -12,6 +12,8 @@ namespace ControlR.Web.Server.Api.Internal;
 public class LogonTokenController : ControllerBase
 {
   [HttpPost]
+  [ProducesResponseType<InternalDtos.LogonTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<InternalDtos.LogonTokenResponseDto>> CreateLogonToken(
     [FromServices] AppDb appDb,
     [FromServices] ILogonTokenProvider logonTokenProvider,
@@ -39,37 +41,31 @@ public class LogonTokenController : ControllerBase
       return BadRequest("Device not found.");
     }
 
-    var user = await appDb.Users.FindAsync(userId);
-    if (user is null)
-    {
-      return BadRequest("User not found or does not belong to this tenant.");
-    }
-
-    if (user.TenantId != tenantId)
-    {
-      return BadRequest("User not found or does not belong to this tenant.");
-    }
-
     var authResult = await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
     if (!authResult.Succeeded)
     {
       return Forbid();
     }
 
-    var logonToken = await logonTokenProvider.CreateTokenAsync(
+    var result = await logonTokenProvider.CreateToken(
       request.DeviceId,
       tenantId,
       userId,
       request.ExpirationMinutes);
 
+    if (!result.IsSuccess)
+    {
+      return result.ToHttpResult().ToActionResult();
+    }
+
     var deviceAccessUrl = new Uri(
       Request.ToOrigin(),
-      $"/device-access?deviceId={request.DeviceId}&logonToken={logonToken.Token}");
+      $"/device-access?deviceId={request.DeviceId}&logonToken={result.Value.Token}");
 
     var response = new InternalDtos.LogonTokenResponseDto(
       DeviceAccessUrl: deviceAccessUrl,
-      ExpiresAt: logonToken.ExpiresAt,
-      Token: logonToken.Token);
+      ExpiresAt: result.Value.ExpiresAt,
+      Token: result.Value.Token);
 
     return Ok(response);
   }

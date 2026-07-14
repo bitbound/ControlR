@@ -75,7 +75,7 @@ public class PersonalAccessTokenAuthenticationHandler(
     // Successful auth resets failure counter
     _failureCache.Remove(failureKey);
 
-    await _userManager.UpdateLastLoginAsync(user);
+    await _userManager.UpdateLastLogin(user);
 
     var claims = new List<Claim>
     {

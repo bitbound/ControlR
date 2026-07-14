@@ -67,7 +67,7 @@
     if (result.Succeeded)
     {
       Logger.LogInformation("User with ID '{UserId}' logged in with a recovery code.", userId);
-      await UserManager.UpdateLastLoginAsync(_user);
+      await UserManager.UpdateLastLogin(_user);
       RedirectManager.RedirectTo(ReturnUrl);
     }
     else if (result.IsLockedOut)

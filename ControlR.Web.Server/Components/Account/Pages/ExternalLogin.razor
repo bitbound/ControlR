@@ -123,7 +123,7 @@
                 _externalLoginInfo.ProviderKey);
             if (externalUser is not null)
             {
-                await UserManager.UpdateLastLoginAsync(externalUser);
+                await UserManager.UpdateLastLogin(externalUser);
             }
 
             RedirectManager.RedirectTo(ReturnUrl);
@@ -168,7 +168,7 @@
             RedirectManager.RedirectTo("Account/RegisterConfirmation", new Dictionary<string, object?> { ["email"] = Input.Email });
         }
 
-        await UserManager.UpdateLastLoginAsync(createUserResult.User);
+        await UserManager.UpdateLastLogin(createUserResult.User);
         await SignInManager.SignInAsync(createUserResult.User, false, _externalLoginInfo.LoginProvider);
         RedirectManager.RedirectTo(ReturnUrl);
     }

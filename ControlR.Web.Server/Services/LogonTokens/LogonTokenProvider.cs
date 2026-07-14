@@ -1,36 +1,45 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Web.Server.Primitives;
+using ControlR.Web.Server.Data.Enums;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Services.LogonTokens;
 
 public interface ILogonTokenProvider
 {
-  Task<LogonTokenModel> CreateTokenAsync(
+  Task<HttpResult<LogonTokenModel>> CreateToken(
     Guid deviceId,
     Guid tenantId,
     Guid userId,
     int expirationMinutes = 5);
 
-  Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId);
-  Task<Result<LogonTokenValidationResult>> ValidateTokenAsync(string token);
+  Task<HttpResult<LogonTokenModel>> CreateTokenForExternal(
+    Guid deviceId,
+    Guid tenantId,
+    string userCorrelationId,
+    int expirationMinutes = 5);
+
+  Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId);
+  Task<Result<LogonTokenValidationResult>> ValidateToken(string token);
 }
 
 public class LogonTokenProvider(
   TimeProvider timeProvider,
   IMemoryCache cache,
   IDbContextFactory<AppDb> dbContextFactory,
-  ILogger<LogonTokenProvider> logger) : ILogonTokenProvider
+  ILogger<LogonTokenProvider> logger,
+  UserManager<AppUser> userManager) : ILogonTokenProvider
 {
-  // Per-token async locks to ensure single-consumption race safety.
   private static readonly ConcurrentDictionary<string, SemaphoreSlim> _tokenLocks = new();
   private readonly IMemoryCache _cache = cache;
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
   private readonly ILogger<LogonTokenProvider> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
+  private readonly UserManager<AppUser> _userManager = userManager;
 
-  public async Task<LogonTokenModel> CreateTokenAsync(
+  public async Task<HttpResult<LogonTokenModel>> CreateToken(
     Guid deviceId,
     Guid tenantId,
     Guid userId,
@@ -39,12 +48,11 @@ public class LogonTokenProvider(
     await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
     var userExists = await dbContext.Users
       .Where(u => u.Id == userId && u.TenantId == tenantId)
-      .Select(u => new { u.Id, u.UserName, u.Email })
       .AnyAsync();
 
     if (!userExists)
     {
-      throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
+      return HttpResult.Fail<LogonTokenModel>(HttpResultErrorCode.NotFound, $"User {userId} not found in tenant {tenantId}.");
     }
 
     var token = RandomGenerator.CreateAccessToken();
@@ -69,19 +77,50 @@ public class LogonTokenProvider(
       "Created logon token for user {UserId} on device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
       userId, deviceId, tenantId, expiresAt);
 
-    return logonToken;
+    return HttpResult.Ok(logonToken);
   }
 
-  public async Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId)
+  public async Task<HttpResult<LogonTokenModel>> CreateTokenForExternal(
+    Guid deviceId,
+    Guid tenantId,
+    string userCorrelationId,
+    int expirationMinutes = 5)
+  {
+    var username = $"ext-{userCorrelationId.Trim()}";
+    var guestUser = await _userManager.Users
+      .FirstOrDefaultAsync(u => u.UserName == username && u.TenantId == tenantId);
+
+    if (guestUser is null)
+    {
+      guestUser = new AppUser
+      {
+        UserName = username,
+        Email = $"{username}@controlr.local",
+        TenantId = tenantId,
+        AccountType = AccountType.ExternalUser
+      };
+      var createResult = await _userManager.CreateAsync(guestUser);
+      if (!createResult.Succeeded)
+      {
+        return HttpResult.Fail<LogonTokenModel>(HttpResultErrorCode.InternalServerError, $"Failed to create external user for correlation ID '{userCorrelationId}'.");
+      }
+    }
+
+    await _userManager.UpdateLastLogin(guestUser);
+
+    return await CreateToken(deviceId, tenantId, guestUser.Id, expirationMinutes);
+  }
+
+  public async Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId)
   {
     var semaphore = _tokenLocks.GetOrAdd(token, _ => new SemaphoreSlim(1, 1));
     await semaphore.WaitAsync();
     try
     {
-      var validationResult = await ValidateTokenInternalAsync(token);
+      var validationResult = await ValidateTokenInternal(token);
       if (!validationResult.IsSuccess)
       {
-        return LogonTokenValidationResult.Failure(validationResult.ErrorMessage!);
+        return LogonTokenValidationResult.Failure(validationResult.ErrorMessage ?? "Token validation failed.");
       }
 
       var logonToken = validationResult.Token;
@@ -124,11 +163,11 @@ public class LogonTokenProvider(
     }
   }
 
-  public async Task<Result<LogonTokenValidationResult>> ValidateTokenAsync(string token)
+  public async Task<Result<LogonTokenValidationResult>> ValidateToken(string token)
   {
     try
     {
-      var validationResult = await ValidateTokenInternalAsync(token);
+      var validationResult = await ValidateTokenInternal(token);
       if (!validationResult.IsSuccess)
       {
         return Result.Fail<LogonTokenValidationResult>(validationResult.ErrorMessage!);
@@ -156,7 +195,7 @@ public class LogonTokenProvider(
 
   private static string GetCacheKey(string token) => $"logon_token:{token}";
 
-  private async Task<TokenValidationResult> ValidateTokenInternalAsync(string token)
+  private async Task<TokenValidationResult> ValidateTokenInternal(string token)
   {
     var cacheKey = GetCacheKey(token);
 

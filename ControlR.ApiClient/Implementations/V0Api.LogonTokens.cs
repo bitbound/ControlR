@@ -8,11 +8,21 @@ namespace ControlR.ApiClient;
 
 internal partial class V0Api
 {
-  async Task<ApiResult<V0Dtos.LogonTokenResponseDto>> IV0LogonTokensApi.CreateLogonToken(V0Dtos.CreateLogonTokenRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.LogonTokenResponseDto>> IV0LogonTokensApi.CreateLogonTokenForExternal(V0Dtos.CreateLogonTokenForExternalRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      using var response = await _client.HttpClient.PostAsJsonAsync(HttpConstants.V0.LogonTokensEndpoint, request, cancellationToken);
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.V0.LogonTokensEndpoint}/external", request, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<V0Dtos.LogonTokenResponseDto>(cancellationToken);
+    });
+  }
+
+  async Task<ApiResult<V0Dtos.LogonTokenResponseDto>> IV0LogonTokensApi.CreateLogonTokenForUser(V0Dtos.CreateLogonTokenForUserRequestDto request, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.V0.LogonTokensEndpoint}/user", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<V0Dtos.LogonTokenResponseDto>(cancellationToken);
     });

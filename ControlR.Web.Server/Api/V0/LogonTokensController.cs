@@ -1,6 +1,5 @@
 using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,14 +11,14 @@ namespace ControlR.Web.Server.Api.V0;
 [ApiVersion(ApiVersions.V0)]
 public class LogonTokensController : ControllerBase
 {
-  [HttpPost]
+  [HttpPost("external")]
   [ProducesResponseType<V0Dtos.LogonTokenResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
-  public async Task<ActionResult<V0Dtos.LogonTokenResponseDto>> Create(
+  [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+  public async Task<ActionResult<V0Dtos.LogonTokenResponseDto>> CreateForExternal(
     [FromServices] AppDb appDb,
-    [FromServices] UserManager<AppUser> userManager,
     [FromServices] ILogonTokenProvider logonTokenProvider,
-    [FromBody] V0Dtos.CreateLogonTokenRequestDto request)
+    [FromBody] V0Dtos.CreateLogonTokenForExternalRequestDto request)
   {
     var device = await appDb.Devices.FindAsync(request.DeviceId);
     if (device is null || device.TenantId != request.TenantId)
@@ -27,68 +26,58 @@ public class LogonTokensController : ControllerBase
       return BadRequest("Device not found");
     }
 
-    if (request.ExpirationMinutes < 1 || request.ExpirationMinutes > 1440)
-    {
-      return BadRequest("ExpirationMinutes must be between 1 and 1440.");
-    }
-
-    Guid userId;
-
-    if (request.UserId.HasValue)
-    {
-      var user = await appDb.Users.FindAsync(request.UserId.Value);
-      if (user is null || user.TenantId != request.TenantId)
-      {
-        return BadRequest("User not found or does not belong to this tenant.");
-      }
-
-      userId = request.UserId.Value;
-    }
-    else if (!string.IsNullOrWhiteSpace(request.UserCorrelationId))
-    {
-      var username = $"ext-{request.UserCorrelationId.Trim()}";
-      var guestUser = await userManager.Users
-        .FirstOrDefaultAsync(u => u.UserName == username && u.TenantId == request.TenantId);
-
-      if (guestUser is null)
-      {
-        guestUser = new AppUser
-        {
-          UserName = username,
-          Email = $"{username}@controlr.local",
-          TenantId = request.TenantId,
-          AccountType = AccountType.ExternalUser
-        };
-        var createResult = await userManager.CreateAsync(guestUser);
-        if (!createResult.Succeeded)
-        {
-          return BadRequest("Failed to create guest user.");
-        }
-      }
-
-      await userManager.UpdateLastLoginAsync(guestUser);
-      userId = guestUser.Id;
-    }
-    else
-    {
-      return BadRequest("UserId or UserCorrelationId is required.");
-    }
-
-    var logonToken = await logonTokenProvider.CreateTokenAsync(
+    var result = await logonTokenProvider.CreateTokenForExternal(
       request.DeviceId,
       request.TenantId,
-      userId,
+      request.UserCorrelationId,
       request.ExpirationMinutes);
 
+    if (!result.IsSuccess)
+    {
+      return result.ToHttpResult().ToActionResult();
+    }
+
+    return Ok(BuildResponse(result.Value));
+  }
+
+  [HttpPost("user")]
+  [ProducesResponseType<V0Dtos.LogonTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<ActionResult<V0Dtos.LogonTokenResponseDto>> CreateForUser(
+    [FromServices] AppDb appDb,
+    [FromServices] ILogonTokenProvider logonTokenProvider,
+    [FromBody] V0Dtos.CreateLogonTokenForUserRequestDto request)
+  {
+    var device = await appDb.Devices.FindAsync(request.DeviceId);
+    if (device is null || device.TenantId != request.TenantId)
+    {
+      return BadRequest("Device not found");
+    }
+
+    var result = await logonTokenProvider.CreateToken(
+      request.DeviceId,
+      request.TenantId,
+      request.UserId,
+      request.ExpirationMinutes);
+
+    if (!result.IsSuccess)
+    {
+      return result.ToHttpResult().ToActionResult();
+    }
+
+    return Ok(BuildResponse(result.Value));
+  }
+
+  private V0Dtos.LogonTokenResponseDto BuildResponse(LogonTokenModel logonToken)
+  {
     var deviceAccessUrl = new Uri(
       Request.ToOrigin(),
-      $"/device-access?deviceId={request.DeviceId}&logonToken={logonToken.Token}");
+      $"/device-access?deviceId={logonToken.DeviceId}&logonToken={logonToken.Token}");
 
-    var response = new V0Dtos.LogonTokenResponseDto(
+    return new V0Dtos.LogonTokenResponseDto(
       DeviceAccessUrl: deviceAccessUrl,
       ExpiresAt: logonToken.ExpiresAt,
       Token: logonToken.Token);
-
-    return Ok(response);
   }
 }

@@ -61,9 +61,9 @@ public class V0ApiIntegrationTests(ITestOutputHelper testOutput)
     var user = await testServer.Services.CreateTestUser(tenant.Id, email: "lt-int@test.local");
     var device = await testServer.Services.CreateTestDevice(tenant.Id);
 
-    var request = new CreateLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, 15);
+    var request = new CreateLogonTokenForUserRequestDto(device.Id, tenant.Id, user.Id, 15);
     var response = await httpClient.PostAsJsonAsync(
-      HttpConstants.V0.LogonTokensEndpoint,
+      $"{HttpConstants.V0.LogonTokensEndpoint}/user",
       request,
       TestContext.Current.CancellationToken);
 

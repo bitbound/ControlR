@@ -127,16 +127,15 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
     Assert.True(deviceResponse.IsSuccessStatusCode,
       $"Create device failed: {deviceResponse.StatusCode}");
 
-    // Step 5: Service account creates a logon token (dynamically creates transient external user).
-    var createLogonTokenReq = new V0Dtos.CreateLogonTokenRequestDto(
+    // Step 5: Service account creates a logon token for an external user (dynamically creates transient external user).
+    var createLogonTokenReq = new V0Dtos.CreateLogonTokenForExternalRequestDto(
       DeviceId: deviceId,
       TenantId: tenantResult.TenantId,
-      UserId: null,
       UserCorrelationId: "e2e-integration-service",
       ExpirationMinutes: 15);
 
     var tokenResponse = await saClient.PostAsJsonAsync(
-      HttpConstants.V0.LogonTokensEndpoint,
+      $"{HttpConstants.V0.LogonTokensEndpoint}/external",
       createLogonTokenReq,
       TestContext.Current.CancellationToken);
 

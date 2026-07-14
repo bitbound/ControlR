@@ -30,7 +30,7 @@ public class LogonTokenAuthenticationHandler(
       return AuthenticateResult.Fail("Valid device ID is required with logon token.");
     }
 
-    var tokenValidation = await _logonTokenProvider.ValidateAndConsumeTokenAsync(
+    var tokenValidation = await _logonTokenProvider.ValidateAndConsumeToken(
       $"{tokenValue}",
       deviceId);
 
@@ -66,7 +66,7 @@ public class LogonTokenAuthenticationHandler(
       claims.Add(new Claim(ClaimTypes.Role, role));
     }
 
-    await _userManager.UpdateLastLoginAsync(user);
+    await _userManager.UpdateLastLogin(user);
 
     var identity = new ClaimsIdentity(claims, Scheme.Name);
     var principal = new ClaimsPrincipal(identity);

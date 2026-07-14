@@ -62,11 +62,10 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     controller.ControllerContext.HttpContext.Request.Scheme = "https";
     controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
 
-    var result = await controller.Create(
+    var result = await controller.CreateForUser(
       services.GetRequiredService<AppDb>(),
-      services.GetRequiredService<UserManager<AppUser>>(),
       services.GetRequiredService<ILogonTokenProvider>(),
-      new CreateLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, 15));
+      new CreateLogonTokenForUserRequestDto(device.Id, tenant.Id, user.Id, 15));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
