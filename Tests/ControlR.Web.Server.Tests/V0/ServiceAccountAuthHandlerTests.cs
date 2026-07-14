@@ -8,6 +8,7 @@ using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -201,8 +202,11 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
       ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme,
       typeof(ServiceAccountCredentialAuthenticationHandler));
 
+    var memoryCache = services.GetRequiredService<IMemoryCache>();
+
     var handler = new ServiceAccountCredentialAuthenticationHandler(
       UrlEncoder.Default,
+      memoryCache,
       serviceAccountManager,
       loggerFactory,
       options,

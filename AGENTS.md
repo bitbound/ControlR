@@ -60,8 +60,6 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 
 **Rules:**
 - Every DTO belongs to exactly one route root's folder (`Internal/`, `V0/`, …). There is no shared root `Dtos/ServerApi/` folder for DTOs.
-- If two route roots need a structurally identical shape, **duplicate it** into each folder. The same class name with a different namespace is intentional — each copy has an independent lifecycle commitment and can evolve separately.
-- When sun-setting a version, its DTO folder can be deleted independently with no risk of breaking other API surfaces.
 
 ## API Routing & Versioning
 
@@ -69,9 +67,9 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 
 | Root | URL prefix | Stability | Consumer |
 |---|---|---|---|---|
-| `Api/Internal` | `/api/internal/*` | Unversioned, volatile | BFF (Blazor UI) |
+| `Api/Internal` | `/api/internal/*` | Unversioned, volatile | Internal. BFF (Blazor UI) |
 | `Api/V0` | `/api/v0/*` | Stable contract | S2S automation |
-| `Api` | `/api/devices`, `/api/agent-update` | Frozen, no new endpoints | Being phased out |
+| `Api/Agent` | `/api/agent/*`, | Unversioned, volatile | Internal. Public APIs for agent. |
 
 - Controllers live in `Api/{Root}/` with namespace `ControlR.Web.Server.Api.{Root}`.
 - Controller class names carry **no** version or audience prefix. The namespace + `[ApiVersion]` attribute convey that.

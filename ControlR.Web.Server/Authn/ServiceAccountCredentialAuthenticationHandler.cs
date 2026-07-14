@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using ControlR.Web.Server.Caching;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -7,13 +8,13 @@ namespace ControlR.Web.Server.Authn;
 
 public class ServiceAccountCredentialAuthenticationHandler(
   UrlEncoder encoder,
+  IMemoryCache memoryCache,
   IServiceAccountManager serviceAccountManager,
   ILoggerFactory logger,
   IOptionsMonitor<ServiceAccountCredentialAuthenticationSchemeOptions> options,
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<ServiceAccountCredentialAuthenticationHandler> handlerLogger) : AuthenticationHandler<ServiceAccountCredentialAuthenticationSchemeOptions>(options, logger, encoder)
 {
-  private static readonly MemoryCache _failureCache = new(new MemoryCacheOptions());
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
     string? apiKey = null;
@@ -37,8 +38,9 @@ public class ServiceAccountCredentialAuthenticationHandler(
       }
 
       var remoteIp = Context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-      var failureKey = $"sa-auth-fail:{remoteIp}";
-      if (_failureCache.TryGetValue<int>(failureKey, out var failureCount) &&
+      var failureKey = CacheKeys.GetServiceAccountAuthFailure(remoteIp);
+
+      if (memoryCache.TryGetValue<int>(failureKey, out var failureCount) &&
           failureCount >= appOptions.CurrentValue.ServiceAccountAuthFailureLimit)
       {
         return AuthenticateResult.Fail("Too many failed authentication attempts. Try again later.");
@@ -47,11 +49,14 @@ public class ServiceAccountCredentialAuthenticationHandler(
       var validationResult = await serviceAccountManager.ValidateCredential(apiKey, Context.RequestAborted);
       if (!validationResult.IsSuccess)
       {
-        _failureCache.Set(failureKey, failureCount + 1, TimeSpan.FromMinutes(appOptions.CurrentValue.ServiceAccountAuthFailureWindowMinutes));
+        memoryCache.Set(
+          failureKey,
+          failureCount + 1,
+          TimeSpan.FromMinutes(appOptions.CurrentValue.ServiceAccountAuthFailureWindowMinutes));
         return AuthenticateResult.Fail("Invalid service account credential");
       }
 
-      _failureCache.Remove(failureKey);
+      memoryCache.Remove(failureKey);
 
       var (account, credential) = validationResult.Value;
 
@@ -76,9 +81,9 @@ public class ServiceAccountCredentialAuthenticationHandler(
     }
     catch (Exception ex) when (ex is not OperationCanceledException)
     {
-      var credentialPrefix = apiKey?.Split(':', 2).FirstOrDefault() ?? "unknown";
+      var credentialId = apiKey?.Split(':', 2).FirstOrDefault() ?? "unknown";
       var remoteIp = Context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-      handlerLogger.LogError(ex, "Service account credential authentication failed. Credential prefix: {CredentialPrefix}, Remote IP: {RemoteIp}", credentialPrefix, remoteIp);
+      handlerLogger.LogError(ex, "Service account credential authentication failed. Credential prefix: {CredentialId}, Remote IP: {RemoteIp}", credentialId, remoteIp);
       return AuthenticateResult.Fail("An internal error occurred during authentication");
     }
   }
