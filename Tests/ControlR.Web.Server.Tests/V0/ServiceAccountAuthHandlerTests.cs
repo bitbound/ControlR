@@ -3,6 +3,7 @@ using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Extensions;
+using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authentication;
@@ -191,6 +192,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
     HttpContext context)
   {
     var options = services.GetRequiredService<IOptionsMonitor<ServiceAccountCredentialAuthenticationSchemeOptions>>();
+    var appOptions = services.GetRequiredService<IOptionsMonitor<AppOptions>>();
     var loggerFactory = services.GetRequiredService<ILoggerFactory>();
     var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
 
@@ -204,6 +206,7 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
       serviceAccountManager,
       loggerFactory,
       options,
+      appOptions,
       loggerFactory.CreateLogger<ServiceAccountCredentialAuthenticationHandler>());
 
     await handler.InitializeAsync(scheme, context);

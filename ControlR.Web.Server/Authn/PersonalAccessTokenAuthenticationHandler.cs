@@ -40,10 +40,9 @@ public class PersonalAccessTokenAuthenticationHandler(
       return AuthenticateResult.NoResult();
     }
 
-    // Basic rate limiting keyed by token prefix (ID part) or remote IP fallback
-    var keyPart = providedPat.Split(':', 2).FirstOrDefault() ?? "unknown";
+    // Basic rate limiting keyed by remote IP
     var remoteIp = Context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-    var failureKey = $"patfail:{keyPart}:{remoteIp}";
+    var failureKey = $"patfail:{remoteIp}";
     if (_failureCache.TryGetValue<int>(failureKey, out var failureCount) && failureCount >= MaxFailures)
     {
       return AuthenticateResult.Fail("Too many failed token attempts. Try again later.");

@@ -166,8 +166,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddRateLimiter(options =>
     {
       options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-      options.GlobalLimiter = PartitionedRateLimiter.Create(
-        ServiceAccountAuthRateLimitPolicy.Create(appOptions));
+
       options.OnRejected = (context, cancellationToken) =>
       {
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfterValue)
@@ -181,6 +180,7 @@ public static class WebApplicationBuilderExtensions
 
         return ValueTask.CompletedTask;
       };
+      
       options.AddPolicy(
         AnonymousAuthRateLimitPolicy.PolicyName,
         AnonymousAuthRateLimitPolicy.Create());

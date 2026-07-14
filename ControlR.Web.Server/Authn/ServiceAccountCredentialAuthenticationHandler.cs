@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Authn;
 
@@ -9,8 +10,10 @@ public class ServiceAccountCredentialAuthenticationHandler(
   IServiceAccountManager serviceAccountManager,
   ILoggerFactory logger,
   IOptionsMonitor<ServiceAccountCredentialAuthenticationSchemeOptions> options,
+  IOptionsMonitor<AppOptions> appOptions,
   ILogger<ServiceAccountCredentialAuthenticationHandler> handlerLogger) : AuthenticationHandler<ServiceAccountCredentialAuthenticationSchemeOptions>(options, logger, encoder)
 {
+  private static readonly MemoryCache _failureCache = new(new MemoryCacheOptions());
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
     string? apiKey = null;
@@ -33,11 +36,22 @@ public class ServiceAccountCredentialAuthenticationHandler(
         return AuthenticateResult.NoResult();
       }
 
+      var remoteIp = Context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+      var failureKey = $"sa-auth-fail:{remoteIp}";
+      if (_failureCache.TryGetValue<int>(failureKey, out var failureCount) &&
+          failureCount >= appOptions.CurrentValue.ServiceAccountAuthFailureLimit)
+      {
+        return AuthenticateResult.Fail("Too many failed authentication attempts. Try again later.");
+      }
+
       var validationResult = await serviceAccountManager.ValidateCredential(apiKey, Context.RequestAborted);
       if (!validationResult.IsSuccess)
       {
+        _failureCache.Set(failureKey, failureCount + 1, TimeSpan.FromMinutes(appOptions.CurrentValue.ServiceAccountAuthFailureWindowMinutes));
         return AuthenticateResult.Fail("Invalid service account credential");
       }
+
+      _failureCache.Remove(failureKey);
 
       var (account, credential) = validationResult.Value;
 
