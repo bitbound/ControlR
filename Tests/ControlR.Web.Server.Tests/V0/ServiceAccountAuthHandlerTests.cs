@@ -203,7 +203,8 @@ public class ServiceAccountAuthHandlerTests(ITestOutputHelper testOutput)
       UrlEncoder.Default,
       serviceAccountManager,
       loggerFactory,
-      options);
+      options,
+      loggerFactory.CreateLogger<ServiceAccountCredentialAuthenticationHandler>());
 
     await handler.InitializeAsync(scheme, context);
 

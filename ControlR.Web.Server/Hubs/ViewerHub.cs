@@ -148,7 +148,7 @@ public class ViewerHub(
     try
     {
       _logger.LogInformation(
-        "Invoking CtrlAltDel for device {DeviceId} and process {ProcessId}.  User: {UserId}", 
+        "Invoking CtrlAltDel for device {DeviceId} and process {ProcessId}.  User: {UserId}",
         deviceId,
         targetDesktopProcessId,
         Context.UserIdentifier);
@@ -171,7 +171,7 @@ public class ViewerHub(
       }
 
       var dto = new InvokeCtrlAltDelRequestDto(
-        targetDesktopProcessId, 
+        targetDesktopProcessId,
         Context.User?.Identity?.Name ?? "Unknown",
         desktopSessionType);
 
@@ -194,7 +194,7 @@ public class ViewerHub(
 
       if (Context.User?.TryGetUserId(out var userId) != true)
       {
-        _logger.LogCritical("User is null.  Authorize tag should have prevented this.");
+        _logger.LogCritical("User is null on connect. Client is trying to connect to ViewerHub from an authenticated but invalid context.");
         return;
       }
 
@@ -256,8 +256,9 @@ public class ViewerHub(
     {
       await base.OnDisconnectedAsync(exception);
 
-      if (Context.User is null)
+      if (Context.User?.TryGetUserId(out var userId) != true)
       {
+        _logger.LogCritical("User is null on disconnect. Client is trying to connect to ViewerHub from an authenticated but invalid context.");
         return;
       }
 
@@ -433,8 +434,8 @@ public class ViewerHub(
         displayName = user.UserName ?? "";
       }
 
-      sessionRequestDto = sessionRequestDto with 
-      { 
+      sessionRequestDto = sessionRequestDto with
+      {
         NotifyUserOnSessionStart = notifyUser,
         ViewerConnectionId = Context.ConnectionId,
         ViewerName = displayName,
@@ -532,9 +533,6 @@ public class ViewerHub(
 
   public async Task SendDtoToUserGroups(DtoWrapper wrapper)
   {
-    if (Context.User?.IsServerPrincipal() == true)
-      return;
-
     if (!TryGetUserId(out var userId) ||
         !TryGetTenantId(out var tenantId))
     {
