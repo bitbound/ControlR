@@ -182,6 +182,36 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
   }
 
   [Fact]
+  public async Task Bootstrap_WithPatSecretOnly_SkipsPatCreation()
+  {
+    var config = new Dictionary<string, string?>
+    {
+      ["Bootstrap:AdminEmail"] = AdminEmail,
+      ["Bootstrap:AdminPassword"] = AdminPassword,
+      ["Bootstrap:AdminPatSecret"] = PatSecret,
+      ["AppOptions:DisableEmailSending"] = "true"
+    };
+
+    await using var testApp = await TestAppBuilder.CreateTestApp(output, extraConfiguration: config);
+    await testApp.App.BootstrapAdminUser();
+
+    using var scope = testApp.CreateScope();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+
+    var user = await appDb.Users
+      .IgnoreQueryFilters()
+      .FirstOrDefaultAsync(u => u.Email == AdminEmail, TestContext.Current.CancellationToken);
+    Assert.NotNull(user);
+
+    var patCount = await appDb.PersonalAccessTokens
+      .IgnoreQueryFilters()
+      .Where(t => t.UserId == user.Id)
+      .CountAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(0, patCount);
+  }
+
+  [Fact]
   public async Task Bootstrap_WithPatSecret_CreatesPat()
   {
     var config = new Dictionary<string, string?>
