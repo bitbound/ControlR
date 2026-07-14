@@ -60,7 +60,6 @@ public class LogonTokenController : ControllerBase
       request.DeviceId,
       tenantId,
       userId,
-      LogonTokenKind.User,
       request.ExpirationMinutes);
 
     var deviceAccessUrl = new Uri(

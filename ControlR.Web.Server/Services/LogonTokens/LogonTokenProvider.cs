@@ -10,8 +10,7 @@ public interface ILogonTokenProvider
   Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
-    Guid? userId,
-    LogonTokenKind kind,
+    Guid userId,
     int expirationMinutes = 5);
 
   Task<LogonTokenValidationResult> ValidateAndConsumeTokenAsync(string token, Guid deviceId);
@@ -24,7 +23,7 @@ public class LogonTokenProvider(
   IDbContextFactory<AppDb> dbContextFactory,
   ILogger<LogonTokenProvider> logger) : ILogonTokenProvider
 {
-  // Per-token async locks to ensure single-consumption race safety
+  // Per-token async locks to ensure single-consumption race safety.
   private static readonly ConcurrentDictionary<string, SemaphoreSlim> _tokenLocks = new();
   private readonly IMemoryCache _cache = cache;
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
@@ -34,27 +33,18 @@ public class LogonTokenProvider(
   public async Task<LogonTokenModel> CreateTokenAsync(
     Guid deviceId,
     Guid tenantId,
-    Guid? userId,
-    LogonTokenKind kind,
+    Guid userId,
     int expirationMinutes = 5)
   {
-    if (kind == LogonTokenKind.User)
+    await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+    var userExists = await dbContext.Users
+      .Where(u => u.Id == userId && u.TenantId == tenantId)
+      .Select(u => new { u.Id, u.UserName, u.Email })
+      .AnyAsync();
+
+    if (!userExists)
     {
-      if (!userId.HasValue)
-      {
-        throw new InvalidOperationException("UserId is required for user logon tokens.");
-      }
-
-      await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-      var exists = await dbContext.Users
-        .Where(u => u.Id == userId.Value && u.TenantId == tenantId)
-        .Select(u => new { u.Id, u.UserName, u.Email })
-        .AnyAsync();
-
-      if (!exists)
-      {
-        throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
-      }
+      throw new InvalidOperationException($"User {userId} not found in tenant {tenantId}");
     }
 
     var token = RandomGenerator.CreateAccessToken();
@@ -66,7 +56,6 @@ public class LogonTokenProvider(
       Token = token,
       DeviceId = deviceId,
       ExpiresAt = expiresAt,
-      Kind = kind,
       UserId = userId,
       TenantId = tenantId,
       CreatedAt = now,
@@ -76,18 +65,9 @@ public class LogonTokenProvider(
     var cacheKey = GetCacheKey(token);
     _cache.Set(cacheKey, logonToken, expiresAt.DateTime);
 
-    if (kind == LogonTokenKind.User)
-    {
-      _logger.LogInformation(
-        "Created logon token for user {UserId} on device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
-        userId, deviceId, tenantId, expiresAt);
-    }
-    else
-    {
-      _logger.LogInformation(
-        "Created service logon token for device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
-        deviceId, tenantId, expiresAt);
-    }
+    _logger.LogInformation(
+      "Created logon token for user {UserId} on device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
+      userId, deviceId, tenantId, expiresAt);
 
     return logonToken;
   }
@@ -124,16 +104,15 @@ public class LogonTokenProvider(
       _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
 
       _logger.LogInformation(
-        "Validated and consumed {Kind} logon token for user {UserId} on device {DeviceId}",
-        logonToken.Kind, logonToken.UserId, deviceId);
+        "Validated and consumed logon token for user {UserId} on device {DeviceId}",
+        logonToken.UserId, deviceId);
 
       return LogonTokenValidationResult.Success(
         validationResult.User.Id,
         logonToken.TenantId,
         validationResult.User.UserName,
         validationResult.User.UserName,
-        validationResult.User.Email,
-        logonToken.Kind);
+        validationResult.User.Email);
     }
     finally
     {
@@ -156,16 +135,15 @@ public class LogonTokenProvider(
       }
 
       _logger.LogInformation(
-        "Validated {Kind} logon token for user {UserId}",
-        validationResult.Token.Kind, validationResult.User.Id);
+        "Validated logon token for user {UserId}",
+        validationResult.User.Id);
 
       var result = LogonTokenValidationResult.Success(
         validationResult.User.Id,
         validationResult.Token.TenantId,
         validationResult.User.UserName,
         validationResult.User.UserName,
-        validationResult.User.Email,
-        validationResult.Token.Kind);
+        validationResult.User.Email);
 
       return Result.Ok(result);
     }

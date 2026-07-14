@@ -1587,8 +1587,7 @@
           "deviceId",
           "tenantId",
           "userId",
-          "userCorrelationId",
-          "kind"
+          "userCorrelationId"
         ],
         "type": "object",
         "properties": {
@@ -1612,9 +1611,6 @@
               "null",
               "string"
             ]
-          },
-          "kind": {
-            "$ref": "#/components/schemas/LogonTokenKind"
           },
           "expirationMinutes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -2136,9 +2132,6 @@
         }
       },
       "InstallerKeyType": {
-        "type": "integer"
-      },
-      "LogonTokenKind": {
         "type": "integer"
       },
       "LogonTokenResponseDto": {

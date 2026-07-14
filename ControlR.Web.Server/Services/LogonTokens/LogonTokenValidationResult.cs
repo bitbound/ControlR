@@ -9,7 +9,6 @@ public class LogonTokenValidationResult
   public string? ErrorMessage { get; set; }
   [MemberNotNullWhen(true, nameof(UserId), nameof(UserName), nameof(TenantId))]
   public bool IsValid { get; set; }
-  public LogonTokenKind Kind { get; set; }
   public Guid? TenantId { get; set; }
 
   public Guid? UserId { get; set; }
@@ -29,14 +28,12 @@ public class LogonTokenValidationResult
     Guid tenantId,
     string? userName,
     string? displayName,
-    string? email,
-    LogonTokenKind kind)
+    string? email)
   {
     return new LogonTokenValidationResult
     {
       IsValid = true,
       UserId = userId,
-      Kind = kind,
       UserName = userName,
       DisplayName = displayName,
       Email = email,

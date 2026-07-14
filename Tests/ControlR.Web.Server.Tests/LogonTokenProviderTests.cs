@@ -21,7 +21,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
 
     // Act
-    var result = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, LogonTokenKind.User);
+    var result = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
     
     // Assert
     Assert.NotNull(result);
@@ -47,7 +47,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
 
     // Act & Assert
     await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-      await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, invalidUserId, LogonTokenKind.User));
+      await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, invalidUserId));
   }
 
   [Fact]
@@ -63,7 +63,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
 
     // Create a token
-    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, LogonTokenKind.User);
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
     
     // Act - First consumption should succeed
     var firstValidation = await logonTokenProvider.ValidateAndConsumeTokenAsync(token.Token, deviceId);
@@ -91,7 +91,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var expirationMinutes = 15;
 
     // Create a token that will expire soon
-    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, LogonTokenKind.User, expirationMinutes);
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, expirationMinutes);
     
     // Act - Advance time past expiration
     testApp.TimeProvider.Advance(TimeSpan.FromMinutes(expirationMinutes + 1));
@@ -133,7 +133,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
 
     // Create a token
-    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id, LogonTokenKind.User);
+    var token = await logonTokenProvider.CreateTokenAsync(deviceId, tenant.Id, user.Id);
     
     // Act
     var validateResult = await logonTokenProvider.ValidateTokenAsync(token.Token);

@@ -32,15 +32,20 @@ public class LogonTokensController : ControllerBase
       return BadRequest("ExpirationMinutes must be between 1 and 1440.");
     }
 
-    Guid? userId = request.UserId;
+    Guid userId;
 
-    if (request.Kind == LogonTokenKind.Service)
+    if (request.UserId.HasValue)
     {
-      if (string.IsNullOrWhiteSpace(request.UserCorrelationId))
+      var user = await appDb.Users.FindAsync(request.UserId.Value);
+      if (user is null || user.TenantId != request.TenantId)
       {
-        return BadRequest("UserCorrelationId is required for service logon tokens.");
+        return BadRequest("User not found or does not belong to this tenant.");
       }
 
+      userId = request.UserId.Value;
+    }
+    else if (!string.IsNullOrWhiteSpace(request.UserCorrelationId))
+    {
       var username = $"ext-{request.UserCorrelationId.Trim()}";
       var guestUser = await userManager.Users
         .FirstOrDefaultAsync(u => u.UserName == username && u.TenantId == request.TenantId);
@@ -62,28 +67,17 @@ public class LogonTokensController : ControllerBase
       }
 
       await userManager.UpdateLastLoginAsync(guestUser);
-
       userId = guestUser.Id;
     }
-    else if (request.Kind == LogonTokenKind.User)
+    else
     {
-      if (!request.UserId.HasValue)
-      {
-        return BadRequest("UserId is required for user logon tokens.");
-      }
-
-      var user = await appDb.Users.FindAsync(request.UserId.Value);
-      if (user is null || user.TenantId != request.TenantId)
-      {
-        return BadRequest("User not found or does not belong to this tenant.");
-      }
+      return BadRequest("UserId or UserCorrelationId is required.");
     }
 
     var logonToken = await logonTokenProvider.CreateTokenAsync(
       request.DeviceId,
       request.TenantId,
       userId,
-      request.Kind,
       request.ExpirationMinutes);
 
     var deviceAccessUrl = new Uri(

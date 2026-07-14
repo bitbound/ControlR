@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
-using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.LogonTokens;
 
 namespace ControlR.Web.Server.Authn;
@@ -60,16 +59,6 @@ public class LogonTokenAuthenticationHandler(
       new(UserClaimTypes.AuthenticationMethod, LogonTokenAuthenticationSchemeOptions.DefaultScheme),
       new(UserClaimTypes.DeviceSessionScope, deviceId.ToString()),
     };
-
-    if (tokenValidation.Kind == LogonTokenKind.Service)
-    {
-      claims.Add(new Claim(PrincipalClaimTypes.PrincipalType, PrincipalClaimTypes.ServiceToken));
-    }
-
-    if (!string.IsNullOrWhiteSpace(user.Email))
-    {
-      claims.Add(new Claim(ClaimTypes.Email, user.Email));
-    }
 
     var roles = await _userManager.GetRolesAsync(user);
     foreach (var role in roles)

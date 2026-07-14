@@ -8,6 +8,5 @@ public record CreateLogonTokenRequestDto(
   Guid? UserId,
   [StringLength(252)]
   string? UserCorrelationId,
-  LogonTokenKind Kind,
   [Range(1, 1440)]
   int ExpirationMinutes = 15);

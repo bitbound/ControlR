@@ -66,7 +66,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       services.GetRequiredService<ILogonTokenProvider>(),
-      new CreateLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, LogonTokenKind.User));
+      new CreateLogonTokenRequestDto(device.Id, tenant.Id, user.Id, null, 15));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
