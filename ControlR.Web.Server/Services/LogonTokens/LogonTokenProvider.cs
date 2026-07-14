@@ -132,7 +132,8 @@ public class LogonTokenProvider(
         logonToken.TenantId,
         validationResult.User.UserName,
         validationResult.User.UserName,
-        validationResult.User.Email);
+        validationResult.User.Email,
+        logonToken.Kind);
     }
     finally
     {
@@ -163,7 +164,8 @@ public class LogonTokenProvider(
         validationResult.Token.TenantId,
         validationResult.User.UserName,
         validationResult.User.UserName,
-        validationResult.User.Email);
+        validationResult.User.Email,
+        validationResult.Token.Kind);
 
       return Result.Ok(result);
     }

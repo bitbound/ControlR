@@ -29,12 +29,14 @@ public class LogonTokenValidationResult
     Guid tenantId,
     string? userName,
     string? displayName,
-    string? email)
+    string? email,
+    LogonTokenKind kind)
   {
     return new LogonTokenValidationResult
     {
       IsValid = true,
       UserId = userId,
+      Kind = kind,
       UserName = userName,
       DisplayName = displayName,
       Email = email,
