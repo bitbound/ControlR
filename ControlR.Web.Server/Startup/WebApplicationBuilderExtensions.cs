@@ -20,7 +20,6 @@ using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Services.Tenants;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Services;
-using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
@@ -163,6 +162,7 @@ public static class WebApplicationBuilderExtensions
         });
       }
     });
+
     builder.Services.AddRateLimiter(options =>
     {
       options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -180,7 +180,7 @@ public static class WebApplicationBuilderExtensions
 
         return ValueTask.CompletedTask;
       };
-      
+
       options.AddPolicy(
         AnonymousAuthRateLimitPolicy.PolicyName,
         AnonymousAuthRateLimitPolicy.Create());

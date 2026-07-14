@@ -17,7 +17,7 @@ public class ApiExceptionHandlerTests
   {
     var handler = new ApiExceptionHandler(NullLogger<ApiExceptionHandler>.Instance);
     var httpContext = new DefaultHttpContext();
-    httpContext.Request.Path = "/api/devices";
+    httpContext.Request.Path = HttpConstants.Internal.DevicesEndpoint;
     httpContext.TraceIdentifier = "test-trace-123";
     httpContext.Response.Body = new MemoryStream();
     var exception = new InvalidOperationException("Something broke");

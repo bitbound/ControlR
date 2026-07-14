@@ -39,7 +39,7 @@ public class RequirePasswordChangeMiddlewareTests
       return Task.CompletedTask;
     });
 
-    var context = CreateContext("/api/personal-access-tokens", IdentityConstants.ApplicationScheme);
+    var context = CreateContext(HttpConstants.Internal.PersonalAccessTokensEndpoint, IdentityConstants.ApplicationScheme);
     context.Response.Body = new MemoryStream();
     var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
 
