@@ -128,8 +128,8 @@ public class LogonTokenProvider(
       if (logonToken.DeviceId != deviceId)
       {
         _logger.LogWarning(
-          "Device ID mismatch for token {Token}. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
-          token, logonToken.DeviceId, deviceId);
+          "Device ID mismatch for logon token. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
+          logonToken.DeviceId, deviceId);
         return LogonTokenValidationResult.Failure("Token is not valid for this device");
       }
 
@@ -201,20 +201,20 @@ public class LogonTokenProvider(
 
     if (!_cache.TryGetValue(cacheKey, out LogonTokenModel? logonToken) || logonToken is null)
     {
-      _logger.LogWarning("Logon token not found: {Token}", token);
+      _logger.LogWarning("Logon token not found.");
       return new TokenValidationResult(false, "Invalid or expired token", null, null);
     }
 
     if (logonToken.IsConsumed)
     {
-      _logger.LogWarning("Token has already been consumed: {Token}", token);
+      _logger.LogWarning("Token has already been consumed.");
       return new TokenValidationResult(false, "Token has already been used", logonToken, null);
     }
 
     var now = _timeProvider.GetUtcNow();
     if (now > logonToken.ExpiresAt)
     {
-      _logger.LogWarning("Token has expired: {Token}, expired at {ExpiresAt}", token, logonToken.ExpiresAt);
+      _logger.LogWarning("Token has expired at {ExpiresAt}", logonToken.ExpiresAt);
       _cache.Remove(cacheKey);
       return new TokenValidationResult(false, "Token has expired", logonToken, null);
     }
