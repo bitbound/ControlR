@@ -1,7 +1,8 @@
 ## Breaking Changes
 
-- In a traditional, interactive server deployment, the first registered user automatically becomes a server administrator.
-  - This behavior now requires explicit opt-in via the `AppOptions__EnableFirstUserSelfRegistration` configuration option.
+- First-user self-registration now requires explicit opt-in via the `AppOptions__EnableFirstUserSelfRegistration` configuration option.
+  - In a normal, interactive server deployment, the first registered user automatically became a server administrator.
+  - This option is useful for server-to-server integrations, where ControlR will be driven primarily via API.
 
 ## Added
 
