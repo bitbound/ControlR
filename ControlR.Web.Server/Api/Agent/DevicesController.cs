@@ -8,6 +8,7 @@ using CreateDeviceRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.I
 namespace ControlR.Web.Server.Api.Agent;
 
 [Route(HttpConstants.Agent.DevicesEndpoint)]
+[Route(HttpConstants.Legacy.DevicesEndpoint)]
 [ApiController]
 [AllowAnonymous]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

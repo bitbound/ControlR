@@ -39,6 +39,7 @@ public partial class ControlrApiContractSyncTests
 
     var missingPaths = apiData.NonLegacyPaths
       .Where(path => !clientTemplates.Contains(path))
+      .Where(path => ApiVersionRegex().IsMatch(path) || path.StartsWith("/api/internal/", StringComparison.OrdinalIgnoreCase))
       .OrderBy(path => path)
       .ToArray();
 
@@ -108,6 +109,9 @@ public partial class ControlrApiContractSyncTests
         $"Mapped sub-client '{propertyName}' for route '{matchedConstant}' is not present on any sub-interface.");
     }
   }
+
+  [GeneratedRegex("^/api/v\\d+/")]
+  private static partial Regex ApiVersionRegex();
 
   private static Dictionary<string, string> CreateEndpointPropertyMap()
   {

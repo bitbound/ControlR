@@ -6,6 +6,7 @@ using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.Serve
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.InstallerKeysEndpoint)]
+[Route(HttpConstants.Legacy.InstallerKeysEndpoint)]
 [ApiController]
 [Authorize(Roles = $"{RoleNames.TenantAdministrator},{RoleNames.InstallerKeyManager}")]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

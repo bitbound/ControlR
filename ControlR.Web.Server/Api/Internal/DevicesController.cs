@@ -6,14 +6,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.DevicesEndpoint)]
+[Route(HttpConstants.Legacy.DevicesEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class DevicesController(
   IDeviceAccessScopeResolver deviceAccessScopeResolver) : ControllerBase
 {
-  private readonly IDeviceAccessScopeResolver _deviceAccessScopeResolver = deviceAccessScopeResolver;
 
+  private readonly IDeviceAccessScopeResolver _deviceAccessScopeResolver = deviceAccessScopeResolver;
   [HttpDelete("{deviceId:guid}")]
   public async Task<IActionResult> DeleteDevice(
     [FromServices] AppDb appDb,

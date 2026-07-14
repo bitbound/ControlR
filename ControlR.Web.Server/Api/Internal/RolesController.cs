@@ -4,6 +4,7 @@ using ControlR.Libraries.Api.Contracts.Constants;
 namespace ControlR.Web.Server.Api.Internal;
  
 [Route(HttpConstants.Internal.RolesEndpoint)]
+[Route(HttpConstants.Legacy.RolesEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.OutputCaching;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.PublicRegistrationSettingsEndpoint)]
+[Route(HttpConstants.Legacy.PublicRegistrationSettingsEndpoint)]
 [ApiController]
 [OutputCache(Duration = 60)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

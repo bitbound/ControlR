@@ -5,8 +5,9 @@ using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Api.Agent;
 
-[ApiController]
 [Route(HttpConstants.Agent.AgentUpdateEndpoint)]
+[Route(HttpConstants.Legacy.AgentUpdateEndpoint)]
+[ApiController]
 [AllowAnonymous]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class AgentUpdateController(
