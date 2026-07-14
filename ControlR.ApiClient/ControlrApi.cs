@@ -1,4 +1,5 @@
 using System.Net;
+using ControlR.ApiClient.Interfaces.Agent;
 using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.ApiClient.Interfaces.V0;
 using ControlR.Libraries.Api.Contracts.Dtos;
@@ -9,6 +10,7 @@ namespace ControlR.ApiClient;
 
 public interface IControlrApi
 {
+  IControlrAgentApi Agent { get; }
   IControlrInternalApi Internal { get; }
   IControlrV0Api V0 { get; }
 }
@@ -27,15 +29,18 @@ public partial class ControlrApi(
   private readonly ILogger<ControlrApi> _logger = logger;
   private readonly IOptions<ControlrApiClientOptions> _options = options;
 
+  private AgentApi? _agent;
   private InternalApi? _internal;
   private V0Api? _v0;
 
+  internal AgentApi AgentApi => _agent ??= new(this);
   internal HttpClient HttpClient => _client;
   internal InternalApi InternalApi => _internal ??= new(this);
   internal ILogger<ControlrApi> Logger => _logger;
   internal IOptions<ControlrApiClientOptions> Options => _options;
   internal V0Api V0 => _v0 ??= new(this);
 
+  IControlrAgentApi IControlrApi.Agent => AgentApi;
   IControlrInternalApi IControlrApi.Internal => InternalApi;
   IControlrV0Api IControlrApi.V0 => V0;
 

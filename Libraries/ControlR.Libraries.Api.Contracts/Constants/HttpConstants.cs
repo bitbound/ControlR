@@ -5,6 +5,11 @@ public static class HttpConstants
   public const string AgentUpdateEndpoint = "/api/agent-update";
   public const string DevicesEndpoint = "/api/devices";
 
+  public static class Agent
+  {
+    public const string AgentUpdateEndpoint = "/api/agent/updates";
+    public const string DevicesEndpoint = "/api/agent/devices";
+  }
   public static class Internal
   {
     public const string AgentUpdateEndpoint = "/api/internal/agent-update";

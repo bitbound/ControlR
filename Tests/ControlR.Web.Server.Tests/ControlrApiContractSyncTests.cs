@@ -185,6 +185,7 @@ public partial class ControlrApiContractSyncTests
     {
       typeof(IControlrInternalApi),
       typeof(IControlrV0Api),
+      typeof(IControlrAgentApi),
     })
     {
       foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
@@ -231,7 +232,8 @@ public partial class ControlrApiContractSyncTests
       {
         var fileName = Path.GetFileName(path);
         return fileName.StartsWith("InternalApi", StringComparison.OrdinalIgnoreCase) ||
-          fileName.StartsWith("V0Api", StringComparison.OrdinalIgnoreCase);
+          fileName.StartsWith("V0Api", StringComparison.OrdinalIgnoreCase) ||
+          fileName.StartsWith("AgentApi", StringComparison.OrdinalIgnoreCase);
       })
       .ToArray();
 

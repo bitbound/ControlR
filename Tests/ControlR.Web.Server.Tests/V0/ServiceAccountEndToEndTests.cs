@@ -120,7 +120,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     using var anonClient = testServer.TestServer.CreateClient();
     var deviceResponse = await anonClient.PostAsJsonAsync(
-      HttpConstants.Internal.DevicesEndpoint,
+      HttpConstants.Agent.DevicesEndpoint,
       createDeviceReq,
       TestContext.Current.CancellationToken);
 

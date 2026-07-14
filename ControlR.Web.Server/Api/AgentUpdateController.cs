@@ -22,6 +22,7 @@ public class AgentUpdateController(
   [ResponseCache(Duration = CacheDurationSeconds, Location = ResponseCacheLocation.Any)]
   [Produces("application/json")]
   [HttpGet("get-bundle-metadata/{runtime}")]
+  [Obsolete("This endpoint has been moved to the `/api/agent/agent-update` endpoint.")]
   public async Task<ActionResult<InternalDtos.BundleMetadataDto>> GetBundleMetadata(
     RuntimeId runtime,
     [FromServices] IAgentVersionProvider agentVersionProvider,

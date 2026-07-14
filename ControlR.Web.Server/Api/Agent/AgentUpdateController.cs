@@ -3,10 +3,10 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
-namespace ControlR.Web.Server.Api.Internal;
+namespace ControlR.Web.Server.Api.Agent;
 
 [ApiController]
-[Route(HttpConstants.Internal.AgentUpdateEndpoint)]
+[Route(HttpConstants.Agent.AgentUpdateEndpoint)]
 [AllowAnonymous]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class AgentUpdateController(
