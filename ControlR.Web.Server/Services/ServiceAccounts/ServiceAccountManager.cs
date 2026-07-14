@@ -296,84 +296,72 @@ public class ServiceAccountManager(
     string apiKey,
     CancellationToken cancellationToken)
   {
+    var parts = apiKey.Split(':', 2);
+    if (parts.Length != 2)
+    {
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
+    }
+
+    // The header id is the credential Guid rendered via Convert.ToHexString on the
+    // Guid's byte array. Reconstruct the Guid from the hex bytes rather than Guid.TryParse.
+    Guid credentialId;
     try
     {
-      var parts = apiKey.Split(':', 2);
-      if (parts.Length != 2)
-      {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
-      }
-
-      // The header id is the credential Guid rendered via Convert.ToHexString on the
-      // Guid's byte array. Reconstruct the Guid from the hex bytes rather than Guid.TryParse.
-      Guid credentialId;
-      try
-      {
-        var idBytes = Convert.FromHexString(parts[0]);
-        credentialId = new Guid(idBytes);
-      }
-      catch
-      {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
-      }
-
-      if (credentialId == Guid.Empty)
-      {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
-      }
-
-      var credential = await appDb.ServiceAccountCredentials
-        .IgnoreQueryFilters()
-        .Include(x => x.ServiceAccount)
-        .FirstOrDefaultAsync(x => x.Id == credentialId, cancellationToken);
-
-      if (credential is null)
-      {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.NotFound, InvalidCredentialMessage);
-      }
-
-      var account = credential.ServiceAccount;
-      if (account is null || !account.IsEnabled)
-      {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account is not available.");
-      }
-
-      if (credential.RevokedAt is not null)
-      {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account credential has been revoked.");
-      }
-
-      if (credential.ExpiresAt is not null && credential.ExpiresAt <= timeProvider.GetUtcNow())
-      {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account credential has expired.");
-      }
-
-      var verification = passwordHasher.VerifyHashedPassword(string.Empty, credential.HashedSecret, parts[1]);
-      if (verification == PasswordVerificationResult.Failed)
-      {
-        return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidCredentialMessage);
-      }
-
-      // Update last-used timestamp. Rehash on the off chance the hasher signals an upgrade.
-      if (verification == PasswordVerificationResult.SuccessRehashNeeded)
-      {
-        credential.HashedSecret = passwordHasher.HashPassword(string.Empty, parts[1]);
-      }
-
-      credential.LastUsedAt = timeProvider.GetUtcNow();
-      await appDb.SaveChangesAsync(cancellationToken);
-
-      return HttpResult.Ok(new ServiceAccountCredentialValidationResult(account, credential));
+      var idBytes = Convert.FromHexString(parts[0]);
+      credentialId = new Guid(idBytes);
     }
-    catch (OperationCanceledException)
+    catch
     {
-      throw;
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
     }
-    catch (Exception ex)
+
+    if (credentialId == Guid.Empty)
     {
-      logger.LogError(ex, "Failed to validate service account credential.");
-      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(ex, HttpResultErrorCode.InternalServerError, "Failed to validate service account credential.");
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
     }
+
+    var credential = await appDb.ServiceAccountCredentials
+      .IgnoreQueryFilters()
+      .Include(x => x.ServiceAccount)
+      .FirstOrDefaultAsync(x => x.Id == credentialId, cancellationToken);
+
+    if (credential is null)
+    {
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.NotFound, InvalidCredentialMessage);
+    }
+
+    var account = credential.ServiceAccount;
+    if (account is null || !account.IsEnabled)
+    {
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account is not available.");
+    }
+
+    if (credential.RevokedAt is not null)
+    {
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account credential has been revoked.");
+    }
+
+    if (credential.ExpiresAt is not null && credential.ExpiresAt <= timeProvider.GetUtcNow())
+    {
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account credential has expired.");
+    }
+
+    var verification = passwordHasher.VerifyHashedPassword(string.Empty, credential.HashedSecret, parts[1]);
+    if (verification == PasswordVerificationResult.Failed)
+    {
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidCredentialMessage);
+    }
+
+    // Update last-used timestamp. Rehash on the off chance the hasher signals an upgrade.
+    if (verification == PasswordVerificationResult.SuccessRehashNeeded)
+    {
+      credential.HashedSecret = passwordHasher.HashPassword(string.Empty, parts[1]);
+    }
+
+    credential.LastUsedAt = timeProvider.GetUtcNow();
+    await appDb.SaveChangesAsync(cancellationToken);
+
+    return HttpResult.Ok(new ServiceAccountCredentialValidationResult(account, credential));
   }
 
   private static string FormatApiKey(Guid credentialId, string plainTextSecret)
