@@ -30,7 +30,10 @@ public interface IServiceAccountManager
   /// </summary>
   Task<HttpResult<CreateServiceAccountResponseDto>> CreateForServer(string name, string? description, CancellationToken cancellationToken);
   /// <summary>Deletes a server service account. Credentials cascade-delete.</summary>
-  Task<HttpResult> Delete(Guid serviceAccountId, CancellationToken cancellationToken);
+  /// <param name="serviceAccountId">The ID of the service account to delete.</param>
+  /// <param name="requestingPrincipalId">The ID of the authenticated principal making the request. Used to prevent self-deletion.</param>
+  /// <param name="cancellationToken">A <see cref="CancellationToken"/>.</param>
+  Task<HttpResult> Delete(Guid serviceAccountId, Guid requestingPrincipalId, CancellationToken cancellationToken);
   /// <summary>Returns a single server-scoped service account with its credential metadata.</summary>
   Task<HttpResult<ServiceAccountDto>> Get(Guid serviceAccountId, CancellationToken cancellationToken);
   /// <summary>Returns all server-scoped service accounts with their credential metadata.</summary>
@@ -225,8 +228,13 @@ public class ServiceAccountManager(
     return HttpResult.Ok(new CreateServiceAccountResponseDto(MapToDto(account), apiKey));
   }
 
-  public async Task<HttpResult> Delete(Guid serviceAccountId, CancellationToken cancellationToken)
+  public async Task<HttpResult> Delete(Guid serviceAccountId, Guid requestingPrincipalId, CancellationToken cancellationToken)
   {
+    if (serviceAccountId.Equals(requestingPrincipalId))
+    {
+      return HttpResult.Fail(HttpResultErrorCode.Forbidden, "A service account cannot delete itself.");
+    }
+
     var account = await appDb.ServiceAccounts
       .FirstOrDefaultAsync(x => x.Id == serviceAccountId && x.Kind == ServiceAccountKind.Server, cancellationToken);
 

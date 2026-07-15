@@ -43,7 +43,7 @@ public class ServiceAccountManagerTests(ITestOutputHelper testOutput)
     var shouldPass = await manager.ValidateCredential(secondApiKey, TestContext.Current.CancellationToken);
     Assert.True(shouldPass.IsSuccess);
 
-    await manager.Delete(accountId, TestContext.Current.CancellationToken);
+    await manager.Delete(accountId, Guid.NewGuid(), TestContext.Current.CancellationToken);
 
     var allAccounts = await manager.GetAllServer(TestContext.Current.CancellationToken);
     Assert.DoesNotContain(allAccounts, a => a.Id == accountId);

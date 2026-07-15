@@ -1,5 +1,3 @@
-using Asp.Versioning;
-using Asp.Versioning.ApiExplorer;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Client.Components.Layout;
 using ControlR.Web.Server.Components;

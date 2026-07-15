@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using ControlR.Web.Server.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 
 namespace ControlR.Web.Server.Startup;

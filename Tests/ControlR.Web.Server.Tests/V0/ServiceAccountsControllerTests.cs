@@ -1,13 +1,10 @@
 using System.Reflection;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.V0;
 using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -180,6 +177,37 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     var result = await controller.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
     var notFound = Assert.IsType<ObjectResult>(result);
     Assert.Equal(404, notFound.StatusCode);
+  }
+
+  [Fact]
+  public async Task Delete_Self_Returns403()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var manager = services.GetRequiredService<IServiceAccountManager>();
+
+    var saResult = await manager.CreateForServer(
+      "Self Delete Test",
+      null,
+      TestContext.Current.CancellationToken);
+    Assert.True(saResult.IsSuccess);
+    var selfAccountId = saResult.Value.ServiceAccount.Id;
+
+    var controller = await TestPrincipalHelper.CreateControllerWithServerServiceAccountAsync<
+      ServiceAccountsController>(scope, cancellationToken: TestContext.Current.CancellationToken);
+
+    // Override the principal with the same account that the controller will be trying to delete.
+    var controllerPrincipal = TestPrincipalHelper.CreateServerServiceAccountPrincipal(saResult.Value);
+    controller.ControllerContext.HttpContext.User = controllerPrincipal;
+
+    var result = await controller.Delete(selfAccountId, TestContext.Current.CancellationToken);
+    var forbidden = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(403, forbidden.StatusCode);
+
+    // Verify the account still exists.
+    var remaining = await manager.GetAllServer(TestContext.Current.CancellationToken);
+    Assert.NotNull(remaining.FirstOrDefault(a => a.Id == selfAccountId));
   }
 
   [Fact]

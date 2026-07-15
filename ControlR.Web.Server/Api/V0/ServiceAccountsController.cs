@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
+using ControlR.Web.Server.Authn;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.V0;
@@ -52,12 +53,25 @@ public class ServiceAccountsController(
 
   [HttpDelete("{serviceAccountId:guid}")]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> Delete(
     Guid serviceAccountId,
     CancellationToken cancellationToken)
   {
-    var result = await _serviceAccountManager.Delete(serviceAccountId, cancellationToken);
+    var principalClaim = User.FindFirst(PrincipalClaimTypes.PrincipalId);
+    if (principalClaim is null)
+    {
+      return Unauthorized();
+    }
+
+    if (!Guid.TryParse(principalClaim.Value, out var principalId))
+    {
+      return Unauthorized();
+    }
+
+    var result = await _serviceAccountManager.Delete(serviceAccountId, principalId, cancellationToken);
     if (!result.IsSuccess)
     {
       return result.ToActionResult();
