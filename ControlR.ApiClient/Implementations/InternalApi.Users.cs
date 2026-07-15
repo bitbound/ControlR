@@ -62,19 +62,19 @@ internal partial class InternalApi
       await _client.HttpClient.GetFromJsonAsync<UserResponseDto[]>(HttpConstants.Internal.UsersEndpoint, cancellationToken));
   }
 
-  async Task<ApiResult<PersonalAccessTokenDto[]>> IUsersApi.GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken)
+  async Task<ApiResult<PersonalAccessTokenResponseDto[]>> IUsersApi.GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<PersonalAccessTokenDto[]>($"{HttpConstants.Internal.UsersEndpoint}/{userId}/personal-access-tokens", cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<PersonalAccessTokenResponseDto[]>($"{HttpConstants.Internal.UsersEndpoint}/{userId}/personal-access-tokens", cancellationToken));
   }
 
-  async Task<ApiResult<PersonalAccessTokenDto>> IUsersApi.UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<PersonalAccessTokenResponseDto>> IUsersApi.UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
       using var response = await _client.HttpClient.PutAsJsonAsync($"{HttpConstants.Internal.UsersEndpoint}/{userId}/personal-access-tokens/{tokenId}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<PersonalAccessTokenDto>(cancellationToken);
+      return await response.Content.ReadFromJsonAsync<PersonalAccessTokenResponseDto>(cancellationToken);
     });
   }
 }

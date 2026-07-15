@@ -204,7 +204,7 @@ public class UsersController : ControllerBase
   }
 
   [HttpGet("{userId:guid}/personal-access-tokens")]
-  public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenDto>>> GetUserPersonalAccessTokens(
+  public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenResponseDto>>> GetUserPersonalAccessTokens(
     [FromRoute] Guid userId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb)
@@ -227,7 +227,7 @@ public class UsersController : ControllerBase
   }
 
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
-  public async Task<ActionResult<InternalDtos.PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(
+  public async Task<ActionResult<InternalDtos.PersonalAccessTokenResponseDto>> UpdateUserPersonalAccessToken(
     [FromRoute] Guid userId,
     [FromRoute] Guid tokenId,
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,

@@ -27,7 +27,7 @@
   </MudCardContent>
 </MudCard>
 
-<MudDataGrid T="PersonalAccessTokenDto" Items="@_personalAccessTokens" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
+<MudDataGrid T="PersonalAccessTokenResponseDto" Items="@_personalAccessTokens" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
   SortMode="SortMode.Single">
   <Columns>
     <PropertyColumn Property="x => x.Name" Title="Name" />

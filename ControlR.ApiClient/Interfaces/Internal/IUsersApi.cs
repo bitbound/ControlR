@@ -11,6 +11,6 @@ public interface IUsersApi
   Task<ApiResult> DeleteUser(Guid userId, CancellationToken cancellationToken = default);
   Task<ApiResult> DeleteUserPersonalAccessToken(Guid userId, Guid tokenId, CancellationToken cancellationToken = default);
   Task<ApiResult<UserResponseDto[]>> GetAllUsers(CancellationToken cancellationToken = default);
-  Task<ApiResult<PersonalAccessTokenDto[]>> GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken = default);
-  Task<ApiResult<PersonalAccessTokenDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<PersonalAccessTokenResponseDto[]>> GetUserPersonalAccessTokens(Guid userId, CancellationToken cancellationToken = default);
+  Task<ApiResult<PersonalAccessTokenResponseDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
 }

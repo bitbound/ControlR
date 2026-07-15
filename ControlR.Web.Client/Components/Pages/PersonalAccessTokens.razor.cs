@@ -6,7 +6,7 @@ public partial class PersonalAccessTokens
 {
   private bool _isLoading = false;
   private string _newTokenName = string.Empty;
-  private PersonalAccessTokenDto[] _personalAccessTokens = [];
+  private PersonalAccessTokenResponseDto[] _personalAccessTokens = [];
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -71,7 +71,7 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task DeletePersonalAccessToken(PersonalAccessTokenDto personalAccessToken)
+  private async Task DeletePersonalAccessToken(PersonalAccessTokenResponseDto personalAccessToken)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Confirm Delete",
@@ -133,7 +133,7 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task RenamePersonalAccessToken(PersonalAccessTokenDto personalAccessToken)
+  private async Task RenamePersonalAccessToken(PersonalAccessTokenResponseDto personalAccessToken)
   {
     var parameters = new DialogParameters
     {

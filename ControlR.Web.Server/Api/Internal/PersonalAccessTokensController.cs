@@ -54,7 +54,7 @@ public class PersonalAccessTokensController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenDto>>> GetPersonalAccessTokens(
+  public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenResponseDto>>> GetPersonalAccessTokens(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] UserManager<AppUser> userManager)
   {
@@ -69,7 +69,7 @@ public class PersonalAccessTokensController : ControllerBase
   }
 
   [HttpPut("{id}")]
-  public async Task<ActionResult<InternalDtos.PersonalAccessTokenDto>> UpdatePersonalAccessToken(
+  public async Task<ActionResult<InternalDtos.PersonalAccessTokenResponseDto>> UpdatePersonalAccessToken(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] UserManager<AppUser> userManager,
     Guid id,

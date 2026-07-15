@@ -236,7 +236,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>());
 
     var getOk = Assert.IsType<OkObjectResult>(getResult.Result);
-    var tokens = Assert.IsAssignableFrom<IEnumerable<InternalDtos.PersonalAccessTokenDto>>(getOk.Value);
+    var tokens = Assert.IsAssignableFrom<IEnumerable<InternalDtos.PersonalAccessTokenResponseDto>>(getOk.Value);
     var createdToken = Assert.Single(tokens);
     Assert.Equal(createDto.PersonalAccessToken.Id, createdToken.Id);
 
@@ -248,7 +248,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
       new InternalDtos.UpdatePersonalAccessTokenRequestDto("Renamed PAT"));
 
     var updateOk = Assert.IsType<OkObjectResult>(updateResult.Result);
-    var updatedToken = Assert.IsType<InternalDtos.PersonalAccessTokenDto>(updateOk.Value);
+    var updatedToken = Assert.IsType<InternalDtos.PersonalAccessTokenResponseDto>(updateOk.Value);
     Assert.Equal("Renamed PAT", updatedToken.Name);
 
     var deleteResult = await controller.DeleteUserPersonalAccessToken(
@@ -265,7 +265,7 @@ public class UsersControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>());
 
     var finalGetOk = Assert.IsType<OkObjectResult>(finalGetResult.Result);
-    var finalTokens = Assert.IsAssignableFrom<IEnumerable<InternalDtos.PersonalAccessTokenDto>>(finalGetOk.Value);
+    var finalTokens = Assert.IsAssignableFrom<IEnumerable<InternalDtos.PersonalAccessTokenResponseDto>>(finalGetOk.Value);
     Assert.Empty(finalTokens);
   }
 }

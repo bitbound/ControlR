@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
-public record PersonalAccessTokenDto(
+public record PersonalAccessTokenResponseDto(
   Guid Id,
   string Name,
   DateTimeOffset CreatedAt,
@@ -14,7 +14,7 @@ public record CreatePersonalAccessTokenRequestDto(
   string Name);
 
 public record CreatePersonalAccessTokenResponseDto(
-  PersonalAccessTokenDto PersonalAccessToken,
+  PersonalAccessTokenResponseDto PersonalAccessToken,
   string PlainTextToken);
 
 public record UpdatePersonalAccessTokenRequestDto(
