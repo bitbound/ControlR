@@ -2076,31 +2076,6 @@
           }
         }
       },
-      "DeviceSearchFilterCountsDto": {
-        "type": "object",
-        "properties": {
-          "offlineDevices": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          },
-          "onlineDevices": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          },
-          "taggedDevices": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          },
-          "untaggedDevices": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
       "DeviceSearchRequestDto": {
         "type": "object",
         "properties": {
@@ -2163,17 +2138,6 @@
       "DeviceSearchResponseDto": {
         "type": "object",
         "properties": {
-          "anyDevicesForUser": {
-            "type": "boolean"
-          },
-          "filterCounts": {
-            "$ref": "#/components/schemas/DeviceSearchFilterCountsDto"
-          },
-          "hiddenUntaggedDevices": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          },
           "items": {
             "type": [
               "null",

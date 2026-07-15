@@ -121,19 +121,13 @@ public class DevicesController() : ControllerBase
   {
     var isRelationalDatabase = appDb.Database.IsRelational();
     var authorizedQuery = appDb.Devices.AsQueryable();
-    var anyDevices = await authorizedQuery.AnyAsync();
 
     var filteredQuery = authorizedQuery
       .FilterBySearchText(requestDto.SearchText, isRelationalDatabase)
       .FilterByOnlineOffline(requestDto.HideOfflineDevices)
       .FilterByColumnFilters(requestDto.FilterDefinitions, isRelationalDatabase, logger);
 
-    var hiddenUntaggedDevices = requestDto.IncludeUntaggedDevices
-      ? 0
-      : await filteredQuery.CountAsync(x => !x.Tags!.Any());
-
     var scopedQuery = filteredQuery.FilterByTagIds(requestDto.TagIds, requestDto.IncludeUntaggedDevices);
-    var filterCounts = await GetFilterCounts(scopedQuery);
     var totalCount = await scopedQuery.CountAsync();
 
     var devices = await scopedQuery
@@ -153,9 +147,6 @@ public class DevicesController() : ControllerBase
 
     var response = new V0Dtos.DeviceSearchResponseDto
     {
-      AnyDevicesForUser = anyDevices,
-      FilterCounts = filterCounts,
-      HiddenUntaggedDevices = hiddenUntaggedDevices,
       Items = pagedDtos,
       TotalItems = totalCount
     };
@@ -196,22 +187,6 @@ public class DevicesController() : ControllerBase
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
     return device.ToV0ResponseDto(isOutdated);
-  }
-
-  private static async Task<V0Dtos.DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)
-  {
-    return await query
-      .Select(x => new { IsTagged = x.Tags!.Any(), x.IsOnline })
-      .GroupBy(_ => 1)
-      .Select(group => new V0Dtos.DeviceSearchFilterCountsDto
-      {
-        TaggedDevices = group.Count(x => x.IsTagged),
-        UntaggedDevices = group.Count(x => !x.IsTagged),
-        OnlineDevices = group.Count(x => x.IsOnline),
-        OfflineDevices = group.Count(x => !x.IsOnline)
-      })
-      .FirstOrDefaultAsync()
-      ?? new V0Dtos.DeviceSearchFilterCountsDto();
   }
 
   private static async Task<bool> GetIsOutdated(Device entity, IAgentVersionProvider agentVersionProvider)

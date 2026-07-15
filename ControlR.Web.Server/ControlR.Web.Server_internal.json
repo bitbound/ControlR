@@ -5449,7 +5449,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               },
@@ -5457,7 +5457,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               },
@@ -5465,7 +5465,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               }
@@ -5596,7 +5596,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               },
@@ -5604,7 +5604,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               },
@@ -5612,7 +5612,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               }
@@ -5742,17 +5742,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               }
             }
@@ -5881,17 +5881,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               }
             }
@@ -9691,7 +9691,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               },
@@ -9699,7 +9699,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               },
@@ -9707,7 +9707,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               }
@@ -9856,7 +9856,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               },
@@ -9864,7 +9864,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               },
@@ -9872,7 +9872,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                    "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                   }
                 }
               }
@@ -10124,17 +10124,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               }
             }
@@ -10281,17 +10281,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PersonalAccessTokenDto"
+                  "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
                 }
               }
             }
@@ -13195,7 +13195,7 @@
         "type": "object",
         "properties": {
           "personalAccessToken": {
-            "$ref": "#/components/schemas/PersonalAccessTokenDto"
+            "$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
           },
           "plainTextToken": {
             "type": "string"
@@ -14233,7 +14233,7 @@
       "MessageSeverity": {
         "type": "integer"
       },
-      "PersonalAccessTokenDto": {
+      "PersonalAccessTokenResponseDto": {
         "required": [
           "id",
           "name",
