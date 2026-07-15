@@ -3,10 +3,10 @@ using System.ComponentModel.DataAnnotations;
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 public record LoginRequestDto(
-  [Required]
-  [EmailAddress]
+  [property: Required]
+  [property: EmailAddress]
   string Email,
-  [Required]
+  [property: Required]
   string Password,
   string? TwoFactorCode = null,
   string? TwoFactorRecoveryCode = null);

@@ -9,8 +9,8 @@ public record PersonalAccessTokenDto(
   DateTimeOffset? LastUsed);
 
 public record CreatePersonalAccessTokenRequestDto(
-  [Required]
-  [StringLength(256, MinimumLength = 1)]
+  [property: Required]
+  [property: StringLength(256, MinimumLength = 1)]
   string Name);
 
 public record CreatePersonalAccessTokenResponseDto(
@@ -18,6 +18,6 @@ public record CreatePersonalAccessTokenResponseDto(
   string PlainTextToken);
 
 public record UpdatePersonalAccessTokenRequestDto(
-  [Required]
-  [StringLength(256, MinimumLength = 1)]
+  [property: Required]
+  [property: StringLength(256, MinimumLength = 1)]
   string Name);

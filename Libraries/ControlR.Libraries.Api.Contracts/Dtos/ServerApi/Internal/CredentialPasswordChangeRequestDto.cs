@@ -3,12 +3,12 @@ using System.ComponentModel.DataAnnotations;
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 public record CredentialPasswordChangeRequestDto(
-  [Required]
-  [EmailAddress]
+  [property: Required]
+  [property: EmailAddress]
   string Email,
-  [Required]
+  [property: Required]
   string CurrentPassword,
-  [Required]
-  [StringLength(100, MinimumLength = 8)]
+  [property: Required]
+  [property: StringLength(100, MinimumLength = 8)]
   string NewPassword,
   string? TwoFactorCode = null);

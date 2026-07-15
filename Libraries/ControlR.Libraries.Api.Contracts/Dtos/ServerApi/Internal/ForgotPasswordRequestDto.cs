@@ -3,6 +3,6 @@ using System.ComponentModel.DataAnnotations;
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 public record ForgotPasswordRequestDto(
-  [Required]
-  [EmailAddress]
+  [property: Required]
+  [property: EmailAddress]
   string Email);

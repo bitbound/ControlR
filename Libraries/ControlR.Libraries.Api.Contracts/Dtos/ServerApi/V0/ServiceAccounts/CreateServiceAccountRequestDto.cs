@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations;
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 
 public record CreateServiceAccountRequestDto(
-  [Required]
-  [StringLength(100, MinimumLength = 1)]
+  [property: Required]
+  [property: StringLength(100, MinimumLength = 1)]
   string Name,
-  [StringLength(500)]
+  [property: StringLength(500)]
   string? Description);
 

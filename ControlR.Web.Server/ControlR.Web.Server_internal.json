@@ -13181,6 +13181,8 @@
         "type": "object",
         "properties": {
           "name": {
+            "maxLength": 256,
+            "minLength": 1,
             "type": "string"
           }
         }
@@ -13262,6 +13264,8 @@
             "type": "string"
           },
           "newPassword": {
+            "maxLength": 100,
+            "minLength": 8,
             "type": "string"
           },
           "twoFactorCode": {
@@ -14393,6 +14397,8 @@
             "type": "string"
           },
           "newPassword": {
+            "maxLength": 100,
+            "minLength": 8,
             "type": "string"
           }
         }
@@ -14799,6 +14805,8 @@
         "type": "object",
         "properties": {
           "name": {
+            "maxLength": 256,
+            "minLength": 1,
             "type": "string"
           }
         }

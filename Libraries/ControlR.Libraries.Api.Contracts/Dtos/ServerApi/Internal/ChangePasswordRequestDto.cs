@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 public record ChangePasswordRequestDto(
-  [Required]
+  [property: Required]
   string CurrentPassword,
-  [Required]
+  [property: Required]
   string NewPassword);

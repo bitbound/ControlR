@@ -1754,6 +1754,8 @@
         "type": "object",
         "properties": {
           "name": {
+            "maxLength": 100,
+            "minLength": 1,
             "type": "string"
           }
         }
@@ -1781,9 +1783,13 @@
         "type": "object",
         "properties": {
           "name": {
+            "maxLength": 100,
+            "minLength": 1,
             "type": "string"
           },
           "description": {
+            "maxLength": 500,
+            "minLength": 0,
             "type": [
               "null",
               "string"
