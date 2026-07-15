@@ -2,6 +2,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.ServiceAccounts;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Primitives;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Services.ServiceAccounts;
 
@@ -57,11 +58,14 @@ public class ServiceAccountManager(
   AppDb appDb,
   TimeProvider timeProvider,
   IPasswordHasher<string> passwordHasher,
+  IMemoryCache memoryCache,
   ILogger<ServiceAccountManager> logger) : IServiceAccountManager
 {
   private const string InvalidApiKeyFormatMessage = "Invalid service account API key format.";
   private const string InvalidCredentialMessage = "Invalid service account credential.";
   private const int MinimumSecretLength = 32;
+
+  private static readonly TimeSpan _cacheExpiration = TimeSpan.FromSeconds(30);
 
   public async Task<HttpResult<CreateServiceAccountCredentialResponseDto>> AddCredential(
     Guid serviceAccountId,
@@ -243,8 +247,11 @@ public class ServiceAccountManager(
       return HttpResult.Fail(HttpResultErrorCode.NotFound, "Server service account not found.");
     }
 
+    await EvictAccountFromCacheAsync(serviceAccountId, cancellationToken);
+
     appDb.ServiceAccounts.Remove(account);
     await appDb.SaveChangesAsync(cancellationToken);
+
     return HttpResult.Ok();
   }
 
@@ -298,6 +305,8 @@ public class ServiceAccountManager(
 
     credential.RevokedAt = timeProvider.GetUtcNow();
     await appDb.SaveChangesAsync(cancellationToken);
+
+    EvictCredentialFromCache(credentialId);
     return HttpResult.Ok();
   }
 
@@ -327,6 +336,26 @@ public class ServiceAccountManager(
     if (credentialId == Guid.Empty)
     {
       return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidApiKeyFormatMessage);
+    }
+
+    if (memoryCache.TryGetValue<ServiceAccountCredentialValidationResult>(credentialId, out var cachedResult) && cachedResult is not null)
+    {
+      var now = timeProvider.GetUtcNow();
+
+      // A credential whose ExpiresAt falls inside the cache window would otherwise keep
+      // authenticating for up to the remaining TTL. Re-check and, if expired, evict and
+      // fall through to a fresh validation that will reject it.
+      if (cachedResult.Credential.ExpiresAt is not null && cachedResult.Credential.ExpiresAt <= now)
+      {
+        EvictCredentialFromCache(credentialId);
+      }
+      else
+      {
+        cachedResult.Credential.LastUsedAt = now;
+        await PersistLastUsedAtAsync(credentialId, now, cancellationToken);
+
+        return HttpResult.Ok(cachedResult);
+      }
     }
 
     var credential = await appDb.ServiceAccountCredentials
@@ -361,7 +390,6 @@ public class ServiceAccountManager(
       return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidCredentialMessage);
     }
 
-    // Update last-used timestamp. Rehash on the off chance the hasher signals an upgrade.
     if (verification == PasswordVerificationResult.SuccessRehashNeeded)
     {
       credential.HashedSecret = passwordHasher.HashPassword(string.Empty, parts[1]);
@@ -370,7 +398,13 @@ public class ServiceAccountManager(
     credential.LastUsedAt = timeProvider.GetUtcNow();
     await appDb.SaveChangesAsync(cancellationToken);
 
-    return HttpResult.Ok(new ServiceAccountCredentialValidationResult(account, credential));
+    appDb.Entry(account).State = EntityState.Detached;
+    appDb.Entry(credential).State = EntityState.Detached;
+
+    var validationResult = new ServiceAccountCredentialValidationResult(account, credential);
+    memoryCache.Set(credentialId, validationResult, _cacheExpiration);
+
+    return HttpResult.Ok(validationResult);
   }
 
   private static string FormatApiKey(Guid credentialId, string plainTextSecret)
@@ -404,5 +438,40 @@ public class ServiceAccountManager(
         .ThenBy(c => c.Id)
         .Select(MapCredentialToDto)
         .ToList());
+  }
+
+  private async Task EvictAccountFromCacheAsync(Guid serviceAccountId, CancellationToken cancellationToken)
+  {
+    try
+    {
+      var account = await appDb.ServiceAccounts
+        .AsNoTracking()
+        .Include(x => x.Credentials)
+        .FirstOrDefaultAsync(x => x.Id == serviceAccountId, cancellationToken);
+        
+      if (account != null)
+      {
+        foreach (var cred in account.Credentials)
+        {
+          memoryCache.Remove(cred.Id);
+        }
+      }
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+      logger.LogWarning(ex, "Failed to evict cached credential validation results for account {AccountId}.", serviceAccountId);
+    }
+  }
+
+  private void EvictCredentialFromCache(Guid credentialId)
+  {
+    memoryCache.Remove(credentialId);
+  }
+
+  private async Task PersistLastUsedAtAsync(Guid credentialId, DateTimeOffset now, CancellationToken cancellationToken)
+  {
+    await appDb.ServiceAccountCredentials
+      .Where(x => x.Id == credentialId)
+      .ExecuteUpdateAsync(x => x.SetProperty(p => p.LastUsedAt, now), cancellationToken);
   }
 }

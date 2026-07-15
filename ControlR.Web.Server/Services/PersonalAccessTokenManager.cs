@@ -217,11 +217,16 @@ public class PersonalAccessTokenManager(
         return Result.Fail<PersonalAccessTokenValidationResult>("Invalid personal access token.");
       }
 
-      var isValid = _passwordHasher.VerifyHashedPassword(string.Empty, storedToken.HashedKey, parts[1]) == PasswordVerificationResult.Success;
+      var verification = _passwordHasher.VerifyHashedPassword(string.Empty, storedToken.HashedKey, parts[1]);
 
-      if (!isValid)
+      if (verification == PasswordVerificationResult.Failed)
       {
         return Result.Fail<PersonalAccessTokenValidationResult>("Invalid personal access token.");
+      }
+
+      if (verification == PasswordVerificationResult.SuccessRehashNeeded)
+      {
+        storedToken.HashedKey = _passwordHasher.HashPassword(string.Empty, parts[1]);
       }
 
       // Update last used timestamp
