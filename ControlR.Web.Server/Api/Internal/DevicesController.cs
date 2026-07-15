@@ -126,7 +126,10 @@ public class DevicesController(
     [FromServices] IAgentVersionProvider agentVersionProvider,
     [FromRoute] Guid deviceId)
   {
-    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId);
+      
     if (device is null)
     {
       return NotFound();

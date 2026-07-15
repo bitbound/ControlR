@@ -269,6 +269,7 @@ public class ServiceAccountManager(
     var accounts = await appDb.ServiceAccounts
       .Where(x => x.Kind == ServiceAccountKind.Server)
       .Include(x => x.Credentials)
+      .AsNoTracking()
       .OrderBy(x => x.Name)
       .ToListAsync(cancellationToken);
 
