@@ -15,6 +15,7 @@ public class DevicesController(
 {
 
   private readonly IDeviceAccessScopeResolver _deviceAccessScopeResolver = deviceAccessScopeResolver;
+
   [HttpDelete("{deviceId:guid}")]
   public async Task<IActionResult> DeleteDevice(
     [FromServices] AppDb appDb,
@@ -110,11 +111,13 @@ public class DevicesController(
       .AsSplitQuery()
       .OrderBy(x => x.CreatedAt);
 
+    var (isSuccess, agentVersion) = await GetAgentVersion(agentVersionProvider);
+
     var deviceStream = query.AsAsyncEnumerable();
 
     await foreach (var device in deviceStream)
     {
-      var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+      var isOutdated = isSuccess && device.AgentVersion != agentVersion;
       yield return device.ToInternalResponseDto(isOutdated);
     }
   }
@@ -143,7 +146,8 @@ public class DevicesController(
       return Forbid();
     }
 
-    var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+    var (isSuccess, currentAgentVersion) = await GetAgentVersion(agentVersionProvider);
+    var isOutdated = isSuccess && device.AgentVersion != currentAgentVersion;
     return device.ToInternalResponseDto(isOutdated);
   }
 
@@ -209,10 +213,13 @@ public class DevicesController(
       .Take(requestDto.PageSize)
       .ToListAsync();
 
+
+    var (isSuccess, currentAgentVersion) = await GetAgentVersion(agentVersionProvider);
+
     var pagedDtos = new List<InternalDtos.DeviceResponseDto>(devices.Count);
     foreach (var device in devices)
     {
-      var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+      var isOutdated = isSuccess && device.AgentVersion != currentAgentVersion;
       pagedDtos.Add(device.ToInternalResponseDto(isOutdated));
     }
 
@@ -266,8 +273,19 @@ public class DevicesController(
     device.Alias = requestDto.Alias ?? string.Empty;
     await appDb.SaveChangesAsync();
 
-    var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+    var (isSuccess, agentVersion) = await GetAgentVersion(agentVersionProvider);
+    var isOutdated = isSuccess && device.AgentVersion != agentVersion;
     return device.ToInternalResponseDto(isOutdated);
+  }
+
+  private static async Task<(bool IsSuccess, string Version)> GetAgentVersion(IAgentVersionProvider agentVersionProvider)
+  {
+    var agentVersionResult = await agentVersionProvider.TryGetAgentVersion();
+    if (!agentVersionResult.IsSuccess)
+    {
+      return (false, string.Empty);
+    }
+    return (true, agentVersionResult.Value.ToString());
   }
 
   private static async Task<InternalDtos.DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)
@@ -284,15 +302,5 @@ public class DevicesController(
       })
       .FirstOrDefaultAsync()
       ?? new InternalDtos.DeviceSearchFilterCountsDto();
-  }
-
-  private static async Task<bool> GetIsOutdated(Device entity, IAgentVersionProvider agentVersionProvider)
-  {
-    var agentVersionResult = await agentVersionProvider.TryGetAgentVersion();
-    if (!agentVersionResult.IsSuccess)
-    {
-      return false;
-    }
-    return entity.AgentVersion != agentVersionResult.Value.ToString();
   }
 }
