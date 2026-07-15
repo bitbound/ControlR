@@ -275,6 +275,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var loggerFactory = services.GetRequiredService<ILoggerFactory>();
     var personalAccessTokenManager = services.GetRequiredService<IPersonalAccessTokenManager>();
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var timeProvider = services.GetRequiredService<TimeProvider>();
 
     var scheme = new AuthenticationScheme(
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,
@@ -284,6 +285,7 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var handler = new PersonalAccessTokenAuthenticationHandler(
       UrlEncoder.Default,
       userManager,
+      timeProvider,
       loggerFactory,
       personalAccessTokenManager,
       options);

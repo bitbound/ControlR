@@ -6,6 +6,7 @@
 @inject IUserCreator UserCreator
 @inject ILogger<Register> Logger
 @inject IdentityRedirectManager RedirectManager
+@inject TimeProvider TimeProvider
 @inject IUserRegistrationProvider UserRegistrationProvider
 
 <PageTitle>Register</PageTitle>
@@ -93,8 +94,10 @@
       return;
     }
 
-    await UserManager.UpdateLastLogin(createResult.User);
-    await SignInManager.SignInAsync(createResult.User, false);
+    var user = createResult.User;
+    user.LastLogin = TimeProvider.GetUtcNow();
+    await UserManager.UpdateAsync(user);
+    await SignInManager.SignInAsync(user, false);
     RedirectManager.RedirectTo(ReturnUrl);
   }
 

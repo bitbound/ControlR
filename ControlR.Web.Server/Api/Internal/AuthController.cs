@@ -238,7 +238,8 @@ public class AuthController : ControllerBase
     if (result.Succeeded)
     {
       await userManager.ResetAccessFailedCountAsync(user);
-      await userManager.UpdateLastLogin(user);
+      user.LastLogin = timeProvider.GetUtcNow();
+      await userManager.UpdateAsync(user);
     }
     }
 

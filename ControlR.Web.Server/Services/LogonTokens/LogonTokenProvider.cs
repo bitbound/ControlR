@@ -112,7 +112,8 @@ public class LogonTokenProvider(
       }
     }
 
-    await _userManager.UpdateLastLogin(guestUser);
+    guestUser.LastLogin = _timeProvider.GetUtcNow();
+    await _userManager.UpdateAsync(guestUser);
 
     return await CreateToken(deviceId, tenantId, guestUser.Id, expirationMinutes, cancellationToken);
   }

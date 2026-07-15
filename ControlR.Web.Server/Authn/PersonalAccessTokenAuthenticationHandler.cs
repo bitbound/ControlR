@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using ControlR.Web.Server.Extensions;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Authn;
@@ -9,6 +8,7 @@ namespace ControlR.Web.Server.Authn;
 public class PersonalAccessTokenAuthenticationHandler(
   UrlEncoder encoder,
   UserManager<AppUser> userManager,
+  TimeProvider timeProvider,
   ILoggerFactory logger,
   IPersonalAccessTokenManager personalAccessTokenManager,
   IOptionsMonitor<PersonalAccessTokenAuthenticationSchemeOptions> options) : AuthenticationHandler<PersonalAccessTokenAuthenticationSchemeOptions>(options, logger, encoder)
@@ -19,6 +19,7 @@ public class PersonalAccessTokenAuthenticationHandler(
   private static readonly TimeSpan _failureWindow = TimeSpan.FromMinutes(5);
 
   private readonly IPersonalAccessTokenManager _personalAccessTokenManager = personalAccessTokenManager;
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -75,7 +76,8 @@ public class PersonalAccessTokenAuthenticationHandler(
     // Successful auth resets failure counter
     _failureCache.Remove(failureKey);
 
-    await _userManager.UpdateLastLogin(user);
+    user.LastLogin = _timeProvider.GetUtcNow();
+    await _userManager.UpdateAsync(user);
 
     var claims = new List<Claim>
     {

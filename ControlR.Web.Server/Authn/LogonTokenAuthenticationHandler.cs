@@ -8,11 +8,13 @@ namespace ControlR.Web.Server.Authn;
 public class LogonTokenAuthenticationHandler(
   UrlEncoder encoder,
   UserManager<AppUser> userManager,
+  TimeProvider timeProvider,
   IOptionsMonitor<LogonTokenAuthenticationSchemeOptions> options,
   ILoggerFactory logger,
   ILogonTokenProvider logonTokenProvider) : AuthenticationHandler<LogonTokenAuthenticationSchemeOptions>(options, logger, encoder)
 {
   private readonly ILogonTokenProvider _logonTokenProvider = logonTokenProvider;
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -66,7 +68,8 @@ public class LogonTokenAuthenticationHandler(
       claims.Add(new Claim(ClaimTypes.Role, role));
     }
 
-    await _userManager.UpdateLastLogin(user);
+    user.LastLogin = _timeProvider.GetUtcNow();
+    await _userManager.UpdateAsync(user);
 
     var identity = new ClaimsIdentity(claims, Scheme.Name);
     var principal = new ClaimsPrincipal(identity);
