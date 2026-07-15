@@ -1,4 +1,4 @@
-namespace ControlR.Web.Server.Caching;
+namespace ControlR.Web.Server.Constants;
 
 public static class CacheKeys
 {

@@ -1,9 +1,10 @@
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Data.Enums;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
+using ControlR.Web.Server.Constants;
 
 namespace ControlR.Web.Server.Services.LogonTokens;
 
@@ -13,28 +14,31 @@ public interface ILogonTokenProvider
     Guid deviceId,
     Guid tenantId,
     Guid userId,
-    int expirationMinutes = 5);
+    int expirationMinutes = 5,
+    CancellationToken cancellationToken = default);
 
   Task<HttpResult<LogonTokenModel>> CreateTokenForExternal(
     Guid deviceId,
     Guid tenantId,
     string userCorrelationId,
-    int expirationMinutes = 5);
+    int expirationMinutes = 5,
+    CancellationToken cancellationToken = default);
 
-  Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId);
-  Task<Result<LogonTokenValidationResult>> ValidateToken(string token);
+  Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId, CancellationToken cancellationToken = default);
+  Task<Result<LogonTokenValidationResult>> ValidateToken(string token, CancellationToken cancellationToken = default);
 }
 
 public class LogonTokenProvider(
   TimeProvider timeProvider,
   IMemoryCache cache,
+  IDistributedLock distributedLock,
   IDbContextFactory<AppDb> dbContextFactory,
   ILogger<LogonTokenProvider> logger,
   UserManager<AppUser> userManager) : ILogonTokenProvider
 {
-  private static readonly ConcurrentDictionary<string, SemaphoreSlim> _tokenLocks = new();
   private readonly IMemoryCache _cache = cache;
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
+  private readonly IDistributedLock _distributedLock = distributedLock;
   private readonly ILogger<LogonTokenProvider> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
@@ -43,12 +47,13 @@ public class LogonTokenProvider(
     Guid deviceId,
     Guid tenantId,
     Guid userId,
-    int expirationMinutes = 5)
+    int expirationMinutes = 5,
+    CancellationToken cancellationToken = default)
   {
-    await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+    await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
     var userExists = await dbContext.Users
       .Where(u => u.Id == userId && u.TenantId == tenantId)
-      .AnyAsync();
+      .AnyAsync(cancellationToken: cancellationToken);
 
     if (!userExists)
     {
@@ -84,11 +89,12 @@ public class LogonTokenProvider(
     Guid deviceId,
     Guid tenantId,
     string userCorrelationId,
-    int expirationMinutes = 5)
+    int expirationMinutes = 5,
+    CancellationToken cancellationToken = default)
   {
     var username = $"ext-{userCorrelationId.Trim()}";
     var guestUser = await _userManager.Users
-      .FirstOrDefaultAsync(u => u.UserName == username && u.TenantId == tenantId);
+      .FirstOrDefaultAsync(u => u.UserName == username && u.TenantId == tenantId, cancellationToken: cancellationToken);
 
     if (guestUser is null)
     {
@@ -108,62 +114,52 @@ public class LogonTokenProvider(
 
     await _userManager.UpdateLastLogin(guestUser);
 
-    return await CreateToken(deviceId, tenantId, guestUser.Id, expirationMinutes);
+    return await CreateToken(deviceId, tenantId, guestUser.Id, expirationMinutes, cancellationToken);
   }
 
-  public async Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId)
+  public async Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId, CancellationToken cancellationToken = default)
   {
-    var semaphore = _tokenLocks.GetOrAdd(token, _ => new SemaphoreSlim(1, 1));
-    await semaphore.WaitAsync();
-    try
+    var lockKey = DistributedLockKeys.GetLogonTokenKey(token);
+    using var heldLock  = await _distributedLock.AcquireLock(lockKey, cancellationToken);
+
+    var validationResult = await ValidateTokenInternal(token);
+    if (!validationResult.IsSuccess)
     {
-      var validationResult = await ValidateTokenInternal(token);
-      if (!validationResult.IsSuccess)
-      {
-        return LogonTokenValidationResult.Failure(validationResult.ErrorMessage ?? "Token validation failed.");
-      }
-
-      var logonToken = validationResult.Token;
-
-      if (logonToken.DeviceId != deviceId)
-      {
-        _logger.LogWarning(
-          "Device ID mismatch for logon token. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
-          logonToken.DeviceId, deviceId);
-        return LogonTokenValidationResult.Failure("Token is not valid for this device");
-      }
-
-      if (logonToken.IsConsumed)
-      {
-        return LogonTokenValidationResult.Failure("Token has already been used");
-      }
-
-      logonToken.IsConsumed = true;
-      var cacheKey = GetCacheKey(token);
-      _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
-
-      _logger.LogInformation(
-        "Validated and consumed logon token for user {UserId} on device {DeviceId}",
-        logonToken.UserId, deviceId);
-
-      return LogonTokenValidationResult.Success(
-        validationResult.User.Id,
-        logonToken.TenantId,
-        validationResult.User.UserName,
-        validationResult.User.UserName,
-        validationResult.User.Email);
+      return LogonTokenValidationResult.Failure(validationResult.ErrorMessage ?? "Token validation failed.");
     }
-    finally
+
+    var logonToken = validationResult.Token;
+
+    if (logonToken.DeviceId != deviceId)
     {
-      semaphore.Release();
-      if (semaphore.CurrentCount == 1)
-      {
-        _tokenLocks.TryRemove(token, out _);
-      }
+      _logger.LogWarning(
+        "Device ID mismatch for logon token. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
+        logonToken.DeviceId, deviceId);
+      return LogonTokenValidationResult.Failure("Token is not valid for this device");
     }
+
+    if (logonToken.IsConsumed)
+    {
+      return LogonTokenValidationResult.Failure("Token has already been used");
+    }
+
+    logonToken.IsConsumed = true;
+    var cacheKey = GetCacheKey(token);
+    _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
+
+    _logger.LogInformation(
+      "Validated and consumed logon token for user {UserId} on device {DeviceId}",
+      logonToken.UserId, deviceId);
+
+    return LogonTokenValidationResult.Success(
+      validationResult.User.Id,
+      logonToken.TenantId,
+      validationResult.User.UserName,
+      validationResult.User.UserName,
+      validationResult.User.Email);
   }
 
-  public async Task<Result<LogonTokenValidationResult>> ValidateToken(string token)
+  public async Task<Result<LogonTokenValidationResult>> ValidateToken(string token, CancellationToken cancellationToken = default)
   {
     try
     {
@@ -238,7 +234,7 @@ public class LogonTokenProvider(
   }
 
   private record UserInfo(Guid Id, string? UserName, string? Email);
-  
+
   private class TokenValidationResult(
     bool isSuccess, 
     string? errorMessage, 

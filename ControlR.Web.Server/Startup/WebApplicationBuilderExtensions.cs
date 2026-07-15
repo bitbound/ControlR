@@ -396,6 +396,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
     builder.Services.AddSingleton<IRetryer, Retryer>();
     builder.Services.AddSingleton<IWaiter, Waiter>();
+    builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
     builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
     builder.Services.AddSingleton<EmailSender>();
