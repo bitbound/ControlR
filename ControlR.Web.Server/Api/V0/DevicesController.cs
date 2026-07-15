@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
 using Microsoft.AspNetCore.Mvc;
@@ -17,16 +18,17 @@ public class DevicesController() : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> DeleteDevice(
     [FromServices] AppDb appDb,
-    [FromRoute] Guid deviceId)
+    [FromRoute] Guid deviceId,
+    CancellationToken cancellationToken)
   {
-    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
     if (device is null)
     {
       return NotFound();
     }
 
     appDb.Devices.Remove(device);
-    await appDb.SaveChangesAsync();
+    await appDb.SaveChangesAsync(cancellationToken);
     return NoContent();
   }
 
@@ -68,14 +70,15 @@ public class DevicesController() : ControllerBase
   [HttpGet]
   public async IAsyncEnumerable<DeviceResponseDto> Get(
     [FromServices] AppDb appDb,
-    [FromServices] IAgentVersionProvider agentVersionProvider)
+    [FromServices] IAgentVersionProvider agentVersionProvider,
+    [EnumeratorCancellation] CancellationToken cancellationToken)
   {
     var query = appDb.Devices
       .Include(x => x.Tags)
       .AsSplitQuery()
       .OrderBy(x => x.CreatedAt);
 
-    await foreach (var device in query.AsAsyncEnumerable())
+    await foreach (var device in query.AsAsyncEnumerable().WithCancellation(cancellationToken))
     {
       var isOutdated = await GetIsOutdated(device, agentVersionProvider);
       yield return device.ToV0ResponseDto(isOutdated);
@@ -88,9 +91,10 @@ public class DevicesController() : ControllerBase
   public async Task<ActionResult<DeviceResponseDto>> GetDevice(
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromRoute] Guid deviceId)
+    [FromRoute] Guid deviceId,
+    CancellationToken cancellationToken)
   {
-    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
     if (device is null)
     {
       return NotFound();
@@ -102,11 +106,12 @@ public class DevicesController() : ControllerBase
 
   [HttpGet("summary")]
   public async IAsyncEnumerable<V0Dtos.DeviceSummaryDto> GetDeviceSummaries(
-    [FromServices] AppDb appDb)
+    [FromServices] AppDb appDb,
+    [EnumeratorCancellation] CancellationToken cancellationToken)
   {
     var query = appDb.Devices.OrderBy(x => x.CreatedAt);
 
-    await foreach (var device in query.AsAsyncEnumerable())
+    await foreach (var device in query.AsAsyncEnumerable().WithCancellation(cancellationToken))
     {
       yield return device.ToV0SummaryDto();
     }
@@ -117,7 +122,8 @@ public class DevicesController() : ControllerBase
     [FromBody] V0Dtos.DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<DevicesController> logger)
+    [FromServices] ILogger<DevicesController> logger,
+    CancellationToken cancellationToken)
   {
     var isRelationalDatabase = appDb.Database.IsRelational();
     var authorizedQuery = appDb.Devices.AsQueryable();
@@ -128,7 +134,7 @@ public class DevicesController() : ControllerBase
       .FilterByColumnFilters(requestDto.FilterDefinitions, isRelationalDatabase, logger);
 
     var scopedQuery = filteredQuery.FilterByTagIds(requestDto.TagIds, requestDto.IncludeUntaggedDevices);
-    var totalCount = await scopedQuery.CountAsync();
+    var totalCount = await scopedQuery.CountAsync(cancellationToken);
 
     var devices = await scopedQuery
       .ApplySorting(requestDto.SortDefinitions)
@@ -136,7 +142,7 @@ public class DevicesController() : ControllerBase
       .AsSplitQuery()
       .Skip(requestDto.Page * requestDto.PageSize)
       .Take(requestDto.PageSize)
-      .ToListAsync();
+      .ToListAsync(cancellationToken);
 
     var pagedDtos = new List<DeviceResponseDto>(devices.Count);
     foreach (var device in devices)
@@ -163,7 +169,8 @@ public class DevicesController() : ControllerBase
     [FromBody] V0Dtos.UpdateDeviceAliasRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider,
-    [FromServices] ILogger<DevicesController> logger)
+    [FromServices] ILogger<DevicesController> logger,
+    CancellationToken cancellationToken)
   {
     if (deviceId != requestDto.DeviceId)
     {
@@ -175,7 +182,7 @@ public class DevicesController() : ControllerBase
       return BadRequest("Alias must be 100 characters or fewer.");
     }
 
-    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
     if (device is null)
     {
       logger.LogWarning("Device {DeviceId} not found for alias update.", deviceId);
@@ -183,7 +190,7 @@ public class DevicesController() : ControllerBase
     }
 
     device.Alias = requestDto.Alias ?? string.Empty;
-    await appDb.SaveChangesAsync();
+    await appDb.SaveChangesAsync(cancellationToken);
 
     var isOutdated = await GetIsOutdated(device, agentVersionProvider);
     return device.ToV0ResponseDto(isOutdated);
