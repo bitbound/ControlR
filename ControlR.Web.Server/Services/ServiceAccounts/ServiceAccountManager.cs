@@ -478,8 +478,24 @@ public class ServiceAccountManager(
 
   private async Task PersistLastUsedAtAsync(Guid credentialId, DateTimeOffset now, CancellationToken cancellationToken)
   {
-    await appDb.ServiceAccountCredentials
-      .Where(x => x.Id == credentialId)
-      .ExecuteUpdateAsync(x => x.SetProperty(p => p.LastUsedAt, now), cancellationToken);
+    if (appDb.Database.IsRelational())
+    {
+      await appDb.ServiceAccountCredentials
+        .Where(x => x.Id == credentialId)
+        .ExecuteUpdateAsync(x => x.SetProperty(p => p.LastUsedAt, now), cancellationToken);
+      return;
+    }
+
+    // The EF Core in-memory provider (used by the test suite) does not support
+    // ExecuteUpdate. Fall back to a tracked update so service-account auth
+    // continues to persist LastUsedAt in tests.
+    var credential = await appDb.ServiceAccountCredentials
+      .FirstOrDefaultAsync(x => x.Id == credentialId, cancellationToken);
+    if (credential is null)
+    {
+      return;
+    }
+    credential.LastUsedAt = now;
+    await appDb.SaveChangesAsync(cancellationToken);
   }
 }

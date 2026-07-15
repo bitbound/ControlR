@@ -90,12 +90,12 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
     var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
 
-    var resultA = await controller.GetDevice(appDb, agentVersionProvider, deviceA.Id);
+    var resultA = await controller.GetDevice(appDb, agentVersionProvider, deviceA.Id, TestContext.Current.CancellationToken);
     var okResultA = Assert.IsType<ActionResult<DeviceResponseDto>>(resultA);
     Assert.NotNull(okResultA.Value);
     Assert.Equal(deviceA.Id, okResultA.Value.Id);
 
-    var resultB = await controller.GetDevice(appDb, agentVersionProvider, deviceB.Id);
+    var resultB = await controller.GetDevice(appDb, agentVersionProvider, deviceB.Id, TestContext.Current.CancellationToken);
     var okResultB = Assert.IsType<ActionResult<DeviceResponseDto>>(resultB);
     Assert.NotNull(okResultB.Value);
     Assert.Equal(deviceB.Id, okResultB.Value.Id);
@@ -120,7 +120,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
 
     var deviceDtos = new List<DeviceResponseDto>();
-    await foreach (var dto in controller.Get(appDb, agentVersionProvider))
+    await foreach (var dto in controller.Get(appDb, agentVersionProvider, TestContext.Current.CancellationToken))
     {
       deviceDtos.Add(dto);
     }
