@@ -120,8 +120,12 @@ public class LogonTokenProvider(
 
   public async Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId, CancellationToken cancellationToken = default)
   {
-    var semaphore = _locks.GetOrAdd(token, _ => new SemaphoreSlim(1, 1));
-    await semaphore.WaitAsync(cancellationToken);
+    using var semaphore = _locks.GetOrAdd(token, _ => new SemaphoreSlim(1, 1));
+
+    if (!await semaphore.WaitAsync(0, cancellationToken))
+    {
+      return LogonTokenValidationResult.Failure("Token is already being validated.");
+    }
     try
     {
       var validationResult = await ValidateTokenInternal(token);
@@ -135,14 +139,14 @@ public class LogonTokenProvider(
       if (logonToken.DeviceId != deviceId)
       {
         _logger.LogWarning(
-          "Device ID mismatch for logon token. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
+          "Device ID mismatch for logon token. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}.",
           logonToken.DeviceId, deviceId);
-        return LogonTokenValidationResult.Failure("Token is not valid for this device");
+        return LogonTokenValidationResult.Failure("Token is not valid for this device.");
       }
 
       if (logonToken.IsConsumed)
       {
-        return LogonTokenValidationResult.Failure("Token has already been used");
+        return LogonTokenValidationResult.Failure("Token has already been used.");
       }
 
       logonToken.IsConsumed = true;
@@ -150,7 +154,7 @@ public class LogonTokenProvider(
       _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt);
 
       _logger.LogInformation(
-        "Validated and consumed logon token for user {UserId} on device {DeviceId}",
+        "Validated and consumed logon token for user {UserId} on device {DeviceId}.",
         logonToken.UserId, deviceId);
 
       return LogonTokenValidationResult.Success(
