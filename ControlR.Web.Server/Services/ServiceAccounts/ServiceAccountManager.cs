@@ -226,7 +226,15 @@ public class ServiceAccountManager(
     account.Credentials.Add(credential);
 
     appDb.ServiceAccounts.Add(account);
-    await appDb.SaveChangesAsync(cancellationToken);
+
+    var saveResult = await appDb.SaveChangesOrConfirmConflictAsync<ServiceAccount>(
+      x => x.Kind == ServiceAccountKind.Server && x.Name == name,
+      cancellationToken);
+
+    if (saveResult == SaveChangesResult.ConflictDetected)
+    {
+      return HttpResult.Fail<CreateServiceAccountResponseDto>(HttpResultErrorCode.Conflict, "A server service account with that name already exists.");
+    }
 
     var apiKey = FormatApiKey(credential.Id, plainTextSecret);
     return HttpResult.Ok(new CreateServiceAccountResponseDto(MapToDto(account), apiKey));
