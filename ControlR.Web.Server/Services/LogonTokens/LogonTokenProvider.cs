@@ -76,7 +76,7 @@ public class LogonTokenProvider(
     };
 
     var cacheKey = GetCacheKey(token);
-    _cache.Set(cacheKey, logonToken, expiresAt.DateTime);
+    _cache.Set(cacheKey, logonToken, expiresAt);
 
     _logger.LogInformation(
       "Created logon token for user {UserId} on device {DeviceId} in tenant {TenantId}, expires at {ExpiresAt}",
@@ -147,7 +147,7 @@ public class LogonTokenProvider(
 
       logonToken.IsConsumed = true;
       var cacheKey = GetCacheKey(token);
-      _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
+      _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt);
 
       _logger.LogInformation(
         "Validated and consumed logon token for user {UserId} on device {DeviceId}",
@@ -163,6 +163,7 @@ public class LogonTokenProvider(
     finally
     {
       semaphore.Release();
+      _locks.TryRemove(token, out _);
     }
   }
 
