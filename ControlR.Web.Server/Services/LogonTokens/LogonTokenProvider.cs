@@ -5,6 +5,7 @@ using ControlR.Web.Server.Data.Enums;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Caching.Distributed;
 using ControlR.Web.Server.Constants;
+using System.Collections.Concurrent;
 
 namespace ControlR.Web.Server.Services.LogonTokens;
 
@@ -31,14 +32,13 @@ public interface ILogonTokenProvider
 public class LogonTokenProvider(
   TimeProvider timeProvider,
   IMemoryCache cache,
-  IDistributedLock distributedLock,
   IDbContextFactory<AppDb> dbContextFactory,
   ILogger<LogonTokenProvider> logger,
   UserManager<AppUser> userManager) : ILogonTokenProvider
 {
+  private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = [];
   private readonly IMemoryCache _cache = cache;
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
-  private readonly IDistributedLock _distributedLock = distributedLock;
   private readonly ILogger<LogonTokenProvider> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
@@ -119,44 +119,50 @@ public class LogonTokenProvider(
 
   public async Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId, CancellationToken cancellationToken = default)
   {
-    var lockKey = DistributedLockKeys.GetLogonTokenKey(token);
-    using var heldLock  = await _distributedLock.AcquireLock(lockKey, cancellationToken);
-
-    var validationResult = await ValidateTokenInternal(token);
-    if (!validationResult.IsSuccess)
+    var semaphore = _locks.GetOrAdd(token, _ => new SemaphoreSlim(1, 1));
+    await semaphore.WaitAsync(cancellationToken);
+    try
     {
-      return LogonTokenValidationResult.Failure(validationResult.ErrorMessage ?? "Token validation failed.");
+      var validationResult = await ValidateTokenInternal(token);
+      if (!validationResult.IsSuccess)
+      {
+        return LogonTokenValidationResult.Failure(validationResult.ErrorMessage ?? "Token validation failed.");
+      }
+
+      var logonToken = validationResult.Token;
+
+      if (logonToken.DeviceId != deviceId)
+      {
+        _logger.LogWarning(
+          "Device ID mismatch for logon token. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
+          logonToken.DeviceId, deviceId);
+        return LogonTokenValidationResult.Failure("Token is not valid for this device");
+      }
+
+      if (logonToken.IsConsumed)
+      {
+        return LogonTokenValidationResult.Failure("Token has already been used");
+      }
+
+      logonToken.IsConsumed = true;
+      var cacheKey = GetCacheKey(token);
+      _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
+
+      _logger.LogInformation(
+        "Validated and consumed logon token for user {UserId} on device {DeviceId}",
+        logonToken.UserId, deviceId);
+
+      return LogonTokenValidationResult.Success(
+        validationResult.User.Id,
+        logonToken.TenantId,
+        validationResult.User.UserName,
+        validationResult.User.UserName,
+        validationResult.User.Email);
     }
-
-    var logonToken = validationResult.Token;
-
-    if (logonToken.DeviceId != deviceId)
+    finally
     {
-      _logger.LogWarning(
-        "Device ID mismatch for logon token. Expected: {ExpectedDeviceId}, Actual: {ActualDeviceId}",
-        logonToken.DeviceId, deviceId);
-      return LogonTokenValidationResult.Failure("Token is not valid for this device");
+      semaphore.Release();
     }
-
-    if (logonToken.IsConsumed)
-    {
-      return LogonTokenValidationResult.Failure("Token has already been used");
-    }
-
-    logonToken.IsConsumed = true;
-    var cacheKey = GetCacheKey(token);
-    _cache.Set(cacheKey, logonToken, logonToken.ExpiresAt.DateTime);
-
-    _logger.LogInformation(
-      "Validated and consumed logon token for user {UserId} on device {DeviceId}",
-      logonToken.UserId, deviceId);
-
-    return LogonTokenValidationResult.Success(
-      validationResult.User.Id,
-      logonToken.TenantId,
-      validationResult.User.UserName,
-      validationResult.User.UserName,
-      validationResult.User.Email);
   }
 
   public async Task<Result<LogonTokenValidationResult>> ValidateToken(string token, CancellationToken cancellationToken = default)

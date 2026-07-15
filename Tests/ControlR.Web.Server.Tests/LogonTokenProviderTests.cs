@@ -95,6 +95,35 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task ValidateAndConsumeToken_WhenConcurrentCalls_PreventsDoubleConsumption()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+
+    var createResult = await logonTokenProvider.CreateToken(deviceId, tenant.Id, user.Id, cancellationToken: TestContext.Current.CancellationToken);
+    Assert.True(createResult.IsSuccess);
+
+    var token = createResult.Value.Token;
+
+    var tasks = Enumerable.Range(0, 10)
+      .Select(_ => logonTokenProvider.ValidateAndConsumeToken(token, deviceId, TestContext.Current.CancellationToken))
+      .ToArray();
+
+    var results = await Task.WhenAll(tasks);
+
+    var successCount = results.Count(r => r.IsValid);
+    var failureCount = results.Length - successCount;
+
+    Assert.Equal(1, successCount);
+    Assert.Equal(9, failureCount);
+  }
+
+  [Fact]
   public async Task ValidateToken_WhenExpired_ReturnsFailure()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
