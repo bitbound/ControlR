@@ -155,10 +155,7 @@ public class LogonTokenProvider(
 
       return LogonTokenValidationResult.Success(
         validationResult.User.Id,
-        logonToken.TenantId,
-        validationResult.User.UserName,
-        validationResult.User.UserName,
-        validationResult.User.Email);
+        logonToken.TenantId);
     }
     finally
     {
@@ -183,10 +180,7 @@ public class LogonTokenProvider(
 
       var result = LogonTokenValidationResult.Success(
         validationResult.User.Id,
-        validationResult.Token.TenantId,
-        validationResult.User.UserName,
-        validationResult.User.UserName,
-        validationResult.User.Email);
+        validationResult.Token.TenantId);
 
       return Result.Ok(result);
     }
@@ -206,25 +200,26 @@ public class LogonTokenProvider(
     if (!_cache.TryGetValue(cacheKey, out LogonTokenModel? logonToken) || logonToken is null)
     {
       _logger.LogWarning("Logon token not found.");
-      return new TokenValidationResult(false, "Invalid or expired token", null, null);
+      return new TokenValidationResult(false, "Invalid or expired token.", null, null);
     }
 
     if (logonToken.IsConsumed)
     {
       _logger.LogWarning("Token has already been consumed.");
-      return new TokenValidationResult(false, "Token has already been used", logonToken, null);
+      return new TokenValidationResult(false, "Token has already been used.", logonToken, null);
     }
 
     var now = _timeProvider.GetUtcNow();
     if (now > logonToken.ExpiresAt)
     {
-      _logger.LogWarning("Token has expired at {ExpiresAt}", logonToken.ExpiresAt);
+      _logger.LogWarning("Token has expired at {ExpiresAt}.", logonToken.ExpiresAt);
       _cache.Remove(cacheKey);
-      return new TokenValidationResult(false, "Token has expired", logonToken, null);
+      return new TokenValidationResult(false, "Token has expired.", logonToken, null);
     }
 
     await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
     var user = await dbContext.Users
+      .AsNoTracking()
       .Where(u => u.Id == logonToken.UserId && u.TenantId == logonToken.TenantId)
       .Select(u => new { u.Id, u.UserName, u.Email })
       .FirstOrDefaultAsync();
