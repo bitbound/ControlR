@@ -33,15 +33,15 @@ public class LogonTokenProvider(
   TimeProvider timeProvider,
   IMemoryCache cache,
   IDbContextFactory<AppDb> dbContextFactory,
-  ILogger<LogonTokenProvider> logger,
-  UserManager<AppUser> userManager) : ILogonTokenProvider
+  IServiceScopeFactory scopeFactory,
+  ILogger<LogonTokenProvider> logger) : ILogonTokenProvider
 {
   private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = [];
   private readonly IMemoryCache _cache = cache;
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
   private readonly ILogger<LogonTokenProvider> _logger = logger;
+  private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
   private readonly TimeProvider _timeProvider = timeProvider;
-  private readonly UserManager<AppUser> _userManager = userManager;
 
   public async Task<HttpResult<LogonTokenModel>> CreateToken(
     Guid deviceId,
@@ -92,8 +92,11 @@ public class LogonTokenProvider(
     int expirationMinutes = 5,
     CancellationToken cancellationToken = default)
   {
+    using var scope = _scopeFactory.CreateScope();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    
     var username = $"ext-{userCorrelationId.Trim()}";
-    var guestUser = await _userManager.Users
+    var guestUser = await userManager.Users
       .FirstOrDefaultAsync(u => u.UserName == username && u.TenantId == tenantId, cancellationToken: cancellationToken);
 
     if (guestUser is null)
@@ -105,7 +108,7 @@ public class LogonTokenProvider(
         TenantId = tenantId,
         AccountType = AccountType.ExternalUser
       };
-      var createResult = await _userManager.CreateAsync(guestUser);
+      var createResult = await userManager.CreateAsync(guestUser);
       if (!createResult.Succeeded)
       {
         return HttpResult.Fail<LogonTokenModel>(HttpResultErrorCode.InternalServerError, $"Failed to create external user for correlation ID '{userCorrelationId}'.");
@@ -113,7 +116,7 @@ public class LogonTokenProvider(
     }
 
     guestUser.LastLogin = _timeProvider.GetUtcNow();
-    await _userManager.UpdateAsync(guestUser);
+    await userManager.UpdateAsync(guestUser);
 
     return await CreateToken(deviceId, tenantId, guestUser.Id, expirationMinutes, cancellationToken);
   }
