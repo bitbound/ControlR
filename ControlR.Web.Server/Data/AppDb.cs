@@ -59,7 +59,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureAgentInstallerKeys(builder);
     ConfigureAgentInstallerKeyUsages(builder);
     ConfigureServiceAccounts(builder);
-    ConfigureServiceAccountCredentials(builder);
   }
 
   private static void ConfigureRoles(ModelBuilder builder)
@@ -176,10 +175,6 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
         .Entity<PersonalAccessToken>()
         .HasQueryFilter(x => x.User != null && x.User.TenantId == _tenantId);
     }
-  }
-
-  private void ConfigureServiceAccountCredentials(ModelBuilder builder)
-  {
   }
 
   private void ConfigureServiceAccounts(ModelBuilder builder)

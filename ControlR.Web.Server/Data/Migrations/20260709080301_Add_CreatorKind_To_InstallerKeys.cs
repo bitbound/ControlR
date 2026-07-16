@@ -15,7 +15,7 @@ public partial class Add_CreatorKind_To_InstallerKeys : Migration
         table: "AgentInstallerKeys",
         type: "integer",
         nullable: false,
-        defaultValue: 0);
+        defaultValue: 0); // Existing rows were all created by users (CreatorKind.User = 0).
   }
 
   /// <inheritdoc />
