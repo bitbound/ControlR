@@ -2,9 +2,6 @@ namespace ControlR.Libraries.Api.Contracts.Constants;
 
 public static class HttpConstants
 {
-  public const string AgentUpdateEndpoint = "/api/agent-update";
-  public const string DevicesEndpoint = "/api/devices";
-
   public static class Agent
   {
     public const string AgentUpdateEndpoint = "/api/agent/updates";
@@ -40,7 +37,7 @@ public static class HttpConstants
     public const string UserTagsEndpoint = "/api/internal/user-tags";
     public const string VersionEndpoint = "/api/internal/version";
   }
-    public static class Legacy
+  public static class Legacy
   {
     public const string AgentUpdateEndpoint = "/api/agent-update";
     public const string AuthEndpoint = "/api/auth";
