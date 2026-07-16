@@ -18,11 +18,30 @@ internal partial class V0Api
     });
   }
 
+  async Task<ApiResult> ITenantsApi.DeleteTenant(Guid tenantId, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.V0.TenantsEndpoint}/{tenantId}", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
   async Task<ApiResult<GetTenantResponseDto>> ITenantsApi.GetTenant(Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
       using var response = await _client.HttpClient.GetAsync($"{HttpConstants.V0.TenantsEndpoint}/{tenantId}", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<GetTenantResponseDto>(cancellationToken);
+    });
+  }
+
+  async Task<ApiResult<GetTenantResponseDto>> ITenantsApi.UpdateTenant(Guid tenantId, UpdateTenantRequestDto request, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.PutAsJsonAsync($"{HttpConstants.V0.TenantsEndpoint}/{tenantId}", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<GetTenantResponseDto>(cancellationToken);
     });
