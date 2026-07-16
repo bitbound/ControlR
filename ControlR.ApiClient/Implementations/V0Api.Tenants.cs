@@ -22,8 +22,9 @@ internal partial class V0Api
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      return await _client.HttpClient.GetFromJsonAsync<GetTenantResponseDto>(
-        $"{HttpConstants.V0.TenantsEndpoint}/{tenantId}", cancellationToken);
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.V0.TenantsEndpoint}/{tenantId}", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<GetTenantResponseDto>(cancellationToken);
     });
   }
 }

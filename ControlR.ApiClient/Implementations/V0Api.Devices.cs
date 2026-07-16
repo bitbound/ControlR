@@ -51,7 +51,11 @@ internal partial class V0Api
   async Task<ApiResult<V0Dtos.DeviceResponseDto>> IV0DevicesApi.GetDevice(Guid deviceId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<V0Dtos.DeviceResponseDto>($"{HttpConstants.V0.DevicesEndpoint}/{deviceId}", cancellationToken));
+    {
+      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.V0.DevicesEndpoint}/{deviceId}", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<V0Dtos.DeviceResponseDto>(cancellationToken);
+    });
   }
 
   async IAsyncEnumerable<V0Dtos.DeviceSummaryDto> IV0DevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
