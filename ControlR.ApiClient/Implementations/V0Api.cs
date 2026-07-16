@@ -4,17 +4,17 @@ namespace ControlR.ApiClient;
 
 internal partial class V0Api(ControlrApi client) :
   IControlrV0Api,
-  IV0DevicesApi,
-  IV0InstallerKeysApi,
-  IV0LogonTokensApi,
+  IDevicesApi,
+  IInstallerKeysApi,
+  ILogonTokensApi,
   IServiceAccountsApi,
-  IV0TenantsApi
+  ITenantsApi
 {
   private readonly ControlrApi _client = client;
 
-  public IV0DevicesApi Devices => this;
-  public IV0InstallerKeysApi InstallerKeys => this;
-  public IV0LogonTokensApi LogonTokens => this;
+  public IDevicesApi Devices => this;
+  public IInstallerKeysApi InstallerKeys => this;
+  public ILogonTokensApi LogonTokens => this;
   public IServiceAccountsApi ServiceAccounts => this;
-  public IV0TenantsApi Tenants => this;
+  public ITenantsApi Tenants => this;
 }

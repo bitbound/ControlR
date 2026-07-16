@@ -8,7 +8,7 @@ namespace ControlR.ApiClient;
 
 internal partial class V0Api
 {
-  async Task<ApiResult<V0Dtos.LogonTokenResponseDto>> IV0LogonTokensApi.CreateLogonTokenForExternal(V0Dtos.CreateLogonTokenForExternalRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.LogonTokenResponseDto>> ILogonTokensApi.CreateLogonTokenForExternal(V0Dtos.CreateLogonTokenForExternalRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
@@ -18,7 +18,7 @@ internal partial class V0Api
     });
   }
 
-  async Task<ApiResult<V0Dtos.LogonTokenResponseDto>> IV0LogonTokensApi.CreateLogonTokenForUser(V0Dtos.CreateLogonTokenForUserRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.LogonTokenResponseDto>> ILogonTokensApi.CreateLogonTokenForUser(V0Dtos.CreateLogonTokenForUserRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {

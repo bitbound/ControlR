@@ -8,7 +8,7 @@ namespace ControlR.ApiClient;
 
 internal partial class V0Api
 {
-  async Task<ApiResult<CreateTenantResponseDto>> IV0TenantsApi.CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<CreateTenantResponseDto>> ITenantsApi.CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
@@ -18,7 +18,7 @@ internal partial class V0Api
     });
   }
 
-  async Task<ApiResult<GetTenantResponseDto>> IV0TenantsApi.GetTenant(Guid tenantId, CancellationToken cancellationToken)
+  async Task<ApiResult<GetTenantResponseDto>> ITenantsApi.GetTenant(Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {

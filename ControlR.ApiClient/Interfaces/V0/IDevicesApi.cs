@@ -3,7 +3,7 @@ using V0Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 
 namespace ControlR.ApiClient.Interfaces.V0;
 
-public interface IV0DevicesApi
+public interface IDevicesApi
 {
   Task<ApiResult> DeleteDevice(Guid deviceId, CancellationToken cancellationToken = default);
   Task<ApiResult<V0Dtos.DeleteManyDevicesResponseDto>> DeleteManyDevices(V0Dtos.DeleteDevicesRequestDto request, CancellationToken cancellationToken = default);

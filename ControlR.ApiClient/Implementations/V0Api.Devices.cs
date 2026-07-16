@@ -9,7 +9,7 @@ namespace ControlR.ApiClient;
 
 internal partial class V0Api
 {
-  async Task<ApiResult> IV0DevicesApi.DeleteDevice(Guid deviceId, CancellationToken cancellationToken)
+  async Task<ApiResult> IDevicesApi.DeleteDevice(Guid deviceId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
@@ -18,7 +18,7 @@ internal partial class V0Api
     });
   }
 
-  async Task<ApiResult<V0Dtos.DeleteManyDevicesResponseDto>> IV0DevicesApi.DeleteManyDevices(
+  async Task<ApiResult<V0Dtos.DeleteManyDevicesResponseDto>> IDevicesApi.DeleteManyDevices(
     V0Dtos.DeleteDevicesRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
@@ -31,7 +31,7 @@ internal partial class V0Api
     });
   }
 
-  async IAsyncEnumerable<V0Dtos.DeviceResponseDto> IV0DevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
+  async IAsyncEnumerable<V0Dtos.DeviceResponseDto> IDevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<V0Dtos.DeviceResponseDto>(
       HttpConstants.V0.DevicesEndpoint,
@@ -48,7 +48,7 @@ internal partial class V0Api
     }
   }
 
-  async Task<ApiResult<V0Dtos.DeviceResponseDto>> IV0DevicesApi.GetDevice(Guid deviceId, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.DeviceResponseDto>> IDevicesApi.GetDevice(Guid deviceId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
@@ -58,7 +58,7 @@ internal partial class V0Api
     });
   }
 
-  async IAsyncEnumerable<V0Dtos.DeviceSummaryDto> IV0DevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
+  async IAsyncEnumerable<V0Dtos.DeviceSummaryDto> IDevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<V0Dtos.DeviceSummaryDto>(
       $"{HttpConstants.V0.DevicesEndpoint}/summary",
@@ -75,7 +75,7 @@ internal partial class V0Api
     }
   }
 
-  async Task<ApiResult<V0Dtos.DeviceSearchResponseDto>> IV0DevicesApi.SearchDevices(V0Dtos.DeviceSearchRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.DeviceSearchResponseDto>> IDevicesApi.SearchDevices(V0Dtos.DeviceSearchRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
@@ -85,7 +85,7 @@ internal partial class V0Api
     });
   }
 
-  async Task<ApiResult<V0Dtos.DeviceResponseDto>> IV0DevicesApi.UpdateDeviceAlias(V0Dtos.UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<V0Dtos.DeviceResponseDto>> IDevicesApi.UpdateDeviceAlias(V0Dtos.UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
