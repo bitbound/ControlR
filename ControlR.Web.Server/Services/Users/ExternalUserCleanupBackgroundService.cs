@@ -72,19 +72,19 @@ public class ExternalUserCleanupBackgroundService(
   private DateTimeOffset? GetExternalUserCleanupCutoff()
   {
     var cleanupDays = _appOptions.Value.ExternalUserCleanupAfterDays;
-    if (cleanupDays <= 0)
-    {
-      return null;
-    }
 
-    // Sub-day values are almost certainly a misconfiguration. The cleanup runs
-    // daily; a half-day cutoff would mass-delete most external users on each run.
+    // 0 or negative disables cleanup by config intent. Sub-day values are
+    // treated the same way because a half-day cutoff would mass-delete most
+    // external users on each run — almost certainly a misconfiguration.
     if (cleanupDays < 1)
     {
-      _logger.LogError(
-        "External user cleanup is disabled: ExternalUserCleanupAfterDays is {CleanupDays}, which is less than 1 day. " +
-        "Sub-day values are likely a misconfiguration.",
-        cleanupDays);
+      if (cleanupDays > 0)
+      {
+        _logger.LogError(
+          "External user cleanup is disabled: ExternalUserCleanupAfterDays is {CleanupDays}, which is less than 1 day. " +
+          "Sub-day values are likely a misconfiguration.",
+          cleanupDays);
+      }
       return null;
     }
 
