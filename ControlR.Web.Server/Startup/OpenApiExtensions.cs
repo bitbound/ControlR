@@ -30,6 +30,8 @@ public static class OpenApiExtensions
             options.Document.AddDocumentTransformer<InternalApiDocumentInfoTransformer>();
             break;
           default:
+            // TODO: replace with startup-time validation via OpenApiEndpointValidator.
+            // See .plans/openapi-endpoint-validator.md.
             throw new InvalidOperationException($"Unknown API version/group: {options.Description.GroupName}");
         }
       });
