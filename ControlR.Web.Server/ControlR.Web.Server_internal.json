@@ -5148,7 +5148,7 @@
     "/api/internal/logon-tokens": {
       "post": {
         "tags": [
-          "LogonToken"
+          "LogonTokens"
         ],
         "parameters": [
           {
@@ -5248,7 +5248,7 @@
     "/api/logon-tokens": {
       "post": {
         "tags": [
-          "LogonToken"
+          "LogonTokens"
         ],
         "parameters": [
           {
@@ -15114,7 +15114,7 @@
       "name": "Invites"
     },
     {
-      "name": "LogonToken"
+      "name": "LogonTokens"
     },
     {
       "name": "PersonalAccessTokens"
