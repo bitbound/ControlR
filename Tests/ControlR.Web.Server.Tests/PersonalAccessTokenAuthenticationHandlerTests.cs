@@ -287,7 +287,6 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
     var handler = new PersonalAccessTokenAuthenticationHandler(
       UrlEncoder.Default,
       userManager,
-      timeProvider,
       loggerFactory,
       personalAccessTokenManager,
       memoryCache,
