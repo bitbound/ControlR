@@ -68,8 +68,21 @@ public class LogonTokenAuthenticationHandler(
       claims.Add(new Claim(ClaimTypes.Role, role));
     }
 
-    user.LastLogin = _timeProvider.GetUtcNow();
-    await _userManager.UpdateAsync(user);
+    try
+    {
+      user.LastLogin = _timeProvider.GetUtcNow();
+      var updateResult = await _userManager.UpdateAsync(user);
+      if (!updateResult.Succeeded)
+      {
+        Logger.LogWarning(
+          "Failed to update LastLogin for user {UserId} during logon token auth: {Errors}",
+          user.Id, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to update LastLogin for user {UserId} during logon token auth.", user.Id);
+    }
 
     var identity = new ClaimsIdentity(claims, Scheme.Name);
     var principal = new ClaimsPrincipal(identity);
