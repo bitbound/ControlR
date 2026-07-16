@@ -1,13 +1,10 @@
-using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.V0;
-using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.LogonTokens;
-using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -33,7 +30,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var tenant = await services.CreateTestTenant();
     var creator = await services.CreateTestUser(tenant.Id, email: "creator@test.local");
     var controller = scope.CreateController<InstallerKeysController>();
-    controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
+    controller.ControllerContext.HttpContext.User = await services.CreateServerPrincipal();
 
     var result = await controller.Create(new CreateInstallerKeyRequestDto(
       tenant.Id,
@@ -58,7 +55,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var user = await services.CreateTestUser(tenant.Id, email: "viewer@test.local");
     var device = await services.CreateTestDevice(tenant.Id);
     var controller = scope.CreateController<LogonTokensController>();
-    controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
+    controller.ControllerContext.HttpContext.User = await services.CreateServerPrincipal();
     controller.ControllerContext.HttpContext.Request.Scheme = "https";
     controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
 
@@ -87,7 +84,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var deviceB = await services.CreateTestDevice(tenantB.Id);
 
     var controller = scope.CreateController<DevicesController>();
-    controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
+    controller.ControllerContext.HttpContext.User = await services.CreateServerPrincipal();
     var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
 
     var resultA = await controller.GetDevice(appDb, agentVersionProvider, deviceA.Id, TestContext.Current.CancellationToken);
@@ -115,7 +112,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var deviceB = await services.CreateTestDevice(tenantB.Id);
 
     var controller = scope.CreateController<DevicesController>();
-    controller.ControllerContext.HttpContext.User = await CreateServerPrincipal(services);
+    controller.ControllerContext.HttpContext.User = await services.CreateServerPrincipal();
 
     var agentVersionProvider = services.GetRequiredService<IAgentVersionProvider>();
 
@@ -127,26 +124,5 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
 
     Assert.Contains(deviceDtos, d => d.Id == deviceA.Id);
     Assert.Contains(deviceDtos, d => d.Id == deviceB.Id);
-  }
-
-  private static async Task<ClaimsPrincipal> CreateServerPrincipal(IServiceProvider services)
-  {
-    var serviceAccountManager = services.GetRequiredService<IServiceAccountManager>();
-    var saResult = await serviceAccountManager.CreateForServer(
-      $"server-principal-{Guid.NewGuid():N}",
-      null,
-      TestContext.Current.CancellationToken);
-
-    Assert.True(saResult.IsSuccess);
-    var serviceAccount = saResult.Value.ServiceAccount;
-    var credential = serviceAccount.Credentials[0];
-
-    return new ClaimsPrincipal(new ClaimsIdentity(
-    [
-      new Claim(PrincipalClaimTypes.PrincipalType, PrincipalClaimTypes.ServerServiceAccount),
-      new Claim(PrincipalClaimTypes.PrincipalId, serviceAccount.Id.ToString()),
-      new Claim(UserClaimTypes.AuthenticationMethod, PrincipalClaimTypes.ServiceAccountCredentialMethod),
-      new Claim(PrincipalClaimTypes.CredentialId, credential.Id.ToString()),
-    ], "TestAuth"));
   }
 }
