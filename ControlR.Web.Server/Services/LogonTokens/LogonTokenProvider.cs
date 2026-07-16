@@ -109,8 +109,17 @@ public class LogonTokenProvider(
       }
     }
 
-    guestUser.LastLogin = _timeProvider.GetUtcNow();
-    await userManager.UpdateAsync(guestUser);
+    try
+    {
+      guestUser.LastLogin = _timeProvider.GetUtcNow();
+      await userManager.UpdateAsync(guestUser);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to update LastLogin for external user {UserId}.", guestUser.Id);
+      return HttpResult.Fail<LogonTokenModel>(HttpResultErrorCode.InternalServerError,
+        "Failed to prepare external user for token issuance.");
+    }
 
     return await CreateToken(deviceId, tenantId, guestUser.Id, expirationMinutes, cancellationToken);
   }

@@ -38,25 +38,36 @@ public class ServiceAccountCredentialAuthenticationHandler(
       }
 
       var remoteIp = Context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-      var failureKey = CacheKeys.GetServiceAccountAuthFailure(remoteIp);
+      var credentialIdPrefix = apiKey.Split(':', 2).FirstOrDefault();
+      var ipFailureKey = CacheKeys.GetServiceAccountAuthFailureByIp(remoteIp);
+      var credentialFailureKey = CacheKeys.GetServiceAccountAuthFailureByCredential(credentialIdPrefix);
+      var failureLimit = appOptions.CurrentValue.ServiceAccountAuthFailureLimit;
+      var failureWindow = TimeSpan.FromMinutes(appOptions.CurrentValue.ServiceAccountAuthFailureWindowMinutes);
 
-      if (memoryCache.TryGetValue<int>(failureKey, out var failureCount) &&
-          failureCount >= appOptions.CurrentValue.ServiceAccountAuthFailureLimit)
+      // Two-axis throttling: independent limits per source IP and per credential.
+      // Combined (IP, credential) keys would let an attacker rotate credential IDs
+      // from one IP to bypass the limit; combined keys per axis let each axis
+      // catch its own attack pattern.
+      if (memoryCache.TryGetValue<int>(ipFailureKey, out var ipFailures) && ipFailures >= failureLimit)
       {
-        return AuthenticateResult.Fail("Too many failed authentication attempts. Try again later.");
+        return AuthenticateResult.Fail("Too many failed authentication attempts from this source. Try again later.");
+      }
+
+      if (memoryCache.TryGetValue<int>(credentialFailureKey, out var credentialFailures) && credentialFailures >= failureLimit)
+      {
+        return AuthenticateResult.Fail("Too many failed authentication attempts for this credential. Try again later.");
       }
 
       var validationResult = await serviceAccountManager.ValidateCredential(apiKey, Context.RequestAborted);
       if (!validationResult.IsSuccess)
       {
-        memoryCache.Set(
-          failureKey,
-          failureCount + 1,
-          TimeSpan.FromMinutes(appOptions.CurrentValue.ServiceAccountAuthFailureWindowMinutes));
+        memoryCache.Set(ipFailureKey, ipFailures + 1, failureWindow);
+        memoryCache.Set(credentialFailureKey, credentialFailures + 1, failureWindow);
         return AuthenticateResult.Fail("Invalid service account credential");
       }
 
-      memoryCache.Remove(failureKey);
+      memoryCache.Remove(ipFailureKey);
+      memoryCache.Remove(credentialFailureKey);
 
       var (account, credential) = validationResult.Value;
 
