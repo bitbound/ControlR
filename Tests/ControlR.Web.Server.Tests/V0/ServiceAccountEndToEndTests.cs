@@ -7,7 +7,6 @@ using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace ControlR.Web.Server.Tests.V0;
 
@@ -19,6 +18,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
   public async Task ServiceAccount_EndToEnd_CompletesFullProvisioningFlow()
   {
     // Step 1: Turn self-registration off and bootstrap a service account on startup.
+    var bootstrapAccountId = Guid.NewGuid();
     var bootstrapTokenId = Guid.NewGuid();
     const string bootstrapSecret = "a-very-strong-bootstrap-secret-key-32-long";
     const string saName = "bootstrap-sa";
@@ -27,6 +27,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
     {
       ["AppOptions:DisableEmailSending"] = "true",
       ["AppOptions:EnableFirstUserSelfRegistration"] = "false",
+      ["Bootstrap:ServerServiceAccountId"] = $"{bootstrapAccountId}",
       ["Bootstrap:ServerServiceAccountName"] = saName,
       ["Bootstrap:ServerServiceAccountTokenId"] = $"{bootstrapTokenId}",
       ["Bootstrap:ServerServiceAccountTokenSecret"] = bootstrapSecret,
@@ -38,6 +39,10 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
     var saManager = services.GetRequiredService<IServiceAccountManager>();
     var bootstrapResult = await saManager.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
     Assert.True(bootstrapResult.IsSuccess, $"Bootstrap failed: {bootstrapResult.Reason}");
+
+    var saAccounts = await saManager.GetAllServer(TestContext.Current.CancellationToken);
+    var sa = saAccounts.First(s => s.Name == saName);
+    Assert.Equal(bootstrapAccountId, sa.Id);
 
     var apiKey = $"{Convert.ToHexString(bootstrapTokenId.ToByteArray())}:{bootstrapSecret}";
 
@@ -61,9 +66,6 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
     Assert.NotEqual(Guid.Empty, tenantResult.TenantId);
 
     // Step 3: Service account creates an installer key.
-    var saAccounts = await saManager.GetAllServer(TestContext.Current.CancellationToken);
-    var sa = saAccounts.First(s => s.Name == saName);
-
     var createKeyReq = new V0Dtos.CreateInstallerKeyRequestDto(
       tenantResult.TenantId,
       sa.Id,

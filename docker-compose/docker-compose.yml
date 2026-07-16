@@ -247,10 +247,11 @@ services:
       #ControlR_Bootstrap__AdminPatSecret: "a-very-strong-and-long-pat-secret-key"
 
       # Bootstrap a server-scoped service account on first startup.
-      # Provide a name and description, and optionally a pre-assigned token ID and secret.
+      # Provide a name and description, and optionally a pre-assigned account ID, token ID, and secret.
       # The resulting x-api-key header value is {hex-guid}:{ServerServiceAccountTokenSecret}.
       #ControlR_Bootstrap__ServerServiceAccountName: "server-svc"
       #ControlR_Bootstrap__ServerServiceAccountDescription: "Server-scoped service account for inter-service communication"
+      #ControlR_Bootstrap__ServerServiceAccountId: "11111111-2222-3333-4444-777777777777"
       #ControlR_Bootstrap__ServerServiceAccountTokenId: "11111111-2222-3333-4444-666666666666"
       #ControlR_Bootstrap__ServerServiceAccountTokenSecret: "a-very-strong-and-long-service-account-secret"
 

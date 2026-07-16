@@ -114,6 +114,7 @@ public class ServiceAccountManager(
     var tokenId = bootstrapOptions.CurrentValue.ServerServiceAccountTokenId;
     var secret = bootstrapOptions.CurrentValue.ServerServiceAccountTokenSecret;
     var description = bootstrapOptions.CurrentValue.ServerServiceAccountDescription;
+    var accountId = bootstrapOptions.CurrentValue.ServerServiceAccountId;
 
     var nameSet = !string.IsNullOrWhiteSpace(name);
     var tokenIdSet = tokenId.HasValue;
@@ -168,6 +169,11 @@ public class ServiceAccountManager(
       Description = description,
       IsEnabled = true
     };
+
+    if (accountId.HasValue)
+    {
+      account.Id = accountId.Value;
+    }
 
     var hashedSecret = passwordHasher.HashPassword(string.Empty, secret);
     var credential = new ServiceAccountCredential

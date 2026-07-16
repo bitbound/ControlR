@@ -45,6 +45,15 @@ public class BootstrapOptions
   public string? ServerServiceAccountDescription { get; init; }
 
   /// <summary>
+  /// Pre-assigned deterministic GUID for the bootstrap server-scoped service account entity.
+  /// When set, the <see cref="ServiceAccount"/> row is created with this ID instead of a
+  /// random UUID. This lets automation consumers embed the account ID in config alongside
+  /// <see cref="ServerServiceAccountTokenId"/> without needing a discovery API call.
+  /// </summary>
+  [ProtectedDataClassification]
+  public Guid? ServerServiceAccountId { get; init; }
+
+  /// <summary>
   /// Display name for the bootstrapped server-scoped service account. When set alongside
   /// <see cref="ServerServiceAccountTokenId"/> and <see cref="ServerServiceAccountTokenSecret"/>,
   /// a <see cref="ServiceAccountKind.Server"/> service account and its initial credential are created
