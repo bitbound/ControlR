@@ -24,7 +24,7 @@ public interface IServiceAccountManager
   /// bootstrap options are fully supplied. Skips creation when the named account already exists.
   /// Throws when the bootstrap input is only partially configured.
   /// </summary>
-  Task<HttpResult> BootstrapServerServiceAccount(BootstrapOptions options, CancellationToken cancellationToken);
+  Task<HttpResult> BootstrapServerServiceAccount(CancellationToken cancellationToken);
   /// <summary>
   /// Creates a new server-scoped service account and its first credential. Returns the new
   /// account and the plaintext secret, which is only exposed this once.
@@ -59,6 +59,7 @@ public class ServiceAccountManager(
   TimeProvider timeProvider,
   IPasswordHasher<string> passwordHasher,
   IMemoryCache memoryCache,
+  IOptionsMonitor<BootstrapOptions> bootstrapOptions,
   ILogger<ServiceAccountManager> logger) : IServiceAccountManager
 {
   private const string InvalidApiKeyFormatMessage = "Invalid service account API key format.";
@@ -107,13 +108,12 @@ public class ServiceAccountManager(
   }
 
   public async Task<HttpResult> BootstrapServerServiceAccount(
-    BootstrapOptions options,
     CancellationToken cancellationToken)
   {
-    var name = options.ServerServiceAccountName;
-    var tokenId = options.ServerServiceAccountTokenId;
-    var secret = options.ServerServiceAccountTokenSecret;
-    var description = options.ServerServiceAccountDescription;
+    var name = bootstrapOptions.CurrentValue.ServerServiceAccountName;
+    var tokenId = bootstrapOptions.CurrentValue.ServerServiceAccountTokenId;
+    var secret = bootstrapOptions.CurrentValue.ServerServiceAccountTokenSecret;
+    var description = bootstrapOptions.CurrentValue.ServerServiceAccountDescription;
 
     var nameSet = !string.IsNullOrWhiteSpace(name);
     var tokenIdSet = tokenId.HasValue;

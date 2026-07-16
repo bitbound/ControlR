@@ -4,12 +4,10 @@ using System.Runtime.InteropServices;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Web.Server.Authn;
-using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Web.Server.Tests.V0;
 
@@ -38,12 +36,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     var services = testServer.Services;
     var saManager = services.GetRequiredService<IServiceAccountManager>();
-    var bootstrapOptions = services.GetRequiredService<IOptions<BootstrapOptions>>();
-    var appLifetime = services.GetRequiredService<IHostApplicationLifetime>();
-    var bootstrapResult = await saManager.BootstrapServerServiceAccount(
-      bootstrapOptions.Value,
-      appLifetime.ApplicationStopping);
-
+    var bootstrapResult = await saManager.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
     Assert.True(bootstrapResult.IsSuccess, $"Bootstrap failed: {bootstrapResult.Reason}");
 
     var apiKey = $"{Convert.ToHexString(bootstrapTokenId.ToByteArray())}:{bootstrapSecret}";

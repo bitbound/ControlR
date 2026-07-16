@@ -188,11 +188,10 @@ public static class HostExtensions
     await using var scope = host.Services.CreateAsyncScope();
     var sp = scope.ServiceProvider;
 
-    var bootstrapOptions = sp.GetRequiredService<IOptions<BootstrapOptions>>();
     var logger = sp.GetRequiredService<ILogger<Program>>();
     var serviceAccountManager = sp.GetRequiredService<IServiceAccountManager>();
 
-    var result = await serviceAccountManager.BootstrapServerServiceAccount(bootstrapOptions.Value, cancellationToken);
+    var result = await serviceAccountManager.BootstrapServerServiceAccount(cancellationToken);
     if (!result.IsSuccess)
     {
       logger.LogError("Bootstrap server service account failed: {Reason}", result.Reason);

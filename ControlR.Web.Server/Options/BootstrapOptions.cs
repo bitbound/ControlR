@@ -40,7 +40,7 @@ public class BootstrapOptions
   public Guid? AdminPatTokenId { get; init; }
 
   /// <summary>
-  /// Human-readable description for the bootstrapped server service account.
+  /// Human-readable description for the bootstrapped server-scoped service account.
   /// </summary>
   public string? ServerServiceAccountDescription { get; init; }
 
@@ -48,19 +48,19 @@ public class BootstrapOptions
   /// Display name for the bootstrapped server-scoped service account. When set alongside
   /// <see cref="ServerServiceAccountTokenId"/> and <see cref="ServerServiceAccountTokenSecret"/>,
   /// a <see cref="ServiceAccountKind.Server"/> service account and its initial credential are created
-  /// on first startup. Omit all three to skip bootstrapping the server service account.
+  /// on first startup. Omit all three to skip bootstrapping the server-scoped service account.
   /// </summary>
   public string? ServerServiceAccountName { get; init; }
 
   /// <summary>
-  /// Pre-assigned deterministic GUID for the bootstrap server service account credential.
+  /// Pre-assigned deterministic GUID for the bootstrap server-scoped service account credential.
   /// The resulting <c>x-api-key</c> header is <c>{hex-guid}:{ServerServiceAccountTokenSecret}</c>.
   /// </summary>
   [ProtectedDataClassification]
   public Guid? ServerServiceAccountTokenId { get; init; }
 
   /// <summary>
-  /// Pre-shared secret for the bootstrap server service account credential.
+  /// Pre-shared secret for the bootstrap server-scoped service account credential.
   /// The resulting <c>x-api-key</c> header is <c>{hex-guid}:{ServerServiceAccountTokenSecret}</c>.
   /// </summary>
   [ProtectedDataClassification]
