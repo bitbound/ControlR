@@ -20,7 +20,7 @@ public static class ServiceCollectionExtensions
   ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
-  ///   The sub-interfaces are also registered individually for backward compatibility.
+  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
   /// </para>
   /// </summary>
   /// <param name="services">
@@ -54,7 +54,7 @@ public static class ServiceCollectionExtensions
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
     services.TryAddTransient<ControlrApiAuthHeaderHandler>();
 
-    // Register the factory for the ControlR API client.
+    // Register the typed HttpClient for ControlrApi.
     services.AddHttpClient(
       ControlrApiClientNames.UnauthenticatedClient,
       (sp, client) =>
@@ -92,7 +92,7 @@ public static class ServiceCollectionExtensions
   ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
-  ///   The sub-interfaces are also registered individually for backward compatibility.
+  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
   /// </para>
   /// </summary>
   /// <param name="services">
@@ -130,7 +130,7 @@ public static class ServiceCollectionExtensions
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
     services.TryAddTransient<ControlrApiAuthHeaderHandler>();
 
-    // Register the factory for the ControlR API client.
+    // Register the typed HttpClient for ControlrApi.
     services.AddHttpClient(
       ControlrApiClientNames.UnauthenticatedClient,
       (sp, client) =>
@@ -169,7 +169,7 @@ public static class ServiceCollectionExtensions
   ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
-  ///   The sub-interfaces are also registered individually for backward compatibility.
+  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
   /// </para>
   /// </summary>
   /// <param name="builder">
