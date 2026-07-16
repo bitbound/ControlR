@@ -14,7 +14,7 @@ namespace ControlR.Web.Server.Tests.V0;
 public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
 {
   [Fact]
-  public async Task AddCredential_DisabledAccount_Returns409()
+  public async Task AddCredential_DisabledAccount_Returns403()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
     var accountId = Guid.Empty;
@@ -45,8 +45,8 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
         new CreateServiceAccountCredentialRequestDto("New Credential"),
         TestContext.Current.CancellationToken);
 
-      var conflict = Assert.IsType<ObjectResult>(result.Result);
-      Assert.Equal(409, conflict.StatusCode);
+      var forbidden = Assert.IsType<ObjectResult>(result.Result);
+      Assert.Equal(403, forbidden.StatusCode);
     }
   }
 

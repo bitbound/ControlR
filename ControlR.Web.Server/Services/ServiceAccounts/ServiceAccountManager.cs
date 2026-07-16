@@ -88,7 +88,7 @@ public class ServiceAccountManager(
 
     if (!account.IsEnabled)
     {
-      return HttpResult.Fail<CreateServiceAccountCredentialResponseDto>(HttpResultErrorCode.Conflict, "Service account is disabled.");
+      return HttpResult.Fail<CreateServiceAccountCredentialResponseDto>(HttpResultErrorCode.Forbidden, "Service account is disabled.");
     }
 
     var plainTextSecret = RandomGenerator.CreateApiKey();
@@ -373,29 +373,29 @@ public class ServiceAccountManager(
 
     if (credential is null)
     {
-      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.NotFound, InvalidCredentialMessage);
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Unauthorized, InvalidCredentialMessage);
     }
 
     var account = credential.ServiceAccount;
     if (account is null || !account.IsEnabled)
     {
-      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account is not available.");
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Forbidden, "Service account is not available.");
     }
 
     if (credential.RevokedAt is not null)
     {
-      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account credential has been revoked.");
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Unauthorized, "Service account credential has been revoked.");
     }
 
     if (credential.ExpiresAt is not null && credential.ExpiresAt <= timeProvider.GetUtcNow())
     {
-      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Conflict, "Service account credential has expired.");
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Unauthorized, "Service account credential has expired.");
     }
 
     var verification = passwordHasher.VerifyHashedPassword(string.Empty, credential.HashedSecret, parts[1]);
     if (verification == PasswordVerificationResult.Failed)
     {
-      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.BadRequest, InvalidCredentialMessage);
+      return HttpResult.Fail<ServiceAccountCredentialValidationResult>(HttpResultErrorCode.Unauthorized, InvalidCredentialMessage);
     }
 
     if (verification == PasswordVerificationResult.SuccessRehashNeeded)
