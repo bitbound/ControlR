@@ -1,3 +1,11 @@
+## Breaking Changes
+
+- If you're using the `ControlrApi` client, the entry point has been split into a few smaller, purpose-specific classes.
+  - You'll need to update your code to use the new static properties that serve as the new entry points.
+  - Existing endpoints were moved under the `Internal` property.  These will continue to evolve dynamically based on the needs of the UI.
+  - The `V0` property is the new versioned API that should be used for server-to-server integrations.
+  - `V0` isn't complete and will be fleshed out over time.
+
 ## Changed
 
 - Replaced the `AppOptions__EnableFirstUserSelfRegistration` configuration option (default `true`) with `AppOptions__DisableFirstUserSelfRegistration` (default `false`).
