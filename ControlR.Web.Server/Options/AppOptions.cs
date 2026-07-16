@@ -103,7 +103,7 @@ public class AppOptions
   /// through this flow is promoted to server administrator and first-tenant admin.
   /// Independent of <see cref="EnablePublicRegistration"/>, which controls ongoing open signup.
   /// </summary>
-  public bool EnableFirstUserSelfRegistration { get; init; }
+  public bool EnableFirstUserSelfRegistration { get; init; } = true;
 
   /// <summary>
   /// Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
