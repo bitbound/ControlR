@@ -29,20 +29,10 @@ public static class OpenApiExtensions
           case "Internal":
             options.Document.AddDocumentTransformer<InternalApiDocumentInfoTransformer>();
             break;
-          case "Legacy":
-            options.Document.AddDocumentTransformer<LegacyApiDocumentInfoTransformer>();
-            break;
           default:
             throw new InvalidOperationException($"Unknown API version/group: {options.Description.GroupName}");
         }
       });
-
-    builder.Services.AddOpenApi("legacy", options =>
-    {
-      options.ShouldInclude = desc => desc.GroupName == "Legacy";
-      options.AddDocumentTransformer<LegacyApiDocumentInfoTransformer>();
-      AddSharedTransformers(options);
-    });
 
     builder.Services.AddOpenApi("internal", options =>
     {

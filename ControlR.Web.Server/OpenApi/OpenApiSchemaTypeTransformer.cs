@@ -9,9 +9,8 @@ public class OpenApiSchemaTypeTransformer : IOpenApiSchemaTransformer
   {
     if (schema.Type.HasValue &&
         schema.Type.Value.HasFlag(JsonSchemaType.String) &&
-        (
-          schema.Type.Value.HasFlag(JsonSchemaType.Number) || schema.Type.Value.HasFlag(JsonSchemaType.Integer
-        )))
+        (schema.Type.Value.HasFlag(JsonSchemaType.Number) ||
+         schema.Type.Value.HasFlag(JsonSchemaType.Integer)))
     {
       // Remove the String flag while preserving other flags
       schema.Type = schema.Type.Value & ~JsonSchemaType.String;
