@@ -6,14 +6,14 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface ITenantSettingsApi
 {
-  [ApiRoute("DELETE", "/api/internal/tenant-settings/{settingName}")]
+  [ApiRoute($"{HttpConstants.Internal.TenantSettingsEndpoint}/{{settingName}}", "DELETE")]
   Task<ApiResult> DeleteTenantSetting(string settingName, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/tenant-settings/{settingName}")]
+  [ApiRoute($"{HttpConstants.Internal.TenantSettingsEndpoint}/{{settingName}}", "GET")]
   Task<ApiResult<TenantSettingResponseDto>> GetTenantSetting(string settingName, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/tenant-settings")]
+  [ApiRoute($"{HttpConstants.Internal.TenantSettingsEndpoint}", "GET")]
   Task<ApiResult<TenantSettingsDto>> GetTenantSettings(CancellationToken cancellationToken = default);
-  [ApiRoute("POST", "/api/internal/tenant-settings")]
+  [ApiRoute($"{HttpConstants.Internal.TenantSettingsEndpoint}", "POST")]
   Task<ApiResult<TenantSettingResponseDto>> SetTenantSetting(TenantSettingRequestDto request, CancellationToken cancellationToken = default);
-  [ApiRoute("PUT", "/api/internal/tenant-settings")]
+  [ApiRoute($"{HttpConstants.Internal.TenantSettingsEndpoint}", "PUT")]
   Task<ApiResult<TenantSettingsDto>> SetTenantSettings(TenantSettingsDto request, CancellationToken cancellationToken = default);
 }

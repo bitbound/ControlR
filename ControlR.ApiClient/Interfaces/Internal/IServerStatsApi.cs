@@ -6,6 +6,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IServerStatsApi
 {
-  [ApiRoute("GET", "/api/internal/server-stats")]
+  [ApiRoute($"{HttpConstants.Internal.ServerStatsEndpoint}", "GET")]
   Task<ApiResult<ServerStatsDto>> GetServerStats(CancellationToken cancellationToken = default);
 }

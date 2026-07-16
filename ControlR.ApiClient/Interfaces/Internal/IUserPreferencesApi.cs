@@ -6,12 +6,12 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IUserPreferencesApi
 {
-  [ApiRoute("GET", "/api/internal/user-preferences/{preferenceName}")]
+  [ApiRoute($"{HttpConstants.Internal.UserPreferencesEndpoint}/{{preferenceName}}", "GET")]
   Task<ApiResult<UserPreferenceResponseDto>> GetUserPreference(string preferenceName, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/user-preferences")]
+  [ApiRoute($"{HttpConstants.Internal.UserPreferencesEndpoint}", "GET")]
   Task<ApiResult<UserPreferencesDto>> GetUserPreferences(CancellationToken cancellationToken = default);
-  [ApiRoute("POST", "/api/internal/user-preferences")]
+  [ApiRoute($"{HttpConstants.Internal.UserPreferencesEndpoint}", "POST")]
   Task<ApiResult<UserPreferenceResponseDto>> SetUserPreference(UserPreferenceRequestDto request, CancellationToken cancellationToken = default);
-  [ApiRoute("PUT", "/api/internal/user-preferences")]
+  [ApiRoute($"{HttpConstants.Internal.UserPreferencesEndpoint}", "PUT")]
   Task<ApiResult<UserPreferencesDto>> SetUserPreferences(UserPreferencesDto request, CancellationToken cancellationToken = default);
 }

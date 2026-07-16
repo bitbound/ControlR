@@ -6,8 +6,8 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IUserServerSettingsApi
 {
-  [ApiRoute("GET", "/api/internal/user-server-settings/decommission-status")]
+  [ApiRoute($"{HttpConstants.Internal.UserServerSettingsEndpoint}/decommission-status", "GET")]
   Task<ApiResult<DecommissionServerResponseDto>> GetDecommissionStatus(CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/user-server-settings/file-upload-max-size")]
+  [ApiRoute($"{HttpConstants.Internal.UserServerSettingsEndpoint}/file-upload-max-size", "GET")]
   Task<ApiResult<long>> GetFileUploadMaxSize(CancellationToken cancellationToken = default);
 }

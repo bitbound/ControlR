@@ -5,6 +5,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface ITestEmailApi
 {
-  [ApiRoute("POST", "/api/internal/test-email")]
+  [ApiRoute($"{HttpConstants.Internal.TestEmailEndpoint}", "POST")]
   Task<ApiResult> SendTestEmail(CancellationToken cancellationToken = default);
 }

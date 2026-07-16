@@ -6,6 +6,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IPublicRegistrationSettingsApi
 {
-  [ApiRoute("GET", "/api/internal/public-registration-settings")]
+  [ApiRoute($"{HttpConstants.Internal.PublicRegistrationSettingsEndpoint}", "GET")]
   Task<ApiResult<PublicRegistrationSettings>> GetPublicRegistrationSettings(CancellationToken cancellationToken = default);
 }

@@ -6,12 +6,12 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IPersonalAccessTokensApi
 {
-  [ApiRoute("POST", "/api/internal/personal-access-tokens")]
+  [ApiRoute($"{HttpConstants.Internal.PersonalAccessTokensEndpoint}", "POST")]
   Task<ApiResult<CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(CreatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
-  [ApiRoute("DELETE", "/api/internal/personal-access-tokens/{personalAccessTokenId}")]
+  [ApiRoute($"{HttpConstants.Internal.PersonalAccessTokensEndpoint}/{{personalAccessTokenId}}", "DELETE")]
   Task<ApiResult> DeletePersonalAccessToken(Guid personalAccessTokenId, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/personal-access-tokens")]
+  [ApiRoute($"{HttpConstants.Internal.PersonalAccessTokensEndpoint}", "GET")]
   Task<ApiResult<PersonalAccessTokenResponseDto[]>> GetPersonalAccessTokens(CancellationToken cancellationToken = default);
-  [ApiRoute("PUT", "/api/internal/personal-access-tokens/{personalAccessTokenId}")]
+  [ApiRoute($"{HttpConstants.Internal.PersonalAccessTokensEndpoint}/{{personalAccessTokenId}}", "PUT")]
   Task<ApiResult<PersonalAccessTokenResponseDto>> UpdatePersonalAccessToken(Guid personalAccessTokenId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
 }

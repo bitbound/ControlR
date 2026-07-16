@@ -5,10 +5,10 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IVersionApi
 {
-  [ApiRoute("GET", "/api/internal/version/agent")]
+  [ApiRoute($"{HttpConstants.Internal.VersionEndpoint}/agent", "GET")]
   Task<ApiResult<Version>> GetCurrentAgentVersion(CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/version/server")]
+  [ApiRoute($"{HttpConstants.Internal.VersionEndpoint}/server", "GET")]
   Task<ApiResult<Version>> GetCurrentServerVersion(CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/version/release-notes")]
+  [ApiRoute($"{HttpConstants.Internal.VersionEndpoint}/release-notes", "GET")]
   Task<ApiResult<string>> GetReleaseNotes(CancellationToken cancellationToken = default);
 }

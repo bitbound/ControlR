@@ -5,6 +5,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IDesktopPreviewApi
 {
-  [ApiRoute("GET", "/api/internal/desktop-preview/{deviceId}/{targetProcessId}")]
+  [ApiRoute($"{HttpConstants.Internal.DesktopPreviewEndpoint}/{{deviceId}}/{{targetProcessId}}", "GET")]
   Task<ApiResult<byte[]>> GetDesktopPreview(Guid deviceId, int targetProcessId, CancellationToken cancellationToken = default);
 }

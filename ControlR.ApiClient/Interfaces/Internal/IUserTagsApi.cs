@@ -6,12 +6,12 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IUserTagsApi
 {
-  [ApiRoute("POST", "/api/internal/user-tags")]
+  [ApiRoute($"{HttpConstants.Internal.UserTagsEndpoint}", "POST")]
   Task<ApiResult> AddUserTag(UserTagAddRequestDto request, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/user-tags")]
+  [ApiRoute($"{HttpConstants.Internal.UserTagsEndpoint}", "GET")]
   Task<ApiResult<TagResponseDto[]>> GetAllowedTags(CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/user-tags/{userId}")]
+  [ApiRoute($"{HttpConstants.Internal.UserTagsEndpoint}/{{userId}}", "GET")]
   Task<ApiResult<TagResponseDto[]>> GetUserTags(Guid userId, CancellationToken cancellationToken = default);
-  [ApiRoute("DELETE", "/api/internal/user-tags/{userId}/{tagId}")]
+  [ApiRoute($"{HttpConstants.Internal.UserTagsEndpoint}/{{userId}}/{{tagId}}", "DELETE")]
   Task<ApiResult> RemoveUserTag(Guid userId, Guid tagId, CancellationToken cancellationToken = default);
 }

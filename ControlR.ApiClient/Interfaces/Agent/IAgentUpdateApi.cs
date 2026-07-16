@@ -7,6 +7,6 @@ namespace ControlR.ApiClient.Interfaces.Agent;
 
 public interface IAgentUpdateApi
 {
-  [ApiRoute("GET", "/api/agent/updates/get-bundle-metadata/{runtime}")]
+  [ApiRoute($"{HttpConstants.Agent.UpdatesEndpoint}/get-bundle-metadata/{{runtime}}", "GET")]
   Task<ApiResult<BundleMetadataDto>> GetBundleMetadata(RuntimeId runtime, CancellationToken cancellationToken = default);
 }

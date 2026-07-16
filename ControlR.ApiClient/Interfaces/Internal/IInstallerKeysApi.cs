@@ -6,14 +6,14 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IInstallerKeysApi
 {
-  [ApiRoute("POST", "/api/internal/installer-keys")]
+  [ApiRoute($"{HttpConstants.Internal.InstallerKeysEndpoint}", "POST")]
   Task<ApiResult<InternalDtos.CreateInstallerKeyResponseDto>> CreateInstallerKey(InternalDtos.CreateInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
-  [ApiRoute("DELETE", "/api/internal/installer-keys/{keyId}")]
+  [ApiRoute($"{HttpConstants.Internal.InstallerKeysEndpoint}/{{keyId}}", "DELETE")]
   Task<ApiResult> DeleteInstallerKey(Guid keyId, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/installer-keys")]
+  [ApiRoute($"{HttpConstants.Internal.InstallerKeysEndpoint}", "GET")]
   Task<ApiResult<InternalDtos.AgentInstallerKeyDto[]>> GetAllInstallerKeys(CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/installer-keys/usages/{keyId}")]
+  [ApiRoute($"{HttpConstants.Internal.InstallerKeysEndpoint}/usages/{{keyId}}", "GET")]
   Task<ApiResult<InternalDtos.AgentInstallerKeyUsageDto[]>> GetInstallerKeyUsages(Guid keyId, CancellationToken cancellationToken = default);
-  [ApiRoute("PUT", "/api/internal/installer-keys/rename")]
+  [ApiRoute($"{HttpConstants.Internal.InstallerKeysEndpoint}/rename", "PUT")]
   Task<ApiResult> RenameInstallerKey(InternalDtos.RenameInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
 }

@@ -6,6 +6,6 @@ namespace ControlR.ApiClient.Interfaces.V0;
 
 public interface IInstallerKeysApi
 {
-  [ApiRoute("POST", "/api/v0/installer-keys")]
+  [ApiRoute($"{HttpConstants.V0.InstallerKeysEndpoint}", "POST")]
   Task<ApiResult<V0Dtos.CreateInstallerKeyResponseDto>> CreateInstallerKey(V0Dtos.CreateInstallerKeyRequestDto dto, CancellationToken cancellationToken = default);
 }

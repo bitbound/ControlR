@@ -6,6 +6,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IRolesApi
 {
-  [ApiRoute("GET", "/api/internal/roles")]
+  [ApiRoute($"{HttpConstants.Internal.RolesEndpoint}", "GET")]
   Task<ApiResult<RoleResponseDto[]>> GetAllRoles(CancellationToken cancellationToken = default);
 }

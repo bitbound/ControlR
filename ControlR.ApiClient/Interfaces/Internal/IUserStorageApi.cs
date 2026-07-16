@@ -6,10 +6,10 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IUserStorageApi
 {
-  [ApiRoute("DELETE", "/api/internal/user-storage/{key}")]
+  [ApiRoute($"{HttpConstants.Internal.UserStorageEndpoint}/{{key}}", "DELETE")]
   Task<ApiResult> DeleteUserStorageItem(string key, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/internal/user-storage/{key}")]
+  [ApiRoute($"{HttpConstants.Internal.UserStorageEndpoint}/{{key}}", "GET")]
   Task<ApiResult<UserStorageResponseDto>> GetUserStorageItem(string key, CancellationToken cancellationToken = default);
-  [ApiRoute("POST", "/api/internal/user-storage")]
+  [ApiRoute($"{HttpConstants.Internal.UserStorageEndpoint}", "POST")]
   Task<ApiResult<UserStorageResponseDto>> SetUserStorageItem(UserStorageRequestDto request, CancellationToken cancellationToken = default);
 }

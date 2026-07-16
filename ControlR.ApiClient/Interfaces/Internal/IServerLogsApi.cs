@@ -6,6 +6,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IServerLogsApi
 {
-  [ApiRoute("GET", "/api/internal/server-logs/get-aspire-url")]
+  [ApiRoute($"{HttpConstants.Internal.ServerLogsEndpoint}/get-aspire-url", "GET")]
   Task<ApiResult<GetAspireUrlResponseDto>> GetAspireUrl(CancellationToken cancellationToken = default);
 }

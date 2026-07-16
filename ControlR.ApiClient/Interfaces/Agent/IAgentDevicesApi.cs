@@ -6,6 +6,6 @@ namespace ControlR.ApiClient.Interfaces.Agent;
 
 public interface IAgentDevicesApi
 {
-  [ApiRoute("POST", "/api/agent/devices")]
+  [ApiRoute($"{HttpConstants.Agent.DevicesEndpoint}", "POST")]
   Task<ApiResult> CreateDevice(InternalDtos.CreateDeviceRequestDto request, CancellationToken cancellationToken = default);
 }

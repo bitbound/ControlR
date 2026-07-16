@@ -6,6 +6,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IEffectiveUserPreferencesApi
 {
-  [ApiRoute("GET", "/api/internal/effective-user-preferences")]
+  [ApiRoute($"{HttpConstants.Internal.EffectiveUserPreferencesEndpoint}", "GET")]
   Task<ApiResult<EffectiveUserPreferencesDto>> GetEffectiveUserPreferences(CancellationToken cancellationToken = default);
 }

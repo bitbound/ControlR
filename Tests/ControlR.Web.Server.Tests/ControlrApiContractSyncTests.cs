@@ -276,6 +276,10 @@ public partial class ControlrApiContractSyncTests
     return values;
   }
 
+  // IMPORTANT: When a new sub-interface is added (e.g., IControlrXxxApi in
+  // ControlR.ApiClient.Interfaces), add it here so the contract sync tests
+  // pick up its [ApiRoute] attributes. Forgetting this list silently disables
+  // coverage for the entire sub-interface.
   private static Type[] GetSubInterfaceTypes()
   {
     return

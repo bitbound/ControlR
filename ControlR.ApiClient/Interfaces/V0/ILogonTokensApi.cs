@@ -6,8 +6,8 @@ namespace ControlR.ApiClient.Interfaces.V0;
 
 public interface ILogonTokensApi
 {
-  [ApiRoute("POST", "/api/v0/logon-tokens/external")]
+  [ApiRoute($"{HttpConstants.V0.LogonTokensEndpoint}/external", "POST")]
   Task<ApiResult<V0Dtos.LogonTokenResponseDto>> CreateLogonTokenForExternal(V0Dtos.CreateLogonTokenForExternalRequestDto request, CancellationToken cancellationToken = default);
-  [ApiRoute("POST", "/api/v0/logon-tokens/user")]
+  [ApiRoute($"{HttpConstants.V0.LogonTokensEndpoint}/user", "POST")]
   Task<ApiResult<V0Dtos.LogonTokenResponseDto>> CreateLogonTokenForUser(V0Dtos.CreateLogonTokenForUserRequestDto request, CancellationToken cancellationToken = default);
 }

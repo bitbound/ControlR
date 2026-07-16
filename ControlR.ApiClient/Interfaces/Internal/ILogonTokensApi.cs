@@ -6,6 +6,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface ILogonTokensApi
 {
-  [ApiRoute("POST", "/api/internal/logon-tokens")]
+  [ApiRoute($"{HttpConstants.Internal.LogonTokensEndpoint}", "POST")]
   Task<ApiResult<InternalDtos.LogonTokenResponseDto>> CreateLogonToken(InternalDtos.LogonTokenRequestDto request, CancellationToken cancellationToken = default);
 }

@@ -6,18 +6,18 @@ namespace ControlR.ApiClient.Interfaces.V0;
 
 public interface IDevicesApi
 {
-  [ApiRoute("DELETE", "/api/v0/devices/{deviceId}")]
+  [ApiRoute($"{HttpConstants.V0.DevicesEndpoint}/{{deviceId}}", "DELETE")]
   Task<ApiResult> DeleteDevice(Guid deviceId, CancellationToken cancellationToken = default);
-  [ApiRoute("POST", "/api/v0/devices/delete-many")]
+  [ApiRoute($"{HttpConstants.V0.DevicesEndpoint}/delete-many", "POST")]
   Task<ApiResult<V0Dtos.DeleteManyDevicesResponseDto>> DeleteManyDevices(V0Dtos.DeleteDevicesRequestDto request, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/v0/devices")]
+  [ApiRoute($"{HttpConstants.V0.DevicesEndpoint}", "GET")]
   IAsyncEnumerable<V0Dtos.DeviceResponseDto> GetAllDevices(CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/v0/devices/{deviceId}")]
+  [ApiRoute($"{HttpConstants.V0.DevicesEndpoint}/{{deviceId}}", "GET")]
   Task<ApiResult<V0Dtos.DeviceResponseDto>> GetDevice(Guid deviceId, CancellationToken cancellationToken = default);
-  [ApiRoute("GET", "/api/v0/devices/summary")]
+  [ApiRoute($"{HttpConstants.V0.DevicesEndpoint}/summary", "GET")]
   IAsyncEnumerable<V0Dtos.DeviceSummaryDto> GetDeviceSummaries(CancellationToken cancellationToken = default);
-  [ApiRoute("POST", "/api/v0/devices/search")]
+  [ApiRoute($"{HttpConstants.V0.DevicesEndpoint}/search", "POST")]
   Task<ApiResult<V0Dtos.DeviceSearchResponseDto>> SearchDevices(V0Dtos.DeviceSearchRequestDto request, CancellationToken cancellationToken = default);
-  [ApiRoute("PATCH", "/api/v0/devices/{deviceId}/alias")]
+  [ApiRoute($"{HttpConstants.V0.DevicesEndpoint}/{{deviceId}}/alias", "PATCH")]
   Task<ApiResult<V0Dtos.DeviceResponseDto>> UpdateDeviceAlias(V0Dtos.UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken = default);
 }

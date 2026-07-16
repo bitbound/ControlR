@@ -6,8 +6,8 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IServerAlertApi
 {
-  [ApiRoute("GET", "/api/internal/server-alert")]
+  [ApiRoute($"{HttpConstants.Internal.ServerAlertEndpoint}", "GET")]
   Task<ApiResult<ServerAlertResponseDto>> GetServerAlert(CancellationToken cancellationToken = default);
-  [ApiRoute("POST", "/api/internal/server-alert")]
+  [ApiRoute($"{HttpConstants.Internal.ServerAlertEndpoint}", "POST")]
   Task<ApiResult<ServerAlertResponseDto>> UpdateServerAlert(ServerAlertRequestDto request, CancellationToken cancellationToken = default);
 }
