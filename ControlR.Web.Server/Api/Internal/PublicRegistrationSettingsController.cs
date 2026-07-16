@@ -1,4 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Client.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
@@ -9,16 +10,13 @@ namespace ControlR.Web.Server.Api.Internal;
 [ApiController]
 [OutputCache(Duration = 60)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class PublicRegistrationSettingsController : ControllerBase
+public class PublicRegistrationSettingsController(
+  IPublicRegistrationSettingsProvider registrationSettings) : ControllerBase
 {
   [HttpGet]
-  public async Task<InternalDtos.PublicRegistrationSettings> Get(
-    [FromServices] AppDb db,
-    [FromServices] IOptionsMonitor<AppOptions> appOptions)
+  public async Task<InternalDtos.PublicRegistrationSettings> Get()
   {
-    var hasUsers = await db.Users.AnyAsync();
-    var registrationEnabled = appOptions.CurrentValue.EnablePublicRegistration ||
-      (!appOptions.CurrentValue.DisableFirstUserSelfRegistration && !hasUsers);
-    return new InternalDtos.PublicRegistrationSettings(registrationEnabled);
+    var isEnabled = await registrationSettings.GetIsPublicRegistrationEnabled();
+    return new InternalDtos.PublicRegistrationSettings(isEnabled);
   }
 }

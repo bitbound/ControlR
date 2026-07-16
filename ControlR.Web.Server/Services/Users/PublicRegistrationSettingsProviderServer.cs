@@ -11,22 +11,14 @@ internal class PublicRegistrationSettingsProviderServer(
   private readonly IDbContextFactory<AppDb> _dbFactory = dbFactory;
   private readonly ILogger<PublicRegistrationSettingsProviderServer> _logger = logger;
 
-  private bool? _cachedValue;
-
   public async Task<bool> GetIsPublicRegistrationEnabled()
   {
-    if (_cachedValue.HasValue)
-    {
-      return _cachedValue.Value;
-    }
-
     try
     {
       await using var db = await _dbFactory.CreateDbContextAsync();
       var hasUsers = await db.Users.AnyAsync();
       var registrationEnabled = _appOptions.CurrentValue.EnablePublicRegistration ||
         (!_appOptions.CurrentValue.DisableFirstUserSelfRegistration && !hasUsers);
-      _cachedValue = registrationEnabled;
       return registrationEnabled;
     }
     catch (Exception ex)
