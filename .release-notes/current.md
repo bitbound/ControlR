@@ -8,9 +8,7 @@
 
 ## Changed
 
-- Replaced the `AppOptions__EnableFirstUserSelfRegistration` configuration option (default `true`) with `AppOptions__DisableFirstUserSelfRegistration` (default `false`).
-  - Existing installations that don't set the new key retain the previous behavior (first-user self-registration enabled by default, first user auto-promoted to server administrator).
-  - Set `AppOptions__DisableFirstUserSelfRegistration` to `true` to opt out of the first-user self-registration bootstrap. This is useful for server-to-server integrations where ControlR is driven primarily via API.
+None.
 
 ## Added
 
@@ -19,6 +17,9 @@
   - This makes it easier to find device-specific metrics, logs, and traces in your OTEL backend.
 - Replaced PrismJS with Monaco Editor on Remote Logs page.
   - Monaco will also be used in the upcoming scripting feature.
+- Added the `AppOptions__DisableFirstUserSelfRegistration` configuration option (default `false`) to control whether the first user can self-register.
+  - By default, the first user can self-register and is automatically promoted to server administrator and first-tenant admin.
+  - This is useful for server-to-server integrations where ControlR is driven primarily via API.
 
 ## Fixed
 
