@@ -66,6 +66,17 @@ public class AppOptions
   public bool DisableEmailSending { get; init; }
 
   /// <summary>
+  /// Disables the one-time first-user self-registration bootstrap.
+  /// By default, public registration is available only while the server has zero users;
+  /// it is automatically disabled once the first user is created. The first user created
+  /// through this flow is promoted to server administrator and first-tenant admin.
+  /// Set this to <c>true</c> to disable the bootstrap entirely. Existing installations
+  /// without this key set retain the prior behavior (self-registration enabled).
+  /// Independent of <see cref="EnablePublicRegistration"/>, which controls ongoing open signup.
+  /// </summary>
+  public bool DisableFirstUserSelfRegistration { get; init; }
+
+  /// <summary>
   /// The Gateway IP address that must match the IP address used by the Docker gateway.
   /// This is used for proper network configuration in Docker environments.
   /// </summary>
@@ -97,15 +108,6 @@ public class AppOptions
   public bool EnableDockerSecrets { get; init; }
 
   /// <summary>
-  /// Controls the one-time first-user self-registration behavior.
-  /// When enabled, public registration is available only while the server has zero users;
-  /// it is automatically disabled once the first user is created. The first user created
-  /// through this flow is promoted to server administrator and first-tenant admin.
-  /// Independent of <see cref="EnablePublicRegistration"/>, which controls ongoing open signup.
-  /// </summary>
-  public bool EnableFirstUserSelfRegistration { get; init; } = true;
-
-  /// <summary>
   /// Enables the interactive bearer-token login flow exposed through ASP.NET Core Identity API endpoints.
   /// </summary>
   public bool EnableInteractiveBearerLogin { get; init; }
@@ -121,7 +123,7 @@ public class AppOptions
   /// Whether to make self-registration permanently publicly available.
   /// When enabled, anyone can create an account without an invitation, regardless of how
   /// many users already exist. Use this for public demo or evaluation deployments.
-  /// Independent of <see cref="EnableFirstUserSelfRegistration"/>, which is a one-time
+  /// Independent of <see cref="DisableFirstUserSelfRegistration"/>, which disables the one-time
   /// bootstrap that auto-disables after the first user is created.
   /// </summary>
   public bool EnablePublicRegistration { get; init; }

@@ -1,8 +1,8 @@
-## Breaking Changes
+## Changed
 
-- First-user self-registration now requires explicit opt-in via the `AppOptions__EnableFirstUserSelfRegistration` configuration option.
-  - In a normal, interactive server deployment, the first registered user automatically became a server administrator.
-  - This option is useful for server-to-server integrations, where ControlR will be driven primarily via API.
+- Replaced the `AppOptions__EnableFirstUserSelfRegistration` configuration option (default `true`) with `AppOptions__DisableFirstUserSelfRegistration` (default `false`).
+  - Existing installations that don't set the new key retain the previous behavior (first-user self-registration enabled by default, first user auto-promoted to server administrator).
+  - Set `AppOptions__DisableFirstUserSelfRegistration` to `true` to opt out of the first-user self-registration bootstrap. This is useful for server-to-server integrations where ControlR is driven primarily via API.
 
 ## Added
 

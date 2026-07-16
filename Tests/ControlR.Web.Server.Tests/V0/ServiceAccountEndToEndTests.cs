@@ -85,7 +85,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
     Assert.NotNull(keyResult);
     Assert.NotEqual(Guid.Empty, keyResult.Id);
 
-    // Step 4: Anonymous request creates a device using the installer key.
+    // Step 4: The agent sends this request during installation, using the supplied installer key.
     var deviceId = Guid.NewGuid();
     var deviceDto = new DeviceUpdateRequestDto(
       Id: deviceId,

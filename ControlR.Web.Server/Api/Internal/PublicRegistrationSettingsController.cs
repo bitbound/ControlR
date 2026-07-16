@@ -18,7 +18,7 @@ public class PublicRegistrationSettingsController : ControllerBase
   {
     var hasUsers = await db.Users.AnyAsync();
     var registrationEnabled = appOptions.CurrentValue.EnablePublicRegistration ||
-      (appOptions.CurrentValue.EnableFirstUserSelfRegistration && !hasUsers);
+      (!appOptions.CurrentValue.DisableFirstUserSelfRegistration && !hasUsers);
     return new InternalDtos.PublicRegistrationSettings(registrationEnabled);
   }
 }

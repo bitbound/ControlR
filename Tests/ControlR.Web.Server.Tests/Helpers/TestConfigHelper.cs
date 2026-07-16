@@ -10,13 +10,13 @@ internal static class TestConfigHelper
     ["AppOptions:DisableEmailSending"] = "true",
   };
 
-  public static Dictionary<string, string?> BaseConfig() => new(_base);
+  public static Dictionary<string, string?> GetBaseConfig() => new(_base);
 
-  public static Dictionary<string, string?> SelfRegistrationDisabledConfig(
+  public static Dictionary<string, string?> GetSelfRegistrationDisabledConfig(
     bool enablePublicRegistration = false) =>
-    new(_base) { ["AppOptions:EnableFirstUserSelfRegistration"] = "false", ["AppOptions:EnablePublicRegistration"] = $"{enablePublicRegistration}" };
+    new(_base) { ["AppOptions:DisableFirstUserSelfRegistration"] = "true", ["AppOptions:EnablePublicRegistration"] = $"{enablePublicRegistration}" };
 
-  public static Dictionary<string, string?> SelfRegistrationEnabledConfig(
+  public static Dictionary<string, string?> GetSelfRegistrationEnabledConfig(
     bool enablePublicRegistration = false) =>
-    new(_base) { ["AppOptions:EnableFirstUserSelfRegistration"] = "true", ["AppOptions:EnablePublicRegistration"] = $"{enablePublicRegistration}" };
+    new(_base) { ["AppOptions:DisableFirstUserSelfRegistration"] = "false", ["AppOptions:EnablePublicRegistration"] = $"{enablePublicRegistration}" };
 }

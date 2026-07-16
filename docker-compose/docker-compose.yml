@@ -64,7 +64,7 @@ services:
       # Whether to make self-registration permanently publicly available.
       # When enabled, anyone can create an account without an invitation, regardless of how
       # many users already exist. Use this for public demo or evaluation deployments.
-      # Independent of EnableFirstUserSelfRegistration, which is a one-time bootstrap
+      # Independent of DisableFirstUserSelfRegistration, which disables the one-time bootstrap
       # that auto-disables after the first user is created.
       ControlR_AppOptions__EnablePublicRegistration: false
 
@@ -72,11 +72,13 @@ services:
       ControlR_AppOptions__AllowAgentsToSelfBootstrap: false
 
       # Controls the one-time first-user self-registration behavior.
-      # When enabled, public registration is available only while the server has zero users;
+      # By default, public registration is available only while the server has zero users;
       # it is automatically disabled once the first user is created. The first user created
       # through this flow is promoted to server administrator and first-tenant admin.
+      # Set this to true to disable the bootstrap entirely. Existing installations without
+      # this key set retain the prior behavior (self-registration enabled).
       # Independent of EnablePublicRegistration, which controls ongoing open signup.
-      ControlR_AppOptions__EnableFirstUserSelfRegistration: true
+      ControlR_AppOptions__DisableFirstUserSelfRegistration: false
 
       # The number of days to retain installer key usage history.
       # Usage entries older than this are excluded from installer key history queries and cleaned up by a background service.
