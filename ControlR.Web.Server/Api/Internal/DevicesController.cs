@@ -146,8 +146,7 @@ public class DevicesController(
       return Forbid();
     }
 
-    var (isSuccess, currentAgentVersion) = await GetAgentVersion(agentVersionProvider);
-    var isOutdated = isSuccess && device.AgentVersion != currentAgentVersion;
+    var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion);
     return device.ToInternalResponseDto(isOutdated);
   }
 
@@ -273,8 +272,7 @@ public class DevicesController(
     device.Alias = requestDto.Alias ?? string.Empty;
     await appDb.SaveChangesAsync();
 
-    var (isSuccess, agentVersion) = await GetAgentVersion(agentVersionProvider);
-    var isOutdated = isSuccess && device.AgentVersion != agentVersion;
+    var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion);
     return device.ToInternalResponseDto(isOutdated);
   }
 

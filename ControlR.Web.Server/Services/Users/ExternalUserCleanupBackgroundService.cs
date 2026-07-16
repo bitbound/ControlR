@@ -24,37 +24,39 @@ public class ExternalUserCleanupBackgroundService(
     }
 
     await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-    var query = db.Users
+    var expiredUserIds = await db.Users
       .Where(x => x.AccountType == AccountType.ExternalUser)
-      .Where(x => x.LastLogin != null && x.LastLogin < cutoff.Value);
+      .Where(x => x.LastLogin != null && x.LastLogin < cutoff.Value)
+      .Select(x => x.Id)
+      .ToListAsync(cancellationToken);
 
-    int removedCount;
+    if (expiredUserIds.Count == 0)
+    {
+      return 0;
+    }
 
     if (db.Database.IsRelational())
     {
-      removedCount = await query.ExecuteDeleteAsync(cancellationToken);
+      await db.Users
+        .Where(x => expiredUserIds.Contains(x.Id))
+        .ExecuteDeleteAsync(cancellationToken);
     }
     else
     {
-      var expiredUsers = await query.ToListAsync(cancellationToken);
-      removedCount = expiredUsers.Count;
-
-      if (removedCount > 0)
-      {
-        db.Users.RemoveRange(expiredUsers);
-        await db.SaveChangesAsync(cancellationToken);
-      }
+      var expiredUsers = await db.Users
+        .Where(x => expiredUserIds.Contains(x.Id))
+        .ToListAsync(cancellationToken);
+      db.Users.RemoveRange(expiredUsers);
+      await db.SaveChangesAsync(cancellationToken);
     }
 
-    if (removedCount > 0)
-    {
-      _logger.LogInformation(
-        "Removed {RemovedCount} expired external user accounts with last login before {Cutoff}.",
-        removedCount,
-        cutoff.Value);
-    }
+    _logger.LogWarning(
+      "Removed {RemovedCount} expired external user accounts with last login before {Cutoff}. User IDs: {UserIds}",
+      expiredUserIds.Count,
+      cutoff.Value,
+      expiredUserIds);
 
-    return removedCount;
+    return expiredUserIds.Count;
   }
 
   protected override async Task HandleElapsed()
@@ -72,6 +74,17 @@ public class ExternalUserCleanupBackgroundService(
     var cleanupDays = _appOptions.Value.ExternalUserCleanupAfterDays;
     if (cleanupDays <= 0)
     {
+      return null;
+    }
+
+    // Sub-day values are almost certainly a misconfiguration. The cleanup runs
+    // daily; a half-day cutoff would mass-delete most external users on each run.
+    if (cleanupDays < 1)
+    {
+      _logger.LogError(
+        "External user cleanup is disabled: ExternalUserCleanupAfterDays is {CleanupDays}, which is less than 1 day. " +
+        "Sub-day values are likely a misconfiguration.",
+        cleanupDays);
       return null;
     }
 

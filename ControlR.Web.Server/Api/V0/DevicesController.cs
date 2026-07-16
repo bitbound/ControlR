@@ -80,7 +80,7 @@ public class DevicesController() : ControllerBase
 
     await foreach (var device in query.AsAsyncEnumerable().WithCancellation(cancellationToken))
     {
-      var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+      var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion, cancellationToken);
       yield return device.ToV0ResponseDto(isOutdated);
     }
   }
@@ -100,7 +100,7 @@ public class DevicesController() : ControllerBase
       return NotFound();
     }
 
-    var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+    var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion, cancellationToken);
     return device.ToV0ResponseDto(isOutdated);
   }
 
@@ -147,7 +147,7 @@ public class DevicesController() : ControllerBase
     var pagedDtos = new List<DeviceResponseDto>(devices.Count);
     foreach (var device in devices)
     {
-      var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+      var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion, cancellationToken);
       pagedDtos.Add(device.ToV0ResponseDto(isOutdated));
     }
 
@@ -192,17 +192,7 @@ public class DevicesController() : ControllerBase
     device.Alias = requestDto.Alias ?? string.Empty;
     await appDb.SaveChangesAsync(cancellationToken);
 
-    var isOutdated = await GetIsOutdated(device, agentVersionProvider);
+    var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion, cancellationToken);
     return device.ToV0ResponseDto(isOutdated);
-  }
-
-  private static async Task<bool> GetIsOutdated(Device entity, IAgentVersionProvider agentVersionProvider)
-  {
-    var agentVersionResult = await agentVersionProvider.TryGetAgentVersion();
-    if (!agentVersionResult.IsSuccess)
-    {
-      return false;
-    }
-    return entity.AgentVersion != agentVersionResult.Value.ToString();
   }
 }

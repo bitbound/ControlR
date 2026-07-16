@@ -97,9 +97,11 @@ public class AppOptions
   public bool EnableDockerSecrets { get; init; }
 
   /// <summary>
-  /// Controls the first-user self-registration behavior.
-  /// When enabled, an empty server instance temporarily treats public registration as available,
-  /// and the first user created by that flow is promoted to server administrator.
+  /// Controls the one-time first-user self-registration behavior.
+  /// When enabled, public registration is available only while the server has zero users;
+  /// it is automatically disabled once the first user is created. The first user created
+  /// through this flow is promoted to server administrator and first-tenant admin.
+  /// Independent of <see cref="EnablePublicRegistration"/>, which controls ongoing open signup.
   /// </summary>
   public bool EnableFirstUserSelfRegistration { get; init; }
 
@@ -116,8 +118,11 @@ public class AppOptions
   public bool EnableNetworkTrust { get; init; }
 
   /// <summary>
-  /// Whether to make self-registration publicly available.
-  /// When enabled, users can create accounts without requiring an invitation.
+  /// Whether to make self-registration permanently publicly available.
+  /// When enabled, anyone can create an account without an invitation, regardless of how
+  /// many users already exist. Use this for public demo or evaluation deployments.
+  /// Independent of <see cref="EnableFirstUserSelfRegistration"/>, which is a one-time
+  /// bootstrap that auto-disables after the first user is created.
   /// </summary>
   public bool EnablePublicRegistration { get; init; }
 
