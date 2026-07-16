@@ -82,8 +82,21 @@
     if (result.Succeeded)
     {
       Logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", userId);
-      _user.LastLogin = TimeProvider.GetUtcNow();
-      await UserManager.UpdateAsync(_user);
+      try
+      {
+        _user.LastLogin = TimeProvider.GetUtcNow();
+        var updateResult = await UserManager.UpdateAsync(_user);
+        if (!updateResult.Succeeded)
+        {
+          Logger.LogWarning(
+            "Failed to update LastLogin for user {UserId} during 2fa login: {Errors}",
+            _user.Id, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+        }
+      }
+      catch (Exception ex)
+      {
+        Logger.LogWarning(ex, "Failed to update LastLogin for user {UserId} during 2fa login.", _user.Id);
+      }
       RedirectManager.RedirectTo(ReturnUrl);
     }
     else if (result.IsLockedOut)

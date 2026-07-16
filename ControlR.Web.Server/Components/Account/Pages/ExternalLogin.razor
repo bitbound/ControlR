@@ -124,8 +124,21 @@
           _externalLoginInfo.ProviderKey);
       if (externalUser is not null)
       {
-        externalUser.LastLogin = TimeProvider.GetUtcNow();
-        await UserManager.UpdateAsync(externalUser);
+        try
+        {
+          externalUser.LastLogin = TimeProvider.GetUtcNow();
+          var updateResult = await UserManager.UpdateAsync(externalUser);
+          if (!updateResult.Succeeded)
+          {
+            Logger.LogWarning(
+              "Failed to update LastLogin for user {UserId} during external login: {Errors}",
+              externalUser.Id, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+          }
+        }
+        catch (Exception ex)
+        {
+          Logger.LogWarning(ex, "Failed to update LastLogin for user {UserId} during external login.", externalUser.Id);
+        }
       }
 
       RedirectManager.RedirectTo(ReturnUrl);
@@ -171,8 +184,21 @@
     }
 
     var user = createUserResult.User;
-    user.LastLogin = TimeProvider.GetUtcNow();
-    await UserManager.UpdateAsync(user);
+    try
+    {
+      user.LastLogin = TimeProvider.GetUtcNow();
+      var updateResult = await UserManager.UpdateAsync(user);
+      if (!updateResult.Succeeded)
+      {
+        Logger.LogWarning(
+          "Failed to update LastLogin for user {UserId} during external registration: {Errors}",
+          user.Id, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to update LastLogin for user {UserId} during external registration.", user.Id);
+    }
     await SignInManager.SignInAsync(user, false, _externalLoginInfo.LoginProvider);
     RedirectManager.RedirectTo(ReturnUrl);
   }
