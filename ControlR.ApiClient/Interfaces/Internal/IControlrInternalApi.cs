@@ -2,7 +2,6 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IControlrInternalApi
 {
-  IInternalAgentUpdateApi AgentUpdate { get; }
   IAuthApi Auth { get; }
   IDesktopPreviewApi DesktopPreview { get; }
   IDeviceFileSystemApi DeviceFileSystem { get; }

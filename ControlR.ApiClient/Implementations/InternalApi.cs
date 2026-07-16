@@ -11,7 +11,6 @@ internal partial class InternalApi(ControlrApi client) :
   IDevicesApi,
   IEffectiveUserPreferencesApi,
   IInstallerKeysApi,
-  IInternalAgentUpdateApi,
   IInvitesApi,
   ILogonTokensApi,
   IPersonalAccessTokensApi,
@@ -33,7 +32,6 @@ internal partial class InternalApi(ControlrApi client) :
 {
   private readonly ControlrApi _client = client;
 
-  public IInternalAgentUpdateApi AgentUpdate => this;
   public IAuthApi Auth => this;
   public IDesktopPreviewApi DesktopPreview => this;
   public IDeviceFileSystemApi DeviceFileSystem => this;

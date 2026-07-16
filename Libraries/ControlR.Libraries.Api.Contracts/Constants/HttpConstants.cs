@@ -9,7 +9,6 @@ public static class HttpConstants
   }
   public static class Internal
   {
-    public const string AgentUpdateEndpoint = "/api/internal/agent-update";
     public const string AuthEndpoint = "/api/internal/auth";
     public const string DesktopPreviewEndpoint = "/api/internal/desktop-preview";
     public const string DeviceFileSystemEndpoint = "/api/internal/device-file-system";
