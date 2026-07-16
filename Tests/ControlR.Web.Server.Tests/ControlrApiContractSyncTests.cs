@@ -6,6 +6,36 @@ namespace ControlR.Web.Server.Tests;
 
 public partial class ControlrApiContractSyncTests
 {
+  private static readonly HashSet<string> _httpVerbs = new(StringComparer.OrdinalIgnoreCase)
+  {
+    "Get", "Post", "Put", "Delete", "Patch"
+  };
+
+  [Fact]
+  public void ClientMethods_AreBackedByServerActions()
+  {
+    var openApiActions = LoadOpenApiActions();
+    var clientCalls = LoadClientHttpCalls();
+
+    var extra = clientCalls
+      .Where(call => !openApiActions.Any(action =>
+        action.Verb == call.Verb &&
+        action.NormalizedPath == call.NormalizedPath))
+      .OrderBy(call => call.Verb)
+      .ThenBy(call => call.NormalizedPath)
+      .ToArray();
+
+    var grouped = extra
+      .GroupBy(call => call.NormalizedPath)
+      .OrderBy(group => group.Key)
+      .Select(group => $"{group.Key}: [{string.Join(", ", group.Select(c => c.Verb))}]")
+      .ToArray();
+
+    Assert.True(
+      extra.Length == 0,
+      $"Client methods with no matching server action: {string.Join(" | ", grouped)}");
+  }
+
   [Fact]
   public void HttpConstants_AreExplicitlyMappedToIControlrApiSubClients()
   {
@@ -28,6 +58,31 @@ public partial class ControlrApiContractSyncTests
       Assert.Contains(mapping.Key, constantValues);
       Assert.Contains(mapping.Value, actualPropertyNames);
     }
+  }
+
+  [Fact]
+  public void OpenApiActions_AreCoveredByClientMethods()
+  {
+    var openApiActions = LoadOpenApiActions();
+    var clientCalls = LoadClientHttpCalls();
+
+    var missing = openApiActions
+      .Where(action => !clientCalls.Any(call =>
+        call.Verb == action.Verb &&
+        call.NormalizedPath == action.NormalizedPath))
+      .OrderBy(action => action.Verb)
+      .ThenBy(action => action.Path)
+      .ToArray();
+
+    var grouped = missing
+      .GroupBy(action => action.Path)
+      .OrderBy(group => group.Key)
+      .Select(group => $"{group.Key}: [{string.Join(", ", group.Select(a => a.Verb))}]")
+      .ToArray();
+
+    Assert.True(
+      missing.Length == 0,
+      $"Server actions with no matching client method: {string.Join(" | ", grouped)}");
   }
 
   [Fact]
@@ -112,519 +167,6 @@ public partial class ControlrApiContractSyncTests
 
   [GeneratedRegex("^/api/v\\d+/")]
   private static partial Regex ApiVersionRegex();
-
-  private static Dictionary<string, string> CreateEndpointPropertyMap()
-  {
-    var propertyNames = GetAllSubInterfacePropertyNames();
-    var endpointPropertyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-    foreach (var field in GetAllHttpConstantFields().OrderBy(field => field.Name))
-    {
-      if (field.DeclaringType?.Name == "Legacy")
-      {
-        continue;
-      }
-
-      var constantValue = field.GetValue(null) as string;
-
-      if (string.IsNullOrWhiteSpace(constantValue))
-      {
-        continue;
-      }
-
-      var propertyName = field.Name.EndsWith("Endpoint", StringComparison.Ordinal)
-        ? field.Name[..^"Endpoint".Length]
-        : field.Name;
-
-      Assert.True(
-        propertyNames.Contains(propertyName),
-        $"HttpConstants field '{field.Name}' (declared by '{field.DeclaringType?.Name}') inferred property '{propertyName}', but that property was not found on any sub-interface.");
-
-      endpointPropertyMap[constantValue] = propertyName;
-    }
-
-    return endpointPropertyMap;
-  }
-
-  private static string FindRepositoryRoot()
-  {
-    var current = new DirectoryInfo(AppContext.BaseDirectory);
-
-    while (current is not null)
-    {
-      var candidatePath = Path.Combine(current.FullName, "ControlR.slnx");
-      if (File.Exists(candidatePath))
-      {
-        return current.FullName;
-      }
-
-      current = current.Parent;
-    }
-
-    throw new DirectoryNotFoundException("Could not locate repository root containing ControlR.slnx.");
-  }
-
-  private static IEnumerable<FieldInfo> GetAllHttpConstantFields()
-  {
-    static IEnumerable<FieldInfo> GetFieldsRecursive(Type type)
-    {
-      foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static)
-        .Where(f => f.FieldType == typeof(string) && f.IsLiteral))
-      {
-        yield return field;
-      }
-
-      foreach (var nested in type.GetNestedTypes(BindingFlags.Public | BindingFlags.Static))
-      {
-        foreach (var field in GetFieldsRecursive(nested))
-        {
-          yield return field;
-        }
-      }
-    }
-
-    return GetFieldsRecursive(typeof(HttpConstants));
-  }
-
-  private static HashSet<string> GetAllSubInterfacePropertyNames()
-  {
-    var propertyNames = new HashSet<string>(StringComparer.Ordinal);
-
-    foreach (var type in new[]
-    {
-      typeof(IControlrInternalApi),
-      typeof(IControlrV0Api),
-      typeof(IControlrAgentApi),
-    })
-    {
-      foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-        .Select(p => p.Name))
-      {
-        propertyNames.Add(propertyName);
-      }
-    }
-
-    return propertyNames;
-  }
-
-  private static string[] GetHttpConstantValues()
-  {
-    var values = GetAllHttpConstantFields()
-      .Where(field => field.DeclaringType?.Name != "Legacy")
-      .Select(field => field.GetValue(null) as string)
-      .Where(value => !string.IsNullOrWhiteSpace(value))
-      .Select(value => value ?? string.Empty)
-      .Distinct(StringComparer.OrdinalIgnoreCase)
-      .ToArray();
-
-    return values;
-  }
-
-  [GeneratedRegex("HttpConstants\\.(?<name>[A-Za-z0-9_.]+)")]
-  private static partial Regex HttpConstantRegex();
-
-  [GeneratedRegex("\\{HttpConstants\\.(?<name>[A-Za-z0-9_.]+)\\}")]
-  private static partial Regex InterpolatedConstantRegex();
-
-  [GeneratedRegex("\\{(?<name>[A-Z][A-Za-z0-9_]*)\\}")]
-  private static partial Regex InterpolatedIdentRegex();
-
-  [GeneratedRegex("\\$\\\"(?<value>[^\\\"]*HttpConstants\\.[A-Za-z0-9_.]+[^\\\"]*)\\\"")]
-  private static partial Regex InterpolatedStringRegex();
-
-  [GeneratedRegex("\\{[^{}]+\\}")]
-  private static partial Regex InterpolationBlockRegex();
-
-  private static HashSet<string> LoadClientRouteTemplates(IReadOnlyCollection<string> constantValues)
-  {
-    var repositoryRoot = FindRepositoryRoot();
-    var apiClientDirectory = Path.Combine(repositoryRoot, "ControlR.ApiClient", "Implementations");
-    var sourceFiles = Directory
-      .EnumerateFiles(apiClientDirectory, "*.cs", SearchOption.TopDirectoryOnly)
-      .Where(path =>
-      {
-        var fileName = Path.GetFileName(path);
-        return fileName.StartsWith("InternalApi", StringComparison.OrdinalIgnoreCase) ||
-          fileName.StartsWith("V0Api", StringComparison.OrdinalIgnoreCase) ||
-          fileName.StartsWith("AgentApi", StringComparison.OrdinalIgnoreCase);
-      })
-      .ToArray();
-
-    var templates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-    foreach (var sourceFile in sourceFiles)
-    {
-      var source = File.ReadAllText(sourceFile);
-
-      foreach (Match match in InterpolatedStringRegex().Matches(source))
-      {
-        var rawTemplate = match.Groups["value"].Value;
-        var resolvedTemplate = ResolveTemplate(rawTemplate);
-        var normalizedTemplate = NormalizePathTemplate(resolvedTemplate);
-
-        if (normalizedTemplate.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-        {
-          templates.Add(normalizedTemplate);
-        }
-      }
-
-      foreach (Match match in HttpConstantRegex().Matches(source))
-      {
-        var constantName = match.Groups["name"].Value;
-        if (!TryResolveHttpConstantValue(constantName, out var constantValue))
-        {
-          continue;
-        }
-
-        var normalizedTemplate = NormalizePathTemplate(constantValue);
-        if (normalizedTemplate.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-        {
-          templates.Add(normalizedTemplate);
-        }
-      }
-    }
-
-    foreach (var value in constantValues)
-    {
-      templates.Add(NormalizePathTemplate(value));
-    }
-
-    return templates;
-  }
-
-  private static OpenApiTestData LoadOpenApiTestData()
-  {
-    var repositoryRoot = FindRepositoryRoot();
-    var serverDirectory = Path.Combine(repositoryRoot, "ControlR.Web.Server");
-
-    var jsonFiles = Directory.GetFiles(serverDirectory, "ControlR.Web.Server_*.json");
-    Assert.True(jsonFiles.Length > 0, $"No OpenAPI JSON files found in '{serverDirectory}'.");
-
-    var legacyPrefixes = GetAllHttpConstantFields()
-      .Where(field => field.DeclaringType?.Name == "Legacy")
-      .Select(field => NormalizePathTemplate((string)field.GetValue(null)!))
-      .Where(prefix => !string.IsNullOrEmpty(prefix))
-      .ToArray();
-
-    var allPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    var nonLegacyPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-    foreach (var jsonFile in jsonFiles)
-    {
-      using var stream = File.OpenRead(jsonFile);
-      using var document = JsonDocument.Parse(stream);
-
-      var root = document.RootElement;
-      if (!root.TryGetProperty("paths", out var pathsElement))
-      {
-        continue;
-      }
-
-      var paths = pathsElement
-        .EnumerateObject()
-        .Select(property => property.Name)
-        .Where(path => path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-        .Select(NormalizePathTemplate)
-        .Distinct(StringComparer.OrdinalIgnoreCase);
-
-      foreach (var path in paths)
-      {
-        allPaths.Add(path);
-
-        var isLegacy = legacyPrefixes.Any(prefix =>
-          path == prefix ||
-          path.StartsWith($"{prefix}/", StringComparison.Ordinal));
-
-        if (!isLegacy)
-        {
-          nonLegacyPaths.Add(path);
-        }
-      }
-    }
-
-    return new OpenApiTestData(
-      allPaths.OrderBy(p => p).ToArray(),
-      nonLegacyPaths.OrderBy(p => p).ToArray());
-  }
-
-  private static string NormalizePathTemplate(string pathTemplate)
-  {
-    if (string.IsNullOrWhiteSpace(pathTemplate))
-    {
-      return string.Empty;
-    }
-
-    var path = pathTemplate.Trim();
-    var queryStart = path.IndexOf('?', StringComparison.Ordinal);
-
-    if (queryStart >= 0)
-    {
-      path = path[..queryStart];
-    }
-
-    path = ParameterRegex().Replace(path, "{}");
-    path = path.Replace("\\", "/", StringComparison.Ordinal);
-
-    while (path.Contains("//", StringComparison.Ordinal))
-    {
-      path = path.Replace("//", "/", StringComparison.Ordinal);
-    }
-
-    if (!path.StartsWith("/", StringComparison.Ordinal))
-    {
-      path = $"/{path}";
-    }
-
-    return path.ToLowerInvariant();
-  }
-
-  [GeneratedRegex("\\{[^{}]+\\}")]
-  private static partial Regex ParameterRegex();
-
-  private static string ResolveTemplate(string rawTemplate)
-  {
-    var resolved = rawTemplate;
-
-    foreach (Match constantMatch in InterpolatedConstantRegex().Matches(rawTemplate))
-    {
-      var constantName = constantMatch.Groups["name"].Value;
-      if (!TryResolveHttpConstantValue(constantName, out var constantValue))
-      {
-        continue;
-      }
-
-      resolved = resolved.Replace(constantMatch.Value, constantValue, StringComparison.Ordinal);
-    }
-
-    resolved = InterpolationBlockRegex().Replace(resolved, "{}");
-
-    return resolved;
-  }
-
-  private static bool TryGetLongestMatchingConstant(
-    string apiPath,
-    IReadOnlyCollection<string> constants,
-    out string? matchedConstant)
-  {
-    matchedConstant = constants
-      .Where(constant =>
-        apiPath.Equals(NormalizePathTemplate(constant), StringComparison.OrdinalIgnoreCase) ||
-        apiPath.StartsWith($"{NormalizePathTemplate(constant)}/", StringComparison.OrdinalIgnoreCase))
-      .OrderByDescending(constant => constant.Length)
-      .FirstOrDefault();
-
-    return matchedConstant is not null;
-  }
-
-  private static bool TryResolveHttpConstantValue(string constantName, out string value)
-  {
-    var parts = constantName.Split('.');
-    Type? currentType = typeof(HttpConstants);
-
-    for (var i = 0; i < parts.Length - 1; i++)
-    {
-      currentType = currentType?.GetNestedType(parts[i], BindingFlags.Public | BindingFlags.Static);
-      if (currentType is null)
-      {
-        value = string.Empty;
-        return false;
-      }
-    }
-
-    var field = currentType?.GetField(parts[^1], BindingFlags.Public | BindingFlags.Static);
-
-    if (field?.GetValue(null) is not string stringValue || string.IsNullOrWhiteSpace(stringValue))
-    {
-      value = string.Empty;
-      return false;
-    }
-
-    value = stringValue;
-    return true;
-  }
-
-  [Fact]
-  public void OpenApiActions_AreCoveredByClientMethods()
-  {
-    var openApiActions = LoadOpenApiActions();
-    var clientCalls = LoadClientHttpCalls();
-
-    var missing = openApiActions
-      .Where(action => !clientCalls.Any(call =>
-        call.Verb == action.Verb &&
-        call.NormalizedPath == action.NormalizedPath))
-      .OrderBy(action => action.Verb)
-      .ThenBy(action => action.Path)
-      .ToArray();
-
-    var grouped = missing
-      .GroupBy(action => action.Path)
-      .OrderBy(group => group.Key)
-      .Select(group => $"{group.Key}: [{string.Join(", ", group.Select(a => a.Verb))}]")
-      .ToArray();
-
-    Assert.True(
-      missing.Length == 0,
-      $"Server actions with no matching client method: {string.Join(" | ", grouped)}");
-  }
-
-  [Fact]
-  public void ClientMethods_AreBackedByServerActions()
-  {
-    var openApiActions = LoadOpenApiActions();
-    var clientCalls = LoadClientHttpCalls();
-
-    var extra = clientCalls
-      .Where(call => !openApiActions.Any(action =>
-        action.Verb == call.Verb &&
-        action.NormalizedPath == call.NormalizedPath))
-      .OrderBy(call => call.Verb)
-      .ThenBy(call => call.NormalizedPath)
-      .ToArray();
-
-    var grouped = extra
-      .GroupBy(call => call.NormalizedPath)
-      .OrderBy(group => group.Key)
-      .Select(group => $"{group.Key}: [{string.Join(", ", group.Select(c => c.Verb))}]")
-      .ToArray();
-
-    Assert.True(
-      extra.Length == 0,
-      $"Client methods with no matching server action: {string.Join(" | ", grouped)}");
-  }
-
-  private record OpenApiTestData(
-    string[] AllPaths,
-    string[] NonLegacyPaths);
-
-  private record OpenApiAction(string Verb, string Path, string NormalizedPath);
-
-  private record ClientHttpCall(string Verb, string Path, string NormalizedPath, string MethodName);
-
-  private static readonly HashSet<string> _httpVerbs = new(StringComparer.OrdinalIgnoreCase)
-  {
-    "Get", "Post", "Put", "Delete", "Patch"
-  };
-
-  [GeneratedRegex("\\.(?<verb>GetFromJsonAsync(?:<[^>]+>)?|GetFromJsonAsAsyncEnumerable(?:<[^>]+>)?|GetStringAsync|GetAsync|PostAsJsonAsync(?:<[^>]+>)?|PostAsync|PutAsJsonAsync(?:<[^>]+>)?|PutAsync|DeleteAsync|PatchAsJsonAsync(?:<[^>]+>)?|PatchAsync)\\s*\\(")]
-  private static partial Regex DirectHttpCallRegex();
-
-  [GeneratedRegex("new HttpRequestMessage\\s*\\(\\s*HttpMethod\\.(?<verb>Get|Post|Put|Delete|Patch)\\s*,\\s*(?:\\$\"(?<path>[^\"]*)\"|(?<pathconst>HttpConstants\\.[A-Za-z0-9_.]+))")]
-  private static partial Regex HttpRequestMessageRegex();
-
-  [GeneratedRegex("HttpConstants\\.(?<name>[A-Za-z0-9_.]+)")]
-  private static partial Regex ConstantRefRegex();
-
-  private static OpenApiAction[] LoadOpenApiActions()
-  {
-    var repositoryRoot = FindRepositoryRoot();
-    var serverDirectory = Path.Combine(repositoryRoot, "ControlR.Web.Server");
-    var jsonFiles = Directory.GetFiles(serverDirectory, "ControlR.Web.Server_*.json");
-
-    var legacyPrefixes = GetAllHttpConstantFields()
-      .Where(field => field.DeclaringType?.Name == "Legacy")
-      .Select(field => NormalizePathTemplate((string)field.GetValue(null)!))
-      .Where(prefix => !string.IsNullOrEmpty(prefix))
-      .ToArray();
-
-    var actions = new List<OpenApiAction>();
-
-    foreach (var jsonFile in jsonFiles)
-    {
-      using var stream = File.OpenRead(jsonFile);
-      using var document = JsonDocument.Parse(stream);
-
-      if (!document.RootElement.TryGetProperty("paths", out var pathsElement))
-      {
-        continue;
-      }
-
-      foreach (var pathProperty in pathsElement.EnumerateObject())
-      {
-        if (!pathProperty.Name.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-        {
-          continue;
-        }
-
-        var normalized = NormalizePathTemplate(pathProperty.Name);
-        if (legacyPrefixes.Any(prefix => normalized == prefix || normalized.StartsWith($"{prefix}/", StringComparison.Ordinal)))
-        {
-          continue;
-        }
-
-        foreach (var operationProperty in pathProperty.Value.EnumerateObject())
-        {
-          var verb = operationProperty.Name.ToUpperInvariant();
-          if (!_httpVerbs.Contains(verb))
-          {
-            continue;
-          }
-
-          actions.Add(new OpenApiAction(verb, pathProperty.Name, normalized));
-        }
-      }
-    }
-
-    return actions.ToArray();
-  }
-
-  private static ClientHttpCall[] LoadClientHttpCalls()
-  {
-    var repositoryRoot = FindRepositoryRoot();
-    var apiClientDirectory = Path.Combine(repositoryRoot, "ControlR.ApiClient", "Implementations");
-    var sourceFiles = Directory.EnumerateFiles(apiClientDirectory, "*.cs", SearchOption.TopDirectoryOnly)
-      .Where(path =>
-      {
-        var name = Path.GetFileName(path);
-        return name.StartsWith("InternalApi", StringComparison.OrdinalIgnoreCase) ||
-          name.StartsWith("V0Api", StringComparison.OrdinalIgnoreCase) ||
-          name.StartsWith("AgentApi", StringComparison.OrdinalIgnoreCase);
-      });
-
-    var calls = new List<ClientHttpCall>();
-
-    foreach (var sourceFile in sourceFiles)
-    {
-      var source = File.ReadAllText(sourceFile);
-      var localConstants = ExtractLocalStringConstants(source);
-      CollectHttpCalls(source, calls, localConstants);
-    }
-
-    return calls.ToArray();
-  }
-
-  private static Dictionary<string, string> ExtractLocalStringConstants(string source)
-  {
-    var result = new Dictionary<string, string>(StringComparer.Ordinal);
-    foreach (Match match in LocalConstRegex().Matches(source))
-    {
-      var name = match.Groups["name"].Value;
-      var value = match.Groups["value"].Value.Trim();
-      value = ResolveInterpolatedPath(value);
-      result[name] = value;
-    }
-
-    foreach (Match match in LocalVarAssignmentRegex().Matches(source))
-    {
-      var name = match.Groups["name"].Value;
-      if (result.ContainsKey(name))
-      {
-        continue;
-      }
-
-      var value = match.Groups["value"].Value.Trim();
-      value = ResolveInterpolatedPath(value);
-      result[name] = value;
-    }
-
-    return result;
-  }
-
-  [GeneratedRegex("private\\s+const\\s+string\\s+(?<name>[A-Za-z_]\\w*)\\s*=\\s*(?:\\$\"(?<value>[^\"]*)\"|\"(?<value>[^\"]*)\")\\s*;")]
-  private static partial Regex LocalConstRegex();
-
-  [GeneratedRegex("\\bvar\\s+(?<name>endpoint|url|path|requestUri|route)\\s*=\\s*(?:\\$\"(?<value>[^\"]*)\"|\"(?<value>[^\"]*)\")\\s*;")]
-  private static partial Regex LocalVarAssignmentRegex();
 
   private static void CollectHttpCalls(string source, List<ClientHttpCall> calls, Dictionary<string, string> localConstants)
   {
@@ -752,52 +294,44 @@ public partial class ControlrApiContractSyncTests
     }
   }
 
-  [GeneratedRegex("(?:async|public)\\s+(?:Task|IAsyncEnumerable|Task<[^>]+>)[^{]*?\\b(?:I[A-Z]\\w*\\.)(?<name>[A-Z]\\w*)\\s*\\(")]
-  private static partial Regex MethodPatternRegex();
+  [GeneratedRegex("HttpConstants\\.(?<name>[A-Za-z0-9_.]+)")]
+  private static partial Regex ConstantRefRegex();
 
-  private static string? VerbFromCallName(string methodName)
+  private static Dictionary<string, string> CreateEndpointPropertyMap()
   {
-    if (methodName.StartsWith("Get", StringComparison.Ordinal)) return "GET";
-    if (methodName.StartsWith("Post", StringComparison.Ordinal)) return "POST";
-    if (methodName.StartsWith("Put", StringComparison.Ordinal)) return "PUT";
-    if (methodName.StartsWith("Delete", StringComparison.Ordinal)) return "DELETE";
-    if (methodName.StartsWith("Patch", StringComparison.Ordinal)) return "PATCH";
-    return null;
-  }
+    var propertyNames = GetAllSubInterfacePropertyNames();
+    var endpointPropertyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-  private static readonly string[] _verbNameBlacklist = new[]
-  {
-    "GetCancellationToken", "GetAwaiter"
-  };
-
-  private static string? VerbFromHttpMethod(string methodName) => VerbFromCallName(methodName);
-
-  private static int FindMatchingCloseParen(string text, int openParenIndex)
-  {
-    var depth = 0;
-    var inString = false;
-    var prevWasEscape = false;
-    for (var i = openParenIndex; i < text.Length; i++)
+    foreach (var field in GetAllHttpConstantFields().OrderBy(field => field.Name))
     {
-      var c = text[i];
-      if (inString)
+      if (field.DeclaringType?.Name == "Legacy")
       {
-        if (c == '\\' && !prevWasEscape) { prevWasEscape = true; continue; }
-        if (c == '"' && !prevWasEscape) inString = false;
-        prevWasEscape = false;
         continue;
       }
 
-      if (c == '"') { inString = true; continue; }
-      if (c == '(') depth++;
-      else if (c == ')')
+      var constantValue = field.GetValue(null) as string;
+
+      if (string.IsNullOrWhiteSpace(constantValue))
       {
-        depth--;
-        if (depth == 0) return i;
+        continue;
       }
+
+      var propertyName = field.Name.EndsWith("Endpoint", StringComparison.Ordinal)
+        ? field.Name[..^"Endpoint".Length]
+        : field.Name;
+
+      Assert.True(
+        propertyNames.Contains(propertyName),
+        $"HttpConstants field '{field.Name}' (declared by '{field.DeclaringType?.Name}') inferred property '{propertyName}', but that property was not found on any sub-interface.");
+
+      endpointPropertyMap[constantValue] = propertyName;
     }
-    return -1;
+
+    return endpointPropertyMap;
   }
+
+  [GeneratedRegex("\\.(?<verb>GetFromJsonAsync(?:<[^>]+>)?|GetFromJsonAsAsyncEnumerable(?:<[^>]+>)?|GetStringAsync|GetAsync|PostAsJsonAsync(?:<[^>]+>)?|PostAsync|PutAsJsonAsync(?:<[^>]+>)?|PutAsync|DeleteAsync|PatchAsJsonAsync(?:<[^>]+>)?|PatchAsync)\\s*\\(")]
+  private static partial Regex DirectHttpCallRegex();
 
   private static string? ExtractFirstPathArgument(string argList, Dictionary<string, string> localConstants)
   {
@@ -840,17 +374,31 @@ public partial class ControlrApiContractSyncTests
     return null;
   }
 
-  private static int FindEndOfInterpolatedString(string text, int openQuoteIndex)
+  private static Dictionary<string, string> ExtractLocalStringConstants(string source)
   {
-    var prevWasEscape = false;
-    for (var i = openQuoteIndex + 1; i < text.Length; i++)
+    var result = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (Match match in LocalConstRegex().Matches(source))
     {
-      var c = text[i];
-      if (c == '\\' && !prevWasEscape) { prevWasEscape = true; continue; }
-      if (c == '"' && !prevWasEscape) return i;
-      prevWasEscape = false;
+      var name = match.Groups["name"].Value;
+      var value = match.Groups["value"].Value.Trim();
+      value = ResolveInterpolatedPath(value);
+      result[name] = value;
     }
-    return -1;
+
+    foreach (Match match in LocalVarAssignmentRegex().Matches(source))
+    {
+      var name = match.Groups["name"].Value;
+      if (result.ContainsKey(name))
+      {
+        continue;
+      }
+
+      var value = match.Groups["value"].Value.Trim();
+      value = ResolveInterpolatedPath(value);
+      result[name] = value;
+    }
+
+    return result;
   }
 
   private static string? ExtractPathFromHttpRequestMatch(Match match)
@@ -870,6 +418,371 @@ public partial class ControlrApiContractSyncTests
 
     return null;
   }
+
+  private static int FindEndOfInterpolatedString(string text, int openQuoteIndex)
+  {
+    var prevWasEscape = false;
+    for (var i = openQuoteIndex + 1; i < text.Length; i++)
+    {
+      var c = text[i];
+      if (c == '\\' && !prevWasEscape) { prevWasEscape = true; continue; }
+      if (c == '"' && !prevWasEscape) return i;
+      prevWasEscape = false;
+    }
+    return -1;
+  }
+
+  private static int FindMatchingCloseParen(string text, int openParenIndex)
+  {
+    var depth = 0;
+    var inString = false;
+    var prevWasEscape = false;
+    for (var i = openParenIndex; i < text.Length; i++)
+    {
+      var c = text[i];
+      if (inString)
+      {
+        if (c == '\\' && !prevWasEscape) { prevWasEscape = true; continue; }
+        if (c == '"' && !prevWasEscape) inString = false;
+        prevWasEscape = false;
+        continue;
+      }
+
+      if (c == '"') { inString = true; continue; }
+      if (c == '(') depth++;
+      else if (c == ')')
+      {
+        depth--;
+        if (depth == 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  private static string FindRepositoryRoot()
+  {
+    var current = new DirectoryInfo(AppContext.BaseDirectory);
+
+    while (current is not null)
+    {
+      var candidatePath = Path.Combine(current.FullName, "ControlR.slnx");
+      if (File.Exists(candidatePath))
+      {
+        return current.FullName;
+      }
+
+      current = current.Parent;
+    }
+
+    throw new DirectoryNotFoundException("Could not locate repository root containing ControlR.slnx.");
+  }
+
+  private static IEnumerable<FieldInfo> GetAllHttpConstantFields()
+  {
+    static IEnumerable<FieldInfo> GetFieldsRecursive(Type type)
+    {
+      foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static)
+        .Where(f => f.FieldType == typeof(string) && f.IsLiteral))
+      {
+        yield return field;
+      }
+
+      foreach (var nested in type.GetNestedTypes(BindingFlags.Public | BindingFlags.Static))
+      {
+        foreach (var field in GetFieldsRecursive(nested))
+        {
+          yield return field;
+        }
+      }
+    }
+
+    return GetFieldsRecursive(typeof(HttpConstants));
+  }
+
+  private static HashSet<string> GetAllSubInterfacePropertyNames()
+  {
+    var propertyNames = new HashSet<string>(StringComparer.Ordinal);
+
+    foreach (var type in new[]
+    {
+      typeof(IControlrInternalApi),
+      typeof(IControlrV0Api),
+      typeof(IControlrAgentApi),
+    })
+    {
+      foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+        .Select(p => p.Name))
+      {
+        propertyNames.Add(propertyName);
+      }
+    }
+
+    return propertyNames;
+  }
+
+  private static string[] GetHttpConstantValues()
+  {
+    var values = GetAllHttpConstantFields()
+      .Where(field => field.DeclaringType?.Name != "Legacy")
+      .Select(field => field.GetValue(null) as string)
+      .Where(value => !string.IsNullOrWhiteSpace(value))
+      .Select(value => value ?? string.Empty)
+      .Distinct(StringComparer.OrdinalIgnoreCase)
+      .ToArray();
+
+    return values;
+  }
+
+  [GeneratedRegex("HttpConstants\\.(?<name>[A-Za-z0-9_.]+)")]
+  private static partial Regex HttpConstantRegex();
+
+  [GeneratedRegex("new HttpRequestMessage\\s*\\(\\s*HttpMethod\\.(?<verb>Get|Post|Put|Delete|Patch)\\s*,\\s*(?:\\$\"(?<path>[^\"]*)\"|(?<pathconst>HttpConstants\\.[A-Za-z0-9_.]+))")]
+  private static partial Regex HttpRequestMessageRegex();
+
+  [GeneratedRegex("\\{HttpConstants\\.(?<name>[A-Za-z0-9_.]+)\\}")]
+  private static partial Regex InterpolatedConstantRegex();
+
+  [GeneratedRegex("\\{(?<name>[A-Z][A-Za-z0-9_]*)\\}")]
+  private static partial Regex InterpolatedIdentRegex();
+
+  [GeneratedRegex("\\$\\\"(?<value>[^\\\"]*HttpConstants\\.[A-Za-z0-9_.]+[^\\\"]*)\\\"")]
+  private static partial Regex InterpolatedStringRegex();
+
+  [GeneratedRegex("\\{[^{}]+\\}")]
+  private static partial Regex InterpolationBlockRegex();
+
+  private static ClientHttpCall[] LoadClientHttpCalls()
+  {
+    var repositoryRoot = FindRepositoryRoot();
+    var apiClientDirectory = Path.Combine(repositoryRoot, "ControlR.ApiClient", "Implementations");
+    var sourceFiles = Directory.EnumerateFiles(apiClientDirectory, "*.cs", SearchOption.TopDirectoryOnly)
+      .Where(path =>
+      {
+        var name = Path.GetFileName(path);
+        return name.StartsWith("InternalApi", StringComparison.OrdinalIgnoreCase) ||
+          name.StartsWith("V0Api", StringComparison.OrdinalIgnoreCase) ||
+          name.StartsWith("AgentApi", StringComparison.OrdinalIgnoreCase);
+      });
+
+    var calls = new List<ClientHttpCall>();
+
+    foreach (var sourceFile in sourceFiles)
+    {
+      var source = File.ReadAllText(sourceFile);
+      var localConstants = ExtractLocalStringConstants(source);
+      CollectHttpCalls(source, calls, localConstants);
+    }
+
+    return calls.ToArray();
+  }
+
+  private static HashSet<string> LoadClientRouteTemplates(IReadOnlyCollection<string> constantValues)
+  {
+    var repositoryRoot = FindRepositoryRoot();
+    var apiClientDirectory = Path.Combine(repositoryRoot, "ControlR.ApiClient", "Implementations");
+    var sourceFiles = Directory
+      .EnumerateFiles(apiClientDirectory, "*.cs", SearchOption.TopDirectoryOnly)
+      .Where(path =>
+      {
+        var fileName = Path.GetFileName(path);
+        return fileName.StartsWith("InternalApi", StringComparison.OrdinalIgnoreCase) ||
+          fileName.StartsWith("V0Api", StringComparison.OrdinalIgnoreCase) ||
+          fileName.StartsWith("AgentApi", StringComparison.OrdinalIgnoreCase);
+      })
+      .ToArray();
+
+    var templates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var sourceFile in sourceFiles)
+    {
+      var source = File.ReadAllText(sourceFile);
+
+      foreach (Match match in InterpolatedStringRegex().Matches(source))
+      {
+        var rawTemplate = match.Groups["value"].Value;
+        var resolvedTemplate = ResolveTemplate(rawTemplate);
+        var normalizedTemplate = NormalizePathTemplate(resolvedTemplate);
+
+        if (normalizedTemplate.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
+          templates.Add(normalizedTemplate);
+        }
+      }
+
+      foreach (Match match in HttpConstantRegex().Matches(source))
+      {
+        var constantName = match.Groups["name"].Value;
+        if (!TryResolveHttpConstantValue(constantName, out var constantValue))
+        {
+          continue;
+        }
+
+        var normalizedTemplate = NormalizePathTemplate(constantValue);
+        if (normalizedTemplate.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
+          templates.Add(normalizedTemplate);
+        }
+      }
+    }
+
+    foreach (var value in constantValues)
+    {
+      templates.Add(NormalizePathTemplate(value));
+    }
+
+    return templates;
+  }
+
+  private static OpenApiAction[] LoadOpenApiActions()
+  {
+    var repositoryRoot = FindRepositoryRoot();
+    var serverDirectory = Path.Combine(repositoryRoot, "ControlR.Web.Server");
+    var jsonFiles = Directory.GetFiles(serverDirectory, "ControlR.Web.Server_*.json");
+
+    var legacyPrefixes = GetAllHttpConstantFields()
+      .Where(field => field.DeclaringType?.Name == "Legacy")
+      .Select(field => NormalizePathTemplate((string)field.GetValue(null)!))
+      .Where(prefix => !string.IsNullOrEmpty(prefix))
+      .ToArray();
+
+    var actions = new List<OpenApiAction>();
+
+    foreach (var jsonFile in jsonFiles)
+    {
+      using var stream = File.OpenRead(jsonFile);
+      using var document = JsonDocument.Parse(stream);
+
+      if (!document.RootElement.TryGetProperty("paths", out var pathsElement))
+      {
+        continue;
+      }
+
+      foreach (var pathProperty in pathsElement.EnumerateObject())
+      {
+        if (!pathProperty.Name.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
+          continue;
+        }
+
+        var normalized = NormalizePathTemplate(pathProperty.Name);
+        if (legacyPrefixes.Any(prefix => normalized == prefix || normalized.StartsWith($"{prefix}/", StringComparison.Ordinal)))
+        {
+          continue;
+        }
+
+        foreach (var operationProperty in pathProperty.Value.EnumerateObject())
+        {
+          var verb = operationProperty.Name.ToUpperInvariant();
+          if (!_httpVerbs.Contains(verb))
+          {
+            continue;
+          }
+
+          actions.Add(new OpenApiAction(verb, pathProperty.Name, normalized));
+        }
+      }
+    }
+
+    return actions.ToArray();
+  }
+
+  private static OpenApiTestData LoadOpenApiTestData()
+  {
+    var repositoryRoot = FindRepositoryRoot();
+    var serverDirectory = Path.Combine(repositoryRoot, "ControlR.Web.Server");
+
+    var jsonFiles = Directory.GetFiles(serverDirectory, "ControlR.Web.Server_*.json");
+    Assert.True(jsonFiles.Length > 0, $"No OpenAPI JSON files found in '{serverDirectory}'.");
+
+    var legacyPrefixes = GetAllHttpConstantFields()
+      .Where(field => field.DeclaringType?.Name == "Legacy")
+      .Select(field => NormalizePathTemplate((string)field.GetValue(null)!))
+      .Where(prefix => !string.IsNullOrEmpty(prefix))
+      .ToArray();
+
+    var allPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var nonLegacyPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var jsonFile in jsonFiles)
+    {
+      using var stream = File.OpenRead(jsonFile);
+      using var document = JsonDocument.Parse(stream);
+
+      var root = document.RootElement;
+      if (!root.TryGetProperty("paths", out var pathsElement))
+      {
+        continue;
+      }
+
+      var paths = pathsElement
+        .EnumerateObject()
+        .Select(property => property.Name)
+        .Where(path => path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        .Select(NormalizePathTemplate)
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+
+      foreach (var path in paths)
+      {
+        allPaths.Add(path);
+
+        var isLegacy = legacyPrefixes.Any(prefix =>
+          path == prefix ||
+          path.StartsWith($"{prefix}/", StringComparison.Ordinal));
+
+        if (!isLegacy)
+        {
+          nonLegacyPaths.Add(path);
+        }
+      }
+    }
+
+    return new OpenApiTestData(
+      allPaths.OrderBy(p => p).ToArray(),
+      nonLegacyPaths.OrderBy(p => p).ToArray());
+  }
+
+  [GeneratedRegex("private\\s+const\\s+string\\s+(?<name>[A-Za-z_]\\w*)\\s*=\\s*(?:\\$\"(?<value>[^\"]*)\"|\"(?<value>[^\"]*)\")\\s*;")]
+  private static partial Regex LocalConstRegex();
+
+  [GeneratedRegex("\\bvar\\s+(?<name>endpoint|url|path|requestUri|route)\\s*=\\s*(?:\\$\"(?<value>[^\"]*)\"|\"(?<value>[^\"]*)\")\\s*;")]
+  private static partial Regex LocalVarAssignmentRegex();
+
+  [GeneratedRegex("(?:async|public)\\s+(?:Task|IAsyncEnumerable|Task<[^>]+>)[^{]*?\\b(?:I[A-Z]\\w*\\.)(?<name>[A-Z]\\w*)\\s*\\(")]
+  private static partial Regex MethodPatternRegex();
+
+  private static string NormalizePathTemplate(string pathTemplate)
+  {
+    if (string.IsNullOrWhiteSpace(pathTemplate))
+    {
+      return string.Empty;
+    }
+
+    var path = pathTemplate.Trim();
+    var queryStart = path.IndexOf('?', StringComparison.Ordinal);
+
+    if (queryStart >= 0)
+    {
+      path = path[..queryStart];
+    }
+
+    path = ParameterRegex().Replace(path, "{}");
+    path = path.Replace("\\", "/", StringComparison.Ordinal);
+
+    while (path.Contains("//", StringComparison.Ordinal))
+    {
+      path = path.Replace("//", "/", StringComparison.Ordinal);
+    }
+
+    if (!path.StartsWith("/", StringComparison.Ordinal))
+    {
+      path = $"/{path}";
+    }
+
+    return path.ToLowerInvariant();
+  }
+
+  [GeneratedRegex("\\{[^{}]+\\}")]
+  private static partial Regex ParameterRegex();
 
   private static string ResolveInterpolatedPath(string raw)
   {
@@ -895,4 +808,84 @@ public partial class ControlrApiContractSyncTests
 
     return interpolated;
   }
+
+  private static string ResolveTemplate(string rawTemplate)
+  {
+    var resolved = rawTemplate;
+
+    foreach (Match constantMatch in InterpolatedConstantRegex().Matches(rawTemplate))
+    {
+      var constantName = constantMatch.Groups["name"].Value;
+      if (!TryResolveHttpConstantValue(constantName, out var constantValue))
+      {
+        continue;
+      }
+
+      resolved = resolved.Replace(constantMatch.Value, constantValue, StringComparison.Ordinal);
+    }
+
+    resolved = InterpolationBlockRegex().Replace(resolved, "{}");
+
+    return resolved;
+  }
+
+  private static bool TryGetLongestMatchingConstant(
+    string apiPath,
+    IReadOnlyCollection<string> constants,
+    out string? matchedConstant)
+  {
+    matchedConstant = constants
+      .Where(constant =>
+        apiPath.Equals(NormalizePathTemplate(constant), StringComparison.OrdinalIgnoreCase) ||
+        apiPath.StartsWith($"{NormalizePathTemplate(constant)}/", StringComparison.OrdinalIgnoreCase))
+      .OrderByDescending(constant => constant.Length)
+      .FirstOrDefault();
+
+    return matchedConstant is not null;
+  }
+
+  private static bool TryResolveHttpConstantValue(string constantName, out string value)
+  {
+    var parts = constantName.Split('.');
+    Type? currentType = typeof(HttpConstants);
+
+    for (var i = 0; i < parts.Length - 1; i++)
+    {
+      currentType = currentType?.GetNestedType(parts[i], BindingFlags.Public | BindingFlags.Static);
+      if (currentType is null)
+      {
+        value = string.Empty;
+        return false;
+      }
+    }
+
+    var field = currentType?.GetField(parts[^1], BindingFlags.Public | BindingFlags.Static);
+
+    if (field?.GetValue(null) is not string stringValue || string.IsNullOrWhiteSpace(stringValue))
+    {
+      value = string.Empty;
+      return false;
+    }
+
+    value = stringValue;
+    return true;
+  }
+
+  private static string? VerbFromCallName(string methodName)
+  {
+    if (methodName.StartsWith("Get", StringComparison.Ordinal)) return "GET";
+    if (methodName.StartsWith("Post", StringComparison.Ordinal)) return "POST";
+    if (methodName.StartsWith("Put", StringComparison.Ordinal)) return "PUT";
+    if (methodName.StartsWith("Delete", StringComparison.Ordinal)) return "DELETE";
+    if (methodName.StartsWith("Patch", StringComparison.Ordinal)) return "PATCH";
+    return null;
+  }
+
+  private static string? VerbFromHttpMethod(string methodName) => VerbFromCallName(methodName);
+
+  private record ClientHttpCall(string Verb, string Path, string NormalizedPath, string MethodName);
+  private record OpenApiAction(string Verb, string Path, string NormalizedPath);
+  private record OpenApiTestData(
+    string[] AllPaths,
+    string[] NonLegacyPaths);
 }
