@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Api.Agent;
 
-[Route(HttpConstants.Agent.AgentUpdateEndpoint)]
+[Route(HttpConstants.Agent.UpdatesEndpoint)]
 [Route(HttpConstants.Legacy.AgentUpdateEndpoint)]
 [ApiController]
 [AllowAnonymous]

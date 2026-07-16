@@ -13,7 +13,7 @@ internal partial class AgentApi
   {
     return await _client.ExecuteApiCall(async () =>
       await _client.HttpClient.GetFromJsonAsync<BundleMetadataDto>(
-        $"{HttpConstants.Agent.AgentUpdateEndpoint}/get-bundle-metadata/{runtime}",
+        $"{HttpConstants.Agent.UpdatesEndpoint}/get-bundle-metadata/{runtime}",
         cancellationToken));
   }
 }
