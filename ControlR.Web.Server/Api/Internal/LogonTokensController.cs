@@ -9,7 +9,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class LogonTokenController : ControllerBase
+public class LogonTokensController : ControllerBase
 {
   [HttpPost]
   [ProducesResponseType<InternalDtos.LogonTokenResponseDto>(StatusCodes.Status200OK)]
