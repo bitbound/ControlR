@@ -258,7 +258,7 @@ public class ViewerHub(
 
       if (Context.User?.TryGetUserId(out var userId) != true)
       {
-        _logger.LogCritical("User is null on disconnect. Client is trying to connect to ViewerHub from an authenticated but invalid context.");
+        _logger.LogCritical("User is null on disconnect. The principal may have been invalidated during the connection lifetime.");
         return;
       }
 
