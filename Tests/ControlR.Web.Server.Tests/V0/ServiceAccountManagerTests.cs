@@ -43,6 +43,7 @@ public class ServiceAccountManagerTests(ITestOutputHelper testOutput)
     var shouldPass = await manager.ValidateCredential(secondApiKey, TestContext.Current.CancellationToken);
     Assert.True(shouldPass.IsSuccess);
 
+    // Authorization isn't exercised here — any valid principal ID is acceptable.
     await manager.Delete(accountId, Guid.NewGuid(), TestContext.Current.CancellationToken);
 
     var allAccounts = await manager.GetAllServer(TestContext.Current.CancellationToken);
