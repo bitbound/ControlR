@@ -14203,6 +14203,8 @@
             "format": "uuid"
           },
           "expirationMinutes": {
+            "maximum": 1440,
+            "minimum": 1,
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32",
@@ -14994,9 +14996,14 @@
         "type": "object",
         "properties": {
           "key": {
+            "maxLength": 256,
+            "minLength": 0,
+            "pattern": "^[a-zA-Z0-9-]+$",
             "type": "string"
           },
           "value": {
+            "maxLength": 2048,
+            "minLength": 0,
             "type": "string"
           }
         }

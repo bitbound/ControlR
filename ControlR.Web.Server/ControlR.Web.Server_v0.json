@@ -1926,9 +1926,13 @@
             "format": "uuid"
           },
           "userCorrelationId": {
+            "maxLength": 252,
+            "minLength": 0,
             "type": "string"
           },
           "expirationMinutes": {
+            "maximum": 1440,
+            "minimum": 1,
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32",
@@ -1957,6 +1961,8 @@
             "format": "uuid"
           },
           "expirationMinutes": {
+            "maximum": 1440,
+            "minimum": 1,
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32",
