@@ -6,5 +6,5 @@ public record CreateLogonTokenForUserRequestDto(
   Guid DeviceId,
   Guid TenantId,
   Guid UserId,
-  [Range(1, 1440)]
+  [property: Range(1, 1440)]
   int ExpirationMinutes = 15);
