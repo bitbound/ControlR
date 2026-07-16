@@ -226,6 +226,9 @@ public partial class ControlrApiContractSyncTests
   [GeneratedRegex("\\{HttpConstants\\.(?<name>[A-Za-z0-9_.]+)\\}")]
   private static partial Regex InterpolatedConstantRegex();
 
+  [GeneratedRegex("\\{(?<name>[A-Z][A-Za-z0-9_]*)\\}")]
+  private static partial Regex InterpolatedIdentRegex();
+
   [GeneratedRegex("\\$\\\"(?<value>[^\\\"]*HttpConstants\\.[A-Za-z0-9_.]+[^\\\"]*)\\\"")]
   private static partial Regex InterpolatedStringRegex();
 
@@ -593,19 +596,35 @@ public partial class ControlrApiContractSyncTests
   private static Dictionary<string, string> ExtractLocalStringConstants(string source)
   {
     var result = new Dictionary<string, string>(StringComparer.Ordinal);
-    var pattern = LocalConstRegex();
-    foreach (Match match in pattern.Matches(source))
+    foreach (Match match in LocalConstRegex().Matches(source))
     {
       var name = match.Groups["name"].Value;
       var value = match.Groups["value"].Value.Trim();
       value = ResolveInterpolatedPath(value);
       result[name] = value;
     }
+
+    foreach (Match match in LocalVarAssignmentRegex().Matches(source))
+    {
+      var name = match.Groups["name"].Value;
+      if (result.ContainsKey(name))
+      {
+        continue;
+      }
+
+      var value = match.Groups["value"].Value.Trim();
+      value = ResolveInterpolatedPath(value);
+      result[name] = value;
+    }
+
     return result;
   }
 
   [GeneratedRegex("private\\s+const\\s+string\\s+(?<name>[A-Za-z_]\\w*)\\s*=\\s*(?:\\$\"(?<value>[^\"]*)\"|\"(?<value>[^\"]*)\")\\s*;")]
   private static partial Regex LocalConstRegex();
+
+  [GeneratedRegex("\\bvar\\s+(?<name>endpoint|url|path|requestUri|route)\\s*=\\s*(?:\\$\"(?<value>[^\"]*)\"|\"(?<value>[^\"]*)\")\\s*;")]
+  private static partial Regex LocalVarAssignmentRegex();
 
   private static void CollectHttpCalls(string source, List<ClientHttpCall> calls, Dictionary<string, string> localConstants)
   {
@@ -625,11 +644,52 @@ public partial class ControlrApiContractSyncTests
 
       var depth = 1;
       var scanIndex = braceIndex + 1;
+      var inString = false;
+      var prevWasEscape = false;
       while (scanIndex < source.Length && depth > 0)
       {
         var c = source[scanIndex];
-        if (c == '{') depth++;
-        else if (c == '}') depth--;
+        if (inString)
+        {
+          if (c == '\\' && !prevWasEscape) { prevWasEscape = true; scanIndex++; continue; }
+          if (c == '"' && !prevWasEscape) inString = false;
+          prevWasEscape = false;
+          scanIndex++;
+          continue;
+        }
+
+        if (c == '$' && scanIndex + 1 < source.Length && source[scanIndex + 1] == '"')
+        {
+          inString = true;
+          scanIndex += 2;
+          continue;
+        }
+
+        if (c == '"')
+        {
+          inString = true;
+          scanIndex++;
+          continue;
+        }
+
+        if (c == '{')
+        {
+          depth++;
+          scanIndex++;
+          continue;
+        }
+
+        if (c == '}')
+        {
+          depth--;
+          scanIndex++;
+          if (depth == 0)
+          {
+            break;
+          }
+          continue;
+        }
+
         scanIndex++;
       }
 
@@ -692,7 +752,7 @@ public partial class ControlrApiContractSyncTests
     }
   }
 
-  [GeneratedRegex("(?:async|public)\\s+(?:Task|IAsyncEnumerable|Task<[^>]+>)[^{]*?\\b(?<name>[A-Z]\\w*)\\s*\\(")]
+  [GeneratedRegex("(?:async|public)\\s+(?:Task|IAsyncEnumerable|Task<[^>]+>)[^{]*?\\b(?:I[A-Z]\\w*\\.)(?<name>[A-Z]\\w*)\\s*\\(")]
   private static partial Regex MethodPatternRegex();
 
   private static string? VerbFromCallName(string methodName)
@@ -750,7 +810,7 @@ public partial class ControlrApiContractSyncTests
       var endQuote = FindEndOfInterpolatedString(argList, quoteStart);
       if (endQuote < 0) return null;
       var raw = argList.Substring(quoteStart + 1, endQuote - quoteStart - 1);
-      return ResolveInterpolatedPath(raw);
+      return ResolveInterpolatedPath(raw, localConstants);
     }
 
     if (argList.StartsWith('"'))
@@ -773,7 +833,7 @@ public partial class ControlrApiContractSyncTests
       var name = identMatch.Groups["name"].Value;
       if (localConstants.TryGetValue(name, out var localValue))
       {
-        return localValue;
+        return ResolveInterpolatedPath(localValue, localConstants);
       }
     }
 
@@ -813,11 +873,25 @@ public partial class ControlrApiContractSyncTests
 
   private static string ResolveInterpolatedPath(string raw)
   {
+    return ResolveInterpolatedPath(raw, localConstants: null);
+  }
+
+  private static string ResolveInterpolatedPath(string raw, Dictionary<string, string>? localConstants)
+  {
     var interpolated = InterpolatedConstantRegex().Replace(raw, match =>
     {
       var constantName = match.Groups["name"].Value;
       return TryResolveHttpConstantValue(constantName, out var value) ? value : match.Value;
     });
+
+    if (localConstants is not null)
+    {
+      interpolated = InterpolatedIdentRegex().Replace(interpolated, match =>
+      {
+        var name = match.Groups["name"].Value;
+        return localConstants.TryGetValue(name, out var value) ? value : match.Value;
+      });
+    }
 
     return interpolated;
   }

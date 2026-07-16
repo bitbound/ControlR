@@ -5,7 +5,7 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 
 public interface IDevicesApi
 {
-  Task<ApiResult> CreateDevice(InternalDtos.CreateDeviceRequestDto request, CancellationToken cancellationToken = default);
+  
   Task<ApiResult> DeleteDevice(Guid deviceId, CancellationToken cancellationToken = default);
   Task<ApiResult<InternalDtos.DeleteManyDevicesResponseDto>> DeleteManyDevices(InternalDtos.DeleteDevicesRequestDto request, CancellationToken cancellationToken = default);
   IAsyncEnumerable<InternalDtos.DeviceResponseDto> GetAllDevices(CancellationToken cancellationToken = default);
