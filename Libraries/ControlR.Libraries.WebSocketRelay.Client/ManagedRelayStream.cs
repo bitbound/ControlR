@@ -37,14 +37,11 @@ public abstract class ManagedRelayStream(
   ILogger<ManagedRelayStream> logger) : IManagedRelayStream
 {
   private const int MaxSendBufferLength = ushort.MaxValue * 2;
-
   private static readonly TimeSpan _closeTimeout = TimeSpan.FromSeconds(1);
 
   protected readonly IMessenger Messenger = messenger;
   protected readonly TimeProvider TimeProvider = timeProvider;
 
-  private readonly SemaphoreSlim _connectionLock = new(1, 1);
-  private readonly SemaphoreSlim _disposeLock = new(1, 1);
   private readonly ILogger<ManagedRelayStream> _logger = logger;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
   private readonly HandlerCollection<DtoWrapper> _messageHandlers = new(ex => { logger.LogError(ex, "Error while invoking message handler."); return Task.CompletedTask; });
@@ -53,33 +50,26 @@ public abstract class ManagedRelayStream(
   private readonly IStreamMetrics _streamMetrics = streamMetrics;
   private readonly IWaiter _waiter = waiter;
 
-  private ClientWebSocket? _client;
-  private int _closedHandlersInvoked;
-  private CancellationTokenSource? _readCancellationSource;
-  private Task? _readFromStreamTask;
-  private volatile int _sendBufferLength;
+  private ActiveConnection? _connection;
+  private int _isDisposed;
+  private int _sendBufferLength;
 
   public TimeSpan CurrentLatency => _streamMetrics.GetCurrentLatency();
   public bool IsConnected => State == WebSocketState.Open;
-  public WebSocketState State => _client?.State ?? WebSocketState.Closed;
+  public WebSocketState State => _connection?.Client.State ?? WebSocketState.Closed;
 
-  protected bool IsDisposed { get; private set; }
+  protected bool IsDisposed => _isDisposed == 1;
 
   public async Task<Result> Close()
   {
-    var connection = await DetachConnection();
+    var conn = Interlocked.Exchange(ref _connection, null);
 
-    if (connection is null)
+    if (conn is null)
     {
       return Result.Ok();
     }
 
-    var result = await CloseSocket(connection.Value.Client);
-    connection.Value.ReadCancellationSource.Cancel();
-    connection.Value.Client.Dispose();
-    ObserveReadLoop(connection.Value.ReadTask, connection.Value.ReadCancellationSource);
-    await InvokeOnClosedHandlers();
-    return result;
+    return await TearDown(conn);
   }
 
   public Task Connect(Uri websocketUri, CancellationToken cancellationToken) =>
@@ -88,28 +78,28 @@ public abstract class ManagedRelayStream(
   public async Task Connect(Uri websocketUri, Action<ClientWebSocketOptions> configureOptions, CancellationToken cancellationToken)
   {
     await Close();
-    _logger.LogInformation("Connecting to {WebSocketOrigin} with custom options.", $"{websocketUri.Scheme}://{websocketUri.Authority}");
-    var client = new ClientWebSocket();
+    ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-    CancellationTokenSource? readCancellationSource = null;
+    _logger.LogInformation("Connecting to {WebSocketOrigin} with custom options.", $"{websocketUri.Scheme}://{websocketUri.Authority}");
+
+    var client = new ClientWebSocket();
+    CancellationTokenSource? readCancellation = null;
 
     try
     {
       configureOptions(client.Options);
       await client.ConnectAsync(websocketUri, cancellationToken);
-      readCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+      readCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-      using var locker = await _connectionLock.AcquireLockAsync(cancellationToken);
-      ObjectDisposedException.ThrowIf(IsDisposed, this);
-      Interlocked.Exchange(ref _closedHandlersInvoked, 0);
-      _client = client;
-      _readCancellationSource = readCancellationSource;
-      _readFromStreamTask = ReadFromStream(client, readCancellationSource.Token);
+      var conn = new ActiveConnection(client, readCancellation);
+      Interlocked.Exchange(ref _connection, conn);
       _logger.LogInformation("Connection successful.");
+
+      _ = ReadFromStream(conn);
     }
     catch
     {
-      readCancellationSource?.Dispose();
+      readCancellation?.Dispose();
       client.Dispose();
       throw;
     }
@@ -136,10 +126,7 @@ public abstract class ManagedRelayStream(
 
   public async Task Send(DtoWrapper dto, CancellationToken cancellationToken)
   {
-    if (_client is not {} client)
-    {
-      throw new InvalidOperationException("Client has not been initialized.");
-    }
+    var conn = _connection ?? throw new InvalidOperationException("Client has not been initialized.");
 
     if (dto.DtoType == DtoType.Ack)
     {
@@ -153,7 +140,7 @@ public abstract class ManagedRelayStream(
     using var sendLocker = await _sendLock.AcquireLockAsync(cancellationToken: linkedCts.Token);
 
     var dtoBytes = MessagePackSerializer.Serialize(dto, cancellationToken: linkedCts.Token);
-    await client.SendAsync(
+    await conn.Client.SendAsync(
       dtoBytes,
       WebSocketMessageType.Binary,
       true,
@@ -164,7 +151,7 @@ public abstract class ManagedRelayStream(
   }
 
   public Task WaitForClose(CancellationToken cancellationToken) =>
-    _waiter.WaitFor(() => _client?.State != WebSocketState.Open, cancellationToken: cancellationToken);
+    _waiter.WaitFor(() => _connection?.Client.State != WebSocketState.Open, cancellationToken: cancellationToken);
 
   protected virtual async ValueTask DisposeAsync(bool disposing)
   {
@@ -173,15 +160,10 @@ public abstract class ManagedRelayStream(
       return;
     }
 
-    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-    using var locker = await _disposeLock.AcquireLockAsync(throwOnTimeout: false, cts.Token);
-
-    if (locker is null)
+    if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
     {
-      _logger.LogWarning("Timed out while waiting to acquire dispose lock. Dispose may already be in progress.");
+      return;
     }
-
-    ObjectDisposedException.ThrowIf(IsDisposed, this);
 
     try
     {
@@ -193,7 +175,6 @@ public abstract class ManagedRelayStream(
     }
     finally
     {
-      IsDisposed = true;
       _onCloseHandlers.Clear();
     }
   }
@@ -232,43 +213,9 @@ public abstract class ManagedRelayStream(
     }
   }
 
-  private async Task<(ClientWebSocket Client, CancellationTokenSource ReadCancellationSource, Task? ReadTask)?> DetachConnection()
+  private async Task InvokeOnClosedHandlers(ActiveConnection conn)
   {
-    using var locker = await _connectionLock.AcquireLockAsync(CancellationToken.None);
-
-    if (_client is not {} client || _readCancellationSource is not {} readCancellationSource)
-    {
-      return null;
-    }
-
-    var connection = (client, readCancellationSource, _readFromStreamTask);
-    _client = null;
-    _readCancellationSource = null;
-    _readFromStreamTask = null;
-    return connection;
-  }
-
-  private async Task HandleReadLoopEnded(ClientWebSocket client)
-  {
-    using var locker = await _connectionLock.AcquireLockAsync(CancellationToken.None);
-
-    if (!ReferenceEquals(_client, client))
-    {
-      return;
-    }
-
-    _client = null;
-    var readCancellationSource = _readCancellationSource;
-    _readCancellationSource = null;
-    _readFromStreamTask = null;
-    client.Dispose();
-    readCancellationSource?.Dispose();
-    await InvokeOnClosedHandlers();
-  }
-
-  private async Task InvokeOnClosedHandlers()
-  {
-    if (Interlocked.Exchange(ref _closedHandlersInvoked, 1) == 1)
+    if (!conn.TryClaimCloseHandlers())
     {
       return;
     }
@@ -286,40 +233,17 @@ public abstract class ManagedRelayStream(
     }
   }
 
-  private void ObserveReadLoop(Task? readTask, CancellationTokenSource readCancellationSource)
-  {
-    if (readTask is null)
-    {
-      readCancellationSource.Dispose();
-      return;
-    }
-
-    _ = readTask.ContinueWith(
-      task =>
-      {
-        readCancellationSource.Dispose();
-
-        if (task.IsFaulted)
-        {
-          _logger.LogDebug(task.Exception, "Read loop ended while closing connection.");
-        }
-      },
-      CancellationToken.None,
-      TaskContinuationOptions.ExecuteSynchronously,
-      TaskScheduler.Default);
-  }
-
-  private async Task ReadFromStream(ClientWebSocket client, CancellationToken cancellationToken)
+  private async Task ReadFromStream(ActiveConnection conn)
   {
     try
     {
-      while (client.State == WebSocketState.Open)
+      while (conn.Client.State == WebSocketState.Open)
       {
         try
         {
           using var dtoStream = _memoryProvider.GetRecyclableStream();
-          using var webSocketStream = WebSocketStream.CreateReadableMessageStream(client);
-          await webSocketStream.CopyToAsync(dtoStream, cancellationToken);
+          using var webSocketStream = WebSocketStream.CreateReadableMessageStream(conn.Client);
+          await webSocketStream.CopyToAsync(dtoStream, conn.ReadCancellation.Token);
 
           var totalBytesRead = (int)dtoStream.Length;
 
@@ -330,12 +254,12 @@ public abstract class ManagedRelayStream(
           }
 
           _streamMetrics.RecordBytesIn(new TransferRecord(totalBytesRead, TimeProvider.GetTimestamp()));
-        
+
           dtoStream.Seek(0, SeekOrigin.Begin);
-        
+
           var receivedWrapper = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(
             dtoStream,
-            cancellationToken: cancellationToken);
+            cancellationToken: conn.ReadCancellation.Token);
 
           switch (receivedWrapper.DtoType)
           {
@@ -348,8 +272,8 @@ public abstract class ManagedRelayStream(
               }
             default:
               {
-                await SendAck(client, totalBytesRead, receivedWrapper.SendTimestamp, cancellationToken);
-                await _messageHandlers.InvokeHandlers(receivedWrapper, cancellationToken);
+                await SendAck(conn.Client, totalBytesRead, receivedWrapper.SendTimestamp, conn.ReadCancellation.Token);
+                await _messageHandlers.InvokeHandlers(receivedWrapper, conn.ReadCancellation.Token);
                 break;
               }
           }
@@ -357,6 +281,10 @@ public abstract class ManagedRelayStream(
         catch (OperationCanceledException)
         {
           _logger.LogInformation("Streaming cancelled.");
+          break;
+        }
+        catch (ObjectDisposedException)
+        {
           break;
         }
         catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.InvalidState)
@@ -378,7 +306,10 @@ public abstract class ManagedRelayStream(
     }
     finally
     {
-      await HandleReadLoopEnded(client);
+      if (Interlocked.CompareExchange(ref _connection, null, conn) == conn)
+      {
+        await TearDown(conn);
+      }
     }
   }
 
@@ -393,6 +324,20 @@ public abstract class ManagedRelayStream(
       WebSocketMessageType.Binary,
       true,
       cancellationToken);
+  }
+
+  private async Task<Result> TearDown(ActiveConnection conn)
+  {
+    conn.ReadCancellation.Cancel();
+
+    var result = await CloseSocket(conn.Client);
+    conn.Client.Dispose();
+    conn.ReadCancellation.Dispose();
+
+    Interlocked.Exchange(ref _sendBufferLength, 0);
+    await InvokeOnClosedHandlers(conn);
+
+    return result;
   }
 
   private async Task WaitForSendBuffer(CancellationToken cancellationToken)
@@ -414,5 +359,16 @@ public abstract class ManagedRelayStream(
     {
       _logger.LogError("Timed out while waiting for send buffer to drain.");
     }
+  }
+
+  private sealed class ActiveConnection(ClientWebSocket client, CancellationTokenSource readCancellation)
+  {
+    private int _closeHandlersInvoked;
+
+    public ClientWebSocket Client { get; } = client;
+    public CancellationTokenSource ReadCancellation { get; } = readCancellation;
+
+    public bool TryClaimCloseHandlers() =>
+      Interlocked.Exchange(ref _closeHandlersInvoked, 1) == 0;
   }
 }
