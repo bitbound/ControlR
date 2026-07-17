@@ -100,7 +100,7 @@
                 <Border Classes="Card" Margin="0, 0, 12, 12">
                   <StackPanel Spacing="18">
                     <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                           ColumnSpacing="18"
                           RowSpacing="6">
                       <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static assets:Resources.Session}" Classes="Info" />
@@ -114,6 +114,11 @@
 
                       <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static assets:Resources.Username}" Classes="Info" />
                       <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Username}" />
+
+                      <TextBlock Grid.Row="4" Grid.Column="0" Text="Desktop" Classes="Info"
+                                 IsVisible="{Binding DesktopName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DesktopName}"
+                                 IsVisible="{Binding DesktopName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     </Grid>
 
                     <StackPanel Orientation="Horizontal"
