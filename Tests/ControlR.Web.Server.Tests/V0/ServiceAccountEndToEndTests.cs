@@ -43,6 +43,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     var mockAgentHubContext = CreateMockAgentHubContext(fakeDesktopSessions);
 
+    // Bootstrap will happen when the server starts.
     using var testServer = await TestWebServerBuilder.CreateTestServer(
       _testOutput,
       settings: config,
@@ -53,10 +54,9 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     var services = testServer.Services;
     var saManager = services.GetRequiredService<IServiceAccountManager>();
-    var bootstrapResult = await saManager.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
-    Assert.True(bootstrapResult.IsSuccess, $"Bootstrap failed: {bootstrapResult.Reason}");
 
-    var saAccounts = await saManager.GetAllServer(TestContext.Current.CancellationToken);
+    // Verify the bootstrapped account exists.
+    var saAccounts = await saManager.GetAllForServer(TestContext.Current.CancellationToken);
     var sa = saAccounts.First(s => s.Name == saName);
     Assert.Equal(bootstrapAccountId, sa.Id);
 
@@ -64,6 +64,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     // Step 2: Service account creates a tenant.
     using var saClient = await testServer.GetHttpClient();
+
     saClient.DefaultRequestHeaders.Add(
       ServiceAccountCredentialAuthenticationSchemeOptions.DefaultHeaderName,
       apiKey);
@@ -76,8 +77,10 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     Assert.True(tenantResponse.IsSuccessStatusCode,
       $"Create tenant failed: {tenantResponse.StatusCode}");
+
     var tenantResult = await tenantResponse.Content
       .ReadFromJsonAsync<V0Dtos.CreateTenantResponseDto>(TestContext.Current.CancellationToken);
+
     Assert.NotNull(tenantResult);
     Assert.NotEqual(Guid.Empty, tenantResult.TenantId);
 
@@ -96,8 +99,10 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     Assert.True(keyResponse.IsSuccessStatusCode,
       $"Create installer key failed: {keyResponse.StatusCode}");
+
     var keyResult = await keyResponse.Content
       .ReadFromJsonAsync<V0Dtos.CreateInstallerKeyResponseDto>(TestContext.Current.CancellationToken);
+
     Assert.NotNull(keyResult);
     Assert.NotEqual(Guid.Empty, keyResult.Id);
 
@@ -111,6 +116,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
       keyResult.KeySecret);
 
     using var anonClient = testServer.TestServer.CreateClient();
+
     var deviceResponse = await anonClient.PostAsJsonAsync(
       HttpConstants.Agent.DevicesEndpoint,
       createDeviceReq,
@@ -128,8 +134,10 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     Assert.True(sessionsResponse.IsSuccessStatusCode,
       $"Get desktop sessions failed: {sessionsResponse.StatusCode}");
+
     var sessions = await sessionsResponse.Content
       .ReadFromJsonAsync<V0Dtos.DesktopSessionResponseDto[]>(TestContext.Current.CancellationToken);
+
     Assert.NotNull(sessions);
     Assert.Equal(2, sessions.Length);
 
@@ -150,14 +158,17 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     Assert.True(tokenResponse.IsSuccessStatusCode,
       $"Create logon token failed: {tokenResponse.StatusCode}");
+
     var tokenResult = await tokenResponse.Content
       .ReadFromJsonAsync<V0Dtos.LogonTokenResponseDto>(TestContext.Current.CancellationToken);
+
     Assert.NotNull(tokenResult);
     Assert.NotNull(tokenResult.Token);
 
     // Step 7: Authenticate to /device-access/ using the logon token.
     using var deviceAccessClient = testServer.Factory.CreateClient(
       new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+      
     var deviceAccessResponse = await deviceAccessClient.GetAsync(
       $"/device-access?deviceId={deviceId}&logonToken={tokenResult.Token}",
       TestContext.Current.CancellationToken);
