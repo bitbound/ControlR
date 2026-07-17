@@ -35,7 +35,7 @@
                 <ItemsControl ItemsSource="{Binding Messages}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:ChatMessageViewModel">
-                            <Grid Margin="0,8">
+                            <Grid Margin="0, 4">
                                 <!-- Viewer message (left aligned - other person) -->
                                 <Border IsVisible="{Binding IsFromViewer}"
                                         Padding="12"

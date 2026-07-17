@@ -132,6 +132,7 @@
                               Command="{Binding ConnectCommand}" />
 
                       <Button Content="{x:Static assets:Resources.Preview}"
+                              IsVisible="{Binding IsPreviewVisible}"
                               Command="{Binding PreviewCommand}" />
                     </StackPanel>
                   </StackPanel>
