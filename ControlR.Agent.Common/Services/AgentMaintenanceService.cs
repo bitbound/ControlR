@@ -90,6 +90,22 @@ internal class AgentMaintenanceService(
       }
 
       var metadata = metadataResult.Value;
+
+      if (!IsBrandCompatible(metadata, out var brandMismatchReason))
+      {
+        _logger.LogCritical(
+          "Aborting update check. Server bundle is for a different brand than this agent. " +
+          "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
+          "Reason: {Reason}. Refusing to overwrite this install with a mismatched bundle. " +
+          "If this server is correct, uninstall this agent and reinstall it from the matching installer.",
+          BrandingConstants.BrandName,
+          BrandingConstants.Publisher,
+          metadata.BrandName,
+          metadata.Publisher,
+          brandMismatchReason);
+        return;
+      }
+
       _logger.LogInformation("Remote bundle hash: {RemoteHash}", metadata.BundleSha256);
 
       var localHash = GetInstalledBundleHash();
@@ -151,7 +167,23 @@ internal class AgentMaintenanceService(
         return;
       }
 
-      var installerPath = await DownloadInstaller(metadataResult.Value, linkedCts.Token);
+      var metadata = metadataResult.Value;
+
+      if (!IsBrandCompatible(metadata, out var brandMismatchReason))
+      {
+        _logger.LogCritical(
+          "Aborting desktop client repair. Server bundle is for a different brand than this agent. " +
+          "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
+          "Reason: {Reason}. Refusing to overwrite this install with a mismatched bundle.",
+          BrandingConstants.BrandName,
+          BrandingConstants.Publisher,
+          metadata.BrandName,
+          metadata.Publisher,
+          brandMismatchReason);
+        return;
+      }
+
+      var installerPath = await DownloadInstaller(metadata, linkedCts.Token);
       if (installerPath is null)
       {
         return;
@@ -239,6 +271,24 @@ internal class AgentMaintenanceService(
     }
 
     return psi;
+  }
+
+  private static bool IsBrandCompatible(BundleMetadataDto metadata, out string reason)
+  {
+    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
+    {
+      reason = "BrandName mismatch.";
+      return false;
+    }
+
+    if (!string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
+    {
+      reason = "Publisher mismatch.";
+      return false;
+    }
+
+    reason = string.Empty;
+    return true;
   }
 
   private static string QuoteArgument(string value)
