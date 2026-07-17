@@ -45,23 +45,6 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
   private readonly TimeProvider _timeProvider;
   private readonly IOptions<ControlrViewerOptions> _viewerOptions;
 
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(CurrentState))]
-  [NotifyPropertyChangedFor(nameof(IsRemoteDisplayVisible))]
-  private string? _alertMessage;
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(CurrentState))]
-  [NotifyPropertyChangedFor(nameof(IsRemoteDisplayVisible))]
-  private SnackbarSeverity _alertSeverity = SnackbarSeverity.Info;
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(CurrentState))]
-  [NotifyPropertyChangedFor(nameof(IsRemoteDisplayVisible))]
-  private bool _isReconnecting;
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(CurrentState))]
-  [NotifyPropertyChangedFor(nameof(IsRemoteDisplayVisible))]
-  private string? _loadingMessage = Resources.ConnectionStatus_Connecting;
-
   public RemoteControlViewModel(
     IControlrApi controlrApi,
     TimeProvider timeProvider,
@@ -95,6 +78,15 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     messenger.RegisterEvent(this, EventKinds.RemoteControlDisconnectRequested, HandleDisconnectRequested);
   }
 
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(CurrentState))]
+  [NotifyPropertyChangedFor(nameof(IsRemoteDisplayVisible))]
+  public partial string? AlertMessage { get; set; }
+
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(CurrentState))]
+  [NotifyPropertyChangedFor(nameof(IsRemoteDisplayVisible))]
+  public partial SnackbarSeverity AlertSeverity { get; set; } = SnackbarSeverity.Info;
   public SignalingState CurrentState
   {
     get
@@ -153,6 +145,11 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     }
   }
   public bool HasDesktopSessions => DesktopSessions.Count > 0;
+
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(CurrentState))]
+  [NotifyPropertyChangedFor(nameof(IsRemoteDisplayVisible))]
+  public partial bool IsReconnecting { get; set; }
   public bool IsRemoteDisplayVisible => CurrentState == SignalingState.ConnectionActive;
   public bool IsViewOnlyEnabled
   {
@@ -168,6 +165,11 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       OnPropertyChanged();
     }
   }
+
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(CurrentState))]
+  [NotifyPropertyChangedFor(nameof(IsRemoteDisplayVisible))]
+  public partial string? LoadingMessage { get; set; } = Resources.ConnectionStatus_Connecting;
   public IRemoteDisplayViewModel RemoteDisplayViewModel { get; }
 
   protected override void Dispose(bool disposing)
