@@ -27,7 +27,7 @@ None.
 
 ## Changed
 
-None.
+- Added guards in the agent auto-update and repair processes to prevent an agent with a different brand or publisher name from bricking the install.
 
 ## Removed
 
