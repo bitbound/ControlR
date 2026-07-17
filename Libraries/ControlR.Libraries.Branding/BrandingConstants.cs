@@ -4,6 +4,9 @@ using System.Text.RegularExpressions;
 namespace ControlR.Libraries.Branding;
 
 [SuppressMessage("MemberOrder", "BB0001", Justification = "Constants are grouped by category, not by member type.")]
+/// <summary>
+/// Centralized branding constants. These values are replaced by the build script during customized builds.
+/// </summary>
 public static partial class BrandingConstants
 {
   public const string BrandName = "ControlR";
