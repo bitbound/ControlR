@@ -21,12 +21,20 @@ public class DesktopPreviewController : ControllerBase
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
     [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IOptionsMonitor<AppOptions> appOptions,
     [FromServices] ILogger<DesktopPreviewController> logger,
     CancellationToken cancellationToken)
   {
+    if (appOptions.CurrentValue.DisableDesktopPreview)
+    {
+      logger.LogWarning(
+        "Desktop preview request rejected for device {DeviceId}. Desktop preview is disabled by configuration.",
+        deviceId);
+      return NotFound();
+    }
     var device = await appDb.Devices
       .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId);
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken: cancellationToken);
 
     if (device is null)
     {

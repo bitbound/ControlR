@@ -1,4 +1,6 @@
-﻿namespace ControlR.Libraries.Ipc;
+﻿using ControlR.Libraries.Branding;
+
+namespace ControlR.Libraries.Ipc;
 public static class IpcPipeNames
 {
   public static string GetPipeName(string? instanceId)
@@ -19,9 +21,9 @@ public static class IpcPipeNames
   public static string GetUnixPipeName(string? instanceId)
   {
 #if DEBUG
-    var pipeName = "/tmp/controlr-ipc-server-debug";
+    var pipeName = $"/tmp/{BrandingConstants.IpcPipeBaseName}-debug";
 #else
-    var pipeName = "/tmp/controlr-ipc-server";
+    var pipeName = $"/tmp/{BrandingConstants.IpcPipeBaseName}";
 #endif
     if (string.IsNullOrWhiteSpace(instanceId))
     {
@@ -33,9 +35,9 @@ public static class IpcPipeNames
   public static string GetWindowsPipeName(string? instanceId)
   {
 #if DEBUG
-    var pipeName = "controlr-ipc-server-debug";
+    var pipeName = $"{BrandingConstants.IpcPipeBaseName}-debug";
 #else
-    var pipeName = "controlr-ipc-server";
+    var pipeName = $"{BrandingConstants.IpcPipeBaseName}";
 #endif
     if (string.IsNullOrWhiteSpace(instanceId))
     {

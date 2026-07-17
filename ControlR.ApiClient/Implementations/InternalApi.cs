@@ -14,7 +14,7 @@ internal partial class InternalApi(ControlrApi client) :
   IInvitesApi,
   ILogonTokensApi,
   IPersonalAccessTokensApi,
-  IPublicRegistrationSettingsApi,
+  IPublicServerSettingsApi,
   IRolesApi,
   IServerAlertApi,
   IServerLogsApi,
@@ -42,7 +42,7 @@ internal partial class InternalApi(ControlrApi client) :
   public IInvitesApi Invites => this;
   public ILogonTokensApi LogonTokens => this;
   public IPersonalAccessTokensApi PersonalAccessTokens => this;
-  public IPublicRegistrationSettingsApi PublicRegistrationSettings => this;
+  public IPublicServerSettingsApi PublicServerSettings => this;
   public IRolesApi Roles => this;
   public IServerAlertApi ServerAlert => this;
   public IServerLogsApi ServerLogs => this;

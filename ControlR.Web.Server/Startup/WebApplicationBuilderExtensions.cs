@@ -425,7 +425,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
     builder.Services.AddScoped<IUserPreferencesProvider>(services => services.GetRequiredService<IUserPreferencesManager>());
     builder.Services.AddScoped<IUserStorageManager, UserStorageManager>();
-    builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderServer>();
+    builder.Services.AddScoped<IPublicServerSettingsProvider, PublicServerSettingsProviderServer>();
     builder.Services.AddScoped<ITenantInvitesProvider, TenantInvitesProvider>();
     builder.Services.AddScoped<IServiceAccountManager, ServiceAccountManager>();
 

@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IThemeStateProvider, ThemeStateProvider>();
     services.AddScoped<IUserPreferencesProvider, UserPreferencesProviderClient>();
     services.AddScoped<IUserStorageClient, UserStorageClient>();
-    services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderClient>();
+    services.AddScoped<IPublicServerSettingsProvider, PublicServerSettingsProviderClient>();
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
     services.AddScoped<IEffectiveUserPreferences, EffectiveUserPreferences>();
     services.AddScoped<ITenantSettingsProvider, TenantSettingsProvider>();

@@ -236,7 +236,7 @@ public partial class Dashboard : IDisposable
           })]
     };
 
-    var result = await ControlrApi.Internal.Devices.SearchDevices(request);
+    var result = await ControlrApi.Internal.Devices.SearchDevices(request, cancellationToken);
     if (!result.IsSuccess)
     {
       _filterCounts = new DeviceSearchFilterCountsDto();

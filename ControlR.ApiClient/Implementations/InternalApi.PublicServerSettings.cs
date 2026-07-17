@@ -8,9 +8,9 @@ namespace ControlR.ApiClient;
 
 internal partial class InternalApi
 {
-  async Task<ApiResult<PublicRegistrationSettings>> IPublicRegistrationSettingsApi.GetPublicRegistrationSettings(CancellationToken cancellationToken)
+  async Task<ApiResult<PublicServerSettings>> IPublicServerSettingsApi.GetPublicServerSettings(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<PublicRegistrationSettings>(HttpConstants.Internal.PublicRegistrationSettingsEndpoint, cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<PublicServerSettings>(HttpConstants.Internal.PublicServerSettingsEndpoint, cancellationToken));
   }
 }

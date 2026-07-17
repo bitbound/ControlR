@@ -11,6 +11,7 @@ public partial class RemoteControl : ViewportAwareComponent
 
   private string? _alertMessage;
   private Severity _alertSeverity;
+  private bool _isDesktopPreviewDisabled;
   private bool _isReconnecting;
   private string? _loadingMessage = "Connecting";
   private Guid _previousDeviceId;
@@ -28,6 +29,8 @@ public partial class RemoteControl : ViewportAwareComponent
   public required ILogger<RemoteControl> Logger { get; init; }
   [Inject]
   public required NavigationManager NavManager { get; init; }
+  [Inject]
+  public required IPublicServerSettingsProvider PublicServerSettings { get; init; }
   [Inject]
   public required IRemoteControlState RemoteControlState { get; init; }
   [Inject]
@@ -112,6 +115,9 @@ public partial class RemoteControl : ViewportAwareComponent
       }
 
       await GetDeviceDesktopSessions(false);
+
+      var serverSettings = await PublicServerSettings.GetPublicServerSettings();
+      _isDesktopPreviewDisabled = serverSettings.DisableDesktopPreview;
 
       if (WebAssemblyEnv.IsDevelopment())
       {
