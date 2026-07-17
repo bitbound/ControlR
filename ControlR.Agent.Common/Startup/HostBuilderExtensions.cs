@@ -4,6 +4,7 @@ using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Services.Linux;
 using ControlR.Agent.Common.Services.Mac;
 using ControlR.Agent.Common.Services.Windows;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Shared.Services.Http;
 using ControlR.Libraries.Signalr.Client.Extensions;
@@ -43,7 +44,7 @@ internal static class HostApplicationBuilderExtensions
     services
       .AddWindowsService(config =>
       {
-        config.ServiceName = "ControlR.Agent";
+        config.ServiceName = BrandingConstants.WindowsServiceBaseName;
       })
       .AddSystemd();
 

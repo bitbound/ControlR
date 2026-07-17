@@ -489,7 +489,7 @@ internal class AgentInstallerWindows(
     {
       var comparison = StringComparison.OrdinalIgnoreCase;
       var procs = ProcessManager
-        .GetProcessesByName("ControlR.DesktopClient")
+        .GetProcessesByName(BrandingConstants.DesktopClientBaseName)
         .Where(x => string.Equals(x.FilePath, targetDesktopClientPath, comparison));
 
       foreach (var proc in procs)
