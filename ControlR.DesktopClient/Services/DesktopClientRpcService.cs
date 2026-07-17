@@ -1,7 +1,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.Ipc.Interfaces;
-using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Shared.Primitives;
@@ -9,13 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;
 
-#pragma warning disable IDE0052 // Remove unread private members. Needed due to preprocessor directives.
-
 public class DesktopClientRpcService(
-    IServiceProvider serviceProvider,
     IChatSessionManager chatSessionManager,
     IDesktopClientPermissionService desktopClientPermissionService,
     IDesktopPreviewProvider desktopPreviewService,
+    IPlatformIpcMessageHandler platformMessageHandler,
     IRemoteControlHostManager remoteControlHostManager,
     IControlledApplicationLifetime appLifetime,
     ILogger<DesktopClientRpcService> logger) : IDesktopClientRpcService
@@ -25,8 +22,8 @@ public class DesktopClientRpcService(
   private readonly IDesktopClientPermissionService _desktopClientPermissionService = desktopClientPermissionService;
   private readonly IDesktopPreviewProvider _desktopPreviewService = desktopPreviewService;
   private readonly ILogger<DesktopClientRpcService> _logger = logger;
+  private readonly IPlatformIpcMessageHandler _platformMessageHandler = platformMessageHandler;
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
-  private readonly IServiceProvider _serviceProvider = serviceProvider;
 
   public async Task<CheckOsPermissionsResponseIpcDto> CheckOsPermissions(CheckOsPermissionsIpcDto dto)
   {
@@ -66,7 +63,6 @@ public class DesktopClientRpcService(
         dto.SessionId,
         dto.TargetProcessId);
 
-      // Close the session through the chat session manager
       await _chatSessionManager.CloseChatSession(dto.SessionId, true);
     }
     catch (Exception ex)
@@ -122,66 +118,12 @@ public class DesktopClientRpcService(
 
   public Task<DesktopSessionInfoResponseIpcDto> GetDesktopSessionInfo()
   {
-    try
-    {
-      var sessionId = System.Diagnostics.Process.GetCurrentProcess().SessionId;
-      var username = Environment.UserName;
-
-#if IS_WINDOWS
-      var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
-
-      var desktopName = "Default";
-      if (win32Interop.GetInputDesktopName(out var inputDesktopName))
-      {
-        desktopName = inputDesktopName;
-      }
-
-      var consoleSessionId = win32Interop.GetConsoleSessionId();
-      var isConsole = (uint)sessionId == consoleSessionId;
-      var sessionType = isConsole ? DesktopSessionType.Console : DesktopSessionType.Rdp;
-      var sessionName = isConsole ? "Console" : "RDP";
-
-      return Task.FromResult(new DesktopSessionInfoResponseIpcDto(
-        AreRemoteControlPermissionsGranted: true,
-        DesktopName: desktopName,
-        Name: sessionName,
-        SystemSessionId: sessionId,
-        SessionType: sessionType,
-        Username: username));
-#else
-      return Task.FromResult(new DesktopSessionInfoResponseIpcDto(
-        AreRemoteControlPermissionsGranted: false,
-        DesktopName: "Default",
-        Name: "Console",
-        SystemSessionId: sessionId,
-        SessionType: DesktopSessionType.Console,
-        Username: username));
-#endif
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting desktop session info.");
-      return Task.FromResult(new DesktopSessionInfoResponseIpcDto(
-        AreRemoteControlPermissionsGranted: false,
-        DesktopName: "Default",
-        Name: "Unknown",
-        SystemSessionId: 0,
-        SessionType: DesktopSessionType.Console,
-        Username: Environment.UserName));
-    }
+    return _platformMessageHandler.GetDesktopSessionInfo();
   }
 
   public Task InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
   {
-#if IS_WINDOWS
-        _logger.LogInformation("Handling Ctrl+Alt+Del request. Requester ID: {RequesterId}", dto.InvokerUserName);
-        var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
-        win32Interop.InvokeCtrlAltDel();
-#else
-    _logger.LogWarning("Ctrl+Alt+Del invocation requested on non-Windows OS. Ignoring.");
-#endif
-    return Task.CompletedTask;
-
+    return _platformMessageHandler.InvokeCtrlAltDel(dto);
   }
 
   public async Task ReceiveChatMessage(ChatMessageIpcDto dto)
@@ -194,7 +136,6 @@ public class DesktopClientRpcService(
         dto.SenderName,
         dto.SenderEmail);
 
-      // Add the message to the session
       await _chatSessionManager.AddMessage(dto.SessionId, dto);
     }
     catch (Exception ex)
@@ -263,5 +204,4 @@ public class DesktopClientRpcService(
       _logger.LogError(ex, "Error while handling shutdown command.");
     }
   }
-
 }

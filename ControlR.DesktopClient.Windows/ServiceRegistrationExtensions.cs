@@ -44,7 +44,8 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<IDxOutputDuplicator, DxOutputDuplicator>()
       .AddSingleton<IWindowsMessagePump, WindowsMessagePump>()
       .AddSingleton<IAeroPeekProvider, AeroPeekProvider>()
-      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceWindows>();
+      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceWindows>()
+      .AddSingleton<IPlatformIpcMessageHandler, PlatformIpcMessageHandlerWindows>();
   }
 
   private static IServiceCollection AddInputSimulator(IServiceCollection services)
