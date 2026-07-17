@@ -38,9 +38,12 @@ public abstract class ManagedRelayStream(
 {
   private const int MaxSendBufferLength = ushort.MaxValue * 2;
 
+  private static readonly TimeSpan _closeTimeout = TimeSpan.FromSeconds(1);
+
   protected readonly IMessenger Messenger = messenger;
   protected readonly TimeProvider TimeProvider = timeProvider;
 
+  private readonly SemaphoreSlim _connectionLock = new(1, 1);
   private readonly SemaphoreSlim _disposeLock = new(1, 1);
   private readonly ILogger<ManagedRelayStream> _logger = logger;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
@@ -52,18 +55,32 @@ public abstract class ManagedRelayStream(
 
   private ClientWebSocket? _client;
   private int _closedHandlersInvoked;
+  private CancellationTokenSource? _readCancellationSource;
   private Task? _readFromStreamTask;
   private volatile int _sendBufferLength;
 
   public TimeSpan CurrentLatency => _streamMetrics.GetCurrentLatency();
   public bool IsConnected => State == WebSocketState.Open;
   public WebSocketState State => _client?.State ?? WebSocketState.Closed;
+
   protected bool IsDisposed { get; private set; }
 
-  public Task<Result> Close() =>
-    _client is {} client
-      ? Close(client, waitForReadLoop: true)
-      : Task.FromResult(Result.Ok());
+  public async Task<Result> Close()
+  {
+    var connection = await DetachConnection();
+
+    if (connection is null)
+    {
+      return Result.Ok();
+    }
+
+    var result = await CloseSocket(connection.Value.Client);
+    connection.Value.ReadCancellationSource.Cancel();
+    connection.Value.Client.Dispose();
+    ObserveReadLoop(connection.Value.ReadTask, connection.Value.ReadCancellationSource);
+    await InvokeOnClosedHandlers();
+    return result;
+  }
 
   public Task Connect(Uri websocketUri, CancellationToken cancellationToken) =>
     Connect(websocketUri, _ => { }, cancellationToken);
@@ -71,14 +88,33 @@ public abstract class ManagedRelayStream(
   public async Task Connect(Uri websocketUri, Action<ClientWebSocketOptions> configureOptions, CancellationToken cancellationToken)
   {
     await Close();
-    Interlocked.Exchange(ref _closedHandlersInvoked, 0);
     _logger.LogInformation("Connecting to {WebSocketOrigin} with custom options.", $"{websocketUri.Scheme}://{websocketUri.Authority}");
-    _client = new ClientWebSocket();
-    configureOptions(_client.Options);
-    await _client.ConnectAsync(websocketUri, cancellationToken);
-    _logger.LogInformation("Connection successful.");
-    _readFromStreamTask = ReadFromStream(_client, cancellationToken);
+    var client = new ClientWebSocket();
+
+    CancellationTokenSource? readCancellationSource = null;
+
+    try
+    {
+      configureOptions(client.Options);
+      await client.ConnectAsync(websocketUri, cancellationToken);
+      readCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+      using var locker = await _connectionLock.AcquireLockAsync(cancellationToken);
+      ObjectDisposedException.ThrowIf(IsDisposed, this);
+      Interlocked.Exchange(ref _closedHandlersInvoked, 0);
+      _client = client;
+      _readCancellationSource = readCancellationSource;
+      _readFromStreamTask = ReadFromStream(client, readCancellationSource.Token);
+      _logger.LogInformation("Connection successful.");
+    }
+    catch
+    {
+      readCancellationSource?.Dispose();
+      client.Dispose();
+      throw;
+    }
   }
+
   public async ValueTask DisposeAsync()
   {
     await DisposeAsync(true);
@@ -86,6 +122,7 @@ public abstract class ManagedRelayStream(
   }
 
   public double GetMbpsIn() => _streamMetrics.GetMbpsIn();
+
   public double GetMbpsOut() => _streamMetrics.GetMbpsOut();
 
   public IDisposable OnClosed(Func<Task> callback)
@@ -161,24 +198,16 @@ public abstract class ManagedRelayStream(
     }
   }
 
-  private async Task<Result> Close(ClientWebSocket client, bool waitForReadLoop)
+  private async Task<Result> CloseSocket(ClientWebSocket client)
   {
-    if (!waitForReadLoop && !ReferenceEquals(_client, client))
-    {
-      client.Dispose();
-      return Result.Ok();
-    }
-
-    Result result;
-
     try
     {
       if (client.State == WebSocketState.Open)
       {
-        using var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var closeCts = new CancellationTokenSource(_closeTimeout);
         await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed.", closeCts.Token);
       }
-      result = Result.Ok();
+      return Result.Ok();
     }
     catch (OperationCanceledException ex)
     {
@@ -186,63 +215,55 @@ public abstract class ManagedRelayStream(
       {
         const string message = "Timed out while closing connection.";
         _logger.LogWarning(ex, message);
-        result = Result.Fail(ex, message);
+        return Result.Fail(ex, message);
       }
-      else
-      {
-        result = Result.Ok();
-      }
+
+      return Result.Ok();
     }
     catch (WebSocketException ex) when (ex.WebSocketErrorCode is WebSocketError.InvalidState or WebSocketError.ConnectionClosedPrematurely)
     {
-      result = Result.Ok();
+      return Result.Ok();
     }
     catch (Exception ex)
     {
       const string message = "Error while closing connection.";
       _logger.LogWarning(ex, message);
-      result = Result.Fail(ex, message);
+      return Result.Fail(ex, message);
     }
+  }
 
-    try
+  private async Task<(ClientWebSocket Client, CancellationTokenSource ReadCancellationSource, Task? ReadTask)?> DetachConnection()
+  {
+    using var locker = await _connectionLock.AcquireLockAsync(CancellationToken.None);
+
+    if (_client is not {} client || _readCancellationSource is not {} readCancellationSource)
     {
-      if (ReferenceEquals(_client, client))
-      {
-        _client = null;
-      }
-
-      if (waitForReadLoop)
-      {
-        var readTask = Interlocked.Exchange(ref _readFromStreamTask, null);
-        client.Dispose();
-
-        if (readTask is not null)
-        {
-          try
-          {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await readTask.WaitAsync(cts.Token);
-          }
-          catch
-          {
-            // Task may have exited due to disposal or other error. Ignore.
-          }
-        }
-      }
-      else
-      {
-        _readFromStreamTask = null;
-        client.Dispose();
-      }
-
-      await InvokeOnClosedHandlers();
+      return null;
     }
-    catch (Exception ex)
+
+    var connection = (client, readCancellationSource, _readFromStreamTask);
+    _client = null;
+    _readCancellationSource = null;
+    _readFromStreamTask = null;
+    return connection;
+  }
+
+  private async Task HandleReadLoopEnded(ClientWebSocket client)
+  {
+    using var locker = await _connectionLock.AcquireLockAsync(CancellationToken.None);
+
+    if (!ReferenceEquals(_client, client))
     {
-      _logger.LogWarning(ex, "Error while completing connection close.");
+      return;
     }
 
-    return result;
+    _client = null;
+    var readCancellationSource = _readCancellationSource;
+    _readCancellationSource = null;
+    _readFromStreamTask = null;
+    client.Dispose();
+    readCancellationSource?.Dispose();
+    await InvokeOnClosedHandlers();
   }
 
   private async Task InvokeOnClosedHandlers()
@@ -263,6 +284,29 @@ public abstract class ManagedRelayStream(
         _logger.LogError(ex, "Error while executing on close callback.");
       }
     }
+  }
+
+  private void ObserveReadLoop(Task? readTask, CancellationTokenSource readCancellationSource)
+  {
+    if (readTask is null)
+    {
+      readCancellationSource.Dispose();
+      return;
+    }
+
+    _ = readTask.ContinueWith(
+      task =>
+      {
+        readCancellationSource.Dispose();
+
+        if (task.IsFaulted)
+        {
+          _logger.LogDebug(task.Exception, "Read loop ended while closing connection.");
+        }
+      },
+      CancellationToken.None,
+      TaskContinuationOptions.ExecuteSynchronously,
+      TaskScheduler.Default);
   }
 
   private async Task ReadFromStream(ClientWebSocket client, CancellationToken cancellationToken)
@@ -334,7 +378,7 @@ public abstract class ManagedRelayStream(
     }
     finally
     {
-      await Close(client, waitForReadLoop: false);
+      await HandleReadLoopEnded(client);
     }
   }
 
