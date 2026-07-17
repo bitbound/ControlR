@@ -131,10 +131,13 @@
                       OnClick="@(_ => StartRemoteControl(session, quiet: false))">
                       Connect
                     </MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => PreviewSession(session))"
-                      Class="ms-4">
-                      Preview
-                    </MudButton>
+                    @if (!_isDesktopPreviewDisabled)
+                    {
+                      <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => PreviewSession(session))"
+                        Class="ms-4">
+                        Preview
+                      </MudButton>
+                    }
                   </MudCardActions>
                 </MudCard>
               </MudItem>

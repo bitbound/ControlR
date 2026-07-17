@@ -8,7 +8,7 @@
 @inject ILogger<Register> Logger
 @inject IdentityRedirectManager RedirectManager
 @inject TimeProvider TimeProvider
-@inject IPublicRegistrationSettingsProvider RegistrationSettings
+@inject IPublicServerSettingsProvider ServerSettings
 
 <PageTitle>Register</PageTitle>
 
@@ -118,7 +118,7 @@
   protected override async Task OnInitializedAsync()
   {
     Input ??= new();
-    if (!await RegistrationSettings.GetIsPublicRegistrationEnabled())
+    if (!(await ServerSettings.GetPublicServerSettings()).IsPublicRegistrationEnabled)
     {
       RedirectManager.RedirectTo("/");
       return;

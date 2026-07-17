@@ -3,7 +3,7 @@
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager NavMan
 @inject ILogger<NavMenu> Logger
-@inject IPublicRegistrationSettingsProvider PublicRegistingsProvider
+@inject IPublicServerSettingsProvider PublicRegistingsProvider
 @inject ISnackbar Snackbar
 @inject ILazyInjector<IControlrInternalApi> ControlrApi
 
@@ -119,7 +119,7 @@
   {
     await base.OnInitializedAsync();
 
-    _isPublicRegistrationEnabled = await PublicRegistingsProvider.GetIsPublicRegistrationEnabled();
+    _isPublicRegistrationEnabled = (await PublicRegistingsProvider.GetPublicServerSettings()).IsPublicRegistrationEnabled;
     
     var state = await AuthState.GetAuthenticationStateAsync();
     _isAuthenticated = state.User.IsAuthenticated();

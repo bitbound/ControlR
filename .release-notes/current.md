@@ -20,6 +20,8 @@ None.
 - Added the `AppOptions__DisableFirstUserSelfRegistration` configuration option (default `false`) to control whether the first user can self-register.
   - By default, the first user can self-register and is automatically promoted to server administrator and first-tenant admin.
   - This is useful for server-to-server integrations where ControlR is driven primarily via API.
+- Added the `AppOptions__DisableDesktopPreview` configuration option (default `false`) to hide the Desktop Preview button on the Remote Control page and reject requests to the desktop preview endpoint.
+  - The button is still visible by default. Set this to `true` to disable the feature entirely.
 
 ## Fixed
 

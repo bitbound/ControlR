@@ -5917,10 +5917,10 @@
         ]
       }
     },
-    "/api/internal/public-registration-settings": {
+    "/api/internal/public-server-settings": {
       "get": {
         "tags": [
-          "PublicRegistrationSettings"
+          "PublicServerSettings"
         ],
         "parameters": [
           {
@@ -5941,69 +5941,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicRegistrationSettings"
+                  "$ref": "#/components/schemas/PublicServerSettings"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicRegistrationSettings"
+                  "$ref": "#/components/schemas/PublicServerSettings"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicRegistrationSettings"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/public-registration-settings": {
-      "get": {
-        "tags": [
-          "PublicRegistrationSettings"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "0.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicRegistrationSettings"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicRegistrationSettings"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicRegistrationSettings"
+                  "$ref": "#/components/schemas/PublicServerSettings"
                 }
               }
             }
@@ -14309,13 +14257,17 @@
           }
         }
       },
-      "PublicRegistrationSettings": {
+      "PublicServerSettings": {
         "required": [
-          "isPublicRegistrationEnabled"
+          "isPublicRegistrationEnabled",
+          "disableDesktopPreview"
         ],
         "type": "object",
         "properties": {
           "isPublicRegistrationEnabled": {
+            "type": "boolean"
+          },
+          "disableDesktopPreview": {
             "type": "boolean"
           }
         }
@@ -15128,7 +15080,7 @@
       "name": "PersonalAccessTokens"
     },
     {
-      "name": "PublicRegistrationSettings"
+      "name": "PublicServerSettings"
     },
     {
       "name": "Roles"

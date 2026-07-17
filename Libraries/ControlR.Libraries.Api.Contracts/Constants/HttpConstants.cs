@@ -19,7 +19,7 @@ public static class HttpConstants
     public const string InvitesEndpoint = "/api/internal/invites";
     public const string LogonTokensEndpoint = "/api/internal/logon-tokens";
     public const string PersonalAccessTokensEndpoint = "/api/internal/personal-access-tokens";
-    public const string PublicRegistrationSettingsEndpoint = "/api/internal/public-registration-settings";
+    public const string PublicServerSettingsEndpoint = "/api/internal/public-server-settings";
     public const string RolesEndpoint = "/api/internal/roles";
     public const string ServerAlertEndpoint = "/api/internal/server-alert";
     public const string ServerLogsEndpoint = "/api/internal/server-logs";
@@ -49,7 +49,6 @@ public static class HttpConstants
     public const string InvitesEndpoint = "/api/invites";
     public const string LogonTokensEndpoint = "/api/logon-tokens";
     public const string PersonalAccessTokensEndpoint = "/api/personal-access-tokens";
-    public const string PublicRegistrationSettingsEndpoint = "/api/public-registration-settings";
     public const string RolesEndpoint = "/api/roles";
     public const string ServerAlertEndpoint = "/api/server-alert";
     public const string ServerLogsEndpoint = "/api/server-logs";

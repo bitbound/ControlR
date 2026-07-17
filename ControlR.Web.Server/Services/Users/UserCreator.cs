@@ -56,7 +56,7 @@ public interface IUserCreator
     IEmailSender<AppUser> emailSender,
     IOptionsMonitor<AppOptions> appOptions,
     IPublicRegistrationBootstrapGate bootstrapGate,
-    IPublicRegistrationSettingsProvider registrationSettings,
+    IPublicServerSettingsProvider serverSettings,
     ILogger<UserCreator> logger) : IUserCreator
   {
     private readonly AppDb _appDb = appDb;
@@ -65,7 +65,7 @@ public interface IUserCreator
     private readonly IEmailSender<AppUser> _emailSender = emailSender;
     private readonly ILogger<UserCreator> _logger = logger;
     private readonly NavigationManager _navigationManager = navigationManager;
-    private readonly IPublicRegistrationSettingsProvider _registrationSettings = registrationSettings;
+    private readonly IPublicServerSettingsProvider _serverSettings = serverSettings;
     private readonly UserManager<AppUser> _userManager = userManager;
     private readonly IUserStore<AppUser> _userStore = userStore;
 
@@ -224,7 +224,7 @@ public interface IUserCreator
     {
       using var gate = await _bootstrapGate.AcquireAsync(cancellationToken);
 
-      if (!await _registrationSettings.GetIsPublicRegistrationEnabled())
+      if (!(await _serverSettings.GetPublicServerSettings()).IsPublicRegistrationEnabled)
       {
         _logger.LogWarning(
           "Public registration blocked for {Email}. Registration is not enabled for this instance.",

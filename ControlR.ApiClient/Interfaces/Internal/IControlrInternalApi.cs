@@ -12,7 +12,7 @@ public interface IControlrInternalApi
   IInvitesApi Invites { get; }
   ILogonTokensApi LogonTokens { get; }
   IPersonalAccessTokensApi PersonalAccessTokens { get; }
-  IPublicRegistrationSettingsApi PublicRegistrationSettings { get; }
+  IPublicServerSettingsApi PublicServerSettings { get; }
   IRolesApi Roles { get; }
   IServerAlertApi ServerAlert { get; }
   IServerLogsApi ServerLogs { get; }

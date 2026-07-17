@@ -9,7 +9,7 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-@inject IPublicRegistrationSettingsProvider RegistrationSettings
+@inject IPublicServerSettingsProvider ServerSettings
 
 <PageTitle>Log in</PageTitle>
 
@@ -106,7 +106,7 @@
       await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
     }
 
-   _isPublicRegistrationEnabled = await RegistrationSettings.GetIsPublicRegistrationEnabled();
+   _isPublicRegistrationEnabled = (await ServerSettings.GetPublicServerSettings()).IsPublicRegistrationEnabled;
   }
 
   public async Task LoginUser()

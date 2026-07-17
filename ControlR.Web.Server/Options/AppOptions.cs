@@ -60,6 +60,13 @@ public class AppOptions
   public ThemeMode DefaultThemeMode { get; init; }
 
   /// <summary>
+  /// When enabled, the Desktop Preview button is hidden on the Remote Control page
+  /// and the desktop preview endpoint refuses to serve requests.
+  /// Use this to disable the feature entirely on servers where it isn't appropriate.
+  /// </summary>
+  public bool DisableDesktopPreview { get; init; }
+
+  /// <summary>
   /// Disables all email sending from the application.
   /// When enabled, no emails will be sent for account confirmation, password reset, etc.
   /// </summary>
