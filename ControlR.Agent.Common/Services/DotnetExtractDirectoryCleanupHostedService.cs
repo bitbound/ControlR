@@ -1,3 +1,4 @@
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
@@ -57,7 +58,7 @@ public class DotnetExtractDirectoryCleanupHostedService(
       return;
     }
 
-    var agentProcs = _processManager.GetProcessesByName("ControlR.Agent").Length + 1;
+    var agentProcs = _processManager.GetProcessesByName(BrandingConstants.AgentBaseName).Length + 1;
 
     var subdirs = _fileSystem
       .GetDirectories(agentTempDirBase)
