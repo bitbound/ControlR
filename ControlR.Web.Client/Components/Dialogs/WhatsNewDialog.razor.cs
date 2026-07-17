@@ -33,7 +33,7 @@ public partial class WhatsNewDialog
   {
     try
     {
-      var result = await ControlrApi.Version.GetReleaseNotes(ComponentClosing);
+      var result = await ControlrApi.Internal.Version.GetReleaseNotes(ComponentClosing);
       if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Value))
       {
         _htmlContent = MarkdownParser.ToHtml(result.Value);

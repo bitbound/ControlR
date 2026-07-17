@@ -12,6 +12,7 @@ namespace ControlR.Web.Client.Tests;
 public class UserStorageClientTests
 {
   private readonly Mock<IControlrApi> _mockApi;
+  private readonly Mock<IControlrInternalApi> _mockInternalApi;
   private readonly Mock<IUserStorageApi> _mockUserStorageApi;
   private readonly Mock<ILogger<UserStorageClient>> _mockLogger;
   private readonly UserStorageClient _client;
@@ -19,10 +20,15 @@ public class UserStorageClientTests
   public UserStorageClientTests()
   {
     _mockUserStorageApi = new Mock<IUserStorageApi>();
-    _mockApi = new Mock<IControlrApi>();
-    _mockApi
+    _mockInternalApi = new Mock<IControlrInternalApi>();
+    _mockInternalApi
       .Setup(x => x.UserStorage)
       .Returns(_mockUserStorageApi.Object);
+
+    _mockApi = new Mock<IControlrApi>();
+    _mockApi
+      .Setup(x => x.Internal)
+      .Returns(_mockInternalApi.Object);
 
     _mockLogger = new Mock<ILogger<UserStorageClient>>();
     _client = new UserStorageClient(

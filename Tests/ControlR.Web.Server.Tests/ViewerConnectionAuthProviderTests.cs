@@ -3,7 +3,6 @@ using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Viewer.Common.Options;
 using ControlR.Libraries.Viewer.Common.Services;
 using Microsoft.AspNetCore.Http.Connections.Client;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Web.Server.Tests;
 

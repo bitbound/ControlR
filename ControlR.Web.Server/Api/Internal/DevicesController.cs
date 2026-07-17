@@ -1,0 +1,304 @@
+using System.Collections.Immutable;
+using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Web.Server.Services.DeviceManagement;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ControlR.Web.Server.Api.Internal;
+
+[Route(HttpConstants.Internal.DevicesEndpoint)]
+[Route(HttpConstants.Legacy.DevicesEndpoint)]
+[ApiController]
+[Authorize]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
+public class DevicesController(
+  IDeviceAccessScopeResolver deviceAccessScopeResolver) : ControllerBase
+{
+
+  private readonly IDeviceAccessScopeResolver _deviceAccessScopeResolver = deviceAccessScopeResolver;
+
+  [HttpDelete("{deviceId:guid}")]
+  public async Task<IActionResult> DeleteDevice(
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromRoute] Guid deviceId)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("Tenant ID not found.");
+    }
+
+    var device = await appDb.Devices.FirstOrDefaultAsync(
+        x => x.Id == deviceId && x.TenantId == tenantId);
+
+    if (device is null)
+    {
+      return NotFound();
+    }
+
+    // Single-device operations use the resource policy directly.
+    var authResult =
+      await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+    if (!authResult.Succeeded)
+    {
+      return Forbid();
+    }
+
+    appDb.Devices.Remove(device);
+    await appDb.SaveChangesAsync();
+    return NoContent();
+  }
+
+  [HttpPost("delete-many")]
+  public async Task<ActionResult<InternalDtos.DeleteManyDevicesResponseDto>> DeleteMany(
+    [FromServices] AppDb appDb,
+    [FromBody] InternalDtos.DeleteDevicesRequestDto requestDto,
+    CancellationToken cancellationToken)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("Tenant ID not found.");
+    }
+
+    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId, cancellationToken);
+
+    // Authorized + existing devices (subset of input that user can delete).
+    var authorizedDeviceIds = await appDb.Devices
+      .ApplyAccessScope(tenantId, accessScope)
+      .Where(d => requestDto.DeviceIds.Contains(d.Id))
+      .Select(d => d.Id)
+      .ToListAsync(cancellationToken);
+
+    var authorizedIdSet = authorizedDeviceIds.ToHashSet();
+
+    var deletedCount = await appDb.Devices
+      .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
+      .ExecuteDeleteAsync(cancellationToken);
+
+    if (deletedCount == authorizedDeviceIds.Count)
+    {
+      // All authorized devices were deleted.
+      return new InternalDtos.DeleteManyDevicesResponseDto(
+        SuccessIds: [.. authorizedDeviceIds],
+        FailureIds: [.. requestDto.DeviceIds.Except(authorizedIdSet)]);
+    }
+
+    var remainingIds = await appDb.Devices
+      .Where(x => x.TenantId == tenantId && authorizedIdSet.Contains(x.Id))
+      .Select(x => x.Id)
+      .ToListAsync(cancellationToken);
+
+    var successIds = authorizedIdSet.Except(remainingIds).ToImmutableList();
+    var failureIds = remainingIds.Concat(requestDto.DeviceIds.Except(authorizedIdSet)).ToImmutableList();
+
+    return new InternalDtos.DeleteManyDevicesResponseDto(successIds, failureIds);
+  }
+
+  [HttpGet]
+  public async IAsyncEnumerable<InternalDtos.DeviceResponseDto> Get(
+    [FromServices] AppDb appDb,
+    [FromServices] IAgentVersionProvider agentVersionProvider)
+  {
+    IQueryable<Device> query = appDb.Devices.Include(x => x.Tags);
+
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      yield break;
+    }
+
+    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+    query = query
+      .ApplyAccessScope(tenantId, accessScope)
+      .AsSplitQuery()
+      .OrderBy(x => x.CreatedAt);
+
+    var (isSuccess, agentVersion) = await GetAgentVersion(agentVersionProvider);
+
+    var deviceStream = query.AsAsyncEnumerable();
+
+    await foreach (var device in deviceStream)
+    {
+      var isOutdated = isSuccess && device.AgentVersion != agentVersion;
+      yield return device.ToInternalResponseDto(isOutdated);
+    }
+  }
+
+  [HttpGet("{deviceId:guid}")]
+  public async Task<ActionResult<InternalDtos.DeviceResponseDto>> GetDevice(
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IAgentVersionProvider agentVersionProvider,
+    [FromRoute] Guid deviceId)
+  {
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId);
+      
+    if (device is null)
+    {
+      return NotFound();
+    }
+
+    var authResult =
+      await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (!authResult.Succeeded)
+    {
+      return Forbid();
+    }
+
+    var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion);
+    return device.ToInternalResponseDto(isOutdated);
+  }
+
+  [HttpGet("summary")]
+  public async IAsyncEnumerable<InternalDtos.DeviceSummaryDto> GetDeviceSummaries(
+    [FromServices] AppDb appDb)
+  {
+    IQueryable<Device> query = appDb.Devices;
+
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      yield break;
+    }
+
+    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+    query = query.ApplyAccessScope(tenantId, accessScope).OrderBy(x => x.CreatedAt);
+
+    var deviceStream = query.AsAsyncEnumerable();
+
+    await foreach (var device in deviceStream)
+    {
+      yield return device.ToInternalSummaryDto();
+    }
+  }
+
+  [HttpPost("search")]
+  public async Task<ActionResult<InternalDtos.DeviceSearchResponseDto>> SearchDevices(
+    [FromBody] InternalDtos.DeviceSearchRequestDto requestDto,
+    [FromServices] AppDb appDb,
+    [FromServices] IAgentVersionProvider agentVersionProvider,
+    [FromServices] ILogger<DevicesController> logger)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("Tenant ID not found.");
+    }
+
+    var accessScope = await _deviceAccessScopeResolver.Resolve(User, tenantId);
+
+    var isRelationalDatabase = appDb.Database.IsRelational();
+    var authorizedQuery = appDb.Devices.ApplyAccessScope(tenantId, accessScope!).AsQueryable();
+
+    var anyDevices = await authorizedQuery.AnyAsync();
+
+    var filteredQuery = authorizedQuery
+      .FilterBySearchText(requestDto.SearchText, isRelationalDatabase)
+      .FilterByOnlineOffline(requestDto.HideOfflineDevices)
+      .FilterByColumnFilters(requestDto.FilterDefinitions, isRelationalDatabase, logger);
+
+    var hiddenUntaggedDevices = requestDto.IncludeUntaggedDevices
+      ? 0
+      : await filteredQuery.CountAsync(x => !x.Tags!.Any());
+
+    var scopedQuery = filteredQuery.FilterByTagIds(requestDto.TagIds, requestDto.IncludeUntaggedDevices);
+    var filterCounts = await GetFilterCounts(scopedQuery);
+    var totalCount = await scopedQuery.CountAsync();
+
+    var devices = await scopedQuery
+      .ApplySorting(requestDto.SortDefinitions)
+      .Include(x => x.Tags)
+      .AsSplitQuery()
+      .Skip(requestDto.Page * requestDto.PageSize)
+      .Take(requestDto.PageSize)
+      .ToListAsync();
+
+
+    var (isSuccess, currentAgentVersion) = await GetAgentVersion(agentVersionProvider);
+
+    var pagedDtos = new List<InternalDtos.DeviceResponseDto>(devices.Count);
+    foreach (var device in devices)
+    {
+      var isOutdated = isSuccess && device.AgentVersion != currentAgentVersion;
+      pagedDtos.Add(device.ToInternalResponseDto(isOutdated));
+    }
+
+    var response = new InternalDtos.DeviceSearchResponseDto
+    {
+      AnyDevicesForUser = anyDevices,
+      FilterCounts = filterCounts,
+      HiddenUntaggedDevices = hiddenUntaggedDevices,
+      Items = pagedDtos,
+      TotalItems = totalCount
+    };
+
+    return response;
+  }
+
+  [HttpPatch("{deviceId:guid}/alias")]
+  [Authorize]
+  public async Task<ActionResult<InternalDtos.DeviceResponseDto>> UpdateDeviceAlias(
+    [FromRoute] Guid deviceId,
+    [FromBody] InternalDtos.UpdateDeviceAliasRequestDto requestDto,
+    [FromServices] AppDb appDb,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] IAgentVersionProvider agentVersionProvider,
+    [FromServices] ILogger<DevicesController> logger)
+  {
+    if (deviceId != requestDto.DeviceId)
+    {
+      return BadRequest("Device ID mismatch.");
+    }
+
+    if (requestDto.Alias is not null && requestDto.Alias.Length > 100)
+    {
+      return BadRequest("Alias must be 100 characters or fewer.");
+    }
+
+    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+    if (device is null)
+    {
+      logger.LogWarning("Device {DeviceId} not found for alias update.", deviceId);
+      return NotFound();
+    }
+
+    var authResult =
+      await authorizationService.AuthorizeAsync(User, device, DeviceAccessByDeviceResourcePolicy.PolicyName);
+    if (!authResult.Succeeded)
+    {
+      logger.LogWarning("User {UserName} denied access to update alias for device {DeviceId}.", User.Identity?.Name, deviceId);
+      return Forbid();
+    }
+
+    device.Alias = requestDto.Alias ?? string.Empty;
+    await appDb.SaveChangesAsync();
+
+    var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion);
+    return device.ToInternalResponseDto(isOutdated);
+  }
+
+  private static async Task<(bool IsSuccess, string Version)> GetAgentVersion(IAgentVersionProvider agentVersionProvider)
+  {
+    var agentVersionResult = await agentVersionProvider.TryGetAgentVersion();
+    if (!agentVersionResult.IsSuccess)
+    {
+      return (false, string.Empty);
+    }
+    return (true, agentVersionResult.Value.ToString());
+  }
+
+  private static async Task<InternalDtos.DeviceSearchFilterCountsDto> GetFilterCounts(IQueryable<Device> query)
+  {
+    return await query
+      .Select(x => new { IsTagged = x.Tags!.Any(), x.IsOnline })
+      .GroupBy(_ => 1)
+      .Select(group => new InternalDtos.DeviceSearchFilterCountsDto
+      {
+        TaggedDevices = group.Count(x => x.IsTagged),
+        UntaggedDevices = group.Count(x => !x.IsTagged),
+        OnlineDevices = group.Count(x => x.IsOnline),
+        OfflineDevices = group.Count(x => !x.IsOnline)
+      })
+      .FirstOrDefaultAsync()
+      ?? new InternalDtos.DeviceSearchFilterCountsDto();
+  }
+}

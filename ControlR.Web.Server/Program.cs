@@ -36,8 +36,20 @@ app.MapDefaultEndpoints();
 
 if (appOptions.EnableScalarUi)
 {
-  app.MapScalarApiReference();
-  app.MapOpenApi();
+  var versionDescriptions = app.DescribeApiVersions();
+  app
+    .MapScalarApiReference(options =>
+    {
+      foreach (var version in versionDescriptions)
+      {
+        options.AddDocument(version.GroupName.ToLowerInvariant(), version.GroupName);
+      }
+    })
+    .WithDocumentPerVersion();
+
+  app
+    .MapOpenApi()
+    .WithDocumentPerVersion();
 }
 
 // Configure the HTTP request pipeline.
@@ -82,7 +94,11 @@ app.MapControllers();
 
 if (appOptions.EnableInteractiveBearerLogin || isOpenApiBuild)
 {
-  var authGroup = app.MapGroup(HttpConstants.AuthEndpoint);
+  var authGroup = app
+    .MapGroup(HttpConstants.Internal.AuthEndpoint)
+    .WithGroupName(OpenApiConstants.InternalGroupName)
+    .WithTags("Auth");
+
   authGroup
     .MapIdentityApi<AppUser>()
     .AddEndpointFilter<IEndpointConventionBuilder, IdentityApiRegisterFilter>();
@@ -97,7 +113,10 @@ app.UseWhen(
       .AddAdditionalAssemblies(typeof(MainLayout).Assembly);
   });
 
-app.MapAdditionalIdentityEndpoints();
+app
+  .MapAdditionalIdentityEndpoints()
+  .WithGroupName(OpenApiConstants.InternalGroupName)
+  .WithTags("Account");
 
 app.MapHub<ViewerHub>(AppConstants.ViewerHubPath);
 
@@ -114,5 +133,6 @@ else
 }
 
 await app.BootstrapAdminUser();
+await app.BootstrapServerServiceAccount();
 
 await app.RunAsync();

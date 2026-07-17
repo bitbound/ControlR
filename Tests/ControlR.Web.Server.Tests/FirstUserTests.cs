@@ -1,5 +1,4 @@
 using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Users;
@@ -8,7 +7,6 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -39,7 +37,7 @@ public class FirstUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
     var user = await appDb.Users

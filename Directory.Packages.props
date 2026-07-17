@@ -3,6 +3,9 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
     <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
+    <PackageVersion Include="Asp.Versioning.Mvc" Version="10.0.0" />
+    <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.0" />
+    <PackageVersion Include="Asp.Versioning.OpenApi" Version="10.0.0-rc.1" />
     <PackageVersion Include="Avalonia" Version="12.0.5" />
     <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.0.1" />
     <PackageVersion Include="Avalonia.Desktop" Version="12.0.5" />

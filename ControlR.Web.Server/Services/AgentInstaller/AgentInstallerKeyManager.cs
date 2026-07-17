@@ -1,23 +1,21 @@
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Web.Server.Extensions;
-using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Primitives;
 
 namespace ControlR.Web.Server.Services.AgentInstaller;
 
 public interface IAgentInstallerKeyManager
 {
-  Task<CreateInstallerKeyResponseDto> CreateKey(
+  Task<InternalDtos.CreateInstallerKeyResponseDto> CreateKey(
       Guid tenantId,
       Guid creatorId,
+      CreatorKind creatorKind,
       InstallerKeyType keyType,
       uint? allowedUses,
       DateTimeOffset? expiration,
       string? friendlyName);
   Task<HttpResult> DeleteKey(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin);
-  Task<IReadOnlyList<AgentInstallerKeyDto>> GetAllKeys(Guid tenantId, Guid userId, bool isTenantAdmin);
-  Task<HttpResult<IReadOnlyList<AgentInstallerKeyUsageDto>>> GetKeyUsages(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin);
-  Task<HttpResult> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null);
+  Task<IReadOnlyList<InternalDtos.AgentInstallerKeyDto>> GetAllKeys(Guid tenantId, Guid userId, bool isTenantAdmin);
+  Task<HttpResult<IReadOnlyList<InternalDtos.AgentInstallerKeyUsageDto>>> GetKeyUsages(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin);
   Task<HttpResult> RenameKey(Guid keyId, string friendlyName, Guid userId, Guid tenantId, bool isTenantAdmin);
   Task<HttpResult<AgentInstallerKey>> TryGetKey(Guid keyId, Guid tenantId);
   /// <summary>
@@ -45,9 +43,10 @@ public class AgentInstallerKeyManager(
   private readonly IPasswordHasher<string> _passwordHasher = passwordHasher;
   private readonly TimeProvider _timeProvider = timeProvider;
 
-  public async Task<CreateInstallerKeyResponseDto> CreateKey(
+  public async Task<InternalDtos.CreateInstallerKeyResponseDto> CreateKey(
       Guid tenantId,
       Guid creatorId,
+      CreatorKind creatorKind,
       InstallerKeyType keyType,
       uint? allowedUses,
       DateTimeOffset? expiration,
@@ -64,6 +63,7 @@ public class AgentInstallerKeyManager(
     {
       TenantId = tenantId,
       CreatorId = creatorId,
+      CreatorKind = creatorKind,
       HashedKey = hashedKey,
       KeyType = keyType,
       AllowedUses = allowedUses,
@@ -75,7 +75,7 @@ public class AgentInstallerKeyManager(
     db.AgentInstallerKeys.Add(installerKey);
     await db.SaveChangesAsync();
 
-    return installerKey.ToCreateResponseDto(plaintextKey);
+    return installerKey.ToInternalResponseDto(plaintextKey);
   }
 
   public async Task<HttpResult> DeleteKey(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin)
@@ -100,7 +100,7 @@ public class AgentInstallerKeyManager(
     return HttpResult.Ok();
   }
 
-  public async Task<IReadOnlyList<AgentInstallerKeyDto>> GetAllKeys(Guid tenantId, Guid userId, bool isTenantAdmin)
+  public async Task<IReadOnlyList<InternalDtos.AgentInstallerKeyDto>> GetAllKeys(Guid tenantId, Guid userId, bool isTenantAdmin)
   {
     await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -144,7 +144,7 @@ public class AgentInstallerKeyManager(
           (x.AllowedUses.HasValue && x.UsageCount < x.AllowedUses.Value))
         .ToListAsync();
 
-      return keyData.Select(x => new AgentInstallerKeyDto(
+      return keyData.Select(x => new InternalDtos.AgentInstallerKeyDto(
         x.Id,
         x.CreatorId,
         x.CreatorName,
@@ -156,7 +156,7 @@ public class AgentInstallerKeyManager(
         x.UsageCount)).ToList();
   }
 
-  public async Task<HttpResult<IReadOnlyList<AgentInstallerKeyUsageDto>>> GetKeyUsages(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin)
+  public async Task<HttpResult<IReadOnlyList<InternalDtos.AgentInstallerKeyUsageDto>>> GetKeyUsages(Guid keyId, Guid userId, Guid tenantId, bool isTenantAdmin)
   {
     await using var db = await _dbContextFactory.CreateDbContextAsync();
     var key = await db.AgentInstallerKeys
@@ -165,12 +165,12 @@ public class AgentInstallerKeyManager(
 
     if (key is null)
     {
-      return HttpResult.Fail<IReadOnlyList<AgentInstallerKeyUsageDto>>(HttpResultErrorCode.NotFound, "Key not found");
+      return HttpResult.Fail<IReadOnlyList<InternalDtos.AgentInstallerKeyUsageDto>>(HttpResultErrorCode.NotFound, "Key not found");
     }
 
     if (!isTenantAdmin && key.CreatorId != userId)
     {
-      return HttpResult.Fail<IReadOnlyList<AgentInstallerKeyUsageDto>>(HttpResultErrorCode.Forbidden, "Permission denied");
+      return HttpResult.Fail<IReadOnlyList<InternalDtos.AgentInstallerKeyUsageDto>>(HttpResultErrorCode.Forbidden, "Permission denied");
     }
 
     var cutoff = GetUsageHistoryCutoff();
@@ -179,50 +179,10 @@ public class AgentInstallerKeyManager(
         .AsNoTracking()
         .Where(x => x.AgentInstallerKeyId == keyId && x.TenantId == tenantId)
         .Where(x => !cutoff.HasValue || x.CreatedAt >= cutoff.Value)
-        .Select(x => new AgentInstallerKeyUsageDto(x.Id, x.DeviceId, x.CreatedAt, x.RemoteIpAddress))
+        .Select(x => new InternalDtos.AgentInstallerKeyUsageDto(x.Id, x.DeviceId, x.CreatedAt, x.RemoteIpAddress))
       .ToListAsync();
 
-    return HttpResult.Ok<IReadOnlyList<AgentInstallerKeyUsageDto>>(usages);
-  }
-
-  public async Task<HttpResult> IncrementUsage(Guid keyId, Guid? deviceId = null, string? remoteIpAddress = null)
-  {
-    await using var db = await _dbContextFactory.CreateDbContextAsync();
-    var installerKey = await db.AgentInstallerKeys
-        .FirstOrDefaultAsync(x => x.Id == keyId);
-
-    if (installerKey is null)
-    {
-      return HttpResult.Fail(HttpResultErrorCode.NotFound, "Installer key not found");
-    }
-
-    var now = _timeProvider.GetUtcNow();
-
-    if (installerKey.KeyType == InstallerKeyType.TimeBased ||
-        installerKey.KeyType == InstallerKeyType.UsageBased)
-    {
-      var isExpired = !installerKey.Expiration.HasValue || installerKey.Expiration.Value < now;
-      if (isExpired)
-      {
-        db.AgentInstallerKeys.Remove(installerKey);
-        await db.SaveChangesAsync();
-        return HttpResult.Fail(HttpResultErrorCode.BadRequest, "Key has expired");
-      }
-    }
-
-    var usageCount = 0;
-    if (installerKey.KeyType == InstallerKeyType.UsageBased)
-    {
-      usageCount = await db.AgentInstallerKeyUsages
-          .CountAsync(u => u.AgentInstallerKeyId == keyId);
-      if (usageCount >= installerKey.AllowedUses)
-      {
-        return HttpResult.Fail(HttpResultErrorCode.BadRequest, "Key usage limit reached");
-      }
-    }
-
-    _ = await AddUsageAndUpdateKey(db, installerKey, usageCount, deviceId, remoteIpAddress);
-    return HttpResult.Ok();
+    return HttpResult.Ok<IReadOnlyList<InternalDtos.AgentInstallerKeyUsageDto>>(usages);
   }
 
   public async Task<HttpResult> RenameKey(Guid keyId, string friendlyName, Guid userId, Guid tenantId, bool isTenantAdmin)

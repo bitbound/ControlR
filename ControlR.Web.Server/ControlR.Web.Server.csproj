@@ -18,6 +18,9 @@
 		<ProjectReference Include="..\Libraries\ControlR.Libraries.WebSocketRelay.Common\ControlR.Libraries.WebSocketRelay.Common.csproj" />
 	</ItemGroup>
 	<ItemGroup>
+		<PackageReference Include="Asp.Versioning.Mvc" />
+		<PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+		<PackageReference Include="Asp.Versioning.OpenApi" />
 		<PackageReference Include="AspNet.Security.OAuth.GitHub" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
 		<PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />

@@ -7,7 +7,7 @@ public partial class PersonalAccessTokenDialog
   [CascadingParameter]
   public required IMudDialogInstance MudDialog { get; init; }
   [Parameter]
-  public required PersonalAccessTokenDto PersonalAccessToken { get; set; }
+  public required PersonalAccessTokenResponseDto PersonalAccessToken { get; set; }
   [Parameter]
   public required string PlainTextKey { get; set; }
   [Inject]

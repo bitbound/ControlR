@@ -7,10 +7,10 @@ namespace ControlR.Web.Server.Services;
 
 public interface ITenantInvitesProvider
 {
-  Task<HttpResult<AcceptInvitationResponseDto>> AcceptInvite(
-    AcceptInvitationRequestDto dto);
+  Task<HttpResult<InternalDtos.AcceptInvitationResponseDto>> AcceptInvite(
+    InternalDtos.AcceptInvitationRequestDto dto);
 
-  Task<HttpResult<TenantInviteResponseDto>> CreateInvite(
+  Task<HttpResult<InternalDtos.TenantInviteResponseDto>> CreateInvite(
     string inviteeEmail,
     Guid tenantId,
     Uri origin,
@@ -20,7 +20,7 @@ public interface ITenantInvitesProvider
     Guid inviteId,
     Guid tenantId);
 
-  Task<TenantInviteResponseDto[]> GetAllInvites(
+  Task<InternalDtos.TenantInviteResponseDto[]> GetAllInvites(
     Guid tenantId,
     Uri origin);
 }
@@ -36,8 +36,8 @@ public class TenantInvitesProvider(
   private readonly IUserCreator _userCreator = userCreator;
   private readonly UserManager<AppUser> _userManager = userManager;
 
-  public async Task<HttpResult<AcceptInvitationResponseDto>> AcceptInvite(
-    AcceptInvitationRequestDto dto)
+  public async Task<HttpResult<InternalDtos.AcceptInvitationResponseDto>> AcceptInvite(
+    InternalDtos.AcceptInvitationRequestDto dto)
   {
     _logger.LogInformation("Accepting invitation for email: {Email}", dto.Email);
 
@@ -57,14 +57,14 @@ public class TenantInvitesProvider(
         "Invitation not found for activation code: {ActivationCode} and email: {Email}",
         dto.ActivationCode,
         normalizedEmail);
-      return HttpResult.Fail<AcceptInvitationResponseDto>(HttpResultErrorCode.NotFound, "Invitation not found.");
+      return HttpResult.Fail<InternalDtos.AcceptInvitationResponseDto>(HttpResultErrorCode.NotFound, "Invitation not found.");
     }
 
     var invitee = await _userManager.FindByEmailAsync(dto.Email);
     if (invitee is null)
     {
       _logger.LogWarning("Invitee user account not found for email: {Email}", dto.Email);
-      return HttpResult.Fail<AcceptInvitationResponseDto>(HttpResultErrorCode.NotFound, "Invitee user account not found.");
+      return HttpResult.Fail<InternalDtos.AcceptInvitationResponseDto>(HttpResultErrorCode.NotFound, "Invitee user account not found.");
     }
 
     var resetCode = await _userManager.GeneratePasswordResetTokenAsync(invitee);
@@ -75,7 +75,7 @@ public class TenantInvitesProvider(
       {
         _logger.LogWarning("Password reset error: {Code} - {Description}", error.Code, error.Description);
       }
-      return HttpResult.Fail<AcceptInvitationResponseDto>(HttpResultErrorCode.BadRequest, "Failed to set new password");
+      return HttpResult.Fail<InternalDtos.AcceptInvitationResponseDto>(HttpResultErrorCode.BadRequest, "Failed to set new password");
     }
 
     // Clear only UserRoles and Tags when moving to new tenant
@@ -86,11 +86,11 @@ public class TenantInvitesProvider(
     appDb.TenantInvites.Remove(invite);
     await appDb.SaveChangesAsync();
 
-    var response = new AcceptInvitationResponseDto(true);
+    var response = new InternalDtos.AcceptInvitationResponseDto(true);
     return HttpResult.Ok(response);
   }
 
-  public async Task<HttpResult<TenantInviteResponseDto>> CreateInvite(
+  public async Task<HttpResult<InternalDtos.TenantInviteResponseDto>> CreateInvite(
     string inviteeEmail,
     Guid tenantId,
     Uri origin,
@@ -102,13 +102,13 @@ public class TenantInvitesProvider(
 
     if (await appDb.TenantInvites.AnyAsync(x => x.InviteeEmail == normalizedEmail))
     {
-      return HttpResult.Fail<TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "Invitee already has a pending invite.");
+      return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "Invitee already has a pending invite.");
     }
 
 #pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
     if (await appDb.Users.AnyAsync(x => x.Email!.ToLower() == normalizedEmail))
     {
-      return HttpResult.Fail<TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists in the database.");
+      return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists in the database.");
     }
 #pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
 
@@ -125,10 +125,10 @@ public class TenantInvitesProvider(
 
       if (firstError is { Code: nameof(IdentityErrorDescriber.DuplicateUserName) })
       {
-        return HttpResult.Fail<TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists.");
+        return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists.");
       }
 
-      return HttpResult.Fail<TenantInviteResponseDto>(HttpResultErrorCode.InternalServerError, "Failed to create user.");
+      return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.InternalServerError, "Failed to create user.");
     }
 
     var invite = new TenantInvite()
@@ -141,7 +141,7 @@ public class TenantInvitesProvider(
     await appDb.SaveChangesAsync();
 
     var inviteUrl = new Uri(origin, $"{ClientRoutes.InviteConfirmationBase}/{invite.ActivationCode}");
-    var retDto = new TenantInviteResponseDto(invite.Id, invite.CreatedAt, normalizedEmail, inviteUrl);
+    var retDto = new InternalDtos.TenantInviteResponseDto(invite.Id, invite.CreatedAt, normalizedEmail, inviteUrl);
     return HttpResult.Ok(retDto);
   }
 
@@ -172,13 +172,13 @@ public class TenantInvitesProvider(
     return HttpResult.Ok();
   }
 
-  public async Task<TenantInviteResponseDto[]> GetAllInvites(Guid tenantId, Uri origin)
+  public async Task<InternalDtos.TenantInviteResponseDto[]> GetAllInvites(Guid tenantId, Uri origin)
   {
     await using var appDb = await _dbContextFactory.CreateDbContextAsync();
 
     return await appDb.TenantInvites
       .Where(x => x.TenantId == tenantId)
-      .Select(x => new TenantInviteResponseDto(
+      .Select(x => new InternalDtos.TenantInviteResponseDto(
         x.Id,
         x.CreatedAt,
         x.InviteeEmail,

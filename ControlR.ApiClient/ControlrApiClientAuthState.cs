@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ControlR.ApiClient.Auth;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.DataRedaction;
 
 namespace ControlR.ApiClient;

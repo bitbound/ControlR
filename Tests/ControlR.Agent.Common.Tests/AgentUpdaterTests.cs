@@ -2,8 +2,9 @@ using ControlR.Agent.Shared.Options;
 using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Common.Services;
 using ControlR.ApiClient;
+using ControlR.ApiClient.Interfaces.Agent;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
@@ -199,9 +200,14 @@ public class AgentMaintenanceServiceTests
   {
     public AgentMaintenanceServiceFixture()
     {
-      ControlrApi
-        .SetupGet(x => x.AgentUpdate)
+      var mockAgentApi = new Mock<IControlrAgentApi>();
+      mockAgentApi
+        .SetupGet(x => x.Updates)
         .Returns(AgentUpdateApi.Object);
+
+      ControlrApi
+        .SetupGet(x => x.Agent)
+        .Returns(mockAgentApi.Object);
 
       HostApplicationLifetime
         .SetupGet(x => x.ApplicationStopping)

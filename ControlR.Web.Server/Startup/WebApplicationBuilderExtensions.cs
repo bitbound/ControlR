@@ -17,9 +17,9 @@ using MudBlazor.Services;
 using ControlR.Web.Server.Components.Account;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Web.Server.Services.Users;
+using ControlR.Web.Server.Services.Tenants;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Services;
-using ControlR.Web.Server.Middleware;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
@@ -111,6 +111,7 @@ public static class WebApplicationBuilderExtensions
 
         options.UseInMemoryDatabase(dbName);
         options.EnableDetailedErrors(appOptions.EnableDatabaseDetailedErrors);
+        options.AddInterceptors(new ServiceAccountInvariantInterceptor());
       }, lifetime: ServiceLifetime.Transient);
     }
     else
@@ -141,18 +142,13 @@ public static class WebApplicationBuilderExtensions
         options.MultipartBodyLengthLimit = appOptions.MaxFileTransferSize;
       }
     });
-    builder.Services.AddControllers();
+    
     builder.Services.AddProblemDetails();
     builder.Services.AddExceptionHandler<ApiExceptionHandler>();
     builder.Services.AddExceptionHandler<UiExceptionHandler>();
-    builder.Services.AddOpenApi(options =>
-    {
-      options.AddDocumentTransformer<FileUploadTransformer>();
-      options.AddDocumentTransformer<IdentityApiOpenApiTransformer>();
-      options.AddDocumentTransformer<ApiProblemDetailsTransformer>();
-      options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
-    });
-    builder.Services.AddEndpointsApiExplorer();
+
+    builder.AddControlrOpenApi();
+
     builder.Services.AddCors(options =>
     {
       if (appOptions.EnableCors && appOptions.CorsAllowedOrigins is { Length: > 0 } origins)
@@ -166,9 +162,11 @@ public static class WebApplicationBuilderExtensions
         });
       }
     });
+
     builder.Services.AddRateLimiter(options =>
     {
       options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
       options.OnRejected = (context, cancellationToken) =>
       {
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfterValue)
@@ -182,7 +180,8 @@ public static class WebApplicationBuilderExtensions
 
         return ValueTask.CompletedTask;
       };
-      options.AddPolicy<string>(
+
+      options.AddPolicy(
         AnonymousAuthRateLimitPolicy.PolicyName,
         AnonymousAuthRateLimitPolicy.Create());
     });
@@ -229,6 +228,9 @@ public static class WebApplicationBuilderExtensions
         .AddAuthenticationSchemes(CustomSchemes.Dynamic)
         .RequireAuthenticatedUser()
         .Build())
+      .AddPolicy(RequireServerServiceAccountPolicy.PolicyName, RequireServerServiceAccountPolicy.Create())
+      .AddPolicy(CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy, CombinedAuthorizationPolicies.CreateServerOrTenantAdmin())
+      .AddPolicy(CombinedAuthorizationPolicies.RequireServerOrTenantAdminOrInstallerKeyManagerPolicy, CombinedAuthorizationPolicies.CreateServerOrTenantAdminOrInstallerKeyManager())
       .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
       .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
 
@@ -240,7 +242,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services
       .AddIdentityApiEndpoints<AppUser>(options =>
       {
-        options.User.RequireUniqueEmail = true;
+        options.User.RequireUniqueEmail = appOptions.RequireUserUniqueEmail;
         options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
         options.Password.RequiredLength = 8;
         options.Password.RequireNonAlphanumeric = false;
@@ -266,7 +268,7 @@ public static class WebApplicationBuilderExtensions
         options.DefaultScheme = CustomSchemes.Dynamic;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
       })
-      .AddPolicyScheme(CustomSchemes.Dynamic, "Smart Authentication Scheme", options =>
+      .AddPolicyScheme(CustomSchemes.Dynamic, "Dynamic Authentication Scheme", options =>
       {
         options.ForwardDefaultSelector = context =>
         {
@@ -287,6 +289,12 @@ public static class WebApplicationBuilderExtensions
           if (context.Request.Headers.ContainsKey(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName))
           {
             return PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme;
+          }
+
+          // If the request carries a service account api key, authenticate as a service account.
+          if (context.Request.Headers.ContainsKey(ServiceAccountCredentialAuthenticationSchemeOptions.DefaultHeaderName))
+          {
+            return ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme;
           }
 
           // Otherwise, use Identity cookies for web UI
@@ -322,6 +330,11 @@ public static class WebApplicationBuilderExtensions
     // Add logon token authentication.
     authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
       LogonTokenAuthenticationSchemeOptions.DefaultScheme,
+      _ => { });
+
+    // Add service account credential authentication (x-api-key).
+    authBuilder.AddScheme<ServiceAccountCredentialAuthenticationSchemeOptions, ServiceAccountCredentialAuthenticationHandler>(
+      ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme,
       _ => { });
 
     builder.Services
@@ -384,7 +397,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IRetryer, Retryer>();
     builder.Services.AddSingleton<IWaiter, Waiter>();
     builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
-    builder.Services.AddSingleton<IUserRegistrationProvider, UserRegistrationProvider>();
+    builder.Services.AddSingleton<IPublicRegistrationBootstrapGate, PublicRegistrationBootstrapGate>();
     builder.Services.AddSingleton<EmailSender>();
     builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<EmailSender>());
     builder.Services.AddSingleton<IControlrEmailSender>(sp => sp.GetRequiredService<EmailSender>());
@@ -395,8 +408,10 @@ public static class WebApplicationBuilderExtensions
       options.RequireAuthenticationForRequester = true;
     });
     builder.Services.AddSingleton<ILogonTokenProvider, LogonTokenProvider>();
-    builder.Services.AddSingleton<AgentInstallerKeyUsageCleaner>();
-    builder.Services.AddHostedService<AgentInstallerKeyUsageCleanupBackgroundService>();
+    builder.Services.AddSingleton<AgentInstallerKeyUsageCleanupBackgroundService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<AgentInstallerKeyUsageCleanupBackgroundService>());
+    builder.Services.AddSingleton<ExternalUserCleanupBackgroundService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<ExternalUserCleanupBackgroundService>());
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IAgentVersionProvider, AgentVersionProvider>();
     builder.Services.AddScoped<IReleaseNotesProvider, ReleaseNotesProvider>();
@@ -407,10 +422,12 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IEffectiveUserPreferencesResolver, EffectiveUserPreferencesResolver>();
     builder.Services.AddScoped<IUserPreferencesManager, UserPreferencesManager>();
     builder.Services.AddScoped<ITenantSettingsManager, TenantSettingsManager>();
+    builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
     builder.Services.AddScoped<IUserPreferencesProvider>(services => services.GetRequiredService<IUserPreferencesManager>());
     builder.Services.AddScoped<IUserStorageManager, UserStorageManager>();
     builder.Services.AddScoped<IPublicRegistrationSettingsProvider, PublicRegistrationSettingsProviderServer>();
     builder.Services.AddScoped<ITenantInvitesProvider, TenantInvitesProvider>();
+    builder.Services.AddScoped<IServiceAccountManager, ServiceAccountManager>();
 
     return builder;
   }
@@ -462,6 +479,7 @@ public static class WebApplicationBuilderExtensions
     {
       options.UseNpgsql(pgBuilder.ConnectionString);
       options.EnableDetailedErrors(appOptions.EnableDatabaseDetailedErrors);
+      options.AddInterceptors(new ServiceAccountInvariantInterceptor());
 
       var accessor = sp.GetRequiredService<IHttpContextAccessor>();
       if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)

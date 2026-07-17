@@ -6,7 +6,7 @@ public partial class PersonalAccessTokens
 {
   private bool _isLoading = false;
   private string _newTokenName = string.Empty;
-  private PersonalAccessTokenDto[] _personalAccessTokens = [];
+  private PersonalAccessTokenResponseDto[] _personalAccessTokens = [];
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -31,7 +31,7 @@ public partial class PersonalAccessTokens
     try
     {
       var request = new CreatePersonalAccessTokenRequestDto(_newTokenName.Trim());
-      var result = await ControlrApi.PersonalAccessTokens.CreatePersonalAccessToken(request);
+      var result = await ControlrApi.Internal.PersonalAccessTokens.CreatePersonalAccessToken(request);
 
       if (result.IsSuccess)
       {
@@ -71,7 +71,7 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task DeletePersonalAccessToken(PersonalAccessTokenDto personalAccessToken)
+  private async Task DeletePersonalAccessToken(PersonalAccessTokenResponseDto personalAccessToken)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Confirm Delete",
@@ -83,7 +83,7 @@ public partial class PersonalAccessTokens
     {
       try
       {
-        var result = await ControlrApi.PersonalAccessTokens.DeletePersonalAccessToken(personalAccessToken.Id);
+        var result = await ControlrApi.Internal.PersonalAccessTokens.DeletePersonalAccessToken(personalAccessToken.Id);
         if (result.IsSuccess)
         {
           await LoadPersonalAccessTokens();
@@ -106,7 +106,7 @@ public partial class PersonalAccessTokens
     _isLoading = true;
     try
     {
-      var result = await ControlrApi.PersonalAccessTokens.GetPersonalAccessTokens();
+      var result = await ControlrApi.Internal.PersonalAccessTokens.GetPersonalAccessTokens();
       if (result.IsSuccess)
       {
         _personalAccessTokens = result.Value;
@@ -133,7 +133,7 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task RenamePersonalAccessToken(PersonalAccessTokenDto personalAccessToken)
+  private async Task RenamePersonalAccessToken(PersonalAccessTokenResponseDto personalAccessToken)
   {
     var parameters = new DialogParameters
     {
@@ -159,7 +159,7 @@ public partial class PersonalAccessTokens
     try
     {
       var updateRequest = new UpdatePersonalAccessTokenRequestDto(newTokenName.Trim());
-      var updateResult = await ControlrApi.PersonalAccessTokens.UpdatePersonalAccessToken(personalAccessToken.Id, updateRequest);
+      var updateResult = await ControlrApi.Internal.PersonalAccessTokens.UpdatePersonalAccessToken(personalAccessToken.Id, updateRequest);
       if (updateResult.IsSuccess)
       {
         await LoadPersonalAccessTokens();

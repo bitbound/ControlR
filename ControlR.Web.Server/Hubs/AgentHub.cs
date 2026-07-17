@@ -34,9 +34,9 @@ public class AgentHub(
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
 
-  private DeviceResponseDto? Device
+  private InternalDtos.DeviceResponseDto? Device
   {
-    get => GetItem<DeviceResponseDto?>(null);
+    get => GetItem<InternalDtos.DeviceResponseDto?>(null);
     set => SetItem(value);
   }
 
@@ -162,7 +162,7 @@ public class AgentHub(
   }
 
   public async Task SendDirectoryContentsStream(Guid streamId, bool directoryExists,
-    ChannelReader<FileSystemEntryDto[]> entryChunks)
+    ChannelReader<InternalDtos.FileSystemEntryDto[]> entryChunks)
   {
     try
     {
@@ -204,7 +204,7 @@ public class AgentHub(
     }
   }
 
-  public async Task SendSubdirectoriesStream(Guid streamId, ChannelReader<FileSystemEntryDto[]> subdirectoryChunks)
+  public async Task SendSubdirectoriesStream(Guid streamId, ChannelReader<InternalDtos.FileSystemEntryDto[]> subdirectoryChunks)
   {
     try
     {
@@ -236,14 +236,14 @@ public class AgentHub(
   }
 
   [Obsolete("This method is deprecated. Please use UpdateDeviceSigned instead.")]
-  public async Task<HubResult<DeviceResponseDto>> UpdateDevice(DeviceUpdateRequestDto agentDto)
+  public async Task<HubResult<InternalDtos.DeviceResponseDto>> UpdateDevice(DeviceUpdateRequestDto agentDto)
   {
     try
     {
       var device = await _appDb.Devices.FindAsync(agentDto.Id);
       if (device is not null && !string.IsNullOrEmpty(device.PublicKey))
       {
-        return HubResult.Fail<DeviceResponseDto>("Device requires signed updates.");
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Device requires signed updates.");
       }
 
       if (_serverOptions.Value.DecommissionServer)
@@ -260,7 +260,7 @@ public class AgentHub(
 
         if (lastTenant is null)
         {
-          return HubResult.Fail<DeviceResponseDto>("No tenants found.");
+          return HubResult.Fail<InternalDtos.DeviceResponseDto>("No tenants found.");
         }
 
         // Update the DTO with the assigned TenantId
@@ -269,12 +269,12 @@ public class AgentHub(
 
       if (agentDto.TenantId == Guid.Empty)
       {
-        return HubResult.Fail<DeviceResponseDto>("Invalid tenant ID.");
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Invalid tenant ID.");
       }
 
       if (!await _appDb.Tenants.AnyAsync(x => x.Id == agentDto.TenantId))
       {
-        return HubResult.Fail<DeviceResponseDto>("Invalid tenant ID.");
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Invalid tenant ID.");
       }
 
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
@@ -289,14 +289,14 @@ public class AgentHub(
 
       if (!updateResult.IsSuccess)
       {
-        return HubResult.Fail<DeviceResponseDto>(updateResult.Reason);
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>(updateResult.Reason);
       }
 
       var deviceEntity = updateResult.Value;
       await AddToGroups(deviceEntity);
 
       var isOutdated = await GetIsAgentOutdated(deviceEntity);
-      Device = deviceEntity.ToDto(isOutdated);
+      Device = deviceEntity.ToInternalResponseDto(isOutdated);
 
       await SendDeviceUpdate(deviceEntity, Device);
 
@@ -305,11 +305,11 @@ public class AgentHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while updating device.");
-      return HubResult.Fail<DeviceResponseDto>("An error occurred while updating the device.");
+      return HubResult.Fail<InternalDtos.DeviceResponseDto>("An error occurred while updating the device.");
     }
   }
 
-  public async Task<HubResult<DeviceResponseDto>> UpdateDeviceSigned(SignedDto<DeviceUpdateRequestDto> signedDto)
+  public async Task<HubResult<InternalDtos.DeviceResponseDto>> UpdateDeviceSigned(SignedDto<DeviceUpdateRequestDto> signedDto)
   {
     try
     {
@@ -330,7 +330,7 @@ public class AgentHub(
           "Public key validation failed for device {DeviceId}: {Reason}",
           agentDto.Id,
           keyValidationResult.Reason);
-        return HubResult.Fail<DeviceResponseDto>(keyValidationResult.Reason);
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>(keyValidationResult.Reason);
       }
 
       var publicKeyBytes = keyValidationResult.Value;
@@ -339,7 +339,7 @@ public class AgentHub(
       if (!_keyProvider.Verify(signedDto, publicKeyBytes))
       {
         _logger.LogWarning("Signature verification failed for device {DeviceId}.", agentDto.Id);
-        return HubResult.Fail<DeviceResponseDto>("Signature verification failed.");
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Signature verification failed.");
       }
 
       // 4. Verify timestamp freshness (disabled if AgentClockSkewTolerance is null)
@@ -350,7 +350,7 @@ public class AgentHub(
           "Timestamp expired for device {DeviceId}. " + 
           "Are system clocks synchronized on both the server and the device?", 
           agentDto.Id);
-        return HubResult.Fail<DeviceResponseDto>("Timestamp expired.");
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Timestamp expired.");
       }
 
       // 5. Handle decommissioning if enabled
@@ -368,7 +368,7 @@ public class AgentHub(
 
         if (lastTenant is null)
         {
-          return HubResult.Fail<DeviceResponseDto>("No tenants found.");
+          return HubResult.Fail<InternalDtos.DeviceResponseDto>("No tenants found.");
         }
 
         agentDto = agentDto with { TenantId = lastTenant.Id };
@@ -377,12 +377,12 @@ public class AgentHub(
       // 7. Validate tenant ID
       if (agentDto.TenantId == Guid.Empty)
       {
-        return HubResult.Fail<DeviceResponseDto>("Invalid tenant ID.");
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Invalid tenant ID.");
       }
 
       if (!await _appDb.Tenants.AnyAsync(x => x.Id == agentDto.TenantId))
       {
-        return HubResult.Fail<DeviceResponseDto>("Invalid tenant ID.");
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Invalid tenant ID.");
       }
 
       // 8. Update device entity and adopt public key if necessary.
@@ -398,7 +398,7 @@ public class AgentHub(
 
       if (!updateResult.IsSuccess)
       {
-        return HubResult.Fail<DeviceResponseDto>(updateResult.Reason);
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>(updateResult.Reason);
       }
 
       var deviceEntity = updateResult.Value;
@@ -406,7 +406,7 @@ public class AgentHub(
       await AddToGroups(deviceEntity);
 
       var isOutdated = await GetIsAgentOutdated(deviceEntity);
-      Device = deviceEntity.ToDto(isOutdated);
+      Device = deviceEntity.ToInternalResponseDto(isOutdated);
 
       await SendDeviceUpdate(deviceEntity, Device);
 
@@ -415,7 +415,7 @@ public class AgentHub(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while updating signed device.");
-      return HubResult.Fail<DeviceResponseDto>("An error occurred while updating the device.");
+      return HubResult.Fail<InternalDtos.DeviceResponseDto>("An error occurred while updating the device.");
     }
   }
 
@@ -473,7 +473,7 @@ public class AgentHub(
     return deviceVersion != currentAgentVersion;
   }
 
-  private async Task<HubResult<DeviceResponseDto>> HandleAgentUpdateForDecommission(
+  private async Task<HubResult<InternalDtos.DeviceResponseDto>> HandleAgentUpdateForDecommission(
     DeviceUpdateRequestDto agentDto,
     Device? device = null)
   {
@@ -493,7 +493,7 @@ public class AgentHub(
     await _outputCacheStore.InvalidateDeviceCacheAsync(agentDto.Id);
     _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", agentDto.Id);
 
-    return HubResult.Fail<DeviceResponseDto>("Server is decommissioned.");
+    return HubResult.Fail<InternalDtos.DeviceResponseDto>("Server is decommissioned.");
   }
 
   /// <summary>
@@ -531,7 +531,7 @@ public class AgentHub(
     }
   }
 
-  private async Task SendDeviceUpdate(Device device, DeviceResponseDto dto)
+  private async Task SendDeviceUpdate(Device device, InternalDtos.DeviceResponseDto dto)
   {
     await _viewerHub.Clients
       .Group(HubGroupNames.GetUserRoleGroupName(RoleNames.DeviceSuperUser, device.TenantId))

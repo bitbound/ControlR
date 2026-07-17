@@ -1,5 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Settings;
@@ -119,7 +117,7 @@ public class EffectiveUserPreferencesResolverTests(ITestOutputHelper testOutput)
     _testApp = await TestAppBuilder.CreateTestApp(_testOutput, testDatabaseName: $"{Guid.NewGuid()}");
   }
 
-  private async Task<EffectiveUserPreferencesDto> ResolveEffectivePreferences(Guid tenantId, Guid userId)
+  private async Task<InternalDtos.EffectiveUserPreferencesDto> ResolveEffectivePreferences(Guid tenantId, Guid userId)
   {
     await using var scope = _testApp.Services.CreateAsyncScope();
     var resolver = scope.ServiceProvider.GetRequiredService<IEffectiveUserPreferencesResolver>();

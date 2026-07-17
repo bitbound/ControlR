@@ -179,7 +179,7 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
 
   private async Task<bool> GetDeviceInfo()
   {
-    var apiResult = await _apiClient.Devices.GetDevice(_options.DeviceId);
+    var apiResult = await _apiClient.Internal.Devices.GetDevice(_options.DeviceId);
     if (apiResult.IsSuccess)
     {
       var device = apiResult.Value;

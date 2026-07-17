@@ -1,12 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -30,16 +27,16 @@ public class LogonTokenDeviceScopeTests(ITestOutputHelper testOutput)
 
     // Create PAT
     var patManager = testApp.TestServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
-    var patCreate = await patManager.CreateToken(new CreatePersonalAccessTokenRequestDto("ScopeTest PAT"), user.Id);
+    var patCreate = await patManager.CreateToken(new InternalDtos.CreatePersonalAccessTokenRequestDto("ScopeTest PAT"), user.Id);
     Assert.True(patCreate.IsSuccess, patCreate.Reason);
     var pat = patCreate.Value.PlainTextToken;
 
     // Request logon token for primary device
     httpClient.DefaultRequestHeaders.Add(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName, pat);
-    var logonTokenRequest = new LogonTokenRequestDto(primaryDeviceId, ExpirationMinutes: 5);
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest, cancellationToken: TestContext.Current.CancellationToken);
+    var logonTokenRequest = new InternalDtos.LogonTokenRequestDto(primaryDeviceId, ExpirationMinutes: 5);
+    var logonTokenResponse = await httpClient.PostAsJsonAsync(HttpConstants.Internal.LogonTokensEndpoint, logonTokenRequest, cancellationToken: TestContext.Current.CancellationToken);
     logonTokenResponse.EnsureSuccessStatusCode();
-    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>(TestContext.Current.CancellationToken);
+    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<InternalDtos.LogonTokenResponseDto>(TestContext.Current.CancellationToken);
     Assert.NotNull(logonTokenResult);
 
     // Consume logon token (first access) to establish cookie session
@@ -50,11 +47,11 @@ public class LogonTokenDeviceScopeTests(ITestOutputHelper testOutput)
     httpClient.DefaultRequestHeaders.Remove(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName);
 
     // Attempt to access primary device API (should succeed)
-    var primaryDeviceApi = await httpClient.GetAsync($"/api/devices/{primaryDeviceId}", TestContext.Current.CancellationToken);
+    var primaryDeviceApi = await httpClient.GetAsync($"{HttpConstants.Internal.DevicesEndpoint}/{primaryDeviceId}", TestContext.Current.CancellationToken);
     Assert.True(primaryDeviceApi.IsSuccessStatusCode, $"Expected success for primary device, got {primaryDeviceApi.StatusCode}");
 
     // Attempt to access other device API (should be forbidden due to DeviceSessionScope restriction)
-    var otherDeviceApi = await httpClient.GetAsync($"/api/devices/{otherDeviceId}", TestContext.Current.CancellationToken);
+    var otherDeviceApi = await httpClient.GetAsync($"{HttpConstants.Internal.DevicesEndpoint}/{otherDeviceId}", TestContext.Current.CancellationToken);
     Assert.True(
       otherDeviceApi.StatusCode == HttpStatusCode.Forbidden || otherDeviceApi.StatusCode == HttpStatusCode.Unauthorized,
       $"Expected Forbidden/Unauthorized for other device, got {otherDeviceApi.StatusCode}");

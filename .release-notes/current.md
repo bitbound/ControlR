@@ -1,5 +1,13 @@
 ## Breaking Changes
 
+- If you're using the `ControlrApi` client, the entry point has been split into a few smaller, purpose-specific classes.
+  - You'll need to update your code to use the new static properties that serve as the new entry points.
+  - Existing endpoints were moved under the `Internal` property.  These will continue to evolve dynamically based on the needs of the UI.
+  - The `V0` property is the new versioned API that should be used for server-to-server integrations.
+  - `V0` isn't complete and will be fleshed out over time.
+
+## Changed
+
 None.
 
 ## Added
@@ -9,6 +17,9 @@ None.
   - This makes it easier to find device-specific metrics, logs, and traces in your OTEL backend.
 - Replaced PrismJS with Monaco Editor on Remote Logs page.
   - Monaco will also be used in the upcoming scripting feature.
+- Added the `AppOptions__DisableFirstUserSelfRegistration` configuration option (default `false`) to control whether the first user can self-register.
+  - By default, the first user can self-register and is automatically promoted to server administrator and first-tenant admin.
+  - This is useful for server-to-server integrations where ControlR is driven primarily via API.
 
 ## Fixed
 

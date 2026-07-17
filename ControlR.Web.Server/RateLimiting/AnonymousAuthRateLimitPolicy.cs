@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using Microsoft.AspNetCore.Http;
 using System.Threading.RateLimiting;
 
 namespace ControlR.Web.Server.RateLimiting;
@@ -13,7 +12,7 @@ public static class AnonymousAuthRateLimitPolicy
     return httpContext =>
     {
       var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-      var path = httpContext.Request.Path.Value ?? HttpConstants.AuthEndpoint;
+      var path = httpContext.Request.Path.Value ?? HttpConstants.Internal.AuthEndpoint;
       var partitionKey = $"{remoteIp}:{path}";
 
       return RateLimitPartition.GetFixedWindowLimiter(

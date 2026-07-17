@@ -110,7 +110,7 @@ public partial class FileSystem : JsInteropableComponent
     {
       // Get path segments from the agent to validate and parse the path correctly
       var pathSegmentsRequest = new GetPathSegmentsRequestDto(DeviceId, targetPath);
-      var pathSegmentsResult = await ControlrApi.DeviceFileSystem.GetPathSegments(pathSegmentsRequest);
+      var pathSegmentsResult = await ControlrApi.Internal.DeviceFileSystem.GetPathSegments(pathSegmentsRequest);
 
       if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)
       {
@@ -193,7 +193,7 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       var request = new FileDeleteRequestDto(DeviceId, item.FullPath, item.IsDirectory);
-      var result = await ControlrApi.DeviceFileSystem.DeleteFile(request);
+      var result = await ControlrApi.Internal.DeviceFileSystem.DeleteFile(request);
 
       if (!result.IsSuccess)
       {
@@ -211,7 +211,7 @@ public partial class FileSystem : JsInteropableComponent
   private async Task DownloadMultipleItems(IReadOnlyCollection<FileSystemEntryViewModel> items)
   {
     var archiveFileName = GetArchiveFileName();
-    var downloadUrl = $"{HttpConstants.DeviceFileSystemEndpoint}/download-archive/{DeviceId}/form";
+    var downloadUrl = $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/download-archive/{DeviceId}/form";
 
     await JsModule.InvokeVoidAsync(
       "downloadArchive",
@@ -227,7 +227,7 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       var downloadUrl =
-        $"{HttpConstants.DeviceFileSystemEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
+        $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/download/{DeviceId}?filePath={Uri.EscapeDataString(item.FullPath)}&fileName={Uri.EscapeDataString(item.Name)}";
 
       await JsModule.InvokeVoidAsync("downloadFile", downloadUrl, item.Name);
       Snackbar.Add($"Started download of '{item.Name}'", Severity.Success);
@@ -254,7 +254,7 @@ public partial class FileSystem : JsInteropableComponent
 
   private async Task<Result<long>> GetMaxFileSize()
   {
-    var getMaxSizeResult = await ControlrApi.UserServerSettings.GetFileUploadMaxSize();
+    var getMaxSizeResult = await ControlrApi.Internal.UserServerSettings.GetFileUploadMaxSize();
     if (!getMaxSizeResult.IsSuccess)
     {
       Logger.LogError("Failed to get max upload size: {Error}", getMaxSizeResult.Reason);
@@ -298,7 +298,7 @@ public partial class FileSystem : JsInteropableComponent
       await InvokeAsync(StateHasChanged);
 
       var request = new GetDirectoryContentsRequestDto(DeviceId, directoryPath);
-      var result = await ControlrApi.DeviceFileSystem.GetDirectoryContents(request);
+      var result = await ControlrApi.Internal.DeviceFileSystem.GetDirectoryContents(request);
       if (result is { IsSuccess: true, Value: not null })
       {
         if (!result.Value.DirectoryExists)
@@ -345,7 +345,7 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
 
       var request = new GetRootDrivesRequestDto(DeviceId);
-      var result = await ControlrApi.DeviceFileSystem.GetRootDrives(request);
+      var result = await ControlrApi.Internal.DeviceFileSystem.GetRootDrives(request);
       if (result is { IsSuccess: true, Value: not null })
       {
         InitialTreeItems = result.Value.Drives
@@ -388,7 +388,7 @@ public partial class FileSystem : JsInteropableComponent
       }
 
       var request = new GetSubdirectoriesRequestDto(DeviceId, parentValue);
-      var result = await ControlrApi.DeviceFileSystem.GetSubdirectories(request);
+      var result = await ControlrApi.Internal.DeviceFileSystem.GetSubdirectories(request);
       if (result is { IsSuccess: true, Value: not null })
       {
         return [.. result.Value.Subdirectories.Select(ConvertToTreeItemData)];
@@ -613,7 +613,7 @@ public partial class FileSystem : JsInteropableComponent
 
       // Create the directory using the new API structure
       var request = new CreateDirectoryRequestDto(DeviceId, SelectedPath, folderName);
-      var result = await ControlrApi.DeviceFileSystem.CreateDirectory(request);
+      var result = await ControlrApi.Internal.DeviceFileSystem.CreateDirectory(request);
       if (result.IsSuccess)
       {
         Snackbar.Add($"Successfully created folder '{folderName}'", Severity.Success);
@@ -681,7 +681,7 @@ public partial class FileSystem : JsInteropableComponent
     {
       // Use the agent to get path segments, which will properly handle the parent path
       var pathSegmentsRequest = new GetPathSegmentsRequestDto(DeviceId, SelectedPath);
-      var pathSegmentsResult = await ControlrApi.DeviceFileSystem.GetPathSegments(pathSegmentsRequest);
+      var pathSegmentsResult = await ControlrApi.Internal.DeviceFileSystem.GetPathSegments(pathSegmentsRequest);
 
       if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)
       {

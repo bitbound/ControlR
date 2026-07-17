@@ -66,7 +66,7 @@ public class InputSimulatorWayland(
     KeyboardInputMode inputMode,
     KeyEventModifiersDto modifiers)
   {
-    if (!await EnsureInitializedAsync())
+    if (!await EnsureInitialized())
     {
       return;
     }
@@ -112,7 +112,7 @@ public class InputSimulatorWayland(
 
   public async Task InvokeMouseButtonEvent(PointerCoordinates coordinates, int button, bool isPressed)
   {
-    if (!await EnsureInitializedAsync())
+    if (!await EnsureInitialized())
     {
       return;
     }
@@ -133,7 +133,7 @@ public class InputSimulatorWayland(
 
   public async Task MovePointer(PointerCoordinates coordinates, MovePointerType moveType)
   {
-    if (!await EnsureInitializedAsync())
+    if (!await EnsureInitialized())
     {
       return;
     }
@@ -197,7 +197,7 @@ public class InputSimulatorWayland(
 
   public async Task ResetKeyboardState()
   {
-    if (!await EnsureInitializedAsync())
+    if (!await EnsureInitialized())
     {
       return;
     }
@@ -238,7 +238,7 @@ public class InputSimulatorWayland(
 
   public async Task ScrollWheel(PointerCoordinates coordinates, int scrollY, int scrollX)
   {
-    if (!await EnsureInitializedAsync())
+    if (!await EnsureInitialized())
     {
       return;
     }
@@ -275,7 +275,7 @@ public class InputSimulatorWayland(
 
   public async Task TypeText(string text)
   {
-    if (!await EnsureInitializedAsync())
+    if (!await EnsureInitialized())
     {
       return;
     }
@@ -421,7 +421,7 @@ public class InputSimulatorWayland(
     return true;
   }
 
-  private async Task<bool> EnsureInitializedAsync()
+  private async Task<bool> EnsureInitialized()
   {
     await _initLock.WaitAsync();
     try

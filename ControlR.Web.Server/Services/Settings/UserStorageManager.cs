@@ -6,8 +6,8 @@ namespace ControlR.Web.Server.Services.Settings;
 public interface IUserStorageManager
 {
   Task<bool> Delete(string key, Guid userId, CancellationToken cancellationToken);
-  Task<UserStorageResponseDto?> Get(string key, Guid userId, CancellationToken cancellationToken);
-  Task<UserStorageResponseDto> Set(string key, string value, Guid userId, CancellationToken cancellationToken);
+  Task<InternalDtos.UserStorageResponseDto?> Get(string key, Guid userId, CancellationToken cancellationToken);
+  Task<InternalDtos.UserStorageResponseDto> Set(string key, string value, Guid userId, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -41,7 +41,7 @@ public partial class UserStorageManager(
     return true;
   }
 
-  public async Task<UserStorageResponseDto?> Get(string key, Guid userId, CancellationToken cancellationToken)
+  public async Task<InternalDtos.UserStorageResponseDto?> Get(string key, Guid userId, CancellationToken cancellationToken)
   {
     ValidateKey(key);
     await using var appDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -49,13 +49,13 @@ public partial class UserStorageManager(
     var entity = await appDb.UserStorageItems
       .AsNoTracking()
       .Where(x => x.Key == key && x.UserId == userId)
-      .Select(x => new UserStorageResponseDto(x.Key, x.Value))
+      .Select(x => new InternalDtos.UserStorageResponseDto(x.Key, x.Value))
       .FirstOrDefaultAsync(cancellationToken);
 
     return entity;
   }
 
-  public async Task<UserStorageResponseDto> Set(
+  public async Task<InternalDtos.UserStorageResponseDto> Set(
     string key, string value, Guid userId, CancellationToken cancellationToken)
   {
     ValidateKey(key);
@@ -73,7 +73,7 @@ public partial class UserStorageManager(
 
     _logger.LogInformation("User storage key '{Key}' set for user '{UserId}'.", key, userId);
 
-    return new UserStorageResponseDto(key, value);
+    return new InternalDtos.UserStorageResponseDto(key, value);
   }
 
   [GeneratedRegex("^[a-zA-Z0-9-]+$")]

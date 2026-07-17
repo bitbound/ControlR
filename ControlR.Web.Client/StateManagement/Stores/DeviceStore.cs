@@ -30,7 +30,7 @@ internal class DeviceStore : StoreBase<DeviceResponseDto>, IDeviceStore
   protected override async Task RefreshImpl()
   {
     var devices = new List<DeviceResponseDto>();
-    await foreach (var device in ControlrApi.Devices.GetAllDevices())
+    await foreach (var device in ControlrApi.Internal.Devices.GetAllDevices())
     {
       devices.Add(device);
     }

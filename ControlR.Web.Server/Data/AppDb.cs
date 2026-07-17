@@ -23,6 +23,8 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
   public DbSet<Device> Devices { get; init; }
   public DbSet<PersonalAccessToken> PersonalAccessTokens { get; init; }
   public DbSet<ServerAlert> ServerAlerts { get; init; }
+  public DbSet<ServiceAccountCredential> ServiceAccountCredentials { get; init; }
+  public DbSet<ServiceAccount> ServiceAccounts { get; init; }
   public DbSet<Tag> Tags { get; init; }
   public DbSet<TenantInvite> TenantInvites { get; init; }
   public DbSet<Tenant> Tenants { get; init; }
@@ -56,6 +58,7 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     ConfigureTenantInvites(builder);
     ConfigureAgentInstallerKeys(builder);
     ConfigureAgentInstallerKeyUsages(builder);
+    ConfigureServiceAccounts(builder);
   }
 
   private static void ConfigureRoles(ModelBuilder builder)
@@ -174,6 +177,60 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
     }
   }
 
+  private void ConfigureServiceAccounts(ModelBuilder builder)
+  {
+    // Service accounts intentionally have NO tenant or user query filter. Authorization
+    // evaluation and admin services must never accidentally hide relevant rows, and
+    // server-scoped accounts do not map to the tenant filter model. Tenant-facing CRUD
+    // applies tenant predicates explicitly in service code.
+
+    builder
+      .Entity<ServiceAccount>()
+      .Property(x => x.Kind)
+      .HasConversion<string>()
+      .HasMaxLength(50);
+
+    builder
+      .Entity<ServiceAccount>()
+      .ToTable(t =>
+      {
+        t.HasCheckConstraint(
+          "CK_ServiceAccounts_Kind_Allowed",
+          "\"Kind\" IN ('Server', 'Tenant')");
+        t.HasCheckConstraint(
+          "CK_ServiceAccounts_Kind_TenantId",
+          "(\"Kind\" = 'Server' AND \"TenantId\" IS NULL) OR (\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL)");
+      });
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasIndex(x => x.Name)
+      .HasDatabaseName("IX_ServiceAccounts_Server_Name")
+      .IsUnique()
+      .HasFilter("\"Kind\" = 'Server' AND \"TenantId\" IS NULL");
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasIndex(x => new { x.TenantId, x.Name })
+      .HasDatabaseName("IX_ServiceAccounts_TenantId_Name")
+      .IsUnique()
+      .HasFilter("\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL");
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasOne(x => x.Tenant)
+      .WithMany()
+      .HasForeignKey(x => x.TenantId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+    builder
+      .Entity<ServiceAccount>()
+      .HasMany(x => x.Credentials)
+      .WithOne(x => x.ServiceAccount)
+      .HasForeignKey(x => x.ServiceAccountId)
+      .OnDelete(DeleteBehavior.Cascade);
+  }
+
   private void ConfigureTags(ModelBuilder builder)
   {
     builder
@@ -275,6 +332,12 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
 
   private void ConfigureUsers(ModelBuilder builder)
   {
+    builder
+      .Entity<AppUser>()
+      .Property(x => x.AccountType)
+      .HasConversion<string>()
+      .HasMaxLength(50);
+
     builder
       .Entity<AppUser>()
       .Property(x => x.CreatedAt)

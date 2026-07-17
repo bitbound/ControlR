@@ -21,7 +21,7 @@ public class RequirePasswordChangeMiddlewareTests
       return Task.CompletedTask;
     });
 
-    var context = CreateContext("/api/auth/change-password", IdentityConstants.ApplicationScheme);
+    var context = CreateContext($"{HttpConstants.Internal.AuthEndpoint}/change-password", IdentityConstants.ApplicationScheme);
     var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
 
     await middleware.Invoke(context, userManager.Object);
@@ -39,7 +39,7 @@ public class RequirePasswordChangeMiddlewareTests
       return Task.CompletedTask;
     });
 
-    var context = CreateContext("/api/personal-access-tokens", IdentityConstants.ApplicationScheme);
+    var context = CreateContext(HttpConstants.Internal.PersonalAccessTokensEndpoint, IdentityConstants.ApplicationScheme);
     context.Response.Body = new MemoryStream();
     var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
 
@@ -100,7 +100,7 @@ public class RequirePasswordChangeMiddlewareTests
       return Task.CompletedTask;
     });
 
-    var context = CreateContext("/api/auth/complete-password-reset", IdentityConstants.ApplicationScheme);
+    var context = CreateContext($"{HttpConstants.Internal.AuthEndpoint}/complete-password-reset", IdentityConstants.ApplicationScheme);
     var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
 
     await middleware.Invoke(context, userManager.Object);
@@ -138,7 +138,7 @@ public class RequirePasswordChangeMiddlewareTests
       return Task.CompletedTask;
     });
 
-    var context = CreateContext("/api/auth/change-password-with-credentials", IdentityConstants.ApplicationScheme);
+    var context = CreateContext($"{HttpConstants.Internal.AuthEndpoint}/change-password-with-credentials", IdentityConstants.ApplicationScheme);
     var userManager = CreateUserManager(new AppUser { RequirePasswordChange = true });
 
     await middleware.Invoke(context, userManager.Object);

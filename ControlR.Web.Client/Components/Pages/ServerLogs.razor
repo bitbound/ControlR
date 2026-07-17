@@ -1,7 +1,7 @@
 ﻿@using Microsoft.Extensions.Options
 @attribute [Route(ClientRoutes.ServerLogs)]
 @attribute [Authorize(Roles = RoleNames.ServerAdministrator)]
-@inject IControlrApi ControlrApi
+@inject IControlrInternalApi ControlrApi
 @inject ILogger<ServerLogs> Logger
 
 <PageTitle>Server Logs</PageTitle>

@@ -1,13 +1,8 @@
 using System.Net;
-using ControlR.ApiClient;
 using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Libraries.TestingUtilities;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -130,72 +125,5 @@ public class ControlrAuthSessionIntegrationTests(ITestOutputHelper testOutput)
     Assert.NotNull(snapshot.BearerTokenExpiresAt);
 
     return (user, snapshot);
-  }
-
-  private sealed class TestControlrApiClient : IDisposable
-  {
-    private readonly HttpClient _apiHttpClient;
-    private readonly HttpClient _unauthenticatedHttpClient;
-
-    public TestControlrApiClient(TestWebServer testServer)
-    {
-      var baseUrl = new Uri("http://localhost");
-      AuthState = new ControlrApiClientAuthState();
-
-      _unauthenticatedHttpClient = new HttpClient(testServer.TestServer.CreateHandler())
-      {
-        BaseAddress = baseUrl
-      };
-
-      var httpClientFactory = new StaticHttpClientFactory(_unauthenticatedHttpClient);
-      var options = new ControlrApiClientOptions
-      {
-        BaseUrl = baseUrl
-      };
-
-      var authHeaderHandler = new ControlrApiAuthHeaderHandler(AuthState)
-      {
-        InnerHandler = testServer.TestServer.CreateHandler()
-      };
-
-      _apiHttpClient = new HttpClient(authHeaderHandler)
-      {
-        BaseAddress = baseUrl
-      };
-
-      var bearerTokenRefresher = new BearerTokenRefresher(AuthState, httpClientFactory, testServer.TimeProvider);
-
-      AuthSession = new ControlrAuthSession(
-        httpClientFactory,
-        AuthState,
-        bearerTokenRefresher,
-        NullLogger<ControlrAuthSession>.Instance,
-        new OptionsMonitorWrapper<ControlrApiClientOptions>(options),
-        testServer.TimeProvider);
-
-      Api = new ControlrApi(
-        _apiHttpClient,
-        AuthState,
-        bearerTokenRefresher,
-        NullLogger<ControlrApi>.Instance,
-        new OptionsWrapper<ControlrApiClientOptions>(options));
-    }
-
-    public IControlrApi Api { get; }
-    public ControlrAuthSession AuthSession { get; }
-    public ControlrApiClientAuthState AuthState { get; }
-
-    public void Dispose()
-    {
-      AuthSession.Dispose();
-      _apiHttpClient.Dispose();
-      _unauthenticatedHttpClient.Dispose();
-      GC.SuppressFinalize(this);
-    }
-
-    public void StopBackgroundRefresh()
-    {
-      AuthSession.Dispose();
-    }
   }
 }

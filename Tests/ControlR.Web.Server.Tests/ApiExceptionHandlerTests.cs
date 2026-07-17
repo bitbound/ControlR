@@ -1,7 +1,5 @@
 using System.Text.Json;
-using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Web.Server.ExceptionHandlers;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -19,7 +17,7 @@ public class ApiExceptionHandlerTests
   {
     var handler = new ApiExceptionHandler(NullLogger<ApiExceptionHandler>.Instance);
     var httpContext = new DefaultHttpContext();
-    httpContext.Request.Path = "/api/devices";
+    httpContext.Request.Path = HttpConstants.Internal.DevicesEndpoint;
     httpContext.TraceIdentifier = "test-trace-123";
     httpContext.Response.Body = new MemoryStream();
     var exception = new InvalidOperationException("Something broke");

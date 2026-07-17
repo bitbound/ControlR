@@ -1,3 +1,4 @@
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Branding;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -128,7 +129,7 @@ public partial class Deploy
     _appendInstanceId = await TenantSettingsProvider.GetAppendInstanceId();
     _instanceId = await TenantSettingsProvider.GetInstanceId();
 
-    var result = await ControlrApi.UserTags.GetAllowedTags();
+    var result = await ControlrApi.Internal.UserTags.GetAllowedTags();
     if (result.IsSuccess)
     {
       _tags = result.Value;
@@ -223,7 +224,7 @@ public partial class Deploy
       KeyType: InstallerKeyType.Persistent,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.InstallerKeys.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.Internal.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add("Failed to create installer key", Severity.Error);
@@ -257,7 +258,7 @@ public partial class Deploy
       Expiration: expirationDate,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.InstallerKeys.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.Internal.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add("Failed to create installer key", Severity.Error);
@@ -282,7 +283,7 @@ public partial class Deploy
       AllowedUses: _totalUsesAllowed,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.InstallerKeys.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.Internal.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add("Failed to create installer key", Severity.Error);
@@ -365,7 +366,7 @@ public partial class Deploy
     _useExistingKey = useExisting;
     if (_useExistingKey && !_existingKeys.Any())
     {
-      var result = await ControlrApi.InstallerKeys.GetAllInstallerKeys();
+      var result = await ControlrApi.Internal.InstallerKeys.GetAllInstallerKeys();
       if (result.IsSuccess)
       {
         _existingKeys = result.Value.OrderByDescending(x => x.CreatedAt);

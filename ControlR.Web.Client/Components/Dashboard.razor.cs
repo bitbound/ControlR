@@ -1,3 +1,4 @@
+using ControlR.Libraries.Api.Contracts.FilterSort;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
@@ -235,7 +236,7 @@ public partial class Dashboard : IDisposable
           })]
     };
 
-    var result = await ControlrApi.Devices.SearchDevices(request);
+    var result = await ControlrApi.Internal.Devices.SearchDevices(request);
     if (!result.IsSuccess)
     {
       _filterCounts = new DeviceSearchFilterCountsDto();
@@ -349,7 +350,7 @@ public partial class Dashboard : IDisposable
         return;
       }
 
-      var deleteResult = await ControlrApi.Devices.DeleteDevice(device.Id);
+      var deleteResult = await ControlrApi.Internal.Devices.DeleteDevice(device.Id);
       if (!deleteResult.IsSuccess)
       {
         Snackbar.Add(deleteResult.Reason, Severity.Error);

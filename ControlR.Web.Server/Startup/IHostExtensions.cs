@@ -154,35 +154,49 @@ public static class HostExtensions
       throw new InvalidOperationException($"Bootstrap admin email confirmation failed: {string.Join("; ", confirmResult.Errors.Select(e => e.Description))}");
     }
 
-    if (string.IsNullOrWhiteSpace(options.AdminPatTokenId) || string.IsNullOrWhiteSpace(options.AdminPatSecret))
+    if (options.AdminPatTokenId is null || string.IsNullOrWhiteSpace(options.AdminPatSecret))
     {
       logger.LogInformation("Bootstrap admin PAT creation skipped: AdminPatTokenId and AdminPatSecret must both be set.");
     }
     else
     {
-      if (!Guid.TryParse(options.AdminPatTokenId, out var tokenId))
-      {
-        logger.LogError("Bootstrap admin PAT creation skipped: AdminPatTokenId is not a valid GUID.");
-        throw new InvalidOperationException("Bootstrap admin PAT creation failed: AdminPatTokenId must be a valid GUID.");
-      }
-      else
-      {
-        var patManager = sp.GetRequiredService<IPersonalAccessTokenManager>();
-        var patResult = await patManager.CreateTokenWithKey(
-          tokenId,
-          options.AdminPatSecret,
-          "Bootstrap Admin PAT",
-          user.Id);
+      var patManager = sp.GetRequiredService<IPersonalAccessTokenManager>();
+      var patResult = await patManager.CreateTokenWithKey(
+        options.AdminPatTokenId.Value,
+        options.AdminPatSecret,
+        "Bootstrap Admin PAT",
+        user.Id);
 
-        if (!patResult.IsSuccess)
-        {
-          logger.LogError(patResult.Exception, "Failed to create bootstrap PAT: {Error}", patResult.Reason);
-          throw new InvalidOperationException($"Bootstrap PAT creation failed: {patResult.Reason}");
-        }
+      if (!patResult.IsSuccess)
+      {
+        logger.LogError(patResult.Exception, "Failed to create bootstrap PAT: {Error}", patResult.Reason);
+        throw new InvalidOperationException($"Bootstrap PAT creation failed: {patResult.Reason}");
       }
     }
 
     logger.LogInformation("Bootstrap admin user setup completed successfully.");
+  }
+
+  /// <summary>
+  /// Bootstraps the server-scoped service account described by <see cref="BootstrapOptions"/>
+  /// (ServerServiceAccountName/TokenId/TokenSecret). No-op when unconfigured; throws on partial
+  /// configuration. Safe to call on every startup: creation is skipped when the named account
+  /// already exists.
+  /// </summary>
+  public static async Task BootstrapServerServiceAccount(this IHost host, CancellationToken cancellationToken = default)
+  {
+    await using var scope = host.Services.CreateAsyncScope();
+    var sp = scope.ServiceProvider;
+
+    var logger = sp.GetRequiredService<ILogger<Program>>();
+    var serviceAccountManager = sp.GetRequiredService<IServiceAccountManager>();
+
+    var result = await serviceAccountManager.BootstrapServerServiceAccount(cancellationToken);
+    if (!result.IsSuccess)
+    {
+      logger.LogError("Bootstrap server service account failed: {Reason}", result.Reason);
+      throw new InvalidOperationException($"Bootstrap server service account failed: {result.Reason}");
+    }
   }
 
   public static async Task RemoveEmptyTenants(this IHost host)

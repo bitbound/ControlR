@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Tests.Helpers;
@@ -29,7 +28,7 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     var loginRequest = new LoginRequest { Email = "nobody@test.local", Password = "nope" };
 
     var response = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/login",
+      $"{HttpConstants.Internal.AuthEndpoint}/login",
       loginRequest,
       TestContext.Current.CancellationToken);
 
@@ -56,7 +55,7 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     var request = new RegisterRequest { Email = "first@test.local", Password = "T3stP@ssw0rd!" };
 
     var response = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       request,
       TestContext.Current.CancellationToken);
 
@@ -91,14 +90,14 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     using var httpClient = await testServer.GetHttpClient();
     var request = new RegisterRequest { Email = "dupe@test.local", Password = "T3stP@ssw0rd!" };
     var firstResponse = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       request,
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
 
     // Second call with same email should fail.
     var secondResponse = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       request,
       TestContext.Current.CancellationToken);
 
@@ -121,7 +120,7 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     var request = new RegisterRequest { Email = "weakpw@test.local", Password = "short" };
 
     var response = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       request,
       TestContext.Current.CancellationToken);
 
@@ -144,7 +143,7 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     using var httpClient = await testServer.GetHttpClient();
     var adminRequest = new RegisterRequest { Email = "admin@test.local", Password = "T3stP@ssw0rd!" };
     var adminResponse = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       adminRequest,
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, adminResponse.StatusCode);
@@ -162,7 +161,7 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     // A second user should be blocked when public registration is disabled.
     var request = new RegisterRequest { Email = "second@test.local", Password = "T3stP@ssw0rd!" };
     var response = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       request,
       TestContext.Current.CancellationToken);
 
@@ -189,7 +188,7 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     var request = new RegisterRequest { Email = "new@test.local", Password = "T3stP@ssw0rd!" };
 
     var response = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       request,
       TestContext.Current.CancellationToken);
 
@@ -216,7 +215,7 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     var request = new RegisterRequest { Email = "newuser@test.local", Password = "T3stP@ssw0rd!" };
 
     var response = await httpClient.PostAsJsonAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       request,
       TestContext.Current.CancellationToken);
 
@@ -253,7 +252,7 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
     // Send empty body (not valid JSON for RegisterRequest).
     using var content = new StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
     var response = await httpClient.PostAsync(
-      $"{HttpConstants.AuthEndpoint}/register",
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
       content,
       TestContext.Current.CancellationToken);
 

@@ -24,7 +24,7 @@ internal class UserStorageClient(
       return cachedValue;
     }
 
-    var result = await _controlrApi.UserStorage.GetUserStorageItem(key, cancellationToken);
+    var result = await _controlrApi.Internal.UserStorage.GetUserStorageItem(key, cancellationToken);
     if (!result.IsSuccess)
     {
       _logger.LogWarning("Failed to get storage key '{Key}'. Reason: {Reason}", key, result.Reason);
@@ -42,7 +42,7 @@ internal class UserStorageClient(
 
   public async Task SetItem(string key, string value, CancellationToken cancellationToken)
   {
-    var response = await _controlrApi.UserStorage.SetUserStorageItem(new(key, value), cancellationToken);
+    var response = await _controlrApi.Internal.UserStorage.SetUserStorageItem(new(key, value), cancellationToken);
     if (!response.IsSuccess)
     {
       _logger.LogError("Failed to set storage key '{Key}'. Reason: {Reason}", key, response.Reason);

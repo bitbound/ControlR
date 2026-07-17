@@ -25,7 +25,7 @@ internal sealed class EffectiveUserPreferences(
     {
       if (_preferences is null)
       {
-        var result = await _controlrApi.EffectiveUserPreferences.GetEffectiveUserPreferences();
+        var result = await _controlrApi.Internal.EffectiveUserPreferences.GetEffectiveUserPreferences();
         if (!result.IsSuccess)
         {
           _snackbar.Add(result.Reason, Severity.Error);

@@ -61,11 +61,24 @@ services:
       # Origins allowed when CORS is enabled.
       #ControlR_AppOptions__CorsAllowedOrigins__0: "https://example.com"
 
-      # Whether to make self-registration publicly available.
+      # Whether to make self-registration permanently publicly available.
+      # When enabled, anyone can create an account without an invitation, regardless of how
+      # many users already exist. Use this for public demo or evaluation deployments.
+      # Independent of DisableFirstUserSelfRegistration, which disables the one-time bootstrap
+      # that auto-disables after the first user is created.
       ControlR_AppOptions__EnablePublicRegistration: false
 
       # Allows devices to self-register without requiring an installer key.
       ControlR_AppOptions__AllowAgentsToSelfBootstrap: false
+
+      # Controls the one-time first-user self-registration behavior.
+      # By default, public registration is available only while the server has zero users;
+      # it is automatically disabled once the first user is created. The first user created
+      # through this flow is promoted to server administrator and first-tenant admin.
+      # Set this to true to disable the bootstrap entirely. Existing installations without
+      # this key set retain the prior behavior (self-registration enabled).
+      # Independent of EnablePublicRegistration, which controls ongoing open signup.
+      ControlR_AppOptions__DisableFirstUserSelfRegistration: false
 
       # The number of days to retain installer key usage history.
       # Usage entries older than this are excluded from installer key history queries and cleaned up by a background service.
@@ -185,6 +198,8 @@ services:
       # Whether users must confirm their email address before being allowed to log in.
       # If true, you must also configure SMTP settings below.
       ControlR_AppOptions__RequireUserEmailConfirmation: true
+      # Whether each user must have a unique email address.
+      ControlR_AppOptions__RequireUserUniqueEmail: true
 
       # Disable all email sending from the application.
       ControlR_AppOptions__DisableEmailSending: false
@@ -232,6 +247,15 @@ services:
       #ControlR_Bootstrap__AdminPassword: "change-me-now"
       #ControlR_Bootstrap__AdminPatTokenId: "11111111-2222-3333-4444-555555555555"
       #ControlR_Bootstrap__AdminPatSecret: "a-very-strong-and-long-pat-secret-key"
+
+      # Bootstrap a server-scoped service account on first startup.
+      # Provide a name and description, and optionally a pre-assigned account ID, token ID, and secret.
+      # The resulting x-api-key header value is {hex-guid}:{ServerServiceAccountTokenSecret}.
+      #ControlR_Bootstrap__ServerServiceAccountName: "server-svc"
+      #ControlR_Bootstrap__ServerServiceAccountDescription: "Server-scoped service account for inter-service communication"
+      #ControlR_Bootstrap__ServerServiceAccountId: "11111111-2222-3333-4444-777777777777"
+      #ControlR_Bootstrap__ServerServiceAccountTokenId: "11111111-2222-3333-4444-666666666666"
+      #ControlR_Bootstrap__ServerServiceAccountTokenSecret: "a-very-strong-and-long-service-account-secret"
 
   postgres:
     image: postgres:18

@@ -4,6 +4,7 @@ namespace ControlR.Web.Server.Services;
 
 public interface IAgentVersionProvider
 {
+  Task<bool> IsAgentOutdated(string? deviceAgentVersion, CancellationToken cancellationToken = default);
   Task<HttpResult<Version>> TryGetAgentVersion(CancellationToken cancellationToken = default);
 }
 
@@ -13,6 +14,17 @@ public class AgentVersionProvider(
 {
   private static readonly SemaphoreSlim _versionLock = new(1, 1);
   private static volatile Version? _cachedVersion;
+
+  public async Task<bool> IsAgentOutdated(string? deviceAgentVersion, CancellationToken cancellationToken = default)
+  {
+    if (string.IsNullOrWhiteSpace(deviceAgentVersion))
+    {
+      return false;
+    }
+
+    var agentVersionResult = await TryGetAgentVersion(cancellationToken);
+    return agentVersionResult.IsSuccess && deviceAgentVersion != agentVersionResult.Value.ToString();
+  }
 
   public async Task<HttpResult<Version>> TryGetAgentVersion(CancellationToken cancellationToken = default)
   {

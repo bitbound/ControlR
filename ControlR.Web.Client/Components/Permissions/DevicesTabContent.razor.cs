@@ -49,7 +49,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
       if (isToggled)
       {
         var addRequest = new DeviceTagAddRequestDto(deviceId, tag.Id);
-        var addResult = await ControlrApi.DeviceTags.AddDeviceTag(addRequest);
+        var addResult = await ControlrApi.Internal.DeviceTags.AddDeviceTag(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -59,7 +59,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.DeviceTags.RemoveDeviceTag(deviceId, tag.Id);
+        var removeResult = await ControlrApi.Internal.DeviceTags.RemoveDeviceTag(deviceId, tag.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);

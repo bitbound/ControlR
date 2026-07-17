@@ -52,7 +52,7 @@ public partial class DesktopPreviewDialog : ComponentBase
       _previewImageDataUri = null;
       await InvokeAsync(StateHasChanged);
 
-      var result = await ControlrApi.DesktopPreview.GetDesktopPreview(Device.Id, Session.ProcessId);
+      var result = await ControlrApi.Internal.DesktopPreview.GetDesktopPreview(Device.Id, Session.ProcessId);
 
       if (result.IsSuccess && result.Value.Length > 0)
       {

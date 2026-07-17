@@ -125,7 +125,7 @@ public partial class DeviceOverviewGrid
     try
     {
       var request = new UpdateDeviceAliasRequestDto(Device.Id, _aliasValue);
-      var result = await ControlrApi.Devices.UpdateDeviceAlias(request);
+      var result = await ControlrApi.Internal.Devices.UpdateDeviceAlias(request);
 
       if (result.IsSuccess)
       {

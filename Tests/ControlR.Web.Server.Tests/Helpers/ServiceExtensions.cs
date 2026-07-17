@@ -1,8 +1,8 @@
 using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
+using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Services.Users;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Web.Server.Services.DeviceManagement;
 using System.Net;
+using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 
 namespace ControlR.Web.Server.Tests.Helpers;
@@ -37,6 +38,21 @@ internal static class ServiceExtensions
   }
 
   /// <summary>
+  /// Creates a controller with a server principal already configured.
+  /// </summary>
+  /// <typeparam name="T">The controller type to create</typeparam>
+  /// <param name="scope">The service scope to use for dependency resolution</param>
+  /// <param name="accountName">Optional name for the server service account</param>
+  /// <returns>The configured controller instance</returns>
+  public static async Task<T> CreateControllerWithServerPrincipal<T>(this IServiceScope scope, string? accountName = null) where T : ControllerBase
+  {
+    var serverPrincipal = await scope.ServiceProvider.CreateServerPrincipal(accountName);
+    var controller = scope.CreateController<T>();
+    controller.ControllerContext.HttpContext.User = serverPrincipal;
+    return controller;
+  }
+
+  /// <summary>
   /// Creates a test tenant and user, then returns a controller configured with that user
   /// </summary>
   /// <typeparam name="T">The controller type to create</typeparam>
@@ -54,35 +70,13 @@ internal static class ServiceExtensions
     var services = scope.ServiceProvider;
     var tenant = await services.CreateTestTenant(tenantName);
 
-    // If the test caller should NOT be a server administrator, ensure there is at least one
-    // existing user so the next created user will not become the automatic server admin.
+    // Ensure there is a seed user so our test user won't become the first-user admin automatically.
     if (!roles.Contains(RoleNames.ServerAdministrator))
     {
-      // create a seed user in the tenant so our test user is not the very first user
       await services.CreateTestUser(tenant.Id, email: "seed@t.local");
     }
 
     var user = await services.CreateTestUser(tenant.Id, userEmail, roles);
-
-    // Ensure the created controller user does not accidentally hold ServerAdministrator role
-    // unless explicitly requested by the caller.
-    if (!roles.Contains(RoleNames.ServerAdministrator))
-    {
-      var userManager = services.GetRequiredService<UserManager<AppUser>>();
-      if (await userManager.IsInRoleAsync(user, RoleNames.ServerAdministrator))
-      {
-        await userManager.RemoveFromRoleAsync(user, RoleNames.ServerAdministrator);
-      }
-      // Also remove any persisted user-role links directly from the DB to ensure Identity
-      // role lookups reflect the intended test state.
-      var db = services.GetRequiredService<AppDb>();
-      var userEntity = await db.Users.Include(u => u.UserRoles).FirstOrDefaultAsync(u => u.Id == user.Id);
-      if (userEntity?.UserRoles?.Count == 0)
-      {
-        db.UserRoles.RemoveRange(userEntity.UserRoles);
-        await db.SaveChangesAsync();
-      }
-    }
     var controller = await scope.CreateControllerWithUser<T>(user);
 
     return (controller, tenant, user);
@@ -103,6 +97,20 @@ internal static class ServiceExtensions
     await controller.SetControllerUser(user, userManager);
 
     return controller;
+  }
+
+  /// <summary>
+  /// Creates a server principal <see cref="ClaimsPrincipal"/> by creating a new server-scoped
+  /// service account and returning a principal with the appropriate claims.
+  /// </summary>
+  public static async Task<ClaimsPrincipal> CreateServerPrincipal(this IServiceProvider services, string? accountName = null)
+  {
+    var manager = services.GetRequiredService<IServiceAccountManager>();
+    var accountNameValue = accountName ?? $"server-principal-{Guid.NewGuid():N}";
+    var result = await manager.CreateForServer(accountNameValue, null, TestContext.Current.CancellationToken);
+
+    Assert.True(result.IsSuccess);
+    return TestPrincipalHelper.CreateServerServiceAccountPrincipal(result.Value);
   }
 
   /// <summary>
@@ -173,13 +181,13 @@ internal static class ServiceExtensions
   }
 
   /// <summary>
-  /// Creates a test user with the specified role and saves it to the database
+  /// Creates a test user with the specified roles and saves it to the database.
   /// </summary>
-  /// <param name="services"></param>
-  /// <param name="tenantId">The tenant ID for the user</param>
-  /// <param name="email">Optional email, defaults to "test@example.com"</param>
-  /// <param name="roles">Optional roles to assign to the user</param>
-  /// <returns>The created user</returns>
+  /// <param name="services">The service provider.</param>
+  /// <param name="tenantId">The tenant ID for the user.</param>
+  /// <param name="email">Optional email, defaults to "test@example.com".</param>
+  /// <param name="roles">Optional roles to assign to the user.</param>
+  /// <returns>The created user.</returns>
   public static async Task<AppUser> CreateTestUser(
     this IServiceProvider services,
     Guid tenantId,
@@ -197,31 +205,17 @@ internal static class ServiceExtensions
     }
 
     var user = userResult.User;
-
-    // Add roles if specified
-    foreach (var role in roles)
-    {
-      // Skip if already in role to avoid duplicate-role errors in tests
-      if (!await userManager.IsInRoleAsync(user, role))
-      {
-        var addResult = await userManager.AddToRoleAsync(user, role);
-        if (!addResult.Succeeded)
-        {
-          throw new InvalidOperationException($"Failed to add role {role} to user: {string.Join(", ", addResult.Errors.Select(e => e.Description))}");
-        }
-      }
-    }
-
+    await AddRolesIfMissingAsync(userManager, user, roles);
     return user;
   }
-  
+
   /// <summary>
-  /// Creates a test user with the specified role and saves it to the database
+  /// Creates a test user with the specified roles and saves it to the database.
   /// </summary>
-  /// <param name="services"></param>
-  /// <param name="email">Optional email, defaults to "test@example.com"</param>
-  /// <param name="roles">Optional roles to assign to the user</param>
-  /// <returns>The created user</returns>
+  /// <param name="services">The service provider.</param>
+  /// <param name="email">Optional email, defaults to "test@example.com".</param>
+  /// <param name="roles">Optional roles to assign to the user.</param>
+  /// <returns>The created user.</returns>
   public static async Task<AppUser> CreateTestUser(
     this IServiceProvider services,
     string email = "test@example.com",
@@ -238,21 +232,24 @@ internal static class ServiceExtensions
     }
 
     var user = userResult.User;
+    await AddRolesIfMissingAsync(userManager, user, roles);
+    return user;
+  }
 
-    // Add roles if specified
+  private static async Task AddRolesIfMissingAsync(UserManager<AppUser> userManager, AppUser user, IEnumerable<string> roles)
+  {
+    var existingRoles = new HashSet<string>(await userManager.GetRolesAsync(user));
     foreach (var role in roles)
     {
-      // Skip if already in role to avoid duplicate-role errors in tests
-      if (!await userManager.IsInRoleAsync(user, role))
+      if (!existingRoles.Contains(role))
       {
         var addResult = await userManager.AddToRoleAsync(user, role);
         if (!addResult.Succeeded)
         {
           throw new InvalidOperationException($"Failed to add role {role} to user: {string.Join(", ", addResult.Errors.Select(e => e.Description))}");
         }
+        existingRoles.Add(role);
       }
     }
-
-    return user;
   }
 }

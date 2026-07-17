@@ -1,6 +1,5 @@
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Api;
+using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Users;
@@ -9,7 +8,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -32,7 +30,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
 
     var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator, TestContext.Current.CancellationToken);
 
-    var request = new CreateUserRequestDto(
+    var request = new InternalDtos.CreateUserRequestDto(
       UserName: "evil",
       Email: "evil@t.local",
       Password: "P@ssw0rd!",
@@ -65,7 +63,7 @@ public class UsersControllerServerAdminTests(ITestOutputHelper testOutput)
     // Ensure the ServerAdministrator role exists using RoleManager
     var serverRole = await db.Roles.FirstAsync(r => r.Name == RoleNames.ServerAdministrator, TestContext.Current.CancellationToken);
 
-    var request = new CreateUserRequestDto(
+    var request = new InternalDtos.CreateUserRequestDto(
       UserName: "super",
       Email: "super@t.local",
       Password: "P@ssw0rd!",

@@ -51,7 +51,7 @@ internal class TenantSettingsProvider(
       return _settings;
     }
 
-    var getResult = await _controlrApi.TenantSettings.GetTenantSettings();
+    var getResult = await _controlrApi.Internal.TenantSettings.GetTenantSettings();
     if (!getResult.IsSuccess)
     {
       _snackbar.Add(getResult.Reason, Severity.Error);
@@ -107,7 +107,7 @@ internal class TenantSettingsProvider(
     {
       if (newValue is null)
       {
-        var deleteResult = await _controlrApi.TenantSettings.DeleteTenantSetting(settingName);
+        var deleteResult = await _controlrApi.Internal.TenantSettings.DeleteTenantSetting(settingName);
         if (!deleteResult.IsSuccess)
         {
           _logger.LogError("Failed to delete setting.  Reason: {Reason}, StatusCode: {StatusCode}",
@@ -133,7 +133,7 @@ internal class TenantSettingsProvider(
       }
 
       var request = new TenantSettingRequestDto(settingName, normalizationResult.Value ?? string.Empty);
-      var setResult = await _controlrApi.TenantSettings.SetTenantSetting(request);
+      var setResult = await _controlrApi.Internal.TenantSettings.SetTenantSetting(request);
 
       if (!setResult.IsSuccess)
       {

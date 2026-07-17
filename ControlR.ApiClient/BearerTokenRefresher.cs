@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 namespace ControlR.ApiClient;
 
@@ -38,7 +38,7 @@ public sealed class BearerTokenRefresher(
   IHttpClientFactory httpClientFactory,
   TimeProvider timeProvider) : IBearerTokenRefresher
 {
-  private const string RefreshEndpoint = $"{HttpConstants.AuthEndpoint}/refresh";
+  private const string RefreshEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/refresh";
 
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;

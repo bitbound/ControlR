@@ -13,6 +13,7 @@ namespace ControlR.Web.Server.Hubs;
 
 [Authorize]
 public class ViewerHub(
+  TimeProvider timeProvider,
   UserManager<AppUser> userManager,
   AppDb appDb,
   IAuthorizationService authorizationService,
@@ -30,6 +31,7 @@ public class ViewerHub(
   private readonly IEffectiveUserPreferencesResolver _effectiveUserPreferencesResolver = effectiveUserPreferencesResolver;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<ViewerHub> _logger = logger;
+  private readonly TimeProvider _timeProvider = timeProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   public async Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
@@ -146,7 +148,7 @@ public class ViewerHub(
     try
     {
       _logger.LogInformation(
-        "Invoking CtrlAltDel for device {DeviceId} and process {ProcessId}.  User: {UserId}", 
+        "Invoking CtrlAltDel for device {DeviceId} and process {ProcessId}.  User: {UserId}",
         deviceId,
         targetDesktopProcessId,
         Context.UserIdentifier);
@@ -169,7 +171,7 @@ public class ViewerHub(
       }
 
       var dto = new InvokeCtrlAltDelRequestDto(
-        targetDesktopProcessId, 
+        targetDesktopProcessId,
         Context.User?.Identity?.Name ?? "Unknown",
         desktopSessionType);
 
@@ -192,7 +194,7 @@ public class ViewerHub(
 
       if (Context.User?.TryGetUserId(out var userId) != true)
       {
-        _logger.LogCritical("User is null.  Authorize tag should have prevented this.");
+        _logger.LogCritical("User is null on connect. Client is trying to connect to ViewerHub from an authenticated but invalid context.");
         return;
       }
 
@@ -213,6 +215,7 @@ public class ViewerHub(
       }
 
       user.IsOnline = true;
+      user.LastLogin = _timeProvider.GetUtcNow();
       await _appDb.SaveChangesAsync();
 
       if (Context.User.IsInRole(RoleNames.ServerAdministrator))
@@ -253,8 +256,9 @@ public class ViewerHub(
     {
       await base.OnDisconnectedAsync(exception);
 
-      if (Context.User is null)
+      if (Context.User?.TryGetUserId(out var userId) != true)
       {
+        _logger.LogCritical("User is null on disconnect. The principal may have been invalidated during the connection lifetime.");
         return;
       }
 
@@ -430,8 +434,8 @@ public class ViewerHub(
         displayName = user.UserName ?? "";
       }
 
-      sessionRequestDto = sessionRequestDto with 
-      { 
+      sessionRequestDto = sessionRequestDto with
+      {
         NotifyUserOnSessionStart = notifyUser,
         ViewerConnectionId = Context.ConnectionId,
         ViewerName = displayName,

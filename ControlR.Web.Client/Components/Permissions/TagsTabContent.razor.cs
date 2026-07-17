@@ -84,7 +84,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     }
 
     var createRequest = new TagCreateRequestDto(_newTagName, TagType.Permission);
-    var createResult = await ControlrApi.Tags.CreateTag(createRequest);
+    var createResult = await ControlrApi.Internal.Tags.CreateTag(createRequest);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add(createResult.Reason, Severity.Error);
@@ -115,7 +115,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    var deleteResult = await ControlrApi.Tags.DeleteTag(_selectedTag.Id);
+    var deleteResult = await ControlrApi.Internal.Tags.DeleteTag(_selectedTag.Id);
     if (!deleteResult.IsSuccess)
     {
       Snackbar.Add(deleteResult.Reason, Severity.Error);
@@ -176,7 +176,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     }
 
     var renameRequest = new TagRenameRequestDto(_selectedTag.Id, response);
-    var renameResult = await ControlrApi.Tags.RenameTag(renameRequest);
+    var renameResult = await ControlrApi.Internal.Tags.RenameTag(renameRequest);
     if (!renameResult.IsSuccess)
     {
       Snackbar.Add(renameResult.Reason, Severity.Error);
@@ -196,7 +196,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       if (isToggled)
       {
         var addRequest = new DeviceTagAddRequestDto(deviceId, tag.Id);
-        var addResult = await ControlrApi.DeviceTags.AddDeviceTag(addRequest);
+        var addResult = await ControlrApi.Internal.DeviceTags.AddDeviceTag(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -206,7 +206,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.DeviceTags.RemoveDeviceTag(deviceId, tag.Id);
+        var removeResult = await ControlrApi.Internal.DeviceTags.RemoveDeviceTag(deviceId, tag.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);
@@ -236,7 +236,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       if (isToggled)
       {
         var addRequest = new UserTagAddRequestDto(userId, tag.Id);
-        var addResult = await ControlrApi.UserTags.AddUserTag(addRequest);
+        var addResult = await ControlrApi.Internal.UserTags.AddUserTag(addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -246,7 +246,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.UserTags.RemoveUserTag(userId, tag.Id);
+        var removeResult = await ControlrApi.Internal.UserTags.RemoveUserTag(userId, tag.Id);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);

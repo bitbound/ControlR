@@ -1,7 +1,6 @@
 using ControlR.Web.Server.Extensions;
 using Microsoft.AspNetCore.OutputCaching;
 using Moq;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 

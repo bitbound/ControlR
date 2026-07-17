@@ -1,22 +1,21 @@
 using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Data.Extensions;
 using ControlR.Web.Server.Primitives;
-using ControlR.Web.Server.Extensions;
 
 namespace ControlR.Web.Server.Services.Settings;
 
 public interface ITenantSettingsManager
 {
-  Task<TenantSettingsDto> GetAllSettings(
+  Task<InternalDtos.TenantSettingsDto> GetAllSettings(
     Guid tenantId,
     CancellationToken cancellationToken = default);
-  Task<HttpResult<TenantSettingResponseDto>> SetSetting(
+  Task<HttpResult<InternalDtos.TenantSettingResponseDto>> SetSetting(
     Guid tenantId,
-    TenantSettingRequestDto setting,
+    InternalDtos.TenantSettingRequestDto setting,
     CancellationToken cancellationToken = default);
-  Task<HttpResult<TenantSettingsDto>> SetSettings(
+  Task<HttpResult<InternalDtos.TenantSettingsDto>> SetSettings(
     Guid tenantId,
-    TenantSettingsDto settings,
+    InternalDtos.TenantSettingsDto settings,
     CancellationToken cancellationToken = default);
 }
 
@@ -27,7 +26,7 @@ public class TenantSettingsManager(
   private readonly AppDb _appDb = appDb;
   private readonly ILogger<TenantSettingsManager> _logger = logger;
 
-  public async Task<TenantSettingsDto> GetAllSettings(
+  public async Task<InternalDtos.TenantSettingsDto> GetAllSettings(
     Guid tenantId,
     CancellationToken cancellationToken = default)
   {
@@ -44,9 +43,9 @@ public class TenantSettingsManager(
         value));
   }
 
-  public async Task<HttpResult<TenantSettingResponseDto>> SetSetting(
+  public async Task<HttpResult<InternalDtos.TenantSettingResponseDto>> SetSetting(
     Guid tenantId,
-    TenantSettingRequestDto setting,
+    InternalDtos.TenantSettingRequestDto setting,
     CancellationToken cancellationToken = default)
   {
     var tenant = await _appDb.Tenants
@@ -55,7 +54,7 @@ public class TenantSettingsManager(
 
     if (tenant is null)
     {
-      return HttpResult.Fail<TenantSettingResponseDto>(HttpResultErrorCode.NotFound, "Tenant not found.");
+      return HttpResult.Fail<InternalDtos.TenantSettingResponseDto>(HttpResultErrorCode.NotFound, "Tenant not found.");
     }
 
     tenant.TenantSettings ??= [];
@@ -69,7 +68,7 @@ public class TenantSettingsManager(
         await _appDb.SaveChangesAsync(cancellationToken);
       }
 
-      return HttpResult.Ok(new TenantSettingResponseDto(null, setting.Name, null));
+      return HttpResult.Ok(new InternalDtos.TenantSettingResponseDto(null, setting.Name, null));
     }
 
     var normalizationResult = TenantSettingDefinitions.Normalize(setting.Name, setting.Value);
@@ -80,7 +79,7 @@ public class TenantSettingsManager(
         setting.Name,
         normalizationResult.ErrorMessage);
 
-      return HttpResult.Fail<TenantSettingResponseDto>(
+      return HttpResult.Fail<InternalDtos.TenantSettingResponseDto>(
         HttpResultErrorCode.ValidationFailed,
         normalizationResult.ErrorMessage ?? "Setting value is invalid.");
     }
@@ -99,12 +98,12 @@ public class TenantSettingsManager(
       .AsNoTracking()
       .SingleAsync(x => x.TenantId == tenantId && x.Name == setting.Name, cancellationToken);
 
-    return HttpResult.Ok(savedSetting.ToDto());
+    return HttpResult.Ok(savedSetting.ToInternalResponseDto());
   }
 
-  public async Task<HttpResult<TenantSettingsDto>> SetSettings(
+  public async Task<HttpResult<InternalDtos.TenantSettingsDto>> SetSettings(
     Guid tenantId,
-    TenantSettingsDto settings,
+    InternalDtos.TenantSettingsDto settings,
     CancellationToken cancellationToken = default)
   {
     var tenant = await _appDb.Tenants
@@ -113,13 +112,13 @@ public class TenantSettingsManager(
 
     if (tenant is null)
     {
-      return HttpResult.Fail<TenantSettingsDto>(HttpResultErrorCode.NotFound, "Tenant not found.");
+      return HttpResult.Fail<InternalDtos.TenantSettingsDto>(HttpResultErrorCode.NotFound, "Tenant not found.");
     }
 
     tenant.TenantSettings ??= [];
 
     var normalizationResults = new List<(string Name, string? Value)>();
-    foreach (var setting in TenantSettingDefinitions.GetValues(settings).Select(x => new TenantSettingRequestDto(x.Name, x.Value ?? string.Empty)))
+    foreach (var setting in TenantSettingDefinitions.GetValues(settings).Select(x => new InternalDtos.TenantSettingRequestDto(x.Name, x.Value ?? string.Empty)))
     {
       if (string.IsNullOrWhiteSpace(setting.Value))
       {
@@ -135,7 +134,7 @@ public class TenantSettingsManager(
           setting.Name,
           normalizationResult.ErrorMessage);
 
-        return HttpResult.Fail<TenantSettingsDto>(
+        return HttpResult.Fail<InternalDtos.TenantSettingsDto>(
           HttpResultErrorCode.ValidationFailed,
           normalizationResult.ErrorMessage ?? "Setting value is invalid.");
       }

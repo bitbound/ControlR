@@ -1,10 +1,8 @@
 using System.Net.Http.Json;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -32,25 +30,25 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
 
     // Create a test user and issue a personal access token for that user
     var patManager = testServer.TestServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
-    var createPatRequest = new CreatePersonalAccessTokenRequestDto("Test Key for Cross-Device Access");
+    var createPatRequest = new InternalDtos.CreatePersonalAccessTokenRequestDto("Test Key for Cross-Device Access");
     var createResult = await patManager.CreateToken(createPatRequest, user.Id);
 
     Assert.True(createResult.IsSuccess, $"PAT creation failed: {createResult.Reason}");
     var pat = createResult.Value.PlainTextToken;
 
     // Phase 2: Create a logon token for device1 only
-    var logonTokenRequest = new LogonTokenRequestDto(deviceId1);
+    var logonTokenRequest = new InternalDtos.LogonTokenRequestDto(deviceId1);
 
     // Add personal access token to request headers
     httpClient.DefaultRequestHeaders.Add(
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName,
       pat);
 
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest, TestContext.Current.CancellationToken);
+    var logonTokenResponse = await httpClient.PostAsJsonAsync(HttpConstants.Internal.LogonTokensEndpoint, logonTokenRequest, TestContext.Current.CancellationToken);
 
     // Assert logon token creation succeeded
     logonTokenResponse.EnsureSuccessStatusCode();
-    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>(TestContext.Current.CancellationToken);
+    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<InternalDtos.LogonTokenResponseDto>(TestContext.Current.CancellationToken);
 
     Assert.NotNull(logonTokenResult);
     Assert.NotNull(logonTokenResult.Token);
@@ -89,24 +87,24 @@ public class LogonTokenEndToEndTests(ITestOutputHelper testOutput)
 
     // Create a test user and issue a personal access token for that user
     var patManager = testServer.TestServer.Services.GetRequiredService<IPersonalAccessTokenManager>();
-    var createPatRequest = new CreatePersonalAccessTokenRequestDto("Test Key for Logon Token");
+    var createPatRequest = new InternalDtos.CreatePersonalAccessTokenRequestDto("Test Key for Logon Token");
     var createResult = await patManager.CreateToken(createPatRequest, user.Id);
 
     Assert.True(createResult.IsSuccess, $"PAT creation failed: {createResult.Reason}");
     var pat = createResult.Value.PlainTextToken;
 
     // Phase 2: Use the API key to request a logon token via HTTP
-    var logonTokenRequest = new LogonTokenRequestDto(deviceId);
+    var logonTokenRequest = new InternalDtos.LogonTokenRequestDto(deviceId);
     // Add personal access token to request headers
     httpClient.DefaultRequestHeaders.Add(
       PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName,
       pat);
 
-    var logonTokenResponse = await httpClient.PostAsJsonAsync("/api/logon-tokens", logonTokenRequest, TestContext.Current.CancellationToken);
+    var logonTokenResponse = await httpClient.PostAsJsonAsync(HttpConstants.Internal.LogonTokensEndpoint, logonTokenRequest, TestContext.Current.CancellationToken);
 
     // Assert logon token creation succeeded
     logonTokenResponse.EnsureSuccessStatusCode();
-    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<LogonTokenResponseDto>(TestContext.Current.CancellationToken);
+    var logonTokenResult = await logonTokenResponse.Content.ReadFromJsonAsync<InternalDtos.LogonTokenResponseDto>(TestContext.Current.CancellationToken);
 
     Assert.NotNull(logonTokenResult);
     Assert.NotNull(logonTokenResult.Token);

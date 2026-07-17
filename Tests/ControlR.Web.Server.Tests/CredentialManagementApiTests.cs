@@ -1,14 +1,11 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -36,8 +33,8 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
 
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
-      "/api/auth/change-password-with-credentials",
-      new CredentialPasswordChangeRequestDto(user.Email!, "T3stP@ssw0rd!", "B3tt3rP@ssw0rd!"),
+      $"{HttpConstants.Internal.AuthEndpoint}/change-password-with-credentials",
+      new InternalDtos.CredentialPasswordChangeRequestDto(user.Email!, "T3stP@ssw0rd!", "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -72,8 +69,8 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
 
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
-      "/api/auth/complete-password-reset",
-      new ResetPasswordRequestDto(user.Email!, resetCode, "B3tt3rP@ssw0rd!"),
+      $"{HttpConstants.Internal.AuthEndpoint}/complete-password-reset",
+      new InternalDtos.ResetPasswordRequestDto(user.Email!, resetCode, "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -98,7 +95,7 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
     var passwordManager = services.GetRequiredService<IPasswordManager>();
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-    var patResult = await patManager.CreateToken(new CreatePersonalAccessTokenRequestDto("Credential Test PAT"), user.Id);
+    var patResult = await patManager.CreateToken(new InternalDtos.CreatePersonalAccessTokenRequestDto("Credential Test PAT"), user.Id);
     var personalAccessToken = patResult.Value!.PlainTextToken;
 
     var resetResult = await passwordManager.AdminResetPassword(tenant.Id, user.Id);
@@ -108,16 +105,16 @@ public class CredentialManagementApiTests(ITestOutputHelper testOutput)
     using var client = testServer.Factory.CreateClient();
     client.DefaultRequestHeaders.Add(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName, personalAccessToken);
 
-    var blockedResponse = await client.GetAsync("/api/personal-access-tokens", TestContext.Current.CancellationToken);
+    var blockedResponse = await client.GetAsync(HttpConstants.Internal.PersonalAccessTokensEndpoint, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Forbidden, blockedResponse.StatusCode);
 
     var changePasswordResponse = await client.PostAsJsonAsync(
-      "/api/auth/change-password",
-      new ChangePasswordRequestDto(temporaryPassword, "B3tt3rP@ssw0rd!"),
+      $"{HttpConstants.Internal.AuthEndpoint}/change-password",
+      new InternalDtos.ChangePasswordRequestDto(temporaryPassword, "B3tt3rP@ssw0rd!"),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, changePasswordResponse.StatusCode);
 
-    var allowedResponse = await client.GetAsync("/api/personal-access-tokens", TestContext.Current.CancellationToken);
+    var allowedResponse = await client.GetAsync(HttpConstants.Internal.PersonalAccessTokensEndpoint, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, allowedResponse.StatusCode);
 
     using var verificationScope = services.CreateScope();

@@ -1,5 +1,6 @@
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Libraries.Shared.Services.FileSystem;
@@ -78,7 +79,7 @@ internal abstract class AgentInstallerBase(
       Logger.LogInformation("Requesting device creation on the server with tags {TagIds}.", string.Join(", ", tagIds));
     }
 
-    var createResult = await _controlrApi.Devices.CreateDevice(createRequest);
+    var createResult = await _controlrApi.Agent.Devices.CreateDevice(createRequest);
     if (createResult.IsSuccess)
     {
       Logger.LogInformation("Device created successfully.");

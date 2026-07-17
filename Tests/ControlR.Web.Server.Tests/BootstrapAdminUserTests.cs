@@ -10,7 +10,6 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -35,7 +34,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
     var user = await appDb.Users
@@ -84,7 +83,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var bootstrapUser = await appDb.Users
       .IgnoreQueryFilters()
@@ -110,7 +109,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
     var user = await appDb.Users
       .IgnoreQueryFilters()
       .FirstOrDefaultAsync(u => u.Email == AdminEmail, TestContext.Current.CancellationToken);
@@ -135,7 +134,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var user = await appDb.Users
       .IgnoreQueryFilters()
@@ -150,7 +149,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var userCount = await appDb.Users.IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken);
     Assert.Equal(0, userCount);
@@ -183,6 +182,36 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
   }
 
   [Fact]
+  public async Task Bootstrap_WithPatSecretOnly_SkipsPatCreation()
+  {
+    var config = new Dictionary<string, string?>
+    {
+      ["Bootstrap:AdminEmail"] = AdminEmail,
+      ["Bootstrap:AdminPassword"] = AdminPassword,
+      ["Bootstrap:AdminPatSecret"] = PatSecret,
+      ["AppOptions:DisableEmailSending"] = "true"
+    };
+
+    await using var testApp = await TestAppBuilder.CreateTestApp(output, extraConfiguration: config);
+    await testApp.App.BootstrapAdminUser();
+
+    using var scope = testApp.CreateScope();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+
+    var user = await appDb.Users
+      .IgnoreQueryFilters()
+      .FirstOrDefaultAsync(u => u.Email == AdminEmail, TestContext.Current.CancellationToken);
+    Assert.NotNull(user);
+
+    var patCount = await appDb.PersonalAccessTokens
+      .IgnoreQueryFilters()
+      .Where(t => t.UserId == user.Id)
+      .CountAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(0, patCount);
+  }
+
+  [Fact]
   public async Task Bootstrap_WithPatSecret_CreatesPat()
   {
     var config = new Dictionary<string, string?>
@@ -198,7 +227,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
     var user = await appDb.Users
@@ -242,7 +271,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
       settings: config);
 
     using var scope = testServer.Services.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
 
     var user = await appDb.Users
       .IgnoreQueryFilters()
@@ -260,7 +289,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     client.DefaultRequestHeaders.Remove(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName);
     client.DefaultRequestHeaders.Add(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName, fullToken);
 
-    var response = await client.GetAsync("/api/users", TestContext.Current.CancellationToken);
+    var response = await client.GetAsync(HttpConstants.Internal.UsersEndpoint, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
   }
@@ -281,7 +310,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     await testApp.App.BootstrapAdminUser();
 
     using var scope = testApp.CreateScope();
-    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
     var user = await appDb.Users
       .Include(u => u.PersonalAccessTokens)
       .IgnoreQueryFilters()

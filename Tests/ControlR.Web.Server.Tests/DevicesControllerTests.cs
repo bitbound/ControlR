@@ -3,11 +3,8 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
@@ -22,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using ControlR.Web.Server.Api.Internal;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -79,7 +77,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
 
     // Act
-    var request = new DeleteDevicesRequestDto([.. nonExistentIds, existingId]);
+    var request = new InternalDtos.DeleteDevicesRequestDto([.. nonExistentIds, existingId]);
     var result = await controller.DeleteMany(db, request, TestContext.Current.CancellationToken);
 
     // Assert
@@ -175,16 +173,15 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       BEFORE DELETE ON "Devices"
       FOR EACH ROW EXECUTE FUNCTION _test_skip_device_delete();
       """;
-#pragma warning disable EF1002
+
     await db.Database.ExecuteSqlRawAsync(createTriggerSql, TestContext.Current.CancellationToken);
-#pragma warning restore EF1002
 
     try
     {
       await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
 
       // Act — request 10 existing + 3 non-existent
-      var request = new DeleteDevicesRequestDto([.. deleteRequestIds, .. nonExistentIds]);
+      var request = new InternalDtos.DeleteDevicesRequestDto([.. deleteRequestIds, .. nonExistentIds]);
       var result = await controller.DeleteMany(db, request, TestContext.Current.CancellationToken);
 
       // Assert
@@ -235,7 +232,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     using var scope = testApp.CreateScope();
     var controller = scope.CreateController<DevicesController>();
 
-    var request = new DeleteDevicesRequestDto([Guid.NewGuid()]);
+    var request = new InternalDtos.DeleteDevicesRequestDto([Guid.NewGuid()]);
 
     // Act
     var result = await controller.DeleteMany(
@@ -309,7 +306,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
 
     // Act
-    var request = new DeleteDevicesRequestDto(deleteIds);
+    var request = new InternalDtos.DeleteDevicesRequestDto(deleteIds);
     var result = await controller.DeleteMany(db, request, TestContext.Current.CancellationToken);
 
     // Assert
@@ -387,7 +384,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, userManager);
 
     // Act - Combined filters: online + has tag + contains "Device 2" in name
-    var request = new DeviceSearchRequestDto
+    var request = new InternalDtos.DeviceSearchRequestDto
     {
       HideOfflineDevices = true,
       TagIds = [tagId],
@@ -464,7 +461,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     }
 
     await controller.SetControllerUser(user, userManager);
-    var onlineRequest = new DeviceSearchRequestDto
+    var onlineRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "true" }],
       Page = 0,
@@ -477,7 +474,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
-    var offlineRequest = new DeviceSearchRequestDto
+    var offlineRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "false" }],
       Page = 0,
@@ -564,7 +561,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, userManager);
 
     // Test multiple filters: Online + High CPU + Contains "Production"
-    var multiFilterRequest = new DeviceSearchRequestDto
+    var multiFilterRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [
         new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "true" },
@@ -582,7 +579,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<ILogger<DevicesController>>());
 
     // Test OS + Online filters
-    var osOnlineRequest = new DeviceSearchRequestDto
+    var osOnlineRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [
         new DeviceColumnFilter { PropertyName = "OsDescription", Operator = FilterOperator.String.Contains, Value = "Windows Server" },
@@ -670,7 +667,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     }
 
     await controller.SetControllerUser(user, userManager);
-    var cpuGtRequest = new DeviceSearchRequestDto
+    var cpuGtRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.GreaterThan, Value = "0.5" }],
       Page = 0,
@@ -682,7 +679,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var cpuEqRequest = new DeviceSearchRequestDto
+    var cpuEqRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.Equal, Value = "0.3" }],
       Page = 0,
@@ -695,7 +692,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
-    var cpuLteRequest = new DeviceSearchRequestDto
+    var cpuLteRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.LessThanOrEqual, Value = "0.5" }],
       Page = 0,
@@ -708,7 +705,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
-    var memGteRequest = new DeviceSearchRequestDto
+    var memGteRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "UsedMemoryPercent", Operator = FilterOperator.Number.GreaterThanOrEqual, Value = "0.6" }],
       Page = 0,
@@ -721,7 +718,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
 
-    var storageNeRequest = new DeviceSearchRequestDto
+    var storageNeRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "UsedStoragePercent", Operator = FilterOperator.Number.NotEqual, Value = "0.5" }],
       Page = 0,
@@ -817,7 +814,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     }
 
     await controller.SetControllerUser(user, userManager);
-    var nameRequest = new DeviceSearchRequestDto
+    var nameRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.Contains, Value = "Server" }],
       Page = 0,
@@ -829,7 +826,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var osRequest = new DeviceSearchRequestDto
+    var osRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "OsDescription", Operator = FilterOperator.String.Contains, Value = "Ubuntu" }],
       Page = 0,
@@ -841,7 +838,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var connRequest = new DeviceSearchRequestDto
+    var connRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "ConnectionId", Operator = FilterOperator.String.Equal, Value = "conn-003" }],
       Page = 0,
@@ -935,7 +932,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     await controller.SetControllerUser(user, userManager);
-    var startsWithRequest = new DeviceSearchRequestDto
+    var startsWithRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.StartsWith, Value = "Device-Prod" }],
       Page = 0,
@@ -947,7 +944,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var endsWithRequest = new DeviceSearchRequestDto
+    var endsWithRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.EndsWith, Value = "-03" }],
       Page = 0,
@@ -959,7 +956,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var notContainsRequest = new DeviceSearchRequestDto
+    var notContainsRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Name", Operator = FilterOperator.String.NotContains, Value = "Prod" }],
       Page = 0,
@@ -971,7 +968,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var emptyRequest = new DeviceSearchRequestDto
+    var emptyRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Alias", Operator = FilterOperator.String.Empty, Value = "" }],
       Page = 0,
@@ -983,7 +980,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var notEmptyRequest = new DeviceSearchRequestDto
+    var notEmptyRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "Alias", Operator = FilterOperator.String.NotEmpty, Value = "" }],
       Page = 0,
@@ -1075,7 +1072,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, userManager);
 
     // Test Empty filter (CpuUtilization = 0)
-    var emptyRequest = new DeviceSearchRequestDto
+    var emptyRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.Empty, Value = "" }],
       Page = 0,
@@ -1089,7 +1086,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<ILogger<DevicesController>>());
 
     // Test NotEmpty filter (CpuUtilization != 0)
-    var notEmptyRequest = new DeviceSearchRequestDto
+    var notEmptyRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.NotEmpty, Value = "" }],
       Page = 0,
@@ -1160,7 +1157,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     await deviceManager.AddOrUpdate(deviceDto, connectionContext);
     await controller.SetControllerUser(user, userManager);
-    var invalidNumericRequest = new DeviceSearchRequestDto
+    var invalidNumericRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "CpuUtilization", Operator = FilterOperator.Number.Equal, Value = "invalid-number" }],
       Page = 0,
@@ -1172,7 +1169,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var invalidBooleanRequest = new DeviceSearchRequestDto
+    var invalidBooleanRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "IsOnline", Operator = FilterOperator.Boolean.Is, Value = "maybe" }],
       Page = 0,
@@ -1184,7 +1181,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
       db,
       services.GetRequiredService<IAgentVersionProvider>(),
       services.GetRequiredService<ILogger<DevicesController>>());
-    var invalidPropertyRequest = new DeviceSearchRequestDto
+    var invalidPropertyRequest = new InternalDtos.DeviceSearchRequestDto
     {
       FilterDefinitions = [new DeviceColumnFilter { PropertyName = "NonExistentProperty", Operator = FilterOperator.String.Equal, Value = "test" }],
       Page = 0,
@@ -1299,7 +1296,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user1, userManager);
 
     // Act
-    var request = new DeviceSearchRequestDto
+    var request = new InternalDtos.DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 20
@@ -1386,7 +1383,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     // Act
     // Test case 1: Get all devices with pagination
-    var request1 = new DeviceSearchRequestDto
+    var request1 = new InternalDtos.DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 5
@@ -1401,7 +1398,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response1 = result1.Value;
 
     // Test case 2: Filter by online status
-    var request2 = new DeviceSearchRequestDto
+    var request2 = new InternalDtos.DeviceSearchRequestDto
     {
       HideOfflineDevices = true,
       Page = 0,
@@ -1417,7 +1414,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response2 = result2.Value;
 
     // Test case 3: Filter by tag
-    var request3 = new DeviceSearchRequestDto
+    var request3 = new InternalDtos.DeviceSearchRequestDto
     {
       TagIds = [tagIds[0]],
       Page = 0,
@@ -1433,7 +1430,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response3 = result3.Value;
 
     // Test case 4: Search by name
-    var request4 = new DeviceSearchRequestDto
+    var request4 = new InternalDtos.DeviceSearchRequestDto
     {
       SearchText = "Device 1",
       Page = 0,
@@ -1448,7 +1445,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response4 = result4.Value;
 
     // Test case 5: Sort by CPU utilization (descending)
-    var request5 = new DeviceSearchRequestDto
+    var request5 = new InternalDtos.DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 10,
@@ -1464,7 +1461,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response5 = result5.Value;
 
     // Test case 6: Filter by selected tag plus untagged devices
-    var request6 = new DeviceSearchRequestDto
+    var request6 = new InternalDtos.DeviceSearchRequestDto
     {
       TagIds = [tagIds[0]],
       IncludeUntaggedDevices = true,
@@ -1481,7 +1478,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     var response6 = result6.Value;
 
     // Test case 7: Filter by untagged devices only
-    var request7 = new DeviceSearchRequestDto
+    var request7 = new InternalDtos.DeviceSearchRequestDto
     {
       IncludeUntaggedDevices = true,
       Page = 0,
@@ -1609,7 +1606,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
 
     // Act
-    var results = new List<DeviceSummaryDto>();
+    var results = new List<InternalDtos.DeviceSummaryDto>();
     await foreach (var summary in controller.GetDeviceSummaries(db))
     {
       results.Add(summary);
@@ -1635,7 +1632,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, services.GetRequiredService<UserManager<AppUser>>());
 
     // Act
-    var results = new List<DeviceSummaryDto>();
+    var results = new List<InternalDtos.DeviceSummaryDto>();
     await foreach (var summary in controller.GetDeviceSummaries(db))
     {
       results.Add(summary);
@@ -1714,7 +1711,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     await controller.SetControllerUser(user, userManager);
 
-    var results = new List<DeviceResponseDto>();
+    var results = new List<InternalDtos.DeviceResponseDto>();
     await foreach (var device in controller.Get(db, agentVersionProvider))
     {
       results.Add(device);
@@ -1795,7 +1792,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, userManager);
 
     var result = await controller.SearchDevices(
-      new DeviceSearchRequestDto
+      new InternalDtos.DeviceSearchRequestDto
       {
         Page = 0,
         PageSize = 20
@@ -1887,7 +1884,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     };
 
     var result = await controller.SearchDevices(
-      new DeviceSearchRequestDto
+      new InternalDtos.DeviceSearchRequestDto
       {
         Page = 0,
         PageSize = 20
@@ -1922,7 +1919,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var deviceId = Guid.NewGuid();
     var longAlias = new string('x', 101);
-    var request = new UpdateDeviceAliasRequestDto(deviceId, longAlias);
+    var request = new InternalDtos.UpdateDeviceAliasRequestDto(deviceId, longAlias);
 
     var result = await controller.UpdateDeviceAlias(
       deviceId,
@@ -1945,7 +1942,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
     await using var db = services.GetRequiredService<AppDb>();
 
     var deviceId = Guid.NewGuid();
-    var request = new UpdateDeviceAliasRequestDto(deviceId, "Alias");
+    var request = new InternalDtos.UpdateDeviceAliasRequestDto(deviceId, "Alias");
 
     var result = await controller.UpdateDeviceAlias(
       deviceId,
@@ -2005,7 +2002,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     await controller.SetControllerUser(user, userManager);
 
-    var request = new UpdateDeviceAliasRequestDto(deviceId, null);
+    var request = new InternalDtos.UpdateDeviceAliasRequestDto(deviceId, null);
 
     var result = await controller.UpdateDeviceAlias(
       deviceId,
@@ -2030,7 +2027,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     var routeId = Guid.NewGuid();
     var bodyId = Guid.NewGuid();
-    var request = new UpdateDeviceAliasRequestDto(bodyId, "Alias");
+    var request = new InternalDtos.UpdateDeviceAliasRequestDto(bodyId, "Alias");
 
     var result = await controller.UpdateDeviceAlias(
       routeId,
@@ -2093,7 +2090,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     await controller.SetControllerUser(user, userManager);
 
-    var request = new UpdateDeviceAliasRequestDto(deviceId, "Alias");
+    var request = new InternalDtos.UpdateDeviceAliasRequestDto(deviceId, "Alias");
 
     var result = await controller.UpdateDeviceAlias(
       deviceId,
@@ -2153,7 +2150,7 @@ public class DevicesControllerTests(ITestOutputHelper testOutput)
 
     await controller.SetControllerUser(user, userManager);
 
-    var request = new UpdateDeviceAliasRequestDto(deviceId, "My Alias");
+    var request = new InternalDtos.UpdateDeviceAliasRequestDto(deviceId, "My Alias");
 
     var result = await controller.UpdateDeviceAlias(
       deviceId,

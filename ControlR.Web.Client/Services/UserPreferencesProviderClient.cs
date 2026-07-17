@@ -28,7 +28,7 @@ internal class UserPreferencesProviderClient(
         return _preferences;
       }
 
-      var getResult = await _controlrApi.UserPreferences.GetUserPreferences();
+      var getResult = await _controlrApi.Internal.UserPreferences.GetUserPreferences();
       if (!getResult.IsSuccess)
       {
         _snackbar.Add(getResult.Reason, Severity.Error);
@@ -61,7 +61,7 @@ internal class UserPreferencesProviderClient(
       }
 
       var request = new UserPreferenceRequestDto(preferenceName, normalizationResult.Value ?? string.Empty);
-      var setResult = await _controlrApi.UserPreferences.SetUserPreference(request);
+      var setResult = await _controlrApi.Internal.UserPreferences.SetUserPreference(request);
 
       if (!setResult.IsSuccess)
       {

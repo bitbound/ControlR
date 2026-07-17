@@ -3,6 +3,7 @@
 @inject SignInManager<AppUser> SignInManager
 @inject UserManager<AppUser> UserManager
 @inject IdentityRedirectManager RedirectManager
+@inject TimeProvider TimeProvider
 @inject ILogger<LoginWith2fa> Logger
 
 <PageTitle>Two-factor authentication</PageTitle>
@@ -81,6 +82,21 @@
     if (result.Succeeded)
     {
       Logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", userId);
+      try
+      {
+        _user.LastLogin = TimeProvider.GetUtcNow();
+        var updateResult = await UserManager.UpdateAsync(_user);
+        if (!updateResult.Succeeded)
+        {
+          Logger.LogWarning(
+            "Failed to update LastLogin for user {UserId} during 2fa login: {Errors}",
+            _user.Id, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+        }
+      }
+      catch (Exception ex)
+      {
+        Logger.LogWarning(ex, "Failed to update LastLogin for user {UserId} during 2fa login.", _user.Id);
+      }
       RedirectManager.RedirectTo(ReturnUrl);
     }
     else if (result.IsLockedOut)

@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using ControlR.ApiClient.Interfaces.Internal;
+using ControlR.ApiClient.Interfaces.V0;
 
 namespace ControlR.ApiClient;
 
@@ -13,11 +15,12 @@ public static class ServiceCollectionExtensions
   ///   Adds services for interacting with the ControlR API via the custom HTTP API client.
   /// </para>
   /// <para>
-  ///   The <see cref="IControlrApiClientFactory"/> will be registered as a singleton service,
-  ///   which can be used to create instances of <see cref="IControlrApi"/>.
+  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
+  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV0Api"/>
+  ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
-  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can also be injected directly.
+  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
   /// </para>
   /// </summary>
   /// <param name="services">
@@ -51,7 +54,7 @@ public static class ServiceCollectionExtensions
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
     services.TryAddTransient<ControlrApiAuthHeaderHandler>();
 
-    // Register the factory for the ControlR API client.
+    // Register the typed HttpClient for ControlrApi.
     services.AddHttpClient(
       ControlrApiClientNames.UnauthenticatedClient,
       (sp, client) =>
@@ -61,13 +64,16 @@ public static class ServiceCollectionExtensions
       });
 
     services
-      .AddHttpClient<IControlrApi, ControlrApi>(
+      .AddHttpClient<ControlrApi>(
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
         client.BaseAddress = options.BaseUrl;
       })
       .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
+    services.TryAddTransient<IControlrApi>(sp => sp.GetRequiredService<ControlrApi>());
+    services.TryAddTransient<IControlrInternalApi>(sp => sp.GetRequiredService<IControlrApi>().Internal);
+    services.TryAddTransient<IControlrV0Api>(sp => sp.GetRequiredService<IControlrApi>().V0);
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
     return services;
@@ -81,11 +87,12 @@ public static class ServiceCollectionExtensions
   ///   Configuration is loaded from the specified configuration section.
   /// </para>
   /// <para>
-  ///   <see cref="IControlrApiClientFactory"/> will be registered as a singleton service,
-  ///   which can be used to create instances of <see cref="IControlrApi"/>.
+  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
+  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV0Api"/>
+  ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
-  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can also be injected directly.
+  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
   /// </para>
   /// </summary>
   /// <param name="services">
@@ -123,7 +130,7 @@ public static class ServiceCollectionExtensions
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
     services.TryAddTransient<ControlrApiAuthHeaderHandler>();
 
-    // Register the factory for the ControlR API client.
+    // Register the typed HttpClient for ControlrApi.
     services.AddHttpClient(
       ControlrApiClientNames.UnauthenticatedClient,
       (sp, client) =>
@@ -133,13 +140,16 @@ public static class ServiceCollectionExtensions
       });
 
     services
-      .AddHttpClient<IControlrApi, ControlrApi>(
+      .AddHttpClient<ControlrApi>(
       (sp, client) =>
       {
         var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
         client.BaseAddress = options.BaseUrl;
       })
       .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
+    services.TryAddTransient<IControlrApi>(sp => sp.GetRequiredService<ControlrApi>());
+    services.TryAddTransient<IControlrInternalApi>(sp => sp.GetRequiredService<IControlrApi>().Internal);
+    services.TryAddTransient<IControlrV0Api>(sp => sp.GetRequiredService<IControlrApi>().V0);
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
 
@@ -154,11 +164,12 @@ public static class ServiceCollectionExtensions
   ///   Configuration is loaded from the specified configuration section using the builder's <see cref="IHostApplicationBuilder.Configuration"/>.
   /// </para>
   /// <para>
-  ///   The <see cref="IControlrApiClientFactory"/> will be registered as a singleton service,
-  ///   which can be used to create instances of <see cref="IControlrApi"/>.
+  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
+  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV0Api"/>
+  ///   via the <c>Internal</c> and <c>V0</c> properties.
   /// </para>
   /// <para>
-  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can also be injected directly.
+  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
   /// </para>
   /// </summary>
   /// <param name="builder">

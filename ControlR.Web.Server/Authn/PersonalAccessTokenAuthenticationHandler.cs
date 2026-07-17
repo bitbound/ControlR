@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.Extensions.Caching.Memory;
+using ControlR.Web.Server.Constants;
 
 namespace ControlR.Web.Server.Authn;
 
@@ -10,13 +11,14 @@ public class PersonalAccessTokenAuthenticationHandler(
   UserManager<AppUser> userManager,
   ILoggerFactory logger,
   IPersonalAccessTokenManager personalAccessTokenManager,
+  IMemoryCache memoryCache,
   IOptionsMonitor<PersonalAccessTokenAuthenticationSchemeOptions> options) : AuthenticationHandler<PersonalAccessTokenAuthenticationSchemeOptions>(options, logger, encoder)
 {
   private const int MaxFailures = 5;
 
-  private static readonly MemoryCache _failureCache = new(new MemoryCacheOptions());
   private static readonly TimeSpan _failureWindow = TimeSpan.FromMinutes(5);
 
+  private readonly IMemoryCache _failureCache = memoryCache;
   private readonly IPersonalAccessTokenManager _personalAccessTokenManager = personalAccessTokenManager;
   private readonly UserManager<AppUser> _userManager = userManager;
 
@@ -39,10 +41,9 @@ public class PersonalAccessTokenAuthenticationHandler(
       return AuthenticateResult.NoResult();
     }
 
-    // Basic rate limiting keyed by token prefix (ID part) or remote IP fallback
-    var keyPart = providedPat.Split(':', 2).FirstOrDefault() ?? "unknown";
+    // Basic rate limiting keyed by remote IP
     var remoteIp = Context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-    var failureKey = $"patfail:{keyPart}:{remoteIp}";
+    var failureKey = CacheKeys.GetPersonalAccessTokenAuthFailure(remoteIp);
     if (_failureCache.TryGetValue<int>(failureKey, out var failureCount) && failureCount >= MaxFailures)
     {
       return AuthenticateResult.Fail("Too many failed token attempts. Try again later.");

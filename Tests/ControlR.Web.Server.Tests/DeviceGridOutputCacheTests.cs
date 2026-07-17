@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Middleware;
@@ -7,7 +6,6 @@ using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.OutputCaching;
@@ -28,7 +26,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     // Arrange
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
     using var scope = testApp.Services.CreateScope();
-    var controller = scope.CreateController<Api.DevicesController>();
+    var controller = scope.CreateController<Api.Internal.DevicesController>();
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
     var outputCacheStore = scope.ServiceProvider.GetRequiredService<IOutputCacheStore>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
@@ -89,7 +87,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
     await controller.SetControllerUser(user, userManager);
 
     // Create the request
-    var request = new DeviceSearchRequestDto
+    var request = new InternalDtos.DeviceSearchRequestDto
     {
       Page = 0,
       PageSize = 10
@@ -100,7 +98,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
         request,
         db,
         scope.ServiceProvider.GetRequiredService<IAgentVersionProvider>(),
-        scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
+        scope.ServiceProvider.GetRequiredService<ILogger<Api.Internal.DevicesController>>());
 
     // Create new device to test cache invalidation
     var newDeviceId = Guid.NewGuid();
@@ -141,7 +139,7 @@ public class DeviceGridOutputCacheTests(ITestOutputHelper testOutput)
       request,
       db,
       scope.ServiceProvider.GetRequiredService<IAgentVersionProvider>(),
-      scope.ServiceProvider.GetRequiredService<ILogger<Api.DevicesController>>());
+      scope.ServiceProvider.GetRequiredService<ILogger<Api.Internal.DevicesController>>());
 
     // Assert
     Assert.NotNull(result1.Value);

@@ -1,7 +1,4 @@
 using System.Globalization;
-using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
@@ -9,7 +6,6 @@ using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 using ControlR.Web.Server.Services.Settings;
 
 namespace ControlR.Web.Server.Tests;
@@ -112,12 +108,12 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, ThemeMode.Dark.ToString()),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, ThemeMode.Dark.ToString()),
       cancellationToken);
 
     var result = await _userPreferencesManager.SetPreferences(
       user.Id,
-      new UserPreferencesDto(
+      new InternalDtos.UserPreferencesDto(
         6.5,
         85,
         25,
@@ -159,7 +155,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
       var result = await _userPreferencesManager.SetPreferences(
         user.Id,
-      new UserPreferencesDto(
+      new InternalDtos.UserPreferencesDto(
         6.5,
         85,
         25,
@@ -210,12 +206,12 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, "Existing Name"),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, "Existing Name"),
       cancellationToken);
 
     var result = await _userPreferencesManager.SetPreferences(
       user.Id,
-      new UserPreferencesDto(
+      new InternalDtos.UserPreferencesDto(
         6.5,
         85,
         25,
@@ -274,7 +270,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     var result = await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.HideOfflineDevices, "not-a-bool"),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.HideOfflineDevices, "not-a-bool"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -290,7 +286,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     var result = await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, "bad$name"),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, "bad$name"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -306,7 +302,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     var result = await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, new string('a', 26)),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, new string('a', 26)),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -322,7 +318,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     var result = await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, "neon"),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, "neon"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);
@@ -338,12 +334,12 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, ThemeMode.Auto.ToString()),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, ThemeMode.Auto.ToString()),
       cancellationToken);
 
     var result = await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, ThemeMode.Dark.ToString()),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, ThemeMode.Dark.ToString()),
       cancellationToken);
 
     Assert.True(result.IsSuccess);
@@ -369,7 +365,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     var result = await _userPreferencesManager.SetPreference(
       user.Id,
-      new UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, " Test User "),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, " Test User "),
       cancellationToken);
 
     Assert.True(result.IsSuccess);
@@ -392,7 +388,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     var result = await _userPreferencesManager.SetPreference(
       Guid.NewGuid(),
-      new UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, "Test User"),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, "Test User"),
       cancellationToken);
 
     Assert.False(result.IsSuccess);

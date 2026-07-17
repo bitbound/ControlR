@@ -16,6 +16,12 @@ Cross-platform remote access and control. .NET 10 backend (ASP.NET Core), Blazor
 
 - Exclude `ControlR.Web.Server/novnc/` and any `node_modules/` directories from context.
 
+## General Instructions
+
+- *IMPORTANT* Use `semantic_search` as your default tool for searching and exploring the codebase.
+- *IMPORTANT* Do not default to `Glob`, `Grep`, `Read`, and similar tools.  Use these only after trying `semantic_search`.
+- `brave-search_brave_web_search` is available for web searches. Use when external data is needed.
+
 ## Service Registration Locations
 
 Services use extension methods, not direct `Program.cs` registrations:
@@ -41,6 +47,35 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 - `IpcDtos/` — Agent ↔ DesktopClient IPC
 - `ServerApi/` — REST API
 - `RemoteControlDtos/` — remote control, routed through websocket relay
+
+### Route Root DTO Convention
+
+DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.ServerApi`:
+
+| Location | Contents | Lifecycle |
+|---|---|---|
+| `Dtos/ServerApi/Internal/` | Internal (BFF) only | Dynamic, changes freely |
+| `Dtos/ServerApi/V0/` | V0 (S2S) only | Stable contract |
+| `Dtos/ServerApi/V1/` | V1 (S2S, future) | Stable contract |
+
+**Rules:**
+- Every DTO belongs to exactly one route root's folder (`Internal/`, `V0/`, …). There is no shared root `Dtos/ServerApi/` folder for DTOs.
+
+## API Routing & Versioning
+
+**Two route roots, two stability levels** — never cross them:
+
+| Root | URL prefix | Stability | Consumer |
+|---|---|---|---|---|
+| `Api/Internal` | `/api/internal/*` | Unversioned, volatile | Internal. BFF (Blazor UI) |
+| `Api/V0` | `/api/v0/*` | Stable contract | S2S automation |
+| `Api/Agent` | `/api/agent/*`, | Unversioned, volatile | Internal. Public APIs for agent. |
+
+- Controllers live in `Api/{Root}/` with namespace `ControlR.Web.Server.Api.{Root}`.
+- Controller class names carry **no** version or audience prefix. The namespace + `[ApiVersion]` attribute convey that.
+  - ✅ `Api/V0/DevicesController.cs` — namespace `Api.V0`
+  - ❌ `V0DevicesController.cs` — version noise in the class name
+- Only add controllers to a new version when stakeholders request them. Don't pre-build.
 
 ## Cross-Platform
 
@@ -116,11 +151,6 @@ DTOs go under `\Libraries\ControlR.Libraries.Api.Contracts\Dtos\`:
 - Use central package management via `Directory.Packages.props`.
 - Don't add `Version` attributes to `<PackageReference>` elements in csproj files. `Version` attributes go in `Directory.Packages.props`.
 - Use `dotnet add <project> package <name>` to add packages.
-
-## Agent Hints
-
-- `semantic_search` is available for searching the codebase. Use when information is needed about the codebase.
-- `brave-search_brave_web_search` is available for web searches. Use when external data is needed.
 
 ## Planning
 

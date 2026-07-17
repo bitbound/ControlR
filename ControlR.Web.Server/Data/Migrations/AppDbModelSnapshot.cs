@@ -55,6 +55,9 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<Guid>("CreatorId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("CreatorKind")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset?>("Expiration")
                         .HasColumnType("timestamp with time zone");
 
@@ -185,6 +188,11 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -203,6 +211,9 @@ namespace ControlR.Web.Server.Data.Migrations
 
                     b.Property<bool>("IsOnline")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastLogin")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -462,6 +473,99 @@ namespace ControlR.Web.Server.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ServiceAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ServiceAccounts_Server_Name")
+                        .HasFilter("\"Kind\" = 'Server' AND \"TenantId\" IS NULL");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ServiceAccounts_TenantId_Name")
+                        .HasFilter("\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL");
+
+                    b.ToTable("ServiceAccounts", t =>
+                        {
+                            t.HasCheckConstraint("CK_ServiceAccounts_Kind_Allowed", "\"Kind\" IN ('Server', 'Tenant')");
+
+                            t.HasCheckConstraint("CK_ServiceAccounts_Kind_TenantId", "(\"Kind\" = 'Server' AND \"TenantId\" IS NULL) OR (\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ServiceAccountCredential", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("HashedSecret")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ServiceAccountId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceAccountId");
+
+                    b.ToTable("ServiceAccountCredentials");
+                });
+
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tag", b =>
                 {
                     b.Property<Guid>("Id")
@@ -508,7 +612,8 @@ namespace ControlR.Web.Server.Data.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
@@ -926,6 +1031,27 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ServiceAccount", b =>
+                {
+                    b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ServiceAccountCredential", b =>
+                {
+                    b.HasOne("ControlR.Web.Server.Data.Entities.ServiceAccount", "ServiceAccount")
+                        .WithMany("Credentials")
+                        .HasForeignKey("ServiceAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceAccount");
+                });
+
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tag", b =>
                 {
                     b.HasOne("ControlR.Web.Server.Data.Entities.Tenant", "Tenant")
@@ -1117,6 +1243,11 @@ namespace ControlR.Web.Server.Data.Migrations
                     b.Navigation("UserRoles");
 
                     b.Navigation("UserStorageItems");
+                });
+
+            modelBuilder.Entity("ControlR.Web.Server.Data.Entities.ServiceAccount", b =>
+                {
+                    b.Navigation("Credentials");
                 });
 
             modelBuilder.Entity("ControlR.Web.Server.Data.Entities.Tenant", b =>

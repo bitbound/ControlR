@@ -18,7 +18,7 @@ public class InviteStore(
 
   protected override async Task RefreshImpl()
   {
-    var getResult = await _controlrApi.Invites.GetPendingTenantInvites();
+    var getResult = await _controlrApi.Internal.Invites.GetPendingTenantInvites();
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);

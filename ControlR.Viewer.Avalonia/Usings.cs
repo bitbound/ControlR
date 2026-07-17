@@ -29,3 +29,4 @@ global using CommunityToolkit.Mvvm.Input;
 global using ControlR.Libraries.Viewer.Common.Enums;
 global using ControlR.Viewer.Avalonia.Views;
 global using ControlR.Libraries.Api.Contracts.Enums;
+global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;

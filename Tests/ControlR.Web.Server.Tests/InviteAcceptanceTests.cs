@@ -1,6 +1,4 @@
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.Api.Contracts.Enums;
-using ControlR.Web.Server.Api;
+using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
@@ -11,7 +9,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -116,11 +113,11 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
       var tenantInvitesProvider = scope.ServiceProvider.GetRequiredService<ITenantInvitesProvider>();
 
       var result = await controller.Create(
-        new TenantInviteRequestDto("user2@example.com"),
+        new InternalDtos.TenantInviteRequestDto("user2@example.com"),
         tenantInvitesProvider);
 
       var okResult = Assert.IsType<OkObjectResult>(result.Result);
-      var inviteResponse = Assert.IsType<TenantInviteResponseDto>(okResult.Value);
+      var inviteResponse = Assert.IsType<InternalDtos.TenantInviteResponseDto>(okResult.Value);
       activationCode = inviteResponse.InviteUrl.Segments[^1];
     }
 
@@ -200,10 +197,10 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
       var tenantInvitesProvider = scope.ServiceProvider.GetRequiredService<ITenantInvitesProvider>();
 
       var acceptResult = await controller.AcceptInvite(
-        new AcceptInvitationRequestDto(activationCode, "user2@example.com", "NewPassword123!"),
+        new InternalDtos.AcceptInvitationRequestDto(activationCode, "user2@example.com", "NewPassword123!"),
         tenantInvitesProvider);
 
-      var acceptResponse = Assert.IsType<AcceptInvitationResponseDto>(acceptResult.Value);
+      var acceptResponse = Assert.IsType<InternalDtos.AcceptInvitationResponseDto>(acceptResult.Value);
       Assert.True(acceptResponse.IsSuccessful);
     }
 

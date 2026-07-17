@@ -82,7 +82,7 @@ public partial class DesktopPreviewDialogViewModel : ViewModelBase<DesktopPrevie
       PreviewImageSource?.Dispose();
       PreviewImageSource = null;
 
-      var result = await _apiClient.DesktopPreview.GetDesktopPreview(
+      var result = await _apiClient.Internal.DesktopPreview.GetDesktopPreview(
         _viewerOptions.Value.DeviceId,
         _session.ProcessId);
 

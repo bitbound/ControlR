@@ -39,7 +39,7 @@ internal class ExampleService(
   {
     var deviceDetails = new List<string>();
     var deviceCount = 0;
-    await foreach (var device in client.Devices.GetAllDevices(cancellationToken).WithCancellation(cancellationToken))
+    await foreach (var device in client.Internal.Devices.GetAllDevices(cancellationToken).WithCancellation(cancellationToken))
     {
       deviceCount++;
       deviceDetails.Add($"\t- {device.Name} (ID: {device.Id})");
@@ -54,7 +54,7 @@ internal class ExampleService(
 
   private async Task UseDependencyInjection(CancellationToken cancellationToken)
   {
-    _logger.LogInformation("Retrieving devices using IControlrApiClientFactory.");
+    _logger.LogInformation("Retrieving devices using dependency injection.");
 
     var client = _serviceProvider.GetRequiredService<IControlrApi>();
     await RetrieveDevices(client, cancellationToken);

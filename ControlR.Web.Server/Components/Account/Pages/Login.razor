@@ -3,7 +3,9 @@
 @using ControlR.Web.Server.Components.Account.Shared
 
 @inject SignInManager<AppUser> SignInManager
+@inject UserManager<AppUser> UserManager
 @inject PasskeySignInManager PasskeySignInManager
+@inject TimeProvider TimeProvider
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
@@ -143,7 +145,27 @@
       {
         Logger.LogInformation("User '{Email}' logged in with a password.", Input.Email);
       }
-      
+
+      var user = await UserManager.FindByEmailAsync(Input.Email);
+      if (user is not null)
+      {
+        try
+        {
+          user.LastLogin = TimeProvider.GetUtcNow();
+          var updateResult = await UserManager.UpdateAsync(user);
+          if (!updateResult.Succeeded)
+          {
+            Logger.LogWarning(
+              "Failed to update LastLogin for user {UserId} during login: {Errors}",
+              user.Id, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+          }
+        }
+        catch (Exception ex)
+        {
+          Logger.LogWarning(ex, "Failed to update LastLogin for user {UserId} during login.", user.Id);
+        }
+      }
+
       RedirectManager.RedirectTo(ReturnUrl);
     }
     else if (result.RequiresTwoFactor)

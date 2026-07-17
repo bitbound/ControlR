@@ -1,0 +1,105 @@
+using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+
+namespace ControlR.Web.Server.Api.Internal;
+
+[Route(HttpConstants.Internal.DesktopPreviewEndpoint)]
+[Route(HttpConstants.Legacy.DesktopPreviewEndpoint)]
+[ApiController]
+[Authorize]
+[EndpointGroupName(OpenApiConstants.InternalGroupName)]
+public class DesktopPreviewController : ControllerBase
+{
+  [HttpGet("{deviceId:guid}/{targetProcessId:int}")]
+  public async Task<IActionResult> GetDesktopPreview(
+    [FromRoute] Guid deviceId,
+    [FromRoute] int targetProcessId,
+    [FromServices] AppDb appDb,
+    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+    [FromServices] IHubStreamStore hubStreamStore,
+    [FromServices] IAuthorizationService authorizationService,
+    [FromServices] ILogger<DesktopPreviewController> logger,
+    CancellationToken cancellationToken)
+  {
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId);
+
+    if (device is null)
+    {
+      logger.LogWarning("Device {DeviceId} not found.", deviceId);
+      return NotFound();
+    }
+
+    var authResult = await authorizationService.AuthorizeAsync(
+      User,
+      device,
+      DeviceAccessByDeviceResourcePolicy.PolicyName);
+
+    if (!authResult.Succeeded)
+    {
+      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.", User.Identity?.Name, deviceId);
+      return Forbid();
+    }
+
+    var requesterId = Guid.NewGuid();
+    var streamId = Guid.NewGuid();
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId);
+
+    var desktopPreviewRequestDto = new DesktopPreviewRequestDto(
+      requesterId,
+      streamId,
+      targetProcessId);
+
+    logger.LogInformation(
+      "Sending desktop preview request for device {DeviceId} and process {TargetProcessId} from user {UserName}.",
+      deviceId,
+      targetProcessId,
+      User.Identity?.Name);
+
+    var requestResult = await agentHub.Clients
+      .Client(device.ConnectionId)
+      .RequestDesktopPreview(desktopPreviewRequestDto);
+
+    if (!requestResult.IsSuccess)
+    {
+      logger.LogWarning(
+        "Desktop preview request for device {DeviceId} and process {TargetProcessId} failed: {ErrorMessage}",
+        deviceId,
+        targetProcessId,
+        requestResult.Reason);
+
+      return Problem(
+        detail: requestResult.Reason,
+        statusCode: StatusCodes.Status503ServiceUnavailable,
+        title: "Desktop preview request failed");
+    }
+
+    try
+    {
+      // Set response content type for JPEG image
+      Response.ContentType = "image/jpeg";
+
+      // Stream the bytes directly to the response
+      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
+      {
+        await Response.Body.WriteAsync(chunk, cancellationToken);
+      }
+
+      return new EmptyResult();
+    }
+    catch (OperationCanceledException)
+    {
+      logger.LogError("Desktop preview request for device {DeviceId} timed out or was canceled.", deviceId);
+      throw;
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error streaming desktop preview for device {DeviceId}.", deviceId);
+      throw;
+    }
+  }
+}

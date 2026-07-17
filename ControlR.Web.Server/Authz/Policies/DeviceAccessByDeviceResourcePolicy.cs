@@ -1,5 +1,4 @@
-﻿using ControlR.Web.Server.Authn;
-using ControlR.Web.Server.Services.DeviceManagement;
+﻿using ControlR.Web.Server.Services.DeviceManagement;
 
 namespace ControlR.Web.Server.Authz.Policies;
 

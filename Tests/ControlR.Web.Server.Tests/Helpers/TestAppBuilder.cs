@@ -4,11 +4,9 @@ using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.AspNetCore.Components;
-using Xunit;
 
 namespace ControlR.Web.Server.Tests.Helpers;
 
@@ -22,7 +20,8 @@ internal static class TestAppBuilder
     ITestOutputHelper testOutput,
     Dictionary<string, string?>? extraConfiguration = null,
     [CallerMemberName] string testDatabaseName = "",
-    bool useInMemoryDatabase = true)
+    bool useInMemoryDatabase = true,
+    Action<ILoggingBuilder>? configureLogging = null)
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
     var uniqueDatabaseName = $"{testDatabaseName}-{Guid.NewGuid()}";
@@ -68,6 +67,10 @@ internal static class TestAppBuilder
     _ = builder.Services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
     _ = builder.Logging.ClearProviders();
     _ = builder.Logging.AddProvider(new XunitLoggerProvider(testOutput));
+    if (configureLogging is not null)
+    {
+      configureLogging(builder.Logging);
+    }
 
     // Build the app
     var app = builder.Build();

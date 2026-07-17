@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using ControlR.ApiClient.Auth;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -108,7 +108,7 @@ public sealed class ControlrAuthSession(
   IOptionsMonitor<ControlrApiClientOptions> optionsMonitor,
   TimeProvider timeProvider) : IControlrAuthSession
 {
-  private const string InteractiveLoginEndpoint = $"{HttpConstants.AuthEndpoint}/interactive-login";
+  private const string InteractiveLoginEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/interactive-login";
 
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
@@ -137,7 +137,7 @@ public sealed class ControlrAuthSession(
     {
       var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
       using var response = await client.PostAsJsonAsync(
-        new Uri(BaseUrl, $"{HttpConstants.AuthEndpoint}/change-password-with-credentials"),
+        new Uri(BaseUrl, $"{HttpConstants.Internal.AuthEndpoint}/change-password-with-credentials"),
         new CredentialPasswordChangeRequestDto(email, currentPassword, newPassword, twoFactorCode),
         cancellationToken);
 

@@ -346,7 +346,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
 
   private async Task InitializeCaptureSettings()
   {
-    var result = await _controlrApi.UserPreferences.GetUserPreferences();
+    var result = await _controlrApi.Internal.UserPreferences.GetUserPreferences();
     if (!result.IsSuccess)
     {
       return;

@@ -66,6 +66,17 @@ public class AppOptions
   public bool DisableEmailSending { get; init; }
 
   /// <summary>
+  /// Disables the one-time first-user self-registration bootstrap.
+  /// By default, public registration is available only while the server has zero users;
+  /// it is automatically disabled once the first user is created. The first user created
+  /// through this flow is promoted to server administrator and first-tenant admin.
+  /// Set this to <c>true</c> to disable the bootstrap entirely. Existing installations
+  /// without this key set retain the prior behavior (self-registration enabled).
+  /// Independent of <see cref="EnablePublicRegistration"/>, which controls ongoing open signup.
+  /// </summary>
+  public bool DisableFirstUserSelfRegistration { get; init; }
+
+  /// <summary>
   /// The Gateway IP address that must match the IP address used by the Docker gateway.
   /// This is used for proper network configuration in Docker environments.
   /// </summary>
@@ -109,8 +120,11 @@ public class AppOptions
   public bool EnableNetworkTrust { get; init; }
 
   /// <summary>
-  /// Whether to make self-registration publicly available.
-  /// When enabled, users can create accounts without requiring an invitation.
+  /// Whether to make self-registration permanently publicly available.
+  /// When enabled, anyone can create an account without an invitation, regardless of how
+  /// many users already exist. Use this for public demo or evaluation deployments.
+  /// Independent of <see cref="DisableFirstUserSelfRegistration"/>, which disables the one-time
+  /// bootstrap that auto-disables after the first user is created.
   /// </summary>
   public bool EnablePublicRegistration { get; init; }
 
@@ -126,6 +140,14 @@ public class AppOptions
   /// information, so it is disabled by default.
   /// </summary>
   public bool EnableSignalrDetailedErrors { get; init; }
+
+  /// <summary>
+  /// Number of days after which external user accounts with no recent login activity are cleaned up.
+  /// External accounts whose <see cref="AppUser.LastLogin"/> is older than this
+  /// threshold are removed by a background service. Accounts that have never logged in are not removed.
+  /// Set to 0 or less to disable external user cleanup.
+  /// </summary>
+  public int ExternalUserCleanupAfterDays { get; init; } = 30;
 
   /// <summary>
   /// The client ID for GitHub OAuth authentication.
@@ -198,6 +220,25 @@ public class AppOptions
   /// If true, you must also configure SMTP settings below.
   /// </summary>
   public bool RequireUserEmailConfirmation { get; init; }
+
+  /// <summary>
+  /// Whether each user must have a unique email address.
+  /// When set to false, multiple accounts can share the same email, or they can have no email at all.
+  /// Defaults to true in production, false in development.
+  /// </summary>
+  public bool RequireUserUniqueEmail { get; init; } = true;
+
+  /// <summary>
+  /// Maximum failed service-account authentication attempts allowed per limiter window.
+  /// Set to 0 or less to disable the pre-authentication limiter for x-api-key requests.
+  /// </summary>
+  public int ServiceAccountAuthFailureLimit { get; init; } = 5;
+
+  /// <summary>
+  /// Size of the fixed window used by the service-account authentication rate limiter.
+  /// Set to 0 or less to disable the pre-authentication limiter for x-api-key requests.
+  /// </summary>
+  public int ServiceAccountAuthFailureWindowMinutes { get; init; } = 5;
 
   /// <summary>
   /// Whether to check certificate revocation for SMTP connections.

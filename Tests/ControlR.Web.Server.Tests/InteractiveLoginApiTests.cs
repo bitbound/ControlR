@@ -1,9 +1,7 @@
 using System.Security.Claims;
 using System.Net;
 using System.Net.Http.Json;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Api;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -16,7 +14,7 @@ using Microsoft.Extensions.Logging;
 using ControlR.Web.Server.Options;
 using Microsoft.Extensions.Options;
 using Moq;
-using Xunit;
+using ControlR.Web.Server.Api.Internal;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -57,10 +55,10 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      new LoginRequestDto(user.Email, "wrong-password"));
+      new InternalDtos.LoginRequestDto(user.Email, "wrong-password"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var payload = Assert.IsType<InteractiveLoginResponseDto>(okResult.Value);
+    var payload = Assert.IsType<InternalDtos.InteractiveLoginResponseDto>(okResult.Value);
     Assert.False(payload.RequiresTwoFactor);
     Assert.True(payload.IsLockedOut);
     Assert.Null(payload.Tokens);
@@ -103,7 +101,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       bearerTokenOptions.Object,
-      new LoginRequestDto("user@example.com", "T3stP@ssw0rd!"));
+      new InternalDtos.LoginRequestDto("user@example.com", "T3stP@ssw0rd!"));
 
     Assert.IsType<NotFoundResult>(result.Result);
   }
@@ -159,10 +157,10 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       bearerTokenOptions.Object,
-      new LoginRequestDto(user.Email, "T3stP@ssw0rd!"));
+      new InternalDtos.LoginRequestDto(user.Email, "T3stP@ssw0rd!"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var payload = Assert.IsType<InteractiveLoginResponseDto>(okResult.Value);
+    var payload = Assert.IsType<InternalDtos.InteractiveLoginResponseDto>(okResult.Value);
     Assert.True(payload.RequiresTwoFactor);
     Assert.Null(payload.Tokens);
   }
@@ -201,7 +199,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      new LoginRequestDto(user.Email, "wrong-password"));
+      new InternalDtos.LoginRequestDto(user.Email, "wrong-password"));
 
     Assert.IsType<UnauthorizedResult>(result.Result);
   }
@@ -236,10 +234,10 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      new LoginRequestDto(user.Email, "T3stP@ssw0rd!"));
+      new InternalDtos.LoginRequestDto(user.Email, "T3stP@ssw0rd!"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var payload = Assert.IsType<InteractiveLoginResponseDto>(okResult.Value);
+    var payload = Assert.IsType<InternalDtos.InteractiveLoginResponseDto>(okResult.Value);
     Assert.True(payload.RequiresPasswordChange);
     Assert.False(payload.RequiresTwoFactor);
     Assert.Null(payload.Tokens);
@@ -275,8 +273,8 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
     {
       lastResponse?.Dispose();
       lastResponse = await client.PostAsJsonAsync(
-        "/api/auth/interactive-login",
-        new LoginRequestDto(user.Email!, "wrong-password"),
+        $"{HttpConstants.Internal.AuthEndpoint}/interactive-login",
+        new InternalDtos.LoginRequestDto(user.Email!, "wrong-password"),
         TestContext.Current.CancellationToken);
     }
 
@@ -316,7 +314,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorRecoveryCode: "recovery-code"));
+      new InternalDtos.LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorRecoveryCode: "recovery-code"));
 
     Assert.IsType<UnauthorizedResult>(result.Result);
   }
@@ -357,10 +355,10 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorRecoveryCode: "recovery code"));
+      new InternalDtos.LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorRecoveryCode: "recovery code"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var payload = Assert.IsType<InteractiveLoginResponseDto>(okResult.Value);
+    var payload = Assert.IsType<InternalDtos.InteractiveLoginResponseDto>(okResult.Value);
     Assert.False(payload.RequiresTwoFactor);
     Assert.NotNull(payload.Tokens);
     Assert.False(string.IsNullOrWhiteSpace(payload.Tokens.AccessToken));
@@ -397,7 +395,7 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorCode: "123-456"));
+      new InternalDtos.LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorCode: "123-456"));
 
     Assert.IsType<UnauthorizedResult>(result.Result);
   }
@@ -438,10 +436,10 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
       TimeProvider.System,
       appOptions.Object,
       CreateBearerTokenOptionsMonitor(),
-      new LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorCode: "123-456"));
+      new InternalDtos.LoginRequestDto(user.Email, "T3stP@ssw0rd!", TwoFactorCode: "123-456"));
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var payload = Assert.IsType<InteractiveLoginResponseDto>(okResult.Value);
+    var payload = Assert.IsType<InternalDtos.InteractiveLoginResponseDto>(okResult.Value);
     Assert.False(payload.RequiresTwoFactor);
     Assert.NotNull(payload.Tokens);
     Assert.False(string.IsNullOrWhiteSpace(payload.Tokens.AccessToken));
@@ -472,13 +470,13 @@ public class InteractiveLoginApiTests(ITestOutputHelper testOutput)
 
     using var client = testServer.Factory.CreateClient();
     using var response = await client.PostAsJsonAsync(
-      "/api/auth/interactive-login",
-      new LoginRequestDto(user.Email!, "T3stP@ssw0rd!"),
+      $"{HttpConstants.Internal.AuthEndpoint}/interactive-login",
+      new InternalDtos.LoginRequestDto(user.Email!, "T3stP@ssw0rd!"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    var payload = await response.Content.ReadFromJsonAsync<InteractiveLoginResponseDto>(TestContext.Current.CancellationToken);
+    var payload = await response.Content.ReadFromJsonAsync<InternalDtos.InteractiveLoginResponseDto>(TestContext.Current.CancellationToken);
     Assert.NotNull(payload);
     Assert.False(payload.RequiresTwoFactor);
     Assert.NotNull(payload.Tokens);

@@ -175,7 +175,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
 
     try
     {
-      var result = await _controlrApi.DeviceFileSystem.CreateDirectory(new CreateDirectoryRequestDto(_deviceState.CurrentDevice.Id, SelectedPath!, folderName));
+      var result = await _controlrApi.Internal.DeviceFileSystem.CreateDirectory(new CreateDirectoryRequestDto(_deviceState.CurrentDevice.Id, SelectedPath!, folderName));
       if (!result.IsSuccess)
       {
         _snackbar.Add(string.Format(Assets.Resources.FileSystem_CreateFolderFailureDetailsMessage, result.Reason), SnackbarSeverity.Error);
@@ -214,7 +214,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
     {
       foreach (var item in SelectedItems)
       {
-        var result = await _controlrApi.DeviceFileSystem.DeleteFile(new FileDeleteRequestDto(_deviceState.CurrentDevice.Id, item.FullPath, item.IsDirectory));
+        var result = await _controlrApi.Internal.DeviceFileSystem.DeleteFile(new FileDeleteRequestDto(_deviceState.CurrentDevice.Id, item.FullPath, item.IsDirectory));
         if (!result.IsSuccess)
         {
           throw new InvalidOperationException(result.Reason);
@@ -267,7 +267,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
 
       if (SelectedItems.Count == 1 && !SelectedItems[0].IsDirectory)
       {
-        var result = await _controlrApi.DeviceFileSystem.DownloadFile(_deviceState.CurrentDevice.Id, SelectedItems[0].FullPath);
+        var result = await _controlrApi.Internal.DeviceFileSystem.DownloadFile(_deviceState.CurrentDevice.Id, SelectedItems[0].FullPath);
         if (!result.IsSuccess || result.Value is null)
         {
           _snackbar.Add(string.Format(Assets.Resources.FileSystem_DownloadFailureDetailsMessage, result.Reason), SnackbarSeverity.Error);
@@ -280,7 +280,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
       else
       {
         var request = new DownloadArchiveRequestDto(GetSuggestedDownloadFileName(), SelectedItems.Select(item => item.FullPath).ToArray());
-        var result = await _controlrApi.DeviceFileSystem.DownloadArchive(_deviceState.CurrentDevice.Id, request);
+        var result = await _controlrApi.Internal.DeviceFileSystem.DownloadArchive(_deviceState.CurrentDevice.Id, request);
         if (!result.IsSuccess || result.Value is null)
         {
           _snackbar.Add(string.Format(Assets.Resources.FileSystem_DownloadFailureDetailsMessage, result.Reason), SnackbarSeverity.Error);
@@ -428,7 +428,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
           }
         }
 
-        var result = await _controlrApi.DeviceFileSystem.UploadFile(_deviceState.CurrentDevice.Id, fileStream, file.Name, SelectedPath!, overwrite);
+        var result = await _controlrApi.Internal.DeviceFileSystem.UploadFile(_deviceState.CurrentDevice.Id, fileStream, file.Name, SelectedPath!, overwrite);
         if (!result.IsSuccess)
         {
           _snackbar.Add(string.Format(Assets.Resources.FileSystem_UploadFailureDetailsMessage, file.Name, result.Reason), SnackbarSeverity.Error);
@@ -466,7 +466,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
 
     try
     {
-      var result = await _controlrApi.DeviceFileSystem.GetPathSegments(new GetPathSegmentsRequestDto(_deviceState.CurrentDevice.Id, SelectedPath!));
+      var result = await _controlrApi.Internal.DeviceFileSystem.GetPathSegments(new GetPathSegmentsRequestDto(_deviceState.CurrentDevice.Id, SelectedPath!));
       if (!result.IsSuccess || result.Value is null || !result.Value.Success)
       {
         _snackbar.Add(result.Value?.ErrorMessage is { Length: > 0 }
@@ -624,7 +624,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
   {
     try
     {
-      var result = await _controlrApi.DeviceFileSystem.GetPathSegments(new GetPathSegmentsRequestDto(_deviceState.CurrentDevice.Id, targetPath));
+      var result = await _controlrApi.Internal.DeviceFileSystem.GetPathSegments(new GetPathSegmentsRequestDto(_deviceState.CurrentDevice.Id, targetPath));
       if (!result.IsSuccess || result.Value is null)
       {
         _snackbar.Add(string.Format(Assets.Resources.FileSystem_PathValidationErrorMessage, targetPath), SnackbarSeverity.Error);
@@ -735,7 +735,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
 
   private async Task<Result<long>> GetMaxFileSize()
   {
-    var result = await _controlrApi.UserServerSettings.GetFileUploadMaxSize();
+    var result = await _controlrApi.Internal.UserServerSettings.GetFileUploadMaxSize();
     if (!result.IsSuccess)
     {
       _snackbar.Add(Assets.Resources.FileSystem_MaxTransferSizeFailureMessage, SnackbarSeverity.Error);
@@ -800,7 +800,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
       IsLoadingContents = true;
       ClearDirectoryEntries();
 
-      var result = await _controlrApi.DeviceFileSystem.GetDirectoryContents(new GetDirectoryContentsRequestDto(_deviceState.CurrentDevice.Id, directoryPath));
+      var result = await _controlrApi.Internal.DeviceFileSystem.GetDirectoryContents(new GetDirectoryContentsRequestDto(_deviceState.CurrentDevice.Id, directoryPath));
       if (!result.IsSuccess || result.Value is null)
       {
         _snackbar.Add(string.Format(Assets.Resources.FileSystem_LoadContentsFailureDetailsMessage, result.Reason), SnackbarSeverity.Warning);
@@ -843,7 +843,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
     {
       IsLoading = true;
       RootItems.Clear();
-      var result = await _controlrApi.DeviceFileSystem.GetRootDrives(new GetRootDrivesRequestDto(_deviceState.CurrentDevice.Id));
+      var result = await _controlrApi.Internal.DeviceFileSystem.GetRootDrives(new GetRootDrivesRequestDto(_deviceState.CurrentDevice.Id));
       if (!result.IsSuccess || result.Value is null)
       {
         _snackbar.Add(string.Format(Assets.Resources.FileSystem_LoadDrivesFailureDetailsMessage, result.Reason), SnackbarSeverity.Error);
@@ -883,7 +883,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
 
     try
     {
-      var result = await _controlrApi.DeviceFileSystem.GetSubdirectories(new GetSubdirectoriesRequestDto(_deviceState.CurrentDevice.Id, item.FullPath));
+      var result = await _controlrApi.Internal.DeviceFileSystem.GetSubdirectories(new GetSubdirectoriesRequestDto(_deviceState.CurrentDevice.Id, item.FullPath));
       if (!result.IsSuccess || result.Value is null)
       {
         return;

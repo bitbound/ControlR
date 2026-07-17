@@ -6,10 +6,9 @@ using System.Text.Json;
 using ControlR.ApiClient;
 using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
-using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.DeviceResponseDto;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -170,7 +169,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
     Assert.Contains(nameof(DeviceResponseDto.Name), result.Reason, StringComparison.Ordinal);
   }
 
-  private static ControlrApi CreateClient(
+  private static IControlrInternalApi CreateClient(
     string jsonResponse,
     bool disableResponseDtoStrictness,
     bool disableStreamingResponseDtoStrictness)
@@ -190,12 +189,14 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
     var authState = new ControlrApiClientAuthState();
     var httpClientFactory = new StaticHttpClientFactory(httpClient);
 
-    return new ControlrApi(
+    var controlrApi = new ControlrApi(
       httpClient,
       authState,
       new BearerTokenRefresher(authState, httpClientFactory, TimeProvider.System),
       NullLogger<ControlrApi>.Instance,
       options);
+
+    return controlrApi.InternalApi;
   }
 
   private static DeviceResponseDto CreateDeviceResponseDto(int index)
