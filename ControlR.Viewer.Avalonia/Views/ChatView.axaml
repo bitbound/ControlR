@@ -162,7 +162,8 @@
             <ItemsControl ItemsSource="{Binding ChatMessages}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="models:ChatMessage">
-                  <Border Classes.ChatUser="{Binding IsFromViewer}"
+                  <Border Margin="0, 4" 
+                          Classes.ChatUser="{Binding IsFromViewer}"
                           Classes.ChatViewer="{Binding !IsFromViewer}">
                     <StackPanel Spacing="4">
                       <!-- Sender + timestamp header -->
