@@ -18,7 +18,7 @@ internal class PlatformIpcMessageHandlerWindows(
   public Task<DesktopSessionInfoResponseIpcDto> GetDesktopSessionInfo()
   {
     var sessionId = Process.GetCurrentProcess().SessionId;
-    var username = Environment.UserName;
+    var username = _win32Interop.GetUsernameFromSessionId((uint)sessionId);
 
     var desktopName = "Default";
     if (_win32Interop.GetInputDesktopName(out var inputDesktopName))
