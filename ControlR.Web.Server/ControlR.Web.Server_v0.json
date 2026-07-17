@@ -2224,6 +2224,7 @@
       "DesktopSessionResponseDto": {
         "required": [
           "areRemoteControlPermissionsGranted",
+          "desktopName",
           "name",
           "processId",
           "systemSessionId",
@@ -2234,6 +2235,9 @@
         "properties": {
           "areRemoteControlPermissionsGranted": {
             "type": "boolean"
+          },
+          "desktopName": {
+            "type": "string"
           },
           "name": {
             "type": "string"

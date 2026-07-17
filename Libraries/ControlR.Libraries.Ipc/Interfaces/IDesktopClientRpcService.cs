@@ -13,6 +13,7 @@ public partial interface IDesktopClientRpcService
     Task<CheckOsPermissionsResponseIpcDto> CheckOsPermissions(CheckOsPermissionsIpcDto dto);
     Task CloseChatSession(CloseChatSessionIpcDto dto);
     Task<DesktopPreviewResponseIpcDto> GetDesktopPreview(DesktopPreviewRequestIpcDto dto);
+    Task<DesktopSessionInfoResponseIpcDto> GetDesktopSessionInfo();
     Task InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto);
     Task ReceiveChatMessage(ChatMessageIpcDto dto);
     Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto);

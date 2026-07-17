@@ -4,6 +4,7 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
 
 public record DesktopSessionResponseDto(
   bool AreRemoteControlPermissionsGranted,
+  string DesktopName,
   string Name,
   int ProcessId,
   int SystemSessionId,
@@ -14,6 +15,7 @@ public record DesktopSessionResponseDto(
   {
     return new(
       session.AreRemoteControlPermissionsGranted,
+      session.DesktopName,
       session.Name,
       session.ProcessId,
       session.SystemSessionId,

@@ -37,12 +37,14 @@ public interface IWin32Interop
     int targetSessionId,
     bool hiddenWindow,
     [NotNullWhen(true)] out IProcess? startedProcess);
+    
   nint CreatePrivacyScreenWindow(int left, int top, int width, int height);
   void DestroyPrivacyScreenWindow(nint windowHandle);
   bool EnumWindows(Func<nint, bool> windowFunc);
   List<DesktopSession> GetActiveSessions();
   List<DesktopSession> GetActiveSessionsCsWin32();
   string? GetClipboardText();
+  uint GetConsoleSessionId();
   PointerCursor GetCurrentCursor();
   bool GetCurrentThreadDesktopName(out string currentDesktop);
   List<string> GetDesktopNames(string windowStation = "WinSta0");
@@ -391,7 +393,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       SystemSessionId = (int)consoleSessionId,
       Type = DesktopSessionType.Console,
       Name = "Console",
-      Username = GetUsernameFromSessionId(consoleSessionId)
+      Username = GetUsernameFromSessionId(consoleSessionId),
+      DesktopName = ResolveDesktopName(consoleSessionId)
     });
 
     var ppSessionInfo = nint.Zero;
@@ -419,7 +422,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
             SystemSessionId = (int)sessionInfo.SessionID,
             Name = sessionInfo.pWinStationName,
             Type = DesktopSessionType.Rdp,
-            Username = GetUsernameFromSessionId(sessionInfo.SessionID)
+            Username = GetUsernameFromSessionId(sessionInfo.SessionID),
+            DesktopName = ResolveDesktopName(sessionInfo.SessionID)
           });
         }
       }
@@ -507,6 +511,11 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     }
   }
 
+  public uint GetConsoleSessionId()
+  {
+    return PInvoke.WTSGetActiveConsoleSessionId();
+  }
+
   public PointerCursor GetCurrentCursor()
   {
     try
@@ -522,7 +531,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
           template: "Failed to get cursor info.  Last p/invoke error: {LastError}",
           cacheDuration: TimeSpan.FromMinutes(1),
           args: [Marshal.GetLastPInvokeErrorMessage()]);
-          
+
         return PointerCursor.Unknown;
       }
 
@@ -910,8 +919,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     if (!PInvoke.OpenProcessToken(safeProcHandle, TOKEN_ACCESS_MASK.TOKEN_QUERY, out var token))
     {
       _logger.LogWarning(
-        "OpenProcessToken failed. Last Win32 Error: {Error} {Message}", 
-        Marshal.GetLastPInvokeError(), 
+        "OpenProcessToken failed. Last Win32 Error: {Error} {Message}",
+        Marshal.GetLastPInvokeError(),
         Marshal.GetLastPInvokeErrorMessage());
       return false;
     }
@@ -928,7 +937,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
       {
         _logger.LogWarning(
           "GetTokenInformation(TokenUIAccess) failed. Last Win32 Error: {Error} {Message}",
-          Marshal.GetLastPInvokeError(), 
+          Marshal.GetLastPInvokeError(),
           Marshal.GetLastPInvokeErrorMessage());
         return false;
       }
@@ -1021,7 +1030,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
       var desktopPtr = Marshal.StringToHGlobalAuto("winsta0\\Default\0");
       using var desktopPtrDisposable = new DisposableValue<nint>(
-        desktopPtr, 
+        desktopPtr,
         ptr => Marshal.FreeHGlobal(ptr));
 
       startupInfo.lpDesktop = new PWSTR((char*)desktopPtr.ToPointer());

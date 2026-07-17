@@ -10,10 +10,11 @@ public enum DesktopSessionType
 public class DesktopSession
 {
   public bool AreRemoteControlPermissionsGranted { get; set; }
+  public string DesktopName { get; set; } = string.Empty;
   public string Name { get; set; } = string.Empty;
   public int ProcessId { get; set; }
   public int SystemSessionId { get; set; }
   public DesktopSessionType Type { get; set; }
-
   public string Username { get; set; } = string.Empty;
+
 }
