@@ -12990,15 +12990,20 @@
       },
       "BundleMetadataDto": {
         "required": [
+          "brandName",
           "bundleDownloadUrl",
           "bundleSha256",
           "installerDownloadUrl",
           "installerSha256",
+          "publisher",
           "runtime",
           "version"
         ],
         "type": "object",
         "properties": {
+          "brandName": {
+            "type": "string"
+          },
           "bundleDownloadUrl": {
             "type": "string"
           },
@@ -13009,6 +13014,9 @@
             "type": "string"
           },
           "installerSha256": {
+            "type": "string"
+          },
+          "publisher": {
             "type": "string"
           },
           "runtime": {

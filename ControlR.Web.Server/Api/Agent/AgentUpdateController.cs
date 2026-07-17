@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Branding;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
@@ -73,6 +74,8 @@ public class AgentUpdateController(
       BundleSha256 = bundleSha256,
       InstallerDownloadUrl = installerPath,
       InstallerSha256 = installerSha256,
+      BrandName = BrandingConstants.BrandName,
+      Publisher = BrandingConstants.Publisher,
     };
 
     return Ok(metadata);

@@ -54,7 +54,9 @@ public class AgentMaintenanceServiceTests
         InstallerDownloadUrl = "/downloads/osx-arm64/ControlR.Agent.Installer",
         InstallerSha256 = installerSha256,
         Runtime = RuntimeId.MacOsArm64,
-        Version = Version.Parse("1.2.3")
+        Version = Version.Parse("1.2.3"),
+        BrandName = "ControlR",
+        Publisher = "Bitbound"
       }));
 
     fixture.DownloadsApi
@@ -127,7 +129,9 @@ public class AgentMaintenanceServiceTests
         InstallerDownloadUrl = "/downloads/win-x64/ControlR.Agent.Installer.exe",
         InstallerSha256 = installerSha256,
         Runtime = RuntimeId.WinX64,
-        Version = Version.Parse("1.2.3")
+        Version = Version.Parse("1.2.3"),
+        BrandName = "ControlR",
+        Publisher = "Bitbound"
       }));
 
     fixture.DownloadsApi
@@ -178,7 +182,9 @@ public class AgentMaintenanceServiceTests
         InstallerDownloadUrl = "/downloads/win-x64/ControlR.Agent.Installer.exe",
         InstallerSha256 = "DEF456",
         Runtime = RuntimeId.WinX64,
-        Version = Version.Parse("1.2.3")
+        Version = Version.Parse("1.2.3"),
+        BrandName = "ControlR",
+        Publisher = "Bitbound"
       }));
 
     var updater = fixture.CreateMaintenanceService();
@@ -194,6 +200,70 @@ public class AgentMaintenanceServiceTests
     fixture.AgentUpdateApi.Verify(
       x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()),
       Times.Once);
+  }
+
+  [Fact]
+  public async Task CheckForUpdate_WhenServerBrandNameDiffers_AbortsWithoutDownloadingInstaller()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+
+    fixture.AgentUpdateApi
+      .Setup(x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
+      {
+        BundleDownloadUrl = "/downloads/win-x64/OtherBrand.Agent.bundle.zip",
+        BundleSha256 = "NEW_HASH",
+        InstallerDownloadUrl = "/downloads/win-x64/OtherBrand.Agent.Installer.exe",
+        InstallerSha256 = "ANY",
+        Runtime = RuntimeId.WinX64,
+        Version = Version.Parse("1.2.3"),
+        BrandName = "OtherBrand",
+        Publisher = "Bitbound"
+      }));
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
+
+    fixture.DownloadsApi.Verify(
+      x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+      Times.Never);
+    fixture.ProcessManager.Verify(
+      x => x.Start(It.IsAny<string>(), It.IsAny<string>()),
+      Times.Never);
+  }
+
+  [Fact]
+  public async Task CheckForUpdate_WhenServerPublisherDiffers_AbortsWithoutDownloadingInstaller()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+
+    fixture.AgentUpdateApi
+      .Setup(x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
+      {
+        BundleDownloadUrl = "/downloads/win-x64/ControlR.Agent.bundle.zip",
+        BundleSha256 = "NEW_HASH",
+        InstallerDownloadUrl = "/downloads/win-x64/ControlR.Agent.Installer.exe",
+        InstallerSha256 = "ANY",
+        Runtime = RuntimeId.WinX64,
+        Version = Version.Parse("1.2.3"),
+        BrandName = "ControlR",
+        Publisher = "WrongPublisher"
+      }));
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
+
+    fixture.DownloadsApi.Verify(
+      x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+      Times.Never);
+    fixture.ProcessManager.Verify(
+      x => x.Start(It.IsAny<string>(), It.IsAny<string>()),
+      Times.Never);
   }
 
   private sealed class AgentMaintenanceServiceFixture

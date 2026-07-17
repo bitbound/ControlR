@@ -329,7 +329,7 @@ internal class DesktopClientWatcherLinux(
     try
     {
       var installDir = GetInstallDirectory();
-      var desktopClientPath = Path.Combine(installDir, "DesktopClient", "ControlR.DesktopClient");
+      var desktopClientPath = Path.Combine(installDir, BrandingConstants.DesktopClientDirectoryName, AppConstants.DesktopClientFileName);
 
       if (!_fileSystem.FileExists(desktopClientPath))
       {

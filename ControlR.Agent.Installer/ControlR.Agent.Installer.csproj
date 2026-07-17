@@ -23,6 +23,7 @@
     <ProjectReference Include="..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
     <ProjectReference Include="..\Libraries\ControlR.Libraries.Shared\ControlR.Libraries.Shared.csproj" />
     <ProjectReference Include="..\Libraries\ControlR.Libraries.Serilog\ControlR.Libraries.Serilog.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
   </ItemGroup>
 
   <Import Project="../WindowsBundleSign.Build.targets" Condition="'$(IsWindows)' == 'true'" />

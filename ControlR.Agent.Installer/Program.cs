@@ -8,6 +8,7 @@ using ControlR.Agent.Shared.Services.Mac;
 using ControlR.Agent.Shared.Services.Windows;
 using ControlR.Agent.Shared.Startup;
 using ControlR.ApiClient;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Shared.DataValidation;
 using ControlR.Libraries.Shared.Helpers;
@@ -222,6 +223,20 @@ static async Task<int> RunInstall(AgentInstallRequest request, string? instanceI
     var metadata = metadataResult.Value;
     logger.LogInformation("Bundle version: {Version}", metadata.Version);
 
+    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal) ||
+        !string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
+    {
+      logger.LogCritical(
+        "Refusing to install: server bundle is for a different brand than this installer. " +
+        "Installer brand: {InstallerBrandName}/{InstallerPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
+        "If this server is correct, run the matching installer instead.",
+        BrandingConstants.BrandName,
+        BrandingConstants.Publisher,
+        metadata.BrandName,
+        metadata.Publisher);
+      return 1;
+    }
+
     logger.LogInformation("Downloading bundle to temp file: {TempBundlePath}", tempBundlePath);
     await downloader.DownloadBundle(metadata.BundleDownloadUrl, metadata.BundleSha256, tempBundlePath);
 
@@ -313,6 +328,20 @@ static async Task<int> RunRepairDesktop(string? instanceId)
 
     var metadata = metadataResult.Value;
     logger.LogInformation("Bundle version: {Version}", metadata.Version);
+
+    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal) ||
+        !string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
+    {
+      logger.LogCritical(
+        "Refusing to repair desktop client: server bundle is for a different brand than this installer. " +
+        "Installer brand: {InstallerBrandName}/{InstallerPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
+        "If this server is correct, run the matching installer instead.",
+        BrandingConstants.BrandName,
+        BrandingConstants.Publisher,
+        metadata.BrandName,
+        metadata.Publisher);
+      return 1;
+    }
 
     logger.LogInformation("Downloading bundle to temp file: {TempBundlePath}", tempBundlePath);
     await downloader.DownloadBundle(metadata.BundleDownloadUrl, metadata.BundleSha256, tempBundlePath);
