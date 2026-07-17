@@ -93,6 +93,17 @@ public abstract class ManagedRelayStream(
 
       var conn = new ActiveConnection(client, readCancellation);
       Interlocked.Exchange(ref _connection, conn);
+
+      if (IsDisposed)
+      {
+        if (Interlocked.CompareExchange(ref _connection, null, conn) == conn)
+        {
+          await TearDown(conn);
+        }
+
+        throw new ObjectDisposedException(GetType().FullName);
+      }
+
       _logger.LogInformation("Connection successful.");
 
       _ = ReadFromStream(conn);
