@@ -28,7 +28,7 @@ public static class PathConstants
   private static string GetEffectiveInstanceId(string? instanceId)
   {
     return string.IsNullOrWhiteSpace(instanceId)
-      ? AppConstants.DefaultInstallDirectoryName
+      ? AppConstants.DefaultInstanceId
       : instanceId;
   }
 }

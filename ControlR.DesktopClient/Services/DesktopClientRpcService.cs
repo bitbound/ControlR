@@ -9,10 +9,10 @@ using Microsoft.Extensions.Logging;
 namespace ControlR.DesktopClient.Services;
 
 public class DesktopClientRpcService(
-    IServiceProvider serviceProvider,
     IChatSessionManager chatSessionManager,
     IDesktopClientPermissionService desktopClientPermissionService,
     IDesktopPreviewProvider desktopPreviewService,
+    IPlatformIpcMessageHandler platformMessageHandler,
     IRemoteControlHostManager remoteControlHostManager,
     IControlledApplicationLifetime appLifetime,
     ILogger<DesktopClientRpcService> logger) : IDesktopClientRpcService
@@ -22,8 +22,8 @@ public class DesktopClientRpcService(
   private readonly IDesktopClientPermissionService _desktopClientPermissionService = desktopClientPermissionService;
   private readonly IDesktopPreviewProvider _desktopPreviewService = desktopPreviewService;
   private readonly ILogger<DesktopClientRpcService> _logger = logger;
+  private readonly IPlatformIpcMessageHandler _platformMessageHandler = platformMessageHandler;
   private readonly IRemoteControlHostManager _remoteControlHostManager = remoteControlHostManager;
-  private readonly IServiceProvider _serviceProvider = serviceProvider;
 
   public async Task<CheckOsPermissionsResponseIpcDto> CheckOsPermissions(CheckOsPermissionsIpcDto dto)
   {
@@ -53,6 +53,7 @@ public class DesktopClientRpcService(
       return new CheckOsPermissionsResponseIpcDto(false, "Unable to determine desktop client permissions.");
     }
   }
+
   public async Task CloseChatSession(CloseChatSessionIpcDto dto)
   {
     try
@@ -62,7 +63,6 @@ public class DesktopClientRpcService(
         dto.SessionId,
         dto.TargetProcessId);
 
-      // Close the session through the chat session manager
       await _chatSessionManager.CloseChatSession(dto.SessionId, true);
     }
     catch (Exception ex)
@@ -70,6 +70,7 @@ public class DesktopClientRpcService(
       _logger.LogError(ex, "Error while handling close chat session request.");
     }
   }
+
   public async Task<DesktopPreviewResponseIpcDto> GetDesktopPreview(DesktopPreviewRequestIpcDto dto)
   {
     try
@@ -115,18 +116,16 @@ public class DesktopClientRpcService(
     }
   }
 
+  public Task<DesktopSessionInfoResponseIpcDto> GetDesktopSessionInfo()
+  {
+    return _platformMessageHandler.GetDesktopSessionInfo();
+  }
+
   public Task InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto)
   {
-#if IS_WINDOWS
-        _logger.LogInformation("Handling Ctrl+Alt+Del request. Requester ID: {RequesterId}", dto.InvokerUserName);
-        var win32Interop = _serviceProvider.GetRequiredService<IWin32Interop>();
-        win32Interop.InvokeCtrlAltDel();
-#else
-    _logger.LogWarning("Ctrl+Alt+Del invocation requested on non-Windows OS. Ignoring.");
-#endif
-    return Task.CompletedTask;
-
+    return _platformMessageHandler.InvokeCtrlAltDel(dto);
   }
+
   public async Task ReceiveChatMessage(ChatMessageIpcDto dto)
   {
     try
@@ -137,7 +136,6 @@ public class DesktopClientRpcService(
         dto.SenderName,
         dto.SenderEmail);
 
-      // Add the message to the session
       await _chatSessionManager.AddMessage(dto.SessionId, dto);
     }
     catch (Exception ex)
@@ -145,6 +143,7 @@ public class DesktopClientRpcService(
       _logger.LogError(ex, "Error while handling chat message.");
     }
   }
+
   public async Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
   {
     var permissionState = await CheckOsPermissions(
@@ -163,6 +162,7 @@ public class DesktopClientRpcService(
 
     return (await _remoteControlHostManager.StartHost(dto)).ToResult();
   }
+
   public async Task<CheckOsPermissionsResponseIpcDto> RequestRemoteControlPermission(RequestRemoteControlPermissionIpcDto dto)
   {
     try
@@ -190,6 +190,7 @@ public class DesktopClientRpcService(
       return new CheckOsPermissionsResponseIpcDto(false, "Unable to request desktop client permissions.");
     }
   }
+
   public async Task ShutdownDesktopClient(ShutdownCommandDto dto)
   {
     try
@@ -203,5 +204,4 @@ public class DesktopClientRpcService(
       _logger.LogError(ex, "Error while handling shutdown command.");
     }
   }
-
 }

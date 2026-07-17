@@ -13,34 +13,48 @@ namespace ControlR.Web.Server.Services.ServiceAccounts;
 /// </summary>
 public interface IServiceAccountManager
 {
-
   /// <summary>
   /// Adds a new credential to an existing server service account. Returns the credential
   /// metadata and the plaintext secret, which is only exposed this once.
   /// </summary>
   Task<HttpResult<CreateServiceAccountCredentialResponseDto>> AddCredential(Guid serviceAccountId, string name, CancellationToken cancellationToken);
+
   /// <summary>
   /// Creates the bootstrapped server service account and its initial credential when the
   /// bootstrap options are fully supplied. Skips creation when the named account already exists.
   /// Throws when the bootstrap input is only partially configured.
   /// </summary>
   Task<HttpResult> BootstrapServerServiceAccount(CancellationToken cancellationToken);
+
   /// <summary>
   /// Creates a new server-scoped service account and its first credential. Returns the new
   /// account and the plaintext secret, which is only exposed this once.
   /// </summary>
   Task<HttpResult<CreateServiceAccountResponseDto>> CreateForServer(string name, string? description, CancellationToken cancellationToken);
-  /// <summary>Deletes a server service account. Credentials cascade-delete.</summary>
+
+  /// <summary>
+  /// Deletes a server service account. Credentials cascade-delete.
+  /// </summary>
   /// <param name="serviceAccountId">The ID of the service account to delete.</param>
   /// <param name="requestingPrincipalId">The ID of the authenticated principal making the request. Used to prevent self-deletion.</param>
   /// <param name="cancellationToken">A <see cref="CancellationToken"/>.</param>
   Task<HttpResult> Delete(Guid serviceAccountId, Guid requestingPrincipalId, CancellationToken cancellationToken);
-  /// <summary>Returns a single server-scoped service account with its credential metadata.</summary>
+
+  /// <summary>
+  /// Returns a single server-scoped service account with its credential metadata.
+  /// </summary>
   Task<HttpResult<ServiceAccountDto>> Get(Guid serviceAccountId, CancellationToken cancellationToken);
-  /// <summary>Returns all server-scoped service accounts with their credential metadata.</summary>
-  Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken);
-  /// <summary>Revokes a credential by setting <see cref="ServiceAccountCredential.RevokedAt"/>.</summary>
+
+  /// <summary>
+  /// Returns all server-scoped service accounts with their credential metadata.
+  /// </summary>
+  Task<List<ServiceAccountDto>> GetAllForServer(CancellationToken cancellationToken);
+
+  /// <summary>
+  /// Revokes a credential by setting <see cref="ServiceAccountCredential.RevokedAt"/>.
+  /// </summary>
   Task<HttpResult> RevokeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken);
+
   /// <summary>
   /// Validates a <c>{hex_id}:{plaintext_secret}</c> API key against a service account credential.
   /// On success updates <see cref="ServiceAccountCredential.LastUsedAt"/> and returns the
@@ -285,7 +299,7 @@ public class ServiceAccountManager(
     return HttpResult.Ok(MapToDto(account));
   }
 
-  public async Task<List<ServiceAccountDto>> GetAllServer(CancellationToken cancellationToken)
+  public async Task<List<ServiceAccountDto>> GetAllForServer(CancellationToken cancellationToken)
   {
     var accounts = await appDb.ServiceAccounts
       .Where(x => x.Kind == ServiceAccountKind.Server)

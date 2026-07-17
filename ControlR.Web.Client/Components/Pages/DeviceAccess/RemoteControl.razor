@@ -112,6 +112,17 @@
                       <div>
                         @(session.Username)
                       </div>
+                      @if (!string.IsNullOrWhiteSpace(session.DesktopName))
+                      {
+                        <div>
+                          <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                            Desktop:
+                          </MudText>
+                        </div>
+                        <div>
+                          @(session.DesktopName)
+                        </div>
+                      }
                     </div>
                   </MudCardContent>
                   @if (!session.AreRemoteControlPermissionsGranted)

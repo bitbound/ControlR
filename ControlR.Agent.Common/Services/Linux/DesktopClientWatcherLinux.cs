@@ -231,9 +231,9 @@ internal class DesktopClientWatcherLinux(
   private string GetDesktopClientServiceName()
   {
     var instanceId = _fileSystemPathProvider.GetEffectiveInstanceId();
-    return string.Equals(instanceId, AppConstants.DefaultInstallDirectoryName, StringComparison.Ordinal)
-      ? "controlr.desktop.service"
-      : $"controlr.desktop-{instanceId}.service";
+    return string.Equals(instanceId, AppConstants.DefaultInstanceId, StringComparison.Ordinal)
+      ? BrandingConstants.LinuxDesktopServiceName
+      : $"{BrandingConstants.LinuxDesktopServiceName.Replace(".service", $"-{instanceId}.service")}";
   }
 
   private string GetInstallDirectory()
@@ -342,7 +342,7 @@ internal class DesktopClientWatcherLinux(
       }
 
       var instanceId = _fileSystemPathProvider.GetEffectiveInstanceId();
-      var instanceArgs = string.Equals(instanceId, AppConstants.DefaultInstallDirectoryName, StringComparison.Ordinal)
+      var instanceArgs = string.Equals(instanceId, AppConstants.DefaultInstanceId, StringComparison.Ordinal)
         ? ""
         : $" --instance-id {instanceId}";
 

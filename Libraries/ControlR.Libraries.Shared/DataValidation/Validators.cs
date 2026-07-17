@@ -6,7 +6,7 @@ public static class Validators
 {
   public static bool IsReservedInstanceId(string instanceId)
   {
-    return string.Equals(instanceId.Trim(), AppConstants.DefaultInstallDirectoryName, StringComparison.OrdinalIgnoreCase);
+    return string.Equals(instanceId.Trim(), AppConstants.DefaultInstanceId, StringComparison.OrdinalIgnoreCase);
   }
 
   public static bool ValidateDisplayName(string displayName, out char[] illegalCharacters)
@@ -38,7 +38,7 @@ public static class Validators
     var trimmedInstanceId = instanceId.Trim();
     if (IsReservedInstanceId(trimmedInstanceId))
     {
-      return $"Instance ID '{AppConstants.DefaultInstallDirectoryName}' is reserved.";
+      return $"Instance ID '{AppConstants.DefaultInstanceId}' is reserved.";
     }
 
     if (trimmedInstanceId is "." or "..")

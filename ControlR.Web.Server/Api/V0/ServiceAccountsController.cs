@@ -99,7 +99,7 @@ public class ServiceAccountsController(
   [HttpGet]
   public async Task<ActionResult<List<ServiceAccountDto>>> GetAll(CancellationToken cancellationToken)
   {
-    var accounts = await _serviceAccountManager.GetAllServer(cancellationToken);
+    var accounts = await _serviceAccountManager.GetAllForServer(cancellationToken);
     return Ok(accounts);
   }
 

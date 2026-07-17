@@ -9,7 +9,7 @@ public static class AppConstants
 {
   public const string AgentHubPath = "/hubs/agent";
   public const int DefaultHubDtoChunkSize = 100;
-  public const string DefaultInstallDirectoryName = "default";
+  public const string DefaultInstanceId = "default";
   public const double DefaultRemoteControlAutoQualityLowerThresholdMbps = 5d;
   public const int DefaultRemoteControlAutoQualityMaximum = 80;
   public const int DefaultRemoteControlAutoQualityMinimum = 20;

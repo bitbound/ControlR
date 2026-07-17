@@ -27,7 +27,7 @@ public class AgentInstallerWindowsRepairTests
   public async Task RepairDesktopClient_WaitsForExitedProcessBeforeReplacingDirectory()
   {
     var bundleZipPath = @"C:\temp\bundle.zip";
-    var installDir = Path.Combine(Path.GetTempPath(), "ControlR", "Install", AppConstants.DefaultInstallDirectoryName);
+    var installDir = Path.Combine(Path.GetTempPath(), "ControlR", "Install", AppConstants.DefaultInstanceId);
     var desktopClientPath = Path.Combine(installDir, "DesktopClient", "ControlR.DesktopClient.exe");
     var fileSystem = new FakeFileSystem('\\');
     var process = new Mock<IProcess>();
@@ -84,7 +84,7 @@ public class AgentInstallerWindowsRepairTests
   public async Task RepairDesktopClient_WhenProcessDoesNotExit_DoesNotReplaceDirectory()
   {
     var bundleZipPath = @"C:\temp\bundle.zip";
-    var installDir = Path.Combine(Path.GetTempPath(), "ControlR", "Install", AppConstants.DefaultInstallDirectoryName);
+    var installDir = Path.Combine(Path.GetTempPath(), "ControlR", "Install", AppConstants.DefaultInstanceId);
     var desktopClientPath = Path.Combine(installDir, "DesktopClient", "ControlR.DesktopClient.exe");
     var fileSystem = new FakeFileSystem('\\');
     var process = new Mock<IProcess>();
