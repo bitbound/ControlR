@@ -232,7 +232,7 @@ public class ViewerRemoteControlStream(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while sending message via websocket stream..");
+      _logger.LogError(ex, "Error while sending message via websocket stream.");
     }
   }
 

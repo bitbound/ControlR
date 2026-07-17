@@ -23,7 +23,7 @@ None.
 
 ## Fixed
 
-None.
+- Fixed a delay in the remote control UI when websocket stream is closing.
 
 ## Changed
 
