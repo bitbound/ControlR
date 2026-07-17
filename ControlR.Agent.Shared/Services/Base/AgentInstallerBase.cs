@@ -41,7 +41,7 @@ internal abstract class AgentInstallerBase(
   protected static string GetInstanceInstallDirectory(string rootDirectory, string? instanceId)
   {
     var installDirectoryName = string.IsNullOrWhiteSpace(instanceId)
-      ? AppConstants.DefaultInstallDirectoryName
+      ? AppConstants.DefaultInstanceId
       : instanceId;
 
     return Path.Combine(rootDirectory, installDirectoryName);

@@ -13,7 +13,7 @@ public class ValidatorsTests
   {
     var result = Validators.ValidateInstanceId(instanceId);
 
-    Assert.Equal($"Instance ID '{AppConstants.DefaultInstallDirectoryName}' is reserved.", result);
+    Assert.Equal($"Instance ID '{AppConstants.DefaultInstanceId}' is reserved.", result);
   }
 
   [Theory]
