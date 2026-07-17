@@ -114,7 +114,7 @@ public sealed class XdgDesktopPortal(
   {
     try
     {
-      await EnsureInitializedAsync(cancellationToken: cancellationToken);
+      await EnsureInitialized(cancellationToken: cancellationToken);
 
       if (!_clipboardEnabled || _sessionHandle is null)
       {
@@ -148,7 +148,7 @@ public sealed class XdgDesktopPortal(
 
   public async Task<(SafeFileHandle Fd, string SessionHandle)?> GetPipeWireConnection()
   {
-    await EnsureInitializedAsync();
+    await EnsureInitialized();
     return _pipewireFd != null && _sessionHandle != null
     ? (_pipewireFd, _sessionHandle)
     : throw new InvalidOperationException("PipeWire connection is not initialized.");
@@ -156,26 +156,26 @@ public sealed class XdgDesktopPortal(
 
   public async Task<string?> GetRemoteDesktopSessionHandle(CancellationToken cancellationToken = default)
   {
-    await EnsureInitializedAsync(cancellationToken: cancellationToken);
+    await EnsureInitialized(cancellationToken: cancellationToken);
     return _sessionHandle;
   }
 
   public async Task<List<PipeWireStreamInfo>> GetScreenCastStreams()
   {
-    await EnsureInitializedAsync();
+    await EnsureInitialized();
     return _streams ?? throw new InvalidOperationException("ScreenCast streams are not initialized.");
   }
 
   public async Task Initialize(bool bypassRestoreToken = false, CancellationToken cancellationToken = default)
   {
-    await EnsureInitializedAsync(bypassRestoreToken);
+    await EnsureInitialized(bypassRestoreToken, cancellationToken);
   }
 
   public async Task NotifyKeyboardKeycode(string sessionHandle, int keycode, bool pressed)
   {
     try
     {
-      await EnsureInitializedAsync();
+      await EnsureInitialized();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
       await proxy.NotifyKeyboardKeycodeAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), keycode, pressed ? 1u : 0u);
     }
@@ -189,7 +189,7 @@ public sealed class XdgDesktopPortal(
   {
     try
     {
-      await EnsureInitializedAsync();
+      await EnsureInitialized();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
       await proxy.NotifyKeyboardKeysymAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), keysym, pressed ? 1u : 0u);
     }
@@ -203,7 +203,7 @@ public sealed class XdgDesktopPortal(
   {
     try
     {
-      await EnsureInitializedAsync();
+      await EnsureInitialized();
       var options = new Dictionary<string, object> { ["finish"] = finish };
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
       await proxy.NotifyPointerAxisAsync(new ObjectPath(sessionHandle), options, dx, dy);
@@ -218,7 +218,7 @@ public sealed class XdgDesktopPortal(
   {
     try
     {
-      await EnsureInitializedAsync();
+      await EnsureInitialized();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
       await proxy.NotifyPointerAxisDiscreteAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), axis, steps);
     }
@@ -232,7 +232,7 @@ public sealed class XdgDesktopPortal(
   {
     try
     {
-      await EnsureInitializedAsync();
+      await EnsureInitialized();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
       await proxy.NotifyPointerButtonAsync(new ObjectPath(sessionHandle), new Dictionary<string, object>(), button, pressed ? 1u : 0u);
     }
@@ -246,7 +246,7 @@ public sealed class XdgDesktopPortal(
   {
     try
     {
-      await EnsureInitializedAsync();
+      await EnsureInitialized();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
       await proxy.NotifyPointerMotionAsync(
         new ObjectPath(sessionHandle),
@@ -264,7 +264,7 @@ public sealed class XdgDesktopPortal(
   {
     try
     {
-      await EnsureInitializedAsync();
+      await EnsureInitialized();
       var proxy = Connection.CreateProxy<IRemoteDesktop>(PortalBusName, PortalObjectPath);
       await proxy.NotifyPointerMotionAbsoluteAsync(
         new ObjectPath(sessionHandle),
@@ -357,7 +357,7 @@ public sealed class XdgDesktopPortal(
 
     try
     {
-      await EnsureInitializedAsync(cancellationToken: cancellationToken);
+      await EnsureInitialized(cancellationToken: cancellationToken);
 
       if (!_clipboardEnabled || _sessionHandle is null)
       {
@@ -506,7 +506,7 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  private async Task EnsureInitializedAsync(bool bypassRestoreToken = false, CancellationToken cancellationToken = default)
+  private async Task EnsureInitialized(bool bypassRestoreToken = false, CancellationToken cancellationToken = default)
   {
     if (_initialized)
     {

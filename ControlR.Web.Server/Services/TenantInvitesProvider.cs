@@ -98,15 +98,15 @@ public class TenantInvitesProvider(
   {
     var normalizedEmail = inviteeEmail.Trim().ToLower();
 
-    await using var appDb = await _dbContextFactory.CreateDbContextAsync();
+    await using var appDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-    if (await appDb.TenantInvites.AnyAsync(x => x.InviteeEmail == normalizedEmail))
+    if (await appDb.TenantInvites.AnyAsync(x => x.InviteeEmail == normalizedEmail, cancellationToken: cancellationToken))
     {
       return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "Invitee already has a pending invite.");
     }
 
 #pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
-    if (await appDb.Users.AnyAsync(x => x.Email!.ToLower() == normalizedEmail))
+    if (await appDb.Users.AnyAsync(x => x.Email!.ToLower() == normalizedEmail, cancellationToken: cancellationToken))
     {
       return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists in the database.");
     }
@@ -137,8 +137,8 @@ public class TenantInvitesProvider(
       InviteeEmail = normalizedEmail,
       TenantId = tenantId,
     };
-    await appDb.TenantInvites.AddAsync(invite);
-    await appDb.SaveChangesAsync();
+    await appDb.TenantInvites.AddAsync(invite, cancellationToken);
+    await appDb.SaveChangesAsync(cancellationToken);
 
     var inviteUrl = new Uri(origin, $"{ClientRoutes.InviteConfirmationBase}/{invite.ActivationCode}");
     var retDto = new InternalDtos.TenantInviteResponseDto(invite.Id, invite.CreatedAt, normalizedEmail, inviteUrl);

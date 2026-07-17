@@ -62,4 +62,6 @@ public static partial class BrandingConstants
 
   public static string BundleHashFileName => $".{UnixBrandKey}-bundle.sha256";
   public static string RepairStageDirectoryPrefix => $".{UnixBrandKey}-desktop-repair-";
+
+  public static string IpcPipeBaseName => $"{UnixBrandKey}-ipc-server";
 }

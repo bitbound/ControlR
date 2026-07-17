@@ -34,7 +34,7 @@ public class DesktopPreviewController : ControllerBase
     }
     var device = await appDb.Devices
       .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId);
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken: cancellationToken);
 
     if (device is null)
     {
