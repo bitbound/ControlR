@@ -153,6 +153,8 @@ jobs:
     name: Apple Build (${{ matrix.arch }})
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-26"]') }}
     needs: [set-version]
+    env:
+      VERSION: ${{ needs.set-version.outputs.version }}
     strategy:
       matrix:
         arch: [osx-arm64, osx-x64]
@@ -447,6 +449,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      VERSION: ${{ needs.set-version.outputs.version }}
     strategy:
       matrix:
         arch: [win-x86, win-x64]
@@ -606,6 +610,8 @@ jobs:
     name: Linux Build
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     needs: [set-version]
+    env:
+      VERSION: ${{ needs.set-version.outputs.version }}
 
     steps:
       - name: Checkout
@@ -689,10 +695,13 @@ jobs:
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["ubuntu-latest"]') }}
     needs:
       [
+        set-version,
         build-windows-binaries,
         build-linux-binaries,
         build-mac-binaries,
       ]
+    env:
+      VERSION: ${{ needs.set-version.outputs.version }}
 
     steps:
       - name: Checkout
