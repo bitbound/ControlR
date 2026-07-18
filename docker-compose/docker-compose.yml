@@ -46,6 +46,10 @@ services:
       ControlR_POSTGRES_PASSWORD: *pgPassword
       ControlR_POSTGRES_DB: "controlr"
 
+      # Set to true to authenticate to Azure Database for PostgreSQL using Entra ID
+      # instead of password authentication. Requires DefaultAzureCredential chain.
+      # ControlR_POSTGRES_USE_ENTRA_ID: false
+
       # Whether to enable the configuration provider for Docker Secrets.
       ControlR_AppOptions__EnableDockerSecrets: false
 

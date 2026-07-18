@@ -1,16 +1,7 @@
-﻿using System.Net;
-using IPNetwork = System.Net.IPNetwork;
-using ControlR.Web.ServiceDefaults;
+﻿using ControlR.Web.ServiceDefaults;
 using ControlR.Libraries.DataRedaction;
-using Microsoft.AspNetCore.HttpOverrides;
-using Npgsql;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Web.Server.Authn;
-using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Data.Configuration;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
@@ -20,11 +11,9 @@ using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Services.Tenants;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Services;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
-using Microsoft.AspNetCore.Authentication.BearerToken;
 using System.Globalization;
 using System.Threading.RateLimiting;
 using ControlR.Libraries.Shared.Services.Encryption;
@@ -116,7 +105,7 @@ public static class WebApplicationBuilderExtensions
     }
     else
     {
-      builder.AddPostgresDb(appOptions);
+      builder.AddControlrPostgresDb(appOptions);
     }
 
     builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -142,7 +131,7 @@ public static class WebApplicationBuilderExtensions
         options.MultipartBodyLengthLimit = appOptions.MaxFileTransferSize;
       }
     });
-    
+
     builder.Services.AddProblemDetails();
     builder.Services.AddExceptionHandler<ApiExceptionHandler>();
     builder.Services.AddExceptionHandler<UiExceptionHandler>();
@@ -187,162 +176,11 @@ public static class WebApplicationBuilderExtensions
     });
 
     // Add authn/authz services.
-    builder.Services.AddCascadingAuthenticationState();
-    builder.Services.AddScoped<IdentityRedirectManager>();
-    builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-
-    builder.Services.ConfigureApplicationCookie(options =>
-    {
-      options.Events.OnRedirectToLogin = context =>
-      {
-        // For API requests, return 401 instead of redirecting
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-          context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-          return Task.CompletedTask;
-        }
-
-        // For UI requests, redirect to the login page
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-      };
-
-      options.Events.OnRedirectToAccessDenied = context =>
-      {
-        // For API requests, return 403 instead of redirecting  
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-          context.Response.StatusCode = StatusCodes.Status403Forbidden;
-          return Task.CompletedTask;
-        }
-
-        // For UI requests, redirect to the access-denied page
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-      };
-    });
-
-    builder.Services
-      .AddAuthorizationBuilder()
-      .SetDefaultPolicy(new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(CustomSchemes.Dynamic)
-        .RequireAuthenticatedUser()
-        .Build())
-      .AddPolicy(RequireServerServiceAccountPolicy.PolicyName, RequireServerServiceAccountPolicy.Create())
-      .AddPolicy(CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy, CombinedAuthorizationPolicies.CreateServerOrTenantAdmin())
-      .AddPolicy(CombinedAuthorizationPolicies.RequireServerOrTenantAdminOrInstallerKeyManagerPolicy, CombinedAuthorizationPolicies.CreateServerOrTenantAdminOrInstallerKeyManager())
-      .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
-      .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
-
-    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
-    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequirementHandler>();
-    builder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
-
-    // Add Identity services.
-    builder.Services
-      .AddIdentityApiEndpoints<AppUser>(options =>
-      {
-        options.User.RequireUniqueEmail = appOptions.RequireUserUniqueEmail;
-        options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
-        options.Password.RequiredLength = 8;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-      })
-      .AddRoles<AppRole>()
-      .AddEntityFrameworkStores<AppDb>()
-      .AddSignInManager()
-      .AddDefaultTokenProviders();
-
-    if (appOptions.EnableInteractiveBearerLogin)
-    {
-      builder.Services.Configure<BearerTokenOptions>(IdentityConstants.BearerScheme, options =>
-      {
-        options.BearerTokenExpiration = TimeSpan.FromMinutes(appOptions.InteractiveBearerTokenExpirationMinutes);
-        options.RefreshTokenExpiration = TimeSpan.FromDays(appOptions.InteractiveRefreshTokenExpirationDays);
-      });
-    }
-
-    var authBuilder = builder.Services
-      .AddAuthentication(options =>
-      {
-        options.DefaultScheme = CustomSchemes.Dynamic;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-      })
-      .AddPolicyScheme(CustomSchemes.Dynamic, "Dynamic Authentication Scheme", options =>
-      {
-        options.ForwardDefaultSelector = context =>
-        {
-          // Check for logon token first (for device access integration)
-          if (context.Request.Path.StartsWithSegments("/device-access") &&
-              context.Request.Query.ContainsKey("logonToken"))
-          {
-            return LogonTokenAuthenticationSchemeOptions.DefaultScheme;
-          }
-
-          if (appOptions.EnableInteractiveBearerLogin &&
-              context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-          {
-            return IdentityConstants.BearerScheme;
-          }
-
-          // If the request has a Personal Access Token header, use PAT authentication
-          if (context.Request.Headers.ContainsKey(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName))
-          {
-            return PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme;
-          }
-
-          // If the request carries a service account api key, authenticate as a service account.
-          if (context.Request.Headers.ContainsKey(ServiceAccountCredentialAuthenticationSchemeOptions.DefaultHeaderName))
-          {
-            return ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme;
-          }
-
-          // Otherwise, use Identity cookies for web UI
-          return IdentityConstants.ApplicationScheme;
-        };
-      });
-
-    if (!string.IsNullOrWhiteSpace(appOptions.MicrosoftClientId) &&
-        !string.IsNullOrWhiteSpace(appOptions.MicrosoftClientSecret))
-    {
-      authBuilder.AddMicrosoftAccount(microsoftOptions =>
-      {
-        microsoftOptions.ClientId = appOptions.MicrosoftClientId;
-        microsoftOptions.ClientSecret = appOptions.MicrosoftClientSecret;
-      });
-    }
-
-    if (!string.IsNullOrWhiteSpace(appOptions.GitHubClientId) &&
-        !string.IsNullOrWhiteSpace(appOptions.GitHubClientSecret))
-    {
-      authBuilder.AddGitHub(options =>
-      {
-        options.ClientId = appOptions.GitHubClientId;
-        options.ClientSecret = appOptions.GitHubClientSecret;
-      });
-    }
-
-    // Add personal access token authentication.
-    authBuilder.AddScheme<PersonalAccessTokenAuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
-      PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,
-      _ => { });
-
-    // Add logon token authentication.
-    authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
-      LogonTokenAuthenticationSchemeOptions.DefaultScheme,
-      _ => { });
-
-    // Add service account credential authentication (x-api-key).
-    authBuilder.AddScheme<ServiceAccountCredentialAuthenticationSchemeOptions, ServiceAccountCredentialAuthenticationHandler>(
-      ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme,
-      _ => { });
-
-    builder.Services
-      .AddScoped<PasskeySignInManager>()
-      .AddScoped<IUserCreator, UserCreator>();
+    builder.AddControlrAuthorization();
+    builder.AddControlrAuthentication(appOptions);
 
     // Configure DataProtection.
-    builder.ConfigureDataProtection();
+    builder.AddControlrDataProtection();
 
     // Add SignalR.
     builder.Services
@@ -356,32 +194,9 @@ public static class WebApplicationBuilderExtensions
       .AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true; });
 
     // Add forwarded headers.
-    if (appOptions.EnableNetworkTrust)
-    {
-      builder.ConfigureForwardedHeadersWithFullTrust();
-    }
-    else
-    {
-      await builder.ConfigureForwardedHeaders(appOptions);
-    }
+    await builder.AddControlrForwardedHeaders(appOptions);
 
-    if (appOptions.UseHttpLogging)
-    {
-      builder.Services.AddHttpLogging(options =>
-      {
-        options.RequestHeaders.Add("X-Forwarded-For");
-        options.RequestHeaders.Add("X-Forwarded-Proto");
-        options.RequestHeaders.Add("X-Forwarded-Host");
-        options.RequestHeaders.Add("X-Original-For");
-        options.RequestHeaders.Add("X-Original-Proto");
-        options.RequestHeaders.Add("X-Original-Host");
-        options.RequestHeaders.Add("CF-Connecting-IP");
-        options.RequestHeaders.Add("CF-RAY");
-        options.RequestHeaders.Add("CF-IPCountry");
-        options.RequestHeaders.Add("CDN-Loop");
-        options.LoggingFields = HttpLoggingFields.All ^ HttpLoggingFields.RequestQuery;
-      });
-    }
+    builder.AddControlrHttpLogging(appOptions);
 
     // Add other services.
 
@@ -430,221 +245,5 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IServiceAccountManager, ServiceAccountManager>();
 
     return builder;
-  }
-
-  private static void AddPostgresDb(
-    this IHostApplicationBuilder builder,
-    AppOptions appOptions)
-  {
-    // Add DB services.
-    var pgUser = builder.Configuration.GetValue<string>("POSTGRES_USER");
-    var pgPass = builder.Configuration.GetValue<string>("POSTGRES_PASSWORD");
-    var pgHost = builder.Configuration.GetValue<string>("POSTGRES_HOST");
-    var pgDb = builder.Configuration.GetValue<string>("POSTGRES_DB");
-    var pgPortRaw = builder.Configuration.GetValue<string>("POSTGRES_PORT");
-    var pgPort = 5432;
-    ArgumentException.ThrowIfNullOrWhiteSpace(pgUser);
-    ArgumentException.ThrowIfNullOrWhiteSpace(pgPass);
-    ArgumentException.ThrowIfNullOrWhiteSpace(pgHost);
-
-    if (string.IsNullOrWhiteSpace(pgDb))
-    {
-      pgDb = "controlr";
-    }
-
-    if (!string.IsNullOrWhiteSpace(pgPortRaw) && int.TryParse(pgPortRaw, out var parsedPort))
-    {
-      pgPort = parsedPort;
-    }
-
-    if (Uri.TryCreate(pgHost, UriKind.Absolute, out var pgHostUri))
-    {
-      pgHost = pgHostUri.Host;
-      if (pgHostUri.Port > 0)
-      {
-        pgPort = pgHostUri.Port;
-      }
-    }
-
-    var pgBuilder = new NpgsqlConnectionStringBuilder
-    {
-      Database = pgDb,
-      Username = pgUser,
-      Password = pgPass,
-      Host = pgHost,
-      Port = pgPort
-    };
-
-    builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
-    {
-      options.UseNpgsql(pgBuilder.ConnectionString);
-      options.EnableDetailedErrors(appOptions.EnableDatabaseDetailedErrors);
-      options.AddInterceptors(new ServiceAccountInvariantInterceptor());
-
-      var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-      if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)
-      {
-        options.UseUserClaims(user);
-      }
-    }, lifetime: ServiceLifetime.Transient);
-  }
-
-  private static void ConfigureDataProtection(this IHostApplicationBuilder builder)
-  {
-    builder.Services.Configure<KeyProtectionOptions>(
-      builder.Configuration.GetSection(KeyProtectionOptions.SectionKey));
-
-    var keyProtectionOptions = builder.Configuration
-      .GetSection(KeyProtectionOptions.SectionKey)
-      .Get<KeyProtectionOptions>() ?? new KeyProtectionOptions();
-
-    var dataProtectionBuilder = builder.Services
-      .AddDataProtection()
-      .PersistKeysToDbContext<AppDb>();
-
-    if (!keyProtectionOptions.EncryptKeys)
-    {
-      dataProtectionBuilder.UnprotectKeysWithAnyCertificate();
-      Console.WriteLine("Data Protection keys will NOT be encrypted at rest. " +
-        "Set KeyProtectionOptions:EncryptKeys to true and configure a certificate for production environments.");
-      return;
-    }
-
-    if (!string.IsNullOrWhiteSpace(keyProtectionOptions.CertificateContentsBase64))
-    {
-      var certBytes = Convert.FromBase64String(keyProtectionOptions.CertificateContentsBase64);
-      var certificate = X509CertificateLoader.LoadPkcs12(certBytes, keyProtectionOptions.CertificatePassword);
-      dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
-      Console.WriteLine($"Data Protection keys will be encrypted using certificate from {nameof(KeyProtectionOptions.CertificateContentsBase64)}.");
-    }
-    else
-    {
-      if (string.IsNullOrWhiteSpace(keyProtectionOptions.CertificatePath))
-      {
-        throw new InvalidOperationException(
-          "KeyProtectionOptions:EncryptKeys is true, but KeyProtectionOptions:CertificatePath is not configured. " +
-          "Provide a valid path to a PFX certificate file.");
-      }
-
-      if (!File.Exists(keyProtectionOptions.CertificatePath))
-      {
-        throw new InvalidOperationException(
-          $"KeyProtectionOptions:EncryptKeys is true, but the certificate file does not exist: " +
-          $"{keyProtectionOptions.CertificatePath}");
-      }
-
-      var certificate = X509CertificateLoader.LoadPkcs12FromFile(
-        keyProtectionOptions.CertificatePath,
-        keyProtectionOptions.CertificatePassword);
-
-      dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
-      Console.WriteLine("Data Protection keys will be encrypted using certificate from file.");
-    }
-  }
-
-  private static async Task ConfigureForwardedHeaders(
-    this IHostApplicationBuilder builder,
-    AppOptions appOptions)
-  {
-    var cloudflareIps = new List<IPNetwork>();
-
-    if (appOptions.EnableCloudflareProxySupport)
-    {
-      using var httpClient = new HttpClient();
-      using var ip4Response = await httpClient.GetAsync("https://www.cloudflare.com/ips-v4");
-      ip4Response.EnsureSuccessStatusCode();
-      var ip4Content = await ip4Response.Content.ReadAsStringAsync();
-      var ip4Networks = ip4Content.Split();
-
-      using var ip6Response = await httpClient.GetAsync("https://www.cloudflare.com/ips-v6");
-      ip6Response.EnsureSuccessStatusCode();
-      var ip6Content = await ip4Response.Content.ReadAsStringAsync();
-      var ip6Networks = ip6Content.Split();
-
-      string[] ipNetworks = [.. ip4Networks, .. ip6Networks];
-
-      foreach (var network in ipNetworks)
-      {
-        if (!IPNetwork.TryParse(network, out var ipNetwork))
-        {
-          Console.WriteLine($"Invalid Cloudflare network: {network}");
-        }
-        else
-        {
-          Console.WriteLine($"Adding Cloudflare KnownNetwork: {network}");
-          cloudflareIps.Add(ipNetwork);
-        }
-      }
-    }
-
-    builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    {
-      options.ForwardedHeaders = ForwardedHeaders.All;
-      options.ForwardLimit = null;
-
-      // Default Docker host. We want to allow forwarded headers from this address.
-      if (!string.IsNullOrWhiteSpace(appOptions.DockerGatewayIp))
-      {
-        if (IPAddress.TryParse(appOptions.DockerGatewayIp, out var dockerGatewayIp))
-        {
-          options.KnownProxies.Add(dockerGatewayIp);
-        }
-        else
-        {
-          Console.WriteLine($"Invalid DockerGatewayIp: {appOptions.DockerGatewayIp}");
-        }
-      }
-
-      if (appOptions.KnownProxies is { Length: > 0 } knownProxies)
-      {
-        foreach (var proxy in knownProxies)
-        {
-          if (IPAddress.TryParse(proxy, out var ip))
-          {
-            Console.WriteLine($"Adding KnownProxy: {proxy}");
-            options.KnownProxies.Add(ip);
-          }
-          else
-          {
-            Console.WriteLine($"Invalid KnownProxy IP: {proxy}");
-          }
-        }
-      }
-
-      if (appOptions.KnownNetworks is { Length: > 0 } knownNetworks)
-      {
-        foreach (var network in knownNetworks)
-        {
-          if (IPNetwork.TryParse(network, out var ipNetwork))
-          {
-            Console.WriteLine($"Adding KnownNetwork: {network}");
-            options.KnownIPNetworks.Add(ipNetwork);
-          }
-          else
-          {
-            Console.WriteLine($"Invalid KnownNetwork: {network}");
-          }
-        }
-      }
-
-      if (cloudflareIps.Count > 0)
-      {
-        foreach (var cloudflareIp in cloudflareIps)
-        {
-          options.KnownIPNetworks.Add(cloudflareIp);
-        }
-      }
-    });
-  }
-  private static void ConfigureForwardedHeadersWithFullTrust(this IHostApplicationBuilder builder)
-  {
-    builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    {
-      options.ForwardedHeaders = ForwardedHeaders.All;
-      options.ForwardLimit = null;
-      options.KnownIPNetworks.Clear();
-      options.KnownProxies.Clear();
-      options.KnownIPNetworks.Clear();
-    });
   }
 }
