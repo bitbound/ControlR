@@ -8,15 +8,15 @@ namespace ControlR.Web.Server.Startup;
 public static class PostgresRegistrationExtensions
 {
   public static void AddControlrPostgresDb(
-    this IHostApplicationBuilder builder,
+    this IHostApplicationBuilder hostBuilder,
     AppOptions appOptions)
   {
-    var pgUser = builder.Configuration.GetValue<string>("POSTGRES_USER");
-    var pgPass = builder.Configuration.GetValue<string>("POSTGRES_PASSWORD");
-    var pgHost = builder.Configuration.GetValue<string>("POSTGRES_HOST");
-    var pgDb = builder.Configuration.GetValue<string>("POSTGRES_DB");
-    var pgPortRaw = builder.Configuration.GetValue<string>("POSTGRES_PORT");
-    var useEntraId = builder.Configuration.GetValue<bool>("POSTGRES_USE_ENTRA_ID");
+    var pgUser = hostBuilder.Configuration.GetValue<string>("POSTGRES_USER");
+    var pgPass = hostBuilder.Configuration.GetValue<string>("POSTGRES_PASSWORD");
+    var pgHost = hostBuilder.Configuration.GetValue<string>("POSTGRES_HOST");
+    var pgDb = hostBuilder.Configuration.GetValue<string>("POSTGRES_DB");
+    var pgPortRaw = hostBuilder.Configuration.GetValue<string>("POSTGRES_PORT");
+    var useEntraId = hostBuilder.Configuration.GetValue<bool>("POSTGRES_USE_ENTRA_ID");
     var pgPort = 5432;
 
     ArgumentException.ThrowIfNullOrWhiteSpace(pgUser);
@@ -56,31 +56,14 @@ public static class PostgresRegistrationExtensions
 
     if (useEntraId)
     {
-      // Azure Database for PostgreSQL requires SSL for Entra ID authentication.
-      pgBuilder.SslMode = SslMode.Require;
-
-      var credentialOptions = new DefaultAzureCredentialOptions();
-      var credential = new DefaultAzureCredential(credentialOptions);
-
-      var dataSourceBuilder = new NpgsqlDataSourceBuilder(pgBuilder.ConnectionString);
-      dataSourceBuilder.UsePeriodicPasswordProvider(
-        passwordProvider: async (_, cancellationToken) =>
-        {
-          var tokenContext = new TokenRequestContext(["https://ossrdbms-aad.database.windows.net/.default"]);
-          var accessToken = await credential.GetTokenAsync(tokenContext, cancellationToken);
-          return accessToken.Token;
-        },
-        successRefreshInterval: TimeSpan.FromMinutes(55),
-        failureRefreshInterval: TimeSpan.FromSeconds(10));
-
-      builder.Services.AddSingleton(dataSourceBuilder.Build());
+      RegisterAzurePgDataSource(hostBuilder, pgBuilder);
     }
     else
     {
       pgBuilder.Password = pgPass;
     }
 
-    builder.Services.AddDbContextFactory<AppDb>((sp, options) =>
+    hostBuilder.Services.AddDbContextFactory<AppDb>((sp, options) =>
     {
       if (useEntraId)
       {
@@ -101,5 +84,27 @@ public static class PostgresRegistrationExtensions
         options.UseUserClaims(user);
       }
     }, lifetime: ServiceLifetime.Transient);
+  }
+
+  private static void RegisterAzurePgDataSource(IHostApplicationBuilder hostBuilder, NpgsqlConnectionStringBuilder pgBuilder)
+  {
+    // Azure Database for PostgreSQL requires SSL for Entra ID authentication.
+    pgBuilder.SslMode = SslMode.Require;
+
+    var credentialOptions = new DefaultAzureCredentialOptions();
+    var credential = new DefaultAzureCredential(credentialOptions);
+
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(pgBuilder.ConnectionString);
+    dataSourceBuilder.UsePeriodicPasswordProvider(
+      passwordProvider: async (_, cancellationToken) =>
+      {
+        var tokenContext = new TokenRequestContext(["https://ossrdbms-aad.database.windows.net/.default"]);
+        var accessToken = await credential.GetTokenAsync(tokenContext, cancellationToken);
+        return accessToken.Token;
+      },
+      successRefreshInterval: TimeSpan.FromMinutes(55),
+      failureRefreshInterval: TimeSpan.FromSeconds(10));
+
+    hostBuilder.Services.AddSingleton(dataSourceBuilder.Build());
   }
 }
