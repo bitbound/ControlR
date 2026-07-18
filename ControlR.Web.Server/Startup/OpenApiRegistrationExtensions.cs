@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.OpenApi;
 
 namespace ControlR.Web.Server.Startup;
 
-public static class OpenApiExtensions
+public static class OpenApiRegistrationExtensions
 {
   public static void AddControlrOpenApi(this IHostApplicationBuilder builder)
   {
