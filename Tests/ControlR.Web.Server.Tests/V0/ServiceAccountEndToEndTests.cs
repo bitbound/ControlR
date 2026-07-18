@@ -3,10 +3,16 @@ using System.Net.Http.Json;
 using System.Runtime.InteropServices;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Authn;
+using ControlR.Web.Server.Data;
+using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace ControlR.Web.Server.Tests.V0;
 
@@ -33,14 +39,24 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
       ["Bootstrap:ServerServiceAccountTokenSecret"] = bootstrapSecret,
     };
 
-    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput, settings: config);
+    var fakeDesktopSessions = CreateFakeDesktopSessions();
+
+    var mockAgentHubContext = CreateMockAgentHubContext(fakeDesktopSessions);
+
+    // Bootstrap will happen when the server starts.
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      _testOutput,
+      settings: config,
+      configureServices: services =>
+      {
+        services.AddSingleton(mockAgentHubContext.Object);
+      });
 
     var services = testServer.Services;
     var saManager = services.GetRequiredService<IServiceAccountManager>();
-    var bootstrapResult = await saManager.BootstrapServerServiceAccount(TestContext.Current.CancellationToken);
-    Assert.True(bootstrapResult.IsSuccess, $"Bootstrap failed: {bootstrapResult.Reason}");
 
-    var saAccounts = await saManager.GetAllServer(TestContext.Current.CancellationToken);
+    // Verify the bootstrapped account exists.
+    var saAccounts = await saManager.GetAllForServer(TestContext.Current.CancellationToken);
     var sa = saAccounts.First(s => s.Name == saName);
     Assert.Equal(bootstrapAccountId, sa.Id);
 
@@ -48,6 +64,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     // Step 2: Service account creates a tenant.
     using var saClient = await testServer.GetHttpClient();
+
     saClient.DefaultRequestHeaders.Add(
       ServiceAccountCredentialAuthenticationSchemeOptions.DefaultHeaderName,
       apiKey);
@@ -60,8 +77,10 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     Assert.True(tenantResponse.IsSuccessStatusCode,
       $"Create tenant failed: {tenantResponse.StatusCode}");
+
     var tenantResult = await tenantResponse.Content
       .ReadFromJsonAsync<V0Dtos.CreateTenantResponseDto>(TestContext.Current.CancellationToken);
+
     Assert.NotNull(tenantResult);
     Assert.NotEqual(Guid.Empty, tenantResult.TenantId);
 
@@ -80,16 +99,186 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
 
     Assert.True(keyResponse.IsSuccessStatusCode,
       $"Create installer key failed: {keyResponse.StatusCode}");
+
     var keyResult = await keyResponse.Content
       .ReadFromJsonAsync<V0Dtos.CreateInstallerKeyResponseDto>(TestContext.Current.CancellationToken);
+
     Assert.NotNull(keyResult);
     Assert.NotEqual(Guid.Empty, keyResult.Id);
 
     // Step 4: The agent sends this request during installation, using the supplied installer key.
+    var deviceDto = CreateDeviceUpdateDto(tenantResult.TenantId);
+    var deviceId = deviceDto.Id;
+
+    var createDeviceReq = new InternalDtos.CreateDeviceRequestDto(
+      deviceDto,
+      keyResult.Id,
+      keyResult.KeySecret);
+
+    using var anonClient = testServer.TestServer.CreateClient();
+
+    var deviceResponse = await anonClient.PostAsJsonAsync(
+      HttpConstants.Agent.DevicesEndpoint,
+      createDeviceReq,
+      TestContext.Current.CancellationToken);
+
+    Assert.True(deviceResponse.IsSuccessStatusCode,
+      $"Create device failed: {deviceResponse.StatusCode}");
+
+    // Step 5: Get active desktop sessions.
+    await BringDeviceOnline(testServer, deviceId);
+
+    var sessionsResponse = await saClient.GetAsync(
+      $"{HttpConstants.V0.DevicesEndpoint}/{deviceId}/desktop-sessions",
+      TestContext.Current.CancellationToken);
+
+    Assert.True(sessionsResponse.IsSuccessStatusCode,
+      $"Get desktop sessions failed: {sessionsResponse.StatusCode}");
+
+    var sessions = await sessionsResponse.Content
+      .ReadFromJsonAsync<V0Dtos.DesktopSessionResponseDto[]>(TestContext.Current.CancellationToken);
+
+    Assert.NotNull(sessions);
+    Assert.Equal(2, sessions.Length);
+
+    AssertConsoleSession(sessions!);
+    AssertRdpSession(sessions!);
+
+    // Step 6: Service account creates a logon token for an external user (dynamically creates transient external user).
+    var createLogonTokenDto = new V0Dtos.CreateLogonTokenForExternalRequestDto(
+      DeviceId: deviceId,
+      TenantId: tenantResult.TenantId,
+      UserCorrelationId: "e2e-integration-service",
+      ExpirationMinutes: 15);
+
+    var tokenResponse = await saClient.PostAsJsonAsync(
+      $"{HttpConstants.V0.LogonTokensEndpoint}/external",
+      createLogonTokenDto,
+      TestContext.Current.CancellationToken);
+
+    Assert.True(tokenResponse.IsSuccessStatusCode,
+      $"Create logon token failed: {tokenResponse.StatusCode}");
+
+    var tokenResult = await tokenResponse.Content
+      .ReadFromJsonAsync<V0Dtos.LogonTokenResponseDto>(TestContext.Current.CancellationToken);
+
+    Assert.NotNull(tokenResult);
+    Assert.NotNull(tokenResult.Token);
+
+    // Step 7: Authenticate to /device-access/ using the logon token.
+    using var deviceAccessClient = testServer.Factory.CreateClient(
+      new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+      
+    var deviceAccessResponse = await deviceAccessClient.GetAsync(
+      $"/device-access?deviceId={deviceId}&logonToken={tokenResult.Token}",
+      TestContext.Current.CancellationToken);
+
+    Assert.True(
+      deviceAccessResponse.IsSuccessStatusCode ||
+      deviceAccessResponse.StatusCode == HttpStatusCode.Redirect ||
+      deviceAccessResponse.StatusCode == HttpStatusCode.Found,
+      $"Device access failed: {deviceAccessResponse.StatusCode}");
+
+    // Step 8: Authenticated session can retrieve device info via the Internal namespace.
+    var deviceInfoResponse = await deviceAccessClient.GetAsync(
+      $"{HttpConstants.Internal.DevicesEndpoint}/{deviceId}",
+      TestContext.Current.CancellationToken);
+
+    Assert.True(deviceInfoResponse.IsSuccessStatusCode,
+      $"Get device info failed: {deviceInfoResponse.StatusCode}");
+    var deviceInfo = await deviceInfoResponse.Content
+      .ReadFromJsonAsync<InternalDtos.DeviceResponseDto>(TestContext.Current.CancellationToken);
+    Assert.NotNull(deviceInfo);
+    Assert.Equal(deviceId, deviceInfo.Id);
+    Assert.Equal("E2E Test Device", deviceInfo.Name);
+  }
+
+  private static void AssertConsoleSession(V0Dtos.DesktopSessionResponseDto[] sessions)
+  {
+    var consoleSession = sessions.First(x => x.Type == DesktopSessionType.Console);
+    Assert.Equal("Console", consoleSession.Name);
+    Assert.Equal("Default", consoleSession.DesktopName);
+    Assert.Equal(1, consoleSession.SystemSessionId);
+    Assert.Equal(1234, consoleSession.ProcessId);
+    Assert.Equal("ConsoleUser", consoleSession.Username);
+    Assert.True(consoleSession.AreRemoteControlPermissionsGranted);
+  }
+
+  private static void AssertRdpSession(V0Dtos.DesktopSessionResponseDto[] sessions)
+  {
+    var rdpSession = sessions.First(x => x.Type == DesktopSessionType.Rdp);
+    Assert.Equal("RDP-Tcp#0", rdpSession.Name);
+    Assert.Equal("Default", rdpSession.DesktopName);
+    Assert.Equal(2, rdpSession.SystemSessionId);
+    Assert.Equal(5678, rdpSession.ProcessId);
+    Assert.Equal("RdpUser", rdpSession.Username);
+    Assert.True(rdpSession.AreRemoteControlPermissionsGranted);
+  }
+
+  private static async Task BringDeviceOnline(TestWebServer testServer, Guid deviceId)
+  {
+    using var scope = testServer.Services.CreateScope();
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var device = await db.Devices.FirstAsync(x => x.Id == deviceId, TestContext.Current.CancellationToken);
+    device.IsOnline = true;
+    device.ConnectionId = "test-agent-connection-id";
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+  }
+
+  private static DesktopSession[] CreateFakeDesktopSessions()
+  {
+    return
+    [
+      new DesktopSession
+      {
+        AreRemoteControlPermissionsGranted = true,
+        DesktopName = "Default",
+        Name = "Console",
+        ProcessId = 1234,
+        SystemSessionId = 1,
+        Type = DesktopSessionType.Console,
+        Username = "ConsoleUser"
+      },
+      new DesktopSession
+      {
+        AreRemoteControlPermissionsGranted = true,
+        DesktopName = "Default",
+        Name = "RDP-Tcp#0",
+        ProcessId = 5678,
+        SystemSessionId = 2,
+        Type = DesktopSessionType.Rdp,
+        Username = "RdpUser"
+      }
+    ];
+  }
+
+  private static Mock<IHubContext<AgentHub, IAgentHubClient>> CreateMockAgentHubContext(
+    DesktopSession[] fakeDesktopSessions)
+  {
+    var mockAgentClient = new Mock<IAgentHubClient>();
+    mockAgentClient
+      .Setup(x => x.GetActiveDesktopSessions())
+      .ReturnsAsync(fakeDesktopSessions);
+
+    var mockHubClients = new Mock<IHubClients<IAgentHubClient>>();
+    mockHubClients
+      .Setup(x => x.Client(It.IsAny<string>()))
+      .Returns(mockAgentClient.Object);
+
+    var mockAgentHubContext = new Mock<IHubContext<AgentHub, IAgentHubClient>>();
+    mockAgentHubContext
+      .Setup(x => x.Clients)
+      .Returns(mockHubClients.Object);
+
+    return mockAgentHubContext;
+  }
+
+  private DeviceUpdateRequestDto CreateDeviceUpdateDto(Guid tenantId)
+  {
     var deviceId = Guid.NewGuid();
     var deviceDto = new DeviceUpdateRequestDto(
       Id: deviceId,
-      TenantId: tenantResult.TenantId,
+      TenantId: tenantId,
       Name: "E2E Test Device",
       AgentVersion: "1.0.0",
       Is64Bit: true,
@@ -108,63 +297,6 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
       LocalIpV6: "fe80::1",
       Drives: [new Drive { Name = "C:", TotalSize = 256000, FreeSpace = 128000 }]);
 
-    var createDeviceReq = new InternalDtos.CreateDeviceRequestDto(
-      deviceDto,
-      keyResult.Id,
-      keyResult.KeySecret);
-
-    using var anonClient = testServer.TestServer.CreateClient();
-    var deviceResponse = await anonClient.PostAsJsonAsync(
-      HttpConstants.Agent.DevicesEndpoint,
-      createDeviceReq,
-      TestContext.Current.CancellationToken);
-
-    Assert.True(deviceResponse.IsSuccessStatusCode,
-      $"Create device failed: {deviceResponse.StatusCode}");
-
-    // Step 5: Service account creates a logon token for an external user (dynamically creates transient external user).
-    var createLogonTokenReq = new V0Dtos.CreateLogonTokenForExternalRequestDto(
-      DeviceId: deviceId,
-      TenantId: tenantResult.TenantId,
-      UserCorrelationId: "e2e-integration-service",
-      ExpirationMinutes: 15);
-
-    var tokenResponse = await saClient.PostAsJsonAsync(
-      $"{HttpConstants.V0.LogonTokensEndpoint}/external",
-      createLogonTokenReq,
-      TestContext.Current.CancellationToken);
-
-    Assert.True(tokenResponse.IsSuccessStatusCode,
-      $"Create logon token failed: {tokenResponse.StatusCode}");
-    var tokenResult = await tokenResponse.Content
-      .ReadFromJsonAsync<V0Dtos.LogonTokenResponseDto>(TestContext.Current.CancellationToken);
-    Assert.NotNull(tokenResult);
-    Assert.NotNull(tokenResult.Token);
-
-    // Step 6: Authenticate to /device-access/ using the logon token.
-    using var deviceAccessClient = testServer.Factory.CreateClient(
-      new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-    var deviceAccessResponse = await deviceAccessClient.GetAsync(
-      $"/device-access?deviceId={deviceId}&logonToken={tokenResult.Token}",
-      TestContext.Current.CancellationToken);
-
-    Assert.True(
-      deviceAccessResponse.IsSuccessStatusCode ||
-      deviceAccessResponse.StatusCode == HttpStatusCode.Redirect ||
-      deviceAccessResponse.StatusCode == HttpStatusCode.Found,
-      $"Device access failed: {deviceAccessResponse.StatusCode}");
-
-    // Step 7: Authenticated session can retrieve device info via the Internal namespace.
-    var deviceInfoResponse = await deviceAccessClient.GetAsync(
-      $"{HttpConstants.Internal.DevicesEndpoint}/{deviceId}",
-      TestContext.Current.CancellationToken);
-
-    Assert.True(deviceInfoResponse.IsSuccessStatusCode,
-      $"Get device info failed: {deviceInfoResponse.StatusCode}");
-    var deviceInfo = await deviceInfoResponse.Content
-      .ReadFromJsonAsync<InternalDtos.DeviceResponseDto>(TestContext.Current.CancellationToken);
-    Assert.NotNull(deviceInfo);
-    Assert.Equal(deviceId, deviceInfo.Id);
-    Assert.Equal("E2E Test Device", deviceInfo.Name);
+    return deviceDto;
   }
 }

@@ -44,7 +44,6 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
   private readonly ISnackbar _snackbar;
   private readonly TimeProvider _timeProvider;
   private readonly IOptions<ControlrViewerOptions> _viewerOptions;
-
   private bool _isDesktopPreviewDisabled;
 
   public RemoteControlViewModel(

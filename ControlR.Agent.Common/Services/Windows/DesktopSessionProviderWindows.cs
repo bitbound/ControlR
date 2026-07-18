@@ -8,23 +8,16 @@ namespace ControlR.Agent.Common.Services.Windows;
 
 internal class DesktopSessionProviderWindows(
   IWin32Interop win32Interop,
-  IIpcServerStore ipcStore) : IDesktopSessionProvider
+  IIpcServerStore ipcStore,
+  ILogger<DesktopSessionProviderWindows> logger) : IDesktopSessionProvider
 {
   private readonly IIpcServerStore _ipcStore = ipcStore;
+  private readonly ILogger<DesktopSessionProviderWindows> _logger = logger;
   private readonly IWin32Interop _win32Interop = win32Interop;
 
-  public Task<DesktopSession[]> GetActiveDesktopClients()
+  public async Task<DesktopSession[]> GetActiveDesktopClients()
   {
-    // Build a map of live Windows sessions we care about (Console + active RDP)
-    var windowsSessions = _win32Interop
-      .GetActiveSessions()
-      .ToDictionary(x => x.SystemSessionId, x => x);
-
-    // If multiple IPC servers are registered for the same Windows session (e.g., stale entries
-    // from a previous DesktopClient PID or multiple installs), prefer:
-    // 1) Connected servers over disconnected
-    // 2) Highest PID (assumed most recent)
-    var serversByWinSession = new Dictionary<int, IpcServerRecord>();
+    var serversBySession = new Dictionary<int, IpcServerRecord>();
 
     foreach (var serverRecord in _ipcStore.Servers.Values)
     {
@@ -38,45 +31,43 @@ internal class DesktopSessionProviderWindows(
         continue;
       }
 
-      if (!serversByWinSession.TryGetValue(sessionId, out var existingRecord) ||
-          serverRecord.Server.IsConnected && !existingRecord.Server.IsConnected ||
-          serverRecord.Server.IsConnected == existingRecord.Server.IsConnected && serverRecord.Process.Id > existingRecord.Process.Id)
+      if (!serversBySession.TryGetValue(sessionId, out var existing) ||
+          serverRecord.Server.IsConnected && !existing.Server.IsConnected ||
+          serverRecord.Server.IsConnected == existing.Server.IsConnected && serverRecord.Process.Id > existing.Process.Id)
       {
-        serversByWinSession[sessionId] = serverRecord;
+        serversBySession[sessionId] = serverRecord;
       }
     }
 
-    var uiSessions = new List<DesktopSession>(serversByWinSession.Count);
+    var uiSessions = new List<DesktopSession>(serversBySession.Count);
 
-    foreach (var server in serversByWinSession.Values)
+    foreach (var (sessionId, serverRecord) in serversBySession)
     {
-      if (!TryGetProcessSessionId(server.Process, out var sessionId))
+      try
       {
-        if (_ipcStore.TryRemove(server.Process.Id, out var removedRecord) && removedRecord is not null)
+        var sessionInfo = await serverRecord.Server.Client.GetDesktopSessionInfo();
+
+        uiSessions.Add(new DesktopSession
         {
-          Disposer.DisposeAll(removedRecord.Process, removedRecord.Server);
-        }
-
-        continue;
+          AreRemoteControlPermissionsGranted = sessionInfo.AreRemoteControlPermissionsGranted,
+          DesktopName = sessionInfo.DesktopName,
+          Name = sessionInfo.Name,
+          ProcessId = serverRecord.Process.Id,
+          SystemSessionId = sessionInfo.SystemSessionId,
+          Type = sessionInfo.SessionType,
+          Username = sessionInfo.Username,
+        });
       }
-
-      if (!windowsSessions.TryGetValue(sessionId, out var winSession))
+      catch (Exception ex)
       {
-        continue;
+        _logger.LogWarning(ex,
+          "Failed to get session info from DesktopClient process {ProcessId} in session {SessionId}.",
+          serverRecord.Process.Id,
+          sessionId);
       }
-
-      uiSessions.Add(new DesktopSession
-      {
-        AreRemoteControlPermissionsGranted = true, // Windows doesn't require special permissions
-        ProcessId = server.Process.Id,
-        SystemSessionId = sessionId,
-        Name = winSession.Name,
-        Username = winSession.Username,
-        Type = winSession.Type,
-      });
     }
 
-    return uiSessions.ToArray().AsTaskResult();
+    return [.. uiSessions];
   }
 
   public Task<string[]> GetLoggedInUsers()
@@ -88,7 +79,7 @@ internal class DesktopSessionProviderWindows(
       .Distinct()
       .ToArray();
 
-    return Task.FromResult(loggedInUsers);
+    return loggedInUsers.AsTaskResult();
   }
 
   private static bool TryGetProcessSessionId(IProcess process, out int sessionId)

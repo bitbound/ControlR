@@ -161,7 +161,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     Assert.IsType<NoContentResult>(result);
 
     // Verify the account was actually deleted.
-    var remaining = await manager.GetAllServer(TestContext.Current.CancellationToken);
+    var remaining = await manager.GetAllForServer(TestContext.Current.CancellationToken);
     Assert.DoesNotContain(remaining, a => a.Id == accountId);
   }
 
@@ -206,7 +206,7 @@ public class ServiceAccountsControllerTests(ITestOutputHelper testOutput)
     Assert.Equal(403, forbidden.StatusCode);
 
     // Verify the account still exists.
-    var remaining = await manager.GetAllServer(TestContext.Current.CancellationToken);
+    var remaining = await manager.GetAllForServer(TestContext.Current.CancellationToken);
     Assert.NotNull(remaining.FirstOrDefault(a => a.Id == selfAccountId));
   }
 

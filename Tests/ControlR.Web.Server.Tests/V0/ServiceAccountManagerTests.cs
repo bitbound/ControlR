@@ -46,7 +46,7 @@ public class ServiceAccountManagerTests(ITestOutputHelper testOutput)
     // Authorization isn't exercised here — any valid principal ID is acceptable.
     await manager.Delete(accountId, Guid.NewGuid(), TestContext.Current.CancellationToken);
 
-    var allAccounts = await manager.GetAllServer(TestContext.Current.CancellationToken);
+    var allAccounts = await manager.GetAllForServer(TestContext.Current.CancellationToken);
     Assert.DoesNotContain(allAccounts, a => a.Id == accountId);
   }
 }

@@ -399,7 +399,7 @@ internal class AgentMaintenanceService(
   private string GetMacInstallerDownloadPath()
   {
     var instanceSegment = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? AppConstants.DefaultInstallDirectoryName
+      ? AppConstants.DefaultInstanceId
       : _instanceOptions.Value.InstanceId;
 
     return _fileSystem.JoinPaths(

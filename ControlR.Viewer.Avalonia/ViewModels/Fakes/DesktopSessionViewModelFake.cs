@@ -27,6 +27,7 @@ internal class DesktopSessionViewModelFake : IRemoteControlDesktopCardViewModel
 
   public bool AreRemoteControlPermissionsGranted => Session.AreRemoteControlPermissionsGranted;
   public IRelayCommand ConnectCommand { get; }
+  public string DesktopName => Session.DesktopName;
   public bool IsPreviewVisible => true;
   public string Name => Session.Name;
   public IRelayCommand PreviewCommand { get; }

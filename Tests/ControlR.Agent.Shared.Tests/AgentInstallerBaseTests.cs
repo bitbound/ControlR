@@ -24,7 +24,7 @@ public class AgentInstallerBaseTests
   {
     var result = TestAgentInstaller.GetInstallDirectoryForTest(@"C:\Program Files\ControlR", instanceId: null);
 
-    Assert.Equal(Path.Combine(@"C:\Program Files\ControlR", AppConstants.DefaultInstallDirectoryName), result);
+    Assert.Equal(Path.Combine(@"C:\Program Files\ControlR", AppConstants.DefaultInstanceId), result);
   }
 
   [Fact]

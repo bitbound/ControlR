@@ -10,6 +10,7 @@ public interface IRemoteControlDesktopCardViewModel
 
   bool AreRemoteControlPermissionsGranted { get; }
   IRelayCommand ConnectCommand { get; }
+  string DesktopName { get; }
   bool IsPreviewVisible { get; }
   string Name { get; }
   IRelayCommand PreviewCommand { get; }
@@ -30,6 +31,7 @@ public partial class RemoteControlDesktopCardViewModel(DesktopSession session) :
   public event EventHandler<DesktopSession>? RemoteControlPermissionRequested;
 
   public bool AreRemoteControlPermissionsGranted => _session.AreRemoteControlPermissionsGranted;
+  public string DesktopName => _session.DesktopName;
   public bool IsPreviewVisible { get; set; } = true;
   public string Name => _session.Name;
   public int ProcessId => _session.ProcessId;

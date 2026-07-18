@@ -44,7 +44,8 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<IClipboardManager, ClipboardManagerMac>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsMac>()
       .AddSingleton<IFileSystemUnix, FileSystemUnix>()
-      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceMac>();
+      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceMac>()
+      .AddSingleton<IPlatformIpcMessageHandler, PlatformIpcMessageHandlerMac>();
   }
 
   private static IServiceCollection AddInputSimulator(IServiceCollection services)

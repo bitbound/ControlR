@@ -132,7 +132,7 @@ public class FileSystemPathProvider(
         _ => throw new PlatformNotSupportedException()
       };
 
-    var instanceId = GetInstanceId() ?? AppConstants.DefaultInstallDirectoryName;
+    var instanceId = GetInstanceId() ?? AppConstants.DefaultInstanceId;
     return Path.Combine(baseDir, instanceId);
   }
 
@@ -219,8 +219,8 @@ public class FileSystemPathProvider(
   public string GetEffectiveInstanceId()
   {
     return string.IsNullOrWhiteSpace(_instanceOptions.CurrentValue.InstanceId)
-      ? AppConstants.DefaultInstallDirectoryName
-      : _instanceOptions.CurrentValue.InstanceId!;
+      ? AppConstants.DefaultInstanceId
+      : _instanceOptions.CurrentValue.InstanceId;
   }
 
   public string GetInstallerLogFilePath()

@@ -2,7 +2,9 @@ using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0.DeviceResponseDto;
 
 namespace ControlR.Web.Server.Api.V0;
@@ -82,6 +84,50 @@ public class DevicesController() : ControllerBase
     {
       var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion, cancellationToken);
       yield return device.ToV0ResponseDto(isOutdated);
+    }
+  }
+
+  [HttpGet("{deviceId:guid}/desktop-sessions")]
+  [ProducesResponseType<IReadOnlyList<V0Dtos.DesktopSessionResponseDto>>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  [ProducesResponseType(StatusCodes.Status409Conflict)]
+  public async Task<ActionResult<IReadOnlyList<V0Dtos.DesktopSessionResponseDto>>> GetDesktopSessions(
+    [FromRoute] Guid deviceId,
+    [FromServices] AppDb appDb,
+    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
+    [FromServices] ILogger<DevicesController> logger,
+    CancellationToken cancellationToken)
+  {
+    var device = await appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+
+    if (device is null)
+    {
+      return NotFound();
+    }
+
+    if (!device.IsOnline || string.IsNullOrWhiteSpace(device.ConnectionId))
+    {
+      return Conflict("Device is currently offline.");
+    }
+
+    try
+    {
+      var sessions = await agentHub.Clients
+        .Client(device.ConnectionId)
+        .GetActiveDesktopSessions();
+
+      var dtos = sessions.Select(V0Dtos.DesktopSessionResponseDto.From).ToList();
+      return Ok(dtos);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while getting desktop sessions for device {DeviceId}.", deviceId);
+      return Problem(
+        detail: "Failed to retrieve desktop sessions from the agent.",
+        statusCode: StatusCodes.Status500InternalServerError,
+        title: "Agent communication failed");
     }
   }
 

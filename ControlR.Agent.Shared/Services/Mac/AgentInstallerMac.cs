@@ -470,7 +470,7 @@ internal class AgentInstallerMac(
   private string GetTempExtractDirectory()
   {
     var instanceSegment = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? AppConstants.DefaultInstallDirectoryName
+      ? AppConstants.DefaultInstanceId
       : _instanceOptions.Value.InstanceId;
 
     return Path.Combine(_macInstallerTempDirectory, instanceSegment, "bundle");
@@ -479,7 +479,7 @@ internal class AgentInstallerMac(
   private string GetUpdaterInstallerPath()
   {
     var instanceSegment = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? AppConstants.DefaultInstallDirectoryName
+      ? AppConstants.DefaultInstanceId
       : _instanceOptions.Value.InstanceId;
 
     return _fileSystem.JoinPaths(

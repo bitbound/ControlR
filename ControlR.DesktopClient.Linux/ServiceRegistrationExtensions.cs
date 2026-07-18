@@ -83,7 +83,8 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>()
       .AddSingleton<IFileSystemUnix, FileSystemUnix>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsLinux>()
-      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceLinux>();
+      .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceLinux>()
+      .AddSingleton<IPlatformIpcMessageHandler, PlatformIpcMessageHandlerLinux>();
   }
 
   private static IServiceCollection AddInputSimulator(IServiceCollection services)
