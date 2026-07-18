@@ -31,6 +31,25 @@ internal partial class V0Api
     });
   }
 
+  async Task<ApiResult<List<V0Dtos.DesktopSessionResponseDto>>> IDevicesApi.GetActiveDesktopSessions(
+    Guid deviceId, 
+    CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.GetAsync(
+        $"{HttpConstants.V0.DevicesEndpoint}/{deviceId}/desktop-sessions/{deviceId}",
+        cancellationToken);
+
+      await response.EnsureSuccessStatusCodeWithDetails();
+
+      var list = await response.Content
+        .ReadFromJsonAsync<List<V0Dtos.DesktopSessionResponseDto>>(cancellationToken);
+
+      return list ?? [];
+    });
+  }
+
   async IAsyncEnumerable<V0Dtos.DeviceResponseDto> IDevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<V0Dtos.DeviceResponseDto>(
