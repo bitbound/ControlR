@@ -1,11 +1,7 @@
 ﻿using ControlR.Web.ServiceDefaults;
 using ControlR.Libraries.DataRedaction;
 using ControlR.Libraries.Shared.Services.Buffers;
-using ControlR.Web.Server.Authn;
-using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Data.Configuration;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
 using MudBlazor.Services;
@@ -18,7 +14,6 @@ using ControlR.Web.Client.Services;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
-using Microsoft.AspNetCore.Authentication.BearerToken;
 using System.Globalization;
 using System.Threading.RateLimiting;
 using ControlR.Libraries.Shared.Services.Encryption;
@@ -181,159 +176,8 @@ public static class WebApplicationBuilderExtensions
     });
 
     // Add authn/authz services.
-    builder.Services.AddCascadingAuthenticationState();
-    builder.Services.AddScoped<IdentityRedirectManager>();
-    builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
-
-    builder.Services.ConfigureApplicationCookie(options =>
-    {
-      options.Events.OnRedirectToLogin = context =>
-      {
-        // For API requests, return 401 instead of redirecting
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-          context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-          return Task.CompletedTask;
-        }
-
-        // For UI requests, redirect to the login page
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-      };
-
-      options.Events.OnRedirectToAccessDenied = context =>
-      {
-        // For API requests, return 403 instead of redirecting  
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-          context.Response.StatusCode = StatusCodes.Status403Forbidden;
-          return Task.CompletedTask;
-        }
-
-        // For UI requests, redirect to the access-denied page
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-      };
-    });
-
-    builder.Services
-      .AddAuthorizationBuilder()
-      .SetDefaultPolicy(new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(CustomSchemes.Dynamic)
-        .RequireAuthenticatedUser()
-        .Build())
-      .AddPolicy(RequireServerServiceAccountPolicy.PolicyName, RequireServerServiceAccountPolicy.Create())
-      .AddPolicy(CombinedAuthorizationPolicies.RequireServerOrTenantAdminPolicy, CombinedAuthorizationPolicies.CreateServerOrTenantAdmin())
-      .AddPolicy(CombinedAuthorizationPolicies.RequireServerOrTenantAdminOrInstallerKeyManagerPolicy, CombinedAuthorizationPolicies.CreateServerOrTenantAdminOrInstallerKeyManager())
-      .AddPolicy(RequireServerAdministratorPolicy.PolicyName, RequireServerAdministratorPolicy.Create())
-      .AddPolicy(DeviceAccessByDeviceResourcePolicy.PolicyName, DeviceAccessByDeviceResourcePolicy.Create());
-
-    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderRequirementHandler>();
-    builder.Services.AddScoped<IAuthorizationHandler, ServiceProviderAsyncRequirementHandler>();
-    builder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
-
-    // Add Identity services.
-    builder.Services
-      .AddIdentityApiEndpoints<AppUser>(options =>
-      {
-        options.User.RequireUniqueEmail = appOptions.RequireUserUniqueEmail;
-        options.SignIn.RequireConfirmedEmail = appOptions.RequireUserEmailConfirmation;
-        options.Password.RequiredLength = 8;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-      })
-      .AddRoles<AppRole>()
-      .AddEntityFrameworkStores<AppDb>()
-      .AddSignInManager()
-      .AddDefaultTokenProviders();
-
-    if (appOptions.EnableInteractiveBearerLogin)
-    {
-      builder.Services.Configure<BearerTokenOptions>(IdentityConstants.BearerScheme, options =>
-      {
-        options.BearerTokenExpiration = TimeSpan.FromMinutes(appOptions.InteractiveBearerTokenExpirationMinutes);
-        options.RefreshTokenExpiration = TimeSpan.FromDays(appOptions.InteractiveRefreshTokenExpirationDays);
-      });
-    }
-
-    var authBuilder = builder.Services
-      .AddAuthentication(options =>
-      {
-        options.DefaultScheme = CustomSchemes.Dynamic;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-      })
-      .AddPolicyScheme(CustomSchemes.Dynamic, "Dynamic Authentication Scheme", options =>
-      {
-        options.ForwardDefaultSelector = context =>
-        {
-          // Check for logon token first (for device access integration)
-          if (context.Request.Path.StartsWithSegments("/device-access") &&
-              context.Request.Query.ContainsKey("logonToken"))
-          {
-            return LogonTokenAuthenticationSchemeOptions.DefaultScheme;
-          }
-
-          if (appOptions.EnableInteractiveBearerLogin &&
-              context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-          {
-            return IdentityConstants.BearerScheme;
-          }
-
-          // If the request has a Personal Access Token header, use PAT authentication
-          if (context.Request.Headers.ContainsKey(PersonalAccessTokenAuthenticationSchemeOptions.DefaultHeaderName))
-          {
-            return PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme;
-          }
-
-          // If the request carries a service account api key, authenticate as a service account.
-          if (context.Request.Headers.ContainsKey(ServiceAccountCredentialAuthenticationSchemeOptions.DefaultHeaderName))
-          {
-            return ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme;
-          }
-
-          // Otherwise, use Identity cookies for web UI
-          return IdentityConstants.ApplicationScheme;
-        };
-      });
-
-    if (!string.IsNullOrWhiteSpace(appOptions.MicrosoftClientId) &&
-        !string.IsNullOrWhiteSpace(appOptions.MicrosoftClientSecret))
-    {
-      authBuilder.AddMicrosoftAccount(microsoftOptions =>
-      {
-        microsoftOptions.ClientId = appOptions.MicrosoftClientId;
-        microsoftOptions.ClientSecret = appOptions.MicrosoftClientSecret;
-      });
-    }
-
-    if (!string.IsNullOrWhiteSpace(appOptions.GitHubClientId) &&
-        !string.IsNullOrWhiteSpace(appOptions.GitHubClientSecret))
-    {
-      authBuilder.AddGitHub(options =>
-      {
-        options.ClientId = appOptions.GitHubClientId;
-        options.ClientSecret = appOptions.GitHubClientSecret;
-      });
-    }
-
-    // Add personal access token authentication.
-    authBuilder.AddScheme<PersonalAccessTokenAuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
-      PersonalAccessTokenAuthenticationSchemeOptions.DefaultScheme,
-      _ => { });
-
-    // Add logon token authentication.
-    authBuilder.AddScheme<LogonTokenAuthenticationSchemeOptions, LogonTokenAuthenticationHandler>(
-      LogonTokenAuthenticationSchemeOptions.DefaultScheme,
-      _ => { });
-
-    // Add service account credential authentication (x-api-key).
-    authBuilder.AddScheme<ServiceAccountCredentialAuthenticationSchemeOptions, ServiceAccountCredentialAuthenticationHandler>(
-      ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme,
-      _ => { });
-
-    builder.Services
-      .AddScoped<PasskeySignInManager>()
-      .AddScoped<IUserCreator, UserCreator>();
+    builder.AddControlrAuthorization();
+    builder.AddControlrAuthentication(appOptions);
 
     // Configure DataProtection.
     builder.AddControlrDataProtection();
@@ -352,23 +196,7 @@ public static class WebApplicationBuilderExtensions
     // Add forwarded headers.
     await builder.AddControlrForwardedHeaders(appOptions);
 
-    if (appOptions.UseHttpLogging)
-    {
-      builder.Services.AddHttpLogging(options =>
-      {
-        options.RequestHeaders.Add("X-Forwarded-For");
-        options.RequestHeaders.Add("X-Forwarded-Proto");
-        options.RequestHeaders.Add("X-Forwarded-Host");
-        options.RequestHeaders.Add("X-Original-For");
-        options.RequestHeaders.Add("X-Original-Proto");
-        options.RequestHeaders.Add("X-Original-Host");
-        options.RequestHeaders.Add("CF-Connecting-IP");
-        options.RequestHeaders.Add("CF-RAY");
-        options.RequestHeaders.Add("CF-IPCountry");
-        options.RequestHeaders.Add("CDN-Loop");
-        options.LoggingFields = HttpLoggingFields.All ^ HttpLoggingFields.RequestQuery;
-      });
-    }
+    builder.AddControlrHttpLogging(appOptions);
 
     // Add other services.
 
