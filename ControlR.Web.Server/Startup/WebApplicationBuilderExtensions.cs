@@ -1,14 +1,10 @@
-﻿using System.Net;
-using IPNetwork = System.Net.IPNetwork;
-using ControlR.Web.ServiceDefaults;
+﻿using ControlR.Web.ServiceDefaults;
 using ControlR.Libraries.DataRedaction;
-using Microsoft.AspNetCore.HttpOverrides;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz;
 using ControlR.Web.Server.Data.Configuration;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.FileProviders;
@@ -19,7 +15,6 @@ using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Services.Tenants;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Services;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.DeviceManagement;
@@ -341,7 +336,7 @@ public static class WebApplicationBuilderExtensions
       .AddScoped<IUserCreator, UserCreator>();
 
     // Configure DataProtection.
-    builder.ConfigureDataProtection();
+    builder.AddControlrDataProtection();
 
     // Add SignalR.
     builder.Services
@@ -355,14 +350,7 @@ public static class WebApplicationBuilderExtensions
       .AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true; });
 
     // Add forwarded headers.
-    if (appOptions.EnableNetworkTrust)
-    {
-      builder.ConfigureForwardedHeadersWithFullTrust();
-    }
-    else
-    {
-      await builder.ConfigureForwardedHeaders(appOptions);
-    }
+    await builder.AddControlrForwardedHeaders(appOptions);
 
     if (appOptions.UseHttpLogging)
     {
@@ -429,164 +417,5 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IServiceAccountManager, ServiceAccountManager>();
 
     return builder;
-  }
-
-  private static void ConfigureDataProtection(this IHostApplicationBuilder builder)
-  {
-    builder.Services.Configure<KeyProtectionOptions>(
-      builder.Configuration.GetSection(KeyProtectionOptions.SectionKey));
-
-    var keyProtectionOptions = builder.Configuration
-      .GetSection(KeyProtectionOptions.SectionKey)
-      .Get<KeyProtectionOptions>() ?? new KeyProtectionOptions();
-
-    var dataProtectionBuilder = builder.Services
-      .AddDataProtection()
-      .PersistKeysToDbContext<AppDb>();
-
-    if (!keyProtectionOptions.EncryptKeys)
-    {
-      dataProtectionBuilder.UnprotectKeysWithAnyCertificate();
-      Console.WriteLine("Data Protection keys will NOT be encrypted at rest. " +
-        "Set KeyProtectionOptions:EncryptKeys to true and configure a certificate for production environments.");
-      return;
-    }
-
-    if (!string.IsNullOrWhiteSpace(keyProtectionOptions.CertificateContentsBase64))
-    {
-      var certBytes = Convert.FromBase64String(keyProtectionOptions.CertificateContentsBase64);
-      var certificate = X509CertificateLoader.LoadPkcs12(certBytes, keyProtectionOptions.CertificatePassword);
-      dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
-      Console.WriteLine($"Data Protection keys will be encrypted using certificate from {nameof(KeyProtectionOptions.CertificateContentsBase64)}.");
-    }
-    else
-    {
-      if (string.IsNullOrWhiteSpace(keyProtectionOptions.CertificatePath))
-      {
-        throw new InvalidOperationException(
-          "KeyProtectionOptions:EncryptKeys is true, but KeyProtectionOptions:CertificatePath is not configured. " +
-          "Provide a valid path to a PFX certificate file.");
-      }
-
-      if (!File.Exists(keyProtectionOptions.CertificatePath))
-      {
-        throw new InvalidOperationException(
-          $"KeyProtectionOptions:EncryptKeys is true, but the certificate file does not exist: " +
-          $"{keyProtectionOptions.CertificatePath}");
-      }
-
-      var certificate = X509CertificateLoader.LoadPkcs12FromFile(
-        keyProtectionOptions.CertificatePath,
-        keyProtectionOptions.CertificatePassword);
-
-      dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
-      Console.WriteLine("Data Protection keys will be encrypted using certificate from file.");
-    }
-  }
-
-  private static async Task ConfigureForwardedHeaders(
-    this IHostApplicationBuilder builder,
-    AppOptions appOptions)
-  {
-    var cloudflareIps = new List<IPNetwork>();
-
-    if (appOptions.EnableCloudflareProxySupport)
-    {
-      using var httpClient = new HttpClient();
-      using var ip4Response = await httpClient.GetAsync("https://www.cloudflare.com/ips-v4");
-      ip4Response.EnsureSuccessStatusCode();
-      var ip4Content = await ip4Response.Content.ReadAsStringAsync();
-      var ip4Networks = ip4Content.Split();
-
-      using var ip6Response = await httpClient.GetAsync("https://www.cloudflare.com/ips-v6");
-      ip6Response.EnsureSuccessStatusCode();
-      var ip6Content = await ip4Response.Content.ReadAsStringAsync();
-      var ip6Networks = ip6Content.Split();
-
-      string[] ipNetworks = [.. ip4Networks, .. ip6Networks];
-
-      foreach (var network in ipNetworks)
-      {
-        if (!IPNetwork.TryParse(network, out var ipNetwork))
-        {
-          Console.WriteLine($"Invalid Cloudflare network: {network}");
-        }
-        else
-        {
-          Console.WriteLine($"Adding Cloudflare KnownNetwork: {network}");
-          cloudflareIps.Add(ipNetwork);
-        }
-      }
-    }
-
-    builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    {
-      options.ForwardedHeaders = ForwardedHeaders.All;
-      options.ForwardLimit = null;
-
-      // Default Docker host. We want to allow forwarded headers from this address.
-      if (!string.IsNullOrWhiteSpace(appOptions.DockerGatewayIp))
-      {
-        if (IPAddress.TryParse(appOptions.DockerGatewayIp, out var dockerGatewayIp))
-        {
-          options.KnownProxies.Add(dockerGatewayIp);
-        }
-        else
-        {
-          Console.WriteLine($"Invalid DockerGatewayIp: {appOptions.DockerGatewayIp}");
-        }
-      }
-
-      if (appOptions.KnownProxies is { Length: > 0 } knownProxies)
-      {
-        foreach (var proxy in knownProxies)
-        {
-          if (IPAddress.TryParse(proxy, out var ip))
-          {
-            Console.WriteLine($"Adding KnownProxy: {proxy}");
-            options.KnownProxies.Add(ip);
-          }
-          else
-          {
-            Console.WriteLine($"Invalid KnownProxy IP: {proxy}");
-          }
-        }
-      }
-
-      if (appOptions.KnownNetworks is { Length: > 0 } knownNetworks)
-      {
-        foreach (var network in knownNetworks)
-        {
-          if (IPNetwork.TryParse(network, out var ipNetwork))
-          {
-            Console.WriteLine($"Adding KnownNetwork: {network}");
-            options.KnownIPNetworks.Add(ipNetwork);
-          }
-          else
-          {
-            Console.WriteLine($"Invalid KnownNetwork: {network}");
-          }
-        }
-      }
-
-      if (cloudflareIps.Count > 0)
-      {
-        foreach (var cloudflareIp in cloudflareIps)
-        {
-          options.KnownIPNetworks.Add(cloudflareIp);
-        }
-      }
-    });
-  }
-  private static void ConfigureForwardedHeadersWithFullTrust(this IHostApplicationBuilder builder)
-  {
-    builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    {
-      options.ForwardedHeaders = ForwardedHeaders.All;
-      options.ForwardLimit = null;
-      options.KnownIPNetworks.Clear();
-      options.KnownProxies.Clear();
-      options.KnownIPNetworks.Clear();
-    });
   }
 }
