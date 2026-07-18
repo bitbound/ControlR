@@ -44,6 +44,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
   private readonly ISnackbar _snackbar;
   private readonly TimeProvider _timeProvider;
   private readonly IOptions<ControlrViewerOptions> _viewerOptions;
+  private bool _isDesktopPreviewDisabled;
 
   public RemoteControlViewModel(
     IControlrApi controlrApi,
@@ -205,6 +206,12 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
         return;
       }
 
+      var settingsResult = await _controlrApi.Internal.PublicServerSettings.GetPublicServerSettings();
+      if (settingsResult.IsSuccess)
+      {
+        _isDesktopPreviewDisabled = settingsResult.Value.DisableDesktopPreview;
+      }
+
       await GetDeviceDesktopSessions(quiet: true);
     }
     catch (Exception ex)
@@ -235,7 +242,10 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       DesktopSessions.Clear();
       foreach (var session in desktopSessions)
       {
-        var vm = new RemoteControlDesktopCardViewModel(session);
+        var vm = new RemoteControlDesktopCardViewModel(session)
+        {
+          IsPreviewVisible = !_isDesktopPreviewDisabled
+        };
         vm.PreviewRequested += HandlePreviewRequested;
         vm.ConnectRequested += HandleConnectRequested;
         vm.RemoteControlPermissionRequested += HandleRequestPermissionsResult;
