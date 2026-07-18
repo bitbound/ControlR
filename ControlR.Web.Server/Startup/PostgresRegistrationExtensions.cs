@@ -56,43 +56,22 @@ public static class PostgresRegistrationExtensions
 
     if (useEntraId)
     {
-      RegisterAzurePgDataSource(hostBuilder, pgBuilder);
+      AddPostgresWithEntraId(hostBuilder, pgBuilder, appOptions);
     }
     else
     {
-      pgBuilder.Password = pgPass;
+      AddPostgresWithPassword(hostBuilder, pgBuilder, pgPass, appOptions);
     }
-
-    hostBuilder.Services.AddDbContextFactory<AppDb>((sp, options) =>
-    {
-      if (useEntraId)
-      {
-        var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
-        options.UseNpgsql(dataSource);
-      }
-      else
-      {
-        options.UseNpgsql(pgBuilder.ConnectionString);
-      }
-
-      options.EnableDetailedErrors(appOptions.EnableDatabaseDetailedErrors);
-      options.AddInterceptors(new ServiceAccountInvariantInterceptor());
-
-      var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-      if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)
-      {
-        options.UseUserClaims(user);
-      }
-    }, lifetime: ServiceLifetime.Transient);
   }
 
-  private static void RegisterAzurePgDataSource(IHostApplicationBuilder hostBuilder, NpgsqlConnectionStringBuilder pgBuilder)
+  private static void AddPostgresWithEntraId(
+    IHostApplicationBuilder hostBuilder,
+    NpgsqlConnectionStringBuilder pgBuilder,
+    AppOptions appOptions)
   {
-    // Azure Database for PostgreSQL requires SSL for Entra ID authentication.
     pgBuilder.SslMode = SslMode.Require;
 
-    var credentialOptions = new DefaultAzureCredentialOptions();
-    var credential = new DefaultAzureCredential(credentialOptions);
+    var credential = new DefaultAzureCredential();
 
     var dataSourceBuilder = new NpgsqlDataSourceBuilder(pgBuilder.ConnectionString);
     dataSourceBuilder.UsePeriodicPasswordProvider(
@@ -105,6 +84,46 @@ public static class PostgresRegistrationExtensions
       successRefreshInterval: TimeSpan.FromMinutes(55),
       failureRefreshInterval: TimeSpan.FromSeconds(10));
 
-    hostBuilder.Services.AddSingleton(dataSourceBuilder.Build());
+    var dataSource = dataSourceBuilder.Build();
+
+    hostBuilder.Services.AddDbContextFactory<AppDb>(
+      (sp, options) =>
+      {
+        options.UseNpgsql(dataSource);
+        ConfigureDbContextOptions(sp, options, appOptions);
+      },
+      lifetime: ServiceLifetime.Transient);
+  }
+
+  private static void AddPostgresWithPassword(
+    IHostApplicationBuilder hostBuilder,
+    NpgsqlConnectionStringBuilder pgBuilder,
+    string? pgPass,
+    AppOptions appOptions)
+  {
+    pgBuilder.Password = pgPass;
+
+    hostBuilder.Services.AddDbContextFactory<AppDb>(
+      (sp, options) =>
+      {
+        options.UseNpgsql(pgBuilder.ConnectionString);
+        ConfigureDbContextOptions(sp, options, appOptions);
+      }, 
+      lifetime: ServiceLifetime.Transient);
+  }
+
+  private static void ConfigureDbContextOptions(
+    IServiceProvider sp,
+    DbContextOptionsBuilder options,
+    AppOptions appOptions)
+  {
+    options.EnableDetailedErrors(appOptions.EnableDatabaseDetailedErrors);
+    options.AddInterceptors(new ServiceAccountInvariantInterceptor());
+
+    var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+    if (accessor.HttpContext?.User is { Identity.IsAuthenticated: true } user)
+    {
+      options.UseUserClaims(user);
+    }
   }
 }
