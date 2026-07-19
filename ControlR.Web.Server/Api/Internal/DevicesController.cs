@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.DevicesEndpoint)]
-[Route(HttpConstants.Legacy.DevicesEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

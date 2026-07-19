@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.InvitesEndpoint)]
-[Route(HttpConstants.Legacy.InvitesEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

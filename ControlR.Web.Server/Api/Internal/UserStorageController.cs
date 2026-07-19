@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.UserStorageEndpoint)]
-[Route(HttpConstants.Legacy.UserStorageEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

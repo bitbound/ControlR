@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.ServerLogsEndpoint)]
-[Route(HttpConstants.Legacy.ServerLogsEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.ServerAdministrator)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

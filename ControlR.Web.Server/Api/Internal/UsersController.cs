@@ -5,7 +5,6 @@ using ControlR.Libraries.Api.Contracts.Constants;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.UsersEndpoint)]
-[Route(HttpConstants.Legacy.UsersEndpoint)]
 [ApiController]
 [Authorize(Roles = RoleNames.TenantAdministrator)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

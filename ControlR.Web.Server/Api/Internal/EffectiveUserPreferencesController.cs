@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.EffectiveUserPreferencesEndpoint)]
-[Route(HttpConstants.Legacy.EffectiveUserPreferencesEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

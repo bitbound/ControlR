@@ -93,7 +93,6 @@ public partial class ControlrApiContractSyncTests
 
     var missingPaths = apiData.NonLegacyPaths
       .Where(path => !clientTemplates.Contains(path))
-      .Where(path => ApiVersionRegex().IsMatch(path) || path.StartsWith("/api/internal/", StringComparison.OrdinalIgnoreCase))
       .OrderBy(path => path)
       .ToArray();
 
@@ -176,7 +175,7 @@ public partial class ControlrApiContractSyncTests
 
     foreach (var field in GetAllHttpConstantFields().OrderBy(field => field.Name))
     {
-      if (field.DeclaringType?.Name == "Legacy")
+      if (field.Name.StartsWith("Legacy", StringComparison.Ordinal))
       {
         continue;
       }
@@ -218,6 +217,41 @@ public partial class ControlrApiContractSyncTests
     }
 
     throw new DirectoryNotFoundException("Could not locate repository root containing ControlR.slnx.");
+  }
+
+  private static Dictionary<string, string> GetAgentLegacyToCanonicalMap()
+  {
+    var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    var fields = typeof(HttpConstants.Agent)
+      .GetFields(BindingFlags.Public | BindingFlags.Static)
+      .Where(f => f.IsLiteral && f.FieldType == typeof(string));
+
+    foreach (var field in fields)
+    {
+      if (!field.Name.StartsWith("Legacy", StringComparison.Ordinal))
+      {
+        continue;
+      }
+
+      var canonicalName = field.Name["Legacy".Length..];
+      var canonicalField = typeof(HttpConstants.Agent).GetField(canonicalName, BindingFlags.Public | BindingFlags.Static);
+
+      if (canonicalField is null)
+      {
+        continue;
+      }
+
+      var legacyValue = NormalizePathTemplate((string)field.GetValue(null)!);
+      var canonicalValue = NormalizePathTemplate((string)canonicalField.GetValue(null)!);
+
+      if (!string.IsNullOrEmpty(legacyValue) && !string.IsNullOrEmpty(canonicalValue))
+      {
+        map[legacyValue] = canonicalValue;
+      }
+    }
+
+    return map;
   }
 
   private static IEnumerable<FieldInfo> GetAllHttpConstantFields()
@@ -266,7 +300,7 @@ public partial class ControlrApiContractSyncTests
   private static string[] GetHttpConstantValues()
   {
     var values = GetAllHttpConstantFields()
-      .Where(field => field.DeclaringType?.Name != "Legacy")
+      .Where(field => !field.Name.StartsWith("Legacy", StringComparison.Ordinal))
       .Select(field => field.GetValue(null) as string)
       .Where(value => !string.IsNullOrWhiteSpace(value))
       .Select(value => value ?? string.Empty)
@@ -274,6 +308,23 @@ public partial class ControlrApiContractSyncTests
       .ToArray();
 
     return values;
+  }
+
+  private static string[] GetLegacyOnlyPrefixes()
+  {
+    var nonLegacyPrefixes = GetAllHttpConstantFields()
+      .Where(field => !field.Name.StartsWith("Legacy", StringComparison.Ordinal))
+      .Select(field => NormalizePathTemplate((string)field.GetValue(null)!))
+      .Where(prefix => !string.IsNullOrEmpty(prefix))
+      .ToArray();
+
+    return GetAllHttpConstantFields()
+      .Where(field => field.Name.StartsWith("Legacy", StringComparison.Ordinal))
+      .Select(field => NormalizePathTemplate((string)field.GetValue(null)!))
+      .Where(prefix => !string.IsNullOrEmpty(prefix))
+      .Where(prefix => !nonLegacyPrefixes.Any(np =>
+        np == prefix || np.StartsWith($"{prefix}/", StringComparison.Ordinal)))
+      .ToArray();
   }
 
   // IMPORTANT: When a new sub-interface is added (e.g., IControlrXxxApi in
@@ -351,11 +402,7 @@ public partial class ControlrApiContractSyncTests
     var serverDirectory = Path.Combine(repositoryRoot, "ControlR.Web.Server");
     var jsonFiles = Directory.GetFiles(serverDirectory, "ControlR.Web.Server_*.json");
 
-    var legacyPrefixes = GetAllHttpConstantFields()
-      .Where(field => field.DeclaringType?.Name == "Legacy")
-      .Select(field => NormalizePathTemplate((string)field.GetValue(null)!))
-      .Where(prefix => !string.IsNullOrEmpty(prefix))
-      .ToArray();
+    var legacyPrefixes = GetLegacyOnlyPrefixes();
 
     var actions = new List<OpenApiAction>();
 
@@ -395,7 +442,23 @@ public partial class ControlrApiContractSyncTests
       }
     }
 
-    return actions.ToArray();
+    // Dedup Agent legacy actions that have a canonical counterpart.
+    // POST /api/devices (legacy) matches POST /api/agent/devices (canonical).
+    // The client uses the canonical path, so the legacy action is covered.
+    var agentLegacyToCanonical = GetAgentLegacyToCanonicalMap();
+    var canonicalActions = new HashSet<(string Verb, string NormalizedPath)>(
+      actions.Select(a => (a.Verb, a.NormalizedPath)));
+
+    return [.. actions
+      .Where(action =>
+      {
+        if (!agentLegacyToCanonical.TryGetValue(action.NormalizedPath, out var canonicalPath))
+        {
+          return true;
+        }
+
+        return !canonicalActions.Contains((action.Verb, NormalizePathTemplate(canonicalPath)));
+      })];
   }
 
   private static OpenApiTestData LoadOpenApiTestData()
@@ -406,11 +469,7 @@ public partial class ControlrApiContractSyncTests
     var jsonFiles = Directory.GetFiles(serverDirectory, "ControlR.Web.Server_*.json");
     Assert.True(jsonFiles.Length > 0, $"No OpenAPI JSON files found in '{serverDirectory}'.");
 
-    var legacyPrefixes = GetAllHttpConstantFields()
-      .Where(field => field.DeclaringType?.Name == "Legacy")
-      .Select(field => NormalizePathTemplate((string)field.GetValue(null)!))
-      .Where(prefix => !string.IsNullOrEmpty(prefix))
-      .ToArray();
+    var legacyPrefixes = GetLegacyOnlyPrefixes();
 
     var allPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     var nonLegacyPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

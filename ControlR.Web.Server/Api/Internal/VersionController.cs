@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.OutputCaching;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.VersionEndpoint)]
-[Route(HttpConstants.Legacy.VersionEndpoint)]
 [ApiController]
 [OutputCache(Duration = 60)]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
