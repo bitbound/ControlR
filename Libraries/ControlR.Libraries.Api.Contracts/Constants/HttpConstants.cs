@@ -65,12 +65,12 @@ public static class HttpConstants
     public const string UserTagsEndpoint = "/api/user-tags";
     public const string VersionEndpoint = "/api/version";
   }
-  public static class V0
+  public static class V1
   {
-    public const string DevicesEndpoint = "/api/v0/devices";
-    public const string InstallerKeysEndpoint = "/api/v0/installer-keys";
-    public const string LogonTokensEndpoint = "/api/v0/logon-tokens";
-    public const string ServiceAccountsEndpoint = "/api/v0/service-accounts";
-    public const string TenantsEndpoint = "/api/v0/tenants";
+    public const string DevicesEndpoint = "/api/v1/devices";
+    public const string InstallerKeysEndpoint = "/api/v1/installer-keys";
+    public const string LogonTokensEndpoint = "/api/v1/logon-tokens";
+    public const string ServiceAccountsEndpoint = "/api/v1/service-accounts";
+    public const string TenantsEndpoint = "/api/v1/tenants";
   }
 }

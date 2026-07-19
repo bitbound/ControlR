@@ -12,7 +12,7 @@ global using ControlR.Web.Server.Services.ServiceAccounts;
 global using ControlR.Web.Client.Authz;
 global using ControlR.Web.Client.Authz.Policies;
 global using ControlR.Web.Server.Data.Entities;
-global using V0Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
+global using V1Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 global using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 global using ControlR.Web.Server.Authz.Policies;
 global using ControlR.Web.Server.Data;

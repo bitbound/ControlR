@@ -11,7 +11,7 @@ public static class OpenApiRegistrationExtensions
       .AddApiVersioning(options =>
       {
         options.AssumeDefaultVersionWhenUnspecified = true;
-        options.DefaultApiVersion = new ApiVersion(0, 0);
+        options.DefaultApiVersion = new ApiVersion(1, 0);
         options.ReportApiVersions = true;
       })
       .AddApiExplorer(options => 
@@ -23,8 +23,8 @@ public static class OpenApiRegistrationExtensions
       {
         switch (options.Description.GroupName)
         {
-          case "v0":
-            options.Document.AddDocumentTransformer<V0ApiDocumentInfoTransformer>();
+          case "v1":
+            options.Document.AddDocumentTransformer<V1ApiDocumentInfoTransformer>();
             break;
           case "Internal":
             options.Document.AddDocumentTransformer<InternalApiDocumentInfoTransformer>();
@@ -43,10 +43,10 @@ public static class OpenApiRegistrationExtensions
       AddSharedTransformers(options);
     });
 
-    builder.Services.AddOpenApi("v0", options =>
+    builder.Services.AddOpenApi("v1", options =>
     {
-      options.ShouldInclude = desc => desc.GroupName == "v0";
-      options.AddDocumentTransformer<V0ApiDocumentInfoTransformer>();
+      options.ShouldInclude = desc => desc.GroupName == "v1";
+      options.AddDocumentTransformer<V1ApiDocumentInfoTransformer>();
       AddSharedTransformers(options);
     });
 

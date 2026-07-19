@@ -249,7 +249,7 @@ public partial class ControlrApiContractSyncTests
     foreach (var type in new[]
     {
       typeof(IControlrInternalApi),
-      typeof(IControlrV0Api),
+      typeof(IControlrV1Api),
       typeof(IControlrAgentApi),
     })
     {
@@ -285,7 +285,7 @@ public partial class ControlrApiContractSyncTests
     return
     [
       typeof(IControlrInternalApi),
-      typeof(IControlrV0Api),
+      typeof(IControlrV1Api),
       typeof(IControlrAgentApi),
     ];
   }

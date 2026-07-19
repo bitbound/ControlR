@@ -18,7 +18,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -81,7 +81,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -144,7 +144,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -207,7 +207,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -270,7 +270,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -333,7 +333,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -396,7 +396,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -456,7 +456,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -516,7 +516,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -596,7 +596,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -676,7 +676,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -719,7 +719,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -781,7 +781,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -843,7 +843,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -895,7 +895,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -967,7 +967,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1039,7 +1039,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1111,7 +1111,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1183,7 +1183,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1255,7 +1255,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1334,7 +1334,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1393,7 +1393,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1436,7 +1436,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1499,7 +1499,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1578,7 +1578,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1637,7 +1637,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1689,7 +1689,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1741,7 +1741,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1784,7 +1784,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1847,7 +1847,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1910,7 +1910,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -1973,7 +1973,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2036,7 +2036,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2099,7 +2099,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2171,7 +2171,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2248,7 +2248,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2300,7 +2300,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2372,7 +2372,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2444,7 +2444,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2494,7 +2494,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2563,7 +2563,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2613,7 +2613,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2673,7 +2673,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2753,7 +2753,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2833,7 +2833,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2902,7 +2902,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -2969,7 +2969,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3041,7 +3041,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3110,7 +3110,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3179,7 +3179,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3259,7 +3259,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3348,7 +3348,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3437,7 +3437,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3517,7 +3517,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3580,7 +3580,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3661,7 +3661,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3739,7 +3739,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3799,7 +3799,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3859,7 +3859,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3919,7 +3919,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -3997,7 +3997,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4066,7 +4066,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4144,7 +4144,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4222,7 +4222,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4274,7 +4274,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4326,7 +4326,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4404,7 +4404,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4473,7 +4473,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4536,7 +4536,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4599,7 +4599,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4679,7 +4679,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4759,7 +4759,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4837,7 +4837,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4906,7 +4906,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -4984,7 +4984,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5062,7 +5062,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5114,7 +5114,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5157,7 +5157,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5257,7 +5257,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5357,7 +5357,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5435,7 +5435,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5504,7 +5504,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5582,7 +5582,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5660,7 +5660,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5710,7 +5710,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5799,7 +5799,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5849,7 +5849,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5929,7 +5929,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -5981,7 +5981,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6050,7 +6050,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6119,7 +6119,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6177,7 +6177,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6257,7 +6257,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6315,7 +6315,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6395,7 +6395,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6455,7 +6455,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6515,7 +6515,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6575,7 +6575,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6635,7 +6635,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6721,7 +6721,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6788,7 +6788,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6868,7 +6868,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -6954,7 +6954,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7021,7 +7021,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7110,7 +7110,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7162,7 +7162,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7213,7 +7213,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7262,7 +7262,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7330,7 +7330,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7379,7 +7379,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7439,7 +7439,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7497,7 +7497,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7575,7 +7575,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7655,7 +7655,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7713,7 +7713,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7791,7 +7791,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7871,7 +7871,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7914,7 +7914,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -7957,7 +7957,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8015,7 +8015,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8093,7 +8093,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8173,7 +8173,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8231,7 +8231,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8309,7 +8309,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8397,7 +8397,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8465,7 +8465,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8525,7 +8525,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8586,7 +8586,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8655,7 +8655,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8716,7 +8716,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8794,7 +8794,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8872,7 +8872,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -8959,7 +8959,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9037,7 +9037,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9106,7 +9106,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9175,7 +9175,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9235,7 +9235,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9313,7 +9313,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9382,7 +9382,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9460,7 +9460,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9538,7 +9538,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9625,7 +9625,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9703,7 +9703,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9790,7 +9790,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9868,7 +9868,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9920,7 +9920,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -9981,7 +9981,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10040,7 +10040,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10138,7 +10138,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10197,7 +10197,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10277,7 +10277,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10337,7 +10337,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10397,7 +10397,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10457,7 +10457,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10525,7 +10525,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10594,7 +10594,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10665,7 +10665,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10734,7 +10734,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10797,7 +10797,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10897,7 +10897,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -10997,7 +10997,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11058,7 +11058,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11127,7 +11127,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11188,7 +11188,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11266,7 +11266,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11344,7 +11344,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11431,7 +11431,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11509,7 +11509,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11569,7 +11569,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11624,7 +11624,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11679,7 +11679,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11731,7 +11731,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11783,7 +11783,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11838,7 +11838,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11901,7 +11901,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11951,7 +11951,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
@@ -11993,7 +11993,7 @@
             "description": "The requested API version",
             "schema": {
               "enum": [
-                "0.0"
+                "1.0"
               ],
               "type": "string"
             }
