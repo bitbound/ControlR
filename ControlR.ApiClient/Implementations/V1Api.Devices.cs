@@ -38,7 +38,7 @@ internal partial class V1Api
     return await _client.ExecuteApiCall(async () =>
     {
       using var response = await _client.HttpClient.GetAsync(
-        $"{HttpConstants.V1.DevicesEndpoint}/{deviceId}/desktop-sessions/{deviceId}",
+        $"{HttpConstants.V1.DevicesEndpoint}/{deviceId}/desktop-sessions",
         cancellationToken);
 
       await response.EnsureSuccessStatusCodeWithDetails();
