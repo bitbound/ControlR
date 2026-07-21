@@ -1,15 +1,16 @@
+using System.Diagnostics;
 using System.Threading.Channels;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Libraries.Api.Contracts.Hubs;
 
 public interface IViewerHub
 {
+  Task AddActivityEvent(string eventName);
   Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId);
   Task CloseTerminalSession(Guid deviceId, Guid terminalSessionId);
 
@@ -32,6 +33,7 @@ public interface IViewerHub
   Task SendPowerStateChange(Guid deviceId, PowerStateChangeType changeType);
   Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto);
   Task SendWakeDevice(Guid deviceId, string[] macAddresses);
+  Task StartRemoteAccessSession();
   Task<HubResult> TestVncConnection(Guid guid, int port);
   Task UninstallAgent(Guid deviceId, string reason);
   Task<HubResult> UploadFile(FileUploadMetadata metadata, ChannelReader<byte[]> fileStream);

@@ -122,6 +122,7 @@ public partial class DeviceAccessLayout
       if (_hubConnectionState != HubConnectionState.Connected)
       {
         await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+        await ViewerHub.Value.Server.StartRemoteAccessSession();
       }
     }
     catch (Exception ex)

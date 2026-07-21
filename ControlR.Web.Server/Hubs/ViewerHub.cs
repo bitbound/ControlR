@@ -8,6 +8,8 @@ using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.Settings;
+using System.Diagnostics;
+using ControlR.Libraries.Api.Contracts.Diagnostics;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -34,8 +36,23 @@ public class ViewerHub(
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
 
+  public Activity? SessionActivity
+  {
+    get => GetItem((Activity?)null);
+    set => SetItem(value);
+  }
+
+  public Task AddActivityEvent(string eventName)
+  {
+    using var activity = SessionActivity?.StartChildActivity($"{RemoteAccessActivityNames.ActivityEvent}/{eventName}");
+    SessionActivity?.AddEvent(eventName);
+    _logger.LogInformation("Activity event added: {EventName}", eventName);
+    return Task.CompletedTask;
+  }
+
   public async Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
   {
+    using var activity = SessionActivity?.StartChildActivity(RemoteAccessActivityNames.CloseChatSession);
     try
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
@@ -49,13 +66,17 @@ public class ViewerHub(
         deviceId,
         targetProcessId);
 
-      return await _agentHub.Clients
+      var result =  await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .CloseChatSession(sessionId, targetProcessId);
+
+      activity?.SetStatus(result.IsSuccess ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+      return result;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while closing chat session {SessionId} on device {DeviceId}.", sessionId, deviceId);
+      activity?.SetStatus(ActivityStatusCode.Error);
       return HubResult.Fail("Agent could not be reached.");
     }
   }
@@ -83,6 +104,7 @@ public class ViewerHub(
     Guid deviceId,
     Guid terminalSessionId)
   {
+    using var activity = SessionActivity?.StartChildActivity(RemoteAccessActivityNames.CreateTerminalSession);
     try
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
@@ -90,12 +112,18 @@ public class ViewerHub(
         return HubResult.Fail("Forbidden.");
       }
 
-      return await _agentHub.Clients
+      var createResult = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .CreateTerminalSession(terminalSessionId, Context.ConnectionId);
+
+      _logger.LogInformation("Create terminal session.  Success: {IsSuccess}", createResult.IsSuccess);
+
+      activity?.SetStatus(createResult.IsSuccess ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+      return createResult;
     }
     catch (Exception ex)
     {
+      activity?.SetStatus(ActivityStatusCode.Error);
       _logger.LogError(ex, "Error while creating terminal session.");
       return HubResult.Fail("An error occurred.");
     }
@@ -272,6 +300,7 @@ public class ViewerHub(
 
       user.IsOnline = false;
       await _userManager.UpdateAsync(user);
+      SessionActivity?.Dispose();
     }
     catch (Exception ex)
     {
@@ -322,6 +351,7 @@ public class ViewerHub(
     Guid deviceId,
     RemoteControlSessionRequestDto sessionRequestDto)
   {
+    using var activity = SessionActivity?.StartChildActivity(RemoteAccessActivityNames.RequestRemoteControlSession);
     try
     {
       if (Context.User is null)
@@ -369,14 +399,18 @@ public class ViewerHub(
         ViewerConnectionId = Context.ConnectionId
       };
 
-      return await _agentHub.Clients
+      var result = await _agentHub.Clients
         .Client(device.ConnectionId)
         .CreateRemoteControlSession(sessionRequestDto);
+
+      activity?.SetStatus(result.IsSuccess ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+      return result;
     }
     catch (Exception ex)
     {
       const string reason = "An error occurred while requesting the remote control session.";
       _logger.LogError(ex, reason);
+      activity?.SetStatus(ActivityStatusCode.Error);
       return HubResult.Fail(reason);
     }
   }
@@ -474,6 +508,7 @@ public class ViewerHub(
 
   public async Task<HubResult> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
   {
+    using var activity = SessionActivity?.StartChildActivity(RemoteAccessActivityNames.SendChatMessage);
     try
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
@@ -499,9 +534,12 @@ public class ViewerHub(
         SenderEmail = $"{user.Email}"
       };
 
-      return await _agentHub.Clients
+      var sendResult = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .SendChatMessage(dto);
+
+      activity?.SetStatus(sendResult.IsSuccess ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+      return sendResult;
     }
     catch (Exception ex)
     {
@@ -585,6 +623,8 @@ public class ViewerHub(
 
   public async Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
   {
+    using var activity = SessionActivity?.StartChildActivity(RemoteAccessEventNames.TerminalInputSent);
+
     try
     {
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
@@ -595,13 +635,19 @@ public class ViewerHub(
       // Create a new DTO with ViewerConnectionId
       var dtoWithViewerConnection = dto with { ViewerConnectionId = Context.ConnectionId };
 
-      return await _agentHub.Clients
+      var sendResult = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .ReceiveTerminalInput(dtoWithViewerConnection);
+
+      _logger.LogInformation("Terminal input sent to agent. Success: {Success}", sendResult.IsSuccess);
+
+      activity?.SetStatus(sendResult.IsSuccess ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+      return sendResult;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending terminal input.");
+      activity?.SetStatus(ActivityStatusCode.Error);
       return HubResult.Fail("Agent could not be reached.");
     }
   }
@@ -634,6 +680,12 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while sending wake device command.");
     }
+  }
+
+  public Task StartRemoteAccessSession()
+  {
+    SessionActivity = RemoteAccessSessionActivitySource.StartRemoteAccessSession();
+    return Task.CompletedTask;
   }
 
   public async Task<HubResult> TestVncConnection(Guid guid, int port)
@@ -684,8 +736,10 @@ public class ViewerHub(
     FileUploadMetadata fileUploadMetadata,
     ChannelReader<byte[]> fileStream)
   {
+    using var activity = SessionActivity?.StartChildActivity(RemoteAccessActivityNames.SendFile);
     try
     {
+
       var deviceId = fileUploadMetadata.DeviceId;
 
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
@@ -747,6 +801,7 @@ public class ViewerHub(
         return HubResult.Fail("An error occurred while writing the file stream.");
       }
 
+      activity?.SetStatus(ActivityStatusCode.Ok);
       return HubResult.Ok();
     }
     catch (OperationCanceledException)

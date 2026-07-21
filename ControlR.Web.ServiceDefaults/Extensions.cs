@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -33,9 +34,17 @@ public static class Extensions
     string serviceName,
     string? hostId = null,
     bool useServiceDiscovery = false,
-    bool useResilience = false)
+    bool useResilience = false,
+    Action<OpenTelemetryLoggerOptions>? configureLogging = null,
+    Action<MeterProviderBuilder>? configureMetrics = null,
+    Action<TracerProviderBuilder>? configureTracing = null)
   {
-    builder.ConfigureOpenTelemetry(serviceName, hostId);
+    builder.ConfigureOpenTelemetry(
+      serviceName,
+      hostId,
+      configureLogging,
+      configureMetrics,
+      configureTracing);
 
     builder.AddDefaultHealthChecks();
 
@@ -65,13 +74,16 @@ public static class Extensions
   public static IHostApplicationBuilder ConfigureOpenTelemetry(
     this IHostApplicationBuilder builder,
     string serviceName,
-    string? hostId = null)
+    string? hostId = null,
+    Action<OpenTelemetryLoggerOptions>? configureLogging = null,
+    Action<MeterProviderBuilder>? configureMetrics = null,
+    Action<TracerProviderBuilder>? configureTracing = null)
   {
     builder.Logging.AddOpenTelemetry(logging =>
     {
       var resourceBuilder = ResourceBuilder.CreateDefault();
       resourceBuilder.AddService(
-        serviceName: serviceName, 
+        serviceName: serviceName,
         serviceNamespace: "controlr");
 
       if (hostId is not null)
@@ -82,13 +94,15 @@ public static class Extensions
       logging.IncludeFormattedMessage = true;
       logging.IncludeScopes = true;
       logging.ParseStateValues = true;
+      logging.SetResourceBuilder(resourceBuilder);
+      configureLogging?.Invoke(logging);
     });
 
     builder.Services.AddOpenTelemetry()
       .ConfigureResource(resourceBuilder =>
       {
         resourceBuilder.AddService(
-          serviceName: serviceName, 
+          serviceName: serviceName,
           serviceNamespace: "controlr");
 
         if (hostId is not null)
@@ -102,6 +116,8 @@ public static class Extensions
           .AddAspNetCoreInstrumentation()
           .AddHttpClientInstrumentation()
           .AddRuntimeInstrumentation();
+
+        configureMetrics?.Invoke(metrics);
       })
       .WithTracing(tracing =>
       {
@@ -120,6 +136,8 @@ public static class Extensions
               return !request.RequestUri.PathAndQuery.StartsWith("/health");
             };
           });
+
+        configureTracing?.Invoke(tracing);
       });
 
     builder.AddOpenTelemetryExporters();
