@@ -61,6 +61,12 @@
 	<ItemGroup>
 		<Folder Include="Data\Migrations\" />
 	</ItemGroup>
+	<Target Name="RenameDefaultOpenApiDocument" AfterTargets="GenerateOpenApiDocuments">
+		<Move SourceFiles="$(OpenApiDocumentsDirectory)\ControlR.Web.Server.json"
+		      DestinationFiles="$(OpenApiDocumentsDirectory)\ControlR.Web.Server_v1.json"
+		      OverwriteReadOnlyFiles="true"
+		      Condition="Exists('$(OpenApiDocumentsDirectory)\ControlR.Web.Server.json')" />
+	</Target>
 	<ItemGroup>
 		<Content Remove="novnc\**\*" />
 		<None Include="novnc\**\*" CopyToPublishDirectory="PreserveNewest" />
