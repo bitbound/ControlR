@@ -6,10 +6,22 @@ namespace ControlR.Web.Server.Tests;
 
 public partial class ControlrApiContractSyncTests
 {
+
   private static readonly HashSet<string> _httpVerbs = new(StringComparer.OrdinalIgnoreCase)
   {
     "Get", "Post", "Put", "Delete", "Patch"
   };
+
+  // IMPORTANT: When a new sub-interface is added (e.g., IControlrXxxApi in
+  // ControlR.ApiClient.Interfaces), add it here so the contract sync tests
+  // pick up its [ApiRoute] attributes. Forgetting this list silently disables
+  // coverage for the entire sub-interface.
+  private static readonly Type[] _subInterfaceTypes =
+  [
+    typeof(IControlrInternalApi),
+    typeof(IControlrV1Api),
+    typeof(IControlrAgentApi),
+  ];
 
   [Fact]
   public void ClientMethods_AreBackedByServerActions()
@@ -132,8 +144,6 @@ public partial class ControlrApiContractSyncTests
       Assert.True(
         hasMatchingConstant,
         $"No HttpConstants route covers OpenAPI path '{apiPath}'.");
-
-      Assert.NotNull(matchedConstant);
 
       var hasMapping = endpointPropertyMap.TryGetValue(matchedConstant ?? string.Empty, out var propertyName);
 
@@ -280,12 +290,7 @@ public partial class ControlrApiContractSyncTests
   {
     var propertyNames = new HashSet<string>(StringComparer.Ordinal);
 
-    foreach (var type in new[]
-    {
-      typeof(IControlrInternalApi),
-      typeof(IControlrV1Api),
-      typeof(IControlrAgentApi),
-    })
+    foreach (var type in _subInterfaceTypes)
     {
       foreach (var propertyName in type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
         .Select(p => p.Name))
@@ -327,18 +332,18 @@ public partial class ControlrApiContractSyncTests
       .ToArray();
   }
 
-  // IMPORTANT: When a new sub-interface is added (e.g., IControlrXxxApi in
-  // ControlR.ApiClient.Interfaces), add it here so the contract sync tests
-  // pick up its [ApiRoute] attributes. Forgetting this list silently disables
-  // coverage for the entire sub-interface.
+  private static Type[] GetSubInterfacePropertyTypes(Type subInterfaceType)
+  {
+    return subInterfaceType
+      .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+      .Select(p => p.PropertyType)
+      .Where(t => t.IsInterface)
+      .ToArray();
+  }
+
   private static Type[] GetSubInterfaceTypes()
   {
-    return
-    [
-      typeof(IControlrInternalApi),
-      typeof(IControlrV1Api),
-      typeof(IControlrAgentApi),
-    ];
+    return _subInterfaceTypes;
   }
 
   private static ClientCall[] LoadClientCallsFromAttributes()
@@ -347,13 +352,7 @@ public partial class ControlrApiContractSyncTests
 
     foreach (var subInterfaceType in GetSubInterfaceTypes())
     {
-      var subInterfacePropertyNames = subInterfaceType
-        .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-        .Select(p => p.PropertyType)
-        .Where(t => t.IsInterface)
-        .ToArray();
-
-      foreach (var propertyType in subInterfacePropertyNames)
+      foreach (var propertyType in GetSubInterfacePropertyTypes(subInterfaceType))
       {
         CollectCallsFromInterface(propertyType, calls);
       }
@@ -368,13 +367,7 @@ public partial class ControlrApiContractSyncTests
 
     foreach (var subInterfaceType in GetSubInterfaceTypes())
     {
-      var subInterfacePropertyNames = subInterfaceType
-        .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-        .Select(p => p.PropertyType)
-        .Where(t => t.IsInterface)
-        .ToArray();
-
-      foreach (var propertyType in subInterfacePropertyNames)
+      foreach (var propertyType in GetSubInterfacePropertyTypes(subInterfaceType))
       {
         foreach (var method in propertyType.GetMethods(BindingFlags.Instance | BindingFlags.Public))
         {
