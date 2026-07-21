@@ -86,19 +86,6 @@ public partial class DeviceAccessLayout
     GC.SuppressFinalize(this);
   }
 
-  private async Task TryDisposeSessionActivity()
-  {
-    try
-    {
-      await ViewerHub.Value.Server.DisposeSessionActivity();
-    }
-    catch (Exception ex)
-    {
-      Logger.LogError(ex, "Error while disposing remote access session.");
-    }
-  }
-
-
   protected override async Task OnInitializedAsync()
   {
     try
@@ -342,6 +329,18 @@ public partial class DeviceAccessLayout
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error disposing remote control session.");
+    }
+  }
+
+  private async Task TryDisposeSessionActivity()
+  {
+    try
+    {
+      await ViewerHub.Value.Server.DisposeSessionActivity();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while disposing remote access session.");
     }
   }
 
