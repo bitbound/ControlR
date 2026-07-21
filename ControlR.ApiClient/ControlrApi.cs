@@ -1,7 +1,7 @@
 using System.Net;
 using ControlR.ApiClient.Interfaces.Agent;
 using ControlR.ApiClient.Interfaces.Internal;
-using ControlR.ApiClient.Interfaces.V0;
+using ControlR.ApiClient.Interfaces.V1;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,7 +12,7 @@ public interface IControlrApi
 {
   IControlrAgentApi Agent { get; }
   IControlrInternalApi Internal { get; }
-  IControlrV0Api V0 { get; }
+  IControlrV1Api V1 { get; }
 }
 
 
@@ -31,18 +31,18 @@ public partial class ControlrApi(
 
   private AgentApi? _agent;
   private InternalApi? _internal;
-  private V0Api? _v0;
+  private V1Api? _v1;
 
   internal AgentApi AgentApi => _agent ??= new(this);
   internal HttpClient HttpClient => _client;
   internal InternalApi InternalApi => _internal ??= new(this);
   internal ILogger<ControlrApi> Logger => _logger;
   internal IOptions<ControlrApiClientOptions> Options => _options;
-  internal V0Api V0 => _v0 ??= new(this);
+  internal V1Api V1 => _v1 ??= new(this);
 
   IControlrAgentApi IControlrApi.Agent => AgentApi;
   IControlrInternalApi IControlrApi.Internal => InternalApi;
-  IControlrV0Api IControlrApi.V0 => V0;
+  IControlrV1Api IControlrApi.V1 => V1;
 
   internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
   {

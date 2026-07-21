@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.ServiceAccounts;
@@ -99,7 +99,7 @@ public class AuthIntegrationTests(ITestOutputHelper testOutput)
       "invalid-key-format");
 
     var response = await httpClient.PostAsJsonAsync(
-      HttpConstants.V0.TenantsEndpoint,
+      HttpConstants.V1.TenantsEndpoint,
       new CreateTenantRequestDto("Auth Test Tenant"),
       TestContext.Current.CancellationToken);
 
@@ -107,14 +107,14 @@ public class AuthIntegrationTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ServiceAcctAuth_AccessV0Endpoint()
+  public async Task ServiceAcctAuth_AccessV1Endpoint()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
     using var httpClient = testServer.Factory.CreateClient();
 
     var serviceAccountManager = testServer.Services.GetRequiredService<IServiceAccountManager>();
     var createResult = await serviceAccountManager.CreateForServer(
-      "V0 Auth Test SA",
+      "V1 Auth Test SA",
       null,
       TestContext.Current.CancellationToken);
     Assert.True(createResult.IsSuccess);
@@ -124,7 +124,7 @@ public class AuthIntegrationTests(ITestOutputHelper testOutput)
       createResult.Value.PlainTextSecretKey);
 
     var response = await httpClient.PostAsJsonAsync(
-      HttpConstants.V0.TenantsEndpoint,
+      HttpConstants.V1.TenantsEndpoint,
       new CreateTenantRequestDto("Auth Test Tenant"),
       TestContext.Current.CancellationToken);
 

@@ -50,7 +50,7 @@
     ]
   },
   {
-    "Name": "Viewer Full Stack",
+    "Name": "Full Stack + Viewer",
     "Projects": [
       {
         "Path": "docker-compose\\docker-compose.dcproj",

@@ -21,8 +21,11 @@ public static class DataProtectionRegistrationExtensions
     if (!keyProtectionOptions.EncryptKeys)
     {
       dataProtectionBuilder.UnprotectKeysWithAnyCertificate();
-      Console.WriteLine("Data Protection keys will NOT be encrypted at rest. " +
-        "Set KeyProtectionOptions:EncryptKeys to true and configure a certificate for production environments.");
+      if (hostBuilder.Environment.IsProduction())
+      {
+        Console.WriteLine("Data Protection keys will NOT be encrypted at rest. " +
+          "Set KeyProtectionOptions:EncryptKeys to true and configure a certificate for production environments.");
+      }
       return;
     }
 
@@ -31,7 +34,11 @@ public static class DataProtectionRegistrationExtensions
       var certBytes = Convert.FromBase64String(keyProtectionOptions.CertificateContentsBase64);
       var certificate = X509CertificateLoader.LoadPkcs12(certBytes, keyProtectionOptions.CertificatePassword);
       dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
-      Console.WriteLine($"Data Protection keys will be encrypted using certificate from {nameof(KeyProtectionOptions.CertificateContentsBase64)}.");
+
+      if (hostBuilder.Environment.IsProduction())
+      {
+        Console.WriteLine($"Data Protection keys will be encrypted using certificate from {nameof(KeyProtectionOptions.CertificateContentsBase64)}.");
+      }
     }
     else
     {
@@ -54,7 +61,10 @@ public static class DataProtectionRegistrationExtensions
         keyProtectionOptions.CertificatePassword);
 
       dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
-      Console.WriteLine("Data Protection keys will be encrypted using certificate from file.");
+      if (hostBuilder.Environment.IsProduction())
+      {
+        Console.WriteLine("Data Protection keys will be encrypted using certificate from file.");
+      }
     }
   }
 }

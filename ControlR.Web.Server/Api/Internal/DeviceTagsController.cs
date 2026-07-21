@@ -5,7 +5,6 @@ using ControlR.Libraries.Api.Contracts.Constants;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.DeviceTagsEndpoint)]
-[Route(HttpConstants.Legacy.DeviceTagsEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

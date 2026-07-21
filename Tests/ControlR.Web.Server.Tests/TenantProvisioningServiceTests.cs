@@ -1,4 +1,4 @@
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V0;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Tenants;

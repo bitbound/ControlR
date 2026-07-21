@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace ControlR.Web.Server.Api.Internal;
 
 [Route(HttpConstants.Internal.AuthEndpoint)]
-[Route(HttpConstants.Legacy.AuthEndpoint)]
 [ApiController]
 [Authorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]

@@ -1,4 +1,4 @@
-﻿global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.DependencyInjection;
 global using ControlR.DesktopClient.Common.ServiceInterfaces;
 global using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 global using Avalonia.Threading;
