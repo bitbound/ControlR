@@ -126,7 +126,7 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
       $"Create device failed: {deviceResponse.StatusCode}");
 
     // Step 5: Get active desktop sessions.
-    await BringDeviceOnline(testServer, deviceId);
+    await SetDeviceOnline(testServer, deviceId);
 
     var sessionsResponse = await saClient.GetAsync(
       $"{HttpConstants.V1.DevicesEndpoint}/{deviceId}/desktop-sessions",
@@ -141,8 +141,8 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
     Assert.NotNull(sessions);
     Assert.Equal(2, sessions.Length);
 
-    AssertConsoleSession(sessions!);
-    AssertRdpSession(sessions!);
+    AssertConsoleSession(sessions);
+    AssertRdpSession(sessions);
 
     // Step 6: Service account creates a logon token for an external user (dynamically creates transient external user).
     var createLogonTokenDto = new V1Dtos.CreateLogonTokenForExternalRequestDto(
@@ -215,16 +215,6 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
     Assert.True(rdpSession.AreRemoteControlPermissionsGranted);
   }
 
-  private static async Task BringDeviceOnline(TestWebServer testServer, Guid deviceId)
-  {
-    using var scope = testServer.Services.CreateScope();
-    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
-    var device = await db.Devices.FirstAsync(x => x.Id == deviceId, TestContext.Current.CancellationToken);
-    device.IsOnline = true;
-    device.ConnectionId = "test-agent-connection-id";
-    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-  }
-
   private static DesktopSession[] CreateFakeDesktopSessions()
   {
     return
@@ -271,6 +261,16 @@ public class ServiceAccountEndToEndTests(ITestOutputHelper testOutput)
       .Returns(mockHubClients.Object);
 
     return mockAgentHubContext;
+  }
+
+  private static async Task SetDeviceOnline(TestWebServer testServer, Guid deviceId)
+  {
+    using var scope = testServer.Services.CreateScope();
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var device = await db.Devices.FirstAsync(x => x.Id == deviceId, TestContext.Current.CancellationToken);
+    device.IsOnline = true;
+    device.ConnectionId = "test-agent-connection-id";
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
 
   private DeviceUpdateRequestDto CreateDeviceUpdateDto(Guid tenantId)
