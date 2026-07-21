@@ -11,7 +11,7 @@ public static class OpenApiRegistrationExtensions
       .AddApiVersioning(options =>
       {
         options.AssumeDefaultVersionWhenUnspecified = true;
-        options.DefaultApiVersion = new ApiVersion(0, 0);
+        options.DefaultApiVersion = new ApiVersion(1, 0);
         options.ReportApiVersions = true;
       })
       .AddApiExplorer(options => 
