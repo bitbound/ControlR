@@ -10,7 +10,7 @@ namespace ControlR.Libraries.Api.Contracts.Hubs;
 
 public interface IViewerHub
 {
-  Task AddActivityEvent(string eventName);
+  Task AddActivity(string activityName);
   Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId);
   Task CloseTerminalSession(Guid deviceId, Guid terminalSessionId);
 

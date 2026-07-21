@@ -4,9 +4,9 @@ namespace ControlR.Web.Server.Diagnostics;
 
 public static class RemoteAccessSessionActivitySource
 {
-  public const string SourceName = "ControlR.Web.Server.RemoteAccess";
+  public const string SourceName = "ControlR.RemoteAccess";
 
-  private const string RemoteAccessSessionActivityName = "remote_access_session";
+  private const string RemoteAccessSessionActivityName = "RemoteAccessSession";
 
   public static readonly ActivitySource Instance = new(SourceName);
 

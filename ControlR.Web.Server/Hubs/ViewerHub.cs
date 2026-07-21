@@ -42,11 +42,10 @@ public class ViewerHub(
     set => SetItem(value);
   }
 
-  public Task AddActivityEvent(string eventName)
+  public Task AddActivity(string activityName)
   {
-    using var activity = SessionActivity?.StartChildActivity($"{RemoteAccessActivityNames.ActivityEvent}/{eventName}");
-    SessionActivity?.AddEvent(eventName);
-    _logger.LogInformation("Activity event added: {EventName}", eventName);
+    using var activity = SessionActivity?.StartChildActivity(activityName);
+    _logger.LogInformation("Activity added: {EventName}", activityName);
     return Task.CompletedTask;
   }
 
@@ -623,7 +622,7 @@ public class ViewerHub(
 
   public async Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
   {
-    using var activity = SessionActivity?.StartChildActivity(RemoteAccessEventNames.TerminalInputSent);
+    using var activity = SessionActivity?.StartChildActivity(RemoteAccessActivityNames.SendTerminalInput);
 
     try
     {

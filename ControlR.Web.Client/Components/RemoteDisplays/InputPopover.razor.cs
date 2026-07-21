@@ -134,7 +134,7 @@ public partial class InputPopover : DisposableComponent
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await RemoteControlStream.RequestClipboardText(RemoteControlState.CurrentSession.SessionId, cts.Token);
-      await ViewerHub.Server.AddActivityEvent(RemoteAccessEventNames.ClipboardReceived);
+      await ViewerHub.Server.AddActivity(RemoteAccessActivityNames.ReceiveClipboardText);
     }
     catch (Exception ex)
     {
@@ -163,7 +163,7 @@ public partial class InputPopover : DisposableComponent
       Snackbar.Add("Sending clipboard", Severity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await RemoteControlStream.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId, cts.Token);
-      await ViewerHub.Server.AddActivityEvent(RemoteAccessEventNames.ClipboardSent);
+      await ViewerHub.Server.AddActivity(RemoteAccessActivityNames.SendClipboardText);
     }
     catch (Exception ex)
     {

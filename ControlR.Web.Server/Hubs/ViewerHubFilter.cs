@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ControlR.Libraries.Api.Contracts.Diagnostics;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
@@ -13,22 +14,12 @@ public class ViewerHubFilter : IHubFilter
       return await next(invocationContext);
     }
 
-    if (Activity.Current is {} currentActivity && 
-        currentActivity.ParentId is null &&
-        viewerHub.SessionActivity?.Id is {} sessionActivityId)
+    if (viewerHub.SessionActivity is {} sessionActivity)
     {
-      Activity.Current.SetParentId(sessionActivityId);
-    }
-
-    try
-    {
+      using var childActivity = sessionActivity.StartChildActivity($"{RemoteAccessActivityNames.HubMethodInvoked}.{invocationContext.HubMethodName}");
       return await next(invocationContext);
     }
-    catch (Exception ex)
-    {
-      
-      Console.WriteLine($"Exception calling '{invocationContext.HubMethodName}': {ex}");
-      throw;
-    }
+
+    return await next(invocationContext);
   }
 }
