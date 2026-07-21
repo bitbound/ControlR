@@ -15,11 +15,14 @@ public class ViewerHubTraceFilter : IHubFilter
     nameof(ViewerHub.RequestRemoteControlPermission),
     nameof(ViewerHub.RequestRemoteControlSession),
     nameof(ViewerHub.RequestVncSession),
+    nameof(ViewerHub.SendAgentUpdateTrigger),
     nameof(ViewerHub.SendChatMessage),
+    nameof(ViewerHub.SendPowerStateChange),
     nameof(ViewerHub.SendTerminalInput),
     nameof(ViewerHub.SendWakeDevice),
-    nameof(ViewerHub.SendPowerStateChange),
+    nameof(ViewerHub.TestVncConnection),
     nameof(ViewerHub.UploadFile),
+    nameof(ViewerHub.UninstallAgent),
   ];
 
   public async ValueTask<object?> InvokeMethodAsync(
