@@ -198,7 +198,7 @@ public static class WebApplicationBuilderExtensions
         options.EnableDetailedErrors = appOptions.EnableSignalrDetailedErrors;
         options.MaximumReceiveMessageSize = 100_000;
         options.MaximumParallelInvocationsPerClient = 2;
-        options.AddFilter<ViewerHubFilter>();
+        options.AddFilter<ViewerHubTraceFilter>();
       })
       .AddMessagePackProtocol()
       .AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true; });
