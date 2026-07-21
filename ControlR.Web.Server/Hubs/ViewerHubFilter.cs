@@ -17,7 +17,17 @@ public class ViewerHubFilter : IHubFilter
     if (viewerHub.SessionActivity is {} sessionActivity)
     {
       using var childActivity = sessionActivity.StartChildActivity($"{RemoteAccessActivityNames.HubMethodInvoked}.{invocationContext.HubMethodName}");
-      return await next(invocationContext);
+      try
+      {
+        var result = await next(invocationContext);
+        childActivity?.SetStatus(ActivityStatusCode.Ok);
+        return result;
+      }
+      catch
+      {
+        childActivity?.SetStatus(ActivityStatusCode.Error);
+        throw;
+      }
     }
 
     return await next(invocationContext);
