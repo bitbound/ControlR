@@ -73,6 +73,7 @@ public partial class DeviceAccessLayout
       {
         await TryDisposeChat();
         await TryDisposeTerminal();
+        await TryDisposeSessionActivity();
         await TryDisposeRemoteControlSession();
         ChatState.Value.Clear();
       }
@@ -84,6 +85,19 @@ public partial class DeviceAccessLayout
     }
     GC.SuppressFinalize(this);
   }
+
+  private async Task TryDisposeSessionActivity()
+  {
+    try
+    {
+      await ViewerHub.Value.Server.DisposeSessionActivity();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while disposing remote access session.");
+    }
+  }
+
 
   protected override async Task OnInitializedAsync()
   {

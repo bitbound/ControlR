@@ -16,6 +16,7 @@ public interface IViewerHub
   Task<HubResult> CreateTerminalSession(
     Guid deviceId,
     Guid terminalSessionId);
+  Task DisposeSessionActivity();
   Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId);
   Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType);

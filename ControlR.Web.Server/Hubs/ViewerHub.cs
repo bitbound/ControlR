@@ -128,6 +128,13 @@ public class ViewerHub(
     }
   }
 
+  public Task DisposeSessionActivity()
+  {
+    SessionActivity?.Dispose();
+    SessionActivity = null;
+    return Task.CompletedTask;
+  }
+
   public async Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId)
   {
     try
@@ -284,6 +291,7 @@ public class ViewerHub(
       await base.OnDisconnectedAsync(exception);
 
       SessionActivity?.Dispose();
+      SessionActivity = null;
 
       if (Context.User?.TryGetUserId(out var userId) != true)
       {
