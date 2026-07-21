@@ -1,9 +1,11 @@
+using System.Buffers;
 using System.Diagnostics;
+using System.Text;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
 
-public class ViewerHubTraceFilter : IHubFilter
+public partial class ViewerHubTraceFilter : IHubFilter
 {
   private static readonly HashSet<string> _includedMethods = 
   [
@@ -24,6 +26,11 @@ public class ViewerHubTraceFilter : IHubFilter
     nameof(ViewerHub.UploadFile),
     nameof(ViewerHub.UninstallAgent),
   ];
+  private static readonly Lazy<Dictionary<string, string>> _snakeCaseMap = new(() =>
+    _includedMethods.ToDictionary(
+      name => name,
+      name => ToLowerSnakeCase(name.AsSpan()),
+      StringComparer.Ordinal));
 
   public async ValueTask<object?> InvokeMethodAsync(
     HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
@@ -36,7 +43,7 @@ public class ViewerHubTraceFilter : IHubFilter
     if (_includedMethods.Contains(invocationContext.HubMethodName) && 
         viewerHub.SessionActivity is {} sessionActivity)
     {
-      using var childActivity = sessionActivity.StartChildActivity(invocationContext.HubMethodName);
+      using var childActivity = sessionActivity.StartChildActivity(GetSnakeCaseName(invocationContext.HubMethodName));
       try
       {
 
@@ -60,5 +67,35 @@ public class ViewerHubTraceFilter : IHubFilter
     }
 
     return await next(invocationContext);
+  }
+
+  private static string GetSnakeCaseName(string methodName) =>
+    _snakeCaseMap.Value.TryGetValue(methodName, out var name) ? name : methodName;
+
+  private static string ToLowerSnakeCase(ReadOnlySpan<char> name)
+  {
+    if (name.IsEmpty)
+    {
+      return string.Empty;
+    }
+
+    var sb = new StringBuilder(name.Length + 4);
+    for (var i = 0; i < name.Length; i++)
+    {
+      var c = name[i];
+      if (i > 0 && char.IsUpper(c))
+      {
+        var prev = name[i - 1];
+        var isPrevLower = char.IsLower(prev);
+        var isNextLower = i + 1 < name.Length && char.IsLower(name[i + 1]);
+        if (isPrevLower || (char.IsUpper(prev) && isNextLower))
+        {
+          sb.Append('_');
+        }
+      }
+
+      sb.Append(char.ToLowerInvariant(c));
+    }
+    return sb.ToString();
   }
 }
