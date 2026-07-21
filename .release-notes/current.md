@@ -2,15 +2,13 @@
 
 - If you're using the `ControlrApi` client, the entry point has been split into three top-level properties: `ControlrApi.Internal`, `ControlrApi.V1`, and `ControlrApi.Agent`.
   - You'll need to update your code to use the new static properties that serve as the new entry points.
-  - Existing endpoints were moved under the `Internal` property.  These will continue to evolve dynamically based on the needs of the UI.
-  - The `V1` property is the new versioned API that should be used for server-to-server integrations.
-
-- Likewise, the REST API has been split into three top-level routes: `/api/internal/`, `/api/v1/`, and `/api/agent/`.
-  - The previous `/api/` route is now `/api/internal/` and will continue to evolve dynamically based on the needs of the UI.
-  - The server will continue listening on the `/api/` route for several releases for backward compatibility.
-  - The new `/api/v1/` route is the new versioned API that should be used for server-to-server integrations.
-  - The `/api/agent/` route will contain only endpoints used by the agent.
-    - This makes it easier to protect the server with services like Cloudflare Access, while white-listing the agent endpoints.
+- The endpoints under `ControlrApi.V1` on the client map to the new `/api/v1/` route on the server.
+  - This is the new versioned, stable API intended for server-to-server integrations.
+  - It's not yet fully implemented and will be completed over time.
+- The endpoints under `ControlrApi.Agent` on the client map to the new `/api/agent/` route on the server.
+  - Agents will only call endpoints under the `/api/agent/` route.
+  - This makes it easier to protect the server with services like Cloudflare Access, while white-listing the agent endpoints.
+- The endpoints under `ControlrApi.Internal` are the pre-existing endpoints and will remain under the root `/api/` route.
 
 ## Added
 
