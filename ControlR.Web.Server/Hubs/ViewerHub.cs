@@ -675,7 +675,7 @@ public class ViewerHub(
     }
   }
 
-  public async Task<HubResult> StartRemoteAccessActivity(Guid deviceId)
+  public async Task<HubResult> StartDeviceAccessActivity(Guid deviceId)
   {
     if (Context.User is null)
     {

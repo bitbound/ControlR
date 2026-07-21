@@ -134,7 +134,7 @@ public partial class DeviceAccessLayout
         await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
       }
 
-      var startResult = await ViewerHub.Value.Server.StartRemoteAccessActivity(_deviceId);
+      var startResult = await ViewerHub.Value.Server.StartDeviceAccessActivity(_deviceId);
       if (startResult.IsSuccess)
       {
         Logger.LogError("Failed to start remote access activity.");

@@ -31,7 +31,7 @@ public interface IViewerHub
   Task SendPowerStateChange(Guid deviceId, PowerStateChangeType changeType);
   Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto);
   Task SendWakeDevice(Guid deviceId, string[] macAddresses);
-  Task<HubResult> StartRemoteAccessActivity(Guid deviceId);
+  Task<HubResult> StartDeviceAccessActivity(Guid deviceId);
   Task<HubResult> TestVncConnection(Guid guid, int port);
   Task UninstallAgent(Guid deviceId, string reason);
   Task<HubResult> UploadFile(FileUploadMetadata metadata, ChannelReader<byte[]> fileStream);
