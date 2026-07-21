@@ -3,11 +3,8 @@ using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Extensions;
-using ControlR.Libraries.Api.Contracts.Hubs.Clients;
-using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.LoadTester;
 

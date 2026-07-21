@@ -20,6 +20,19 @@ public static class ActivityExtensions
       ActivityKind.Internal,
       parentActivity.Context);
 
+    if (activity is null)
+    {
+      return null;
+    }
+
+    if (parentActivity.Source.Name == DefaultActivitySource.SourceName)
+    {
+      foreach (var tag in parentActivity.Tags)
+      {
+        activity.AddTag(tag.Key, tag.Value);
+      }
+    }
+
     return activity;
   }
 }

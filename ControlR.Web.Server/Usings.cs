@@ -2,6 +2,7 @@ global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Api.Contracts.Dtos;
 global using ControlR.Libraries.Shared.Extensions;
 global using ControlR.Libraries.Shared.Services;
+global using ControlR.Libraries.Shared.Diagnostics;
 global using ControlR.Libraries.Api.Contracts.Hubs;
 global using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 global using ControlR.Libraries.Shared.Constants;

@@ -13,13 +13,11 @@ internal static class DefaultActivitySource
     string userName,
     Guid userId,
     Guid deviceId,
-    string? parentId = null,
     IEnumerable<KeyValuePair<string, object?>>? tags = null)
   {
     var activity = Instance.StartActivity(
       RemoteAccessActivityNames.RemoteAccessSession,
-      ActivityKind.Internal,
-      parentId: parentId);
+      ActivityKind.Internal);
 
     if (activity is null)
     {
