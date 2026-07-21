@@ -9,7 +9,7 @@ using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.Settings;
 using System.Diagnostics;
-using ControlR.Libraries.Api.Contracts.Diagnostics;
+using ControlR.Libraries.Shared.Diagnostics;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -287,7 +287,7 @@ public class ViewerHub(
       SessionActivity?.Dispose();
       SessionActivity = null;
 
-      if (Context.User?.TryGetUserId(out var userId) != true)
+      if (Context.User is null)
       {
         _logger.LogCritical("User is null on disconnect. The principal may have been invalidated during the connection lifetime.");
         return;
@@ -355,11 +355,6 @@ public class ViewerHub(
   {
     try
     {
-      if (Context.User is null)
-      {
-        return HubResult.Fail("User is null.");
-      }
-
       if (!TryGetUserId(out var userId))
       {
         return HubResult.Fail("Failed to get user ID.");
@@ -680,10 +675,34 @@ public class ViewerHub(
     }
   }
 
-  public Task StartRemoteAccessSession()
+  public async Task<HubResult> StartRemoteAccessActivity(Guid deviceId)
   {
-    SessionActivity = RemoteAccessSessionActivitySource.StartRemoteAccessSession();
-    return Task.CompletedTask;
+    if (Context.User is null)
+    {
+      _logger.LogCritical("Failed to get user ID when starting remote access session.");
+      return HubResult.Fail("Unauthorized.");
+    }
+
+    var authResult = await TryAuthorizeAgainstDevice(deviceId);
+    if (!authResult.IsSuccess)
+    {
+      return HubResult.Fail("Unauthorized.");
+    }
+
+    var user = await _userManager.GetUserAsync(Context.User);
+
+    if (user?.UserName is null)
+    {
+      _logger.LogCritical("Failed to get user name when starting remote access session.");
+      return HubResult.Fail("Unauthorized.");
+    }
+
+    SessionActivity = DefaultActivitySource.StartRemoteAccessActivity(
+      userName: user.UserName, 
+      userId: user.Id, 
+      deviceId: deviceId);
+
+    return HubResult.Ok();
   }
 
   public async Task<HubResult> TestVncConnection(Guid guid, int port)

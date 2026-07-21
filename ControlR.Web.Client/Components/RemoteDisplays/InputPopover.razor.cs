@@ -1,4 +1,4 @@
-using ControlR.Libraries.Api.Contracts.Diagnostics;
+using ControlR.Libraries.Shared.Diagnostics;
 
 namespace ControlR.Web.Client.Components.RemoteDisplays;
 

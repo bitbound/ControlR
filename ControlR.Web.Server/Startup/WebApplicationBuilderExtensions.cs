@@ -89,9 +89,7 @@ public static class WebApplicationBuilderExtensions
         useServiceDiscovery: true,
         configureTracing: tracing =>
         {
-          tracing
-            .AddSource(DefaultActivitySources.Name)
-            .AddSource(RemoteAccessSessionActivitySource.SourceName);
+          tracing.AddSource(DefaultActivitySource.SourceName);
         });
     }
     else
