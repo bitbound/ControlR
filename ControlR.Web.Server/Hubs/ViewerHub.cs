@@ -283,6 +283,8 @@ public class ViewerHub(
     {
       await base.OnDisconnectedAsync(exception);
 
+      SessionActivity?.Dispose();
+
       if (Context.User?.TryGetUserId(out var userId) != true)
       {
         _logger.LogCritical("User is null on disconnect. The principal may have been invalidated during the connection lifetime.");
@@ -299,7 +301,6 @@ public class ViewerHub(
 
       user.IsOnline = false;
       await _userManager.UpdateAsync(user);
-      SessionActivity?.Dispose();
     }
     catch (Exception ex)
     {

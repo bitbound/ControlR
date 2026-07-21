@@ -14,22 +14,31 @@ public partial class DeviceAccessLayout
 
   [Inject]
   public required ILazyInjector<IChatState> ChatState { get; init; }
+
   [Inject]
   public required ILazyInjector<IControlrApi> ControlrApi { get; init; }
+
   [Inject]
   public required ILazyInjector<IDeviceState> DeviceAccessState { get; init; }
+
   [Inject]
   public required ILazyInjector<IHistoryEntryParser> HistoryEntryParser { get; init; }
+
   [Inject]
   public required ILazyInjector<IHubConnector> HubConnector { get; init; }
+
   [Inject]
   public required ILazyInjector<IRemoteControlState> RemoteControlState { get; init; }
+
   [Inject]
   public required ILazyInjector<IViewerRemoteControlStream> RemoteControlStream { get; init; }
+
   [Inject]
   public required ILazyInjector<IScreenWake> ScreenWake { get; init; }
+
   [Inject]
   public required ILazyInjector<ITerminalState> TerminalState { get; init; }
+
   [Inject]
   public required ILazyInjector<IHubConnection<IViewerHub>> ViewerHub { get; init; }
 
@@ -122,8 +131,9 @@ public partial class DeviceAccessLayout
       if (_hubConnectionState != HubConnectionState.Connected)
       {
         await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
-        await ViewerHub.Value.Server.StartRemoteAccessSession();
       }
+
+      await ViewerHub.Value.Server.StartRemoteAccessSession();
     }
     catch (Exception ex)
     {
@@ -294,7 +304,7 @@ public partial class DeviceAccessLayout
 
         if (RemoteControlStream.Value.IsConnected)
         {
-          try 
+          try
           {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await RemoteControlStream.Value.SendCloseStreamingSession(cts.Token);
@@ -329,7 +339,7 @@ public partial class DeviceAccessLayout
       TerminalState.Value.DraftCommandInputText = string.Empty;
       TerminalState.Value.InputHistory.Clear();
       TerminalState.Value.Output.Clear();
-      
+
       if (!ViewerHub.Value.IsConnected || TerminalState.Value.Id == Guid.Empty)
       {
         return;
