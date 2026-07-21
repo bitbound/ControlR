@@ -36,7 +36,7 @@ public class ViewerHubTraceFilter : IHubFilter
     if (_includedMethods.Contains(invocationContext.HubMethodName) && 
         viewerHub.SessionActivity is {} sessionActivity)
     {
-      using var childActivity = sessionActivity.StartChildActivity($"{invocationContext.HubMethodName}");
+      using var childActivity = sessionActivity.StartChildActivity(invocationContext.HubMethodName);
       try
       {
 
