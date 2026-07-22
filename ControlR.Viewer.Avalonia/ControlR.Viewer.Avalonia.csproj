@@ -23,10 +23,9 @@
     <PackageReference Include="Bitbound.SimpleMessenger" />
     <PackageReference Include="CommunityToolkit.Diagnostics" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="Devolutions.AvaloniaControls" />
-    <PackageReference Include="Devolutions.AvaloniaTheme.DevExpress" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="System.Reactive" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
