@@ -359,7 +359,7 @@ public partial class DeviceAccessLayout
   {
     try
     {
-      await ViewerHub.Value.Server.DisposeSessionActivity();
+      await ViewerHub.Value.Server.DisposeDeviceAccessActivity();
     }
     catch (Exception ex)
     {

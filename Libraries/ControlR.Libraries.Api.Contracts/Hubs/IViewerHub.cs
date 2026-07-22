@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Threading.Channels;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
@@ -10,13 +9,13 @@ namespace ControlR.Libraries.Api.Contracts.Hubs;
 
 public interface IViewerHub
 {
-  Task AddActivity(string activityName);
+  Task AddViewerActivity(string activityName);
   Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId);
   Task CloseTerminalSession(Guid deviceId, Guid terminalSessionId);
   Task<HubResult> CreateTerminalSession(
     Guid deviceId,
     Guid terminalSessionId);
-  Task DisposeSessionActivity();
+  Task DisposeDeviceAccessActivity();
   Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId);
   Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType);

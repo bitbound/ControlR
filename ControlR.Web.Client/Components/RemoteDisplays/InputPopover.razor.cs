@@ -1,5 +1,3 @@
-using ControlR.Libraries.Shared.Diagnostics;
-
 namespace ControlR.Web.Client.Components.RemoteDisplays;
 
 public partial class InputPopover : DisposableComponent
@@ -134,7 +132,7 @@ public partial class InputPopover : DisposableComponent
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await RemoteControlStream.RequestClipboardText(RemoteControlState.CurrentSession.SessionId, cts.Token);
-      await ViewerHub.Server.AddActivity(RemoteAccessActivityNames.ReceiveClipboardText);
+      await ViewerHub.Server.AddViewerActivity(RemoteAccessActivityNames.ReceiveClipboardText);
     }
     catch (Exception ex)
     {
@@ -163,7 +161,7 @@ public partial class InputPopover : DisposableComponent
       Snackbar.Add("Sending clipboard", Severity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await RemoteControlStream.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId, cts.Token);
-      await ViewerHub.Server.AddActivity(RemoteAccessActivityNames.SendClipboardText);
+      await ViewerHub.Server.AddViewerActivity(RemoteAccessActivityNames.SendClipboardText);
     }
     catch (Exception ex)
     {

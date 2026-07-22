@@ -9,7 +9,6 @@ using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.Settings;
 using System.Diagnostics;
-using ControlR.Libraries.Shared.Diagnostics;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -42,10 +41,10 @@ public class ViewerHub(
     set => SetItem(value);
   }
 
-  public Task AddActivity(string activityName)
+  public Task AddViewerActivity(string activityName)
   {
     using var activity = SessionActivity?.StartChildActivity(activityName);
-    _logger.LogInformation("Activity added: {EventName}", activityName);
+    _logger.LogInformation("Viewer Activity: {EventName}", activityName);
     return Task.CompletedTask;
   }
 
@@ -122,7 +121,7 @@ public class ViewerHub(
     }
   }
 
-  public Task DisposeSessionActivity()
+  public Task DisposeDeviceAccessActivity()
   {
     SessionActivity?.Dispose();
     SessionActivity = null;
