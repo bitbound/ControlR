@@ -9,8 +9,10 @@ public class LogonTokenModel
   public required Guid DeviceId { get; set; }
   public required DateTimeOffset ExpiresAt { get; set; }
   public bool IsConsumed => Volatile.Read(ref _consumed) == 1;
+  public string? SessionCorrelationId { get; set; }
   public required Guid TenantId { get; set; }
   public required string Token { get; set; }
+  public string? UserCorrelationId { get; set; }
   public required Guid UserId { get; set; }
 
   /// <summary>

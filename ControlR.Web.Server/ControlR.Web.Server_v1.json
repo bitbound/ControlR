@@ -2045,6 +2045,22 @@
             "minLength": 0,
             "type": "string"
           },
+          "userDisplayName": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sessionCorrelationId": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "expirationMinutes": {
             "maximum": 1440,
             "minimum": 1,
@@ -2074,6 +2090,14 @@
           "userId": {
             "type": "string",
             "format": "uuid"
+          },
+          "sessionCorrelationId": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "expirationMinutes": {
             "maximum": 1440,

@@ -7,6 +7,7 @@ public class LogonTokenValidationResult
   public string? ErrorMessage { get; set; }
   [MemberNotNullWhen(true, nameof(UserId), nameof(TenantId))]
   public bool IsValid { get; set; }
+  public string? SessionCorrelationId { get; set; }
   public Guid? TenantId { get; set; }
 
   public Guid? UserId { get; set; }
@@ -22,13 +23,15 @@ public class LogonTokenValidationResult
 
   public static LogonTokenValidationResult Success(
     Guid userId,
-    Guid tenantId)
+    Guid tenantId,
+    string? sessionCorrelationId = null)
   {
     return new LogonTokenValidationResult
     {
       IsValid = true,
       UserId = userId,
-      TenantId = tenantId
+      TenantId = tenantId,
+      SessionCorrelationId = sessionCorrelationId
     };
   }
 }

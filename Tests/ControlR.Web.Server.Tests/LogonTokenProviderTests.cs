@@ -135,7 +135,7 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
     var expirationMinutes = 15;
 
-    var createResult = await logonTokenProvider.CreateToken(deviceId, tenant.Id, user.Id, expirationMinutes, TestContext.Current.CancellationToken);
+    var createResult = await logonTokenProvider.CreateToken(deviceId, tenant.Id, user.Id, expirationMinutes, cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.True(createResult.IsSuccess);
     testApp.TimeProvider.Advance(TimeSpan.FromMinutes(expirationMinutes + 1));
