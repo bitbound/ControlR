@@ -20,13 +20,11 @@
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />
     <PackageVersion Include="CommunityToolkit.Diagnostics" Version="8.4.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+     <PackageVersion Include="System.Reactive" Version="6.1.0" />
     <PackageVersion Include="ControlR.ApiClient" Version="0.23.17" />
     <PackageVersion Include="ControlR.Viewer.Avalonia" Version="0.23.17" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
-    <PackageVersion Include="Devolutions.AvaloniaControls" Version="2026.7.6" />
     <PackageVersion Include="Devolutions.AvaloniaTheme.DevExpress" Version="2026.7.6" />
-    <PackageVersion Include="Devolutions.AvaloniaTheme.Linux" Version="2026.7.6" />
-    <PackageVersion Include="Devolutions.AvaloniaTheme.MacOS" Version="2026.7.6" />
     <PackageVersion Include="Devolutions.Cadeau" Version="2026.6.18" />
     <PackageVersion Include="Extensions.MudBlazor.StaticInput" Version="4.1.0" />
     <PackageVersion Include="HotAvalonia" Version="3.1.3" />

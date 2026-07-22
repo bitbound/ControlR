@@ -1,10 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
-using Avalonia.Layout;
 using ControlR.Viewer.Avalonia.ViewModels.Fakes;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 using System.ComponentModel;
