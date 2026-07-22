@@ -199,6 +199,9 @@ export async function applyPinchZoom(contentDiv, canvasRef, canvasCssWidth, canv
 export async function drawFrame(canvasId, x, y, width, height, imageFormat, encodedRegion) {
   try {
     const state = getState(canvasId);
+    if (!state.canvas2dContext) {
+      return;
+    }
     const byteArray = new Uint8Array(encodedRegion.slice());
     const imageBlob = new Blob([byteArray], { type: getBlobType(imageFormat) });
     const bitmap = await createImageBitmap(imageBlob);
