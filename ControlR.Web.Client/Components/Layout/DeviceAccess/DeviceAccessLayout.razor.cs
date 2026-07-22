@@ -14,22 +14,31 @@ public partial class DeviceAccessLayout
 
   [Inject]
   public required ILazyInjector<IChatState> ChatState { get; init; }
+
   [Inject]
   public required ILazyInjector<IControlrApi> ControlrApi { get; init; }
+
   [Inject]
   public required ILazyInjector<IDeviceState> DeviceAccessState { get; init; }
+
   [Inject]
   public required ILazyInjector<IHistoryEntryParser> HistoryEntryParser { get; init; }
+
   [Inject]
   public required ILazyInjector<IHubConnector> HubConnector { get; init; }
+
   [Inject]
   public required ILazyInjector<IRemoteControlState> RemoteControlState { get; init; }
+
   [Inject]
   public required ILazyInjector<IViewerRemoteControlStream> RemoteControlStream { get; init; }
+
   [Inject]
   public required ILazyInjector<IScreenWake> ScreenWake { get; init; }
+
   [Inject]
   public required ILazyInjector<ITerminalState> TerminalState { get; init; }
+
   [Inject]
   public required ILazyInjector<IHubConnection<IViewerHub>> ViewerHub { get; init; }
 
@@ -64,6 +73,7 @@ public partial class DeviceAccessLayout
       {
         await TryDisposeChat();
         await TryDisposeTerminal();
+        await TryDisposeSessionActivity();
         await TryDisposeRemoteControlSession();
         ChatState.Value.Clear();
       }
@@ -114,6 +124,7 @@ public partial class DeviceAccessLayout
       await GetDeviceInfo();
       _previousDeviceId = _deviceId;
 
+      // Registrations are removed in BaseLayout when disposing.
       Messenger.Value.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage);
       Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
       Messenger.Value.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
@@ -122,6 +133,10 @@ public partial class DeviceAccessLayout
       if (_hubConnectionState != HubConnectionState.Connected)
       {
         await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
+      }
+      else
+      {
+        await StartDeviceAccessActivity();
       }
     }
     catch (Exception ex)
@@ -252,12 +267,32 @@ public partial class DeviceAccessLayout
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
   {
     _hubConnectionState = message.NewState;
+    if (_hubConnectionState == HubConnectionState.Connected)
+    {
+      await StartDeviceAccessActivity();
+    }
     await InvokeAsync(StateHasChanged);
   }
 
   private void NavigateBackToDashboard()
   {
     NavManager.NavigateTo("/");
+  }
+
+  private async Task StartDeviceAccessActivity()
+  {
+    try
+    {
+      var startResult = await ViewerHub.Value.Server.StartDeviceAccessActivity(_deviceId);
+      if (startResult.IsSuccess)
+      {
+        Logger.LogError("Failed to start remote access activity.");
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error starting device access activity.");
+    }
   }
 
   private async Task TryDisposeChat()
@@ -293,7 +328,7 @@ public partial class DeviceAccessLayout
 
         if (RemoteControlStream.Value.IsConnected)
         {
-          try 
+          try
           {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await RemoteControlStream.Value.SendCloseStreamingSession(cts.Token);
@@ -320,6 +355,18 @@ public partial class DeviceAccessLayout
     }
   }
 
+  private async Task TryDisposeSessionActivity()
+  {
+    try
+    {
+      await ViewerHub.Value.Server.DisposeSessionActivity();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while disposing remote access session.");
+    }
+  }
+
   private async Task TryDisposeTerminal()
   {
     try
@@ -328,7 +375,7 @@ public partial class DeviceAccessLayout
       TerminalState.Value.DraftCommandInputText = string.Empty;
       TerminalState.Value.InputHistory.Clear();
       TerminalState.Value.Output.Clear();
-      
+
       if (!ViewerHub.Value.IsConnected || TerminalState.Value.Id == Guid.Empty)
       {
         return;

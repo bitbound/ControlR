@@ -19,6 +19,7 @@ using System.Threading.RateLimiting;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.ExceptionHandlers;
+using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Startup;
 
@@ -83,7 +84,13 @@ public static class WebApplicationBuilderExtensions
     if (!builder.Environment.IsEnvironment("Testing"))
     {
       // Add telemetry.
-      builder.AddServiceDefaults(ServiceNames.Controlr, useServiceDiscovery: true);
+      builder.AddServiceDefaults(
+        ServiceNames.Controlr, 
+        useServiceDiscovery: true,
+        configureTracing: tracing =>
+        {
+          tracing.AddSource(DefaultActivitySource.SourceName);
+        });
     }
     else
     {
@@ -189,6 +196,7 @@ public static class WebApplicationBuilderExtensions
         options.EnableDetailedErrors = appOptions.EnableSignalrDetailedErrors;
         options.MaximumReceiveMessageSize = 100_000;
         options.MaximumParallelInvocationsPerClient = 2;
+        options.AddFilter<ViewerHubTraceFilter>();
       })
       .AddMessagePackProtocol()
       .AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true; });

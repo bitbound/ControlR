@@ -24,10 +24,10 @@ public class HubResult
     ErrorCode = errorCode;
   }
 
-  public Guid? ErrorCode { get; }
+  public Guid? ErrorCode { get; init; }
   
   [MemberNotNullWhen(false, nameof(Reason))]
-  public bool IsSuccess { get; init; }
+  public virtual bool IsSuccess { get; init; }
   
   public string? Reason { get; init; }
 
@@ -57,11 +57,12 @@ public class HubResult
 /// Describes the success or failure of any kind of operation.
 /// </summary>
 [MessagePackObject(keyAsPropertyName: true)]
-public class HubResult<T>
+public class HubResult<T> : HubResult
 {
   [JsonConstructor]
   [SerializationConstructor]
   public HubResult(T? value, bool isSuccess, string? reason = null, Guid? errorCode = null)
+    : base(isSuccess, reason, errorCode)
   {
     if (!isSuccess && string.IsNullOrWhiteSpace(reason))
     {
@@ -74,12 +75,9 @@ public class HubResult<T>
     ErrorCode = errorCode;
   }
 
-  public Guid? ErrorCode { get; }
+  
   [MemberNotNullWhen(true, nameof(Value))]
-  [MemberNotNullWhen(false, nameof(Reason))]
-  public bool IsSuccess { get; init; }
-
-  public string? Reason { get; init; }
+  public override bool IsSuccess { get; init; }
 
   public T? Value { get; init; }
 }

@@ -1,14 +1,10 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Data;
-using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.CreateInstallerKeyRequestDto;

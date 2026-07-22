@@ -8,6 +8,8 @@ using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.Settings;
+using System.Diagnostics;
+using ControlR.Libraries.Shared.Diagnostics;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -34,6 +36,19 @@ public class ViewerHub(
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
 
+  public Activity? SessionActivity
+  {
+    get => GetItem((Activity?)null);
+    set => SetItem(value);
+  }
+
+  public Task AddActivity(string activityName)
+  {
+    using var activity = SessionActivity?.StartChildActivity(activityName);
+    _logger.LogInformation("Activity added: {EventName}", activityName);
+    return Task.CompletedTask;
+  }
+
   public async Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
   {
     try
@@ -49,9 +64,11 @@ public class ViewerHub(
         deviceId,
         targetProcessId);
 
-      return await _agentHub.Clients
+      var result = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .CloseChatSession(sessionId, targetProcessId);
+
+      return result;
     }
     catch (Exception ex)
     {
@@ -90,15 +107,26 @@ public class ViewerHub(
         return HubResult.Fail("Forbidden.");
       }
 
-      return await _agentHub.Clients
+      var createResult = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .CreateTerminalSession(terminalSessionId, Context.ConnectionId);
+
+      _logger.LogInformation("Create terminal session.  Success: {IsSuccess}", createResult.IsSuccess);
+
+      return createResult;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating terminal session.");
       return HubResult.Fail("An error occurred.");
     }
+  }
+
+  public Task DisposeSessionActivity()
+  {
+    SessionActivity?.Dispose();
+    SessionActivity = null;
+    return Task.CompletedTask;
   }
 
   public async Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId)
@@ -256,7 +284,10 @@ public class ViewerHub(
     {
       await base.OnDisconnectedAsync(exception);
 
-      if (Context.User?.TryGetUserId(out var userId) != true)
+      SessionActivity?.Dispose();
+      SessionActivity = null;
+
+      if (Context.User is null)
       {
         _logger.LogCritical("User is null on disconnect. The principal may have been invalidated during the connection lifetime.");
         return;
@@ -324,11 +355,6 @@ public class ViewerHub(
   {
     try
     {
-      if (Context.User is null)
-      {
-        return HubResult.Fail("User is null.");
-      }
-
       if (!TryGetUserId(out var userId))
       {
         return HubResult.Fail("Failed to get user ID.");
@@ -369,9 +395,11 @@ public class ViewerHub(
         ViewerConnectionId = Context.ConnectionId
       };
 
-      return await _agentHub.Clients
+      var result = await _agentHub.Clients
         .Client(device.ConnectionId)
         .CreateRemoteControlSession(sessionRequestDto);
+
+      return result;
     }
     catch (Exception ex)
     {
@@ -415,9 +443,14 @@ public class ViewerHub(
         userId,
         Context.ConnectionAborted);
 
-      var displayName = user.UserPreferences
-        ?.FirstOrDefault(x => x.Name == UserPreferenceNames.UserDisplayName)
-        ?.Value;
+      var displayNameResult = await GetDisplayName(userId);
+      if (!displayNameResult.IsSuccess)
+      {
+        return HubResult.Fail(displayNameResult.Reason ?? "Failed to resolve display name.");
+      }
+
+      var displayName = displayNameResult.Value;
+      
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
 
       _logger.LogInformation(
@@ -499,9 +532,11 @@ public class ViewerHub(
         SenderEmail = $"{user.Email}"
       };
 
-      return await _agentHub.Clients
+      var sendResult = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .SendChatMessage(dto);
+
+      return sendResult;
     }
     catch (Exception ex)
     {
@@ -595,9 +630,13 @@ public class ViewerHub(
       // Create a new DTO with ViewerConnectionId
       var dtoWithViewerConnection = dto with { ViewerConnectionId = Context.ConnectionId };
 
-      return await _agentHub.Clients
+      var sendResult = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .ReceiveTerminalInput(dtoWithViewerConnection);
+
+      _logger.LogInformation("Terminal input sent to agent. Success: {Success}", sendResult.IsSuccess);
+
+      return sendResult;
     }
     catch (Exception ex)
     {
@@ -634,6 +673,36 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while sending wake device command.");
     }
+  }
+
+  public async Task<HubResult> StartDeviceAccessActivity(Guid deviceId)
+  {
+    if (Context.User is null)
+    {
+      _logger.LogCritical("Failed to get user ID when starting remote access session.");
+      return HubResult.Fail("Unauthorized.");
+    }
+
+    var authResult = await TryAuthorizeAgainstDevice(deviceId);
+    if (!authResult.IsSuccess)
+    {
+      return HubResult.Fail("Unauthorized.");
+    }
+
+    var user = await _userManager.GetUserAsync(Context.User);
+
+    if (user?.UserName is null)
+    {
+      _logger.LogCritical("Failed to get user name when starting remote access session.");
+      return HubResult.Fail("Unauthorized.");
+    }
+
+    SessionActivity = DefaultActivitySource.StartRemoteAccessActivity(
+      userName: user.UserName, 
+      userId: user.Id, 
+      deviceId: deviceId);
+
+    return HubResult.Ok();
   }
 
   public async Task<HubResult> TestVncConnection(Guid guid, int port)
@@ -686,6 +755,7 @@ public class ViewerHub(
   {
     try
     {
+
       var deviceId = fileUploadMetadata.DeviceId;
 
       if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
