@@ -1,13 +1,14 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Text;
+using ControlR.Web.Server.Diagnostics;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
 
 public partial class ViewerHubTraceFilter : IHubFilter
 {
-  private static readonly HashSet<string> _includedMethods = 
+  private static readonly HashSet<string> _includedMethods =
   [
     nameof(ViewerHub.CloseChatSession),
     nameof(ViewerHub.CloseTerminalSession),
@@ -40,29 +41,20 @@ public partial class ViewerHubTraceFilter : IHubFilter
       return await next(invocationContext);
     }
 
-    if (_includedMethods.Contains(invocationContext.HubMethodName) && 
-        viewerHub.SessionActivity is {} sessionActivity)
+    if (Activity.Current is { } currentActivity &&
+        invocationContext.Context.User is { } userPrincipal)
     {
-      using var childActivity = sessionActivity.StartChildActivity(GetSnakeCaseName(invocationContext.HubMethodName));
-      try
+      var userManager = invocationContext.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+      var appUser = await userManager.GetUserAsync(userPrincipal);
+      currentActivity.SetTag(ActivityTagKeys.UserId, appUser?.Id);
+      currentActivity.SetTag(ActivityTagKeys.UserName, appUser?.UserName);
+
+      if (_includedMethods.Contains(invocationContext.HubMethodName))
       {
-
-        var result = await next(invocationContext);
-
-        var isSuccess = result switch
-        {
-          HubResult hubResult => hubResult.IsSuccess,
-          _ => true
-        };
-
-        var statusCode = isSuccess ? ActivityStatusCode.Ok : ActivityStatusCode.Error;
-        childActivity?.SetStatus(statusCode);
-        return result;
-      }
-      catch
-      {
-        childActivity?.SetStatus(ActivityStatusCode.Error);
-        throw;
+        using var childActivity = currentActivity.StartChildActivity(GetSnakeCaseName(invocationContext.HubMethodName));
+        childActivity?.SetTag(ActivityTagKeys.UserId, appUser?.Id);
+        childActivity?.SetTag(ActivityTagKeys.UserName, appUser?.UserName);
+        return await next(invocationContext);
       }
     }
 
