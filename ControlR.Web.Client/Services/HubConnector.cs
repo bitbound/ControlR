@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Connections.Client;
 
@@ -14,17 +13,13 @@ public interface IHubConnector
 internal class HubConnector(
   NavigationManager navMan,
   IServiceProvider serviceProvider,
-  IHubConnection<IViewerHub> viewerHub,
-  IMessenger messenger,
-  ILogger<HubConnector> logger) : IHubConnector
+  IMessenger messenger) : IHubConnector
 {
   private readonly HashSet<object> _configuredHubs = [];
   private readonly ConcurrentDictionary<Type, SemaphoreSlim> _connectLocks = [];
-  private readonly ILogger<HubConnector> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly NavigationManager _navMan = navMan;
   private readonly IServiceProvider _serviceProvider = serviceProvider;
-  private readonly IHubConnection<IViewerHub> _viewerHub = viewerHub;
 
   public async Task Connect<THub>(string relativeHubEndpoint, CancellationToken cancellationToken = default)
     where THub : class

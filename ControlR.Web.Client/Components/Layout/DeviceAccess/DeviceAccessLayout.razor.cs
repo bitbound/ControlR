@@ -124,6 +124,7 @@ public partial class DeviceAccessLayout
       await GetDeviceInfo();
       _previousDeviceId = _deviceId;
 
+      // Registrations are removed in BaseLayout when disposing.
       Messenger.Value.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage);
       Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
       Messenger.Value.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
@@ -133,11 +134,9 @@ public partial class DeviceAccessLayout
       {
         await HubConnector.Value.Connect<IViewerHub>(AppConstants.ViewerHubPath);
       }
-
-      var startResult = await ViewerHub.Value.Server.StartDeviceAccessActivity(_deviceId);
-      if (startResult.IsSuccess)
+      else
       {
-        Logger.LogError("Failed to start remote access activity.");
+        await StartDeviceAccessActivity();
       }
     }
     catch (Exception ex)
@@ -268,12 +267,32 @@ public partial class DeviceAccessLayout
   private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
   {
     _hubConnectionState = message.NewState;
+    if (_hubConnectionState == HubConnectionState.Connected)
+    {
+      await StartDeviceAccessActivity();
+    }
     await InvokeAsync(StateHasChanged);
   }
 
   private void NavigateBackToDashboard()
   {
     NavManager.NavigateTo("/");
+  }
+
+  private async Task StartDeviceAccessActivity()
+  {
+    try
+    {
+      var startResult = await ViewerHub.Value.Server.StartDeviceAccessActivity(_deviceId);
+      if (startResult.IsSuccess)
+      {
+        Logger.LogError("Failed to start remote access activity.");
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error starting device access activity.");
+    }
   }
 
   private async Task TryDisposeChat()
