@@ -1,8 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
-using ControlR.Web.Client.Models;
-using ControlR.Libraries.Viewer.Common.State;
-using ControlR.Libraries.WebSocketRelay.Client;
-using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
