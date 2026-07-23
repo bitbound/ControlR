@@ -42,6 +42,7 @@ jobs:
           private-key: ${{ secrets.BBB_PRIVATE_KEY }}
 
       - uses: anomalyco/opencode/github@latest
+        timeout-minutes: 30
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
