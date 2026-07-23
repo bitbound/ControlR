@@ -1,5 +1,6 @@
 using ControlR.Web.Server.Authz.Roles;
 using ControlR.Web.Server.Data.Configuration;
+using ControlR.Web.Server.Data.Enums;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
@@ -7,6 +8,16 @@ namespace ControlR.Web.Server.Data;
 
 public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionKeyContext
 {
+  // EF Core's fluent API cannot express conditional check constraints or partial unique
+  // indexes. These SQL strings assume default column mapping (property name == column name).
+  private static readonly string _serverKindFilter =
+    $"\"{nameof(ServiceAccount.Kind)}\" = '{nameof(ServiceAccountKind.Server)}' " +
+    $"AND \"{nameof(ServiceAccount.TenantId)}\" IS NULL";
+
+  private static readonly string _tenantKindFilter =
+    $"\"{nameof(ServiceAccount.Kind)}\" = '{nameof(ServiceAccountKind.Tenant)}' " +
+    $"AND \"{nameof(ServiceAccount.TenantId)}\" IS NOT NULL";
+
   private readonly Guid? _tenantId;
   private readonly Guid? _userId;
 
@@ -195,11 +206,9 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .ToTable(t =>
       {
         t.HasCheckConstraint(
-          "CK_ServiceAccounts_Kind_Allowed",
-          "\"Kind\" IN ('Server', 'Tenant')");
-        t.HasCheckConstraint(
           "CK_ServiceAccounts_Kind_TenantId",
-          "(\"Kind\" = 'Server' AND \"TenantId\" IS NULL) OR (\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL)");
+          $"(\"{nameof(ServiceAccount.Kind)}\" = '{nameof(ServiceAccountKind.Server)}' AND \"{nameof(ServiceAccount.TenantId)}\" IS NULL) OR " +
+          $"(\"{nameof(ServiceAccount.Kind)}\" = '{nameof(ServiceAccountKind.Tenant)}' AND \"{nameof(ServiceAccount.TenantId)}\" IS NOT NULL)");
       });
 
     builder
@@ -207,14 +216,14 @@ public class AppDb : IdentityDbContext<AppUser, AppRole, Guid>, IDataProtectionK
       .HasIndex(x => x.Name)
       .HasDatabaseName("IX_ServiceAccounts_Server_Name")
       .IsUnique()
-      .HasFilter("\"Kind\" = 'Server' AND \"TenantId\" IS NULL");
+      .HasFilter(_serverKindFilter);
 
     builder
       .Entity<ServiceAccount>()
       .HasIndex(x => new { x.TenantId, x.Name })
       .HasDatabaseName("IX_ServiceAccounts_TenantId_Name")
       .IsUnique()
-      .HasFilter("\"Kind\" = 'Tenant' AND \"TenantId\" IS NOT NULL");
+      .HasFilter(_tenantKindFilter);
 
     builder
       .Entity<ServiceAccount>()

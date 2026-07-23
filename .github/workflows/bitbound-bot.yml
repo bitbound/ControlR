@@ -1,0 +1,51 @@
+name: opencode
+
+on:
+  issue_comment:
+    types: [created, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  opencode:
+    runs-on: ${{ fromJson('["self-hosted","Linux"]') }}
+
+    if: |
+      github.event_name == 'pull_request' ||
+      ((github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && (
+        contains(github.event.comment.body, '/bb') ||
+        contains(github.event.comment.body, '/bbb') ||
+        contains(github.event.comment.body, '@bb') ||
+        contains(github.event.comment.body, '@bbb')
+      ))
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.BBB_APP_ID }}
+          private-key: ${{ secrets.BBB_PRIVATE_KEY }}
+
+      - uses: anomalyco/opencode/github@latest
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          model: ${{vars.BBB_MODEL}}
+          use_github_token: true
+          mentions: "/bbb,/bb,@bbb,@bb"
