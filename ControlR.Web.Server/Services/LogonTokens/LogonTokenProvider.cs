@@ -1,6 +1,8 @@
+using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Data.Enums;
+using ControlR.Web.Server.Primitives;
+using ControlR.Web.Server.Services.Settings;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Services.LogonTokens;
@@ -12,6 +14,8 @@ public interface ILogonTokenProvider
     Guid tenantId,
     Guid userId,
     int expirationMinutes = 5,
+    string? userCorrelationId = null,
+    string? sessionCorrelationId = null,
     CancellationToken cancellationToken = default);
 
   Task<HttpResult<LogonTokenModel>> CreateTokenForExternal(
@@ -19,6 +23,8 @@ public interface ILogonTokenProvider
     Guid tenantId,
     string userCorrelationId,
     int expirationMinutes = 5,
+    string? userDisplayName = null,
+    string? sessionCorrelationId = null,
     CancellationToken cancellationToken = default);
 
   Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId, CancellationToken cancellationToken = default);
@@ -43,6 +49,8 @@ public class LogonTokenProvider(
     Guid tenantId,
     Guid userId,
     int expirationMinutes = 5,
+    string? userCorrelationId = null,
+    string? sessionCorrelationId = null,
     CancellationToken cancellationToken = default)
   {
     await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -65,7 +73,9 @@ public class LogonTokenProvider(
       ExpiresAt = expiresAt,
       UserId = userId,
       TenantId = tenantId,
-      CreatedAt = now
+      CreatedAt = now,
+      UserCorrelationId = userCorrelationId,
+      SessionCorrelationId = sessionCorrelationId
     };
 
     // The absolute expiration lets the cache evict the entry on its own once the token
@@ -84,10 +94,13 @@ public class LogonTokenProvider(
     Guid tenantId,
     string userCorrelationId,
     int expirationMinutes = 5,
+    string? userDisplayName = null,
+    string? sessionCorrelationId = null,
     CancellationToken cancellationToken = default)
   {
     using var scope = _scopeFactory.CreateScope();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var preferencesManager = scope.ServiceProvider.GetRequiredService<IUserPreferencesManager>();
 
     var username = $"ext-{userCorrelationId.Trim()}";
     var guestUser = await userManager.Users
@@ -121,7 +134,22 @@ public class LogonTokenProvider(
         "Failed to prepare external user for token issuance.");
     }
 
-    return await CreateToken(deviceId, tenantId, guestUser.Id, expirationMinutes, cancellationToken);
+    if (!string.IsNullOrWhiteSpace(userDisplayName))
+    {
+      var preferenceResult = await preferencesManager.SetPreference(
+        guestUser.Id,
+        new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, userDisplayName.Trim()),
+        cancellationToken);
+
+      if (!preferenceResult.IsSuccess)
+      {
+        _logger.LogWarning(
+          "Failed to set UserDisplayName preference for external user {UserId}. Reason: {Reason}",
+          guestUser.Id, preferenceResult.Reason);
+      }
+    }
+
+    return await CreateToken(deviceId, tenantId, guestUser.Id, expirationMinutes, userCorrelationId, sessionCorrelationId, cancellationToken);
   }
 
   public async Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId, CancellationToken cancellationToken = default)
@@ -158,7 +186,7 @@ public class LogonTokenProvider(
       "Validated and consumed logon token for user {UserId} on device {DeviceId}.",
       userId, deviceId);
 
-    return LogonTokenValidationResult.Success(userId.Value, logonToken.TenantId);
+    return LogonTokenValidationResult.Success(userId.Value, logonToken.TenantId, logonToken.SessionCorrelationId);
   }
 
   public async Task<Result<LogonTokenValidationResult>> ValidateToken(string token, CancellationToken cancellationToken = default)
@@ -184,7 +212,7 @@ public class LogonTokenProvider(
 
       _logger.LogInformation("Validated logon token for user {UserId}", userId);
 
-      var result = LogonTokenValidationResult.Success(userId.Value, logonToken.TenantId);
+      var result = LogonTokenValidationResult.Success(userId.Value, logonToken.TenantId, logonToken.SessionCorrelationId);
       return Result.Ok(result);
     }
     catch (Exception ex)

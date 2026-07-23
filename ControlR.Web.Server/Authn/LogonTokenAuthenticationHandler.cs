@@ -62,6 +62,11 @@ public class LogonTokenAuthenticationHandler(
       new(UserClaimTypes.DeviceSessionScope, deviceId.ToString()),
     };
 
+    if (!string.IsNullOrWhiteSpace(tokenValidation.SessionCorrelationId))
+    {
+      claims.Add(new(UserClaimTypes.SessionCorrelationId, tokenValidation.SessionCorrelationId));
+    }
+
     var roles = await _userManager.GetRolesAsync(user);
     foreach (var role in roles)
     {

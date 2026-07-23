@@ -58,7 +58,7 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var result = await controller.CreateForUser(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<ILogonTokenProvider>(),
-      new CreateLogonTokenForUserRequestDto(device.Id, tenant.Id, user.Id, 15));
+      new CreateLogonTokenForUserRequestDto(device.Id, tenant.Id, user.Id, ExpirationMinutes: 15));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);

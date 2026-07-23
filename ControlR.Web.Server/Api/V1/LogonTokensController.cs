@@ -30,7 +30,9 @@ public class LogonTokensController : ControllerBase
       request.DeviceId,
       request.TenantId,
       request.UserCorrelationId,
-      request.ExpirationMinutes);
+      request.ExpirationMinutes,
+      userDisplayName: request.UserDisplayName,
+      sessionCorrelationId: request.SessionCorrelationId);
 
     if (!result.IsSuccess)
     {
@@ -59,7 +61,8 @@ public class LogonTokensController : ControllerBase
       request.DeviceId,
       request.TenantId,
       request.UserId,
-      request.ExpirationMinutes);
+      request.ExpirationMinutes,
+      sessionCorrelationId: request.SessionCorrelationId);
 
     if (!result.IsSuccess)
     {

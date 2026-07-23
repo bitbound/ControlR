@@ -7,5 +7,9 @@ public record CreateLogonTokenForExternalRequestDto(
   Guid TenantId,
   [property: StringLength(252)]
   string UserCorrelationId,
+  [property: StringLength(50)]
+  string? UserDisplayName = null,
+  [property: StringLength(128)]
+  string? SessionCorrelationId = null,
   [property: Range(1, 1440)]
   int ExpirationMinutes = 15);
