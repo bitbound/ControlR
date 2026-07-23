@@ -61,6 +61,21 @@ If your service is guaranteed to only receive traffic from a trusted reverse pro
 
 If the public IP for your connected devices is not showing correctly, the problem is likely due to a misconfiguration here.  If `ControlR_Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides` is set to `Debug`, you will see internal logs from Microsoft's `ForwardedHeadersMiddleware` showing the IP that isn't being trusted.
 
+## Agent Route Allowlist (Cloudflare Access and Similar Proxies)
+
+If you front your server with a browser-authentication proxy such as Cloudflare Access, Tailscale Funnel, or Pomerium, you need to know which paths the agent actually uses. The agent runs unattended on managed devices and cannot complete a browser-based login flow, so the routes it calls must reach the server without going through the proxy's auth layer. Everything else can stay behind it.
+
+The agent only touches these four route patterns:
+
+| Path | Transport | Purpose |
+|------|-----------|---------|
+| `/hubs/agent` | HTTP and WebSockets | SignalR connection between the agent and the server. Carries device registration, heartbeats, status updates, and command dispatch. |
+| `/relay` | WebSockets | Used by the desktop client on the target device to stream screen captures and receive input events during remote control sessions. |
+| `/api/agent` | HTTP | REST endpoints used by the agent (update metadata, device registration, etc.). |
+| `/downloads` | HTTP | Agent bundles, installers, and `Version.txt` that the agent fetches when checking for and applying updates. |
+
+Configure your proxy to bypass authentication for these four prefixes. All other paths, including the web UI, the viewer SignalR hub (`/hubs/viewer`), and the internal and V1 API surfaces, should remain protected. The agent does not need access to any of them.
+
 ## Server Configuration:
 
 The environment variables for the server can be found in the [docker-compose.yml](./docker-compose/docker-compose.yml) file.  Follow the instructions at the top to supply sensitive values using environment variables and/or Docker Secrets.
