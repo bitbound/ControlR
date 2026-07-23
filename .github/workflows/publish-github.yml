@@ -98,10 +98,11 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
-      - name: Copy OpenAPI Spec
+      - name: Copy OpenAPI Specs
         shell: bash
         run: |
-          cp ./server-publish/ControlR.Web.Server.json ./ControlR.Web.Server.json
+          cp ./server-publish/ControlR.Web.Server_internal.json ./ControlR.Web.Server_internal.json
+          cp ./server-publish/ControlR.Web.Server_v1.json ./ControlR.Web.Server_v1.json
 
       - name: Prepare Release Artifacts
         shell: bash
@@ -124,7 +125,8 @@ jobs:
           body_path: ./server-publish/wwwroot/downloads/release-notes.md 
           files: |
             server-linux-amd64.zip
-            ControlR.Web.Server.json
+            ControlR.Web.Server_internal.json
+            ControlR.Web.Server_v1.json
             docker-compose.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
