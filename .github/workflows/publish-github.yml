@@ -169,6 +169,7 @@ jobs:
           fi
 
       - name: Release Created
+        shell: bash
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** v${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
