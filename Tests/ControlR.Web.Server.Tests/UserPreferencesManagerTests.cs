@@ -302,7 +302,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
 
     var result = await _userPreferencesManager.SetPreference(
       user.Id,
-      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, new string('a', 26)),
+      new InternalDtos.UserPreferenceRequestDto(UserPreferenceNames.UserDisplayName, new string('a', 51)),
       cancellationToken);
 
     Assert.False(result.IsSuccess);

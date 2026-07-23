@@ -2046,7 +2046,7 @@
             "type": "string"
           },
           "userDisplayName": {
-            "maxLength": 128,
+            "maxLength": 50,
             "minLength": 0,
             "type": [
               "null",

@@ -1,5 +1,6 @@
 using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Services.LogonTokens;
+using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,6 +33,32 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task CreateTokenForExternal_WithUserDisplayName_SetsPreference()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+    var preferencesManager = scope.ServiceProvider.GetRequiredService<IUserPreferencesManager>();
+
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var userCorrelationId = $"test-{Guid.NewGuid():N}";
+    var userDisplayName = "Test Display Name";
+
+    var createResult = await logonTokenProvider.CreateTokenForExternal(
+      deviceId, tenant.Id, userCorrelationId,
+      userDisplayName: userDisplayName,
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.True(createResult.IsSuccess);
+
+    var preferences = await preferencesManager.GetAllPreferences(
+      createResult.Value.UserId, TestContext.Current.CancellationToken);
+
+    Assert.Equal(userDisplayName, preferences.UserDisplayName);
+  }
+
+  [Fact]
   public async Task CreateToken_WithInvalidUserId_ReturnsNotFound()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -46,6 +73,57 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
 
     Assert.False(result.IsSuccess);
     Assert.Equal(HttpResultErrorCode.NotFound, result.ErrorCode);
+  }
+
+  [Fact]
+  public async Task CreateToken_WithoutSessionCorrelationId_ReturnsNull()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+
+    var createResult = await logonTokenProvider.CreateToken(
+      deviceId, tenant.Id, user.Id, cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.True(createResult.IsSuccess);
+    Assert.Null(createResult.Value.SessionCorrelationId);
+
+    var validationResult = await logonTokenProvider.ValidateAndConsumeToken(
+      createResult.Value.Token, deviceId, TestContext.Current.CancellationToken);
+
+    Assert.True(validationResult.IsValid);
+    Assert.Null(validationResult.SessionCorrelationId);
+  }
+
+  [Fact]
+  public async Task CreateToken_WithSessionCorrelationId_RoundTripsThroughValidation()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+    var sessionCorrelationId = $"session-{Guid.NewGuid():N}";
+
+    var createResult = await logonTokenProvider.CreateToken(
+      deviceId, tenant.Id, user.Id,
+      sessionCorrelationId: sessionCorrelationId,
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.True(createResult.IsSuccess);
+    Assert.Equal(sessionCorrelationId, createResult.Value.SessionCorrelationId);
+
+    var validationResult = await logonTokenProvider.ValidateAndConsumeToken(
+      createResult.Value.Token, deviceId, TestContext.Current.CancellationToken);
+
+    Assert.True(validationResult.IsValid);
+    Assert.Equal(sessionCorrelationId, validationResult.SessionCorrelationId);
   }
 
   [Fact]

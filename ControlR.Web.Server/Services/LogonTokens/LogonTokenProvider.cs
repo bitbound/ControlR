@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Constants;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Primitives;
@@ -99,7 +98,7 @@ public class LogonTokenProvider(
     string? sessionCorrelationId = null,
     CancellationToken cancellationToken = default)
   {
-     using var scope = _scopeFactory.CreateScope();
+    using var scope = _scopeFactory.CreateScope();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
     var preferencesManager = scope.ServiceProvider.GetRequiredService<IUserPreferencesManager>();
 

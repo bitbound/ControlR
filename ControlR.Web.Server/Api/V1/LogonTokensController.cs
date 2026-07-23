@@ -27,12 +27,12 @@ public class LogonTokensController : ControllerBase
     }
 
     var result = await logonTokenProvider.CreateTokenForExternal(
-       request.DeviceId,
-       request.TenantId,
-       request.UserCorrelationId,
-       request.ExpirationMinutes,
-       userDisplayName: request.UserDisplayName,
-       sessionCorrelationId: request.SessionCorrelationId);
+      request.DeviceId,
+      request.TenantId,
+      request.UserCorrelationId,
+      request.ExpirationMinutes,
+      userDisplayName: request.UserDisplayName,
+      sessionCorrelationId: request.SessionCorrelationId);
 
     if (!result.IsSuccess)
     {

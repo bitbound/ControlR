@@ -116,9 +116,9 @@ public static class UserPreferenceDefinitions
 
   private static string? ValidateUserDisplayName(string value)
   {
-    if (value.Length > 25)
+    if (value.Length > 50)
     {
-      return "User display name must be 25 characters or less.";
+      return "User display name must be 50 characters or less.";
     }
 
     var illegalCharacters = value
