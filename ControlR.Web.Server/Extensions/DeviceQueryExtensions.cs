@@ -12,7 +12,7 @@ public static class DeviceQueryExtensions
   {
     if (sortDefinitions is not { Count: > 0 })
     {
-      return query;
+      return query.OrderBy(x => x.CreatedAt);
     }
 
     IOrderedQueryable<Device>? orderedQuery = null;
@@ -35,7 +35,7 @@ public static class DeviceQueryExtensions
       };
     }
 
-    return orderedQuery ?? query;
+    return orderedQuery ?? query.OrderBy(x => x.CreatedAt);
   }
 
   public static IQueryable<Device> FilterByColumnFilters(
