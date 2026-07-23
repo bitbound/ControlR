@@ -9,6 +9,7 @@ using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.Settings;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -696,10 +697,15 @@ public class ViewerHub(
       return HubResult.Fail("Unauthorized.");
     }
 
-    SessionActivity = DefaultActivitySource.StartRemoteAccessActivity(
+    SessionActivity = DefaultActivitySource.StartDeviceAccessActivity(
       userName: user.UserName, 
       userId: user.Id, 
       deviceId: deviceId);
+
+    if (Context.User.FindFirstValue(UserClaimTypes.SessionCorrelationId) is {} sessionCorrelationId)
+    {
+      SessionActivity?.SetTag(ActivityTagKeys.SessionCorrelationId, sessionCorrelationId);
+    }
 
     return HubResult.Ok();
   }
