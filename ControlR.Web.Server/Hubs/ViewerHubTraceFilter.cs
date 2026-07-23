@@ -49,12 +49,18 @@ public partial class ViewerHubTraceFilter : IHubFilter
       currentActivity.SetTag(ActivityTagKeys.UserId, appUser?.Id);
       currentActivity.SetTag(ActivityTagKeys.UserName, appUser?.UserName);
 
-      if (_includedMethods.Contains(invocationContext.HubMethodName))
+      if (viewerHub.SessionActivity is { } sessionActivity &&
+          _includedMethods.Contains(invocationContext.HubMethodName))
       {
-        using var childActivity = currentActivity.StartChildActivity(GetSnakeCaseName(invocationContext.HubMethodName));
+        using var childActivity = sessionActivity.StartChildActivity(GetSnakeCaseName(invocationContext.HubMethodName));
         childActivity?.SetTag(ActivityTagKeys.UserId, appUser?.Id);
         childActivity?.SetTag(ActivityTagKeys.UserName, appUser?.UserName);
-        return await next(invocationContext);
+        var result = await next(invocationContext);
+        if (result is HubResult hubResult)
+        {
+          childActivity?.SetStatus(hubResult.IsSuccess ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+        }
+        return result;
       }
     }
 
