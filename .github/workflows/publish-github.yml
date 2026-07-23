@@ -132,6 +132,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Archive Release Notes
+        if: ${{ !inputs.prerelease }}
         shell: bash
         run: |
           VERSION="${{ steps.get-version.outputs.VERSION }}"
