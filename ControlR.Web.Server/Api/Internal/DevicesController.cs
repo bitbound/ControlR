@@ -290,6 +290,7 @@ public class DevicesController(
     return await query
       .Select(x => new { IsTagged = x.Tags!.Any(), x.IsOnline })
       .GroupBy(_ => 1)
+      .OrderBy(g => g.Key)
       .Select(group => new InternalDtos.DeviceSearchFilterCountsDto
       {
         TaggedDevices = group.Count(x => x.IsTagged),

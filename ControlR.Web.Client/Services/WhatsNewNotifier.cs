@@ -4,8 +4,8 @@ namespace ControlR.Web.Client.Services;
 
 public interface IWhatsNewNotifier
 {
-  Task CheckAndShowIfNeeded(CancellationToken cancellationToken);
-  Task ShowWhatsNew(CancellationToken cancellationToken);
+  Task CheckAndShowIfNeeded(bool requireExplicitDismissal, CancellationToken cancellationToken);
+  Task ShowWhatsNew(bool requireExplicitDismissal, CancellationToken cancellationToken);
 }
 
 public class WhatsNewNotifier(
@@ -21,7 +21,7 @@ public class WhatsNewNotifier(
 
   private bool _checkInProgress;
 
-  public async Task CheckAndShowIfNeeded(CancellationToken cancellationToken)
+  public async Task CheckAndShowIfNeeded(bool requireExplicitDismissal, CancellationToken cancellationToken)
   {
     if (_checkInProgress)
       return;
@@ -42,7 +42,7 @@ public class WhatsNewNotifier(
       if (acknowledged == currentVersion)
         return;
 
-      await ShowWhatsNew(currentVersion, cancellationToken);
+      await ShowWhatsNew(currentVersion, requireExplicitDismissal, cancellationToken);
     }
     finally
     {
@@ -50,7 +50,7 @@ public class WhatsNewNotifier(
     }
   }
 
-  public async Task ShowWhatsNew(CancellationToken cancellationToken)
+  public async Task ShowWhatsNew(bool requireExplicitDismissal, CancellationToken cancellationToken)
   {
     var currentVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
     if (string.IsNullOrWhiteSpace(currentVersion))
@@ -60,14 +60,15 @@ public class WhatsNewNotifier(
       return;
     }
 
-    await ShowWhatsNew(currentVersion, cancellationToken);
+    await ShowWhatsNew(currentVersion, requireExplicitDismissal, cancellationToken);
   }
 
-  private async Task ShowWhatsNew(string currentVersion, CancellationToken cancellationToken)
+  private async Task ShowWhatsNew(string currentVersion, bool requireExplicitDismissal, CancellationToken cancellationToken)
   {
     var options = new DialogOptions
     {
-      CloseOnEscapeKey = true,
+      CloseOnEscapeKey = !requireExplicitDismissal,
+      BackdropClick = !requireExplicitDismissal,
       MaxWidth = MaxWidth.Medium,
       FullWidth = true
     };

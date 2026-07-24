@@ -172,7 +172,7 @@
   {
     try
     {
-      await WhatsNewNotifier.ShowWhatsNew(ComponentClosing);
+      await WhatsNewNotifier.ShowWhatsNew(requireExplicitDismissal: false, ComponentClosing);
     }
     catch (OperationCanceledException ex)
     {

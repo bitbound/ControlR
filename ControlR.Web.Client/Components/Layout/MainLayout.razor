@@ -147,7 +147,7 @@
     try
     {
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-      await WhatsNewNotifier.Value.CheckAndShowIfNeeded(cts.Token);
+      await WhatsNewNotifier.Value.CheckAndShowIfNeeded(requireExplicitDismissal: true, cts.Token);
     }
     catch (OperationCanceledException ex)
     {
