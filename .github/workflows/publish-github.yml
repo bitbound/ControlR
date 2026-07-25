@@ -57,6 +57,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.BBB_APP_ID }}
+          private-key: ${{ secrets.BBB_PRIVATE_KEY }}
+
       - name: Validate local storage configuration
         uses: ./.github/actions/validate-local-storage
         with:
@@ -129,7 +136,7 @@ jobs:
             ControlR.Web.Server_v1.json
             docker-compose.yml
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Archive Release Notes
         if: ${{ !inputs.prerelease }}
@@ -158,14 +165,14 @@ jobs:
 
           None.
           TEMPLATE
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "bitbound-bot[bot]"
+          git config user.email "bitbound-bot[bot]@users.noreply.github.com"
           if git diff --quiet && git diff --cached --quiet; then
             echo "No changes to commit."
           else
             git add .release-notes/
             git commit -m "chore: archive release notes for v${VERSION}"
-            git push
+            git push "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
           fi
 
       - name: Release Created
