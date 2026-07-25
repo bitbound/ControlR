@@ -1,41 +1,14 @@
 ## Breaking Changes
 
-- If you're using the `ControlrApi` client, the entry point has been split into three top-level properties: `ControlrApi.Internal`, `ControlrApi.V1`, and `ControlrApi.Agent`.
-  - You'll need to update your code to use the new static properties that serve as the new entry points.
-- The endpoints under `ControlrApi.V1` on the client map to the new `/api/v1/` route on the server.
-  - This is the new versioned, stable API intended for server-to-server integrations.
-- The endpoints under `ControlrApi.Agent` on the client map to the new `/api/agent/` route on the server.
-  - Agents will only call endpoints under the `/api/agent/` route.
-  - This makes it easier to protect the server with services like Cloudflare Access, while white-listing the agent endpoints.
-- The endpoints under `ControlrApi.Internal` are the pre-existing endpoints and will remain under the root `/api/` route.
+None.
 
 ## Enhancements
 
-- Added this **What's New** dialog that shows when starting a new version for the first time.
-- Devices now set their device ID as the `host.id` attribute for OpenTelemetry (if configured).
-  - This makes it easier to find device-specific metrics, logs, and traces in your OTEL backend.
-- Replaced PrismJS with Monaco Editor on Remote Logs page.
-  - Monaco will also be used in the upcoming scripting feature.
-- Added the `AppOptions__DisableFirstUserSelfRegistration` configuration option (default `false`) to control whether the first user can self-register.
-  - By default, the first user can self-register and is automatically promoted to server administrator and first-tenant admin.
-  - This is useful for server-to-server integrations where ControlR is driven primarily via API.
-- Added the `AppOptions__DisableDesktopPreview` configuration option (default `false`) to hide the Desktop Preview button on the Remote Control page and reject requests to the desktop preview endpoint.
-  - The button is still visible by default. Set this to `true` to disable the feature entirely.
-- Created guards in the agent auto-update and repair processes to prevent an agent with a different brand or publisher name from bricking the install.
-- Added Service Accounts with full CRUD API, credential management, and versioned V1 endpoints for server-to-server integrations.
-- Logon Tokens now carry session correlation IDs for external accounts and propagate the user display name into authentication claims.
-- Improved observability in ViewerHub with traces appearing in a single waterfall under the "device_access_session" parent span.
-- Desktop name is now exposed in remote control views on Windows, allowing users to see which desktop (Default, WinLogon, ScreenSaver) is active in the Windows session.
-- Server service accounts can now access devices across multiple tenants, simplifying cross-tenant administration for "headless" integrations.
-- Agent routes now live exclusively under `/api/agent/`, making it easier to configure server protection via Cloudflare Access or similar proxies.
-- Separate OpenAPI docs are now published for the "internal" APIs (pre-existing) and the new versioned V1 API.
+None.
 
 ## Fixes
 
-- Fixed an EF Core warning about a query that lacked a unique column in `ORDER BY`. When two devices have the same sort value, different databases could previously return rows in different order.
-- Fixed a race condition where the LastLogin timestamp could be updated even when a logon token authentication ultimately failed.
-- Fixed a delay in the remote control UI when websocket stream is closing.
-- Guarded against canvas removal from the DOM when switching pages during a remote control session.
+None.
 
 ## Removals
 
@@ -43,6 +16,4 @@ None.
 
 ## Internal
 
-- Added platform-specific IPC message handling infrastructure (`IPlatformIpcMessageHandler`) for Windows, Linux, and macOS.
-- Centralized API routing via `HttpConstants` and `ApiRouteAttribute`, reducing scattered route string literals across the codebase.
-- Added UserStorage key/value user-related data (e.g. "acknowledged version 0.25.50.0 updates").
+None.
