@@ -86,13 +86,15 @@ public class TenantSettingsManager(
 
     var entity = new TenantSetting
     {
-      Id = Guid.NewGuid(),
       Name = setting.Name,
       Value = normalizationResult.Value ?? string.Empty,
       TenantId = tenantId
     };
 
-    await _appDb.UpsertAsync(entity, [x => x.Name, x => x.TenantId], cancellationToken);
+    await _appDb.AddOrUpdate(
+      entity: entity, 
+      match: x => x.Name == entity.Name && x.TenantId == entity.TenantId, 
+      cancellationToken: cancellationToken);
 
     var savedSetting = await _appDb.TenantSettings
       .AsNoTracking()

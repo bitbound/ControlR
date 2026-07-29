@@ -69,7 +69,10 @@ public partial class UserStorageManager(
       Value = value
     };
 
-    await appDb.UpsertAsync(entity, [x => x.Key, x => x.UserId], cancellationToken);
+    await appDb.AddOrUpdate(
+      entity: entity,
+      match: x => x.Key == entity.Key && x.UserId == entity.UserId,
+      cancellationToken: cancellationToken);
 
     _logger.LogInformation("User storage key '{Key}' set for user '{UserId}'.", key, userId);
 

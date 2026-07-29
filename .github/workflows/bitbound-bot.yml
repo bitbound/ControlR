@@ -19,7 +19,7 @@ jobs:
     runs-on: ${{ fromJson('["self-hosted","Linux"]') }}
 
     if: |
-      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) ||
       ((github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && (
         contains(github.event.comment.body, '/bb') ||
         contains(github.event.comment.body, '/bbb')

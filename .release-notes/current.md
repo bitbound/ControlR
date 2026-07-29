@@ -8,12 +8,12 @@ None.
 
 ## Fixes
 
-None.
+- Fixed inserts to UserStorage failing due to upsert bypassing EF Core custom conventions configuration.
 
 ## Removals
 
-None.
+- Removed `ControlR.Web.Server/Data/Extensions/UpsertExtensions.cs`.
 
 ## Internal
 
-None.
+- Added `BlazorDisableThrowNavigationException` to Blazor projects.
