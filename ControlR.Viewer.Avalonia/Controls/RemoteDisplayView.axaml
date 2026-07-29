@@ -373,6 +373,19 @@
                                    FormatString="F1"
                                    Value="{Binding MaxBandwidthMbps}" />
                   </StackPanel>
+
+                  <TextBlock Text="{x:Static assets:Resources.EncodingFormat}"
+                             FontSize="10" />
+
+                  <ComboBox ItemsSource="{Binding AvailableEncodingFormats}"
+                            SelectedItem="{Binding EncodingFormat}"
+                            ToolTip.Tip="{x:Static assets:Resources.EncodingFormatTooltip}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
                 </StackPanel>
               </Border>
             </Flyout>

@@ -351,6 +351,24 @@ namespace ControlR.Viewer.Avalonia.Assets {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Encoding Format.
+        /// </summary>
+        public static string EncodingFormat {
+            get {
+                return ResourceManager.GetString("EncodingFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Select the encoding format. WebP provides better compression, while JPEG is faster to encode.
+        /// </summary>
+        public static string EncodingFormatTooltip {
+            get {
+                return ResourceManager.GetString("EncodingFormatTooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Disconnected.
         /// </summary>
         public static string Disconnected {

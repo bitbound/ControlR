@@ -19,10 +19,12 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   int AutoQualityMaximum { get; set; }
   int AutoQualityMinimum { get; set; }
   double AutoQualityUpperThresholdMbps { get; set; }
+  IEnumerable<ImageFormat> AvailableEncodingFormats { get; }
   bool CaptureCursor { get; set; }
   IAsyncRelayCommand DisconnectCommand { get; }
   ObservableCollection<DisplayLayoutItem> DisplayItems { get; }
   bool EnableDirectX { get; set; }
+  ImageFormat EncodingFormat { get; set; }
   bool HasMetricsData { get; }
   bool HasMultipleDisplays { get; }
   bool IsAutoPanEnabled { get; set; }
@@ -98,11 +100,14 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
   [ObservableProperty]
   private CursorChangedDto? _activeCursor;
+
   [ObservableProperty]
   [NotifyPropertyChangedFor(nameof(IsBlockInputToggleEnabled))]
   private bool _isBlockInputBusy;
+
   [ObservableProperty]
   private double _selectedDisplayHeight;
+
   [ObservableProperty]
   private double _selectedDisplayWidth;
 
@@ -210,6 +215,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       OnPropertyChanged();
     }
   }
+  public IEnumerable<ImageFormat> AvailableEncodingFormats => [ImageFormat.WebP, ImageFormat.Jpeg];
   public bool CaptureCursor
   {
     get => _remoteControlState.CaptureCursor;
@@ -237,6 +243,21 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       }
 
       _remoteControlState.EnableDirectX = value;
+      _ = SendCaptureSettings();
+      OnPropertyChanged();
+    }
+  }
+  public ImageFormat EncodingFormat
+  {
+    get => _remoteControlState.EncodingFormat;
+    set
+    {
+      if (_remoteControlState.EncodingFormat == value)
+      {
+        return;
+      }
+
+      _remoteControlState.EncodingFormat = value;
       _ = SendCaptureSettings();
       OnPropertyChanged();
     }
@@ -411,6 +432,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       OnPropertyChanged();
     }
   }
+
   // This is public so ScreenRenderer can use it.
   public ILogger<RemoteDisplayViewModel> Logger { get; private set; }
   public int ManualQuality
