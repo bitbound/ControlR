@@ -7,7 +7,7 @@ on:
 jobs:
   auto-close:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login != 'bitbound' && github.actor != 'dependabot[bot]' && github.actor != 'copilot[bot]' && github.actor != 'bitbound-bot'
+    if: ${{ !contains(fromJSON(vars.ALLOWED_PR_AUTHORS), github.actor) }}
 
     permissions:
       pull-requests: write
@@ -23,19 +23,16 @@ jobs:
 
             However, I am not accepting PRs at the moment for the following reasons:
 
-            **Read-Only Mirror**
-            For now, the public repository is a read-only mirror. This allows me to work on ideas and experiments in private and only reveal them when they're ready.
-
             **Legal and Financial Considerations**
-            With Remotely, I found out that there are legal impliciations to accepting external contributions.  Since I'm now depending on ControlR to be my primary source of income, it's less complicated and risky if I avoid external contributions for now.
+            With Remotely, I found out that there are legal impliciations to accepting external contributions.  Once I have a Contributor's License Agreement (CLA) in place, I want to have an attorney review everything to make sure I'm not missing anything.
 
-            **Personal Working Style**
-            During these early stages of the project, working solo will bring me the most amount of happiness and sense of accomplishment.  It will allow me to move quickly and maintain a clear vision.
+            **Foundational Changes**
+            During these early stages of the project, there will be (and have already been) large foundational changes.  I'll be able to move quicker and maintain a clear vision during this period if I'm not having to coordinate with distributed changes.
 
             **Reviewing AI Code**
-            In my opinion, reviewing code consumes about 4 times as many "mental calories" compared to writing it. With the rise of AI, I'm worried that I'd spend the vast majority of my time reviewing AI-generated PRs, which would detract from my ability to keep the project moving forward.
+            With the rise of AI, I'm worried that I'd spend the vast majority of my time reviewing AI-generated PRs, which would detract from my ability to keep the project moving forward.  I don't know yet how I'm going to handle this issue, but I don't currently have the bandwidth to find solutions.
 
-            I will begin accepting external contributions once ControlR reaches a more mature state and is financially self-sustaining.  Thank you for understanding!
+            I will begin accepting external contributions once ControlR reaches a more mature state and I've been able to resolve the above concerns.  Thank you for understanding!
 
             If you have ideas, suggestions, or found a bug, please feel free to open an issue instead. I'd love to hear your feedback!
 
