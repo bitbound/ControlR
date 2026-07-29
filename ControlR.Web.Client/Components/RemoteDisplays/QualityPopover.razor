@@ -73,7 +73,7 @@
   <div class="mt-3">
     <MudTooltip Text="Select the encoding format. WebP provides better compression, while JPEG is faster to encode.">
       <MudSelect T="ImageFormat" Value="RemoteControlState.EncodingFormat" ValueChanged="@(HandleEncodingFormatChanged)"
-                 Label="Encoding Format" Variant="Variant.Outlined">
+                 Label="Encoding Format" Variant="Variant.Outlined" FullWidth>
         <MudSelectItem Value="@ImageFormat.WebP">WebP</MudSelectItem>
         <MudSelectItem Value="@ImageFormat.Jpeg">JPEG</MudSelectItem>
       </MudSelect>
