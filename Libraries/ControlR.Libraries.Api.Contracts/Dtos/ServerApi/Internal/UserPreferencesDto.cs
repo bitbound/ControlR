@@ -1,3 +1,4 @@
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
@@ -8,6 +9,7 @@ public sealed record UserPreferencesDto(
   int AutoQualityMinimum,
   double AutoQualityUpperThresholdMbps,
   bool CaptureCursor,
+  ImageFormat EncodingFormat,
   bool EnableDirectX,
   bool HideOfflineDevices,
   bool IncludeUntaggedDevices,

@@ -596,7 +596,8 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         _remoteControlState.AutoQualityMinimum,
         _remoteControlState.AutoQualityUpperThresholdMbps,
         _remoteControlState.IsMaxBandwidthEnabled,
-        _remoteControlState.MaxBandwidthMbps);
+        _remoteControlState.MaxBandwidthMbps,
+        _remoteControlState.EncodingFormat);
 
       await _viewerStream.SendCaptureSettings(dto, cts.Token);
     }

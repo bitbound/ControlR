@@ -95,7 +95,8 @@ public class ImageUtility : IImageUtility
     canvas.DrawBitmap(
       bitmap,
       cropArea,
-      new SKRect(0, 0, cropArea.Width, cropArea.Height));
+      new SKRect(0, 0, cropArea.Width, cropArea.Height),
+      SKSamplingOptions.Default);
     return cropped;
   }
 

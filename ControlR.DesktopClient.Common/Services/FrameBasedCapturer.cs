@@ -587,7 +587,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
               recoveryCapture.Bitmap,
               [recoveryRegion.Value],
               effectiveQuality,
-              ImageFormat.WebP,
+              _sessionState.EncodingFormat,
               cancellationToken);
 
             previousCapture?.Dispose();
@@ -652,7 +652,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
           bitmap,
           dirtyRegions,
           effectiveQuality,
-          ImageFormat.WebP,
+          _sessionState.EncodingFormat,
           cancellationToken);
 
         if (effectiveQuality < _sessionState.AutoQualityMaximum)

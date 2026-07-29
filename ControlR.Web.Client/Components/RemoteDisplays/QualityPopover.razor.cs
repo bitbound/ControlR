@@ -41,6 +41,12 @@ public class QualityPopoverBase : DisposableComponent
     await SendCaptureSettings();
   }
 
+  protected async Task HandleEncodingFormatChanged(ImageFormat value)
+  {
+    RemoteControlState.EncodingFormat = value;
+    await SendCaptureSettings();
+  }
+
   protected async Task HandleManualQualityChanged(int value)
   {
     RemoteControlState.ManualQuality = value;
@@ -89,7 +95,8 @@ public class QualityPopoverBase : DisposableComponent
         RemoteControlState.AutoQualityMinimum,
         RemoteControlState.AutoQualityUpperThresholdMbps,
         RemoteControlState.IsMaxBandwidthEnabled,
-        RemoteControlState.MaxBandwidthMbps);
+        RemoteControlState.MaxBandwidthMbps,
+        RemoteControlState.EncodingFormat);
 
       await RemoteControlStream.SendCaptureSettings(dto, cts.Token);
     }

@@ -13,6 +13,7 @@ public interface IRemoteControlState : IStateBase
   RemoteControlSession? CurrentSession { get; set; }
   DisplayDto[]? DisplayData { get; set; }
   bool EnableDirectX { get; set; }
+  ImageFormat EncodingFormat { get; set; }
   bool IsAutoPanEnabled { get; set; }
   bool IsAutoQualityEnabled { get; set; }
   bool IsBlockUserInputEnabled { get; set; }
@@ -97,6 +98,11 @@ public class RemoteControlState(ILogger<ObservableState> logger) : ObservableSta
   public bool EnableDirectX
   {
     get => Get(defaultValue: true);
+    set => Set(value);
+  }
+  public ImageFormat EncodingFormat
+  {
+    get => Get(defaultValue: AppConstants.DefaultRemoteControlEncodingFormat);
     set => Set(value);
   }
   public bool IsAutoPanEnabled

@@ -77,7 +77,8 @@ public class BandwidthComparison
     canvas.DrawBitmap(
       bitmap,
       new SKRect(left, top, left + cropWidth, top + cropHeight),
-      new SKRect(0, 0, cropWidth, cropHeight));
+      new SKRect(0, 0, cropWidth, cropHeight),
+      SKSamplingOptions.Default);
 
     using var ms = new MemoryStream();
     var skFormat = imageFormat switch
@@ -252,5 +253,9 @@ public class Program
     Console.WriteLine();
 
     ChangedAreasBenchmark.Run();
+
+    Console.WriteLine();
+
+    EncodeSpeedBenchmark.Run();
   }
 }
