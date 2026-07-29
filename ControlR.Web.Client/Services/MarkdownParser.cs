@@ -360,19 +360,34 @@ public sealed class MarkdownParser : IMarkdownParser
         }
       }
 
-      // Italic _text_ — only open if NOT followed by _ (would be __ or ___)
-      if (c == '_' && !(remaining >= 2 && text[i + 1] == '_'))
+      // Italic _text_ — _ only delimits emphasis when surrounded by whitespace or input boundaries.
+      if (c == '_' && remaining >= 2 && text[i + 1] != '_')
       {
-        var searchFrom = text.Slice(i + 1);
-        var endIdx = FindSingleCharClose(searchFrom, '_');
-        if (endIdx >= 0)
+        var isOpen = i == 0 || char.IsWhiteSpace(text[i - 1]);
+        if (isOpen)
         {
-          sb.Append("<i>");
-          ParseInline(searchFrom[..endIdx], sb);
-          sb.Append("</i>");
-          i += 1 + endIdx + 1;
-          continue;
+          var searchFrom = text[(i + 1)..];
+          var endIdx = FindSingleCharClose(searchFrom, '_');
+          if (endIdx >= 0)
+          {
+            var closePos = i + 1 + endIdx;
+            var isClose = closePos + 1 >= text.Length || char.IsWhiteSpace(text[closePos + 1]);
+            if (isClose)
+            {
+              sb.Append("<i>");
+              ParseInline(searchFrom[..endIdx], sb);
+              sb.Append("</i>");
+              i += 1 + endIdx + 1;
+              continue;
+            }
+          }
         }
+
+        // Not a valid opener, or no properly-flanked closer. Emit the
+        // underscore literally and keep scanning so it is rendered once.
+        AppendHtmlEncoded(sb, c);
+        i++;
+        continue;
       }
 
       // Inline code `text`

@@ -105,13 +105,15 @@ public class UserPreferencesManager(
 
     var entity = new UserPreference
     {
-      Id = Guid.NewGuid(),
       Name = preference.Name,
       UserId = userId,
       Value = normalizationResult.Value ?? string.Empty
     };
 
-    await appDb.UpsertAsync(entity, [x => x.Name, x => x.UserId], cancellationToken);
+    await appDb.AddOrUpdate(
+      entity: entity, 
+      match: x => x.Name == entity.Name && x.UserId == entity.UserId, 
+      cancellationToken: cancellationToken);
 
     var savedPreference = await appDb.UserPreferences
       .AsNoTracking()

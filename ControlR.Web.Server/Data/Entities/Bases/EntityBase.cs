@@ -11,23 +11,10 @@ public interface IEntityBase
 
 public class EntityBase : IEntityBase
 {
-  private Guid _id;
-
-  [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+  [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
   public DateTimeOffset CreatedAt { get; set; }
 
   [Key]
-  public Guid Id
-  {
-    get => _id;
-    set
-    {
-      if (value == Guid.Empty)
-      {
-        return;
-      }
-
-      _id = value;
-    }
-  }
+  [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+  public Guid Id { get; set; }
 }

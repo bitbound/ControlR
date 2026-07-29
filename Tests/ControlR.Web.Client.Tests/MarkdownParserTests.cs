@@ -225,6 +225,36 @@ public class MarkdownParserTests
     Assert.Contains("*italic", result);
   }
 
+  [Fact]
+  public void ToHtml_UnderscoreInWord_DoesNotTreatAsItalic()
+  {
+    var result = _parser.ToHtml("device_access_session");
+    Assert.DoesNotContain("<i>", result);
+    Assert.Equal("<p>device_access_session</p>", StripNewlines(result));
+  }
+
+  [Fact]
+  public void ToHtml_MultipleUnderscoresInWord_PreservedLiterally()
+  {
+    var result = _parser.ToHtml("foo_bar_baz");
+    Assert.DoesNotContain("<i>", result);
+    Assert.Equal("<p>foo_bar_baz</p>", StripNewlines(result));
+  }
+
+  [Fact]
+  public void ToHtml_ItalicUnderscore_SurroundedBySpaces_ParsesCorrectly()
+  {
+    var result = _parser.ToHtml("This is _italic_ text.");
+    Assert.Contains("<i>italic</i>", result);
+  }
+
+  [Fact]
+  public void ToHtml_ItalicUnderscoreAtStartOfParagraph_ParsesCorrectly()
+  {
+    var result = _parser.ToHtml("_italic_ text");
+    Assert.Equal("<p><i>italic</i> text</p>", StripNewlines(result));
+  }
+
   #endregion
 
   #region Bold-Italic
