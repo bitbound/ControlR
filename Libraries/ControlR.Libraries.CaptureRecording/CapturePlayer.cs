@@ -1,10 +1,25 @@
+using System.Buffers;
 using ControlR.Libraries.Shared.Collections;
 using MessagePack;
 using SkiaSharp;
 
 namespace ControlR.Libraries.CaptureRecording;
 
-public sealed class CapturePlayer : IAsyncDisposable
+public interface ICapturePlayer : IAsyncDisposable
+{
+  TimeSpan Position { get; }
+
+  IDisposable OnEvent(Action<CapturePlaybackEvent> callback);
+  IDisposable OnEvent(Func<CapturePlaybackEvent, Task> callback);
+  IDisposable OnFrameReady(Action<CapturePlaybackFrame> callback);
+  IDisposable OnFrameReady(Func<CapturePlaybackFrame, Task> callback);
+  Task Reset(CancellationToken cancellationToken = default);
+  Task Seek(TimeSpan position, CancellationToken cancellationToken = default);
+  Task Start(CancellationToken cancellationToken = default);
+  Task Stop();
+}
+
+public sealed class CapturePlayer : ICapturePlayer
 {
   private readonly HandlerCollection<CapturePlaybackEvent> _eventHandlers = new();
   private readonly HandlerCollection<CapturePlaybackFrame> _frameHandlers = new();
@@ -23,10 +38,12 @@ public sealed class CapturePlayer : IAsyncDisposable
 
   public CapturePlayer(
     Stream stream,
-    TimeProvider? timeProvider = null,
-    CapturePlayerOptions? options = null)
+    TimeProvider timeProvider,
+    CapturePlayerOptions options)
   {
     ArgumentNullException.ThrowIfNull(stream);
+    ArgumentNullException.ThrowIfNull(timeProvider);
+    ArgumentNullException.ThrowIfNull(options);
 
     if (!stream.CanSeek)
     {
@@ -39,8 +56,8 @@ public sealed class CapturePlayer : IAsyncDisposable
     }
 
     _stream = stream;
-    _timeProvider = timeProvider ?? TimeProvider.System;
-    _options = options ?? new();
+    _timeProvider = timeProvider;
+    _options = options;
 
     var header = CaptureRecordingStorage.ReadFileHeader(_stream);
     CaptureRecordingStorage.ValidateFileHeader(header);
@@ -199,13 +216,14 @@ public sealed class CapturePlayer : IAsyncDisposable
   {
     var clone = new SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType);
     using var canvas = new SKCanvas(clone);
-    canvas.DrawBitmap(source, 0, 0);
+    canvas.DrawBitmap(source, 0f, 0f, SKSamplingOptions.Default);
     return clone;
   }
 
-  private async Task ApplyEvent(CaptureRecord record)
+  private async Task ApplyEvent(CaptureRecord record, CancellationToken cancellationToken)
   {
-    var payload = MessagePackSerializer.Deserialize<CaptureEventRecordData>(record.Payload);
+    var memory = new ReadOnlyMemory<byte>(record.Payload, 0, record.Header.PayloadLength);
+    var payload = MessagePackSerializer.Deserialize<CaptureEventRecordData>(memory, cancellationToken: cancellationToken);
     await _eventHandlers.InvokeHandlers(
       new CapturePlaybackEvent
       {
@@ -215,12 +233,13 @@ public sealed class CapturePlayer : IAsyncDisposable
         Sequence = record.Header.Sequence,
         Timestamp = TimeSpan.FromTicks(record.Header.TimestampTicks)
       },
-      CancellationToken.None).ConfigureAwait(false);
+      cancellationToken).ConfigureAwait(false);
   }
 
   private void ApplyFrameBatch(CaptureRecord record)
   {
-    var payload = MessagePackSerializer.Deserialize<CaptureFrameRecordData>(record.Payload);
+    var memory = new ReadOnlyMemory<byte>(record.Payload, 0, record.Header.PayloadLength);
+    var payload = MessagePackSerializer.Deserialize<CaptureFrameRecordData>(memory);
 
     EnsureCanvasSize(record.Header.CanvasWidth, record.Header.CanvasHeight);
 
@@ -232,8 +251,21 @@ public sealed class CapturePlayer : IAsyncDisposable
     using var canvas = new SKCanvas(_compositedFrame);
     foreach (var region in payload.Regions)
     {
+      if (region.X < 0 || region.Y < 0)
+      {
+        throw new InvalidDataException(
+          $"Screen region position ({region.X}, {region.Y}) is outside the canvas.");
+      }
+
       using var decoded = SKBitmap.Decode(region.EncodedImage) 
         ?? throw new InvalidDataException("Screen region image could not be decoded during playback.");
+
+      if (region.X + decoded.Width > _compositedFrame.Width || region.Y + decoded.Height > _compositedFrame.Height)
+      {
+        throw new InvalidDataException(
+          $"Screen region extends beyond canvas bounds. " +
+          $"Region: ({region.X},{region.Y}) {decoded.Width}x{decoded.Height}, Canvas: {_compositedFrame.Width}x{_compositedFrame.Height}.");
+      }
 
       canvas.DrawBitmap(decoded, region.X, region.Y);
     }
@@ -241,7 +273,8 @@ public sealed class CapturePlayer : IAsyncDisposable
 
   private void ApplyKeyFrame(CaptureRecord record)
   {
-    var payload = MessagePackSerializer.Deserialize<CaptureKeyFrameRecordData>(record.Payload);
+    var memory = new ReadOnlyMemory<byte>(record.Payload, 0, record.Header.PayloadLength);
+    var payload = MessagePackSerializer.Deserialize<CaptureKeyFrameRecordData>(memory);
     using var encodedData = SKData.CreateCopy(payload.EncodedImage);
     using var image = SKImage.FromEncodedData(encodedData) 
       ?? throw new InvalidDataException("Key frame image could not be decoded during playback.");
@@ -250,7 +283,7 @@ public sealed class CapturePlayer : IAsyncDisposable
     _compositedFrame = bitmap;
   }
 
-  private async Task EmitFrame(int sequence, TimeSpan timestamp)
+  private async Task EmitFrame(int sequence, TimeSpan timestamp, CancellationToken cancellationToken)
   {
     if (_compositedFrame is null)
     {
@@ -265,7 +298,7 @@ public sealed class CapturePlayer : IAsyncDisposable
         Sequence = sequence,
         Timestamp = timestamp
       },
-      CancellationToken.None).ConfigureAwait(false);
+      cancellationToken).ConfigureAwait(false);
   }
 
   private void EnsureCanvasSize(int canvasWidth, int canvasHeight)
@@ -303,8 +336,8 @@ public sealed class CapturePlayer : IAsyncDisposable
     while (_stream.Position < _stream.Length)
     {
       var offset = _stream.Position;
-      var record = CaptureRecordingStorage.ReadRecord(_stream, offset);
-      if (record.Header.Kind == CaptureRecordKind.KeyFrame)
+      var recordHeader = CaptureRecordingStorage.ReadRecordHeader(_stream, offset);
+      if (recordHeader.Kind == CaptureRecordKind.KeyFrame)
       {
         nearestKeyFrameOffset = offset;
       }
@@ -312,12 +345,12 @@ public sealed class CapturePlayer : IAsyncDisposable
       entries.Add(
         new CaptureIndexEntry(
           offset,
-          record.Header.TimestampTicks,
-          record.Header.Sequence,
+          recordHeader.TimestampTicks,
+          recordHeader.Sequence,
           nearestKeyFrameOffset,
-          record.Header.Kind));
+          recordHeader.Kind));
 
-      _stream.Position = offset + CaptureRecordingStorage.RecordHeaderSize + record.Header.PayloadLength;
+      _stream.Position = offset + CaptureRecordingStorage.RecordHeaderSize + recordHeader.PayloadLength;
     }
 
     return entries;
@@ -364,8 +397,11 @@ public sealed class CapturePlayer : IAsyncDisposable
         case CaptureRecordKind.Event:
           break;
         default:
+          ArrayPool<byte>.Shared.Return(record.Payload);
           throw new InvalidDataException($"Unsupported capture record kind {record.Header.Kind}.");
       }
+
+      ArrayPool<byte>.Shared.Return(record.Payload);
     }
 
     _currentRecordIndex = targetIndex;
@@ -376,7 +412,7 @@ public sealed class CapturePlayer : IAsyncDisposable
       var sequence = precedingEntryIndex >= 0
         ? _indexEntries[precedingEntryIndex].Sequence
         : 0;
-      await EmitFrame(sequence, normalizedPosition).ConfigureAwait(false);
+      await EmitFrame(sequence, normalizedPosition, cancellationToken).ConfigureAwait(false);
     }
   }
 
@@ -420,14 +456,17 @@ public sealed class CapturePlayer : IAsyncDisposable
           break;
         case CaptureRecordKind.FrameBatch:
           ApplyFrameBatch(record);
-          await EmitFrame(record.Header.Sequence, recordTimestamp).ConfigureAwait(false);
+          await EmitFrame(record.Header.Sequence, recordTimestamp, cancellationToken).ConfigureAwait(false);
           break;
         case CaptureRecordKind.Event:
-          await ApplyEvent(record).ConfigureAwait(false);
+          await ApplyEvent(record, cancellationToken).ConfigureAwait(false);
           break;
         default:
+          ArrayPool<byte>.Shared.Return(record.Payload);
           throw new InvalidDataException($"Unsupported capture record kind {record.Header.Kind}.");
       }
+
+      ArrayPool<byte>.Shared.Return(record.Payload);
 
       previousTimestamp = recordTimestamp;
 

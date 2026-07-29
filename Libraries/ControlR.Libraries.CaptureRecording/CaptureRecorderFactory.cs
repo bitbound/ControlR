@@ -1,19 +1,18 @@
+using Microsoft.Extensions.Options;
+
 namespace ControlR.Libraries.CaptureRecording;
 
 public interface ICaptureRecorderFactory
 {
-  CaptureRecorder Create(Stream stream);
+  ICaptureRecorder Create(Stream stream);
 }
 
-public sealed class CaptureRecorderFactory(
-  TimeProvider? timeProvider = null,
-  CaptureRecorderOptions? options = null) : ICaptureRecorderFactory
+internal sealed class CaptureRecorderFactory(
+  TimeProvider timeProvider,
+  IOptionsMonitor<CaptureRecorderOptions> options) : ICaptureRecorderFactory
 {
-  private readonly CaptureRecorderOptions _options = options ?? new();
-  private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
-
-  public CaptureRecorder Create(Stream stream)
+  public ICaptureRecorder Create(Stream stream)
   {
-    return new CaptureRecorder(stream, _timeProvider, _options);
+    return new CaptureRecorder(stream, timeProvider, options.CurrentValue);
   }
 }

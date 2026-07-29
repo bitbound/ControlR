@@ -4,7 +4,31 @@ using SkiaSharp;
 
 namespace ControlR.Libraries.CaptureRecording;
 
-public sealed class CaptureRecorder : IAsyncDisposable
+public interface ICaptureRecorder : IAsyncDisposable
+{
+  Task WriteEvent<T>(
+    string eventType,
+    T payload,
+    TimeSpan? timestamp = null,
+    CancellationToken cancellationToken = default);
+
+  Task WriteFrame(
+    ScreenRegionDto region,
+    CaptureFrameMetadata metadata,
+    CancellationToken cancellationToken = default);
+
+  Task WriteFrame(
+    ScreenRegionsDto regions,
+    CaptureFrameMetadata metadata,
+    CancellationToken cancellationToken = default);
+
+  Task WriteFrame(
+    IReadOnlyCollection<ScreenRegionDto> regions,
+    CaptureFrameMetadata metadata,
+    CancellationToken cancellationToken = default);
+}
+
+public sealed class CaptureRecorder : ICaptureRecorder
 {
   private readonly List<CaptureIndexEntry> _indexEntries = [];
   private readonly CaptureRecorderOptions _options;
@@ -24,10 +48,12 @@ public sealed class CaptureRecorder : IAsyncDisposable
 
   public CaptureRecorder(
     Stream stream,
-    TimeProvider? timeProvider = null,
-    CaptureRecorderOptions? options = null)
+    TimeProvider timeProvider,
+    CaptureRecorderOptions options)
   {
     ArgumentNullException.ThrowIfNull(stream);
+    ArgumentNullException.ThrowIfNull(timeProvider);
+    ArgumentNullException.ThrowIfNull(options);
 
     if (!stream.CanSeek)
     {
@@ -40,8 +66,8 @@ public sealed class CaptureRecorder : IAsyncDisposable
     }
 
     _stream = stream;
-    _timeProvider = timeProvider ?? TimeProvider.System;
-    _options = options ?? new();
+    _timeProvider = timeProvider;
+    _options = options;
     _recordingStartedAt = _timeProvider.GetUtcNow();
 
     _stream.SetLength(0);
@@ -216,10 +242,23 @@ public sealed class CaptureRecorder : IAsyncDisposable
 
     foreach (var region in regions)
     {
+      if (region.X < 0 || region.Y < 0)
+      {
+        throw new InvalidDataException(
+          $"Screen region position ({region.X}, {region.Y}) is outside the canvas.");
+      }
+
       using var decoded = SKBitmap.Decode(region.EncodedImage);
       if (decoded is null)
       {
         throw new InvalidDataException("Screen region image could not be decoded.");
+      }
+
+      if (region.X + decoded.Width > canvasWidth || region.Y + decoded.Height > canvasHeight)
+      {
+        throw new InvalidDataException(
+          $"Screen region extends beyond canvas bounds. " +
+          $"Region: ({region.X},{region.Y}) {decoded.Width}x{decoded.Height}, Canvas: {canvasWidth}x{canvasHeight}.");
       }
 
       canvas.DrawBitmap(decoded, region.X, region.Y, _paint);

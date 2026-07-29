@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Buffers.Binary;
 
 namespace ControlR.Libraries.CaptureRecording;
@@ -21,6 +22,8 @@ internal static class CaptureRecordingStorage
   public const short FileHeaderSize = 64;
   public const int IndexEntrySize = 32;
   public const int RecordHeaderSize = 32;
+
+  private const int MaxPayloadLength = 100 * 1024 * 1024;
 
   public static CaptureFileHeader ReadFileHeader(Stream stream)
   {
@@ -70,12 +73,48 @@ internal static class CaptureRecordingStorage
 
   public static CaptureRecord ReadRecord(Stream stream, long offset)
   {
+    var header = ReadRecordHeader(stream, offset);
+
+    if (header.PayloadLength < 0)
+    {
+      throw new InvalidDataException("Payload length cannot be negative.");
+    }
+
+    if (header.PayloadLength > MaxPayloadLength)
+    {
+      throw new InvalidDataException(
+        $"Payload length {header.PayloadLength} exceeds maximum of {MaxPayloadLength}.");
+    }
+
+    var remaining = stream.Length - stream.Position;
+    if (header.PayloadLength > remaining)
+    {
+      throw new InvalidDataException(
+        $"Payload length {header.PayloadLength} exceeds remaining stream data ({remaining} bytes).");
+    }
+
+    var payload = ArrayPool<byte>.Shared.Rent(header.PayloadLength);
+    try
+    {
+      stream.ReadExactly(payload, 0, header.PayloadLength);
+    }
+    catch
+    {
+      ArrayPool<byte>.Shared.Return(payload);
+      throw;
+    }
+
+    return new CaptureRecord(offset, header, payload);
+  }
+
+  public static CaptureRecordHeader ReadRecordHeader(Stream stream, long offset)
+  {
     stream.Position = offset;
 
     Span<byte> headerBuffer = stackalloc byte[RecordHeaderSize];
     stream.ReadExactly(headerBuffer);
 
-    var header = new CaptureRecordHeader(
+    return new CaptureRecordHeader(
       (CaptureRecordKind)headerBuffer[0],
       (CaptureRecordFlags)headerBuffer[1],
       BinaryPrimitives.ReadInt32LittleEndian(headerBuffer[4..8]),
@@ -83,11 +122,6 @@ internal static class CaptureRecordingStorage
       BinaryPrimitives.ReadInt32LittleEndian(headerBuffer[16..20]),
       BinaryPrimitives.ReadInt32LittleEndian(headerBuffer[20..24]),
       BinaryPrimitives.ReadInt32LittleEndian(headerBuffer[24..28]));
-
-    var payload = new byte[header.PayloadLength];
-    stream.ReadExactly(payload);
-
-    return new CaptureRecord(offset, header, payload);
   }
 
   public static void ValidateFileHeader(CaptureFileHeader header)
