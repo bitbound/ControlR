@@ -247,14 +247,10 @@ public class Program
 {
   public static void Main()
   {
-    Console.WriteLine("=== ControlR Encoding Bandwidth Comparison ===");
-    Console.WriteLine();
-    Console.WriteLine("Compares JPEG vs WebP for region-based screen capture.");
-    Console.WriteLine("Loads PNG frames from .plans/captures/, simulates dirty-region");
-    Console.WriteLine("detection via ImageUtility.GetChangedAreas, encodes each region,");
-    Console.WriteLine("and measures total wire size after MessagePack serialization.");
+    BandwidthComparison.Run();
+
     Console.WriteLine();
 
-    BandwidthComparison.Run();
+    ChangedAreasBenchmark.Run();
   }
 }
