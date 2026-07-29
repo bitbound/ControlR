@@ -47,32 +47,20 @@ public class ChangedAreasBenchmark
     PrintResults("SIMD (Vector<byte>)", simdTimes, scalarTimes);
   }
 
-  private static void WarmUp(IImageUtility imageUtility, SKBitmap current, SKBitmap previous)
+  private static string GetCapturesPath()
   {
-    for (var i = 0; i < 5; i++)
+    var current = AppContext.BaseDirectory;
+    while (!string.IsNullOrEmpty(current))
     {
-      imageUtility.GetChangedAreas(current, previous);
-      imageUtility.GetChangedAreas(current, previous, useSimd: false);
+      var candidate = Path.Combine(current, ".plans", "captures");
+      if (Directory.Exists(candidate))
+      {
+        return candidate;
+      }
+      var parent = Directory.GetParent(current);
+      current = parent?.FullName;
     }
-  }
-
-  private static void PrintResults(string simdLabel, List<double> simdTimes, List<double> scalarTimes)
-  {
-    var simdAvg = simdTimes.Average();
-    var scalarAvg = scalarTimes.Average();
-    var speedup = scalarAvg / simdAvg;
-
-    Console.WriteLine();
-    Console.WriteLine("=== Change Detection: Scalar vs SIMD ===");
-    Console.WriteLine();
-    Console.WriteLine("Scenario: {0} grid (4 columns x 2 rows), {1} iterations", "4x2", Iterations);
-    Console.WriteLine();
-    Console.WriteLine("  Scalar:  avg={0:F1} us  min={1:F1} us  max={2:F1} us",
-      scalarAvg, scalarTimes.Min(), scalarTimes.Max());
-    Console.WriteLine("  SIMD:    avg={0:F1} us  min={1:F1} us  max={2:F1} us",
-      simdAvg, simdTimes.Min(), simdTimes.Max());
-    Console.WriteLine("  Speedup: {0:F2}x", speedup);
-    Console.WriteLine("  Savings: {0:F1}%", (1 - simdAvg / scalarAvg) * 100);
+    throw new DirectoryNotFoundException(".plans/captures directory not found");
   }
 
   private static (SKBitmap[], string[]) LoadFramePairs(string directory, int count)
@@ -97,19 +85,31 @@ public class ChangedAreasBenchmark
     return (bitmaps, pngFiles.Take(bitmaps.Length).ToArray());
   }
 
-  private static string GetCapturesPath()
+  private static void PrintResults(string simdLabel, List<double> simdTimes, List<double> scalarTimes)
   {
-    var current = AppContext.BaseDirectory;
-    while (!string.IsNullOrEmpty(current))
+    var simdAvg = simdTimes.Average();
+    var scalarAvg = scalarTimes.Average();
+    var speedup = scalarAvg / simdAvg;
+
+    Console.WriteLine();
+    Console.WriteLine("=== Change Detection: Scalar vs SIMD ===");
+    Console.WriteLine();
+    Console.WriteLine("Scenario: {0} grid (4 columns x 2 rows), {1} iterations", "4x2", Iterations);
+    Console.WriteLine();
+    Console.WriteLine("  Scalar:  avg={0:F1} us  min={1:F1} us  max={2:F1} us",
+      scalarAvg, scalarTimes.Min(), scalarTimes.Max());
+    Console.WriteLine("  SIMD:    avg={0:F1} us  min={1:F1} us  max={2:F1} us",
+      simdAvg, simdTimes.Min(), simdTimes.Max());
+    Console.WriteLine("  Speedup: {0:F2}x", speedup);
+    Console.WriteLine("  Savings: {0:F1}%", (1 - simdAvg / scalarAvg) * 100);
+  }
+
+  private static void WarmUp(IImageUtility imageUtility, SKBitmap current, SKBitmap previous)
+  {
+    for (var i = 0; i < 5; i++)
     {
-      var candidate = Path.Combine(current, ".plans", "captures");
-      if (Directory.Exists(candidate))
-      {
-        return candidate;
-      }
-      var parent = Directory.GetParent(current);
-      current = parent?.FullName;
+      imageUtility.GetChangedAreas(current, previous);
+      imageUtility.GetChangedAreas(current, previous, useSimd: false);
     }
-    throw new DirectoryNotFoundException(".plans/captures directory not found");
   }
 }
