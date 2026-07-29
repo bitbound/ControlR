@@ -11,7 +11,7 @@ public interface IImageUtility
   SKBitmap CropBitmap(SKBitmap bitmap, SKRect cropArea);
   SKBitmap DownscaleBitmap(SKBitmap bitmap, double scale);
   byte[] Encode(SKBitmap bitmap, SKEncodedImageFormat format, int quality = 80);
-  byte[] EncodeJpeg(SKBitmap bitmap, int quality, bool compressOutput = true);
+  byte[] EncodeJpeg(SKBitmap bitmap, int quality);
   Result<SKRect> GetChangedArea(SKBitmap? currentFrame, SKBitmap? previousFrame, bool forceFullscreen = false);
   Result<SKRect[]> GetChangedAreas(SKBitmap? currentFrame, SKBitmap? previousFrame, uint gridColumns = 4, uint gridRows = 2, bool forceFullscreen = false);
   bool IsEmpty(SKBitmap bitmap);
@@ -112,7 +112,7 @@ public class ImageUtility : IImageUtility
     return ms.ToArray();
   }
 
-  public byte[] EncodeJpeg(SKBitmap bitmap, int quality, bool compressOutput = true)
+  public byte[] EncodeJpeg(SKBitmap bitmap, int quality)
   {
     using var ms = new MemoryStream();
     bitmap.Encode(ms, SKEncodedImageFormat.Jpeg, quality);
