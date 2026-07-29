@@ -15,7 +15,7 @@ permissions:
   issues: write
 
 jobs:
-  opencode:
+  bitbound-bot:
     runs-on: ${{ fromJson('["self-hosted","Linux"]') }}
 
     if: |
