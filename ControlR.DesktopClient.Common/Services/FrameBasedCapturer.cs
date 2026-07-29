@@ -406,12 +406,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
   /// <returns>The region to send as a recovery frame, or null.</returns>
   private SKRect? GetRecoveryRegion(int effectiveQuality, double currentMbps)
   {
-    var autoQualityMaximum = Math.Clamp(
-      _sessionState.AutoQualityMaximum,
-      Math.Clamp(_sessionState.AutoQualityMinimum, 1, 99) + 1,
-      100);
-
-    if (effectiveQuality < autoQualityMaximum ||
+    if (effectiveQuality < _sessionState.AutoQualityMaximum ||
         !_sessionState.IsAutoQualityEnabled ||
         _pendingRecoveryRegion is not { } pendingRecoveryRegion ||
         pendingRecoveryRegion.IsEmpty)
@@ -660,10 +655,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
           ImageFormat.Jpeg,
           cancellationToken);
 
-        if (effectiveQuality < Math.Clamp(
-          _sessionState.AutoQualityMaximum,
-          Math.Clamp(_sessionState.AutoQualityMinimum, 1, 99) + 1,
-          100))
+        if (effectiveQuality < _sessionState.AutoQualityMaximum)
         {
           TrackReducedQualityRegion(bitmapSize, dirtyRegions);
         }
