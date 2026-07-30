@@ -4,7 +4,11 @@ None.
 
 ## Enhancements
 
-None.
+- Added an option for WebP encoding format for remote control sessions.
+  - WebP provides better compression (lower bandwidth utilization) while still being better quality than JPEG.
+  - However, WebP takes longer to encode, so FPS can be lower than JPEG, depending on screen activity.
+- Added SIMD acceleration for image diffing, reducing diff time by up to 29%.
+  - This can offset some of the additional encoding time of WebP in some scenarios.
 
 ## Fixes
 
