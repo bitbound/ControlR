@@ -140,16 +140,19 @@
                    Label="Enable DirectX" />
     </MudTooltip>
   </div>
+</div>
 
-  <div class="mt-2">
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Default Encoding Settings
+  </MudText>
+
+  <div>
     <MudTooltip
       Text="Select the encoding format to use for screen capture.  WebP provides better compression and quality, while JPEG is faster to encode.">
       <MudSelect T="ImageFormat" Value="_encodingFormat"
-                 ValueChanged="@((ImageFormat value) => SetEncodingFormat(value))"
-                 FullWidth
-                 Style="max-width: 500px"
-                 Label="Encoding Format"
-                 Variant="Variant.Outlined">
+                 ValueChanged="@((ImageFormat value) => SetEncodingFormat(value))" FullWidth Style="max-width: 500px"
+                 Label="Encoding Format" Variant="Variant.Outlined">
         <MudSelectItem Value="@ImageFormat.WebP">WebP (less bandwidth, higher quality, slower encoding)</MudSelectItem>
         <MudSelectItem Value="@ImageFormat.Jpeg">JPEG (more bandwidth, lower quality, faster encoding)</MudSelectItem>
       </MudSelect>

@@ -150,9 +150,9 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
     return Task.CompletedTask;
   }
 
-  public Task SendCaptureSettings()
+  public Task<bool> SendCaptureSettings()
   {
-    return Task.CompletedTask;
+    return Task.FromResult(true);
   }
 
   public Task SendClipboardText(string text)
