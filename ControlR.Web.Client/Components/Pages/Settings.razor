@@ -180,12 +180,12 @@
   {
     <div class="mt-3 d-flex flex-column gap-3" style="max-width: 500px">
       <MudTooltip
-        Text="Highest JPEG quality auto mode will use while outbound bandwidth stays below the lower threshold.">
+        Text="Highest image quality auto mode will use while outbound bandwidth stays below the lower threshold.">
         <MudNumericField T="int" Value="_autoQualityMaximum" ValueChanged="@((int value) => SetAutoQualityMaximum(value))"
                          Label="Auto Quality Maximum" Min="2" Max="100" Step="1" Variant="Variant.Outlined" />
       </MudTooltip>
 
-      <MudTooltip Text="Lowest JPEG quality auto mode will use once outbound bandwidth reaches the upper threshold.">
+      <MudTooltip Text="Lowest image quality auto mode will use once outbound bandwidth reaches the upper threshold.">
         <MudNumericField T="int" Value="_autoQualityMinimum" ValueChanged="@((int value) => SetAutoQualityMinimum(value))"
                          Label="Auto Quality Minimum" Min="1" Max="99" Step="1" Variant="Variant.Outlined" />
       </MudTooltip>
