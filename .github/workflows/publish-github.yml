@@ -101,7 +101,7 @@ jobs:
         id: get-version
         shell: bash
         run: |
-          VERSION=$(cat ./server-publish/wwwroot/downloads/Version.txt | xargs)
+          VERSION=$(tr -d '\r' < ./server-publish/wwwroot/downloads/Version.txt | xargs)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
