@@ -13,6 +13,7 @@ None.
 ## Fixes
 
 - Fixed inserts to UserStorage failing due to upsert bypassing EF Core custom conventions configuration.
+  - This was causing the dismissal of the "What's New" dialog to not "stick".
 - Fixed an issue with the Markdown parser incorrectly rendering underscores as italics when flanked by non-whitespace characters.
 
 ## Removals
