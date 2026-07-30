@@ -315,9 +315,19 @@ public class AgentHub(
     {
       var agentDto = signedDto.Dto;
 
-      // 1. Determine the public key to verify against
+      // 1. Determine the public key to verify against.
+      // Only trust the agent-supplied key when self-bootstrap is enabled.
       var device = await _appDb.Devices.FindAsync(agentDto.Id);
       var storedPublicKey = device?.PublicKey;
+      
+      if (string.IsNullOrEmpty(storedPublicKey) && !_appOptions.Value.AllowAgentsToSelfBootstrap)
+      {
+        _logger.LogWarning(
+          "Rejecting update from unknown device {DeviceId}. Self-bootstrap is disabled.",
+          agentDto.Id);
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Unknown device.");
+      }
+
       var publicKeyBase64 = !string.IsNullOrEmpty(storedPublicKey)
         ? storedPublicKey
         : signedDto.PublicKey;
@@ -338,7 +348,11 @@ public class AgentHub(
       // 3. Verify signature
       if (!_keyProvider.Verify(signedDto, publicKeyBytes))
       {
-        _logger.LogWarning("Signature verification failed for device {DeviceId}.", agentDto.Id);
+        _logger.LogWarning(
+          "Signature verification failed. Device Id: {DeviceId}. Device Name: {DeviceName}", 
+          agentDto.Id,
+          agentDto.Name);
+          
         return HubResult.Fail<InternalDtos.DeviceResponseDto>("Signature verification failed.");
       }
 
