@@ -284,7 +284,7 @@ public partial class DeviceAccessLayout
     try
     {
       var startResult = await ViewerHub.Value.Server.StartDeviceAccessActivity(_deviceId);
-      if (startResult.IsSuccess)
+      if (!startResult.IsSuccess)
       {
         Logger.LogError("Failed to start remote access activity.");
       }

@@ -13,50 +13,92 @@ public class QualityPopoverBase : DisposableComponent
 
   protected async Task HandleAutoQualityLowerThresholdChanged(double value)
   {
+    var oldValue = RemoteControlState.AutoQualityLowerThresholdMbps;
     RemoteControlState.AutoQualityLowerThresholdMbps = value;
-    await SendCaptureSettings();
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.AutoQualityLowerThresholdMbps = oldValue;
+    }
   }
 
   protected async Task HandleAutoQualityMaximumChanged(int value)
   {
+    var oldValue = RemoteControlState.AutoQualityMaximum;
     RemoteControlState.AutoQualityMaximum = value;
-    await SendCaptureSettings();
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.AutoQualityMaximum = oldValue;
+    }
   }
 
   protected async Task HandleAutoQualityMinimumChanged(int value)
   {
+    var oldValue = RemoteControlState.AutoQualityMinimum;
     RemoteControlState.AutoQualityMinimum = value;
-    await SendCaptureSettings();
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.AutoQualityMinimum = oldValue;
+    }
   }
 
   protected async Task HandleAutoQualityToggled(bool value)
   {
+    var oldValue = RemoteControlState.IsAutoQualityEnabled;
     RemoteControlState.IsAutoQualityEnabled = value;
-    await SendCaptureSettings();
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.IsAutoQualityEnabled = oldValue;
+    }
   }
 
   protected async Task HandleAutoQualityUpperThresholdChanged(double value)
   {
+    var oldValue = RemoteControlState.AutoQualityUpperThresholdMbps;
     RemoteControlState.AutoQualityUpperThresholdMbps = value;
-    await SendCaptureSettings();
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.AutoQualityUpperThresholdMbps = oldValue;
+    }
+  }
+
+  protected async Task HandleEncodingFormatChanged(ImageFormat value)
+  {
+    var oldValue = RemoteControlState.EncodingFormat;
+    RemoteControlState.EncodingFormat = value;
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.EncodingFormat = oldValue;
+    }
   }
 
   protected async Task HandleManualQualityChanged(int value)
   {
+    var oldValue = RemoteControlState.ManualQuality;
     RemoteControlState.ManualQuality = value;
-    await SendCaptureSettings();
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.ManualQuality = oldValue;
+    }
   }
 
   protected async Task HandleMaxBandwidthChanged(double value)
   {
+    var oldValue = RemoteControlState.MaxBandwidthMbps;
     RemoteControlState.MaxBandwidthMbps = value;
-    await SendCaptureSettings();
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.MaxBandwidthMbps = oldValue;
+    }
   }
 
   protected async Task HandleMaxBandwidthToggled(bool value)
   {
+    var oldValue = RemoteControlState.IsMaxBandwidthEnabled;
     RemoteControlState.IsMaxBandwidthEnabled = value;
-    await SendCaptureSettings();
+    if (!await SendCaptureSettings())
+    {
+      RemoteControlState.IsMaxBandwidthEnabled = oldValue;
+    }
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -69,13 +111,13 @@ public class QualityPopoverBase : DisposableComponent
     await base.OnAfterRenderAsync(firstRender);
   }
 
-  private async Task SendCaptureSettings()
+  private async Task<bool> SendCaptureSettings()
   {
     try
     {
       if (RemoteControlStream.State != System.Net.WebSockets.WebSocketState.Open)
       {
-        return;
+        return false;
       }
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -89,14 +131,17 @@ public class QualityPopoverBase : DisposableComponent
         RemoteControlState.AutoQualityMinimum,
         RemoteControlState.AutoQualityUpperThresholdMbps,
         RemoteControlState.IsMaxBandwidthEnabled,
-        RemoteControlState.MaxBandwidthMbps);
+        RemoteControlState.MaxBandwidthMbps,
+        RemoteControlState.EncodingFormat);
 
       await RemoteControlStream.SendCaptureSettings(dto, cts.Token);
+      return true;
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while sending capture settings.");
       Snackbar.Add("An error occurred while updating capture settings", Severity.Error);
+      return false;
     }
   }
 }

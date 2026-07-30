@@ -162,22 +162,14 @@ public partial class MainWindowViewModel : ObservableObject, IMainWindowViewMode
   {
     await Dispatcher.UIThread.InvokeAsync(() =>
     {
-      if (!IsInteractiveBearerAuth)
-      {
-        IsViewerVisible = !string.IsNullOrWhiteSpace(ViewerOptions.PersonalAccessToken);
-        RequiresTwoFactor = false;
-        TwoFactorCode = string.Empty;
-
-        if (!IsViewerVisible && !string.IsNullOrWhiteSpace(e.Message))
-        {
-          StatusMessage = e.Message;
-        }
-
-        return;
-      }
-
       switch (e.State)
       {
+        case ControlrAuthSessionState.PatConfigured:
+          IsViewerVisible = true;
+          RequiresPasswordChange = false;
+          RequiresTwoFactor = false;
+          TwoFactorCode = string.Empty;
+          break;
         case ControlrAuthSessionState.Authenticated:
           IsViewerVisible = true;
           RequiresPasswordChange = false;

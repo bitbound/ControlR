@@ -62,7 +62,8 @@ public partial class ExtrasPopover : DisposableComponent
           RemoteControlState.AutoQualityMinimum,
           RemoteControlState.AutoQualityUpperThresholdMbps,
           RemoteControlState.IsMaxBandwidthEnabled,
-          RemoteControlState.MaxBandwidthMbps),
+          RemoteControlState.MaxBandwidthMbps,
+          RemoteControlState.EncodingFormat),
         cts.Token);
     }
     catch (Exception ex)

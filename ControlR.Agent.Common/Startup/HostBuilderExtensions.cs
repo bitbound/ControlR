@@ -22,6 +22,7 @@ using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.Processes;
+using ControlR.Libraries.DataRedaction;
 using ControlR.Libraries.Hosting;
 using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Shared.Services.FileSystem;
@@ -96,6 +97,7 @@ internal static class HostApplicationBuilderExtensions
       options.BaseUrl = appOptions.ServerUri;
     });
 
+    builder.Services.AddStarRedactor();
     services.AddAgentSharedServices();
     services.AddSingleton<IProcessManager, ProcessManager>();
     services.AddSingleton<ISystemEnvironment>(_ => SystemEnvironment.Instance);

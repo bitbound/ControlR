@@ -1,4 +1,5 @@
 using System.Globalization;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
@@ -119,6 +120,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         25,
         16.5,
         true,
+        ImageFormat.WebP,
         true,
         false,
         true,
@@ -161,6 +163,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         25,
         16.5,
         true,
+        ImageFormat.WebP,
         true,
         false,
         true,
@@ -217,6 +220,7 @@ public class UserPreferencesManagerTests(ITestOutputHelper testOutput) : IAsyncL
         25,
         16.5,
         true,
+        ImageFormat.WebP,
         true,
         false,
         true,

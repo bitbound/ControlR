@@ -1,4 +1,6 @@
 using System.Drawing;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using ControlR.DesktopClient.Common.Extensions;
 using ControlR.Libraries.Shared.Primitives;
 using SkiaSharp;
@@ -13,7 +15,7 @@ public interface IImageUtility
   byte[] Encode(SKBitmap bitmap, SKEncodedImageFormat format, int quality = 80);
   byte[] EncodeJpeg(SKBitmap bitmap, int quality);
   Result<SKRect> GetChangedArea(SKBitmap? currentFrame, SKBitmap? previousFrame, bool forceFullscreen = false);
-  Result<SKRect[]> GetChangedAreas(SKBitmap? currentFrame, SKBitmap? previousFrame, uint gridColumns = 4, uint gridRows = 2, bool forceFullscreen = false);
+  Result<SKRect[]> GetChangedAreas(SKBitmap? currentFrame, SKBitmap? previousFrame, uint gridColumns = 4, uint gridRows = 2, bool forceFullscreen = false, bool useSimd = true);
   bool IsEmpty(SKBitmap bitmap);
 }
 
@@ -93,7 +95,8 @@ public class ImageUtility : IImageUtility
     canvas.DrawBitmap(
       bitmap,
       cropArea,
-      new SKRect(0, 0, cropArea.Width, cropArea.Height));
+      new SKRect(0, 0, cropArea.Width, cropArea.Height),
+      SKSamplingOptions.Default);
     return cropped;
   }
 
@@ -141,68 +144,10 @@ public class ImageUtility : IImageUtility
       return Result.Fail<SKRect>("Bitmaps do not have the same pixel size.");
     }
 
-    var width = currentFrame.Width;
-    var height = currentFrame.Height;
-    var left = int.MaxValue;
-    var top = int.MaxValue;
-    var right = int.MinValue;
-    var bottom = int.MinValue;
-
-    var bytesPerPixel = currentFrame.BytesPerPixel;
-
-    try
-    {
-      unsafe
-      {
-        var scan1 = (byte*)currentFrame.GetPixels().ToPointer();
-        var scan2 = (byte*)previousFrame.GetPixels().ToPointer();
-
-        for (var row = 0; row < height; row++)
-        {
-          for (var column = 0; column < width; column++)
-          {
-            var index = row * width * bytesPerPixel + column * bytesPerPixel;
-
-            var data1 = scan1 + index;
-            var data2 = scan2 + index;
-
-            if (data1[0] == data2[0] &&
-                data1[1] == data2[1] &&
-                data1[2] == data2[2] &&
-                data1[3] == data2[3])
-            {
-              continue;
-            }
-
-            top = Math.Min(top, row);
-            bottom = Math.Max(bottom, row);
-            left = Math.Min(left, column);
-            right = Math.Max(right, column);
-          }
-        }
-
-        if (left <= right && top <= bottom)
-        {
-          left = Math.Max(left - 2, 0);
-          top = Math.Max(top - 2, 0);
-          right = Math.Min(right + 2, width);
-          bottom = Math.Min(bottom + 2, height);
-
-          return Result.Ok(new SKRect(left, top, right, bottom));
-        }
-        else
-        {
-          return Result.Ok(SKRect.Empty);
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      return Result.Fail<SKRect>(ex);
-    }
+    return Result.Ok(GetChangedAreaSimd(currentFrame, previousFrame));
   }
 
-  public Result<SKRect[]> GetChangedAreas(SKBitmap? currentFrame, SKBitmap? previousFrame, uint gridColumns = 4, uint gridRows = 2, bool forceFullscreen = false)
+  public Result<SKRect[]> GetChangedAreas(SKBitmap? currentFrame, SKBitmap? previousFrame, uint gridColumns = 4, uint gridRows = 2, bool forceFullscreen = false, bool useSimd = true)
   {
     if (gridColumns == 0 || gridRows == 0)
     {
@@ -229,7 +174,7 @@ public class ImageUtility : IImageUtility
       return Result.Fail<SKRect[]>("Bitmaps do not have the same pixel size.");
     }
 
-    if (currentFrame.Width < gridColumns || currentFrame.Height <  gridRows)
+    if (currentFrame.Width < gridColumns || currentFrame.Height < gridRows)
     {
       return Result.Fail<SKRect[]>($"Bitmap dimensions are smaller than the grid size. Bitmap size: {currentFrame.Width}x{currentFrame.Height}. Grid size: {gridColumns}x{gridRows}");
     }
@@ -241,6 +186,7 @@ public class ImageUtility : IImageUtility
 
     var sectionCount = gridColumns * gridRows;
     var results = new SKRect[sectionCount];
+    var effectiveUseSimd = useSimd && Vector.IsHardwareAccelerated;
 
     Parallel.For(0, sectionCount, index =>
     {
@@ -250,7 +196,9 @@ public class ImageUtility : IImageUtility
       var y = row * sectionHeight;
       var w = col == gridColumns - 1 ? width - x : sectionWidth;
       var h = row == gridRows - 1 ? height - y : sectionHeight;
-      results[index] = GetChangedAreaForSection(currentFrame, previousFrame, x, y, w, h);
+      results[index] = effectiveUseSimd
+        ? GetChangedAreaForSectionSimd(currentFrame, previousFrame, x, y, w, h)
+        : GetChangedAreaForSection(currentFrame, previousFrame, x, y, w, h);
     });
 
     return Result.Ok(results);
@@ -347,6 +295,217 @@ public class ImageUtility : IImageUtility
           top = Math.Max(top - 2, startY);
           right = Math.Min(right + 2, endX);
           bottom = Math.Min(bottom + 2, endY);
+
+          return new SKRect(left, top, right, bottom);
+        }
+        else
+        {
+          return SKRect.Empty;
+        }
+      }
+    }
+    catch
+    {
+      return SKRect.Empty;
+    }
+  }
+
+  private static SKRect GetChangedAreaForSectionSimd(SKBitmap currentFrame, SKBitmap previousFrame, int startX, int startY, int sectionWidth, int sectionHeight)
+  {
+    var width = currentFrame.Width;
+    var height = currentFrame.Height;
+    var bytesPerPixel = currentFrame.BytesPerPixel;
+    var stride = width * bytesPerPixel;
+
+    var left = int.MaxValue;
+    var top = int.MaxValue;
+    var right = int.MinValue;
+    var bottom = int.MinValue;
+
+    try
+    {
+      unsafe
+      {
+        var scan1 = (byte*)currentFrame.GetPixels().ToPointer();
+        var scan2 = (byte*)previousFrame.GetPixels().ToPointer();
+
+        var endX = Math.Min(startX + sectionWidth, width);
+        var endY = Math.Min(startY + sectionHeight, height);
+
+        var vectorSize = Vector<byte>.Count;
+        var pixelSize = bytesPerPixel;
+
+        for (var row = startY; row < endY; row++)
+        {
+          var rowOffset = row * stride;
+          var column = startX;
+
+          while (column <= endX - vectorSize)
+          {
+            var pixelByteIndex = rowOffset + column * pixelSize;
+            var span1 = MemoryMarshal.CreateReadOnlySpan(ref *(scan1 + pixelByteIndex), vectorSize);
+            var span2 = MemoryMarshal.CreateReadOnlySpan(ref *(scan2 + pixelByteIndex), vectorSize);
+            var v1 = new Vector<byte>(span1);
+            var v2 = new Vector<byte>(span2);
+
+            if (!v1.Equals(v2))
+            {
+              var colsInVector = vectorSize / pixelSize;
+              for (var vc = 0; vc < colsInVector; vc++)
+              {
+                var colIdx = column + vc;
+                if (colIdx >= endX)
+                  break;
+
+                var pi = rowOffset + colIdx * pixelSize;
+                if (scan1[pi] != scan2[pi] ||
+                    scan1[pi + 1] != scan2[pi + 1] ||
+                    scan1[pi + 2] != scan2[pi + 2] ||
+                    scan1[pi + 3] != scan2[pi + 3])
+                {
+                  top = Math.Min(top, row);
+                  bottom = Math.Max(bottom, row);
+                  left = Math.Min(left, colIdx);
+                  right = Math.Max(right, colIdx);
+                }
+              }
+            }
+
+            column += vectorSize / pixelSize;
+          }
+
+          for (; column < endX; column++)
+          {
+            var index = rowOffset + column * pixelSize;
+
+            var data1 = scan1 + index;
+            var data2 = scan2 + index;
+
+            if (data1[0] == data2[0] &&
+                data1[1] == data2[1] &&
+                data1[2] == data2[2] &&
+                data1[3] == data2[3])
+            {
+              continue;
+            }
+
+            top = Math.Min(top, row);
+            bottom = Math.Max(bottom, row);
+            left = Math.Min(left, column);
+            right = Math.Max(right, column);
+          }
+        }
+
+        if (left <= right && top <= bottom)
+        {
+          left = Math.Max(left - 2, startX);
+          top = Math.Max(top - 2, startY);
+          right = Math.Min(right + 2, endX);
+          bottom = Math.Min(bottom + 2, endY);
+
+          return new SKRect(left, top, right, bottom);
+        }
+        else
+        {
+          return SKRect.Empty;
+        }
+      }
+    }
+    catch
+    {
+      return SKRect.Empty;
+    }
+  }
+
+  private static SKRect GetChangedAreaSimd(SKBitmap currentFrame, SKBitmap previousFrame)
+  {
+    var width = currentFrame.Width;
+    var height = currentFrame.Height;
+    var bytesPerPixel = currentFrame.BytesPerPixel;
+    var stride = width * bytesPerPixel;
+
+    var left = int.MaxValue;
+    var top = int.MaxValue;
+    var right = int.MinValue;
+    var bottom = int.MinValue;
+
+    try
+    {
+      unsafe
+      {
+        var scan1 = (byte*)currentFrame.GetPixels().ToPointer();
+        var scan2 = (byte*)previousFrame.GetPixels().ToPointer();
+
+        var vectorSize = Vector<byte>.Count;
+        var pixelSize = bytesPerPixel;
+
+        for (var row = 0; row < height; row++)
+        {
+          var rowOffset = row * stride;
+          var column = 0;
+
+          while (column <= width - vectorSize)
+          {
+            var pixelByteIndex = rowOffset + column * pixelSize;
+            var span1 = MemoryMarshal.CreateReadOnlySpan(ref *(scan1 + pixelByteIndex), vectorSize);
+            var span2 = MemoryMarshal.CreateReadOnlySpan(ref *(scan2 + pixelByteIndex), vectorSize);
+            var v1 = new Vector<byte>(span1);
+            var v2 = new Vector<byte>(span2);
+
+            if (!v1.Equals(v2))
+            {
+              var colsInVector = vectorSize / pixelSize;
+              for (var vc = 0; vc < colsInVector; vc++)
+              {
+                var colIdx = column + vc;
+                if (colIdx >= width)
+                  break;
+
+                var pi = rowOffset + colIdx * pixelSize;
+                if (scan1[pi] != scan2[pi] ||
+                    scan1[pi + 1] != scan2[pi + 1] ||
+                    scan1[pi + 2] != scan2[pi + 2] ||
+                    scan1[pi + 3] != scan2[pi + 3])
+                {
+                  top = Math.Min(top, row);
+                  bottom = Math.Max(bottom, row);
+                  left = Math.Min(left, colIdx);
+                  right = Math.Max(right, colIdx);
+                }
+              }
+            }
+
+            column += vectorSize / pixelSize;
+          }
+
+          for (; column < width; column++)
+          {
+            var index = rowOffset + column * pixelSize;
+
+            var data1 = scan1 + index;
+            var data2 = scan2 + index;
+
+            if (data1[0] == data2[0] &&
+                data1[1] == data2[1] &&
+                data1[2] == data2[2] &&
+                data1[3] == data2[3])
+            {
+              continue;
+            }
+
+            top = Math.Min(top, row);
+            bottom = Math.Max(bottom, row);
+            left = Math.Min(left, column);
+            right = Math.Max(right, column);
+          }
+        }
+
+        if (left <= right && top <= bottom)
+        {
+          left = Math.Max(left - 2, 0);
+          top = Math.Max(top - 2, 0);
+          right = Math.Min(right + 2, width);
+          bottom = Math.Min(bottom + 2, height);
 
           return new SKRect(left, top, right, bottom);
         }

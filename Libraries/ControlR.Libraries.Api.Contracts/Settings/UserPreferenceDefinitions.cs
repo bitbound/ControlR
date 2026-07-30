@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Globalization;
 using System.Reflection;
 using ControlR.Libraries.Api.Contracts.Constants;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
 
@@ -15,6 +16,7 @@ public static class UserPreferenceDefinitions
   public const double DefaultAutoQualityUpperThresholdMbps = 15d;
   public const bool DefaultCaptureCursor = false;
   public const bool DefaultEnableDirectX = true;
+  public const ImageFormat DefaultEncodingFormat = ImageFormat.Jpeg;
   public const bool DefaultHideOfflineDevices = true;
   public const bool DefaultIncludeUntaggedDevices = false;
   public const bool DefaultIsAutoQualityEnabled = false;
@@ -36,6 +38,8 @@ public static class UserPreferenceDefinitions
     SettingDefinition.CreateBoolean(UserPreferenceNames.CaptureCursor, DefaultCaptureCursor);
   public static SettingDefinition<bool> EnableDirectX { get; } =
     SettingDefinition.CreateBoolean(UserPreferenceNames.EnableDirectX, DefaultEnableDirectX);
+  public static SettingDefinition<ImageFormat> EncodingFormat { get; } =
+    SettingDefinition.CreateEnum(UserPreferenceNames.EncodingFormat, DefaultEncodingFormat);
   public static SettingDefinition<bool> HideOfflineDevices { get; } =
     SettingDefinition.CreateBoolean(UserPreferenceNames.HideOfflineDevices, DefaultHideOfflineDevices);
   public static SettingDefinition<bool> IncludeUntaggedDevices { get; } =

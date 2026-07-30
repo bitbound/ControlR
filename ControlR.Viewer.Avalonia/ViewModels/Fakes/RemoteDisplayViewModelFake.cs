@@ -1,7 +1,6 @@
-﻿#pragma warning disable CS0067 
+﻿#pragma warning disable CS0067 // The event 'RemoteDisplayViewModelFake.PropertyChanged' is never used
 using System.ComponentModel;
 using Avalonia.Layout;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Primitives;
 
@@ -16,6 +15,7 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
   public int AutoQualityMaximum { get; set; } = 80;
   public int AutoQualityMinimum { get; set; } = 20;
   public double AutoQualityUpperThresholdMbps { get; set; } = 20;
+  public IEnumerable<ImageFormat> AvailableEncodingFormats => [ImageFormat.WebP, ImageFormat.Jpeg];
   public bool CaptureCursor { get; set; }
   public SKBitmap? CompositedFrame => null;
   public IAsyncRelayCommand DisconnectCommand => new AsyncRelayCommand(() => Task.CompletedTask);
@@ -80,6 +80,7 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
     }
   ];
   public bool EnableDirectX { get; set; } = true;
+  public ImageFormat EncodingFormat { get; set; } = ImageFormat.Jpeg;
   public bool HasMetricsData => true;
   public bool HasMultipleDisplays => true;
   public bool IsAutoPanEnabled { get; set; } = true;
@@ -149,9 +150,9 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
     return Task.CompletedTask;
   }
 
-  public Task SendCaptureSettings()
+  public Task<bool> SendCaptureSettings()
   {
-    return Task.CompletedTask;
+    return Task.FromResult(true);
   }
 
   public Task SendClipboardText(string text)

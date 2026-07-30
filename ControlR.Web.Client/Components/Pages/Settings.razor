@@ -11,42 +11,26 @@
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Tenant ID
   </MudText>
-  <MudTextField T="Guid?"
-                Label="Your Tenant ID"
-                ReadOnly="true"
-                Variant="Variant.Filled"
-                AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
-                OnAdornmentClick="CopyTenantId"
-                Adornment="Adornment.End"
-                Style="max-width: 500px"
-                Value="_tenantId" />
+  <MudTextField T="Guid?" Label="Your Tenant ID" ReadOnly="true" Variant="Variant.Filled"
+                AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyTenantId" Adornment="Adornment.End"
+                Style="max-width: 500px" Value="_tenantId" />
 </div>
 
 <div class="mt-10">
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     User ID
   </MudText>
-  <MudTextField T="Guid?"
-                Label="Your User ID"
-                ReadOnly="true"
-                Variant="Variant.Filled"
-                AdornmentIcon="@(Icons.Material.Filled.ContentCopy)"
-                OnAdornmentClick="CopyUserId"
-                Adornment="Adornment.End"
-                Style="max-width: 500px"
-                Value="_userId" />
+  <MudTextField T="Guid?" Label="Your User ID" ReadOnly="true" Variant="Variant.Filled"
+                AdornmentIcon="@(Icons.Material.Filled.ContentCopy)" OnAdornmentClick="CopyUserId" Adornment="Adornment.End"
+                Style="max-width: 500px" Value="_userId" />
 </div>
 
 <div class="mt-10">
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     User Display Name
   </MudText>
-  <MudTextField T="string"
-                @bind-Value:get="_userDisplayName"
-                @bind-Value:set="SetUserDisplayName"
-                MaxLength="25"
-                Style="max-width: 500px"
-                Validation="(string e) => ValidateDisplayName(e)"
+  <MudTextField T="string" @bind-Value:get="_userDisplayName" @bind-Value:set="SetUserDisplayName" MaxLength="25"
+                Style="max-width: 500px" Validation="(string e) => ValidateDisplayName(e)"
                 Label="Shown to partners when connecting">
 
   </MudTextField>
@@ -56,7 +40,7 @@
   <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
     Show Notification to User
   </MudText>
-  
+
   @if (_isNotifyUserEnforced)
   {
     <MudAlert Severity="Severity.Info" Class="mb-3">
@@ -71,11 +55,8 @@
       }
     </MudAlert>
   }
-  
-  <MudCheckBox T="bool"
-               @bind-Value:get="_notifyUser"
-               @bind-Value:set="SetNotifyUser"
-               Disabled="_isNotifyUserEnforced"
+
+  <MudCheckBox T="bool" @bind-Value:get="_notifyUser" @bind-Value:set="SetNotifyUser" Disabled="_isNotifyUserEnforced"
                Label="Notify users when a remote control session starts" />
 </div>
 
@@ -116,13 +97,15 @@
   </MudText>
 
   <MudRadioGroup @bind-Value:get="_keyboardInputMode" @bind-Value:set="SetKeyboardInputMode" T="KeyboardInputMode">
-    <MudTooltip Text="Types the logical character for text input while keeping physical-style handling for commands, navigation keys, and modifiers.">
+    <MudTooltip
+      Text="Types the logical character for text input while keeping physical-style handling for commands, navigation keys, and modifiers.">
       <MudRadio Value="@KeyboardInputMode.Auto" Color="Color.Primary">Auto</MudRadio>
     </MudTooltip>
     <MudTooltip Text="Simulates the same physical key position on the remote machine, regardless of keyboard layout.">
       <MudRadio Value="@KeyboardInputMode.Physical" Color="Color.Primary">Physical</MudRadio>
     </MudTooltip>
-    <MudTooltip Text="Prefers the logical key or character value, so pressing a key types that same character regardless of the remote layout.">
+    <MudTooltip
+      Text="Prefers the logical key or character value, so pressing a key types that same character regardless of the remote layout.">
       <MudRadio Value="@KeyboardInputMode.Virtual" Color="Color.Primary">Virtual</MudRadio>
     </MudTooltip>
   </MudRadioGroup>
@@ -145,19 +128,36 @@
     Default Capture Settings
   </MudText>
 
-  <MudTooltip Text="Include the remote cursor by default when a new remote control session starts.">
-    <MudCheckBox T="bool"
-                 Value="_captureCursor"
-                 ValueChanged="@((bool value) => SetCaptureCursor(value))"
-                 Label="Capture cursor" />
-  </MudTooltip>
+  <div>
+    <MudTooltip Text="Include the remote cursor by default when a new remote control session starts.">
+      <MudCheckBox T="bool" Value="_captureCursor" ValueChanged="@((bool value) => SetCaptureCursor(value))"
+                   Label="Capture cursor" />
+    </MudTooltip>
 
-  <MudTooltip Text="Use DirectX capture for better performance on Windows systems.  Disabling this can improve compatibility in some situations.">
-    <MudCheckBox T="bool"
-                 Value="_enableDirectX"
-                 ValueChanged="@((bool value) => SetEnableDirectX(value))"
-                 Label="Enable DirectX" />
-  </MudTooltip>
+    <MudTooltip
+      Text="Use DirectX capture for better performance on Windows systems.  Disabling this can improve compatibility in some situations.">
+      <MudCheckBox T="bool" Value="_enableDirectX" ValueChanged="@((bool value) => SetEnableDirectX(value))"
+                   Label="Enable DirectX" />
+    </MudTooltip>
+  </div>
+</div>
+
+<div class="mt-10">
+  <MudText Typo="Typo.h6" Color="Color.Primary" GutterBottom>
+    Default Encoding Settings
+  </MudText>
+
+  <div>
+    <MudTooltip
+      Text="Select the encoding format to use for screen capture.  WebP provides better compression and quality, while JPEG is faster to encode.">
+      <MudSelect T="ImageFormat" Value="_encodingFormat"
+                 ValueChanged="@((ImageFormat value) => SetEncodingFormat(value))" FullWidth Style="max-width: 500px"
+                 Label="Encoding Format" Variant="Variant.Outlined">
+        <MudSelectItem Value="@ImageFormat.WebP">WebP (less bandwidth, higher quality, slower encoding)</MudSelectItem>
+        <MudSelectItem Value="@ImageFormat.Jpeg">JPEG (more bandwidth, lower quality, faster encoding)</MudSelectItem>
+      </MudSelect>
+    </MudTooltip>
+  </div>
 </div>
 
 <div class="mt-10">
@@ -165,70 +165,41 @@
     <MudText Typo="Typo.h6" Color="Color.Primary">
       Default Quality Settings
     </MudText>
-    <MudButton Variant="Variant.Text"
-                Color="Color.Default"
-                Size="Size.Small"
-                Class="ml-4"
-                OnClick="RestoreQualityDefaults">
+    <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small" Class="ml-4"
+               OnClick="RestoreQualityDefaults">
       Restore Defaults
     </MudButton>
   </div>
 
   <MudTooltip Text="Automatically adjust image quality based on the remote sender's outbound bandwidth.">
-    <MudSwitch Value="_isAutoQualityEnabled"
-               ValueChanged="@((bool value) => SetIsAutoQualityEnabled(value))"
-               Color="Color.Secondary"
-               Label="Enable auto quality"
-               ThumbIcon="@(Icons.Material.Filled.AutoAwesome)" />
+    <MudSwitch Value="_isAutoQualityEnabled" ValueChanged="@((bool value) => SetIsAutoQualityEnabled(value))"
+               Color="Color.Secondary" Label="Enable auto quality" ThumbIcon="@(Icons.Material.Filled.AutoAwesome)" />
   </MudTooltip>
 
   @if (_isAutoQualityEnabled)
   {
     <div class="mt-3 d-flex flex-column gap-3" style="max-width: 500px">
-      <MudTooltip Text="Highest JPEG quality auto mode will use while outbound bandwidth stays below the lower threshold.">
-        <MudNumericField T="int"
-                         Value="_autoQualityMaximum"
-                         ValueChanged="@((int value) => SetAutoQualityMaximum(value))"
-                         Label="Auto Quality Maximum"
-                         Min="2"
-                         Max="100"
-                         Step="1"
-                         Variant="Variant.Outlined" />
+      <MudTooltip
+        Text="Highest image quality auto mode will use while outbound bandwidth stays below the lower threshold.">
+        <MudNumericField T="int" Value="_autoQualityMaximum" ValueChanged="@((int value) => SetAutoQualityMaximum(value))"
+                         Label="Auto Quality Maximum" Min="2" Max="100" Step="1" Variant="Variant.Outlined" />
       </MudTooltip>
 
-      <MudTooltip Text="Lowest JPEG quality auto mode will use once outbound bandwidth reaches the upper threshold.">
-        <MudNumericField T="int"
-                         Value="_autoQualityMinimum"
-                         ValueChanged="@((int value) => SetAutoQualityMinimum(value))"
-                         Label="Auto Quality Minimum"
-                         Min="1"
-                         Max="99"
-                         Step="1"
-                         Variant="Variant.Outlined" />
+      <MudTooltip Text="Lowest image quality auto mode will use once outbound bandwidth reaches the upper threshold.">
+        <MudNumericField T="int" Value="_autoQualityMinimum" ValueChanged="@((int value) => SetAutoQualityMinimum(value))"
+                         Label="Auto Quality Minimum" Min="1" Max="99" Step="1" Variant="Variant.Outlined" />
       </MudTooltip>
 
       <MudTooltip Text="Quality starts dropping after outbound bandwidth rises above this value.">
-        <MudNumericField T="double"
-                         Value="_autoQualityLowerThresholdMbps"
-                         ValueChanged="@((double value) => SetAutoQualityLowerThresholdMbps(value))"
-                         Label="Auto Quality Lower Threshold"
-                         Min="1"
-                         Step="1"
-                         Variant="Variant.Outlined"
-                         Adornment="Adornment.End"
-                         AdornmentText="Mbps" />
+        <MudNumericField T="double" Value="_autoQualityLowerThresholdMbps"
+                         ValueChanged="@((double value) => SetAutoQualityLowerThresholdMbps(value))" Label="Auto Quality Lower Threshold"
+                         Min="1" Step="1" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentText="Mbps" />
       </MudTooltip>
 
       <MudTooltip Text="Quality reaches the minimum auto value once outbound bandwidth reaches this point.">
-        <MudNumericField T="double"
-                         Value="_autoQualityUpperThresholdMbps"
-                         ValueChanged="@((double value) => SetAutoQualityUpperThresholdMbps(value))"
-                         Label="Auto Quality Upper Threshold"
-                         Min="2"
-                         Step="1"
-                         Variant="Variant.Outlined"
-                         Adornment="Adornment.End"
-                         AdornmentText="Mbps" />
+        <MudNumericField T="double" Value="_autoQualityUpperThresholdMbps"
+                         ValueChanged="@((double value) => SetAutoQualityUpperThresholdMbps(value))" Label="Auto Quality Upper Threshold"
+                         Min="2" Step="1" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentText="Mbps" />
       </MudTooltip>
     </div>
   }
@@ -236,49 +207,30 @@
   {
     <div class="mt-3 d-flex flex-column gap-3" style="max-width: 500px">
       <MudTooltip Text="Set a fixed JPEG quality for screen regions sent during remote control sessions.">
-        <MudNumericField T="int"
-                         Value="_manualQuality"
-                         ValueChanged="@((int value) => SetManualQuality(value))"
-                         Label="Manual Quality"
-                         Min="1"
-                         Max="100"
-                         Step="1"
-                         Variant="Variant.Outlined" />
+        <MudNumericField T="int" Value="_manualQuality" ValueChanged="@((int value) => SetManualQuality(value))"
+                         Label="Manual Quality" Min="1" Max="100" Step="1" Variant="Variant.Outlined" />
       </MudTooltip>
 
       <MudTooltip Text="Set a fixed JPEG quality for screen regions sent during remote control sessions.">
-        <MudSlider T="int"
-                   Value="_manualQuality"
-                   ValueChanged="@((int value) => SetManualQuality(value))"
-                   Min="1"
-                   Max="100"
-                   Step="1"
-                   Color="Color.Primary" />
+        <MudSlider T="int" Value="_manualQuality" ValueChanged="@((int value) => SetManualQuality(value))" Min="1"
+                   Max="100" Step="1" Color="Color.Primary" />
       </MudTooltip>
     </div>
   }
 
   <div class="mt-3 d-flex flex-column gap-3" style="max-width: 500px">
-    <MudTooltip Text="Pause capture on the remote end whenever outbound bandwidth rises above this cap, then resume once it falls back below it.">
-      <MudSwitch Value="_isMaxBandwidthEnabled"
-                 ValueChanged="@((bool value) => SetIsMaxBandwidthEnabled(value))"
-                 Color="Color.Secondary"
-                 Label="Enable Max Mbps"
-                 ThumbIcon="@(Icons.Material.Filled.Speed)" />
+    <MudTooltip
+      Text="Pause capture on the remote end whenever outbound bandwidth rises above this cap, then resume once it falls back below it.">
+      <MudSwitch Value="_isMaxBandwidthEnabled" ValueChanged="@((bool value) => SetIsMaxBandwidthEnabled(value))"
+                 Color="Color.Secondary" Label="Enable Max Mbps" ThumbIcon="@(Icons.Material.Filled.Speed)" />
     </MudTooltip>
 
     @if (_isMaxBandwidthEnabled)
     {
       <MudTooltip Text="Hard outbound bandwidth cap that pauses remote capture while usage is above this value.">
-        <MudNumericField T="double"
-                         Value="_maxBandwidthMbps"
-                         ValueChanged="@((double value) => SetMaxBandwidthMbps(value))"
-                         Label="Max Mbps"
-                         Min="1"
-                         Step="1"
-                         Variant="Variant.Outlined"
-                         Adornment="Adornment.End"
-                         AdornmentText="Mbps" />
+        <MudNumericField T="double" Value="_maxBandwidthMbps"
+                         ValueChanged="@((double value) => SetMaxBandwidthMbps(value))" Label="Max Mbps" Min="1" Step="1"
+                         Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentText="Mbps" />
       </MudTooltip>
     }
   </div>

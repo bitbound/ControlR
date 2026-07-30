@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Benchmarks/">
+    <Project Path="Benchmarks/ControlR.Benchmarks.RemoteControl/ControlR.Benchmarks.RemoteControl.csproj" />
+  </Folder>
   <Folder Name="/Examples/">
     <Project Path="Examples/ControlR.ApiClientExample/ControlR.ApiClientExample.csproj" Id="fa6b0650-0e67-4ee8-8924-e06eeea1a2d7" />
     <Project Path="Examples/ControlR.AvaloniaViewerExample/ControlR.AvaloniaViewerExample.csproj" Id="d28213d2-1049-4fe0-9668-82c7da87c436" />

@@ -263,6 +263,7 @@ public partial class RemoteControl : ViewportAwareComponent
     var preferences = await UserPreferences.GetPreferences();
     RemoteControlState.CaptureCursor = preferences.CaptureCursor;
     RemoteControlState.EnableDirectX = preferences.EnableDirectX;
+    RemoteControlState.EncodingFormat = preferences.EncodingFormat;
     RemoteControlState.IsAutoQualityEnabled = preferences.IsAutoQualityEnabled;
     RemoteControlState.ManualQuality = preferences.ManualQuality;
     RemoteControlState.AutoQualityLowerThresholdMbps = preferences.AutoQualityLowerThresholdMbps;
@@ -394,7 +395,8 @@ public partial class RemoteControl : ViewportAwareComponent
         RemoteControlState.AutoQualityMinimum,
         RemoteControlState.AutoQualityUpperThresholdMbps,
         RemoteControlState.IsMaxBandwidthEnabled,
-        RemoteControlState.MaxBandwidthMbps),
+        RemoteControlState.MaxBandwidthMbps,
+        RemoteControlState.EncodingFormat),
       cts.Token);
   }
 

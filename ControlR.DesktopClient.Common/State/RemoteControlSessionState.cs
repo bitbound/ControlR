@@ -1,4 +1,6 @@
-﻿using ControlR.Libraries.Shared.Constants;
+﻿using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.StateManagement;
 using Microsoft.Extensions.Logging;
 
@@ -12,6 +14,7 @@ public interface IRemoteControlSessionState : IStateBase
   double AutoQualityUpperThresholdMbps { get; set; }
   bool CaptureCursor { get; set; }
   bool EnableDirectX { get; set; }
+  ImageFormat EncodingFormat { get; set; }
   int ImageQuality { get; set; }
   bool IsAutoQualityEnabled { get; set; }
   bool IsMaxBandwidthEnabled { get; set; }
@@ -67,6 +70,11 @@ public class RemoteControlSessionState(ILogger<RemoteControlSessionState> logger
   public bool EnableDirectX
   {
     get => Get(defaultValue: true);
+    set => Set(value);
+  }
+  public ImageFormat EncodingFormat
+  {
+    get => Get(defaultValue: AppConstants.DefaultRemoteControlEncodingFormat);
     set => Set(value);
   }
   public int ImageQuality

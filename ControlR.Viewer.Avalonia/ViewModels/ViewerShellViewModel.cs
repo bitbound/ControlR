@@ -41,19 +41,6 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
   private readonly ControlrViewerOptions _options;
   private readonly ISnackbar _snackbar;
 
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(HasAlertMessage))]
-  [NotifyPropertyChangedFor(nameof(ShowReconnectButton))]
-  private string? _alertMessage;
-  [ObservableProperty]
-  private SnackbarSeverity _alertSeverity = SnackbarSeverity.Info;
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(IsConnected))]
-  [NotifyPropertyChangedFor(nameof(ConnectionStatus))]
-  [NotifyPropertyChangedFor(nameof(ShowReconnectButton))]
-  private HubConnectionState _connectionState;
-  [ObservableProperty]
-  private IViewModelBase? _currentViewModel;
   private bool _isShellInitialized;
 
   public ViewerShellViewModel(
@@ -92,6 +79,19 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     );
   }
 
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(HasAlertMessage))]
+  [NotifyPropertyChangedFor(nameof(ShowReconnectButton))]
+  public partial string? AlertMessage { get; set; }
+
+  [ObservableProperty]
+  public partial SnackbarSeverity AlertSeverity { get; set; } = SnackbarSeverity.Info;
+
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(IsConnected))]
+  [NotifyPropertyChangedFor(nameof(ConnectionStatus))]
+  [NotifyPropertyChangedFor(nameof(ShowReconnectButton))]
+  public partial HubConnectionState ConnectionState { get; set; }
   public string ConnectionStatus
   {
     get
@@ -106,6 +106,9 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
       };
     }
   }
+
+  [ObservableProperty]
+  public partial IViewModelBase? CurrentViewModel { get; set; }
   public bool HasAlertMessage => !string.IsNullOrWhiteSpace(AlertMessage);
   public bool IsConnected => ConnectionState == HubConnectionState.Connected;
   public bool IsDeviceOffline => _deviceState.TryGetCurrentDevice()?.IsOnline == false;
@@ -144,6 +147,23 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
     AlertSeverity = SnackbarSeverity.Info;
   }
 
+  private async Task ApplyAuthStateChange(ControlrAuthSessionStateChangedEventArgs e)
+  {
+    switch (e.State)
+    {
+      case ControlrAuthSessionState.PatConfigured:
+      case ControlrAuthSessionState.Authenticated:
+        await InitializeViewer();
+        break;
+      case ControlrAuthSessionState.Expired:
+        await DisconnectForUnauthenticated(e.Message);
+        break;
+      case ControlrAuthSessionState.SignedOut:
+        await DisconnectForUnauthenticated(null);
+        break;
+    }
+  }
+
   private async Task Connect()
   {
     if (!await _hubConnector.Connect())
@@ -152,9 +172,11 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
       _snackbar.Add(Resources.ViewerHub_ConnectionFailed, SnackbarSeverity.Error);
       AlertMessage = Resources.ViewerHub_ConnectionFailed;
       AlertSeverity = SnackbarSeverity.Error;
+      ConnectionState = HubConnectionState.Disconnected;
       return;
     }
 
+    ConnectionState = HubConnectionState.Connected;
     AlertMessage = null;
   }
 
@@ -214,32 +236,7 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
   {
     try
     {
-      if (_options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken)
-      {
-        if (!string.IsNullOrWhiteSpace(_options.PersonalAccessToken))
-        {
-          await Dispatcher.UIThread.InvokeAsync(async () => await InitializeViewer());
-        }
-        else
-        {
-          await Dispatcher.UIThread.InvokeAsync(async () => await DisconnectForUnauthenticated(null));
-        }
-
-        return;
-      }
-
-      switch (e.State)
-      {
-        case ControlrAuthSessionState.Authenticated:
-          await Dispatcher.UIThread.InvokeAsync(async () => await InitializeViewer());
-          break;
-        case ControlrAuthSessionState.Expired:
-          await Dispatcher.UIThread.InvokeAsync(async () => await DisconnectForUnauthenticated(e.Message));
-          break;
-        case ControlrAuthSessionState.SignedOut:
-          await Dispatcher.UIThread.InvokeAsync(async () => await DisconnectForUnauthenticated(null));
-          break;
-      }
+      await Dispatcher.UIThread.InvokeAsync(async () => await ApplyAuthStateChange(e));
     }
     catch (Exception ex)
     {
@@ -342,6 +339,11 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
         return;
       }
 
+      if (IsConnected)
+      {
+        return;
+      }
+
       ConnectionState = HubConnectionState.Connecting;
       OnPropertyChanged(nameof(ConnectionStatus));
       AlertMessage = null;
@@ -349,6 +351,7 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
 
       if (!await GetDeviceInfo())
       {
+        ConnectionState = HubConnectionState.Disconnected;
         return;
       }
 

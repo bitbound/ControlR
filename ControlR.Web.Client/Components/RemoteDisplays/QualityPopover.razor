@@ -2,63 +2,53 @@
 @inherits QualityPopoverBase
 
 <div class="d-flex flex-column gap-3">
-  <MudText Typo="Typo.caption" Class="mb-2 d-block">Quality</MudText>
+  <div class="mt-2">
+    <MudTooltip Text="Select the encoding format. WebP provides better compression, while JPEG is faster to encode.">
+      <MudSelect T="ImageFormat" Value="RemoteControlState.EncodingFormat" ValueChanged="@(HandleEncodingFormatChanged)"
+                 Label="Encoding Format" Variant="Variant.Outlined" FullWidth>
+        <MudSelectItem Value="@ImageFormat.WebP">WebP</MudSelectItem>
+        <MudSelectItem Value="@ImageFormat.Jpeg">JPEG</MudSelectItem>
+      </MudSelect>
+    </MudTooltip>
+  </div>
 
-  <MudTooltip Text="Automatically adjust image quality based on bandwidth utilization.">
-    <MudSwitch Value="RemoteControlState.IsAutoQualityEnabled"
-               ValueChanged="@((bool value) => HandleAutoQualityToggled(value))"
-               Color="Color.Secondary"
-               Label="Enable auto quality"
-               ThumbIcon="@(Icons.Material.Filled.AutoAwesome)" />
-  </MudTooltip>
+    
+  <MudText Typo="Typo.caption" Class="mt-3 d-block">Quality</MudText>
+
+  <div>
+    <MudTooltip Text="Automatically adjust image quality based on bandwidth utilization.">
+      <MudSwitch Value="RemoteControlState.IsAutoQualityEnabled"
+                 ValueChanged="@((bool value) => HandleAutoQualityToggled(value))" Color="Color.Secondary"
+                 Label="Enable auto quality" ThumbIcon="@(Icons.Material.Filled.AutoAwesome)" />
+    </MudTooltip>
+  </div>
 
   @if (RemoteControlState.IsAutoQualityEnabled)
   {
     <div class="mt-3 d-flex flex-column gap-3">
-      <MudTooltip Text="Highest JPEG quality auto mode will use while outbound bandwidth stays below the lower threshold.">
-        <MudNumericField T="int"
-                         Value="RemoteControlState.AutoQualityMaximum"
-                         ValueChanged="@(HandleAutoQualityMaximumChanged)"
-                         Label="Auto Quality Maximum"
-                         Min="2"
-                         Max="100"
-                         Step="1"
+      <MudTooltip
+        Text="Highest image quality auto mode will use while outbound bandwidth stays below the lower threshold.">
+        <MudNumericField T="int" Value="RemoteControlState.AutoQualityMaximum"
+                         ValueChanged="@(HandleAutoQualityMaximumChanged)" Label="Auto Quality Maximum" Min="2" Max="100" Step="1"
                          Variant="Variant.Outlined" />
       </MudTooltip>
 
-      <MudTooltip Text="Lowest JPEG quality auto mode will use once outbound bandwidth reaches the upper threshold.">
-        <MudNumericField T="int"
-                         Value="RemoteControlState.AutoQualityMinimum"
-                         ValueChanged="@(HandleAutoQualityMinimumChanged)"
-                         Label="Auto Quality Minimum"
-                         Min="1"
-                         Max="99"
-                         Step="1"
+      <MudTooltip Text="Lowest image quality auto mode will use once outbound bandwidth reaches the upper threshold.">
+        <MudNumericField T="int" Value="RemoteControlState.AutoQualityMinimum"
+                         ValueChanged="@(HandleAutoQualityMinimumChanged)" Label="Auto Quality Minimum" Min="1" Max="99" Step="1"
                          Variant="Variant.Outlined" />
       </MudTooltip>
 
       <MudTooltip Text="Quality starts dropping after outbound bandwidth rises above this value.">
-        <MudNumericField T="double"
-                         Value="RemoteControlState.AutoQualityLowerThresholdMbps"
-                         ValueChanged="@(HandleAutoQualityLowerThresholdChanged)"
-                         Label="Auto Quality Lower Threshold"
-                         Min="1"
-                         Step="1"
-                         Variant="Variant.Outlined"
-                         Adornment="Adornment.End"
-                         AdornmentText="Mbps" />
+        <MudNumericField T="double" Value="RemoteControlState.AutoQualityLowerThresholdMbps"
+                         ValueChanged="@(HandleAutoQualityLowerThresholdChanged)" Label="Auto Quality Lower Threshold" Min="1" Step="1"
+                         Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentText="Mbps" />
       </MudTooltip>
 
       <MudTooltip Text="Quality reaches the minimum auto value once outbound bandwidth reaches this point.">
-        <MudNumericField T="double"
-                         Value="RemoteControlState.AutoQualityUpperThresholdMbps"
-                         ValueChanged="@(HandleAutoQualityUpperThresholdChanged)"
-                         Label="Auto Quality Upper Threshold"
-                         Min="2"
-                         Step="1"
-                         Variant="Variant.Outlined"
-                         Adornment="Adornment.End"
-                         AdornmentText="Mbps" />
+        <MudNumericField T="double" Value="RemoteControlState.AutoQualityUpperThresholdMbps"
+                         ValueChanged="@(HandleAutoQualityUpperThresholdChanged)" Label="Auto Quality Upper Threshold" Min="2" Step="1"
+                         Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentText="Mbps" />
       </MudTooltip>
     </div>
   }
@@ -66,50 +56,29 @@
   {
     <div class="mt-3 d-flex flex-column gap-3">
       <MudTooltip Text="Set a fixed image quality for screen captures sent during the session.">
-        <MudNumericField T="int"
-                         Value="RemoteControlState.ManualQuality"
-                         ValueChanged="@(HandleManualQualityChanged)"
-                         Label="Manual Quality"
-                         Min="1"
-                         Max="100"
-                         Step="1"
-                         Variant="Variant.Outlined" />
+        <MudNumericField T="int" Value="RemoteControlState.ManualQuality" ValueChanged="@(HandleManualQualityChanged)"
+                         Label="Manual Quality" Min="1" Max="100" Step="1" Variant="Variant.Outlined" />
       </MudTooltip>
 
       <MudTooltip Text="Set a fixed image quality for screen captures sent during the session.">
-        <MudSlider T="int"
-                   Value="RemoteControlState.ManualQuality"
-                   ValueChanged="@(HandleManualQualityChanged)"
-                   Min="1"
-                   Max="100"
-                   Step="1"
-                   Color="Color.Secondary" />
+        <MudSlider T="int" Value="RemoteControlState.ManualQuality" ValueChanged="@(HandleManualQualityChanged)" Min="1"
+                   Max="100" Step="1" Color="Color.Secondary" />
       </MudTooltip>
     </div>
   }
 
   <div class="mt-3 d-flex flex-column gap-3">
     <MudTooltip Text="Throttle capturing on the remote end whenever outbound bandwidth rises above this cap.">
-      <MudSwitch T="bool" 
-                 Value="RemoteControlState.IsMaxBandwidthEnabled"
-                 ValueChanged="@(HandleMaxBandwidthToggled)"
-                 Color="Color.Secondary"
-                 Label="Enable Max Mbps"
-                 ThumbIcon="@(Icons.Material.Filled.Speed)" />
+      <MudSwitch T="bool" Value="RemoteControlState.IsMaxBandwidthEnabled" ValueChanged="@(HandleMaxBandwidthToggled)"
+                 Color="Color.Secondary" Label="Enable Max Mbps" ThumbIcon="@(Icons.Material.Filled.Speed)" />
     </MudTooltip>
 
     @if (RemoteControlState.IsMaxBandwidthEnabled)
     {
       <MudTooltip Text="Hard outbound bandwidth cap that pauses remote capture while usage is above this value.">
-        <MudNumericField T="double"
-                         Value="RemoteControlState.MaxBandwidthMbps"
-                         ValueChanged="@(HandleMaxBandwidthChanged)"
-                         Label="Max Mbps"
-                         Min="1"
-                         Step="1"
-                         Variant="Variant.Outlined"
-                         Adornment="Adornment.End"
-                         AdornmentText="Mbps" />
+        <MudNumericField T="double" Value="RemoteControlState.MaxBandwidthMbps"
+                         ValueChanged="@(HandleMaxBandwidthChanged)" Label="Max Mbps" Min="1" Step="1" Variant="Variant.Outlined"
+                         Adornment="Adornment.End" AdornmentText="Mbps" />
       </MudTooltip>
     }
   </div>

@@ -367,6 +367,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     var preferences = result.Value;
     _remoteControlState.CaptureCursor = preferences.CaptureCursor;
     _remoteControlState.EnableDirectX = preferences.EnableDirectX;
+    _remoteControlState.EncodingFormat = preferences.EncodingFormat;
     _remoteControlState.IsAutoQualityEnabled = preferences.IsAutoQualityEnabled;
     _remoteControlState.ManualQuality = preferences.ManualQuality;
     _remoteControlState.AutoQualityLowerThresholdMbps = preferences.AutoQualityLowerThresholdMbps;

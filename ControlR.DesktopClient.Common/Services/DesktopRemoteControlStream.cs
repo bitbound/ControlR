@@ -173,6 +173,7 @@ internal sealed class DesktopRemoteControlStream(
   {
     _sessionState.CaptureCursor = payload.CaptureCursor;
     _sessionState.EnableDirectX = payload.EnableDirectX;
+    _sessionState.EncodingFormat = payload.EncodingFormat;
     _sessionState.IsAutoQualityEnabled = payload.IsAutoQualityEnabled;
     _sessionState.ImageQuality = payload.ManualQuality;
 

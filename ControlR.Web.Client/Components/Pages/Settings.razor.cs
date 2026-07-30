@@ -12,6 +12,7 @@ public partial class Settings : IDisposable
   private double _autoQualityUpperThresholdMbps = AppConstants.DefaultRemoteControlAutoQualityUpperThresholdMbps;
   private bool _captureCursor = AppConstants.DefaultRemoteControlCaptureCursor;
   private bool _enableDirectX = UserPreferenceDefinitions.DefaultEnableDirectX;
+  private ImageFormat _encodingFormat = UserPreferenceDefinitions.DefaultEncodingFormat;
   private bool _isAutoQualityEnabled = AppConstants.DefaultRemoteControlIsAutoQualityEnabled;
   private bool _isMaxBandwidthEnabled = AppConstants.DefaultRemoteControlIsMaxBandwidthEnabled;
   private bool _isNotifyUserEnforced;
@@ -73,6 +74,7 @@ public partial class Settings : IDisposable
     _viewMode = preferences.ViewMode;
     _captureCursor = preferences.CaptureCursor;
     _enableDirectX = preferences.EnableDirectX;
+    _encodingFormat = preferences.EncodingFormat;
     _isAutoQualityEnabled = preferences.IsAutoQualityEnabled;
     _manualQuality = Math.Clamp(preferences.ManualQuality, 1, 100);
     _autoQualityLowerThresholdMbps = Math.Max(0.1d, preferences.AutoQualityLowerThresholdMbps);
@@ -219,6 +221,13 @@ public partial class Settings : IDisposable
     _enableDirectX = value;
     await UserPreferences.SetPreference(UserPreferenceNames.EnableDirectX, value);
     Snackbar.Add("Default DirectX capture updated", Severity.Success);
+  }
+
+  private async Task SetEncodingFormat(ImageFormat value)
+  {
+    _encodingFormat = value;
+    await UserPreferences.SetPreference(UserPreferenceNames.EncodingFormat, value);
+    Snackbar.Add("Encoding format updated", Severity.Success);
   }
 
   private async Task SetIsAutoQualityEnabled(bool value)

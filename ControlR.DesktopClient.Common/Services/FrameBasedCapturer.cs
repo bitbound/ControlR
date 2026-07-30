@@ -17,6 +17,7 @@ using System.Collections.Concurrent;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.Common.Services;
 
@@ -587,7 +588,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
               recoveryCapture.Bitmap,
               [recoveryRegion.Value],
               effectiveQuality,
-              ImageFormat.Jpeg,
+              _sessionState.EncodingFormat,
               cancellationToken);
 
             previousCapture?.Dispose();
@@ -652,7 +653,7 @@ internal class FrameBasedCapturer : IDesktopCapturer
           bitmap,
           dirtyRegions,
           effectiveQuality,
-          ImageFormat.Jpeg,
+          _sessionState.EncodingFormat,
           cancellationToken);
 
         if (effectiveQuality < _sessionState.AutoQualityMaximum)

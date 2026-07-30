@@ -2,7 +2,6 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Messenger.Extensions;
 using System.ComponentModel;
 using Avalonia.Input.Platform;
@@ -19,10 +18,12 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   int AutoQualityMaximum { get; set; }
   int AutoQualityMinimum { get; set; }
   double AutoQualityUpperThresholdMbps { get; set; }
+  IEnumerable<ImageFormat> AvailableEncodingFormats { get; }
   bool CaptureCursor { get; set; }
   IAsyncRelayCommand DisconnectCommand { get; }
   ObservableCollection<DisplayLayoutItem> DisplayItems { get; }
   bool EnableDirectX { get; set; }
+  ImageFormat EncodingFormat { get; set; }
   bool HasMetricsData { get; }
   bool HasMultipleDisplays { get; }
   bool IsAutoPanEnabled { get; set; }
@@ -68,7 +69,7 @@ public interface IRemoteDisplayViewModel : INotifyPropertyChanged, IDisposable
   LockedValueToken<SKBitmap?> AcquireCompositedFrame();
   Task InvokeCtrlAltDel();
   Task RequestClipboardText();
-  Task SendCaptureSettings();
+  Task<bool> SendCaptureSettings();
   Task SendClipboardText(string text);
   Task SendKeyboardStateReset();
   Task SendKeyEvent(string key, string code, bool isPressed, KeyEventModifiersDto modifiers);
@@ -98,11 +99,14 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
   [ObservableProperty]
   private CursorChangedDto? _activeCursor;
+
   [ObservableProperty]
   [NotifyPropertyChangedFor(nameof(IsBlockInputToggleEnabled))]
   private bool _isBlockInputBusy;
+
   [ObservableProperty]
   private double _selectedDisplayHeight;
+
   [ObservableProperty]
   private double _selectedDisplayWidth;
 
@@ -149,7 +153,12 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         OnPropertyChanged(nameof(AutoQualityUpperThresholdMbps));
       }
 
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: previousLower,
+        setter: x => _remoteControlState.AutoQualityLowerThresholdMbps = x,
+        propertyName: nameof(AutoQualityLowerThresholdMbps))
+        .Forget();
+
       OnPropertyChanged();
     }
   }
@@ -166,7 +175,11 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         return;
       }
 
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: previous,
+        setter: x => _remoteControlState.AutoQualityMaximum = x,
+        propertyName: nameof(AutoQualityMaximum))
+        .Forget();
       OnPropertyChanged();
     }
   }
@@ -189,7 +202,11 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         OnPropertyChanged(nameof(AutoQualityMaximum));
       }
 
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: previousMinimum,
+        setter: x => _remoteControlState.AutoQualityMinimum = x,
+        propertyName: nameof(AutoQualityMinimum))
+        .Forget();
       OnPropertyChanged();
     }
   }
@@ -206,10 +223,15 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         return;
       }
 
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: previous,
+        setter: x => _remoteControlState.AutoQualityUpperThresholdMbps = x,
+        propertyName: nameof(AutoQualityUpperThresholdMbps))
+        .Forget();
       OnPropertyChanged();
     }
   }
+  public IEnumerable<ImageFormat> AvailableEncodingFormats => [ImageFormat.WebP, ImageFormat.Jpeg];
   public bool CaptureCursor
   {
     get => _remoteControlState.CaptureCursor;
@@ -221,7 +243,11 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       }
 
       _remoteControlState.CaptureCursor = value;
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: !value,
+        setter: x => _remoteControlState.CaptureCursor = x,
+        propertyName: nameof(CaptureCursor))
+        .Forget();
       OnPropertyChanged();
     }
   }
@@ -237,7 +263,31 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       }
 
       _remoteControlState.EnableDirectX = value;
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: !value,
+        setter: x => _remoteControlState.EnableDirectX = x,
+        propertyName: nameof(EnableDirectX))
+        .Forget();
+      OnPropertyChanged();
+    }
+  }
+  public ImageFormat EncodingFormat
+  {
+    get => _remoteControlState.EncodingFormat;
+    set
+    {
+      if (_remoteControlState.EncodingFormat == value)
+      {
+        return;
+      }
+
+      var oldValue = _remoteControlState.EncodingFormat;
+      _remoteControlState.EncodingFormat = value;
+      SendWithRollback(
+        oldValue: oldValue,
+        setter: x => _remoteControlState.EncodingFormat = x,
+        propertyName: nameof(EncodingFormat))
+        .Forget();
       OnPropertyChanged();
     }
   }
@@ -267,7 +317,11 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       }
 
       _remoteControlState.IsAutoQualityEnabled = value;
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: !value,
+        setter: x => _remoteControlState.IsAutoQualityEnabled = x,
+        propertyName: nameof(IsAutoQualityEnabled))
+        .Forget();
       OnPropertyChanged();
       OnPropertyChanged(nameof(IsManualQualityVisible));
     }
@@ -342,7 +396,11 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       }
 
       _remoteControlState.IsMaxBandwidthEnabled = value;
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: !value,
+        setter: x => _remoteControlState.IsMaxBandwidthEnabled = x,
+        propertyName: nameof(IsMaxBandwidthEnabled))
+        .Forget();
       OnPropertyChanged();
     }
   }
@@ -411,6 +469,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
       OnPropertyChanged();
     }
   }
+
   // This is public so ScreenRenderer can use it.
   public ILogger<RemoteDisplayViewModel> Logger { get; private set; }
   public int ManualQuality
@@ -426,7 +485,11 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         return;
       }
 
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: previous,
+        setter: x => _remoteControlState.ManualQuality = x,
+        propertyName: nameof(ManualQuality))
+        .Forget();
       OnPropertyChanged();
     }
   }
@@ -443,7 +506,11 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         return;
       }
 
-      _ = SendCaptureSettings();
+      SendWithRollback(
+        oldValue: previous,
+        setter: x => _remoteControlState.MaxBandwidthMbps = x,
+        propertyName: nameof(MaxBandwidthMbps))
+        .Forget();
       OnPropertyChanged();
     }
   }
@@ -576,13 +643,13 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     }
   }
 
-  public async Task SendCaptureSettings()
+  public async Task<bool> SendCaptureSettings()
   {
     try
     {
       if (_viewerStream.State != System.Net.WebSockets.WebSocketState.Open)
       {
-        return;
+        return false;
       }
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -596,13 +663,16 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         _remoteControlState.AutoQualityMinimum,
         _remoteControlState.AutoQualityUpperThresholdMbps,
         _remoteControlState.IsMaxBandwidthEnabled,
-        _remoteControlState.MaxBandwidthMbps);
+        _remoteControlState.MaxBandwidthMbps,
+        _remoteControlState.EncodingFormat);
 
       await _viewerStream.SendCaptureSettings(dto, cts.Token);
+      return true;
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while sending capture settings.");
+      return false;
     }
   }
 
@@ -1133,6 +1203,15 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while changing displays.");
+    }
+  }
+
+  private async Task SendWithRollback<T>(T oldValue, Action<T> setter, string propertyName)
+  {
+    if (!await SendCaptureSettings())
+    {
+      setter(oldValue);
+      OnPropertyChanged(propertyName);
     }
   }
 

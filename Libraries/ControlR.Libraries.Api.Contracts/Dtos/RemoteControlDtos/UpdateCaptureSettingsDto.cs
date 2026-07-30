@@ -13,4 +13,5 @@ public record UpdateCaptureSettingsDto(
   int AutoQualityMinimum,
   double AutoQualityUpperThresholdMbps,
   bool IsMaxBandwidthEnabled,
-  double MaxBandwidthMbps);
+  double MaxBandwidthMbps,
+  ImageFormat EncodingFormat);

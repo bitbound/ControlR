@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services;
@@ -15,6 +16,7 @@ public static class AppConstants
   public const int DefaultRemoteControlAutoQualityMinimum = 20;
   public const double DefaultRemoteControlAutoQualityUpperThresholdMbps = 15d;
   public const bool DefaultRemoteControlCaptureCursor = false;
+  public const ImageFormat DefaultRemoteControlEncodingFormat = ImageFormat.Jpeg;
   public const bool DefaultRemoteControlIsAutoQualityEnabled = false;
   public const bool DefaultRemoteControlIsMaxBandwidthEnabled = false;
   public const int DefaultRemoteControlManualQuality = 75;

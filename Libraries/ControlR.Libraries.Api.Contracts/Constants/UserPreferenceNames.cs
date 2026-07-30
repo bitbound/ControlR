@@ -8,6 +8,7 @@ public static class UserPreferenceNames
   public const string AutoQualityUpperThresholdMbps = "auto-quality-upper-threshold-mbps";
   public const string CaptureCursor = "capture-cursor";
   public const string EnableDirectX = "enable-directx";
+  public const string EncodingFormat = "encoding-format";
   public const string HideOfflineDevices = "hide-offline-devices";
   public const string IncludeUntaggedDevices = "include-untagged-devices";
   public const string IsAutoQualityEnabled = "is-auto-quality-enabled";
