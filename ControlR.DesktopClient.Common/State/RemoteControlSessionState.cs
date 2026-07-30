@@ -1,4 +1,5 @@
 ﻿using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.StateManagement;
 using Microsoft.Extensions.Logging;

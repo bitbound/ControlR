@@ -17,6 +17,7 @@ using System.Collections.Concurrent;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.Common.Services;
 

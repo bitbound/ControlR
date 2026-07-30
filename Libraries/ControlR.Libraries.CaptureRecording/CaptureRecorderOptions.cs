@@ -1,4 +1,4 @@
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Libraries.CaptureRecording;
 

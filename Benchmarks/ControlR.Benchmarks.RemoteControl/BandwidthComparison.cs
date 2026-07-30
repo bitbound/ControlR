@@ -1,6 +1,7 @@
 using ControlR.DesktopClient.Common.Extensions;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
 using MessagePack;
 using SkiaSharp;
 
