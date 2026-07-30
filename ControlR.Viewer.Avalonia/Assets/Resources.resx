@@ -481,7 +481,7 @@ Details: {0}</value>
     <value>Encoding Format</value>
   </data>
   <data name="EncodingFormatTooltip" xml:space="preserve">
-    <value>Select the encoding format. WebP provides better compression, while JPEG is faster to encode.</value>
+    <value>Select the encoding format for remote control streams. WebP provides higher quality for less bandwidth, while JPEG is faster to encode.</value>
   </data>
   <data name="MaxBandwidthMbps" xml:space="preserve">
     <value>Max Mbps</value>

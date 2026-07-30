@@ -16,7 +16,7 @@ public static class UserPreferenceDefinitions
   public const double DefaultAutoQualityUpperThresholdMbps = 15d;
   public const bool DefaultCaptureCursor = false;
   public const bool DefaultEnableDirectX = true;
-  public const ImageFormat DefaultEncodingFormat = ImageFormat.WebP;
+  public const ImageFormat DefaultEncodingFormat = ImageFormat.Jpeg;
   public const bool DefaultHideOfflineDevices = true;
   public const bool DefaultIncludeUntaggedDevices = false;
   public const bool DefaultIsAutoQualityEnabled = false;

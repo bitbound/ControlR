@@ -80,7 +80,7 @@ internal class RemoteDisplayViewModelFake : IRemoteDisplayViewModel
     }
   ];
   public bool EnableDirectX { get; set; } = true;
-  public ImageFormat EncodingFormat { get; set; } = ImageFormat.WebP;
+  public ImageFormat EncodingFormat { get; set; } = ImageFormat.Jpeg;
   public bool HasMetricsData => true;
   public bool HasMultipleDisplays => true;
   public bool IsAutoPanEnabled { get; set; } = true;

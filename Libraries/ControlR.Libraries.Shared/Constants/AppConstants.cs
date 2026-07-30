@@ -16,7 +16,7 @@ public static class AppConstants
   public const int DefaultRemoteControlAutoQualityMinimum = 20;
   public const double DefaultRemoteControlAutoQualityUpperThresholdMbps = 15d;
   public const bool DefaultRemoteControlCaptureCursor = false;
-  public const ImageFormat DefaultRemoteControlEncodingFormat = ImageFormat.WebP;
+  public const ImageFormat DefaultRemoteControlEncodingFormat = ImageFormat.Jpeg;
   public const bool DefaultRemoteControlIsAutoQualityEnabled = false;
   public const bool DefaultRemoteControlIsMaxBandwidthEnabled = false;
   public const int DefaultRemoteControlManualQuality = 75;
