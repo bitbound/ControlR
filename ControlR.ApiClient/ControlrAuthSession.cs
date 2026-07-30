@@ -72,7 +72,7 @@ public interface IControlrAuthSession : IDisposable
   Task<string?> GetBearerToken(CancellationToken cancellationToken = default);
   /// <summary>
   /// Restores a previously captured <see cref="AuthSnapshot"/>.
-  /// If the snapshot contains a personal access token it is restored as a PAT session (state: <see cref="ControlrAuthSessionState.SignedOut"/>).
+  /// If the snapshot contains a personal access token it is restored as a PAT session (state: <see cref="ControlrAuthSessionState.PatConfigured"/>).
   /// Otherwise bearer tokens are restored and the background token-refresh loop is started (state: <see cref="ControlrAuthSessionState.Authenticated"/>).
   /// </summary>
   /// <param name="snapshot">The previously captured auth snapshot.</param>
@@ -230,9 +230,12 @@ public sealed class ControlrAuthSession(
     if (!string.IsNullOrWhiteSpace(personalAccessToken))
     {
       _authState.SetPersonalAccessToken(personalAccessToken);
+      UpdateState(ControlrAuthSessionState.PatConfigured);
     }
-
-    UpdateState(ControlrAuthSessionState.SignedOut);
+    else
+    {
+      UpdateState(ControlrAuthSessionState.SignedOut);
+    }
   }
 
   public async Task<InteractiveLoginResult> SignIn(InteractiveSignInRequest request, CancellationToken cancellationToken = default)

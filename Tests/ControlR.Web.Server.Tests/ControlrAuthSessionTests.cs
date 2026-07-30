@@ -288,7 +288,7 @@ public class ControlrAuthSessionTests
   }
 
   [Fact]
-  public async Task RestoreAuthSnapshot_WhenSnapshotHasPersonalAccessToken_RestoresPatAndSignedOutState()
+  public async Task RestoreAuthSnapshot_WhenSnapshotHasPersonalAccessToken_RestoresPatAndPatConfiguredState()
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
     var options = CreateOptions();
@@ -305,7 +305,7 @@ public class ControlrAuthSessionTests
     await session.RestoreAuthSnapshot(snapshot);
 
     Assert.Equal("pat-value", authState.PersonalAccessToken);
-    Assert.Equal(ControlrAuthSessionState.SignedOut, session.State);
+    Assert.Equal(ControlrAuthSessionState.PatConfigured, session.State);
     Assert.Null(authState.BearerToken);
     Assert.Null(authState.RefreshToken);
   }

@@ -149,22 +149,9 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
 
   private async Task ApplyAuthStateChange(ControlrAuthSessionStateChangedEventArgs e)
   {
-    if (_options.AuthenticationMethod == ViewerAuthenticationMethod.PersonalAccessToken)
-    {
-      if (!string.IsNullOrWhiteSpace(_options.PersonalAccessToken))
-      {
-        await InitializeViewer();
-      }
-      else
-      {
-        await DisconnectForUnauthenticated(null);
-      }
-
-      return;
-    }
-
     switch (e.State)
     {
+      case ControlrAuthSessionState.PatConfigured:
       case ControlrAuthSessionState.Authenticated:
         await InitializeViewer();
         break;
