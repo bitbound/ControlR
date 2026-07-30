@@ -36,7 +36,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.BBB_APP_ID }}
+          client-id: ${{ secrets.BBB_CLIENT_ID }}
           private-key: ${{ secrets.BBB_PRIVATE_KEY }}
 
       - uses: anomalyco/opencode/github@latest
