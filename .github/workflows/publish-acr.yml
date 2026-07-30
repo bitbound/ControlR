@@ -1,0 +1,175 @@
+name: Publish to ACR
+run-name: ACR Publish (${{ inputs.sponsor_login }}-slot${{ inputs.slot_number }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Build workflow run ID to publish"
+        required: true
+        type: string
+      sponsor_login:
+        description: "Sponsor GitHub login (used as repository prefix)"
+        required: true
+        type: string
+      slot_number:
+        description: "Sponsor build slot number"
+        required: true
+        type: number
+      use_local_storage:
+        description: "Use local artifact storage"
+        required: false
+        type: boolean
+        default: true
+      use_self_hosted_runners:
+        description: "Use self-hosted runners"
+        required: false
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      run_id:
+        description: "Build workflow run ID to publish"
+        required: true
+        type: string
+      sponsor_login:
+        description: "Sponsor GitHub login (used as repository prefix)"
+        required: true
+        type: string
+      slot_number:
+        description: "Sponsor build slot number"
+        required: true
+        type: number
+      use_local_storage:
+        description: "Use local artifact storage"
+        required: false
+        type: boolean
+        default: true
+      use_self_hosted_runners:
+        description: "Use self-hosted runners"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to ACR
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+
+    env:
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      SPONSOR_LOGIN: ${{ inputs.sponsor_login }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Validate local storage configuration
+        uses: ./.github/actions/validate-local-storage
+        with:
+          use_local_storage: ${{ inputs.use_local_storage }}
+          artifact_host: ${{ vars.ARTIFACT_HOST }}
+          artifact_base_path: ${{ vars.ARTIFACT_BASE_PATH }}
+
+      - name: Normalize sponsor login
+        id: normalize
+        shell: bash
+        run: |
+          NORMALIZED=$(echo "$SPONSOR_LOGIN" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/^-//;s/-$//')
+          if [ -z "$NORMALIZED" ]; then
+            NORMALIZED="sponsor"
+          fi
+          echo "normalized=$NORMALIZED" >> $GITHUB_OUTPUT
+          echo "Normalized sponsor login: $NORMALIZED"
+
+      - name: Download Server Artifact
+        uses: ./.github/actions/download-artifact
+        with:
+          name: Server
+          path: ./server-publish
+          github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          run-id: ${{ inputs.run_id }}
+
+      - name: Get Version from Version.txt
+        id: get-version
+        shell: bash
+        run: |
+          VERSION=$(cat ./server-publish/wwwroot/downloads/Version.txt)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Verify Downloaded Files
+        shell: bash
+        run: |
+          TEST_PATHS=(
+            "./server-publish/wwwroot/downloads/Version.txt"
+            "./server-publish/wwwroot/downloads/linux-x64/ControlR.Agent.Installer"
+            "./server-publish/wwwroot/downloads/linux-x64/ControlR.Agent.bundle.zip"
+            "./server-publish/novnc/vnc.html"
+          )
+
+          for TEST_PATH in "${TEST_PATHS[@]}"; do
+            if [ ! -f "$TEST_PATH" ] && [ ! -d "$TEST_PATH" ]; then
+              echo "Error: $TEST_PATH not found."
+              exit 1
+            fi
+          done
+          echo "All required files verified successfully"
+
+      - name: Create Custom Dockerfile
+        shell: bash
+        run: |
+          cat > ./server-publish/Dockerfile << 'EOF'
+          FROM mcr.microsoft.com/dotnet/aspnet:10.0
+          RUN apt update
+          RUN apt -y install curl
+          
+          USER $APP_UID
+          WORKDIR /app
+          EXPOSE 8080
+          EXPOSE 8081
+
+          COPY . /app
+
+          ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
+
+          HEALTHCHECK \
+            CMD curl -f http://localhost:8080/health || exit 1
+          EOF
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to ACR
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_CLIENT_ID }}
+          password: ${{ secrets.ACR_CLIENT_SECRET }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./server-publish
+          file: ./server-publish/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ steps.normalize.outputs.normalized }}/controlr:${{ steps.normalize.outputs.normalized }}-slot${{ inputs.slot_number }}
+          build-args: |
+            CURRENT_VERSION=${{ steps.get-version.outputs.VERSION }}
+
+      - name: Image Published
+        run: |
+          IMAGE_REF="${{ secrets.ACR_LOGIN_SERVER }}/${{ steps.normalize.outputs.normalized }}/controlr:${{ steps.normalize.outputs.normalized }}-slot${{ inputs.slot_number }}"
+          echo "## ACR Publish Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Sponsor:** ${{ inputs.sponsor_login }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Slot:** ${{ inputs.slot_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${IMAGE_REF}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Run:** ${{ inputs.run_id }}" >> $GITHUB_STEP_SUMMARY
