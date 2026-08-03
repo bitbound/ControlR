@@ -16,6 +16,14 @@ on:
         description: "Full ACR image reference (e.g., myregistry.azurecr.io/sponsor/controlr:sponsor-slot1)"
         required: true
         type: string
+      sponsor_login:
+        description: "Sponsor GitHub login"
+        required: true
+        type: string
+      slot_number:
+        description: "Sponsor build slot number"
+        required: true
+        type: number
 
 permissions:
   actions: write
@@ -25,17 +33,38 @@ env:
   BUILD_WORKFLOW: build.yml
 
 jobs:
-  trigger-build:
-    name: Trigger Build
+  dispatch-and-build:
+    name: Build
     runs-on: ubuntu-latest
     outputs:
       run_id: ${{ steps.wait.outputs.run_id }}
     steps:
-      - name: Dispatch build.yml
-        id: dispatch
+      - name: Snapshot existing build runs
+        id: snapshot
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept        = "application/vnd.github+json"
+          }
+          $repo = "$env:REPO"
+          $uri = "https://api.github.com/repos/$repo/actions/workflows/$env:BUILD_WORKFLOW/runs?per_page=100"
+          $existing = Invoke-RestMethod -Uri $uri -Headers $headers
+          $ids = $existing.workflow_runs | ForEach-Object { $_.id.ToString() }
+          $ids -join "," | Set-Content -Path "$env:RUNNER_TEMP/existing-runs.txt" -Encoding utf8
+          Write-Host "Snapshot recorded ($($ids.Count) existing runs)"
+
+      - name: Dispatch build.yml
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+          CONFIG_URL: ${{ inputs.customization_config_url }}
+          VERSION: ${{ inputs.version }}
         run: |
           $headers = @{
             Authorization = "Bearer $env:GH_TOKEN"
@@ -43,10 +72,10 @@ jobs:
           }
 
           $body = @{
-            ref    = "${{ github.ref_name }}"
+            ref    = "$env:REF_NAME"
             inputs = @{
-              customization_config_url = "${{ inputs.customization_config_url }}"
-              version                  = "${{ inputs.version }}"
+              customization_config_url = "$env:CONFIG_URL"
+              version                  = "$env:VERSION"
               use_self_hosted_runners  = "true"
               use_local_storage        = "true"
               retention_days_artifacts = "1"
@@ -57,84 +86,64 @@ jobs:
             }
           } | ConvertTo-Json -Depth 3
 
-          $repo = "${{ github.repository }}"
+          $repo = "$env:REPO"
           $uri = "https://api.github.com/repos/$repo/actions/workflows/$env:BUILD_WORKFLOW/dispatches"
           Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $body -ContentType "application/json"
           Write-Host "Dispatched $env:BUILD_WORKFLOW"
-          Start-Sleep -Seconds 5
 
-      - name: Wait for build run
+      - name: Wait for dispatched build run
         id: wait
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           $headers = @{
             Authorization = "Bearer $env:GH_TOKEN"
             Accept        = "application/vnd.github+json"
           }
-          $repo = "${{ github.repository }}"
-          $timeout = 90
-          $elapsed = 0
+          $repo = "$env:REPO"
+          $existing = ((Get-Content "$env:RUNNER_TEMP/existing-runs.txt" -Raw).Trim() -split ',')
 
-          Start-Sleep -Seconds 10
+          $run = $null
+          $deadline = (Get-Date).AddHours(2)
 
-          while ($elapsed -lt $timeout) {
-            $uri = "https://api.github.com/repos/$repo/actions/workflows/$env:BUILD_WORKFLOW/runs?per_page=5&status=in_progress"
-            $response = Invoke-RestMethod -Uri $uri -Headers $headers
-
-            $run = $response.workflow_runs |
-              Where-Object { $_.head_branch -eq "${{ github.ref_name }}" } |
+          # Poll for a run that did not exist before our dispatch.
+          while ((Get-Date) -lt $deadline -and -not $run) {
+            Start-Sleep -Seconds 15
+            $uri = "https://api.github.com/repos/$repo/actions/workflows/$env:BUILD_WORKFLOW/runs?per_page=100"
+            $runs = Invoke-RestMethod -Uri $uri -Headers $headers
+            $run = $runs.workflow_runs |
+              Where-Object { $_.head_branch -eq "$env:REF_NAME" -and $_.id.ToString() -notin $existing } |
               Select-Object -First 1
-
-            if ($run) {
-              Write-Host "Found in-progress run: $($run.id)"
-              break
-            }
-
-            $uri = "https://api.github.com/repos/$repo/actions/workflows/$env:BUILD_WORKFLOW/runs?per_page=5&status=queued"
-            $response = Invoke-RestMethod -Uri $uri -Headers $headers
-
-            $run = $response.workflow_runs |
-              Where-Object { $_.head_branch -eq "${{ github.ref_name }}" } |
-              Select-Object -First 1
-
-            if ($run) {
-              Write-Host "Found queued run: $($run.id)"
-              break
-            }
-
-            Start-Sleep -Seconds 10
-            $elapsed += 10
+            if ($run) { Write-Host "Found dispatched run: $($run.id)" }
           }
 
           if (-not $run) {
-            Write-Error "Could not find the dispatched build run within timeout."
+            Write-Error "Could not find the dispatched build run. Check that build.yml exists on the $env:REF_NAME branch."
             exit 1
           }
 
           $runId = $run.id
-          Write-Host "Waiting for run $runId to complete..."
 
-          while ($elapsed -lt $timeout) {
+          # Wait for the run to complete.
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 20
             $uri = "https://api.github.com/repos/$repo/actions/runs/$runId"
-            $runStatus = Invoke-RestMethod -Uri $uri -Headers $headers
-
-            if ($runStatus.status -eq "completed") {
-              Write-Host "Run $runId completed with conclusion: $($runStatus.conclusion)"
-              if ($runStatus.conclusion -ne "success") {
-                Write-Error "Build run failed with conclusion: $($runStatus.conclusion)"
+            $status = Invoke-RestMethod -Uri $uri -Headers $headers
+            if ($status.status -eq "completed") {
+              Write-Host "Run $runId completed with conclusion: $($status.conclusion)"
+              if ($status.conclusion -ne "success") {
+                Write-Error "Build run failed with conclusion: $($status.conclusion)"
                 exit 1
               }
               break
             }
-
-            Start-Sleep -Seconds 15
-            $elapsed += 15
           }
 
-          if ($runStatus.status -ne "completed") {
-            Write-Error "Build run $runId did not complete within timeout ($timeout minutes)."
+          if ($status.status -ne "completed") {
+            Write-Error "Build run $runId did not complete within 2 hours."
             exit 1
           }
 
@@ -142,50 +151,13 @@ jobs:
 
   publish-acr:
     name: Publish to ACR
-    runs-on: ubuntu-latest
-    needs: trigger-build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download Server Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: Server
-          path: ./server-publish
-          github-token: ${{ github.token }}
-          run-id: ${{ needs.trigger-build.outputs.run_id }}
-
-      - name: Get Version
-        id: get-version
-        shell: bash
-        run: |
-          VERSION=$(cat ./server-publish/wwwroot/downloads/Version.txt)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to ACR
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Build and Push to ACR
-        uses: docker/build-push-action@v7
-        with:
-          context: ./server-publish
-          file: ./server-publish/Dockerfile
-          push: true
-          tags: ${{ inputs.image_reference }}
-
-      - name: Publish Summary
-        shell: bash
-        run: |
-          echo "## ACR Publish Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** ${{ inputs.image_reference }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Build Run:** ${{ needs.trigger-build.outputs.run_id }}" >> $GITHUB_STEP_SUMMARY
+    needs: dispatch-and-build
+    uses: ./.github/workflows/publish-acr.yml
+    with:
+      run_id: ${{ needs.dispatch-and-build.outputs.run_id }}
+      sponsor_login: ${{ inputs.sponsor_login }}
+      slot_number: ${{ inputs.slot_number }}
+      image_reference: ${{ inputs.image_reference }}
+      use_local_storage: true
+      use_self_hosted_runners: true
+    secrets: inherit
