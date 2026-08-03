@@ -28,6 +28,11 @@ on:
 permissions:
   actions: write
   contents: read
+  id-token: write
+
+concurrency:
+  group: acr-publish-${{ inputs.sponsor_login }}-slot${{ inputs.slot_number }}
+  cancel-in-progress: false
 
 env:
   BUILD_WORKFLOW: build.yml
@@ -37,27 +42,10 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     outputs:
-      run_id: ${{ steps.wait.outputs.run_id }}
+      run_id: ${{ steps.dispatch.outputs.run_id }}
     steps:
-      - name: Snapshot existing build runs
-        id: snapshot
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-        run: |
-          $headers = @{
-            Authorization = "Bearer $env:GH_TOKEN"
-            Accept        = "application/vnd.github+json"
-          }
-          $repo = "$env:REPO"
-          $uri = "https://api.github.com/repos/$repo/actions/workflows/$env:BUILD_WORKFLOW/runs?per_page=100"
-          $existing = Invoke-RestMethod -Uri $uri -Headers $headers
-          $ids = $existing.workflow_runs | ForEach-Object { $_.id.ToString() }
-          $ids -join "," | Set-Content -Path "$env:RUNNER_TEMP/existing-runs.txt" -Encoding utf8
-          Write-Host "Snapshot recorded ($($ids.Count) existing runs)"
-
       - name: Dispatch build.yml
+        id: dispatch
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -72,8 +60,9 @@ jobs:
           }
 
           $body = @{
-            ref    = "$env:REF_NAME"
-            inputs = @{
+            ref                = "$env:REF_NAME"
+            return_run_details = $true
+            inputs             = @{
               customization_config_url = "$env:CONFIG_URL"
               version                  = "$env:VERSION"
               use_self_hosted_runners  = "true"
@@ -86,68 +75,61 @@ jobs:
             }
           } | ConvertTo-Json -Depth 3
 
-          $repo = "$env:REPO"
-          $uri = "https://api.github.com/repos/$repo/actions/workflows/$env:BUILD_WORKFLOW/dispatches"
-          Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $body -ContentType "application/json"
-          Write-Host "Dispatched $env:BUILD_WORKFLOW"
+          $uri = "https://api.github.com/repos/$env:REPO/actions/workflows/$env:BUILD_WORKFLOW/dispatches"
+          $response = Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $body -ContentType "application/json"
 
-      - name: Wait for dispatched build run
-        id: wait
+          if (-not $response.workflow_run_id) {
+            Write-Error "Dispatch succeeded but did not return a workflow run ID."
+            exit 1
+          }
+
+          Write-Host "Dispatched $env:BUILD_WORKFLOW: run $($response.workflow_run_id)"
+          echo "run_id=$($response.workflow_run_id)" >> $env:GITHUB_OUTPUT
+
+      - name: Wait for build run
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          REF_NAME: ${{ github.ref_name }}
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
         run: |
           $headers = @{
             Authorization = "Bearer $env:GH_TOKEN"
             Accept        = "application/vnd.github+json"
           }
-          $repo = "$env:REPO"
-          $existing = ((Get-Content "$env:RUNNER_TEMP/existing-runs.txt" -Raw).Trim() -split ',')
 
-          $run = $null
           $deadline = (Get-Date).AddHours(2)
+          $status = $null
+          $lastStatus = ""
 
-          # Poll for a run that did not exist before our dispatch.
-          while ((Get-Date) -lt $deadline -and -not $run) {
-            Start-Sleep -Seconds 15
-            $uri = "https://api.github.com/repos/$repo/actions/workflows/$env:BUILD_WORKFLOW/runs?per_page=100"
-            $runs = Invoke-RestMethod -Uri $uri -Headers $headers
-            $run = $runs.workflow_runs |
-              Where-Object { $_.head_branch -eq "$env:REF_NAME" -and $_.id.ToString() -notin $existing } |
-              Select-Object -First 1
-            if ($run) { Write-Host "Found dispatched run: $($run.id)" }
-          }
-
-          if (-not $run) {
-            Write-Error "Could not find the dispatched build run. Check that build.yml exists on the $env:REF_NAME branch."
-            exit 1
-          }
-
-          $runId = $run.id
-
-          # Wait for the run to complete.
           while ((Get-Date) -lt $deadline) {
-            Start-Sleep -Seconds 20
-            $uri = "https://api.github.com/repos/$repo/actions/runs/$runId"
-            $status = Invoke-RestMethod -Uri $uri -Headers $headers
+            Start-Sleep -Seconds 30
+            try {
+              $status = Invoke-RestMethod -Uri "https://api.github.com/repos/$env:REPO/actions/runs/$env:RUN_ID" -Headers $headers
+            } catch {
+              Write-Host "Transient error polling run status, will retry: $($_.Exception.Message)"
+              continue
+            }
+            if ($status.status -ne $lastStatus) {
+              Write-Host "Run $env:RUN_ID status: $($status.status)"
+              $lastStatus = $status.status
+            }
             if ($status.status -eq "completed") {
-              Write-Host "Run $runId completed with conclusion: $($status.conclusion)"
-              if ($status.conclusion -ne "success") {
-                Write-Error "Build run failed with conclusion: $($status.conclusion)"
-                exit 1
-              }
               break
             }
           }
 
-          if ($status.status -ne "completed") {
-            Write-Error "Build run $runId did not complete within 2 hours."
+          if (-not $status -or $status.status -ne "completed") {
+            Write-Error "Build run $env:RUN_ID did not complete within 2 hours."
             exit 1
           }
 
-          echo "run_id=$runId" >> $env:GITHUB_OUTPUT
+          if ($status.conclusion -ne "success") {
+            Write-Error "Build run $env:RUN_ID failed with conclusion: $($status.conclusion)"
+            exit 1
+          }
+
+          Write-Host "Build run $env:RUN_ID completed successfully"
 
   publish-acr:
     name: Publish to ACR
