@@ -199,21 +199,11 @@ public static class HostExtensions
     }
   }
 
-  public static async Task RemoveEmptyTenants(this IHost host)
+  public static async Task EnsureDatabaseCreated(this IHost host)
   {
     await using var scope = host.Services.CreateAsyncScope();
     await using var context = scope.ServiceProvider.GetRequiredService<AppDb>();
-    var emptyTenants = await context.Tenants
-      .Where(x => x.Users!.Count == 0)
-      .ToListAsync();
-
-    if (emptyTenants.Count == 0)
-    {
-      return;
-    }
-
-    context.Tenants.RemoveRange(emptyTenants);
-    await context.SaveChangesAsync();
+    await context.Database.EnsureCreatedAsync();
   }
 
   public static async Task SetAllDevicesOffline(this IHost host)
