@@ -68,7 +68,7 @@ jobs:
           private-key: ${{ secrets.BBB_PRIVATE_KEY }}
 
       - name: Run OpenCodeReview
-        uses: alibaba/open-code-review@be5e79c1a70a7e04bede846bae42cc7cda96b90d
+        uses: alibaba/open-code-review@c35ddd7223f2b5540ce03aa43c9a25ef643fca27
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
