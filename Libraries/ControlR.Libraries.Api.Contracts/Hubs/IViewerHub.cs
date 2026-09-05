@@ -13,24 +13,40 @@ public interface IViewerHub
   Task<HubResult> AddViewerActivity(string activityName);
 
   Task<HubResult> AddViewerActivity2(AddViewerActivityRequestDto request);
+
+  [Obsolete("Use CloseChatSession2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId);
   Task<HubResult> CloseChatSession2(CloseChatSessionRequestDto request);
+
+  [Obsolete("Use CloseTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
   Task CloseTerminalSession(Guid deviceId, Guid terminalSessionId);
   Task<HubResult> CloseTerminalSession2(CloseTerminalSessionRequestDto request);
+
+  [Obsolete("Use CreateTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> CreateTerminalSession(
     Guid deviceId,
     Guid terminalSessionId);
   Task<HubResult> CreateTerminalSession2(CreateTerminalSessionRequestDto request);
   Task<HubResult> DisposeDeviceAccessActivity();
+
+  [Obsolete("Use GetActiveDesktopSessions2. (deprecated 2026-09-03, v0.28.x)")]
   Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId);
   Task<HubResult<IReadOnlyList<DesktopSession>>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request);
+
+  [Obsolete("Use GetDeviceAccessPermissions2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions(Guid deviceId);
   Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions2(GetDeviceAccessPermissionsRequestDto request);
   Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
+
+  [Obsolete("Use InvokeCtrlAltDel2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType);
   Task<HubResult> InvokeCtrlAltDel2(InvokeCtrlAltDelViewerRequestDto request);
+
+  [Obsolete("Use RefreshDeviceInfo2. (deprecated 2026-09-03, v0.28.x)")]
   Task RefreshDeviceInfo(Guid deviceId);
   Task<HubResult> RefreshDeviceInfo2(RefreshDeviceInfoRequestDto request);
+
+  [Obsolete("Use RequestRemoteControlPermission2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> RequestRemoteControlPermission(Guid deviceId, int targetProcessId);
   Task<HubResult> RequestRemoteControlPermission2(RequestRemoteControlPermissionRequestDto request);
 
