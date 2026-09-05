@@ -325,6 +325,12 @@ public partial class DeviceAccessLayout
     }
 
     var result = await ViewerHub.Value.Server.GetDeviceAccessPermissions2(new(_deviceId));
+    if (!result.IsSuccess)
+    {
+      Logger.LogError("Failed to get device access permissions for device {DeviceId}: {Error}", _deviceId, result.Reason);
+      Snackbar.Value.Add("Failed to get device access permissions", Severity.Error);
+    }
+
     _deviceAccessPermissions = result.IsSuccess ? result.Value : null;
     EnforceCurrentPagePermission();
     await InvokeAsync(StateHasChanged);

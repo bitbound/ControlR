@@ -236,8 +236,8 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
         _logger.LogError("Failed to get active desktop sessions for remote control: {Error}", desktopSessionsResult.Reason);
         if (!quiet)
         {
-          _snackbar.Add("Failed to get active sessions", SnackbarSeverity.Warning);
-          AlertMessage = "Failed to get active sessions.";
+          _snackbar.Add(Resources.RemoteControl_FailedToGetSessions, SnackbarSeverity.Warning);
+          AlertMessage = Resources.RemoteControl_FailedToGetSessions;
           AlertSeverity = SnackbarSeverity.Warning;
         }
         return;

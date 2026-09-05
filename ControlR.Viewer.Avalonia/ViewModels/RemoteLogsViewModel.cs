@@ -272,7 +272,7 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error loading selected log file.");
-        _snackbar.Add("An error occurred while loading the log file", SnackbarSeverity.Error);
+        _snackbar.Add(Resources.RemoteLogs_LoadContentsError, SnackbarSeverity.Error);
       }
     }, DispatcherPriority.Normal);
   }
