@@ -1012,7 +1012,6 @@ jobs:
         run: |
           $TestPaths = @(
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/Version.txt",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/ServerRuntime.txt",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/release-notes.md",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.Installer.exe",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.Installer.exe",
@@ -1034,6 +1033,21 @@ jobs:
               exit 1
             }
           }
+
+      - name: Create Server Runtime Metadata
+        shell: pwsh
+        run: |
+          New-Item -Path $env:RUNNER_TEMP -ItemType Directory -Force | Out-Null
+          Set-Content -Path "$env:RUNNER_TEMP/ServerRuntime.txt" -Value "${{ inputs.server_runtime }}" -Force -Encoding UTF8
+
+      - name: Upload Server Metadata
+        uses: ./.github/actions/upload-artifact
+        with:
+          name: Server-Metadata
+          path: ${{ runner.temp }}/ServerRuntime.txt
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Upload Server
         uses: ./.github/actions/upload-artifact
