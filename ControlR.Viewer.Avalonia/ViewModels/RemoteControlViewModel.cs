@@ -240,6 +240,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
           AlertMessage = Resources.RemoteControl_FailedToGetSessions;
           AlertSeverity = SnackbarSeverity.Warning;
         }
+        DesktopSessions.Clear();
         return;
       }
 

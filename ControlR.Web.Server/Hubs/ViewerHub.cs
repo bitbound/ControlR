@@ -160,12 +160,11 @@ public class ViewerHub(
     }
   }
 
-  public async Task<HubResult> DisposeDeviceAccessActivity()
+  public Task<HubResult> DisposeDeviceAccessActivity()
   {
     SessionActivity?.Dispose();
     SessionActivity = null;
-    await Task.CompletedTask;
-    return HubResult.Ok();
+    return Task.FromResult(HubResult.Ok());
   }
 
   [Obsolete("Use GetActiveDesktopSessions2. (deprecated 2026-09-03, v0.28.x)")]

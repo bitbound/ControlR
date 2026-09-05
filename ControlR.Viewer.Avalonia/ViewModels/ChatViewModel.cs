@@ -366,25 +366,29 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
         _chatState.CurrentSession.ProcessId,
         DateTimeOffset.Now);
 
-      _chatState.ChatMessages.Add(new ChatMessage
+      var chatMessage = new ChatMessage
       {
         IsFromViewer = true,
         Message = message,
         SenderName = Resources.Chat_You,
         Timestamp = DateTimeOffset.Now
-      });
+      };
+
+      _chatState.ChatMessages.Add(chatMessage);
+
+      NewMessage = string.Empty;
 
       var sendResult = await _viewerHub.Server.SendChatMessage2(new(_viewerOptions.Value.DeviceId, dto));
       if (!sendResult.IsSuccess)
       {
         _logger.LogError("Failed to send chat message: {Error}", sendResult.Reason);
         _snackbar.Add(Resources.Chat_FailedToSend, SnackbarSeverity.Warning);
+        NewMessage = message;
+        _chatState.ChatMessages.Remove(chatMessage);
         return;
       }
 
       await _chatState.NotifyStateChanged();
-
-      NewMessage = string.Empty;
     }
     catch (Exception ex)
     {

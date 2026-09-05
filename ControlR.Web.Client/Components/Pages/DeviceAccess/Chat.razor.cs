@@ -1,6 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
-using ControlR.Libraries.Viewer.Common.State;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;
@@ -132,24 +130,24 @@ public partial class Chat : ComponentBase, IDisposable
   {
     if (ChatState.CurrentSession is not null)
     {
-        try
-        {
-            var result = await ViewerHub.Server.CloseChatSession2(new(
-                DeviceAccessState.CurrentDevice.Id,
-                ChatState.SessionId,
-                ChatState.CurrentSession.ProcessId));
+      try
+      {
+        var result = await ViewerHub.Server.CloseChatSession2(new(
+            DeviceAccessState.CurrentDevice.Id,
+            ChatState.SessionId,
+            ChatState.CurrentSession.ProcessId));
 
-            if (!result.IsSuccess)
-            {
-              Logger.LogError("Failed to close chat session: {Error}", result.Reason);
-                Snackbar.Add("Failed to close chat session", Severity.Warning);
-            }
-        }
-        catch (Exception ex)
+        if (!result.IsSuccess)
         {
-            Logger.LogError(ex, "Error closing chat session.");
-            Snackbar.Add("Error closing chat session", Severity.Error);
+          Logger.LogError("Failed to close chat session: {Error}", result.Reason);
+          Snackbar.Add("Failed to close chat session", Severity.Warning);
         }
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Error closing chat session.");
+        Snackbar.Add("Error closing chat session", Severity.Error);
+      }
     }
 
     ChatState.Clear();
@@ -179,15 +177,15 @@ public partial class Chat : ComponentBase, IDisposable
   {
     try
     {
-        var sessionsResult = await ViewerHub.Server.GetActiveDesktopSessions2(new(DeviceAccessState.CurrentDevice.Id));
-        if (!sessionsResult.IsSuccess)
-        {
-          Logger.LogError("Error loading desktop sessions: {Error}", sessionsResult.Reason);
-          _alertMessage = "An error occurred while loading desktop sessions.";
-          _alertSeverity = Severity.Error;
-          return;
-        }
-        _systemSessions = sessionsResult.Value?.ToArray() ?? [];
+      var sessionsResult = await ViewerHub.Server.GetActiveDesktopSessions2(new(DeviceAccessState.CurrentDevice.Id));
+      if (!sessionsResult.IsSuccess)
+      {
+        Logger.LogError("Error loading desktop sessions: {Error}", sessionsResult.Reason);
+        _alertMessage = "An error occurred while loading desktop sessions.";
+        _alertSeverity = Severity.Error;
+        return;
+      }
+      _systemSessions = sessionsResult.Value?.ToArray() ?? [];
     }
     catch (Exception ex)
     {
@@ -220,10 +218,12 @@ public partial class Chat : ComponentBase, IDisposable
 
     try
     {
+      var newMessage = ChatState.NewMessage.Trim();
+
       var chatDto = new ChatMessageHubDto(
         DeviceAccessState.CurrentDevice.Id,
         ChatState.SessionId,
-        ChatState.NewMessage.Trim(),
+        newMessage,
         string.Empty, // SenderName will be set in the hub
         string.Empty, // SenderEmail will be set in the hub
         ChatState.CurrentSession.SystemSessionId,
@@ -233,11 +233,12 @@ public partial class Chat : ComponentBase, IDisposable
       // Add the message to our local chat
       var chatMessage = new ChatMessage
       {
-        Message = ChatState.NewMessage.Trim(),
+        Message = newMessage,
         SenderName = "You",
         Timestamp = DateTimeOffset.Now,
         IsFromViewer = true
       };
+
       ChatState.ChatMessages.Add(chatMessage);
 
       // Clear the input
@@ -249,6 +250,8 @@ public partial class Chat : ComponentBase, IDisposable
       {
         Logger.LogError("Failed to send chat message: {Error}", result.Reason);
         Snackbar.Add("Failed to send message", Severity.Error);
+        ChatState.ChatMessages.Remove(chatMessage);
+        ChatState.NewMessage = newMessage;
       }
 
       await InvokeAsync(StateHasChanged);

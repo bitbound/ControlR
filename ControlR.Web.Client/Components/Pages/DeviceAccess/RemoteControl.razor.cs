@@ -186,6 +186,7 @@ public partial class RemoteControl : ViewportAwareComponent
           _alertMessage = "Failed to get active sessions.";
           _alertSeverity = Severity.Warning;
         }
+        _systemSessions = [];
         return;
       }
 
