@@ -9,7 +9,9 @@ namespace ControlR.Libraries.Api.Contracts.Hubs;
 
 public interface IViewerHub
 {
+  [Obsolete("Use AddViewerActivity2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> AddViewerActivity(string activityName);
+
   Task<HubResult> AddViewerActivity2(AddViewerActivityRequestDto request);
   Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId);
   Task<HubResult> CloseChatSession2(CloseChatSessionRequestDto request);

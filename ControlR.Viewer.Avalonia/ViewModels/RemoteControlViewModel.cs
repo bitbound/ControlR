@@ -231,7 +231,19 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     try
     {
       var desktopSessionsResult = await _hubConnection.Server.GetActiveDesktopSessions2(new(_viewerOptions.Value.DeviceId));
-      var desktopSessions = desktopSessionsResult.IsSuccess ? desktopSessionsResult.Value?.ToArray() ?? [] : [];
+      if (!desktopSessionsResult.IsSuccess)
+      {
+        _logger.LogError("Failed to get active desktop sessions for remote control: {Error}", desktopSessionsResult.Reason);
+        if (!quiet)
+        {
+          _snackbar.Add("Failed to get active sessions", SnackbarSeverity.Warning);
+          AlertMessage = "Failed to get active sessions.";
+          AlertSeverity = SnackbarSeverity.Warning;
+        }
+        return;
+      }
+
+      var desktopSessions = desktopSessionsResult.Value?.ToArray() ?? [];
 
       foreach (var existingSession in DesktopSessions)
       {

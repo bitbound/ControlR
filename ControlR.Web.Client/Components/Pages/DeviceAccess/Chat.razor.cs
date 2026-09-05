@@ -180,7 +180,14 @@ public partial class Chat : ComponentBase, IDisposable
     try
     {
         var sessionsResult = await ViewerHub.Server.GetActiveDesktopSessions2(new(DeviceAccessState.CurrentDevice.Id));
-        _systemSessions = sessionsResult.IsSuccess ? sessionsResult.Value?.ToArray() ?? [] : [];
+        if (!sessionsResult.IsSuccess)
+        {
+          Logger.LogError("Error loading desktop sessions: {Error}", sessionsResult.Reason);
+          _alertMessage = "An error occurred while loading desktop sessions.";
+          _alertSeverity = Severity.Error;
+          return;
+        }
+        _systemSessions = sessionsResult.Value?.ToArray() ?? [];
     }
     catch (Exception ex)
     {

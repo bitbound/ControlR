@@ -177,7 +177,19 @@ public partial class RemoteControl : ViewportAwareComponent
     try
     {
       var sessionsResult = await ViewerHub.Server.GetActiveDesktopSessions2(new(DeviceState.CurrentDevice.Id));
-      _systemSessions = sessionsResult.IsSuccess ? sessionsResult.Value?.ToArray() ?? [] : [];
+      if (!sessionsResult.IsSuccess)
+      {
+        Logger.LogError("Failed to get active sessions: {Error}", sessionsResult.Reason);
+        if (!quiet)
+        {
+          Snackbar.Add("Failed to get active sessions", Severity.Warning);
+          _alertMessage = "Failed to get active sessions.";
+          _alertSeverity = Severity.Warning;
+        }
+        return;
+      }
+
+      _systemSessions = sessionsResult.Value?.ToArray() ?? [];
     }
     catch (Exception ex)
     {

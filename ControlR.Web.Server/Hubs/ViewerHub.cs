@@ -53,6 +53,7 @@ public class ViewerHub(
     set => SetItem(value);
   }
 
+  [Obsolete("Use AddViewerActivity2. (deprecated 2026-09-03, v0.28.x)")]
   public Task<HubResult> AddViewerActivity(string activityName)
   {
     return AddViewerActivity2(new(activityName));

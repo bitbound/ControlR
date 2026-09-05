@@ -94,7 +94,14 @@
     try
     {
       var hubResult = await ViewerHub.Server.GetActiveDesktopSessions2(new(Device.Id));
-      Sessions = hubResult.IsSuccess ? hubResult.Value?.ToArray() ?? [] : [];
+      if (!hubResult.IsSuccess)
+      {
+        Logger.LogError("Failed to refresh desktop sessions for device {DeviceId}: {Error}", Device.Id, hubResult.Reason);
+        Snackbar.Add("Failed to refresh desktop sessions.", Severity.Error);
+        return;
+      }
+
+      Sessions = hubResult.Value?.ToArray() ?? [];
       await InvokeAsync(StateHasChanged);
     }
     catch (Exception ex)

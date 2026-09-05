@@ -262,7 +262,13 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
     try
     {
       var desktopSessionsResult = await _viewerHub.Server.GetActiveDesktopSessions2(new(_viewerOptions.Value.DeviceId));
-      var desktopSessions = desktopSessionsResult.IsSuccess ? desktopSessionsResult.Value?.ToArray() ?? [] : [];
+      if (!desktopSessionsResult.IsSuccess)
+      {
+        _logger.LogError("Failed to get active desktop sessions for chat: {Error}", desktopSessionsResult.Reason);
+        return;
+      }
+
+      var desktopSessions = desktopSessionsResult.Value?.ToArray() ?? [];
 
       DesktopSessions.Clear();
       foreach (var session in desktopSessions)

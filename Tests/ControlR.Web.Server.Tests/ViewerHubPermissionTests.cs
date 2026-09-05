@@ -29,6 +29,41 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
   private readonly ITestOutputHelper _testOutput = testOutput;
 
   [Fact]
+  public async Task AddViewerActivity2_Invoked_ReturnsHubResult()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRead);
+
+    var (hub, _) = CreateHub(testApp, user, tenant.Id);
+
+    var result = await hub.AddViewerActivity2(new("test-activity"));
+
+    Assert.True(result.IsSuccess);
+  }
+
+  [Fact]
+  public async Task CloseTerminalSession2_AllowedDevice_ReturnsSuccess()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceTerminalUse);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    agentClient
+      .Setup(client => client.CloseTerminalSession(It.IsAny<Guid>()))
+      .Returns(Task.CompletedTask);
+
+    var result = await hub.CloseTerminalSession2(new(device.Id, Guid.NewGuid()));
+
+    Assert.True(result.IsSuccess);
+  }
+
+  [Fact]
   public async Task RequestRemoteControlSession_AllowedDevice_ForwardsDtoDeviceIdentity()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -178,6 +213,37 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
         forwarded.ViewerConnectionId == hub.Context.ConnectionId)), Times.Once);
   }
 
+  [Fact]
+  public async Task SendChatMessage2_AllowedDevice_ForwardsMessage()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceChatSend);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    agentClient
+      .Setup(client => client.SendChatMessage(It.IsAny<ChatMessageHubDto>()))
+      .ReturnsAsync(HubResult.Ok());
+
+    var chatMessage = new ChatMessageHubDto(
+      device.Id,
+      Guid.NewGuid(),
+      "hello",
+      string.Empty,
+      string.Empty,
+      0,
+      0,
+      DateTimeOffset.Now);
+
+    var result = await hub.SendChatMessage2(new(device.Id, chatMessage));
+
+    Assert.True(result.IsSuccess);
+    agentClient.Verify(client => client.SendChatMessage(It.Is<ChatMessageHubDto>(message =>
+      message.DeviceId == device.Id && message.Message == "hello")), Times.Once);
+  }
+
   private static (ViewerHub Hub, Mock<IAgentHubClient> AgentClient) CreateHub(
     TestApp testApp,
     AppUser user,
@@ -246,72 +312,6 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       tenantId,
       new PrincipalDescriptor(PrincipalType.User, userId, tenantId, "test")));
     await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-  }
-
-  [Fact]
-  public async Task AddViewerActivity2_Invoked_ReturnsHubResult()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var tenant = await testApp.Services.CreateTestTenant();
-    var user = await testApp.Services.CreateTestUser(tenant.Id);
-    var device = await testApp.Services.CreateTestDevice(tenant.Id);
-    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRead);
-
-    var (hub, _) = CreateHub(testApp, user, tenant.Id);
-
-    var result = await hub.AddViewerActivity2(new("test-activity"));
-
-    Assert.True(result.IsSuccess);
-  }
-
-  [Fact]
-  public async Task CloseTerminalSession2_AllowedDevice_ReturnsSuccess()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var tenant = await testApp.Services.CreateTestTenant();
-    var user = await testApp.Services.CreateTestUser(tenant.Id);
-    var device = await testApp.Services.CreateTestDevice(tenant.Id);
-    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceTerminalUse);
-
-    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
-    agentClient
-      .Setup(client => client.CloseTerminalSession(It.IsAny<Guid>()))
-      .Returns(Task.CompletedTask);
-
-    var result = await hub.CloseTerminalSession2(new(device.Id, Guid.NewGuid()));
-
-    Assert.True(result.IsSuccess);
-  }
-
-  [Fact]
-  public async Task SendChatMessage2_AllowedDevice_ForwardsMessage()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var tenant = await testApp.Services.CreateTestTenant();
-    var user = await testApp.Services.CreateTestUser(tenant.Id);
-    var device = await testApp.Services.CreateTestDevice(tenant.Id);
-    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceChatSend);
-
-    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
-    agentClient
-      .Setup(client => client.SendChatMessage(It.IsAny<ChatMessageHubDto>()))
-      .ReturnsAsync(HubResult.Ok());
-
-    var chatMessage = new ChatMessageHubDto(
-      device.Id,
-      Guid.NewGuid(),
-      "hello",
-      string.Empty,
-      string.Empty,
-      0,
-      0,
-      DateTimeOffset.Now);
-
-    var result = await hub.SendChatMessage2(new(device.Id, chatMessage));
-
-    Assert.True(result.IsSuccess);
-    agentClient.Verify(client => client.SendChatMessage(It.Is<ChatMessageHubDto>(message =>
-      message.DeviceId == device.Id && message.Message == "hello")), Times.Once);
   }
 
   private sealed class TestHubCallerContext : HubCallerContext
