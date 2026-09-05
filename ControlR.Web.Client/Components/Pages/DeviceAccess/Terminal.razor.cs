@@ -83,9 +83,9 @@ public partial class Terminal : IAsyncDisposable
 
       Messenger.Register<DtoReceivedMessage<TerminalOutputDto>>(this, HandleTerminalOutputMessage);
 
-      var result = await ViewerHub.Server.CreateTerminalSession(
+      var result = await ViewerHub.Server.CreateTerminalSession2(new CreateTerminalSessionRequestDto(
         DeviceState.CurrentDevice.Id,
-        TerminalState.Id);
+        TerminalState.Id));
 
       if (!result.IsSuccess)
       {
@@ -335,9 +335,9 @@ public partial class Terminal : IAsyncDisposable
       TerminalState.DraftCommandInputText = string.Empty;
 
       var dto = new TerminalInputDto(TerminalState.Id, TerminalState.CommandInputText);
-      var result = await ViewerHub.Server.SendTerminalInput(
+      var result = await ViewerHub.Server.SendTerminalInput2(new(
         DeviceState.CurrentDevice.Id,
-        dto);
+        dto));
 
       if (!result.IsSuccess)
       {

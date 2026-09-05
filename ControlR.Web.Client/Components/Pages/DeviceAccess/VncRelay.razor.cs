@@ -129,7 +129,7 @@ public partial class VncRelay
         return;
       }
       Snackbar.Add("Testing connection", Severity.Info);
-      var testResult = await ViewerHub.Server.TestVncConnection(device.Id, _port);
+      var testResult = await ViewerHub.Server.TestVncConnection2(new(device.Id, _port));
       if (testResult.IsSuccess)
       {
         Snackbar.Add("Connection test successful", Severity.Success);

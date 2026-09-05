@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
@@ -52,74 +53,100 @@ public class ViewerHub(
     set => SetItem(value);
   }
 
-  public Task AddViewerActivity(string activityName)
+  public Task<HubResult> AddViewerActivity(string activityName)
   {
-    using var activity = SessionActivity?.StartChildActivity(activityName);
-    _logger.LogInformation("Viewer Activity: {EventName}", activityName);
-    return Task.CompletedTask;
+    return AddViewerActivity2(new(activityName));
   }
 
+  public Task<HubResult> AddViewerActivity2(AddViewerActivityRequestDto request)
+  {
+    using var activity = SessionActivity?.StartChildActivity(request.ActivityName);
+    _logger.LogInformation("Viewer Activity: {EventName}", request.ActivityName);
+    return Task.FromResult(HubResult.Ok());
+  }
+
+  [Obsolete("Use CloseChatSession2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
+  {
+    return await CloseChatSession2(new(deviceId, sessionId, targetProcessId));
+  }
+
+  public async Task<HubResult> CloseChatSession2(CloseChatSessionRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.ChatSend) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.ChatSend) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
       }
 
       _logger.LogInformation(
         "Closing chat session {SessionId} for device {DeviceId} and process {ProcessId}",
-        sessionId,
-        deviceId,
-        targetProcessId);
+        request.SessionId,
+        request.DeviceId,
+        request.TargetProcessId);
 
       var result = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .CloseChatSession(sessionId, targetProcessId);
+        .CloseChatSession(request.SessionId, request.TargetProcessId);
 
       return result;
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while closing chat session {SessionId} on device {DeviceId}.", sessionId, deviceId);
+      _logger.LogError(ex, "Error while closing chat session {SessionId} on device {DeviceId}.", request.SessionId, request.DeviceId);
       return HubResult.Fail("Agent could not be reached.");
     }
   }
 
+  [Obsolete("Use CloseTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task CloseTerminalSession(Guid deviceId, Guid terminalSessionId)
+  {
+    await CloseTerminalSession2(new(deviceId, terminalSessionId));
+  }
+
+  public async Task<HubResult> CloseTerminalSession2(CloseTerminalSessionRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.TerminalUse) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.TerminalUse) is not { IsSuccess: true } authResult)
       {
-        return;
+        return HubResult.Fail("Forbidden.");
       }
 
       await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .CloseTerminalSession(terminalSessionId);
+        .CloseTerminalSession(request.TerminalId);
+
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while closing terminal session.");
+      return HubResult.Fail("An error occurred.");
     }
   }
 
+  [Obsolete("Use CreateTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> CreateTerminalSession(
     Guid deviceId,
     Guid terminalSessionId)
   {
+    return await CreateTerminalSession2(new(deviceId, terminalSessionId));
+  }
+
+  public async Task<HubResult> CreateTerminalSession2(CreateTerminalSessionRequestDto request)
+  {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.TerminalUse) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.TerminalUse) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Forbidden.");
       }
 
       var createResult = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .CreateTerminalSession(terminalSessionId, Context.ConnectionId);
+        .CreateTerminalSession(request.TerminalId, Context.ConnectionId);
 
       _logger.LogInformation("Create terminal session.  Success: {IsSuccess}", createResult.IsSuccess);
 
@@ -132,48 +159,65 @@ public class ViewerHub(
     }
   }
 
-  public Task DisposeDeviceAccessActivity()
+  public async Task<HubResult> DisposeDeviceAccessActivity()
   {
     SessionActivity?.Dispose();
     SessionActivity = null;
-    return Task.CompletedTask;
+    await Task.CompletedTask;
+    return HubResult.Ok();
   }
 
+  [Obsolete("Use GetActiveDesktopSessions2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId)
+  {
+    var result = await GetActiveDesktopSessions2(new(deviceId));
+    return result.IsSuccess
+      ? result.Value?.ToArray() ?? []
+      : [];
+  }
+
+  public async Task<HubResult<IReadOnlyList<DesktopSession>>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
       {
-        return [];
+        return HubResult.Fail<IReadOnlyList<DesktopSession>>("Unauthorized.");
       }
 
       var device = authResult.Value;
       var principal = Context.User?.ToPrincipalDescriptor();
       if (principal is null)
       {
-        return [];
+        return HubResult.Fail<IReadOnlyList<DesktopSession>>("Unauthorized.");
       }
 
       var sessions = await _agentHub.Clients.Client(device.ConnectionId).GetActiveDesktopSessions();
-      return sessions
-        .Where(x => _desktopSessionAccessAuthorizer.CanUse(principal, deviceId, x.SystemSessionId))
-        .ToArray();
+      return HubResult.Ok<IReadOnlyList<DesktopSession>>(
+        sessions
+          .Where(x => _desktopSessionAccessAuthorizer.CanUse(principal, request.DeviceId, x.SystemSessionId))
+          .ToList());
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting Windows sessions from agent.");
-      return [];
+      return HubResult.Fail<IReadOnlyList<DesktopSession>>("An error occurred.");
     }
   }
 
+  [Obsolete("Use GetDeviceAccessPermissions2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions(Guid deviceId)
+  {
+    return await GetDeviceAccessPermissions2(new(deviceId));
+  }
+
+  public async Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions2(GetDeviceAccessPermissionsRequestDto request)
   {
     try
     {
       var device = await _appDb.Devices
         .AsNoTracking()
-        .FirstOrDefaultAsync(x => x.Id == deviceId);
+        .FirstOrDefaultAsync(x => x.Id == request.DeviceId);
 
       if (device is null)
       {
@@ -232,7 +276,7 @@ public class ViewerHub(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while resolving device-access permissions for device {DeviceId}.", deviceId);
+      _logger.LogError(ex, "Error while resolving device-access permissions for device {DeviceId}.", request.DeviceId);
       return HubResult.Fail<DeviceAccessPermissionsDto>("An error occurred while resolving device permissions.");
     }
   }
@@ -260,17 +304,23 @@ public class ViewerHub(
     }
   }
 
+  [Obsolete("Use InvokeCtrlAltDel2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType)
+  {
+    return await InvokeCtrlAltDel2(new(deviceId, targetDesktopProcessId, desktopSessionType));
+  }
+
+  public async Task<HubResult> InvokeCtrlAltDel2(InvokeCtrlAltDelViewerRequestDto request)
   {
     try
     {
       _logger.LogInformation(
         "Invoking CtrlAltDel for device {DeviceId} and process {ProcessId}.  User: {UserId}",
-        deviceId,
-        targetDesktopProcessId,
+        request.DeviceId,
+        request.TargetDesktopProcessId,
         Context.UserIdentifier);
 
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.CtrlAltDelSend) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.CtrlAltDelSend) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
       }
@@ -288,9 +338,9 @@ public class ViewerHub(
       }
 
       var dto = new InvokeCtrlAltDelRequestDto(
-        targetDesktopProcessId,
+        request.TargetDesktopProcessId,
         Context.User?.Identity?.Name ?? "Unknown",
-        desktopSessionType);
+        request.DesktopSessionType);
 
       return await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
@@ -366,37 +416,52 @@ public class ViewerHub(
     }
   }
 
+  [Obsolete("Use RefreshDeviceInfo2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task RefreshDeviceInfo(Guid deviceId)
+  {
+    await RefreshDeviceInfo2(new(deviceId));
+  }
+
+  public async Task<HubResult> RefreshDeviceInfo2(RefreshDeviceInfoRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.Read) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.Read) is not { IsSuccess: true } authResult)
       {
-        return;
+        return HubResult.Fail("Unauthorized.");
       }
 
       await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .RefreshDeviceInfo();
+
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while refreshing device info.");
+      return HubResult.Fail("An error occurred while refreshing device info.");
     }
   }
 
+  [Obsolete("Use RequestRemoteControlPermission2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> RequestRemoteControlPermission(Guid deviceId, int targetProcessId)
+  {
+    return await RequestRemoteControlPermission2(new(deviceId, targetProcessId));
+  }
+
+  public async Task<HubResult> RequestRemoteControlPermission2(RequestRemoteControlPermissionRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
       }
 
       return await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .RequestRemoteControlPermission(targetProcessId);
+        .RequestRemoteControlPermission(request.TargetProcessId);
     }
     catch (Exception ex)
     {
@@ -564,35 +629,51 @@ public class ViewerHub(
     }
   }
 
+  [Obsolete("Use SendAgentUpdateTrigger2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task SendAgentUpdateTrigger(Guid deviceId)
+  {
+    await SendAgentUpdateTrigger2(new(deviceId));
+  }
+
+  public async Task<HubResult> SendAgentUpdateTrigger2(SendAgentUpdateTriggerRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.AgentUpdate) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.AgentUpdate) is not { IsSuccess: true } authResult)
       {
-        return;
+        return HubResult.Fail("Unauthorized.");
       }
 
       await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
         .ReceiveAgentUpdateTrigger();
+
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending agent update trigger.");
+      return HubResult.Fail("An error occurred while sending the agent update trigger.");
     }
   }
 
+  [Obsolete("Use SendChatMessage2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
+  {
+    return await SendChatMessage2(new(deviceId, dto));
+  }
+
+  public async Task<HubResult> SendChatMessage2(SendChatMessageRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.ChatSend) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.ChatSend) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
       }
 
-      if (!CanUseDesktopSession(deviceId, dto.TargetSystemSession))
+      var dto = request.Message;
+      if (!CanUseDesktopSession(request.DeviceId, dto.TargetSystemSession))
       {
         return HubResult.Fail("The requested desktop session is not authorized.");
       }
@@ -605,7 +686,7 @@ public class ViewerHub(
         "Chat message sent by user {SenderName} ({SenderEmail}) to device {DeviceId} for session {SessionId}",
         displayName,
         user.Email,
-        deviceId,
+        request.DeviceId,
         dto.SessionId);
 
       dto = dto with
@@ -628,59 +709,75 @@ public class ViewerHub(
     }
   }
 
-  // Intentionally general-purpose and currently unused by any client. Will be
-  // exercised by an upcoming refactor that routes generic DTOs to the agent.
-  public async Task SendDtoToAgent(Guid deviceId, DtoWrapper wrapper)
+  public async Task<HubResult> SendDtoToAgent(SendDtoToAgentRequestDto request)
   {
     try
     {
       using var scope = _logger.BeginMemberScope();
 
-      if (await TryAuthorizeAgainstDevice(deviceId) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId) is not { IsSuccess: true } authResult)
       {
-        return;
+        return HubResult.Fail("Unauthorized.");
       }
 
       await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .ReceiveDto(wrapper);
+        .ReceiveDto(request.Wrapper);
+
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending DTO to agent.");
+      return HubResult.Fail("An error occurred while sending the DTO to the agent.");
     }
   }
 
+  [Obsolete("Use SendPowerStateChange2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task SendPowerStateChange(Guid deviceId, PowerStateChangeType changeType)
+  {
+    await SendPowerStateChange2(new(deviceId, changeType));
+  }
+
+  public async Task<HubResult> SendPowerStateChange2(SendPowerStateChangeRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.PowerManage) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.PowerManage) is not { IsSuccess: true } authResult)
       {
-        return;
+        return HubResult.Fail("Unauthorized.");
       }
 
       await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .ReceivePowerStateChange(changeType);
+        .ReceivePowerStateChange(request.ChangeType);
+
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending power state change.");
+      return HubResult.Fail("An error occurred while sending the power state change.");
     }
   }
 
+  [Obsolete("Use SendTerminalInput2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
+  {
+    return await SendTerminalInput2(new(deviceId, dto));
+  }
+
+  public async Task<HubResult> SendTerminalInput2(SendTerminalInputRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.TerminalUse) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.TerminalUse) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
       }
 
       // Create a new DTO with ViewerConnectionId
-      var dtoWithViewerConnection = dto with { ViewerConnectionId = Context.ConnectionId };
+      var dtoWithViewerConnection = request.Input with { ViewerConnectionId = Context.ConnectionId };
 
       var sendResult = await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
@@ -697,27 +794,30 @@ public class ViewerHub(
     }
   }
 
+  [Obsolete("Use SendWakeDevice2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult<string>> SendWakeDevice(Guid deviceId, string[] macAddresses)
+  {
+    return await SendWakeDevice2(new(deviceId, macAddresses));
+  }
+
+  public async Task<HubResult<string>> SendWakeDevice2(SendWakeDeviceRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.WakeSend) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.WakeSend) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail<string>("Unauthorized.");
       }
 
       var target = authResult.Value;
 
-      // A magic packet only reaches the target's LAN if an online neighbor emits it there,
-      // so fan out only to online devices that share the target's network (same public IP).
-      // Device group/tag membership is organizational, not spatial, and is not a proximity signal.
       if (string.IsNullOrWhiteSpace(target.PublicIpV4))
       {
-        return HubResult.Ok($"The target device has no known public IP, so no network neighbors could be found to broadcast the magic packet.");
+        return HubResult.Ok<string>("The target device has no known public IP, so no network neighbors could be found to broadcast the magic packet.");
       }
 
       var connectionIds = await _appDb.Devices
-        .Where(device => device.Id != deviceId &&
+        .Where(device => device.Id != request.DeviceId &&
                          device.TenantId == target.TenantId &&
                          device.CustomerId == target.CustomerId &&
                          device.PublicIpV4 == target.PublicIpV4 &&
@@ -728,15 +828,15 @@ public class ViewerHub(
 
       if (connectionIds.Count == 0)
       {
-        return HubResult.Ok($"No online devices sharing public IP {target.PublicIpV4} were found. The target may need an online agent on the same network to be woken.");
+        return HubResult.Ok<string>($"No online devices sharing public IP {target.PublicIpV4} were found. The target may need an online agent on the same network to be woken.");
       }
 
-      var dto = new WakeDeviceDto(macAddresses);
+      var dto = new WakeDeviceDto(request.MacAddresses.ToArray());
       await _agentHub.Clients
         .Clients(connectionIds)
         .InvokeWakeDevice(dto);
 
-      return HubResult.Ok($"Magic packet broadcast by {connectionIds.Count} devic{(connectionIds.Count == 1 ? "e" : "es")} with public IP {target.PublicIpV4}.");
+      return HubResult.Ok<string>($"Magic packet broadcast by {connectionIds.Count} devic{(connectionIds.Count == 1 ? "e" : "es")} with public IP {target.PublicIpV4}.");
     }
     catch (Exception ex)
     {
@@ -745,7 +845,13 @@ public class ViewerHub(
     }
   }
 
+  [Obsolete("Use StartDeviceAccessActivity2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> StartDeviceAccessActivity(Guid deviceId)
+  {
+    return await StartDeviceAccessActivity2(new(deviceId));
+  }
+
+  public async Task<HubResult> StartDeviceAccessActivity2(StartDeviceAccessActivityRequestDto request)
   {
     if (Context.User is null)
     {
@@ -753,7 +859,7 @@ public class ViewerHub(
       return HubResult.Fail("Unauthorized.");
     }
 
-    var authResult = await TryAuthorizeAgainstDevice(deviceId);
+    var authResult = await TryAuthorizeAgainstDevice(request.DeviceId);
     if (!authResult.IsSuccess)
     {
       return HubResult.Fail("Unauthorized.");
@@ -768,9 +874,9 @@ public class ViewerHub(
     }
 
     SessionActivity = DefaultActivitySource.StartDeviceAccessActivity(
-      userName: user.UserName, 
-      userId: user.Id, 
-      deviceId: deviceId);
+      userName: user.UserName,
+      userId: user.Id,
+      deviceId: request.DeviceId);
 
     if (Context.User.FindFirstValue(UserClaimTypes.SessionCorrelationId) is {} sessionCorrelationId)
     {
@@ -780,25 +886,32 @@ public class ViewerHub(
     return HubResult.Ok();
   }
 
+  [Obsolete("Use SubscribeToDeviceHeartbeats2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> SubscribeToDeviceHeartbeats(Guid[] deviceIds)
   {
+    return await SubscribeToDeviceHeartbeats2(new(deviceIds));
+  }
+
+  public async Task<HubResult> SubscribeToDeviceHeartbeats2(SubscribeToDeviceHeartbeatsRequestDto request)
+  {
+    var deviceIds = request.DeviceIds;
     if (Context.User is null)
     {
       return HubResult.Fail("Not authenticated.");
     }
 
-    if (deviceIds is not { Length: > 0 })
+    if (deviceIds is not { Count: > 0 })
     {
       return HubResult.Ok();
     }
 
-    if (deviceIds.Length > MaxHeartbeatSubscriptionBatch)
+    if (deviceIds.Count > MaxHeartbeatSubscriptionBatch)
     {
       return HubResult.Fail(
-        $"Too many device IDs ({deviceIds.Length}). Subscribe at most {MaxHeartbeatSubscriptionBatch} devices per call.");
+        $"Too many device IDs ({deviceIds.Count}). Subscribe at most {MaxHeartbeatSubscriptionBatch} devices per call.");
     }
 
-    var distinctIds = deviceIds.Distinct().ToArray();
+    var distinctIds = deviceIds.Distinct().ToList();
 
     var devices = await _appDb.Devices.AsNoTracking()
       .Include(x => x.DeviceGroupMembers)
@@ -836,18 +949,24 @@ public class ViewerHub(
     return HubResult.Ok();
   }
 
+  [Obsolete("Use TestVncConnection2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> TestVncConnection(Guid guid, int port)
+  {
+    return await TestVncConnection2(new(guid, port));
+  }
+
+  public async Task<HubResult> TestVncConnection2(TestVncConnectionRequestDto request)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(guid, DeviceResourcePolicies.VncRelayConnect) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.VncRelayConnect) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
       }
 
       return await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .TestVncConnection(port);
+        .TestVncConnection(request.Port);
     }
     catch (Exception ex)
     {
@@ -856,43 +975,59 @@ public class ViewerHub(
     }
   }
 
+  [Obsolete("Use UninstallAgent2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task UninstallAgent(Guid deviceId, string reason)
+  {
+    await UninstallAgent2(new(deviceId, reason));
+  }
+
+  public async Task<HubResult> UninstallAgent2(UninstallAgentRequestDto request)
   {
     try
     {
-      // Uninstalling removes the agent from the machine, so it requires delete authority
-      // rather than the catch-all read policy.
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.Delete) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.Delete) is not { IsSuccess: true } authResult)
       {
-        return;
+        return HubResult.Fail("Unauthorized.");
       }
 
       _logger.LogInformation(
         "Agent uninstall command sent by user: {UserName}.  Device: {DeviceId}",
         Context.UserIdentifier,
-        deviceId);
+        request.DeviceId);
 
       await _agentHub.Clients
         .Client(authResult.Value.ConnectionId)
-        .UninstallAgent(reason);
+        .UninstallAgent(request.Reason);
+
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while uninstalling agent.");
+      return HubResult.Fail("An error occurred while uninstalling the agent.");
     }
   }
 
+  [Obsolete("Use UnsubscribeFromDeviceHeartbeats2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task UnsubscribeFromDeviceHeartbeats(Guid[] deviceIds)
   {
-    if (deviceIds is not { Length: > 0 })
+    await UnsubscribeFromDeviceHeartbeats2(new(deviceIds));
+  }
+
+  public async Task<HubResult> UnsubscribeFromDeviceHeartbeats2(UnsubscribeFromDeviceHeartbeatsRequestDto request)
+  {
+    var deviceIds = request.DeviceIds;
+    if (deviceIds is not { Count: > 0 })
     {
-      return;
+      return HubResult.Ok();
     }
 
     foreach (var deviceId in deviceIds.Distinct())
     {
       await Groups.RemoveFromGroupAsync(Context.ConnectionId, HubGroupNames.DeviceHeartbeat(deviceId));
     }
+
+    return HubResult.Ok();
   }
 
   public async Task<HubResult> UploadFile(

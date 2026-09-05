@@ -326,9 +326,7 @@ public partial class TerminalViewModel : ViewModelBase<TerminalView>, ITerminalV
       _terminalState.DraftCommandInputText = string.Empty;
 
       var dto = new TerminalInputDto(_terminalState.Id, CommandInputText);
-      var result = await _viewerHub.Server.SendTerminalInput(
-        _deviceState.CurrentDevice.Id,
-        dto);
+      var result = await _viewerHub.Server.SendTerminalInput2(new(_deviceState.CurrentDevice.Id, dto));
 
       if (!result.IsSuccess)
       {
@@ -391,7 +389,7 @@ public partial class TerminalViewModel : ViewModelBase<TerminalView>, ITerminalV
     {
       try
       {
-        await _viewerHub.Server.CloseTerminalSession(_deviceState.CurrentDevice.Id, _terminalState.Id);
+        await _viewerHub.Server.CloseTerminalSession2(new(_deviceState.CurrentDevice.Id, _terminalState.Id));
       }
       catch (Exception ex)
       {
@@ -416,9 +414,7 @@ public partial class TerminalViewModel : ViewModelBase<TerminalView>, ITerminalV
         }
       }
 
-      var result = await _viewerHub.Server.CreateTerminalSession(
-        _deviceState.CurrentDevice.Id,
-        _terminalState.Id);
+      var result = await _viewerHub.Server.CreateTerminalSession2(new(_deviceState.CurrentDevice.Id, _terminalState.Id));
 
       if (!result.IsSuccess)
       {

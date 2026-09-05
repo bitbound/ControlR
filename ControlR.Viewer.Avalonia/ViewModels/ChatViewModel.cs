@@ -232,10 +232,10 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
     {
       if (_chatState.CurrentSession is not null)
       {
-        var result = await _viewerHub.Server.CloseChatSession(
+        var result = await _viewerHub.Server.CloseChatSession2(new(
           _viewerOptions.Value.DeviceId,
           _chatState.SessionId,
-          _chatState.CurrentSession.ProcessId);
+          _chatState.CurrentSession.ProcessId));
 
         if (!result.IsSuccess)
         {
@@ -261,7 +261,8 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
   {
     try
     {
-      var desktopSessions = await _viewerHub.Server.GetActiveDesktopSessions(_viewerOptions.Value.DeviceId);
+      var desktopSessionsResult = await _viewerHub.Server.GetActiveDesktopSessions2(new(_viewerOptions.Value.DeviceId));
+      var desktopSessions = desktopSessionsResult.IsSuccess ? desktopSessionsResult.Value?.ToArray() ?? [] : [];
 
       DesktopSessions.Clear();
       foreach (var session in desktopSessions)
@@ -360,7 +361,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
         Timestamp = DateTimeOffset.Now
       });
 
-      await _viewerHub.Server.SendChatMessage(_viewerOptions.Value.DeviceId, dto);
+      await _viewerHub.Server.SendChatMessage2(new(_viewerOptions.Value.DeviceId, dto));
 
       await _chatState.NotifyStateChanged();
       

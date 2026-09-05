@@ -93,7 +93,8 @@
   {
     try
     {
-      Sessions = await ViewerHub.Server.GetActiveDesktopSessions(Device.Id);
+      var hubResult = await ViewerHub.Server.GetActiveDesktopSessions2(new(Device.Id));
+      Sessions = hubResult.IsSuccess ? hubResult.Value?.ToArray() ?? [] : [];
       await InvokeAsync(StateHasChanged);
     }
     catch (Exception ex)

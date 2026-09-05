@@ -230,7 +230,8 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
   {
     try
     {
-      var desktopSessions = await _hubConnection.Server.GetActiveDesktopSessions(_viewerOptions.Value.DeviceId);
+      var desktopSessionsResult = await _hubConnection.Server.GetActiveDesktopSessions2(new(_viewerOptions.Value.DeviceId));
+      var desktopSessions = desktopSessionsResult.IsSuccess ? desktopSessionsResult.Value?.ToArray() ?? [] : [];
 
       foreach (var existingSession in DesktopSessions)
       {
@@ -322,9 +323,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
     try
     {
       _snackbar.Add(Resources.RemoteControl_RequestingPermissions, SnackbarSeverity.Info);
-      var result = await _hubConnection.Server.RequestRemoteControlPermission(
-        _viewerOptions.Value.DeviceId,
-        session.ProcessId);
+      var result = await _hubConnection.Server.RequestRemoteControlPermission2(new(_viewerOptions.Value.DeviceId, session.ProcessId));
 
       if (result.IsSuccess)
       {

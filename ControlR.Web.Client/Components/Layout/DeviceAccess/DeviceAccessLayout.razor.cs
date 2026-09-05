@@ -324,7 +324,7 @@ public partial class DeviceAccessLayout
       return;
     }
 
-    var result = await ViewerHub.Value.Server.GetDeviceAccessPermissions(_deviceId);
+    var result = await ViewerHub.Value.Server.GetDeviceAccessPermissions2(new(_deviceId));
     _deviceAccessPermissions = result.IsSuccess ? result.Value : null;
     EnforceCurrentPagePermission();
     await InvokeAsync(StateHasChanged);
@@ -334,7 +334,7 @@ public partial class DeviceAccessLayout
   {
     try
     {
-      var startResult = await ViewerHub.Value.Server.StartDeviceAccessActivity(_deviceId);
+      var startResult = await ViewerHub.Value.Server.StartDeviceAccessActivity2(new(_deviceId));
       if (!startResult.IsSuccess)
       {
         Logger.LogError("Failed to start remote access activity.");
@@ -355,10 +355,10 @@ public partial class DeviceAccessLayout
 
     if (_subscribedDeviceId != Guid.Empty)
     {
-      await ViewerHub.Value.Server.UnsubscribeFromDeviceHeartbeats([_subscribedDeviceId]);
+      await ViewerHub.Value.Server.UnsubscribeFromDeviceHeartbeats2(new([_subscribedDeviceId]));
     }
 
-    var result = await ViewerHub.Value.Server.SubscribeToDeviceHeartbeats([_deviceId]);
+    var result = await ViewerHub.Value.Server.SubscribeToDeviceHeartbeats2(new([_deviceId]));
     if (result.IsSuccess)
     {
       _subscribedDeviceId = _deviceId;
@@ -380,10 +380,10 @@ public partial class DeviceAccessLayout
         return;
       }
 
-      await ViewerHub.Value.Server.CloseChatSession(
+      await ViewerHub.Value.Server.CloseChatSession2(new(
         DeviceAccessState.Value.CurrentDevice.Id,
         ChatState.Value.SessionId,
-        ChatState.Value.CurrentSession.ProcessId);
+        ChatState.Value.CurrentSession.ProcessId));
 
     }
     catch (Exception ex)
@@ -456,9 +456,9 @@ public partial class DeviceAccessLayout
       {
         return;
       }
-      await ViewerHub.Value.Server.CloseTerminalSession(
+      await ViewerHub.Value.Server.CloseTerminalSession2(new(
         DeviceAccessState.Value.CurrentDevice.Id,
-        TerminalState.Value.Id);
+        TerminalState.Value.Id));
     }
     catch (Exception ex)
     {
@@ -472,7 +472,7 @@ public partial class DeviceAccessLayout
     {
       if (ViewerHub.Value.IsConnected && _subscribedDeviceId != Guid.Empty)
       {
-        await ViewerHub.Value.Server.UnsubscribeFromDeviceHeartbeats([_subscribedDeviceId]);
+        await ViewerHub.Value.Server.UnsubscribeFromDeviceHeartbeats2(new([_subscribedDeviceId]));
       }
     }
     catch (Exception ex)

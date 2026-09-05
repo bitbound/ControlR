@@ -132,7 +132,7 @@ public partial class DeviceOverviewGrid
         var updatedDevice = result.Value;
         await DeviceStore.AddOrUpdate(updatedDevice);
         _aliasValue = updatedDevice.Alias;
-        await ViewerHub.Server.RefreshDeviceInfo(Device.Id);
+        await ViewerHub.Server.RefreshDeviceInfo2(new(Device.Id));
         Snackbar.Add("Alias updated.", Severity.Success);
         _isEditingAlias = false;
       }

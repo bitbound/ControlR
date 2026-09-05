@@ -86,7 +86,7 @@ public partial class Dashboard : IAsyncDisposable
     {
       if (MainHub.IsConnected && _subscribedDeviceIds.Count > 0)
       {
-        await MainHub.Server.UnsubscribeFromDeviceHeartbeats([.. _subscribedDeviceIds]);
+        await MainHub.Server.UnsubscribeFromDeviceHeartbeats2(new([.. _subscribedDeviceIds]));
       }
     }
     catch (Exception ex)
@@ -394,7 +394,7 @@ public partial class Dashboard : IAsyncDisposable
   {
     try
     {
-      await MainHub.Server.RefreshDeviceInfo(device.Id);
+      await MainHub.Server.RefreshDeviceInfo2(new(device.Id));
     }
     catch (Exception ex)
     {
@@ -480,7 +480,7 @@ public partial class Dashboard : IAsyncDisposable
         return;
       }
 
-      await MainHub.Server.SendPowerStateChange(device.Id, PowerStateChangeType.Restart);
+      await MainHub.Server.SendPowerStateChange2(new(device.Id, PowerStateChangeType.Restart));
       Snackbar.Add("Restart command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -526,7 +526,7 @@ public partial class Dashboard : IAsyncDisposable
         return;
       }
 
-      await MainHub.Server.SendPowerStateChange(device.Id, PowerStateChangeType.Shutdown);
+      await MainHub.Server.SendPowerStateChange2(new(device.Id, PowerStateChangeType.Shutdown));
       Snackbar.Add("Shutdown command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -553,7 +553,7 @@ public partial class Dashboard : IAsyncDisposable
 
       foreach (var batch in toSubscribe.Chunk(SubscriptionBatchSize))
       {
-        var result = await MainHub.Server.SubscribeToDeviceHeartbeats(batch);
+        var result = await MainHub.Server.SubscribeToDeviceHeartbeats2(new(batch));
         if (result.IsSuccess)
         {
           subscribed.UnionWith(batch);
@@ -567,7 +567,7 @@ public partial class Dashboard : IAsyncDisposable
 
       if (toUnsubscribe.Length > 0)
       {
-        await MainHub.Server.UnsubscribeFromDeviceHeartbeats(toUnsubscribe);
+        await MainHub.Server.UnsubscribeFromDeviceHeartbeats2(new(toUnsubscribe));
         subscribed.ExceptWith(toUnsubscribe);
       }
 
@@ -594,7 +594,7 @@ public partial class Dashboard : IAsyncDisposable
         return;
       }
 
-      await MainHub.Server.UninstallAgent(device.Id, "Manually uninstalled.");
+      await MainHub.Server.UninstallAgent2(new(device.Id, "Manually uninstalled."));
       Snackbar.Add("Uninstall command sent", Severity.Success);
     }
     catch (Exception ex)
@@ -608,7 +608,7 @@ public partial class Dashboard : IAsyncDisposable
     try
     {
       Snackbar.Add("Sending update request", Severity.Success);
-      await MainHub.Server.SendAgentUpdateTrigger(deviceId);
+      await MainHub.Server.SendAgentUpdateTrigger2(new(deviceId));
     }
     catch (Exception ex)
     {
@@ -626,7 +626,7 @@ public partial class Dashboard : IAsyncDisposable
         return;
       }
 
-      var result = await MainHub.Server.SendWakeDevice(device.Id, device.Dto.MacAddresses.ToArray());
+      var result = await MainHub.Server.SendWakeDevice2(new(device.Id, device.Dto.MacAddresses.ToArray()));
       if (result.IsSuccess)
       {
         Snackbar.Add(result.Value, Severity.Success);

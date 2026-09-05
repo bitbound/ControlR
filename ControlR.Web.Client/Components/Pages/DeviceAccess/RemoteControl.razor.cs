@@ -176,7 +176,8 @@ public partial class RemoteControl : ViewportAwareComponent
   {
     try
     {
-      _systemSessions = await ViewerHub.Server.GetActiveDesktopSessions(DeviceState.CurrentDevice.Id);
+      var sessionsResult = await ViewerHub.Server.GetActiveDesktopSessions2(new(DeviceState.CurrentDevice.Id));
+      _systemSessions = sessionsResult.IsSuccess ? sessionsResult.Value?.ToArray() ?? [] : [];
     }
     catch (Exception ex)
     {
@@ -363,7 +364,7 @@ public partial class RemoteControl : ViewportAwareComponent
     try
     {
       Snackbar.Add("Requesting permission for remote control", Severity.Info);
-      var result = await ViewerHub.Server.RequestRemoteControlPermission(DeviceId, session.ProcessId);
+      var result = await ViewerHub.Server.RequestRemoteControlPermission2(new(DeviceId, session.ProcessId));
       if (result.IsSuccess)
       {
         Snackbar.Add("Permission granted. Refreshing sessions.", Severity.Success);
