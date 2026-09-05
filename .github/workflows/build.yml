@@ -69,7 +69,7 @@ on:
         type: string
 
       skip_version_increment:
-        description: "Use the supplied version as-is without incrementing CURRENT_VERSION"
+        description: "Use the supplied version without incrementing or setting the current version."
         required: false
         default: false
         type: boolean
@@ -961,6 +961,11 @@ jobs:
         run: |
           Set-Content -Path "ControlR.Web.Server/wwwroot/downloads/Version.txt" -Value $env:VERSION -Force -Encoding UTF8
 
+      - name: Create ServerRuntime.txt
+        shell: pwsh
+        run: |
+          Set-Content -Path "ControlR.Web.Server/wwwroot/downloads/ServerRuntime.txt" -Value "${{ inputs.server_runtime }}" -Force -Encoding UTF8
+
       - name: Copy Release Notes
         shell: pwsh
         run: |
@@ -1007,6 +1012,7 @@ jobs:
         run: |
           $TestPaths = @(
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/Version.txt",
+            "ControlR.Web.Server/bin/publish/wwwroot/downloads/ServerRuntime.txt",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/release-notes.md",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.Installer.exe",
             "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.Installer.exe",
@@ -1055,6 +1061,7 @@ jobs:
           echo "## Build Summary" >> $env:GITHUB_STEP_SUMMARY
           echo "**Version:** v${{ env.VERSION }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Git Ref:** ${{ github.ref }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "**Server Runtime:** ${{ inputs.server_runtime }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Use Self-Hosted Runners:** ${{ inputs.use_self_hosted_runners }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Use Local Storage for Artifacts:** ${{ inputs.use_local_storage }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Customization Config URL:** ${{ inputs.customization_config_url }}" >> $env:GITHUB_STEP_SUMMARY
