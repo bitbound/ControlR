@@ -20,9 +20,8 @@
 - Reworked how ungrouped/untagged device display is toggled.
 - Authorization changes are now logged, with tenant and server views of the activity.
 - Fine-grained permissions can now be applied to Personal Access Tokens.
-- Personal access token management is now permission-gated (`personal-access-token.self.read` / `.self.write`,
-  granted via the new "Self Service" preset that every user receives). Tokens that inherit the owner's
-  full permissions can only be created by a direct login, not by another token.
+- Personal access token management is now permission-gated (`personal-access-token.self.read` / `.self.write`, granted via the new "Self Service" preset that every user receives).
+  - Tokens that inherit the owner's full permissions can only be created by a direct login, not by another token.
 - Added an Effective Permissions page that shows exactly what a user or service account can do.
 - Added `Customer` input to the deploy page, allowing for the device to get added to a specific customer during agent installation.
 - Refactored `Deploy` page for better usability (back button, pre-populated expiration for time-based keys, grid sizing).
