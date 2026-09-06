@@ -132,7 +132,11 @@ public partial class DeviceOverviewGrid
         var updatedDevice = result.Value;
         await DeviceStore.AddOrUpdate(updatedDevice);
         _aliasValue = updatedDevice.Alias;
-        await ViewerHub.Server.RefreshDeviceInfo2(new(Device.Id));
+        var refreshResult = await ViewerHub.Server.RefreshDeviceInfo2(new(Device.Id));
+        if (!refreshResult.IsSuccess)
+        {
+          Logger.LogWarning("Failed to refresh device info after alias update for {DeviceId}: {Reason}", Device.Id, refreshResult.Reason);
+        }
         Snackbar.Add("Alias updated.", Severity.Success);
         _isEditingAlias = false;
       }

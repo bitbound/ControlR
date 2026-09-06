@@ -394,7 +394,11 @@ public partial class Dashboard : IAsyncDisposable
   {
     try
     {
-      await MainHub.Server.RefreshDeviceInfo2(new(device.Id));
+      var refreshResult = await MainHub.Server.RefreshDeviceInfo2(new(device.Id));
+      if (!refreshResult.IsSuccess)
+      {
+        Snackbar.Add($"Failed to refresh device info: {refreshResult.Reason}", Severity.Warning);
+      }
     }
     catch (Exception ex)
     {
@@ -480,8 +484,15 @@ public partial class Dashboard : IAsyncDisposable
         return;
       }
 
-      await MainHub.Server.SendPowerStateChange2(new(device.Id, PowerStateChangeType.Restart));
-      Snackbar.Add("Restart command sent", Severity.Success);
+      var restartResult = await MainHub.Server.SendPowerStateChange2(new(device.Id, PowerStateChangeType.Restart));
+      if (restartResult.IsSuccess)
+      {
+        Snackbar.Add("Restart command sent", Severity.Success);
+      }
+      else
+      {
+        Snackbar.Add($"Failed to restart device: {restartResult.Reason}", Severity.Error);
+      }
     }
     catch (Exception ex)
     {
@@ -526,8 +537,15 @@ public partial class Dashboard : IAsyncDisposable
         return;
       }
 
-      await MainHub.Server.SendPowerStateChange2(new(device.Id, PowerStateChangeType.Shutdown));
-      Snackbar.Add("Shutdown command sent", Severity.Success);
+      var shutdownResult = await MainHub.Server.SendPowerStateChange2(new(device.Id, PowerStateChangeType.Shutdown));
+      if (shutdownResult.IsSuccess)
+      {
+        Snackbar.Add("Shutdown command sent", Severity.Success);
+      }
+      else
+      {
+        Snackbar.Add($"Failed to shut down device: {shutdownResult.Reason}", Severity.Error);
+      }
     }
     catch (Exception ex)
     {
@@ -594,8 +612,15 @@ public partial class Dashboard : IAsyncDisposable
         return;
       }
 
-      await MainHub.Server.UninstallAgent2(new(device.Id, "Manually uninstalled."));
-      Snackbar.Add("Uninstall command sent", Severity.Success);
+      var uninstallResult = await MainHub.Server.UninstallAgent2(new(device.Id, "Manually uninstalled."));
+      if (uninstallResult.IsSuccess)
+      {
+        Snackbar.Add("Uninstall command sent", Severity.Success);
+      }
+      else
+      {
+        Snackbar.Add($"Failed to uninstall agent: {uninstallResult.Reason}", Severity.Error);
+      }
     }
     catch (Exception ex)
     {
@@ -607,8 +632,15 @@ public partial class Dashboard : IAsyncDisposable
   {
     try
     {
-      Snackbar.Add("Sending update request", Severity.Success);
-      await MainHub.Server.SendAgentUpdateTrigger2(new(deviceId));
+      var updateResult = await MainHub.Server.SendAgentUpdateTrigger2(new(deviceId));
+      if (updateResult.IsSuccess)
+      {
+        Snackbar.Add("Sending update request", Severity.Success);
+      }
+      else
+      {
+        Snackbar.Add($"Failed to send update request: {updateResult.Reason}", Severity.Error);
+      }
     }
     catch (Exception ex)
     {

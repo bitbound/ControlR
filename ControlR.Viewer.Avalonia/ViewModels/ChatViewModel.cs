@@ -1,7 +1,9 @@
 using System.Globalization;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
+using ControlR.Libraries.Avalonia.Services;
 
 namespace ControlR.Viewer.Avalonia.ViewModels;
 
@@ -30,6 +32,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
 {
   private readonly IChatState _chatState;
   private readonly IDeviceState _deviceState;
+  private readonly IUiDispatcher _dispatcher;
   private readonly ILogger<ChatViewModel> _logger;
   private readonly ISnackbar _snackbar;
   private readonly IHubConnection<IViewerHub> _viewerHub;
@@ -42,6 +45,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
     IDeviceState deviceState,
     IChatState chatState,
     IOptions<ControlrViewerOptions> viewerOptions,
+    IUiDispatcher dispatcher,
     ISnackbar snackbar,
     ILogger<ChatViewModel> logger)
   {
@@ -49,6 +53,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
     _deviceState = deviceState;
     _chatState = chatState;
     _viewerOptions = viewerOptions;
+    _dispatcher = dispatcher;
     _snackbar = snackbar;
     _logger = logger;
   }
@@ -211,7 +216,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
       _stateChangeHandler?.Dispose();
       _stateChangeHandler = _chatState.OnStateChanged(HandleChatStateChanged);
 
-      if (!await GetDesktopSessionsAsync())
+      if (!await GetDesktopSessions())
       {
         AlertMessage = Resources.Chat_FailedToLoadSessions;
         AlertSeverity = SnackbarSeverity.Warning;
@@ -261,12 +266,14 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
     }
   }
 
-  private async Task<bool> GetDesktopSessionsAsync()
+  private async Task<bool> GetDesktopSessions()
   {
     var desktopSessionsResult = await _viewerHub.Server.GetActiveDesktopSessions2(new(_viewerOptions.Value.DeviceId));
     if (!desktopSessionsResult.IsSuccess)
     {
       _logger.LogError("Failed to get active desktop sessions for chat: {Error}", desktopSessionsResult.Reason);
+      DesktopSessions.Clear();
+      OnPropertyChanged(nameof(HasDesktopSessions));
       return false;
     }
 
@@ -303,7 +310,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
     {
       AlertMessage = null;
       AlertSeverity = SnackbarSeverity.Info;
-      if (await GetDesktopSessionsAsync())
+      if (await GetDesktopSessions())
       {
         _snackbar.Add(Resources.RemoteControl_SessionsRefreshed, SnackbarSeverity.Info);
       }
@@ -327,7 +334,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
     LoadingMessage = Resources.Chat_Loading;
     try
     {
-      if (!await GetDesktopSessionsAsync())
+      if (!await GetDesktopSessions())
       {
         AlertMessage = Resources.Chat_FailedToLoadSessions;
         AlertSeverity = SnackbarSeverity.Warning;
@@ -348,13 +355,24 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
   [RelayCommand]
   private async Task SendMessage()
   {
+    var message = NewMessage?.Trim();
+    if (string.IsNullOrWhiteSpace(message) || _chatState.CurrentSession is null)
+    {
+      return;
+    }
+
+    var chatMessage = new ChatMessage
+    {
+      IsFromViewer = true,
+      Message = message,
+      SenderName = Resources.Chat_You,
+      Timestamp = DateTimeOffset.Now
+    };
+
     try
     {
-      var message = NewMessage?.Trim();
-      if (string.IsNullOrWhiteSpace(message) || _chatState.CurrentSession is null)
-      {
-        return;
-      }
+      _chatState.ChatMessages.Add(chatMessage);
+      NewMessage = string.Empty;
 
       var dto = new ChatMessageHubDto(
         _viewerOptions.Value.DeviceId,
@@ -366,18 +384,6 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
         _chatState.CurrentSession.ProcessId,
         DateTimeOffset.Now);
 
-      var chatMessage = new ChatMessage
-      {
-        IsFromViewer = true,
-        Message = message,
-        SenderName = Resources.Chat_You,
-        Timestamp = DateTimeOffset.Now
-      };
-
-      _chatState.ChatMessages.Add(chatMessage);
-
-      NewMessage = string.Empty;
-
       var sendResult = await _viewerHub.Server.SendChatMessage2(new(_viewerOptions.Value.DeviceId, dto));
       if (!sendResult.IsSuccess)
       {
@@ -388,12 +394,21 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
         return;
       }
 
-      await _chatState.NotifyStateChanged();
+      if (_dispatcher.CheckAccess())
+      {
+        await _chatState.NotifyStateChanged();
+      }
+      else
+      {
+        await _dispatcher.InvokeAsync(_chatState.NotifyStateChanged);
+      }
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Failed to send chat message.");
       _snackbar.Add(Resources.Chat_FailedToSend, SnackbarSeverity.Warning);
+      _chatState.ChatMessages.Remove(chatMessage);
+      NewMessage = message;
     }
   }
 }

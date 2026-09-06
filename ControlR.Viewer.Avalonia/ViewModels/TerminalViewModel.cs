@@ -320,23 +320,24 @@ public partial class TerminalViewModel : ViewModelBase<TerminalView>, ITerminalV
         _terminalState.InputHistory.RemoveAt(0);
       }
 
-      CommandInputText = CommandInputText.Trim();
-      _terminalState.InputHistory.Add(CommandInputText);
-      _terminalState.InputHistoryIndex = _terminalState.InputHistory.Count;
-      _terminalState.DraftCommandInputText = string.Empty;
+      var command = CommandInputText.Trim();
 
-      var dto = new TerminalInputDto(_terminalState.Id, CommandInputText);
+      var dto = new TerminalInputDto(_terminalState.Id, command);
       var result = await _viewerHub.Server.SendTerminalInput2(new(_deviceState.CurrentDevice.Id, dto));
 
-      if (!result.IsSuccess)
+      if (result.IsSuccess)
+      {
+        _terminalState.InputHistory.Add(command);
+        _terminalState.InputHistoryIndex = _terminalState.InputHistory.Count;
+        _terminalState.DraftCommandInputText = string.Empty;
+        CommandInputText = string.Empty;
+        _terminalState.LastCompletionInput = null;
+        ClearCompletions();
+      }
+      else
       {
         _snackbar.Add(result.Reason, SnackbarSeverity.Error);
       }
-
-      CommandInputText = string.Empty;
-      _terminalState.DraftCommandInputText = string.Empty;
-      _terminalState.LastCompletionInput = null;
-      ClearCompletions();
     }
     catch (Exception ex)
     {

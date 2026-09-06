@@ -103,7 +103,11 @@ public class ViewerHub(
   [Obsolete("Use CloseTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task CloseTerminalSession(Guid deviceId, Guid terminalSessionId)
   {
-    await CloseTerminalSession2(new(deviceId, terminalSessionId));
+    var result = await CloseTerminalSession2(new(deviceId, terminalSessionId));
+    if (!result.IsSuccess)
+    {
+      _logger.LogWarning("CloseTerminalSession failed: {Reason}", result.Reason);
+    }
   }
 
   public async Task<HubResult> CloseTerminalSession2(CloseTerminalSessionRequestDto request)
@@ -419,7 +423,11 @@ public class ViewerHub(
   [Obsolete("Use RefreshDeviceInfo2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task RefreshDeviceInfo(Guid deviceId)
   {
-    await RefreshDeviceInfo2(new(deviceId));
+    var result = await RefreshDeviceInfo2(new(deviceId));
+    if (!result.IsSuccess)
+    {
+      _logger.LogWarning("RefreshDeviceInfo failed: {Reason}", result.Reason);
+    }
   }
 
   public async Task<HubResult> RefreshDeviceInfo2(RefreshDeviceInfoRequestDto request)
@@ -632,7 +640,11 @@ public class ViewerHub(
   [Obsolete("Use SendAgentUpdateTrigger2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task SendAgentUpdateTrigger(Guid deviceId)
   {
-    await SendAgentUpdateTrigger2(new(deviceId));
+    var result = await SendAgentUpdateTrigger2(new(deviceId));
+    if (!result.IsSuccess)
+    {
+      _logger.LogWarning("SendAgentUpdateTrigger failed: {Reason}", result.Reason);
+    }
   }
 
   public async Task<HubResult> SendAgentUpdateTrigger2(SendAgentUpdateTriggerRequestDto request)
@@ -736,13 +748,22 @@ public class ViewerHub(
   [Obsolete("Use SendPowerStateChange2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task SendPowerStateChange(Guid deviceId, PowerStateChangeType changeType)
   {
-    await SendPowerStateChange2(new(deviceId, changeType));
+    var result = await SendPowerStateChange2(new(deviceId, changeType));
+    if (!result.IsSuccess)
+    {
+      _logger.LogWarning("SendPowerStateChange failed: {Reason}", result.Reason);
+    }
   }
 
   public async Task<HubResult> SendPowerStateChange2(SendPowerStateChangeRequestDto request)
   {
     try
     {
+      if (request.ChangeType is PowerStateChangeType.None)
+      {
+        return HubResult.Fail("Invalid power state change type.");
+      }
+
       if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.PowerManage) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
@@ -978,7 +999,11 @@ public class ViewerHub(
   [Obsolete("Use UninstallAgent2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task UninstallAgent(Guid deviceId, string reason)
   {
-    await UninstallAgent2(new(deviceId, reason));
+    var result = await UninstallAgent2(new(deviceId, reason));
+    if (!result.IsSuccess)
+    {
+      _logger.LogWarning("UninstallAgent failed: {Reason}", result.Reason);
+    }
   }
 
   public async Task<HubResult> UninstallAgent2(UninstallAgentRequestDto request)
@@ -1011,7 +1036,11 @@ public class ViewerHub(
   [Obsolete("Use UnsubscribeFromDeviceHeartbeats2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task UnsubscribeFromDeviceHeartbeats(Guid[] deviceIds)
   {
-    await UnsubscribeFromDeviceHeartbeats2(new(deviceIds));
+    var result = await UnsubscribeFromDeviceHeartbeats2(new(deviceIds));
+    if (!result.IsSuccess)
+    {
+      _logger.LogWarning("UnsubscribeFromDeviceHeartbeats failed: {Reason}", result.Reason);
+    }
   }
 
   public async Task<HubResult> UnsubscribeFromDeviceHeartbeats2(UnsubscribeFromDeviceHeartbeatsRequestDto request)

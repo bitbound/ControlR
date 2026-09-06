@@ -250,8 +250,8 @@ public partial class Chat : ComponentBase, IDisposable
       {
         Logger.LogError("Failed to send chat message: {Error}", result.Reason);
         Snackbar.Add("Failed to send message", Severity.Error);
-        ChatState.ChatMessages.Remove(chatMessage);
-        ChatState.NewMessage = newMessage;
+         _ = ChatState.ChatMessages.Remove(chatMessage);
+         ChatState.NewMessage = newMessage;
       }
 
       await InvokeAsync(StateHasChanged);

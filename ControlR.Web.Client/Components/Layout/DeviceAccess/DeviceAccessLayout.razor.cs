@@ -154,24 +154,32 @@ public partial class DeviceAccessLayout
 
   protected override async Task OnParametersSetAsync()
   {
-    await base.OnParametersSetAsync();
-
-    if (_previousDeviceId == Guid.Empty)
+    try
     {
-      return;
+      await base.OnParametersSetAsync();
+
+      if (_previousDeviceId == Guid.Empty)
+      {
+        return;
+      }
+
+      var currentUri = new Uri(NavManager.Uri);
+      var query = HttpUtility.ParseQueryString(currentUri.Query);
+      if (Guid.TryParse(query.Get("deviceId"), out var currentDeviceId) &&
+          currentDeviceId != Guid.Empty &&
+          currentDeviceId != _previousDeviceId)
+      {
+        await GetDeviceInfo();
+        _previousDeviceId = _deviceId;
+        _deviceAccessPermissions = null;
+        await RefreshDeviceAccessPermissions();
+        await SyncHeartbeatSubscription();
+      }
     }
-
-    var currentUri = new Uri(NavManager.Uri);
-    var query = HttpUtility.ParseQueryString(currentUri.Query);
-    if (Guid.TryParse(query.Get("deviceId"), out var currentDeviceId) &&
-        currentDeviceId != Guid.Empty &&
-        currentDeviceId != _previousDeviceId)
+    catch (Exception ex)
     {
-      await GetDeviceInfo();
-      _previousDeviceId = _deviceId;
-      _deviceAccessPermissions = null;
-      await RefreshDeviceAccessPermissions();
-      await SyncHeartbeatSubscription();
+      _errorText = "An error occurred while loading the device.";
+      Logger.LogError(ex, "Error in DeviceAccessLayout parameter processing for device {DeviceId}", _deviceId);
     }
   }
 
@@ -361,7 +369,13 @@ public partial class DeviceAccessLayout
 
     if (_subscribedDeviceId != Guid.Empty)
     {
-      await ViewerHub.Value.Server.UnsubscribeFromDeviceHeartbeats2(new([_subscribedDeviceId]));
+      var unsubscribeResult = await ViewerHub.Value.Server.UnsubscribeFromDeviceHeartbeats2(new([_subscribedDeviceId]));
+      if (!unsubscribeResult.IsSuccess)
+      {
+        Logger.LogWarning("Failed to unsubscribe from device heartbeat: {Reason}", unsubscribeResult.Reason);
+      }
+
+      _subscribedDeviceId = Guid.Empty;
     }
 
     var result = await ViewerHub.Value.Server.SubscribeToDeviceHeartbeats2(new([_deviceId]));
@@ -441,7 +455,7 @@ public partial class DeviceAccessLayout
   {
     try
     {
-      await ViewerHub.Value.Server.DisposeDeviceAccessActivity();
+      _ = await ViewerHub.Value.Server.DisposeDeviceAccessActivity();
     }
     catch (Exception ex)
     {
