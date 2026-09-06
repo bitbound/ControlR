@@ -83,9 +83,9 @@ public partial class Terminal : IAsyncDisposable
 
       Messenger.Register<DtoReceivedMessage<TerminalOutputDto>>(this, HandleTerminalOutputMessage);
 
-      var result = await ViewerHub.Server.CreateTerminalSession(
+      var result = await ViewerHub.Server.CreateTerminalSession2(new CreateTerminalSessionRequestDto(
         DeviceState.CurrentDevice.Id,
-        TerminalState.Id);
+        TerminalState.Id));
 
       if (!result.IsSuccess)
       {
@@ -329,23 +329,24 @@ public partial class Terminal : IAsyncDisposable
         TerminalState.InputHistory.RemoveAt(0);
       }
 
-      TerminalState.CommandInputText = TerminalState.CommandInputText.Trim();
-      TerminalState.InputHistory.Add(TerminalState.CommandInputText);
-      TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count;
-      TerminalState.DraftCommandInputText = string.Empty;
+      var command = TerminalState.CommandInputText.Trim();
 
-      var dto = new TerminalInputDto(TerminalState.Id, TerminalState.CommandInputText);
-      var result = await ViewerHub.Server.SendTerminalInput(
+      var dto = new TerminalInputDto(TerminalState.Id, command);
+      var result = await ViewerHub.Server.SendTerminalInput2(new(
         DeviceState.CurrentDevice.Id,
-        dto);
+        dto));
 
-      if (!result.IsSuccess)
+      if (result.IsSuccess)
+      {
+        TerminalState.InputHistory.Add(command);
+        TerminalState.InputHistoryIndex = TerminalState.InputHistory.Count;
+        TerminalState.CommandInputText = string.Empty;
+        TerminalState.DraftCommandInputText = string.Empty;
+      }
+      else
       {
         Snackbar.Add(result.Reason, Severity.Error);
       }
-
-      TerminalState.CommandInputText = string.Empty;
-      TerminalState.DraftCommandInputText = string.Empty;
     }
     catch (Exception ex)
     {

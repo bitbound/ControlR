@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Authn;
@@ -25,6 +27,75 @@ namespace ControlR.Web.Server.Tests;
 public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutput = testOutput;
+
+  [Fact]
+  public async Task AddViewerActivity2_Invoked_ReturnsHubResult()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRead);
+
+    var (hub, _) = CreateHub(testApp, user, tenant.Id);
+
+    var result = await hub.AddViewerActivity2(new("test-activity"));
+
+    Assert.True(result.IsSuccess);
+  }
+
+  [Fact]
+  public async Task CloseTerminalSession2_AllowedDevice_ReturnsSuccess()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceTerminalUse);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    agentClient
+      .Setup(client => client.CloseTerminalSession(It.IsAny<Guid>()))
+      .Returns(Task.CompletedTask);
+
+    var result = await hub.CloseTerminalSession2(new(device.Id, Guid.NewGuid()));
+
+    Assert.True(result.IsSuccess);
+  }
+
+  [Fact]
+  public async Task GetActiveDesktopSessions2_UnauthorizedDevice_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRead);
+
+    var (hub, _) = CreateHub(testApp, user, tenant.Id);
+
+    var result = await hub.GetActiveDesktopSessions2(new(device.Id));
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+  }
+
+  [Fact]
+  public async Task GetDeviceAccessPermissions2_DeviceReadDenied_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceTerminalUse);
+
+    var (hub, _) = CreateHub(testApp, user, tenant.Id);
+
+    var result = await hub.GetDeviceAccessPermissions2(new(device.Id));
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+  }
 
   [Fact]
   public async Task RequestRemoteControlSession_AllowedDevice_ForwardsDtoDeviceIdentity()
@@ -174,6 +245,75 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       It.Is<VncSessionRequestDto>(forwarded =>
         forwarded.DeviceId == device.Id &&
         forwarded.ViewerConnectionId == hub.Context.ConnectionId)), Times.Once);
+  }
+
+  [Fact]
+  public async Task SendChatMessage2_AllowedDevice_ForwardsMessage()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceChatSend);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    agentClient
+      .Setup(client => client.SendChatMessage(It.IsAny<ChatMessageHubDto>()))
+      .ReturnsAsync(HubResult.Ok());
+
+    var chatMessage = new ChatMessageHubDto(
+      device.Id,
+      Guid.NewGuid(),
+      "hello",
+      string.Empty,
+      string.Empty,
+      0,
+      0,
+      DateTimeOffset.Now);
+
+    var result = await hub.SendChatMessage2(chatMessage);
+
+    Assert.True(result.IsSuccess);
+    agentClient.Verify(client => client.SendChatMessage(It.Is<ChatMessageHubDto>(message =>
+      message.Message == "hello" &&
+      message.DeviceId == device.Id &&
+      message.ViewerConnectionId == hub.Context.ConnectionId)), Times.Once);
+  }
+
+  [Fact]
+  public async Task SubscribeToDeviceHeartbeats2_OverBatchLimit_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+
+    var (hub, _) = CreateHub(testApp, user, tenant.Id);
+
+    var deviceIds = Enumerable.Range(0, 101).Select(_ => Guid.NewGuid());
+    var result = await hub.SubscribeToDeviceHeartbeats2(new([.. deviceIds]));
+
+    Assert.False(result.IsSuccess);
+    Assert.Contains("Too many device IDs", result.Reason);
+  }
+
+  [Fact]
+  public async Task TestVncConnection2_UnauthorizedDevice_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRead);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+
+    var result = await hub.TestVncConnection2(new(device.Id, 5900));
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+    agentClient.Verify(
+      client => client.TestVncConnection(It.IsAny<int>()),
+      Times.Never);
   }
 
   private static (ViewerHub Hub, Mock<IAgentHubClient> AgentClient) CreateHub(

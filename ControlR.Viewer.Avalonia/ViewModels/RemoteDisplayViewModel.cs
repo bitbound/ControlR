@@ -603,10 +603,10 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         return;
       }
 
-      var invokeResult = await _viewerHub.Server.InvokeCtrlAltDel(
+      var invokeResult = await _viewerHub.Server.InvokeCtrlAltDel2(new(
         currentSession.Device.Id,
         currentSession.TargetProcessId,
-        currentSession.DesktopSessionType);
+        currentSession.DesktopSessionType));
 
       if (!invokeResult.IsSuccess)
       {

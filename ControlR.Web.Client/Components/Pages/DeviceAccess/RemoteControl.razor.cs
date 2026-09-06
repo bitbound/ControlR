@@ -15,7 +15,7 @@ public partial class RemoteControl : ViewportAwareComponent
   private bool _isReconnecting;
   private string? _loadingMessage = "Connecting";
   private Guid _previousDeviceId;
-  private DesktopSession[]? _systemSessions;
+  private IReadOnlyList<DesktopSession>? _systemSessions;
 
   [SupplyParameterFromQuery]
   public required Guid DeviceId { get; init; }
@@ -176,7 +176,21 @@ public partial class RemoteControl : ViewportAwareComponent
   {
     try
     {
-      _systemSessions = await ViewerHub.Server.GetActiveDesktopSessions(DeviceState.CurrentDevice.Id);
+      var sessionsResult = await ViewerHub.Server.GetActiveDesktopSessions2(new(DeviceState.CurrentDevice.Id));
+      if (!sessionsResult.IsSuccess)
+      {
+        Logger.LogError("Failed to get active sessions: {Error}", sessionsResult.Reason);
+        if (!quiet)
+        {
+          Snackbar.Add("Failed to get active sessions", Severity.Warning);
+          _alertMessage = "Failed to get active sessions.";
+          _alertSeverity = Severity.Warning;
+        }
+        _systemSessions = [];
+        return;
+      }
+
+      _systemSessions = sessionsResult.Value?.Sessions ?? [];
     }
     catch (Exception ex)
     {
@@ -326,12 +340,12 @@ public partial class RemoteControl : ViewportAwareComponent
           }
 
           await GetDeviceDesktopSessions(true);
-          if (_systemSessions is null or { Length: 0 })
+          if (_systemSessions is null or { Count: 0 })
           {
             continue;
           }
 
-          if (_systemSessions.Length > 1)
+          if (_systemSessions.Count > 1)
           {
             break;
           }
@@ -363,7 +377,7 @@ public partial class RemoteControl : ViewportAwareComponent
     try
     {
       Snackbar.Add("Requesting permission for remote control", Severity.Info);
-      var result = await ViewerHub.Server.RequestRemoteControlPermission(DeviceId, session.ProcessId);
+      var result = await ViewerHub.Server.RequestRemoteControlPermission2(new(DeviceId, session.ProcessId));
       if (result.IsSuccess)
       {
         Snackbar.Add("Permission granted. Refreshing sessions.", Severity.Success);

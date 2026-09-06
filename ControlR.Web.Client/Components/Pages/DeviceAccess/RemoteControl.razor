@@ -54,7 +54,7 @@
           </MudTooltip>
         </div>
 
-        @if (_systemSessions is null || _systemSessions.Length == 0)
+        @if (_systemSessions is null || _systemSessions.Count == 0)
         {
           <MudAlert Severity="Severity.Warning" Icon="@(Icons.Material.Filled.Info)">
             No desktop sessions available.

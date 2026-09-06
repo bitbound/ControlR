@@ -1,4 +1,6 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 
 [MessagePackObject(keyAsPropertyName: true)]
-public record RefreshDeviceInfoRequestDto(Guid DeviceId);
+public record SendTerminalInputRequestDto(
+  Guid DeviceId,
+  TerminalInputDto Input);

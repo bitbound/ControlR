@@ -104,10 +104,10 @@ public partial class InputPopover : DisposableComponent
         return;
       }
 
-      var invokeResult = await ViewerHub.Server.InvokeCtrlAltDel(
+      var invokeResult = await ViewerHub.Server.InvokeCtrlAltDel2(new(
         DeviceState.CurrentDevice.Id,
         currentSession.TargetProcessId,
-        currentSession.DesktopSessionType);
+        currentSession.DesktopSessionType));
 
       if (!invokeResult.IsSuccess)
       {
@@ -141,7 +141,11 @@ public partial class InputPopover : DisposableComponent
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await RemoteControlStream.RequestClipboardText(RemoteControlState.CurrentSession.SessionId, cts.Token);
-      await ViewerHub.Server.AddViewerActivity(DeviceAccessActivityNames.ReceiveClipboardText);
+      var activityResult = await ViewerHub.Server.AddViewerActivity2(new(DeviceAccessActivityNames.ReceiveClipboardText));
+      if (!activityResult.IsSuccess)
+      {
+        Logger.LogWarning("Failed to log ReceiveClipboardText activity: {Reason}", activityResult.Reason);
+      }
     }
     catch (Exception ex)
     {
@@ -170,7 +174,11 @@ public partial class InputPopover : DisposableComponent
       Snackbar.Add("Sending clipboard", Severity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await RemoteControlStream.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId, cts.Token);
-      await ViewerHub.Server.AddViewerActivity(DeviceAccessActivityNames.SendClipboardText);
+      var activityResult = await ViewerHub.Server.AddViewerActivity2(new(DeviceAccessActivityNames.SendClipboardText));
+      if (!activityResult.IsSuccess)
+      {
+        Logger.LogWarning("Failed to log SendClipboardText activity: {Reason}", activityResult.Reason);
+      }
     }
     catch (Exception ex)
     {
