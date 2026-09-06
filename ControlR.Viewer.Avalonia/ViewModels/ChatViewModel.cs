@@ -277,7 +277,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
       return false;
     }
 
-    var desktopSessions = desktopSessionsResult.Value?.ToArray() ?? [];
+    var desktopSessions = desktopSessionsResult.Value?.Sessions ?? [];
 
     DesktopSessions.Clear();
     foreach (var session in desktopSessions)

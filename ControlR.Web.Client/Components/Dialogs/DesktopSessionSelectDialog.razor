@@ -4,7 +4,7 @@
       Sessions on @(Device.Dto.Name):
     </MudText>
 
-    @if (Sessions.Length == 0)
+    @if (Sessions.Count == 0)
     {
       <MudText Typo="Typo.body1" Color="Color.Warning">
         No sessions available.
@@ -78,7 +78,7 @@
 
   [Parameter]
   [EditorRequired]
-  public DesktopSession[] Sessions { get; set; } = [];
+  public IReadOnlyList<DesktopSession> Sessions { get; set; } = [];
 
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
@@ -101,7 +101,7 @@
         return;
       }
 
-      Sessions = hubResult.Value?.ToArray() ?? [];
+      Sessions = hubResult.Value?.Sessions ?? [];
       await InvokeAsync(StateHasChanged);
     }
     catch (Exception ex)

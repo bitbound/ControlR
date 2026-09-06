@@ -176,24 +176,24 @@ public class ViewerHub(
   {
     var result = await GetActiveDesktopSessions2(new(deviceId));
     return result.IsSuccess
-      ? result.Value?.ToArray() ?? []
+      ? result.Value?.Sessions.ToArray() ?? []
       : [];
   }
 
-  public async Task<HubResult<IReadOnlyList<DesktopSession>>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request)
+  public async Task<HubResult<ActiveDesktopSessionsResponseDto>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request)
   {
     try
     {
       if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
       {
-        return HubResult.Fail<IReadOnlyList<DesktopSession>>("Unauthorized.");
+        return HubResult.Fail<ActiveDesktopSessionsResponseDto>("Unauthorized.");
       }
 
       var device = authResult.Value;
       var principal = Context.User?.ToPrincipalDescriptor();
       if (principal is null)
       {
-        return HubResult.Fail<IReadOnlyList<DesktopSession>>("Unauthorized.");
+        return HubResult.Fail<ActiveDesktopSessionsResponseDto>("Unauthorized.");
       }
 
       var sessions = await _agentHub.Clients.Client(device.ConnectionId).GetActiveDesktopSessions();
@@ -201,13 +201,12 @@ public class ViewerHub(
         .CanUse(principal, request.DeviceId, x.SystemSessionId))
         .ToImmutableList();
 
-      return HubResult.Ok<IReadOnlyList<DesktopSession>>(
-        [.. authorizedSessions]);
+      return HubResult.Ok(new ActiveDesktopSessionsResponseDto(authorizedSessions));
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting Windows sessions from agent.");
-      return HubResult.Fail<IReadOnlyList<DesktopSession>>("An error occurred.");
+      return HubResult.Fail<ActiveDesktopSessionsResponseDto>("An error occurred.");
     }
   }
 

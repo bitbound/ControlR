@@ -13,7 +13,7 @@ public partial class Chat : ComponentBase, IDisposable
   private ElementReference _chatMessagesContainer;
   private string? _loadingMessage = "Loading";
   private IDisposable? _stateChangeHandler;
-  private DesktopSession[]? _systemSessions;
+  private IReadOnlyList<DesktopSession>? _systemSessions;
 
   [Inject]
   public required IChatState ChatState { get; init; }
@@ -185,7 +185,7 @@ public partial class Chat : ComponentBase, IDisposable
         _alertSeverity = Severity.Error;
         return;
       }
-      _systemSessions = sessionsResult.Value?.ToArray() ?? [];
+      _systemSessions = sessionsResult.Value?.Sessions ?? [];
     }
     catch (Exception ex)
     {

@@ -244,7 +244,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
         return;
       }
 
-      var desktopSessions = desktopSessionsResult.Value?.ToArray() ?? [];
+      var desktopSessions = desktopSessionsResult.Value?.Sessions ?? [];
 
       foreach (var existingSession in DesktopSessions)
       {

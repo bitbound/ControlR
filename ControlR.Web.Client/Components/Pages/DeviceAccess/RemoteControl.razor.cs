@@ -15,7 +15,7 @@ public partial class RemoteControl : ViewportAwareComponent
   private bool _isReconnecting;
   private string? _loadingMessage = "Connecting";
   private Guid _previousDeviceId;
-  private DesktopSession[]? _systemSessions;
+  private IReadOnlyList<DesktopSession>? _systemSessions;
 
   [SupplyParameterFromQuery]
   public required Guid DeviceId { get; init; }
@@ -190,7 +190,7 @@ public partial class RemoteControl : ViewportAwareComponent
         return;
       }
 
-      _systemSessions = sessionsResult.Value?.ToArray() ?? [];
+      _systemSessions = sessionsResult.Value?.Sessions ?? [];
     }
     catch (Exception ex)
     {
@@ -340,12 +340,12 @@ public partial class RemoteControl : ViewportAwareComponent
           }
 
           await GetDeviceDesktopSessions(true);
-          if (_systemSessions is null or { Length: 0 })
+          if (_systemSessions is null or { Count: 0 })
           {
             continue;
           }
 
-          if (_systemSessions.Length > 1)
+          if (_systemSessions.Count > 1)
           {
             break;
           }

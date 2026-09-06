@@ -31,7 +31,7 @@ public interface IViewerHub
 
   [Obsolete("Use GetActiveDesktopSessions2. (deprecated 2026-09-03, v0.28.x)")]
   Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId);
-  Task<HubResult<IReadOnlyList<DesktopSession>>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request);
+  Task<HubResult<ActiveDesktopSessionsResponseDto>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request);
 
   [Obsolete("Use GetDeviceAccessPermissions2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions(Guid deviceId);
