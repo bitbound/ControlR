@@ -9,6 +9,7 @@ using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.PermissionAssignments;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests;
@@ -119,6 +120,103 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       Assert.True(result.IsSuccess, $"Expected preset application to succeed: {result.Reason}");
       Assert.Equal(PermissionPresets.GetPermissions(PermissionPresets.ServerAdministrator).Count, result.Value);
     }
+
+  [Fact]
+  public async Task CreateMany_ResourceScopedServerScope_ForUser_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.CreateMany(
+      [ServerScopeDeviceReadRequest(target.Id)],
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+    Assert.Contains("server service accounts", result.Reason);
+  }
+
+  [Fact]
+  public async Task CreateToken_ResourceScopedServerScope_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var owner = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"owner-{Guid.NewGuid():N}@t.local");
+
+    // The owner is deliberately given the device grant at Server scope, so the only thing stopping
+    // this request is the credential rule itself rather than the owner's missing reach.
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      owner.Id,
+      PermissionNames.DeviceRead,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, owner.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var patManager = scope.ServiceProvider.GetRequiredService<IPersonalAccessTokenManager>();
+
+    var result = await patManager.CreateToken(
+      new InternalDtos.CreatePersonalAccessTokenRequestDto(
+        "Cross-tenant PAT",
+        PersonalAccessTokenPermissionMode.Restricted,
+        [new InternalDtos.CredentialScopeDto(PermissionNames.DeviceRead, PermissionScopeKind.Server, null)]),
+      owner.Id,
+      Actor(owner.Id, tenant.Id));
+
+    Assert.False(result.IsSuccess);
+    Assert.Contains("reserved for server service accounts", result.Reason);
+  }
+
+  [Fact]
+  public async Task CreateToken_ServerOnlyPermissionAtServerScope_Succeeds()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var owner = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"owner-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      owner.Id,
+      PermissionNames.ServerAlertsRead,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, owner.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var patManager = scope.ServiceProvider.GetRequiredService<IPersonalAccessTokenManager>();
+
+    var result = await patManager.CreateToken(
+      new InternalDtos.CreatePersonalAccessTokenRequestDto(
+        "Server admin PAT",
+        PersonalAccessTokenPermissionMode.Restricted,
+        [new InternalDtos.CredentialScopeDto(PermissionNames.ServerAlertsRead, PermissionScopeKind.Server, null)]),
+      owner.Id,
+      Actor(owner.Id, tenant.Id));
+
+    Assert.True(result.IsSuccess, $"Expected PAT creation to succeed: {result.Reason}");
+  }
 
   [Fact]
   public async Task Create_AssignmentTargetingServerServiceAccount_ByServerAdmin_Succeeds()
@@ -357,6 +455,335 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task Create_ResourceScopedServerScopeDeny_ForPersonalAccessToken_Succeeds()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var owner = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"owner-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsDeny,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    // The owner holds the reach, so credential grant-authority passes. The only thing that may
+    // reject this request is the Server-scope rule, which must not apply to a deny.
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      owner.Id,
+      PermissionNames.DeviceRead,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, owner.Id, tenant.Id, "test")));
+
+    var tokenId = Guid.NewGuid();
+    await SeedPersonalAccessToken(testApp, tokenId, owner.Id);
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.PersonalAccessToken,
+        tokenId,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Deny,
+        PermissionScopeKind.Server,
+        null,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.True(result.IsSuccess, result.Reason);
+  }
+
+  [Fact]
+  public async Task Create_ResourceScopedServerScopeDeny_ForUser_Succeeds()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsDeny,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    // A deny narrows only its own principal, so it confers no cross-tenant reach and must stay
+    // assignable. This is the org-wide kill switch for a tenant-bound principal.
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.User,
+        target.Id,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Deny,
+        PermissionScopeKind.Server,
+        null,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.True(result.IsSuccess, result.Reason);
+  }
+
+  [Fact]
+  public async Task Create_ResourceScopedServerScope_ForPersonalAccessToken_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var patOwner = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"pat-owner-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var setupScope = testApp.CreateScope();
+    var patManager = setupScope.ServiceProvider.GetRequiredService<IPersonalAccessTokenManager>();
+    var patResult = await patManager.CreateToken(
+      new InternalDtos.CreatePersonalAccessTokenRequestDto(
+        "Test PAT", PersonalAccessTokenPermissionMode.InheritOwner),
+      patOwner.Id,
+      Actor(patOwner.Id, tenant.Id));
+    Assert.True(patResult.IsSuccess, $"Expected PAT creation to succeed: {patResult.Reason}");
+    var patId = patResult.Value.PersonalAccessToken.Id;
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.PersonalAccessToken,
+        patId,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Server,
+        null,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+    // Asserted on the reason: without it the owner's own missing reach at the server resource
+    // would produce BadRequest too, and the test would pass even if the rule were removed.
+    Assert.Contains("server service accounts", result.Reason);
+  }
+
+  [Fact]
+  public async Task Create_ResourceScopedServerScope_ForServerServiceAccount_Succeeds()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var setupScope = testApp.CreateScope();
+    var accountManager = setupScope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
+    var accountResult = await accountManager.CreateForServer(
+      $"server-sa-{Guid.NewGuid():N}", null, ServiceAccountAccessMode.Unrestricted, TestContext.Current.CancellationToken);
+    Assert.True(accountResult.IsSuccess);
+    var accountId = accountResult.Value.Id;
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.ServiceAccount,
+        accountId,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Server,
+        null,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.True(result.IsSuccess, $"Expected server-SA device grant to succeed: {result.Reason}");
+  }
+
+  [Fact]
+  public async Task Create_ResourceScopedServerScope_ForTenantServiceAccount_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var setupScope = testApp.CreateScope();
+    var accountManager = setupScope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
+    var accountResult = await accountManager.CreateForTenant(
+      $"tenant-sa-{Guid.NewGuid():N}", null, tenant.Id,
+      Actor(actor.Id, tenant.Id), TestContext.Current.CancellationToken);
+    Assert.True(accountResult.IsSuccess);
+    var accountId = accountResult.Value.Id;
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.ServiceAccount,
+        accountId,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Server,
+        null,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+  }
+
+  [Fact]
+  public async Task Create_ResourceScopedServerScope_ForUserSharingIdWithServerServiceAccount_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    // Principal identity is only unique within a PermissionPrincipalKind. A user whose id matches a
+    // server account id must still be classified as tenant-bound.
+    var sharedId = Guid.NewGuid();
+    await SeedServerServiceAccountWithId(testApp, sharedId);
+    await SeedUserWithId(testApp, sharedId, tenant.Id);
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.User,
+        sharedId,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Server,
+        null,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+    Assert.Contains("server service accounts", result.Reason);
+  }
+
+  [Fact]
+  public async Task Create_ResourceScopedServerScope_ForUser_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.User,
+        target.Id,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Server,
+        null,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+  }
+
+  [Fact]
   public async Task Create_ServerScoped_ByNonServerAdmin_Forbidden()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -490,6 +917,90 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task Delete_ServerSA_Target_ByTenantAdmin_ReturnsForbidden()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var setupScope = testApp.CreateScope();
+    var accountManager = setupScope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
+    var accountResult = await accountManager.CreateForServer(
+      $"server-sa-{Guid.NewGuid():N}", null, ServiceAccountAccessMode.Unrestricted, TestContext.Current.CancellationToken);
+    Assert.True(accountResult.IsSuccess);
+    var accountId = accountResult.Value.Id;
+
+    var saRow = PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.ServiceAccount,
+      accountId,
+      PermissionNames.DeviceRead,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test"));
+    await SeedAssignment(testApp, saRow);
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var deleteResult = await manager.Delete(
+      saRow.Id, tenant.Id, Actor(actor.Id, tenant.Id), TestContext.Current.CancellationToken);
+
+    Assert.False(deleteResult.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.Forbidden, deleteResult.ErrorCode);
+
+    var deleteManyResult = await manager.DeleteMany(
+      [saRow.Id], tenant.Id, Actor(actor.Id, tenant.Id), TestContext.Current.CancellationToken);
+
+    Assert.False(deleteManyResult.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.Forbidden, deleteManyResult.ErrorCode);
+  }
+
+  [Fact]
+  public async Task ReplaceForPrincipal_ResourceScopedServerScope_ForUser_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.ReplaceForPrincipal(
+      PermissionPrincipalKind.User,
+      target.Id,
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      [ServerScopeDeviceReadRequest(target.Id)],
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+    Assert.Contains("server service accounts", result.Reason);
   }
 
   [Fact]
@@ -661,6 +1172,169 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     Assert.Contains(remaining, x => x.PermissionName == PermissionNames.ServerTelemetryRead);
   }
 
+  [Fact]
+  public async Task Update_ResourceScopedServerScope_ForServerServiceAccount_Succeeds()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var setupScope = testApp.CreateScope();
+    var accountManager = setupScope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
+    var accountResult = await accountManager.CreateForServer(
+      $"server-sa-{Guid.NewGuid():N}", null, ServiceAccountAccessMode.Unrestricted, TestContext.Current.CancellationToken);
+    Assert.True(accountResult.IsSuccess);
+    var accountId = accountResult.Value.Id;
+
+    var saRow = PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.ServiceAccount,
+      accountId,
+      PermissionNames.DeviceRead,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test"));
+    await SeedAssignment(testApp, saRow);
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Update(
+      saRow.Id,
+      new InternalDtos.UpdatePermissionAssignmentRequestDto(
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Server,
+        null,
+        "updated notes",
+        true),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.True(result.IsSuccess, $"Expected server-SA update to succeed: {result.Reason}");
+  }
+
+  [Fact]
+  public async Task Update_ResourceScopedToServerScope_ForUser_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    var userRow = PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      target.Id,
+      PermissionNames.DeviceRead,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test"));
+    await SeedAssignment(testApp, userRow);
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Update(
+      userRow.Id,
+      new InternalDtos.UpdatePermissionAssignmentRequestDto(
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Server,
+        null,
+        null,
+        true),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+  }
+
+  [Fact]
+  public async Task Update_ServerSA_Target_ByTenantAdmin_ReturnsForbidden()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var setupScope = testApp.CreateScope();
+    var accountManager = setupScope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
+    var accountResult = await accountManager.CreateForServer(
+      $"server-sa-{Guid.NewGuid():N}", null, ServiceAccountAccessMode.Unrestricted, TestContext.Current.CancellationToken);
+    Assert.True(accountResult.IsSuccess);
+    var accountId = accountResult.Value.Id;
+
+    var saRow = PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.ServiceAccount,
+      accountId,
+      PermissionNames.DeviceRead,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test"));
+    await SeedAssignment(testApp, saRow);
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Update(
+      saRow.Id,
+      new InternalDtos.UpdatePermissionAssignmentRequestDto(
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Tenant,
+        tenant.Id,
+        "modified by tenant admin",
+        true),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.Forbidden, result.ErrorCode);
+  }
+
     [Fact]
     public async Task Update_ServerScopeToTenantScope_WithoutTenantPermissionsWrite_Forbidden()
     {
@@ -759,4 +1433,61 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     db.PermissionAssignments.Add(assignment);
     await db.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
+
+  private static async Task SeedPersonalAccessToken(TestApp testApp, Guid tokenId, Guid userId)
+  {
+    using var scope = testApp.CreateScope();
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    db.PersonalAccessTokens.Add(new PersonalAccessToken
+    {
+      Id = tokenId,
+      Name = $"pat-{tokenId:N}",
+      HashedKey = "test-hashed-key",
+      UserId = userId,
+      PermissionMode = PersonalAccessTokenPermissionMode.Restricted
+    });
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+  }
+
+  private static async Task SeedServerServiceAccountWithId(TestApp testApp, Guid accountId)
+  {
+    using var scope = testApp.CreateScope();
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    db.ServiceAccounts.Add(new ServiceAccount
+    {
+      Id = accountId,
+      Kind = ServiceAccountKind.Server,
+      Name = $"server-sa-{accountId:N}",
+      IsEnabled = true,
+      AccessMode = ServiceAccountAccessMode.Restricted
+    });
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+  }
+
+  private static async Task SeedUserWithId(TestApp testApp, Guid userId, Guid tenantId)
+  {
+    using var scope = testApp.CreateScope();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var result = await userManager.CreateAsync(new AppUser
+    {
+      Id = userId,
+      UserName = $"colliding-{userId:N}@t.local",
+      NormalizedUserName = $"COLLIDING-{userId:N}@T.LOCAL".ToUpperInvariant(),
+      Email = $"colliding-{userId:N}@t.local",
+      NormalizedEmail = $"COLLIDING-{userId:N}@T.LOCAL".ToUpperInvariant(),
+      EmailConfirmed = true,
+      TenantId = tenantId
+    });
+    Assert.True(result.Succeeded, string.Join(", ", result.Errors.Select(x => x.Description)));
+  }
+
+  private static InternalDtos.CreatePermissionAssignmentRequestDto ServerScopeDeviceReadRequest(Guid principalId) =>
+    new(
+      PermissionPrincipalKind.User,
+      principalId,
+      PermissionNames.DeviceRead,
+      PermissionEffect.Allow,
+      PermissionScopeKind.Server,
+      null,
+      null);
 }

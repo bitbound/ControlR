@@ -175,23 +175,22 @@ public class PermissionAssignmentManager(
       authorityError.Code, authorityError.Reason);
     }
 
-    var serverTargetResult = await ValidateServerServiceAccountTarget(
-      request.PrincipalKind, request.PrincipalId, effectivePermissions, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(request.PrincipalKind, request.PrincipalId, cancellationToken);
 
-    if (!serverTargetResult.IsSuccess)
+    if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
-      return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(
-        serverTargetResult.ErrorCode, serverTargetResult.Reason);
+      return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(targetError.ErrorCode, targetError.Reason);
     }
 
-    if (await ValidatePermissionScope(request.PermissionName, request.ScopeKind, request.ScopeId, tenantId, cancellationToken) is { } scopeError)
+    if (await ValidatePermissionScope(request.PermissionName, request.ScopeKind, request.ScopeId, request.Effect, tenantId,
+      targetIsServerServiceAccount, cancellationToken) is { } scopeError)
     {
       return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(scopeError.Code, scopeError.Reason);
     }
 
     if (await ValidateCredentialPrincipalScope(
       request.PrincipalKind, request.PrincipalId, request.PermissionName,
-      request.ScopeKind, request.ScopeId, cancellationToken) is { } credentialScopeError)
+      request.ScopeKind, request.ScopeId, request.Effect, cancellationToken) is { } credentialScopeError)
     {
       return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(HttpResultErrorCode.BadRequest, credentialScopeError);
     }
@@ -321,12 +320,11 @@ public class PermissionAssignmentManager(
       }
     }
 
-    var serverTargetResult = await ValidateServerServiceAccountTarget(
-      requests[0].PrincipalKind, requests[0].PrincipalId, effectivePermissions, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(requests[0].PrincipalKind, requests[0].PrincipalId, cancellationToken);
 
-    if (!serverTargetResult.IsSuccess)
+    if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
-      return HttpResult.Fail(serverTargetResult.ErrorCode, serverTargetResult.Reason);
+      return HttpResult.Fail(targetError.ErrorCode, targetError.Reason);
     }
 
     foreach (var request in requests)
@@ -347,14 +345,15 @@ public class PermissionAssignmentManager(
     // Validate all requests before staging any entities.
     foreach (var request in requests)
     {
-      if (await ValidatePermissionScope(request.PermissionName, request.ScopeKind, request.ScopeId, tenantId, cancellationToken) is { } scopeError)
+      if (await ValidatePermissionScope(request.PermissionName, request.ScopeKind, request.ScopeId, request.Effect, tenantId,
+        targetIsServerServiceAccount, cancellationToken) is { } scopeError)
       {
         return HttpResult.Fail(scopeError.Code, scopeError.Reason);
       }
 
       if (await ValidateCredentialPrincipalScope(
         request.PrincipalKind, request.PrincipalId, request.PermissionName,
-        request.ScopeKind, request.ScopeId, cancellationToken) is { } credentialScopeError)
+        request.ScopeKind, request.ScopeId, request.Effect, cancellationToken) is { } credentialScopeError)
       {
         return HttpResult.Fail(HttpResultErrorCode.BadRequest, credentialScopeError);
       }
@@ -457,6 +456,13 @@ public class PermissionAssignmentManager(
       return HttpResult.Fail(HttpResultErrorCode.NotFound, "Permission assignment not found.");
     }
 
+    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(assignment.PrincipalKind, assignment.PrincipalId, cancellationToken);
+
+    if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
+    {
+      return HttpResult.Fail(targetError.ErrorCode, targetError.Reason);
+    }
+
     if (ValidateWriteAuthority(assignment.Effect, assignment.ScopeKind, effectivePermissions) is { } authorityError)
     {
       return HttpResult.Fail(authorityError.Code, authorityError.Reason);
@@ -512,8 +518,17 @@ public class PermissionAssignmentManager(
       .Where(x => IsVisibleToTenant(x, tenantId, effectivePermissions))
       .ToList();
 
+    var serverAccountPrincipals = await GetServerServiceAccountPrincipalsAsync(
+      assignments.Select(x => (x.PrincipalKind, x.PrincipalId)),
+      cancellationToken);
+
     foreach (var assignment in assignments)
     {
+      if (ValidateServerServiceAccountTarget(serverAccountPrincipals.Contains((assignment.PrincipalKind, assignment.PrincipalId)), effectivePermissions) is { IsSuccess: false } targetError)
+      {
+        return HttpResult.Fail<InternalDtos.DeleteManyPermissionAssignmentsResponseDto>(targetError.ErrorCode, targetError.Reason);
+      }
+
       if (ValidateWriteAuthority(assignment.Effect, assignment.ScopeKind, effectivePermissions) is { } authorityError)
       {
         return HttpResult.Fail<InternalDtos.DeleteManyPermissionAssignmentsResponseDto>(authorityError.Code, authorityError.Reason);
@@ -607,12 +622,11 @@ public class PermissionAssignmentManager(
       }
     }
 
-    var serverTargetResult = await ValidateServerServiceAccountTarget(
-      principalKind, principalId, effectivePermissions, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(principalKind, principalId, cancellationToken);
 
-    if (!serverTargetResult.IsSuccess)
+    if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
-      return HttpResult.Fail(serverTargetResult.ErrorCode, serverTargetResult.Reason);
+      return HttpResult.Fail(targetError.ErrorCode, targetError.Reason);
     }
 
     if (principalKind == PermissionPrincipalKind.User && principalId == actor.PrincipalId)
@@ -646,14 +660,15 @@ public class PermissionAssignmentManager(
     // Validate all requests before staging any entities or taking the lock.
     foreach (var request in assignments)
     {
-      if (await ValidatePermissionScope(request.PermissionName, request.ScopeKind, request.ScopeId, tenantId, cancellationToken) is { } scopeError)
+      if (await ValidatePermissionScope(request.PermissionName, request.ScopeKind, request.ScopeId, request.Effect, tenantId,
+        targetIsServerServiceAccount, cancellationToken) is { } scopeError)
       {
         return HttpResult.Fail(scopeError.Code, scopeError.Reason);
       }
 
       if (await ValidateCredentialPrincipalScope(
         principalKind, principalId, request.PermissionName,
-        request.ScopeKind, request.ScopeId, cancellationToken) is { } credentialScopeError)
+        request.ScopeKind, request.ScopeId, request.Effect, cancellationToken) is { } credentialScopeError)
       {
         return HttpResult.Fail(HttpResultErrorCode.BadRequest, credentialScopeError);
       }
@@ -783,6 +798,13 @@ public class PermissionAssignmentManager(
         HttpResultErrorCode.NotFound, "Permission assignment not found.");
     }
 
+    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(assignment.PrincipalKind, assignment.PrincipalId, cancellationToken);
+
+    if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
+    {
+      return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(targetError.ErrorCode, targetError.Reason);
+    }
+
     if (ValidateWriteAuthority(assignment.Effect, assignment.ScopeKind, effectivePermissions) is { } existingAuthorityError)
     {
       return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(existingAuthorityError.Code, existingAuthorityError.Reason);
@@ -793,14 +815,15 @@ public class PermissionAssignmentManager(
       return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(authorityError.Code, authorityError.Reason);
     }
 
-    if (await ValidatePermissionScope(request.PermissionName, request.ScopeKind, request.ScopeId, tenantId, cancellationToken) is { } scopeError)
+    if (await ValidatePermissionScope(request.PermissionName, request.ScopeKind, request.ScopeId, request.Effect, tenantId,
+      targetIsServerServiceAccount, cancellationToken) is { } scopeError)
     {
       return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(scopeError.Code, scopeError.Reason);
     }
 
     if (await ValidateCredentialPrincipalScope(
       assignment.PrincipalKind, assignment.PrincipalId, request.PermissionName,
-      request.ScopeKind, request.ScopeId, cancellationToken) is { } credentialScopeError)
+      request.ScopeKind, request.ScopeId, request.Effect, cancellationToken) is { } credentialScopeError)
     {
       return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(HttpResultErrorCode.BadRequest, credentialScopeError);
     }
@@ -910,6 +933,26 @@ public class PermissionAssignmentManager(
     PermissionScopeKind.Tenant => tenantId,
     _ => scopeId
   };
+
+  /// <summary>
+  /// Server-scoped service accounts operate cross-tenant by design, so assigning permissions
+  /// to one is a server-scope operation: only a caller with ServerPermissionsWrite may target
+  /// a server service account as a principal, regardless of the assignment's own scope kind.
+  /// This prevents a tenant admin from attaching a tenant-scoped grant to a server account
+  /// (which would strip its opt-in bypass or shadow its cross-tenant reach).
+  /// </summary>
+  private static HttpResult ValidateServerServiceAccountTarget(
+    bool targetIsServerServiceAccount,
+    IReadOnlySet<string> effectivePermissions)
+  {
+    if (targetIsServerServiceAccount && !effectivePermissions.Contains(PermissionNames.ServerPermissionsWrite))
+    {
+      return HttpResult.Fail(HttpResultErrorCode.Forbidden,
+        $"The '{PermissionNames.ServerPermissionsWrite}' permission is required to manage assignments for a server service account.");
+    }
+
+    return HttpResult.Ok();
+  }
 
   /// <summary>
   /// Checks the actor's write/deny management permissions for the target scope. This is
@@ -1059,6 +1102,45 @@ public class PermissionAssignmentManager(
   }
 
   /// <summary>
+  /// Returns which of <paramref name="principals"/> are server-kind service accounts, the only
+  /// principals that may hold Server-scope grants of tenant-addressable permissions.
+  /// </summary>
+  /// <remarks>
+  /// Principal ids are only unique within a <see cref="PermissionPrincipalKind"/>, so the kind must
+  /// travel with the id. A user whose id happens to match a service account id is not a service
+  /// account and must not be classified as one.
+  /// </remarks>
+  private async Task<HashSet<(PermissionPrincipalKind Kind, Guid Id)>> GetServerServiceAccountPrincipalsAsync(
+    IEnumerable<(PermissionPrincipalKind Kind, Guid Id)> principals,
+    CancellationToken cancellationToken)
+  {
+    var candidates = principals
+      .Where(x => x.Kind == PermissionPrincipalKind.ServiceAccount)
+      .Distinct()
+      .ToList();
+
+    if (candidates.Count == 0)
+    {
+      return [];
+    }
+
+    var ids = candidates.Select(x => x.Id).ToList();
+    var serverAccountIds = await _appDb.ServiceAccounts
+      .Where(x => ids.Contains(x.Id) && x.Kind == ServiceAccountKind.Server)
+      .Select(x => x.Id)
+      .ToListAsync(cancellationToken);
+
+    var serverIdSet = serverAccountIds.ToHashSet();
+    return [.. candidates.Where(x => serverIdSet.Contains(x.Id))];
+  }
+
+  private async Task<bool> IsServerServiceAccountAsync(
+    PermissionPrincipalKind principalKind,
+    Guid principalId,
+    CancellationToken cancellationToken) =>
+    (await GetServerServiceAccountPrincipalsAsync([(principalKind, principalId)], cancellationToken)).Contains((principalKind, principalId));
+
+  /// <summary>
   /// Credential principals can't exceed their owning user's rights; validates the row against
   /// the owner at write time. Returns an error message, or <see langword="null"/> if valid.
   /// </summary>
@@ -1068,6 +1150,7 @@ public class PermissionAssignmentManager(
     string permissionName,
     PermissionScopeKind scopeKind,
     Guid? scopeId,
+    PermissionEffect effect,
     CancellationToken cancellationToken)
   {
     var ownerUserId = principalKind switch
@@ -1099,6 +1182,12 @@ public class PermissionAssignmentManager(
       return "Token owner not found.";
     }
 
+    // A deny confers nothing, so there is no grant authority to check against the owner.
+    if (effect == PermissionEffect.Deny)
+    {
+      return null;
+    }
+
     var ownerPrincipal = new PrincipalDescriptor(
       PrincipalType: PrincipalType.User,
       PrincipalId: owner.Id,
@@ -1123,7 +1212,9 @@ public class PermissionAssignmentManager(
     string permissionName,
     PermissionScopeKind scopeKind,
     Guid? scopeId,
+    PermissionEffect effect,
     Guid tenantId,
+    bool targetIsServerServiceAccount,
     CancellationToken cancellationToken)
   {
     var metadata = PermissionCatalog.Get(permissionName);
@@ -1145,6 +1236,18 @@ public class PermissionAssignmentManager(
     if (scopeKind == PermissionScopeKind.Server && scopeId.HasValue)
     {
       return (HttpResultErrorCode.BadRequest, $"ScopeId must be null for {scopeKind} scope.");
+    }
+
+    // Server-scope allows of tenant-addressable permissions reach every tenant, so only the one
+    // principal kind with no tenant binding may hold them. Denies and server administration
+    // permissions (whose only legal scope is already Server) are exempt.
+    if (effect == PermissionEffect.Allow
+      && scopeKind == PermissionScopeKind.Server
+      && metadata.AllowsTenantScope
+      && !targetIsServerServiceAccount)
+    {
+      return (HttpResultErrorCode.BadRequest,
+        "Server-scoped resource permissions can only be assigned to server service accounts.");
     }
 
     if (scopeKind == PermissionScopeKind.Device && !await _appDb.Devices.AnyAsync(x => x.Id == scopeId && x.TenantId == tenantId, cancellationToken))
@@ -1192,36 +1295,6 @@ public class PermissionAssignmentManager(
         .AnyAsync(x => x.Id == principalId && x.TenantId == tenantId, cancellationToken),
       _ => false
     };
-  }
-
-  /// <summary>
-  /// Server-scoped service accounts operate cross-tenant by design, so assigning permissions
-  /// to one is a server-scope operation: only a caller with ServerPermissionsWrite may target
-  /// a server service account as a principal, regardless of the assignment's own scope kind.
-  /// This prevents a tenant admin from attaching a tenant-scoped grant to a server account
-  /// (which would strip its opt-in bypass or shadow its cross-tenant reach).
-  /// </summary>
-  private async Task<HttpResult> ValidateServerServiceAccountTarget(
-    PermissionPrincipalKind principalKind,
-    Guid principalId,
-    IReadOnlySet<string> effectivePermissions,
-    CancellationToken cancellationToken)
-  {
-    if (principalKind != PermissionPrincipalKind.ServiceAccount)
-    {
-      return HttpResult.Ok();
-    }
-
-    var isServerAccount = await _appDb.ServiceAccounts
-      .AnyAsync(x => x.Id == principalId && x.Kind == ServiceAccountKind.Server, cancellationToken);
-
-    if (isServerAccount && !effectivePermissions.Contains(PermissionNames.ServerPermissionsWrite))
-    {
-      return HttpResult.Fail(HttpResultErrorCode.Forbidden,
-        $"The '{PermissionNames.ServerPermissionsWrite}' permission is required to manage assignments for a server service account.");
-    }
-
-    return HttpResult.Ok();
   }
 
   private sealed record AssignmentKey(

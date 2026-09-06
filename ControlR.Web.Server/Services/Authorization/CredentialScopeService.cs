@@ -70,6 +70,17 @@ public class CredentialScopeService(
           $"Scope target not found in this tenant: {scopes[i].ScopeKind}/{scopes[i].ScopeId}.");
       }
 
+      // A credential is always tenant-bound, so a Server-scope grant of a tenant-addressable
+      // permission would reach outside its tenant even when the creator holds that reach.
+      if (scopes[i].ScopeKind == PermissionScopeKind.Server &&
+          PermissionCatalog.AllowsTenantScope(scopes[i].PermissionName))
+      {
+        return HttpResult.Fail(
+          HttpResultErrorCode.BadRequest,
+          $"'{scopes[i].PermissionName}' cannot be granted at Server scope to a credential. " +
+          "Server-scoped resource permissions are reserved for server service accounts.");
+      }
+
       requests.Add(new PermissionEvaluationRequest(scopes[i].PermissionName, scopeResource));
     }
 

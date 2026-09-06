@@ -9,6 +9,12 @@ public static class PermissionCatalog
 
   public static IReadOnlyDictionary<string, PermissionMetadata> All => _permissions;
 
+  /// <summary>
+  /// By-name lookup of <see cref="PermissionMetadata.AllowsTenantScope"/>. Unknown permissions return false.
+  /// </summary>
+  public static bool AllowsTenantScope(string permissionName) =>
+    Get(permissionName)?.AllowsTenantScope ?? false;
+
   public static bool Exists(string permissionName) => _permissions.ContainsKey(permissionName);
 
   public static PermissionMetadata? Get(string permissionName) =>
@@ -64,10 +70,10 @@ public static class PermissionCatalog
 
     var server = ImmutableArray.Create(PermissionScopeKind.Server);
     var tenant = ImmutableArray.Create(PermissionScopeKind.Tenant);
-    // Server scope is legal for device permissions (for cross-tenant server principals),
-    // but assignable only via server permission management (ValidateWriteAuthority requires
-    // ServerPermissionsWrite). Preset seeding uses GetBroadestTenantLegalScope, which excludes
-    // Server, so presets never create server-scoped device grants.
+    // Server scope is legal for device permissions, but is only meaningful (and grantable) on a
+    // server-kind service account. The write boundary (ValidatePermissionScope) rejects a
+    // Server-scope grant on a resource-scoped permission for any other principal. Preset
+    // seeding uses GetBroadestTenantLegalScope, which excludes Server.
     var deviceResources = ImmutableArray.Create(PermissionScopeKind.Device, PermissionScopeKind.DeviceGroup, PermissionScopeKind.CustomerTenant, PermissionScopeKind.Tenant, PermissionScopeKind.Server);
     var deviceGroup = ImmutableArray.Create(PermissionScopeKind.DeviceGroup, PermissionScopeKind.Tenant);
     var userGroup = ImmutableArray.Create(PermissionScopeKind.UserGroup, PermissionScopeKind.Tenant);

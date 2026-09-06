@@ -104,13 +104,6 @@ public sealed class PermissionEvaluationContextLoader(
     return new PermissionEvaluationContext(principal, false, ownerRules, patRules, true);
   }
 
-  private static bool IsOwnedByPrincipalTenant(
-    PermissionAssignment assignment,
-    Guid? principalTenantId) =>
-    principalTenantId is null ||
-    assignment.OwningTenantId is null ||
-    assignment.OwningTenantId == principalTenantId;
-
   private static async Task<IReadOnlyList<PermissionRule>> LoadCredentialRules(
     AppDb db,
     PermissionPrincipalKind principalKind,
@@ -128,9 +121,7 @@ public sealed class PermissionEvaluationContextLoader(
                            assignment.IsEnabled)
       .ToListAsync(cancellationToken);
 
-    return [.. assignments
-      .Where(assignment => IsOwnedByPrincipalTenant(assignment, tenantId))
-      .Select(assignment => PermissionRule.Create(assignment, source, priority))];
+    return PermissionRuleFactory.CreateCredentialRules(assignments, tenantId, source, priority);
   }
 
   private static async Task<IReadOnlyList<PermissionRule>> LoadOwnerRules(

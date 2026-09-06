@@ -28,6 +28,66 @@ public class PermissionRuleFactoryTests
   }
 
   [Fact]
+  public void CreateDirectRules_ServerScopeDeny_ForTenantBoundPrincipal_IsKept()
+  {
+    var tenantId = Guid.NewGuid();
+    var assignments = new[]
+    {
+      CreateScopedAssignment(tenantId, PermissionNames.DeviceRead, PermissionScopeKind.Server, null,
+        PermissionEffect.Deny)
+    };
+
+    var rules = PermissionRuleFactory.CreateDirectRules(assignments, tenantId);
+
+    var rule = Assert.Single(rules);
+    Assert.Equal(PermissionEffect.Deny, rule.Effect);
+  }
+
+  [Fact]
+  public void CreateDirectRules_ServerScopeOnServerOnlyPermission_ForTenantBoundPrincipal_IsKept()
+  {
+    var tenantId = Guid.NewGuid();
+    var assignments = new[]
+    {
+      CreateScopedAssignment(tenantId, PermissionNames.ServerAlertsRead, PermissionScopeKind.Server, null)
+    };
+
+    var rules = PermissionRuleFactory.CreateDirectRules(assignments, tenantId);
+
+    Assert.Single(rules);
+  }
+
+  [Fact]
+  public void CreateDirectRules_ServerScopeOnTenantAddressablePermission_ForTenantBoundPrincipal_IsDropped()
+  {
+    var tenantId = Guid.NewGuid();
+    var assignments = new[]
+    {
+      CreateScopedAssignment(tenantId, PermissionNames.DeviceRead, PermissionScopeKind.Server, null),
+      CreateScopedAssignment(tenantId, PermissionNames.DeviceRead, PermissionScopeKind.Tenant, tenantId)
+    };
+
+    var rules = PermissionRuleFactory.CreateDirectRules(assignments, tenantId);
+
+    var rule = Assert.Single(rules);
+    Assert.Equal(PermissionScopeKind.Tenant, rule.ScopeKind);
+  }
+
+  [Fact]
+  public void CreateDirectRules_ServerScopeOnTenantAddressablePermission_ForTenantLessPrincipal_IsKept()
+  {
+    var assignments = new[]
+    {
+      CreateScopedAssignment(null, PermissionNames.DeviceRead, PermissionScopeKind.Server, null)
+    };
+
+    var rules = PermissionRuleFactory.CreateDirectRules(assignments, tenantId: null);
+
+    var rule = Assert.Single(rules);
+    Assert.Equal(PermissionScopeKind.Server, rule.ScopeKind);
+  }
+
+  [Fact]
   public void CreateGroupRules_UsesUserGroupSourceAndPriority()
   {
     var tenantId = Guid.NewGuid();
@@ -43,13 +103,29 @@ public class PermissionRuleFactoryTests
   private static PermissionAssignment CreateAssignment(
     Guid? owningTenantId,
     bool isEnabled = true) =>
-    PermissionAssignment.CreateGrant(
-      PermissionPrincipalKind.User,
-      Guid.NewGuid(),
+    CreateScopedAssignment(
+      owningTenantId,
       PermissionNames.DeviceRead,
       PermissionScopeKind.Tenant,
       Guid.NewGuid(),
+      PermissionEffect.Allow,
+      isEnabled);
+
+  private static PermissionAssignment CreateScopedAssignment(
+    Guid? owningTenantId,
+    string permissionName,
+    PermissionScopeKind scopeKind,
+    Guid? scopeId,
+    PermissionEffect effect = PermissionEffect.Allow,
+    bool isEnabled = true) =>
+    PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      Guid.NewGuid(),
+      permissionName,
+      scopeKind,
+      scopeId,
       owningTenantId,
       new PrincipalDescriptor(PrincipalType.User, Guid.NewGuid(), owningTenantId, "test"),
+      effect,
       isEnabled: isEnabled);
 }

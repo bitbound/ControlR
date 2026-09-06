@@ -56,6 +56,13 @@ public partial class PermissionAssignmentDialog : ComponentBase
 
   private bool IsEdit => ExistingAssignment is not null;
 
+  /// <summary>
+  /// True when the target principal is a server-kind service account.
+  /// </summary>
+  private bool PrincipalAllowsServerScope =>
+    PrincipalKind == PermissionPrincipalKind.ServiceAccount &&
+    AccountKind == ServiceAccountKind.Server;
+
   protected override async Task OnInitializedAsync()
   {
     if (PermissionCatalogStore.Items.Count == 0)
@@ -96,11 +103,6 @@ public partial class PermissionAssignmentDialog : ComponentBase
     }
   }
 
-  private static PermissionScopeKind BroadestLegalScope(InternalDtos.PermissionCatalogEntryDto? entry)
-  {
-    return PermissionScopeKinds.GetBroadestTenantLegalScope(entry?.AllowedScopeKinds ?? []) ?? PermissionScopeKind.Tenant;
-  }
-
   private static bool HasNonServerScope(InternalDtos.PermissionCatalogEntryDto entry) =>
     entry.AllowedScopeKinds.Any(static kind => kind != PermissionScopeKind.Server);
 
@@ -115,9 +117,10 @@ public partial class PermissionAssignmentDialog : ComponentBase
   };
 
   /// <summary>
-  /// Returns the scope kinds available in the dropdown for the selected permission,
-  /// excluding <see cref="PermissionScopeKind.Server"/> when the caller lacks
-  /// <see cref="PermissionNames.ServerPermissionsWrite"/>.
+  /// Returns the scope kinds available in the dropdown for the selected permission.
+  /// <see cref="PermissionScopeKind.Server"/> is hidden when the caller lacks
+  /// <see cref="PermissionNames.ServerPermissionsWrite"/>, or when the permission is
+  /// resource-scoped and the target is not a server-kind service account.
   /// </summary>
   private IReadOnlyList<PermissionScopeKind> AvailableScopeKinds(InternalDtos.PermissionCatalogEntryDto? entry)
   {
@@ -126,7 +129,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
       return [];
     }
 
-    if (CanManageServerScope)
+    if (CanManageServerScope && ServerScopeAllowedFor(entry))
     {
       return entry.AllowedScopeKinds;
     }
@@ -135,20 +138,40 @@ public partial class PermissionAssignmentDialog : ComponentBase
   }
 
   /// <summary>
-  /// Returns the broadest legal scope for the selected permission, excluding Server when
-  /// the caller lacks server permission management authority.
+  /// Returns the broadest legal scope available for the selected permission given the
+  /// current principal, so the default selection never lands on a scope that is hidden.
   /// </summary>
   private PermissionScopeKind BroadestAvailableScope(InternalDtos.PermissionCatalogEntryDto? entry)
   {
-    if (CanManageServerScope)
+    if (entry is null)
     {
-      return PermissionScopeKinds.GetBroadestLegalScope(entry?.AllowedScopeKinds ?? []) ?? PermissionScopeKind.Tenant;
+      return PermissionScopeKind.Tenant;
     }
 
-    return BroadestLegalScope(entry);
+    var kinds = AvailableScopeKinds(entry);
+
+    // Server is selectable for a deny but never pre-selected, so a tenant admin is never seeded
+    // a server-wide row by default.
+    if (!PrincipalAllowsServerScope)
+    {
+      kinds = [.. kinds.Where(static kind => kind != PermissionScopeKind.Server)];
+    }
+
+    return PermissionScopeKinds.GetBroadestLegalScope(kinds) ?? PermissionScopeKind.Tenant;
   }
 
   private void Cancel() => MudDialog.Cancel();
+
+  private void HandleEffectChanged(PermissionEffect effect)
+  {
+    _effect = effect;
+
+    if (_selectedPermission is { } entry && !AvailableScopeKinds(entry).Contains(_scopeKind))
+    {
+      _scopeKind = BroadestAvailableScope(entry);
+      _scopeId = null;
+    }
+  }
 
   private void HandlePermissionChanged(InternalDtos.PermissionCatalogEntryDto? value)
   {
@@ -172,6 +195,15 @@ public partial class PermissionAssignmentDialog : ComponentBase
       p.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
       p.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase));
   }
+
+  /// <summary>
+  /// True when the Server scope should be shown for this permission and principal. Denies are
+  /// exempt from the reach rule because a deny narrows only its own principal.
+  /// </summary>
+  private bool ServerScopeAllowedFor(InternalDtos.PermissionCatalogEntryDto entry) =>
+    PrincipalAllowsServerScope
+    || _effect == PermissionEffect.Deny
+    || !entry.AllowedScopeKinds.Contains(PermissionScopeKind.Tenant);
 
   private async Task Submit()
   {
