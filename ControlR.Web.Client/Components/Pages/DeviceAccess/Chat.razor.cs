@@ -245,7 +245,7 @@ public partial class Chat : ComponentBase, IDisposable
       ChatState.NewMessage = string.Empty;
 
       // Send to the device
-      var result = await ViewerHub.Server.SendChatMessage2(new(DeviceAccessState.CurrentDevice.Id, chatDto));
+      var result = await ViewerHub.Server.SendChatMessage2(chatDto);
       if (!result.IsSuccess)
       {
         Logger.LogError("Failed to send chat message: {Error}", result.Reason);

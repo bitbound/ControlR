@@ -237,11 +237,11 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       0,
       DateTimeOffset.Now);
 
-    var result = await hub.SendChatMessage2(new(device.Id, chatMessage));
+    var result = await hub.SendChatMessage2(chatMessage);
 
     Assert.True(result.IsSuccess);
     agentClient.Verify(client => client.SendChatMessage(It.Is<ChatMessageHubDto>(message =>
-      message.DeviceId == device.Id && message.Message == "hello")), Times.Once);
+      message.Message == "hello")), Times.Once);
   }
 
   private static (ViewerHub Hub, Mock<IAgentHubClient> AgentClient) CreateHub(

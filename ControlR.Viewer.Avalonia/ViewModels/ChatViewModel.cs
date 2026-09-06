@@ -384,7 +384,7 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
         _chatState.CurrentSession.ProcessId,
         DateTimeOffset.Now);
 
-      var sendResult = await _viewerHub.Server.SendChatMessage2(new(_viewerOptions.Value.DeviceId, dto));
+      var sendResult = await _viewerHub.Server.SendChatMessage2(dto);
       if (!sendResult.IsSuccess)
       {
         _logger.LogError("Failed to send chat message: {Error}", sendResult.Reason);

@@ -68,7 +68,7 @@ public interface IViewerHub
   [Obsolete("Use SendChatMessage2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> SendChatMessage(Guid deviceId, ChatMessageHubDto dto);
 
-  Task<HubResult> SendChatMessage2(SendChatMessageRequestDto request);
+  Task<HubResult> SendChatMessage2(ChatMessageHubDto dto);
 
   Task<HubResult> SendDtoToAgent(SendDtoToAgentRequestDto request);
 

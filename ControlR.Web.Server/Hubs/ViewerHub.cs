@@ -672,20 +672,19 @@ public class ViewerHub(
   [Obsolete("Use SendChatMessage2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
   {
-    return await SendChatMessage2(new(deviceId, dto));
+    return await SendChatMessage2(dto with { DeviceId = deviceId });
   }
 
-  public async Task<HubResult> SendChatMessage2(SendChatMessageRequestDto request)
+  public async Task<HubResult> SendChatMessage2(ChatMessageHubDto dto)
   {
     try
     {
-      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.ChatSend) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(dto.DeviceId, DeviceResourcePolicies.ChatSend) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
       }
 
-      var dto = request.Message;
-      if (!CanUseDesktopSession(request.DeviceId, dto.TargetSystemSession))
+      if (!CanUseDesktopSession(dto.DeviceId, dto.TargetSystemSession))
       {
         return HubResult.Fail("The requested desktop session is not authorized.");
       }
@@ -698,7 +697,7 @@ public class ViewerHub(
         "Chat message sent by user {SenderName} ({SenderEmail}) to device {DeviceId} for session {SessionId}",
         displayName,
         user.Email,
-        request.DeviceId,
+        dto.DeviceId,
         dto.SessionId);
 
       dto = dto with
