@@ -3,7 +3,6 @@ using System.Threading.Channels;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using Microsoft.AspNetCore.SignalR;
@@ -13,6 +12,7 @@ using ControlR.Web.Server.Services.Authorization;
 using System.Diagnostics;
 using System.Security.Claims;
 using ControlR.Web.Server.Services.Authorization.Capabilities;
+using System.Collections.Immutable;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -197,10 +197,12 @@ public class ViewerHub(
       }
 
       var sessions = await _agentHub.Clients.Client(device.ConnectionId).GetActiveDesktopSessions();
+      var authorizedSessions = sessions.Where(x => _desktopSessionAccessAuthorizer
+        .CanUse(principal, request.DeviceId, x.SystemSessionId))
+        .ToImmutableList();
+
       return HubResult.Ok<IReadOnlyList<DesktopSession>>(
-        sessions
-          .Where(x => _desktopSessionAccessAuthorizer.CanUse(principal, request.DeviceId, x.SystemSessionId))
-          .ToList());
+        [.. authorizedSessions]);
     }
     catch (Exception ex)
     {
@@ -851,7 +853,7 @@ public class ViewerHub(
         return HubResult.Ok<string>($"No online devices sharing public IP {target.PublicIpV4} were found. The target may need an online agent on the same network to be woken.");
       }
 
-      var dto = new WakeDeviceDto(request.MacAddresses.ToArray());
+      var dto = new WakeDeviceDto([.. request.MacAddresses]);
       await _agentHub.Clients
         .Clients(connectionIds)
         .InvokeWakeDevice(dto);
