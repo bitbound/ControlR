@@ -229,6 +229,25 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public void PermissionMetadata_NonTenantAddressablePermissionsAreServerOnly()
+  {
+    // The Allow at Server scope is restricted to server service accounts only for
+    // tenant-addressable permissions (see ValidatePermissionScope). That exemption for
+    // non-tenant-addressable permissions is only safe because such permissions are server
+    // administration whose sole allowed scope is already Server. Guard that invariant, which
+    // the PermissionMetadata.AllowsTenantScope doc comment relies on.
+    foreach (var (permissionName, metadata) in PermissionCatalog.All)
+    {
+      if (metadata.AllowsTenantScope)
+      {
+        continue;
+      }
+
+      Assert.Equal([PermissionScopeKind.Server], metadata.AllowedScopeKinds);
+    }
+  }
+
+  [Fact]
   public void PermissionScopeKinds_GetBroadestTenantLegalScope_ExcludesServer()
   {
     // Device permissions (Option A) now include Server in their allowed scope kinds. The

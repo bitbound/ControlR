@@ -56,8 +56,8 @@ internal static class PermissionScopeSelection
 
   /// <summary>
   /// True when the Server scope is legal for this permission, target principal, and effect.
-  /// Denies are exempt from the reach rule; server-only permissions must stay assignable to
-  /// users (humans hold server administration).
+  /// Denies are exempt from the reach rule. Server-only permissions must stay assignable to
+  /// users.
   /// </summary>
   internal static bool ServerScopeAllowed(
     IReadOnlyList<PermissionScopeKind> allowedScopeKinds,
