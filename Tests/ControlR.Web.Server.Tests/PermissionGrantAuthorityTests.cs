@@ -161,8 +161,9 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
     var owner = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"owner-{Guid.NewGuid():N}@t.local");
 
-    // The owner is deliberately given the device grant at Server scope, so the only thing stopping
-    // this request is the credential rule itself rather than the owner's missing reach.
+    // The seeded Server-scope owner grant does not matter here: the loader drops it for a
+    // tenant-bound user, so the owner can never hold Server-scope reach. What stops this request
+    // is the credential rule itself, not a comparison of ownership reach.
     await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
       PermissionPrincipalKind.User,
       owner.Id,
@@ -599,8 +600,9 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       tenant.Id,
       new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
 
-    // The owner holds the reach, so credential grant-authority passes. The only thing that may
-    // reject this request is the Server-scope rule, which must not apply to a deny.
+    // Deny validation skips owner grant-authority entirely (a deny confers nothing, so there is
+    // nothing for the owner to be able to grant), and the Server-scope rule is allow-only. The
+    // owner's reach is therefore irrelevant: this row is accepted without any ownership check.
     await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
       PermissionPrincipalKind.User,
       owner.Id,

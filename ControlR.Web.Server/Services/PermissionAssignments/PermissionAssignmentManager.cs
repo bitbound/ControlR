@@ -175,7 +175,7 @@ public class PermissionAssignmentManager(
       authorityError.Code, authorityError.Reason);
     }
 
-    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(request.PrincipalKind, request.PrincipalId, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccount(request.PrincipalKind, request.PrincipalId, cancellationToken);
 
     if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
@@ -320,7 +320,7 @@ public class PermissionAssignmentManager(
       }
     }
 
-    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(requests[0].PrincipalKind, requests[0].PrincipalId, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccount(requests[0].PrincipalKind, requests[0].PrincipalId, cancellationToken);
 
     if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
@@ -456,7 +456,7 @@ public class PermissionAssignmentManager(
       return HttpResult.Fail(HttpResultErrorCode.NotFound, "Permission assignment not found.");
     }
 
-    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(assignment.PrincipalKind, assignment.PrincipalId, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccount(assignment.PrincipalKind, assignment.PrincipalId, cancellationToken);
 
     if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
@@ -518,7 +518,7 @@ public class PermissionAssignmentManager(
       .Where(x => IsVisibleToTenant(x, tenantId, effectivePermissions))
       .ToList();
 
-    var serverAccountPrincipals = await GetServerServiceAccountPrincipalsAsync(
+    var serverAccountPrincipals = await GetServerServiceAccountPrincipals(
       assignments.Select(x => (x.PrincipalKind, x.PrincipalId)),
       cancellationToken);
 
@@ -622,7 +622,7 @@ public class PermissionAssignmentManager(
       }
     }
 
-    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(principalKind, principalId, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccount(principalKind, principalId, cancellationToken);
 
     if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
@@ -798,7 +798,7 @@ public class PermissionAssignmentManager(
         HttpResultErrorCode.NotFound, "Permission assignment not found.");
     }
 
-    var targetIsServerServiceAccount = await IsServerServiceAccountAsync(assignment.PrincipalKind, assignment.PrincipalId, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccount(assignment.PrincipalKind, assignment.PrincipalId, cancellationToken);
 
     if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
@@ -1110,7 +1110,7 @@ public class PermissionAssignmentManager(
   /// travel with the id. A user whose id happens to match a service account id is not a service
   /// account and must not be classified as one.
   /// </remarks>
-  private async Task<HashSet<(PermissionPrincipalKind Kind, Guid Id)>> GetServerServiceAccountPrincipalsAsync(
+  private async Task<HashSet<(PermissionPrincipalKind Kind, Guid Id)>> GetServerServiceAccountPrincipals(
     IEnumerable<(PermissionPrincipalKind Kind, Guid Id)> principals,
     CancellationToken cancellationToken)
   {
@@ -1134,11 +1134,11 @@ public class PermissionAssignmentManager(
     return [.. candidates.Where(x => serverIdSet.Contains(x.Id))];
   }
 
-  private async Task<bool> IsServerServiceAccountAsync(
+  private async Task<bool> IsServerServiceAccount(
     PermissionPrincipalKind principalKind,
     Guid principalId,
     CancellationToken cancellationToken) =>
-    (await GetServerServiceAccountPrincipalsAsync([(principalKind, principalId)], cancellationToken)).Contains((principalKind, principalId));
+    (await GetServerServiceAccountPrincipals([(principalKind, principalId)], cancellationToken)).Contains((principalKind, principalId));
 
   /// <summary>
   /// Credential principals can't exceed their owning user's rights; validates the row against
