@@ -7,6 +7,7 @@ A .NET client library for interacting with the ControlR API. This library provid
 - Strongly-typed API client generated from OpenAPI specification
 - Built-in support for dependency injection
 - Static builder pattern for scenarios where dependency injection is not available
+- Multi-server factory for backend integrations that target different servers with different credentials at runtime
 - Efficient HTTP connection management via `IHttpClientFactory`
 - Automatic request/response serialization
 - Two authentication modes: Personal Access Token (stateless) and Interactive Bearer (email/password with automatic token refresh)
@@ -21,7 +22,11 @@ dotnet add package ControlR.ApiClient
 
 ## Quick Start
 
-The library supports two usage patterns: dependency injection (recommended for most applications) and a static builder pattern (useful for scripts or simple scenarios).
+The library supports three usage patterns:
+
+- **Dependency injection.** Recommended for applications that connect to a single ControlR server.
+- **Static builder.** For scripts or simple scenarios without a service provider.
+- **Multi-server factory.** For backend integrations that target several ControlR servers at once, each with its own base URL and credentials.
 
 ### Option 1: Dependency Injection
 
@@ -136,6 +141,80 @@ foreach (var device in devices)
 }
 ```
 
+### Option 3: Multi-Server Factory
+
+Backend integrations that talk to several ControlR servers at once (e.g. a service account
+managing a fleet of tenant servers discovered at runtime) use a factory instead of a single
+singleton client. Each target gets its own base URL, credentials, token-refresh state, and
+connection pool.
+
+#### Service Registration
+
+Server-side only. Do not use from Blazor WebAssembly; use `AddControlrApiClient` there.
+
+```csharp
+using ControlR.ApiClient;
+
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddControlrApiClientFactory(options =>
+{
+    // Idle targets are evicted after 30 minutes by default; null disables eviction.
+    options.MaxIdleClientLifetime = TimeSpan.FromMinutes(30);
+    // Optional cap. When reached, the least-recently-used target is evicted.
+    options.MaxTrackedClients = 100;
+});
+```
+
+An `IConfiguration` overload (`AddControlrApiClientFactory(builder.Configuration, ControlrApiClientFactoryOptions.SectionKey)`) is also available.
+
+#### Using the Factory
+
+Inject `IControlrApiClientFactory` and reconcile the tracked targets against your server registry.
+
+```csharp
+public class FleetService
+{
+    private readonly IControlrApiClientFactory _factory;
+
+    public FleetService(IControlrApiClientFactory factory)
+    {
+        _factory = factory;
+    }
+
+    public async Task<IReadOnlyList<DeviceResponseDto>> GetDevicesAsync(
+        string tenantId,
+        Uri baseUrl,
+        string pat,
+        CancellationToken cancellationToken)
+    {
+        // First configuration for a name wins. Pass credential updates by removing
+        // and re-creating the target.
+        var client = _factory.GetOrCreateClient(tenantId, options =>
+        {
+            options.BaseUrl = baseUrl;
+            options.PersonalAccessToken = pat;
+        });
+
+        var devices = new List<DeviceResponseDto>();
+        await foreach (var device in client.Devices
+            .GetAllDevices(cancellationToken)
+            .WithCancellation(cancellationToken))
+        {
+            devices.Add(device);
+        }
+
+        return devices;
+    }
+
+    public void Forget(string tenantId) => _factory.TryRemoveClient(tenantId);
+}
+```
+
+To rotate a target's credentials, call `TryRemoveClient(name)` and then `GetOrCreateClient(name, newOptions)`. Interactive auth sessions come from `GetOrCreateAuthSession(name)`, created lazily so service-account-only consumers never pay for one.
+
+See `IControlrApiClientFactory` and `ControlrApiClientFactoryOptions` for the full surface.
+
 ## Configuration
 
 ### ControlrApiClientOptions
@@ -145,6 +224,17 @@ foreach (var device in devices)
 | `BaseUrl`                   | `Uri`    | Yes      | The base URL of your ControlR server             |
 | `PersonalAccessToken`       | `string` | No       | A personal access token for stateless auth (omit or leave null for interactive bearer auth) |
 | `AuthenticationMethod`      | `ViewerAuthenticationMethod` | No | `PersonalAccessToken` (default) or `InteractiveBearer` |
+
+### ControlrApiClientFactoryOptions
+
+For `AddControlrApiClientFactory` (server-side only):
+
+| Property                  | Type        | Default          | Description                                                                                                |
+|---------------------------|-------------|------------------|------------------------------------------------------------------------------------------------------------|
+| `MaxIdleClientLifetime`   | `TimeSpan?` | 30 minutes       | How long a target may go unused before the sweeper evicts it. `null` disables idle eviction.               |
+| `SweeperInterval`         | `TimeSpan`  | 1 minute         | How often the sweeper checks for idle targets. Must be greater than zero.                                  |
+| `MaxTrackedClients`       | `int?`      | `null`           | Maximum tracked targets. When reached, creating a new target evicts the least-recently-used one.           |
+| `HttpMessageHandlerFactory` | `Func<HttpMessageHandler>?` | `null` | Creates the primary handler per target (proxy, custom TLS, etc.). Must return a NEW instance per call. |
 
 ### Authentication
 

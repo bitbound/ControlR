@@ -25,6 +25,7 @@
 - Added an Effective Permissions page that shows exactly what a user or service account can do.
 - Added `Customer` input to the deploy page, allowing for the device to get added to a specific customer during agent installation.
 - Refactored `Deploy` page for better usability (back button, pre-populated expiration for time-based keys, grid sizing).
+- Added `IControlrApiClientFactory` to the `ControlR.ApiClient` library: register one factory and produce `IControlrApi` clients that target different ControlR servers, each with its own server-scoped service-account credentials. Includes idle-target eviction, an optional tracked-target cap with least-recently-used eviction, and credential rotation via remove-and-recreate. Server-side only; existing `AddControlrApiClient` and `ControlrApiClientBuilder` usage is unchanged.
 
 ## Fixes
 

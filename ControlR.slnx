@@ -38,6 +38,7 @@
   <Folder Name="/Tests/">
     <Project Path="Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj" />
     <Project Path="Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj" />
+    <Project Path="Tests/ControlR.ApiClient.Tests/ControlR.ApiClient.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Common.Tests/ControlR.DesktopClient.Common.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Linux.Tests/ControlR.DesktopClient.Linux.Tests.csproj" />
     <Project Path="Tests/ControlR.DesktopClient.Mac.Tests/ControlR.DesktopClient.Mac.Tests.csproj" />
