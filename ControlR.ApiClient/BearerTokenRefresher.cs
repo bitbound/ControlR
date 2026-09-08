@@ -104,7 +104,18 @@ public sealed class BearerTokenRefresher(
     }
     finally
     {
-      auth.BearerRefreshLock.Release();
+      try
+      {
+        auth.BearerRefreshLock.Release();
+      }
+      catch (ObjectDisposedException)
+      {
+        // The owning client entry was evicted while this refresh was in flight (the factory
+        // disposes the semaphore with the entry). The refresh result is already applied to the
+        // auth state, and the state itself is being discarded, so there is nothing left to
+        // guard. Swallowing here keeps a successful refresh from surfacing as a crash in the
+        // finally block.
+      }
     }
   }
 }

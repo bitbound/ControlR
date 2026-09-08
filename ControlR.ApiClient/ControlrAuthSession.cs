@@ -109,9 +109,14 @@ public sealed class ControlrAuthSession(
   TimeProvider timeProvider) : IControlrAuthSession
 {
   private const string InteractiveLoginEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/interactive-login";
-  private const int MaxRefreshRetryBackoffSeconds = 60;
 
-  private static readonly TimeSpan _maxRefreshRetryBackoff = TimeSpan.FromSeconds(MaxRefreshRetryBackoffSeconds);
+  /// <summary>
+  /// Consecutive background refresh failures tolerated before the session is expired.
+  /// </summary>
+  private const int MaxConsecutiveRefreshFailures = 10;
+
+  private static readonly TimeSpan _maxRefreshRetryBackoff = TimeSpan.FromSeconds(60);
+  private static readonly TimeSpan _minRefreshRetryBackoff = TimeSpan.FromMilliseconds(250);
 
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
@@ -121,6 +126,7 @@ public sealed class ControlrAuthSession(
   private readonly TimeProvider _timeProvider = timeProvider;
 
   private Uri _baseUrl = optionsMonitor.CurrentValue.BaseUrl;
+  private int _consecutiveRefreshFailures;
   private CancellationTokenSource? _refreshLoopCts;
   private long _refreshLoopGeneration;
   private ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
@@ -367,7 +373,10 @@ public sealed class ControlrAuthSession(
     return Task.CompletedTask;
   }
 
-  private async Task RefreshBearerTokenIfNeeded(bool forceRefresh, CancellationToken cancellationToken)
+  private async Task RefreshBearerTokenIfNeeded(
+    bool forceRefresh,
+    CancellationToken cancellationToken,
+    long? loopGeneration = null)
   {
     var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
       forceRefresh,
@@ -377,7 +386,14 @@ public sealed class ControlrAuthSession(
 
     if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {
-      ExpireSession("The session expired. Sign in again.");
+      // A superseded background loop must not expire a session that the current loop (or an
+      // interactive foreground call) now owns. The response was computed with the previous
+      // session's refresh token, so its rejection says nothing about the current one.
+      if (loopGeneration is null || loopGeneration == Volatile.Read(ref _refreshLoopGeneration))
+      {
+        ExpireSession("The session expired. Sign in again.");
+      }
+
       throw new InvalidOperationException("The refresh token is no longer valid.");
     }
 
@@ -431,10 +447,18 @@ public sealed class ControlrAuthSession(
 
         try
         {
-          await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
+          await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken, loopGeneration: generation);
+          _consecutiveRefreshFailures = 0;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+          // A cancelled or superseded loop must not touch shared failure state, retry, or
+          // expire anything. The loop owning the current generation owns the counter.
+          if (generation != Volatile.Read(ref _refreshLoopGeneration))
+          {
+            return;
+          }
+
           if (State == ControlrAuthSessionState.Expired)
           {
             // The server rejected the refresh token itself. RefreshBearerTokenIfNeeded has
@@ -443,10 +467,28 @@ public sealed class ControlrAuthSession(
           }
 
           // A transient failure (network hiccup, timeout, 5xx, 404) must not discard a refresh
-          // token that is often valid for days. Retry with a fixed backoff instead.
+          // token that is often valid for days. Retry with a clamped backoff, but cap the
+          // attempt count so a permanently broken server cannot produce an endless retry loop.
+          _consecutiveRefreshFailures++;
+          if (_consecutiveRefreshFailures >= MaxConsecutiveRefreshFailures)
+          {
+            _logger.LogWarning(
+              ex,
+              "Bearer token refresh failed {FailureCount} consecutive times. Expiring the session.",
+              _consecutiveRefreshFailures);
+            await HandleRefreshLoopFault(
+              generation,
+              "Unable to renew the session. Sign in again.");
+            return;
+          }
+
           _logger.LogWarning(ex, "Bearer token refresh failed in the background. Retrying.");
           var backoff = _optionsMonitor.CurrentValue.BearerRefreshLeadTime * 2;
-          if (backoff > _maxRefreshRetryBackoff)
+          if (backoff < _minRefreshRetryBackoff)
+          {
+            backoff = _minRefreshRetryBackoff;
+          }
+          else if (backoff > _maxRefreshRetryBackoff)
           {
             backoff = _maxRefreshRetryBackoff;
           }
@@ -472,6 +514,10 @@ public sealed class ControlrAuthSession(
       StopRefreshLoop();
       return;
     }
+
+    // Fresh loop, fresh failure budget. Otherwise a previous session's failures would expire
+    // a newly authenticated session after fewer failures than the configured cap.
+    _consecutiveRefreshFailures = 0;
 
     var cts = new CancellationTokenSource();
     var generation = Interlocked.Increment(ref _refreshLoopGeneration);

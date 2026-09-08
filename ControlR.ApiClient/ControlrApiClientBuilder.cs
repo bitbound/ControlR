@@ -67,7 +67,9 @@ public static class ControlrApiClientBuilder
         $"The API client builder has not been initialized.  Call {nameof(Initialize)} first.");
     }
 
-    return _client;
+    // Route through the factory so the target's last-used stamp is refreshed. The configure
+    // action is a no-op because first-configuration-wins ignores it for the existing name.
+    return _factory.GetOrCreateClient(DefaultTargetName, static _ => { });
   }
 
   /// <summary>
@@ -78,26 +80,35 @@ public static class ControlrApiClientBuilder
   {
     ArgumentNullException.ThrowIfNull(configureOptions);
 
-    using var lockScope = _servicesLock.EnterScope();
-    if (_factory is not null)
-    {
-      return;
-    }
-
+    // Idle eviction is disabled because the builder is a process-wide singleton whose one
+    // target must never be swept while callers keep holding the client reference.
     var factory = new ControlrApiClientFactory(
-      new ControlrApiClientFactoryOptions(),
+      new ControlrApiClientFactoryOptions { MaxIdleClientLifetime = null },
       TimeProvider.System,
       NullLoggerFactory.Instance);
 
+    IControlrApi client;
     try
     {
-      _client = factory.GetOrCreateClient(DefaultTargetName, configureOptions);
-      _factory = factory;
+      client = factory.GetOrCreateClient(DefaultTargetName, configureOptions);
     }
     catch
     {
       factory.Dispose();
       throw;
     }
+
+    // Publish both fields only after successful creation, so a failed Initialize leaves the
+    // builder un-initialized (GetClient keeps throwing InvalidOperationException) and a retry
+    // genuinely retries instead of silently hitting the first-call-wins guard.
+    using var lockScope = _servicesLock.EnterScope();
+    if (_factory is not null)
+    {
+      factory.Dispose();
+      return;
+    }
+
+    _factory = factory;
+    _client = client;
   }
 }

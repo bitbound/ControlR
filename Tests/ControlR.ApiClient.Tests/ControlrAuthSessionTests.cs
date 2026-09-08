@@ -13,6 +13,52 @@ public sealed class ControlrAuthSessionTests
 {
   private static readonly Uri _server = new("https://server.test/");
 
+    [Fact]
+  public async Task FactoryEviction_WhileRefreshInFlight_DoesNotThrowObjectDisposed()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    var handler = new GatedRefreshHandler(gate.Task);
+    var loggerFactory = new RecordingLoggerFactory();
+    var timeProvider = new FakeTimeProvider();
+
+    var factoryOptions = new ControlrApiClientFactoryOptions
+    {
+      MaxIdleClientLifetime = null,
+      HttpMessageHandlerFactory = () => handler
+    };
+    var factory = new ControlrApiClientFactory(
+      factoryOptions,
+      timeProvider,
+      loggerFactory);
+
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _server);
+
+    var session = factory.GetOrCreateAuthSession("a");
+    await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
+
+    // Wait until the refresh request is actually in flight (semaphore held).
+    await WaitUntilAsync(() => handler.RefreshStarted, cts.Token);
+
+    // Evict mid-flight: the entry teardown disposes the bearer-refresh lock while the
+    // refresher's finally-block Release() is still pending.
+    Assert.True(factory.TryRemoveClient("a"));
+    gate.SetResult();
+
+    // Give the in-flight completion time to run its finally block and the loop to react.
+    await Task.Delay(TimeSpan.FromMilliseconds(250), cts.Token);
+
+    // Pre-fix, the ObjectDisposedException from the finally block escaped into the refresh
+    // loop, which logged "refresh failed" and retried. The fixed path completes the refresh
+    // quietly against the discarded entry, so no failure may be logged.
+    Assert.DoesNotContain(loggerFactory.Messages, m => m.Contains("failed", StringComparison.OrdinalIgnoreCase));
+
+    // The factory must remain usable after the mid-flight eviction.
+    factory.GetOrCreateClient("b", o => o.BaseUrl = _server);
+    Assert.Equal(["b"], factory.GetClientNames());
+    factory.Dispose();
+  }
+
   [Fact]
   public async Task RestoreAuthSnapshot_AfterProcessRestart_ResumesWithoutAnyLoginRequest()
   {
@@ -70,6 +116,28 @@ public sealed class ControlrAuthSessionTests
       handler.Requests,
       r => r.RequestUri!.AbsolutePath.EndsWith("/api/auth/refresh", StringComparison.Ordinal));
     Assert.Equal(new Uri(_server, "/api/auth/refresh"), refresh.RequestUri);
+    session.Dispose();
+  }
+
+  [Fact]
+  public async Task RunRefreshLoop_WhenRefreshFailsRepeatedly_ExpiresSessionAfterRetryCap()
+  {
+    var timeProvider = new FakeTimeProvider();
+    var session = CreateSession(
+      new RecordingHttpMessageHandler(_ => throw new HttpRequestException("Simulated persistent failure.")),
+      timeProvider,
+      options => options.BearerRefreshLeadTime = TimeSpan.FromMilliseconds(1));
+
+    await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
+
+    await WaitUntilAsync(
+      () => session.State == ControlrAuthSessionState.Expired,
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(ControlrAuthSessionState.Expired, session.State);
+    // After a dead-broken refresh, the session ends expired with tokens cleared rather than
+    // retrying forever.
+    Assert.Null(session.GetAuthSnapshot().RefreshToken);
     session.Dispose();
   }
 
@@ -224,6 +292,24 @@ public sealed class ControlrAuthSessionTests
       }
 
       await Task.Delay(10, cancellationToken);
+    }
+  }
+
+  private sealed class GatedRefreshHandler(Task gate) : HttpMessageHandler
+  {
+    public bool RefreshStarted { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+      HttpRequestMessage request,
+      CancellationToken cancellationToken)
+    {
+      if (request.RequestUri!.AbsolutePath.EndsWith("/refresh", StringComparison.Ordinal))
+      {
+        RefreshStarted = true;
+        await gate.WaitAsync(cancellationToken);
+      }
+
+      return new HttpResponseMessage(HttpStatusCode.OK);
     }
   }
 }

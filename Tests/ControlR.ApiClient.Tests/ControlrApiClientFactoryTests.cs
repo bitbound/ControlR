@@ -186,6 +186,16 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
+  public void GetOrCreateClient_WhenBaseUrlRelative_ThrowsOptionsValidation()
+  {
+    using var factory = CreateFactory();
+
+    Assert.Throws<OptionsValidationException>(
+      () => factory.GetOrCreateClient("a", o => o.BaseUrl = new Uri("/relative/", UriKind.Relative)));
+    Assert.Empty(factory.GetClientNames());
+  }
+
+  [Fact]
   public void GetOrCreateClient_WhenCalledAfterDispose_ThrowsObjectDisposed()
   {
     var factory = CreateFactory();
@@ -247,6 +257,34 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
+  public void GetOrCreateClient_WhenHandlerFactoryThrows_DisposesAllocatedHandlers()
+  {
+    RecordingHttpMessageHandler? firstHandler = null;
+    var calls = 0;
+    using var factory = CreateFactory(options =>
+    {
+      options.HttpMessageHandlerFactory = () =>
+      {
+        calls++;
+        if (calls == 1)
+        {
+          firstHandler = new RecordingHttpMessageHandler();
+          return firstHandler;
+        }
+
+        throw new InvalidOperationException("Simulated handler construction failure.");
+      };
+    });
+
+    Assert.Throws<InvalidOperationException>(
+      () => factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA));
+
+    // The handler allocated before the failure must not leak.
+    Assert.Equal(1, firstHandler!.DisposeCount);
+    Assert.Empty(factory.GetClientNames());
+  }
+
+  [Fact]
   public async Task GetOrCreateClient_WhenNameExists_IgnoresNewConfigureAction()
   {
     var handlerCount = 0;
@@ -288,6 +326,38 @@ public sealed class ControlrApiClientFactoryTests
     Assert.Equal(
       "pat-first",
       request.Headers.GetValues(ControlrApiClientOptions.PersonalAccessTokenHeader).Single());
+  }
+
+  [Fact]
+  public async Task RefreshIfNeeded_WhenSemaphoreDisposedMidFlight_StillCompletesRefresh()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var handler = new GatedRefreshHandlerInline(gate.Task);
+    var client = new HttpClient(handler) { BaseAddress = new Uri("https://server.test/") };
+    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
+    authState.SetBearerTokens("access-old", "refresh-old", DateTimeOffset.UnixEpoch);
+
+    var refresher = new BearerTokenRefresher(
+      authState,
+      new SingleClientHttpClientFactory(client),
+      TimeProvider.System);
+
+    var refreshTask = refresher.RefreshIfNeeded(
+      forceRefresh: true,
+      refreshWindow: TimeSpan.FromMinutes(1),
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    await WaitUntilAsyncInline(() => handler.RefreshStarted);
+
+    // Entry teardown disposes the lock while the refresh holds it.
+    authState.BearerRefreshLock.Dispose();
+    gate.SetResult();
+
+    // Pre-fix, the finally-block Release threw ObjectDisposedException out of RefreshIfNeeded.
+    var result = await refreshTask;
+
+    Assert.Equal(BearerTokenRefreshResult.Refreshed, result);
+    client.Dispose();
   }
 
   [Fact]
@@ -410,5 +480,39 @@ public sealed class ControlrApiClientFactoryTests
       options,
       timeProvider ?? TimeProvider.System,
       NullLoggerFactory.Instance);
+  }
+
+  private static async Task WaitUntilAsyncInline(Func<bool> condition)
+  {
+    var deadline = DateTime.UtcNow.AddSeconds(10);
+    while (!condition())
+    {
+      if (DateTime.UtcNow > deadline)
+      {
+        throw new TimeoutException("The condition was not met within the allotted time.");
+      }
+
+      await Task.Delay(10);
+    }
+  }
+
+  private sealed class GatedRefreshHandlerInline(Task gate) : HttpMessageHandler
+  {
+    public bool RefreshStarted { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+      HttpRequestMessage request,
+      CancellationToken cancellationToken)
+    {
+      RefreshStarted = true;
+      await gate.WaitAsync(cancellationToken);
+      return RecordingHttpMessageHandler.Json(
+        System.Text.Json.JsonSerializer.Serialize(
+          new ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.AccessTokenResponseDto(
+            "Bearer",
+            "access-renewed",
+            3600,
+            "refresh-renewed")));
+    }
   }
 }

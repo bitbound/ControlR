@@ -213,6 +213,8 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
       return existing.Api;
     }
 
+    ClientEntry entry;
+    List<ClientEntry>? evicted = null;
     using (_createLock.EnterScope())
     {
       // Double-check: a concurrent creator may have linked the entry while we waited for the lock.
@@ -224,12 +226,19 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
       ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
 
-      var entry = BuildEntry(name, configureOptions);
+      entry = BuildEntry(name, configureOptions);
       Touch(entry);
       _clients[name] = entry;
-      EvictToTrackLimit(excludedName: name);
-      return entry.Api;
+      evicted = EvictToTrackLimit(excludedName: name);
     }
+
+    // Dispose outside the lock so a slow handler teardown cannot stall unrelated factory calls.
+    foreach (var victim in evicted)
+    {
+      victim.DisposeOnce();
+    }
+
+    return entry.Api;
   }
 
   /// <inheritdoc />
@@ -281,12 +290,18 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
       PooledConnectionLifetime = ControlrApiClientFactoryOptions.DefaultPooledConnectionLifetime
     };
 
+  private static bool IsConfiguredBaseUrl([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] Uri? baseUrl) =>
+    baseUrl is not null &&
+    !ReferenceEquals(baseUrl, _unconfiguredBaseUrl) &&
+    baseUrl.IsAbsoluteUri &&
+    baseUrl.Scheme is "http" or "https";
+
   private ClientEntry BuildEntry(string name, Action<ControlrApiClientOptions> configureOptions)
   {
     var options = new ControlrApiClientOptions { BaseUrl = _unconfiguredBaseUrl };
     configureOptions(options);
 
-    if (options.BaseUrl is null || ReferenceEquals(options.BaseUrl, _unconfiguredBaseUrl))
+    if (!IsConfiguredBaseUrl(options.BaseUrl))
     {
       throw new OptionsValidationException(
         name,
@@ -294,58 +309,79 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
         [$"The BaseUrl is required for target '{name}'."]);
     }
 
-    var authState = new ControlrApiClientAuthState(options.PersonalAccessToken);
-    var authHeaderHandler = new ControlrApiAuthHeaderHandler(authState)
-    {
-      InnerHandler = CreateHandler()
-    };
-    var httpClient = new HttpClient(authHeaderHandler)
-    {
-      BaseAddress = options.BaseUrl
-    };
-    var unauthenticatedHttpClient = new HttpClient(CreateHandler())
-    {
-      BaseAddress = options.BaseUrl
-    };
-    var unauthenticatedClientFactory = new SingleClientHttpClientFactory(unauthenticatedHttpClient);
-    var refresher = new BearerTokenRefresher(authState, unauthenticatedClientFactory, _timeProvider);
-    var api = new ControlrApi(
-      httpClient,
-      authState,
-      refresher,
-      _loggerFactory.CreateLogger<ControlrApi>(),
-      new OptionsWrapper<ControlrApiClientOptions>(options));
+    var baseUrl = options.BaseUrl;
 
-    return new ClientEntry(
-      name,
-      api,
-      httpClient,
-      unauthenticatedHttpClient,
-      authState,
-      new Lazy<IControlrAuthSession>(
-        () => new ControlrAuthSession(
-          unauthenticatedClientFactory,
-          authState,
-          refresher,
-          _loggerFactory.CreateLogger<ControlrAuthSession>(),
-          new FrozenOptionsMonitor<ControlrApiClientOptions>(options),
-          _timeProvider),
-        LazyThreadSafetyMode.ExecutionAndPublication));
+    // Track every allocated step so a mid-construction failure (e.g. the caller's
+    // HttpMessageHandlerFactory throwing) cannot orphan sockets, handlers, or semaphores.
+    HttpMessageHandler? authInnerHandler = null;
+    HttpMessageHandler? unauthenticatedInnerHandler = null;
+    HttpClient? httpClient = null;
+    HttpClient? unauthenticatedHttpClient = null;
+
+    try
+    {
+      authInnerHandler = CreateHandler();
+      unauthenticatedInnerHandler = CreateHandler();
+      var authState = new ControlrApiClientAuthState(options.PersonalAccessToken);
+      var authHeaderHandler = new ControlrApiAuthHeaderHandler(authState) { InnerHandler = authInnerHandler };
+      httpClient = new HttpClient(authHeaderHandler) { BaseAddress = baseUrl };
+      authInnerHandler = null;
+      unauthenticatedHttpClient = new HttpClient(unauthenticatedInnerHandler) { BaseAddress = baseUrl };
+      unauthenticatedInnerHandler = null;
+
+      var unauthenticatedClientFactory = new SingleClientHttpClientFactory(unauthenticatedHttpClient);
+      var refresher = new BearerTokenRefresher(authState, unauthenticatedClientFactory, _timeProvider);
+      var api = new ControlrApi(
+        httpClient,
+        authState,
+        refresher,
+        _loggerFactory.CreateLogger<ControlrApi>(),
+        new OptionsWrapper<ControlrApiClientOptions>(options));
+
+      return new ClientEntry(
+        name,
+        api,
+        httpClient,
+        unauthenticatedHttpClient,
+        authState,
+        new Lazy<IControlrAuthSession>(
+          () => new ControlrAuthSession(
+            unauthenticatedClientFactory,
+            authState,
+            refresher,
+            _loggerFactory.CreateLogger<ControlrAuthSession>(),
+            new FrozenOptionsMonitor<ControlrApiClientOptions>(options),
+            _timeProvider),
+          LazyThreadSafetyMode.ExecutionAndPublication));
+    }
+    catch
+    {
+      // Disposing an HttpClient also disposes its handler chain, so the nulled-out references
+      // above prevent double-disposal.
+      httpClient?.Dispose();
+      unauthenticatedHttpClient?.Dispose();
+      authInnerHandler?.Dispose();
+      unauthenticatedInnerHandler?.Dispose();
+      throw;
+    }
   }
 
   private HttpMessageHandler CreateHandler() =>
     _factoryOptions.HttpMessageHandlerFactory?.Invoke() ?? CreateDefaultHandler();
 
   /// <summary>
-  /// When <see cref="ControlrApiClientFactoryOptions.MaxTrackedClients"/> is set, evicts
+  /// When <see cref="ControlrApiClientFactoryOptions.MaxTrackedClients"/> is set, unlinks
   /// least-recently-used entries until the tracked count fits under the cap. Must be called while
   /// holding <see cref="_createLock"/>. Never evicts <paramref name="excludedName"/>.
+  /// The caller disposes the returned entries outside the lock.
   /// </summary>
-  private void EvictToTrackLimit(string excludedName)
+  private List<ClientEntry> EvictToTrackLimit(string excludedName)
   {
+    List<ClientEntry> evicted = [];
+
     if (_factoryOptions.MaxTrackedClients is not { } max || max < 1)
     {
-      return;
+      return evicted;
     }
 
     while (_clients.Count > max)
@@ -357,12 +393,14 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
       if (victim is null)
       {
-        return;
+        return evicted;
       }
 
       _clients.TryRemove(victim.Name, out _);
-      victim.DisposeOnce();
+      evicted.Add(victim);
     }
+
+    return evicted;
   }
 
   private void Touch(ClientEntry entry)
