@@ -56,6 +56,13 @@ public partial class PermissionAssignmentDialog : ComponentBase
 
   private bool IsEdit => ExistingAssignment is not null;
 
+  /// <summary>
+  /// True when the target principal is a server-kind service account.
+  /// </summary>
+  private bool PrincipalAllowsServerScope =>
+    PrincipalKind == PermissionPrincipalKind.ServiceAccount &&
+    AccountKind == ServiceAccountKind.Server;
+
   protected override async Task OnInitializedAsync()
   {
     if (PermissionCatalogStore.Items.Count == 0)
@@ -96,11 +103,6 @@ public partial class PermissionAssignmentDialog : ComponentBase
     }
   }
 
-  private static PermissionScopeKind BroadestLegalScope(InternalDtos.PermissionCatalogEntryDto? entry)
-  {
-    return PermissionScopeKinds.GetBroadestTenantLegalScope(entry?.AllowedScopeKinds ?? []) ?? PermissionScopeKind.Tenant;
-  }
-
   private static bool HasNonServerScope(InternalDtos.PermissionCatalogEntryDto entry) =>
     entry.AllowedScopeKinds.Any(static kind => kind != PermissionScopeKind.Server);
 
@@ -115,40 +117,37 @@ public partial class PermissionAssignmentDialog : ComponentBase
   };
 
   /// <summary>
-  /// Returns the scope kinds available in the dropdown for the selected permission,
-  /// excluding <see cref="PermissionScopeKind.Server"/> when the caller lacks
-  /// <see cref="PermissionNames.ServerPermissionsWrite"/>.
+  /// Returns the scope kinds available in the dropdown for the selected permission.
+  /// <see cref="PermissionScopeKind.Server"/> is hidden when the caller lacks
+  /// <see cref="PermissionNames.ServerPermissionsWrite"/>, or when the permission is
+  /// resource-scoped and the target is not a server-kind service account.
   /// </summary>
-  private IReadOnlyList<PermissionScopeKind> AvailableScopeKinds(InternalDtos.PermissionCatalogEntryDto? entry)
-  {
-    if (entry is null)
-    {
-      return [];
-    }
-
-    if (CanManageServerScope)
-    {
-      return entry.AllowedScopeKinds;
-    }
-
-    return [.. entry.AllowedScopeKinds.Where(static kind => kind != PermissionScopeKind.Server)];
-  }
+  private IReadOnlyList<PermissionScopeKind> AvailableScopeKinds(InternalDtos.PermissionCatalogEntryDto? entry) =>
+    entry is null
+      ? []
+      : PermissionScopeSelection.AvailableScopeKinds(entry.AllowedScopeKinds, _effect, PrincipalAllowsServerScope, CanManageServerScope);
 
   /// <summary>
-  /// Returns the broadest legal scope for the selected permission, excluding Server when
-  /// the caller lacks server permission management authority.
+  /// Returns the broadest scope offered by <see cref="AvailableScopeKinds"/> for the selected
+  /// permission, so the default selection never lands on a scope that is hidden.
   /// </summary>
-  private PermissionScopeKind BroadestAvailableScope(InternalDtos.PermissionCatalogEntryDto? entry)
-  {
-    if (CanManageServerScope)
-    {
-      return PermissionScopeKinds.GetBroadestLegalScope(entry?.AllowedScopeKinds ?? []) ?? PermissionScopeKind.Tenant;
-    }
-
-    return BroadestLegalScope(entry);
-  }
+  private PermissionScopeKind BroadestAvailableScope(InternalDtos.PermissionCatalogEntryDto? entry) =>
+    entry is null
+      ? PermissionScopeKind.Tenant
+      : PermissionScopeSelection.BroadestSelectable(entry.AllowedScopeKinds, _effect, PrincipalAllowsServerScope, CanManageServerScope);
 
   private void Cancel() => MudDialog.Cancel();
+
+  private void HandleEffectChanged(PermissionEffect effect)
+  {
+    _effect = effect;
+
+    if (_selectedPermission is { } entry && !AvailableScopeKinds(entry).Contains(_scopeKind))
+    {
+      _scopeKind = BroadestAvailableScope(entry);
+      _scopeId = null;
+    }
+  }
 
   private void HandlePermissionChanged(InternalDtos.PermissionCatalogEntryDto? value)
   {

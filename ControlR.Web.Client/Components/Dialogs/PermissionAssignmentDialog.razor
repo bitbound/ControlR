@@ -22,7 +22,7 @@
                          ToStringFunc="@(p => p is null ? string.Empty : $"{p.DisplayName} ({p.Name})")" />
       </MudItem>
       <MudItem xs="6">
-        <MudSelect T="PermissionEffect" @bind-Value="_effect" Label="Effect">
+        <MudSelect T="PermissionEffect" Value="_effect" ValueChanged="HandleEffectChanged" Label="Effect">
           <MudSelectItem Value="PermissionEffect.Allow">Allow</MudSelectItem>
           <MudSelectItem Value="PermissionEffect.Deny">Deny</MudSelectItem>
         </MudSelect>

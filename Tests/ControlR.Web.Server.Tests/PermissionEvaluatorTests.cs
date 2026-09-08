@@ -1537,10 +1537,51 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
   public async Task ServerScopedAssignment_CoversAnyTenantResource()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenantA = await testApp.App.Services.CreateTestTenant();
+    var tenantB = await testApp.App.Services.CreateTestTenant();
+    var deviceA = await testApp.App.Services.CreateTestDevice(tenantA.Id);
+    var deviceB = await testApp.App.Services.CreateTestDevice(tenantB.Id);
+    var serviceAccountId = await SeedServerServiceAccount(testApp, ServiceAccountAccessMode.Restricted);
+
+    await SeedAssignment(testApp, new PermissionAssignment
+    {
+      PrincipalKind = PermissionPrincipalKind.ServiceAccount,
+      PrincipalId = serviceAccountId,
+      PermissionName = PermissionNames.DeviceRead,
+      Effect = PermissionEffect.Allow,
+      ScopeKind = PermissionScopeKind.Server,
+      ScopeId = null,
+      OwningTenantId = null,
+      IsEnabled = true
+    });
+
+    var evaluator = GetEvaluator(testApp);
+    var principal = new PrincipalDescriptor(
+      PrincipalType.ServerServiceAccount,
+      serviceAccountId,
+      TenantId: null,
+      AuthMethod: PrincipalClaimValues.ServiceAccountCredentialMethod);
+
+    var resourceA = new ResourceDescriptor(PermissionScopeKind.Device, deviceA.Id, tenantA.Id);
+    var resultA = await evaluator.Evaluate(principal, PermissionNames.DeviceRead, resourceA, TestContext.Current.CancellationToken);
+    Assert.True(resultA.Allowed);
+    Assert.Equal("Direct", resultA.MatchedRuleSource);
+
+    var resourceB = new ResourceDescriptor(PermissionScopeKind.Device, deviceB.Id, tenantB.Id);
+    var resultB = await evaluator.Evaluate(principal, PermissionNames.DeviceRead, resourceB, TestContext.Current.CancellationToken);
+    Assert.True(resultB.Allowed);
+  }
+
+  [Fact]
+  public async Task ServerScopedDeviceAllow_OnTenantBoundUser_IsInert()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var tenant = await testApp.App.Services.CreateTestTenant();
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
     var device = await testApp.App.Services.CreateTestDevice(tenant.Id);
 
+    // Written directly, because the write boundary now rejects this row. A database that predates
+    // that rule can still hold one, and it must not confer reach.
     await SeedAssignment(testApp, new PermissionAssignment
     {
       PrincipalKind = PermissionPrincipalKind.User,
@@ -1559,8 +1600,7 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
 
     var result = await evaluator.Evaluate(principal, PermissionNames.DeviceRead, resource, TestContext.Current.CancellationToken);
 
-    Assert.True(result.Allowed);
-    Assert.Equal("Direct", result.MatchedRuleSource);
+    Assert.False(result.Allowed);
   }
 
   [Fact]
