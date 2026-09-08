@@ -5,7 +5,7 @@ using Xunit;
 
 namespace ControlR.Libraries.TestingUtilities;
 
-public class XunitLogger<T>(ITestOutputHelper testOutput) : XunitLogger(testOutput, nameof(T)), ILogger<T>
+public class XunitLogger<T>(ITestOutputHelper testOutput) : XunitLogger(testOutput, typeof(T).Name), ILogger<T>
 {
 }
 
