@@ -1,5 +1,4 @@
 using ControlR.Agent.Shared.Options;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.Encryption;

@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Branding;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;

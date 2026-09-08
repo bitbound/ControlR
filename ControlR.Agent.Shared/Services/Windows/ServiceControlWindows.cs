@@ -1,6 +1,5 @@
 using System.Runtime.Versioning;
 using System.ServiceProcess;
-using ControlR.Agent.Shared.Interfaces;
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;

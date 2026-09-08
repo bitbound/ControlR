@@ -1,4 +1,3 @@
-using System;
 using System.Buffers;
 
 namespace ControlR.Libraries.NativeInterop.Linux;

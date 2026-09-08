@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using ControlR.Agent.Common.Interfaces;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Services;
 using ControlR.Agent.Common.Startup;

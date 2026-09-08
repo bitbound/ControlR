@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Settings;
-using ControlR.Web.Client.Models;
 
 namespace ControlR.Web.Client.Services;
 

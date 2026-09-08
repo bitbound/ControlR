@@ -1,8 +1,6 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Asp.Versioning;
-using ControlR.Libraries.Api.Contracts.Authz;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Extensions.Dtos.V1;

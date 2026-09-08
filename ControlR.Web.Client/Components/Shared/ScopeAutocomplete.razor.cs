@@ -1,5 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Dtos;
-
 namespace ControlR.Web.Client.Components.Shared;
 
 public sealed record ScopeOption(Guid Id, string DisplayName);

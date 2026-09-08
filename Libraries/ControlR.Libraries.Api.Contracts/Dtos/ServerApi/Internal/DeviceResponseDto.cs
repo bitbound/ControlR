@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
-using ControlR.Libraries.Api.Contracts.Enums;
 using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;

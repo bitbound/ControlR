@@ -1,7 +1,6 @@
 using System.Threading.Channels;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 
 namespace ControlR.Libraries.Api.Contracts.Hubs;
 

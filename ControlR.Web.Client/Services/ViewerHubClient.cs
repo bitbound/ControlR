@@ -1,6 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Dtos.Ui;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
-using ControlR.Web.Client.Extensions;
 
 namespace ControlR.Web.Client.Services;
 

@@ -1,6 +1,5 @@
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;

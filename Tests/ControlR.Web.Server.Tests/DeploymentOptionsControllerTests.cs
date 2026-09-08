@@ -4,8 +4,6 @@ using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
-using ControlR.Libraries.Api.Contracts.Enums;
-using ControlR.Web.Server.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests;

@@ -3,11 +3,9 @@ using ControlR.Agent.LoadTester;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Api.Contracts.Hubs;
 using ControlR.Agent.LoadTester.Helpers;
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.SignalR.Client;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Dtos;
 

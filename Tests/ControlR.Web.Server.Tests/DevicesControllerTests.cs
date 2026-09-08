@@ -4,8 +4,6 @@ using System.Runtime.InteropServices;
 using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
-using ControlR.Libraries.Api.Contracts.FilterSort;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;

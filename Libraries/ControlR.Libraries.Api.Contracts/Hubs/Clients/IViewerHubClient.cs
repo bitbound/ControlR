@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Dtos.Ui;
 
 namespace ControlR.Libraries.Api.Contracts.Hubs.Clients;

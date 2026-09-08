@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Bitbound.SimpleMessenger;
+﻿using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Messages;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;

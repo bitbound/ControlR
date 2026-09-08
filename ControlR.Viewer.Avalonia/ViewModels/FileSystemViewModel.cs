@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -7,7 +6,6 @@ using Avalonia.Threading;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.ApiClient;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Avalonia.Controls.Dialogs;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using ControlR.Libraries.Shared.Helpers;

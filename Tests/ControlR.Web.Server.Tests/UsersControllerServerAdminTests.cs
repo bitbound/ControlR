@@ -1,4 +1,3 @@
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;

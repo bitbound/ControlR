@@ -4,7 +4,6 @@ using ControlR.Web.Server.Startup;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 
 namespace ControlR.Web.Server.Tests.V1;
 

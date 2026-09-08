@@ -1,13 +1,10 @@
 using System.Security.Claims;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Extensions.Database;
 using ControlR.Web.Server.Services.Authorization;
-using ControlR.Web.Server.Services.Authorization.PermissionRules;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;

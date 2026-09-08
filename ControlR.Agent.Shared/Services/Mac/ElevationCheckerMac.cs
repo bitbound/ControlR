@@ -1,4 +1,3 @@
-using ControlR.Agent.Shared.Interfaces;
 using ControlR.Libraries.NativeInterop.Unix;
 
 namespace ControlR.Agent.Shared.Services.Mac;

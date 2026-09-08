@@ -1,5 +1,3 @@
-using ControlR.Agent.Shared.Options;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Shared.Services.Encryption;
 using Microsoft.AspNetCore.SignalR.Client;

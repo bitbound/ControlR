@@ -1,8 +1,6 @@
-using ControlR.Libraries.Api.Contracts.Authz;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;

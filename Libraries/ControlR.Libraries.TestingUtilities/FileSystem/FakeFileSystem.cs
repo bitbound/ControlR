@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.Versioning;
 using System.Security.Principal;
-using System.Security.AccessControl;
 using System.Text;
 using System.Text.RegularExpressions;
 using ControlR.Libraries.Shared.Primitives;

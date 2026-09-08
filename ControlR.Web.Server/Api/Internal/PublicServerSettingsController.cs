@@ -1,4 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Client.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;

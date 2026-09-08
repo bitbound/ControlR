@@ -3,7 +3,6 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Startup;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Moq;
 
 namespace ControlR.DesktopClient.Tests;

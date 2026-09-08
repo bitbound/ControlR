@@ -1,5 +1,4 @@
 ﻿using ControlR.DesktopClient.Common.Models;
-using System.Drawing;
 using SkiaSharp;
 
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;

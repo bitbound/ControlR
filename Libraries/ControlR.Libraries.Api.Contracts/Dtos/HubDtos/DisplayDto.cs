@@ -1,5 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Enums;
-
 namespace ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 
 [MessagePackObject(keyAsPropertyName: true)]

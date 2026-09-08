@@ -13,7 +13,6 @@ global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Signalr.Client;
 global using ControlR.ApiClient;
 global using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
-global using ControlR.Agent.Shared;
 global using ControlR.Agent.Shared.Interfaces;
 global using ControlR.Agent.Shared.Options;
 global using ControlR.Agent.Shared.Services;

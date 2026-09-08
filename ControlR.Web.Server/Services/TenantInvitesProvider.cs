@@ -1,6 +1,5 @@
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Client;
-using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Services.Users;

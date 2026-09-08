@@ -1,6 +1,3 @@
-using ControlR.Web.Client.Authz;
-using ControlR.Web.Client.Services;
-using Microsoft.AspNetCore.Components;
 using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 namespace ControlR.Web.Client.Components.Pages;

@@ -2,7 +2,6 @@ using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
-using ControlR.DesktopClient.Linux;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;

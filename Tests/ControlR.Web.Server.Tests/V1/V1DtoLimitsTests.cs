@@ -1,7 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
-
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Options;
 

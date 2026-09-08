@@ -1,5 +1,4 @@
 using System.Text.Encodings.Web;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Extensions;

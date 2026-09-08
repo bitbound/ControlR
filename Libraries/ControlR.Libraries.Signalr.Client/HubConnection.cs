@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Security.Cryptography;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Logging;
 using ControlR.Libraries.Signalr.Client.Diagnostics;
 using ControlR.Libraries.Signalr.Client.Exceptions;

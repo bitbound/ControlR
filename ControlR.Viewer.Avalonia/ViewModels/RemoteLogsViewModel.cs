@@ -4,7 +4,6 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.ApiClient;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Viewer.Common.Helpers;

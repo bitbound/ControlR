@@ -1,6 +1,4 @@
-﻿using ControlR.Libraries.Shared.IO;
-
-namespace ControlR.Libraries.Shared.Services.Http;
+﻿namespace ControlR.Libraries.Shared.Services.Http;
 
 public interface IDownloadsApi
 {

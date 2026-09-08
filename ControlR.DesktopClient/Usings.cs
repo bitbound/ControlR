@@ -9,19 +9,15 @@ global using ControlR.Libraries.Shared.Extensions;
 global using ControlR.DesktopClient.Views;
 global using CommunityToolkit.Mvvm.Input;
 global using ControlR.DesktopClient.Controls;
-global using ControlR.Libraries.Avalonia;
 global using ControlR.Libraries.Avalonia.Theming;
-global using ControlR.Libraries.Avalonia.Controls;
 global using System.Diagnostics.CodeAnalysis;
 global using CommunityToolkit.Mvvm.ComponentModel;
 global using ControlR.DesktopClient.Common;
-global using ControlR.Libraries.Api.Contracts.Enums;
 global using ControlR.DesktopClient.Common.ViewModelInterfaces;
 global using ControlR.Libraries.Shared.Collections;
 
 #if IS_WINDOWS
 global using ControlR.DesktopClient.Windows;
-global using ControlR.DesktopClient.Windows.Services;
 global using ControlR.Libraries.NativeInterop.Windows;
 #endif
 

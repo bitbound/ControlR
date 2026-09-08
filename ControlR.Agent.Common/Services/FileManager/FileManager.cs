@@ -1,7 +1,5 @@
 using System.IO.Compression;
 using ControlR.Agent.Shared.Constants;
-using ControlR.Agent.Shared.Services;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.FileSystem;
 

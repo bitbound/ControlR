@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ControlR.Libraries.Shared.Extensions.Values;
+﻿namespace ControlR.Libraries.Shared.Extensions.Values;
 
 /// <summary>
 ///   Provides a disposable wrapper that allows suppressing disposal of the underlying resource.

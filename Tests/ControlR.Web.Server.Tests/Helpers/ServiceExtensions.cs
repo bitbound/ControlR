@@ -1,8 +1,6 @@
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Services.PermissionAssignments;
 using ControlR.Web.Server.Data.Entities;
-using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Services.Users;
 using Microsoft.AspNetCore.Http;

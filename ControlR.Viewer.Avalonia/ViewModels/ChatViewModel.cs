@@ -1,5 +1,4 @@
 using System.Globalization;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;

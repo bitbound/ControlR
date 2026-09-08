@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
-using ControlR.Libraries.Api.Contracts.Authz;
 using ControlR.Libraries.Shared.Comparers;
 using ControlR.Web.Server.Authz.Permissions;
 

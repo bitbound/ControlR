@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Tests.Helpers;

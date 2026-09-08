@@ -1,5 +1,4 @@
 using ControlR.DesktopClient.Common.Options;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ViewModels;
 using Microsoft.Extensions.Options;
 

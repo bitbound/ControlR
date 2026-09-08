@@ -1,7 +1,6 @@
 using ControlR.Agent.Shared.Constants;
 using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Branding;
-using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Options;
 
