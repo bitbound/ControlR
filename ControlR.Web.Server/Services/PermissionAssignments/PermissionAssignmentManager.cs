@@ -1153,20 +1153,38 @@ public class PermissionAssignmentManager(
     PermissionEffect effect,
     CancellationToken cancellationToken)
   {
-    var ownerUserId = principalKind switch
+    Guid? ownerUserId = null;
+    if (principalKind == PermissionPrincipalKind.LogonToken)
     {
-      PermissionPrincipalKind.PersonalAccessToken => await _appDb.PersonalAccessTokens
+      var token = await _appDb.LogonTokens
+        .IgnoreQueryFilters()
+        .Where(x => x.Id == principalId)
+        .Select(x => new { x.DeviceId, x.UserId })
+        .FirstOrDefaultAsync(cancellationToken);
+
+      if (token is null)
+      {
+        return "Logon token not found.";
+      }
+
+      // Logon-token rules are only ever loaded when they are Device-scoped to the token's own
+      // device, so every other row shape is inert. Reject them rather than report success for
+      // a row that can never evaluate.
+      if (scopeKind != PermissionScopeKind.Device || scopeId != token.DeviceId)
+      {
+        return "Logon token assignments must be Device-scoped to the token's device.";
+      }
+
+      ownerUserId = token.UserId;
+    }
+    else if (principalKind == PermissionPrincipalKind.PersonalAccessToken)
+    {
+      ownerUserId = await _appDb.PersonalAccessTokens
         .IgnoreQueryFilters()
         .Where(x => x.Id == principalId)
         .Select(x => (Guid?)x.UserId)
-        .FirstOrDefaultAsync(cancellationToken),
-      PermissionPrincipalKind.LogonToken => await _appDb.LogonTokens
-        .IgnoreQueryFilters()
-        .Where(x => x.Id == principalId)
-        .Select(x => (Guid?)x.UserId)
-        .FirstOrDefaultAsync(cancellationToken),
-      _ => null
-    };
+        .FirstOrDefaultAsync(cancellationToken);
+    }
 
     if (ownerUserId is null)
     {

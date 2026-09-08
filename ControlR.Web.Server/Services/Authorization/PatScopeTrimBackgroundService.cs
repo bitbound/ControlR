@@ -22,6 +22,50 @@ public class PatScopeTrimBackgroundService(
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
   private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
 
+  public async Task Sweep(CancellationToken cancellationToken)
+  {
+    await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+    var tokenIds = await db.PermissionAssignments
+      .IgnoreQueryFilters()
+      .Where(x => x.PrincipalKind == PermissionPrincipalKind.PersonalAccessToken &&
+                  x.IsEnabled)
+      .Select(x => x.PrincipalId)
+      .Distinct()
+      .ToListAsync(cancellationToken);
+
+    if (tokenIds.Count == 0)
+    {
+      return;
+    }
+
+    using var scope = _scopeFactory.CreateScope();
+    var permissionEvaluator = scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>();
+    var resourceFactory = scope.ServiceProvider.GetRequiredService<IResourceDescriptorFactory>();
+
+    foreach (var tokenId in tokenIds)
+    {
+      try
+      {
+        await ResolveAndTrimAsync(
+          db,
+          permissionEvaluator,
+          resourceFactory,
+          tokenId,
+          cancellationToken);
+      }
+      catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+      {
+        throw;
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex,
+          "Error trimming scopes for personal access token {TokenId}.", tokenId);
+      }
+    }
+  }
+
   protected override async Task HandleElapsed(CancellationToken stoppingToken)
   {
     await Sweep(stoppingToken);
@@ -96,8 +140,11 @@ public class PatScopeTrimBackgroundService(
       .Where((_, index) => decisions[requests[index]].Allowed)
       .Select(item => item.Row.Id)
       .ToHashSet();
+    // Trimming removes excess reach, and only allows carry reach. Denies are deliberately
+    // permitted to exceed the owner's permissions (the write gate skips owner-authority for
+    // them), so owner-coverage is the wrong test and trimming them would undo accepted writes.
     var excessRows = scopeRows
-      .Where(row => !coveredRowIds.Contains(row.Id))
+      .Where(row => row.Effect != PermissionEffect.Deny && !coveredRowIds.Contains(row.Id))
       .ToList();
 
     if (excessRows.Count == 0)
@@ -124,49 +171,5 @@ public class PatScopeTrimBackgroundService(
     Logger.LogInformation(
       "Trimmed {Count} excess scope row(s) from personal access token {TokenId}.",
       excessRows.Count, tokenId);
-  }
-
-  private async Task Sweep(CancellationToken cancellationToken)
-  {
-    await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-
-    var tokenIds = await db.PermissionAssignments
-      .IgnoreQueryFilters()
-      .Where(x => x.PrincipalKind == PermissionPrincipalKind.PersonalAccessToken &&
-                  x.IsEnabled)
-      .Select(x => x.PrincipalId)
-      .Distinct()
-      .ToListAsync(cancellationToken);
-
-    if (tokenIds.Count == 0)
-    {
-      return;
-    }
-
-    using var scope = _scopeFactory.CreateScope();
-    var permissionEvaluator = scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>();
-    var resourceFactory = scope.ServiceProvider.GetRequiredService<IResourceDescriptorFactory>();
-
-    foreach (var tokenId in tokenIds)
-    {
-      try
-      {
-        await ResolveAndTrimAsync(
-          db,
-          permissionEvaluator,
-          resourceFactory,
-          tokenId,
-          cancellationToken);
-      }
-      catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-      {
-        throw;
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex,
-          "Error trimming scopes for personal access token {TokenId}.", tokenId);
-      }
-    }
   }
 }

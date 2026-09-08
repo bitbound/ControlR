@@ -404,6 +404,70 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task Create_DeviceScopeWrongDevice_ForLogonToken_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var recipient = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"recipient-{Guid.NewGuid():N}@t.local");
+    var tokenDevice = await testApp.App.Services.CreateTestDevice(tenant.Id);
+    var otherDevice = await testApp.App.Services.CreateTestDevice(tenant.Id);
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      recipient.Id,
+      PermissionNames.DeviceRead,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, recipient.Id, tenant.Id, "test")));
+
+    var tokenId = Guid.NewGuid();
+    await SeedLogonToken(testApp, tokenId, recipient.Id, tokenDevice.Id, tenant.Id);
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    // A Device row for a different device survives every existing gate (the device exists in the
+    // tenant, the owner holds the permission) but the loaders filter it out against the token's
+    // device scope, so it is inert. It must be rejected at write time.
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.LogonToken,
+        tokenId,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Device,
+        otherDevice.Id,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+  }
+
+  [Fact]
   public async Task Create_IdenticalAssignment_ReturnsConflict_WhileOppositeEffectSucceeds()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -452,6 +516,60 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     Assert.False(duplicate.IsSuccess);
     Assert.Equal(HttpResultErrorCode.Conflict, duplicate.ErrorCode);
     Assert.True(deny.IsSuccess);
+  }
+
+  [Fact]
+  public async Task Create_ResourceScopedServerScopeDeny_ForLogonToken_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var recipient = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"recipient-{Guid.NewGuid():N}@t.local");
+    var device = await testApp.App.Services.CreateTestDevice(tenant.Id);
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsDeny,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    var tokenId = Guid.NewGuid();
+    await SeedLogonToken(testApp, tokenId, recipient.Id, device.Id, tenant.Id);
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    // Logon-token rules are only ever loaded when they are Device-scoped to the token's device,
+    // so any other scope kind is inert by construction. The write gate must reject it rather than
+    // report success for a row that can never evaluate.
+    var result = await manager.Create(
+      new InternalDtos.CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.LogonToken,
+        tokenId,
+        PermissionNames.DeviceRead,
+        PermissionEffect.Deny,
+        PermissionScopeKind.Server,
+        null,
+        null),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
   }
 
   [Fact]
@@ -1431,6 +1549,22 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     using var scope = testApp.CreateScope();
     await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
     db.PermissionAssignments.Add(assignment);
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+  }
+
+  private static async Task SeedLogonToken(TestApp testApp, Guid tokenId, Guid userId, Guid deviceId, Guid tenantId)
+  {
+    using var scope = testApp.CreateScope();
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    db.LogonTokens.Add(new LogonToken
+    {
+      Id = tokenId,
+      Token = $"test-logon-token-{tokenId:N}",
+      UserId = userId,
+      DeviceId = deviceId,
+      TenantId = tenantId,
+      ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+    });
     await db.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
 
