@@ -109,6 +109,9 @@ public sealed class ControlrAuthSession(
   TimeProvider timeProvider) : IControlrAuthSession
 {
   private const string InteractiveLoginEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/interactive-login";
+  private const int MaxRefreshRetryBackoffSeconds = 60;
+
+  private static readonly TimeSpan _maxRefreshRetryBackoff = TimeSpan.FromSeconds(MaxRefreshRetryBackoffSeconds);
 
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
@@ -213,8 +216,8 @@ public sealed class ControlrAuthSession(
 
     ResetSession(clearPersonalAccessToken: true);
     _authState.SetBearerTokens(snapshot.BearerToken, snapshot.RefreshToken, snapshot.BearerTokenExpiresAt);
-    StartRefreshLoop();
     UpdateState(ControlrAuthSessionState.Authenticated);
+    StartRefreshLoop();
     return Task.CompletedTask;
   }
 
@@ -425,7 +428,31 @@ public sealed class ControlrAuthSession(
         }
 
         await Task.Delay(delay, cancellationToken);
-        await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
+
+        try
+        {
+          await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+          if (State == ControlrAuthSessionState.Expired)
+          {
+            // The server rejected the refresh token itself. RefreshBearerTokenIfNeeded has
+            // already transitioned the session to Expired; nothing left to retry.
+            return;
+          }
+
+          // A transient failure (network hiccup, timeout, 5xx, 404) must not discard a refresh
+          // token that is often valid for days. Retry with a fixed backoff instead.
+          _logger.LogWarning(ex, "Bearer token refresh failed in the background. Retrying.");
+          var backoff = _optionsMonitor.CurrentValue.BearerRefreshLeadTime * 2;
+          if (backoff > _maxRefreshRetryBackoff)
+          {
+            backoff = _maxRefreshRetryBackoff;
+          }
+
+          await Task.Delay(backoff, cancellationToken);
+        }
       }
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

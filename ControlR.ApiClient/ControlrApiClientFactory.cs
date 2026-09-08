@@ -371,35 +371,25 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     Volatile.Write(ref entry.LastUsedOrdinal, Interlocked.Increment(ref _touchOrdinal));
   }
 
-  private sealed class ClientEntry
+  private sealed class ClientEntry(
+    string name,
+    ControlrApi api,
+    HttpClient httpClient,
+    HttpClient unauthenticatedHttpClient,
+    ControlrApiClientAuthState authState,
+    Lazy<IControlrAuthSession> authSession)
   {
     public long LastUsedOrdinal;
     public long LastUsedTicks;
 
     private int _disposeState;
 
-    public ClientEntry(
-      string name,
-      ControlrApi api,
-      HttpClient httpClient,
-      HttpClient unauthenticatedHttpClient,
-      ControlrApiClientAuthState authState,
-      Lazy<IControlrAuthSession> authSession)
-    {
-      Name = name;
-      Api = api;
-      HttpClient = httpClient;
-      UnauthenticatedHttpClient = unauthenticatedHttpClient;
-      AuthState = authState;
-      AuthSession = authSession;
-    }
-
-    public ControlrApi Api { get; }
-    public Lazy<IControlrAuthSession> AuthSession { get; }
-    public ControlrApiClientAuthState AuthState { get; }
-    public HttpClient HttpClient { get; }
-    public string Name { get; }
-    public HttpClient UnauthenticatedHttpClient { get; }
+    public ControlrApi Api { get; } = api;
+    public Lazy<IControlrAuthSession> AuthSession { get; } = authSession;
+    public ControlrApiClientAuthState AuthState { get; } = authState;
+    public HttpClient HttpClient { get; } = httpClient;
+    public string Name { get; } = name;
+    public HttpClient UnauthenticatedHttpClient { get; } = unauthenticatedHttpClient;
 
     /// <summary>
     /// Disposes the target's HTTP stacks, interactive session (if created), and bearer-refresh lock.
