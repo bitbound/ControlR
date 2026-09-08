@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using ControlR.Agent.Common.Interfaces;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Helpers;
-using ControlR.Agent.Shared.Services;
 
 namespace ControlR.Agent.Common.Services;
 

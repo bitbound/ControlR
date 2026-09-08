@@ -1,6 +1,5 @@
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
-using ControlR.Web.Server.Data;
 
 namespace ControlR.Web.Server.Services.Authorization.Capabilities;
 

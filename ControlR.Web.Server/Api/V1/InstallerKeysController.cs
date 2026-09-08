@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Web.Server.Services.AgentInstaller;
 using Microsoft.AspNetCore.Mvc;
 using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.CreateInstallerKeyRequestDto;

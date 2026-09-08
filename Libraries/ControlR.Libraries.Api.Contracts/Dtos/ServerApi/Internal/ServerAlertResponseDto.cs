@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
-using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 

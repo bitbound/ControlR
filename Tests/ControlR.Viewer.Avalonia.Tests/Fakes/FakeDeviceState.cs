@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Collections;
 using ControlR.Libraries.Viewer.Common.State;

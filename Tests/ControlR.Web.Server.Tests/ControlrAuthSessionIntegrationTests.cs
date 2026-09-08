@@ -1,6 +1,5 @@
 using System.Net;
 using ControlR.ApiClient.Auth;
-using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Tests.Helpers;
 

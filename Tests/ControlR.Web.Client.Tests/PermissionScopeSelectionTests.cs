@@ -1,4 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Authz;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Client.Components.Dialogs;
 

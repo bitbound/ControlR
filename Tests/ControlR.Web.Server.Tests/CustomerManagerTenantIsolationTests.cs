@@ -2,7 +2,6 @@ using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Primitives;
-using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Services.Customers;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;

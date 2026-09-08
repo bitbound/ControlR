@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-
-namespace ControlR.Web.Client.Components.ContentWindows;
+﻿namespace ControlR.Web.Client.Components.ContentWindows;
 
 public partial class DeviceContentWindow : IAsyncDisposable
 {

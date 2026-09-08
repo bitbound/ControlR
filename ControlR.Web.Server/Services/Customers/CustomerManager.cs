@@ -1,5 +1,4 @@
 using ControlR.Web.Server.Authz.Permissions;
-using ControlR.Web.Server.Extensions.Database;
 using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Services.Authorization;
 

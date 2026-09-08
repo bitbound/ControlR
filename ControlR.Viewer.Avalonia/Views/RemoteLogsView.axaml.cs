@@ -4,7 +4,6 @@ using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using ControlR.Viewer.Avalonia.ViewModels;
 
 namespace ControlR.Viewer.Avalonia.Views;
 

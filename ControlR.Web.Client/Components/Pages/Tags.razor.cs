@@ -1,7 +1,4 @@
-﻿using ControlR.Web.Client.StateManagement.Stores;
-using Microsoft.AspNetCore.Components;
-
-namespace ControlR.Web.Client.Components.Pages;
+﻿namespace ControlR.Web.Client.Components.Pages;
 
 // ReSharper disable once ClassNeverInstantiated.Global
 public partial class Tags : ComponentBase

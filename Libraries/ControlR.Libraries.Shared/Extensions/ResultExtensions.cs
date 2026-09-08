@@ -1,5 +1,4 @@
 using System.Net;
-using ControlR.Libraries.Api.Contracts.Dtos;
 
 namespace ControlR.Libraries.Shared.Extensions;
 

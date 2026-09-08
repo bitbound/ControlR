@@ -1,7 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
-using ControlR.Libraries.Viewer.Common.State;
-using ControlR.Web.Client.Components.Dialogs;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
 namespace ControlR.Web.Client.Components.Pages.DeviceAccess;

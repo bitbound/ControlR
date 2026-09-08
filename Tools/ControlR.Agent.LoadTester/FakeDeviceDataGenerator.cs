@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using ControlR.Agent.Common.Models;
 using ControlR.Agent.Shared.Interfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;

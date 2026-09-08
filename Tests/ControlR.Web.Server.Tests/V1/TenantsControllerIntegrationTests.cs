@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services;

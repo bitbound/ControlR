@@ -1,5 +1,4 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.Libraries.Serilog;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;

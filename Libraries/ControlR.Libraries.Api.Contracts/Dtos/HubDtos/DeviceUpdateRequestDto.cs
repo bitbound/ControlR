@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
-using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 

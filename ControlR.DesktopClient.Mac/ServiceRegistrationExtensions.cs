@@ -4,8 +4,6 @@ using ControlR.DesktopClient.Mac.Helpers;
 using ControlR.DesktopClient.Mac.Services;
 using ControlR.DesktopClient.ViewModels.Mac;
 using ControlR.Libraries.NativeInterop.Unix;
-using ControlR.Libraries.Serilog;
-using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

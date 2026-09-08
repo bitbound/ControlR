@@ -6,12 +6,10 @@ using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.Signalr.Client.Extensions;
-using ControlR.Libraries.Viewer.Common.Options;
 using ControlR.Viewer.Avalonia.Services.Navigation;
 using ControlR.Viewer.Avalonia.ViewModels.Dialogs;
 using ControlR.Viewer.Avalonia.Views.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.Viewer.Avalonia;
 

@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using ControlR.Libraries.Avalonia.Controls.Dialogs;
 using ControlR.Libraries.Avalonia.ViewModels;
 using ControlR.Viewer.Avalonia.Views.Dialogs;

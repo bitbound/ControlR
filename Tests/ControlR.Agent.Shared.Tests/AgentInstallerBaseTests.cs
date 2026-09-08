@@ -1,10 +1,8 @@
 using ControlR.Agent.Shared.Interfaces;
-using ControlR.Agent.Shared.Models;
 using ControlR.Agent.Shared.Options;
 using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Shared.Services.Base;
 using ControlR.ApiClient;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;

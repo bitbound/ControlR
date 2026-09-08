@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using ControlR.Web.Client.StateManagement;
-using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Components;

@@ -1,5 +1,4 @@
 using System.Runtime.Versioning;
-using Xunit;
 
 #if IS_WINDOWS
 [assembly: SupportedOSPlatform("windows8.0")]

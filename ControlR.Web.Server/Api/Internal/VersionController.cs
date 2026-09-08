@@ -1,5 +1,4 @@
-﻿using ControlR.Libraries.Api.Contracts.Constants;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 
 namespace ControlR.Web.Server.Api.Internal;

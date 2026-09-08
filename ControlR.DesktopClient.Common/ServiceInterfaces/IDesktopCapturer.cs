@@ -1,7 +1,6 @@
 using ControlR.DesktopClient.Common.Models;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Primitives;
-using System.Diagnostics.CodeAnalysis;
 
 namespace ControlR.DesktopClient.Common.ServiceInterfaces;
 /// <summary>

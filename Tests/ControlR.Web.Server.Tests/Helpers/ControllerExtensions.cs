@@ -1,5 +1,4 @@
-﻿using ControlR.Web.Client.Authz;
-using ControlR.Web.Server.Authn;
+﻿using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;

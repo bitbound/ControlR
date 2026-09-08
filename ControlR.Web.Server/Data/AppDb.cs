@@ -1,5 +1,4 @@
 using ControlR.Web.Server.Data.Configuration;
-using ControlR.Web.Server.Data.Enums;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;

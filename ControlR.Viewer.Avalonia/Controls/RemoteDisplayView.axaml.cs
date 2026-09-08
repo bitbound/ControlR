@@ -6,7 +6,6 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using ControlR.Viewer.Avalonia.Native;
 using Avalonia.Media.Imaging;
-using ControlR.Libraries.Api.Contracts.Enums;
 using Avalonia.Input.Platform;
 
 namespace ControlR.Viewer.Avalonia.Controls;

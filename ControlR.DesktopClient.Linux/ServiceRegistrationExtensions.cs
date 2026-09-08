@@ -1,4 +1,3 @@
-using Avalonia.Controls;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;

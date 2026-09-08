@@ -1,6 +1,5 @@
 using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.TestingUtilities.Extensions;

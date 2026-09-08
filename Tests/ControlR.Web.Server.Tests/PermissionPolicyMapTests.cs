@@ -1,4 +1,3 @@
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Authz.Permissions;
 using System.Reflection;

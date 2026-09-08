@@ -1,6 +1,5 @@
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Options;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.DesktopClient.Common.State;

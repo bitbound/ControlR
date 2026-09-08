@@ -1,5 +1,4 @@
 using ControlR.Libraries.Api.Contracts.Enums;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using SkiaSharp;
 
 namespace ControlR.DesktopClient.Common.Services.Encoders;

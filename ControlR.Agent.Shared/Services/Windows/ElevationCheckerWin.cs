@@ -1,4 +1,3 @@
-using ControlR.Agent.Shared.Interfaces;
 using System.Runtime.Versioning;
 using System.Security.Principal;
 

@@ -1,4 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Authorization.PermissionRules;

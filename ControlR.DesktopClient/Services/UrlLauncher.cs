@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;

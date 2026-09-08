@@ -1,5 +1,4 @@
 using ControlR.Libraries.Hosting;
-using ControlR.Web.Server.Extensions.Database;
 
 namespace ControlR.Web.Server.Services.AgentInstaller;
 

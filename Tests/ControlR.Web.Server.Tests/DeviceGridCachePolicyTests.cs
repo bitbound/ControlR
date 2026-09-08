@@ -1,4 +1,3 @@
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OutputCaching;

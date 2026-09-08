@@ -3,7 +3,6 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.ApiClient;
 using ControlR.ApiClient.Auth;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using ControlR.Libraries.Messenger.Extensions.Messages;

@@ -1,6 +1,5 @@
 using System.Runtime.Versioning;
 using ControlR.Agent.Common.Services.Base;
-using ControlR.Agent.Shared.Options;
 using ControlR.Libraries.Ipc;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;

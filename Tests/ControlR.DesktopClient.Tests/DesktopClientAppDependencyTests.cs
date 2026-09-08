@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 

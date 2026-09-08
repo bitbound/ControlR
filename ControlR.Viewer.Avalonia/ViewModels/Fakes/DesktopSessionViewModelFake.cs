@@ -1,6 +1,4 @@
 #pragma warning disable CS0067
-using CommunityToolkit.Mvvm.Input;
-
 namespace ControlR.Viewer.Avalonia.ViewModels.Fakes;
 internal class DesktopSessionViewModelFake : IRemoteControlDesktopCardViewModel
 {

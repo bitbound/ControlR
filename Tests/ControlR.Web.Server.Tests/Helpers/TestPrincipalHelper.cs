@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using Microsoft.AspNetCore.Mvc;

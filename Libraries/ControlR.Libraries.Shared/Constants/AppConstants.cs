@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services;

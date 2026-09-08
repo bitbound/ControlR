@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Authn;

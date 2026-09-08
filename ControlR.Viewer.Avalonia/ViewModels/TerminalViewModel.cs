@@ -1,4 +1,3 @@
-using System.Collections.Specialized;
 using System.Globalization;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;

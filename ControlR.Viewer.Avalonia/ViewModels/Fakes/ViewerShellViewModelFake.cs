@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
 
 namespace ControlR.Viewer.Avalonia.ViewModels.Fakes;

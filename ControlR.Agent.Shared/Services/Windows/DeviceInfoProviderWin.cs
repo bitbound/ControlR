@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.NativeInterop.Windows;
 using Windows.Win32;

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using ControlR.Web.Client.Authz;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Tests.Helpers;

@@ -1,6 +1,5 @@
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Authz.Permissions;
-using ControlR.Web.Server.Data.Enums;
 using ControlR.Web.Server.Services.Authorization;
 
 namespace ControlR.Web.Server.Services;
