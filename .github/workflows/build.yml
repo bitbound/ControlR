@@ -961,11 +961,6 @@ jobs:
         run: |
           Set-Content -Path "ControlR.Web.Server/wwwroot/downloads/Version.txt" -Value $env:VERSION -Force -Encoding UTF8
 
-      - name: Create ServerRuntime.txt
-        shell: pwsh
-        run: |
-          Set-Content -Path "ControlR.Web.Server/wwwroot/downloads/ServerRuntime.txt" -Value "${{ inputs.server_runtime }}" -Force -Encoding UTF8
-
       - name: Copy Release Notes
         shell: pwsh
         run: |
@@ -1037,7 +1032,6 @@ jobs:
       - name: Create Server Runtime Metadata
         shell: pwsh
         run: |
-          New-Item -Path $env:RUNNER_TEMP -ItemType Directory -Force | Out-Null
           Set-Content -Path "$env:RUNNER_TEMP/ServerRuntime.txt" -Value "${{ inputs.server_runtime }}" -Force -Encoding UTF8
 
       - name: Upload Server Metadata
