@@ -273,9 +273,11 @@ Two consequences worth knowing:
   a login and re-authenticating is acceptable.
 - A cached `IControlrAuthSession` goes dead when its target is removed by either path. Disposal moves
   it to the terminal `Disposed` state and raises `StateChanged`, so an observer still holding the
-  reference stops reporting a usable session. `Disposed` is deliberately distinct from `Expired`: an
+  reference stops reporting a usable session. `Disposed` is deliberately distinct from `Expired`. An
   expired session can be signed in again on the same object, a disposed one cannot, and its caller
-  needs a fresh session from `GetOrCreateAuthSession`.
+  needs a fresh session from `GetOrCreateAuthSession`. Restoring a saved snapshot onto a disposed
+  session throws `ObjectDisposedException` instead of being accepted quietly, so re-obtain a session
+  before restoring after a removal.
 
 `TryGetAuthSession` creates nothing and does not refresh the last-used stamp, so a status page that
 polls it across every target cannot accidentally hold them open.

@@ -86,6 +86,9 @@ public interface IControlrAuthSession : IDisposable
   /// Otherwise bearer tokens are restored and the background token-refresh loop is started (state: <see cref="ControlrAuthSessionState.Authenticated"/>).
   /// </summary>
   /// <param name="snapshot">The previously captured auth snapshot.</param>
+  /// <exception cref="ObjectDisposedException">
+  /// This session was disposed. Obtain a new session and restore it there.
+  /// </exception>
   Task RestoreAuthSnapshot(AuthSnapshot snapshot);
   /// <summary>
   /// Updates the server base URL used by the session.
@@ -289,8 +292,14 @@ public sealed class ControlrAuthSession(
   /// </summary>
   /// <param name="snapshot">The snapshot to apply.</param>
   /// <exception cref="ArgumentException">The snapshot contains no personal access token, service account credential, or complete set of bearer tokens.</exception>
+  /// <exception cref="ObjectDisposedException">
+  /// The session was disposed. A restore would store the credential while the terminal state
+  /// suppressed the state change, leaving a session that reports a credential it can never use.
+  /// </exception>
   public Task RestoreAuthSnapshot(AuthSnapshot snapshot)
   {
+    ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
+
     if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
     {
       SetPersonalAccessToken(snapshot.PersonalAccessToken);

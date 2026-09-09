@@ -206,6 +206,32 @@ public sealed class ControlrAuthSessionTests
   }
 
   [Fact]
+  public async Task RestoreAuthSnapshot_WhenSessionIsDisposed_ThrowsObjectDisposed()
+  {
+    var handler = new RecordingHttpMessageHandler(TokenIssuingResponder());
+    var session = CreateSession(handler, new FakeTimeProvider());
+
+    var login = await session.SignIn(
+      new InteractiveSignInRequest { Email = "u@test.test", Password = "pw" },
+      TestContext.Current.CancellationToken);
+    Assert.Equal(InteractiveLoginStatus.Authenticated, login.Status);
+    session.Dispose();
+
+    // A snapshot carrying a distinct token pair, so a restore that slipped past the guard shows up
+    // against the pair this session already holds.
+    var exception = await Assert.ThrowsAsync<ObjectDisposedException>(
+      () => session.RestoreAuthSnapshot(ExpiredSnapshot(bearer: "access-stale", refresh: "refresh-stale")));
+
+    // Without the throw, the restore wrote the snapshot's pair into the auth state while the terminal
+    // state suppressed the state change, so the session reported a token it could never use and
+    // raised nothing. A host that restored onto an evicted target would boot unauthenticated with
+    // nothing to point at.
+    Assert.Contains(nameof(ControlrAuthSession), exception.ObjectName, StringComparison.Ordinal);
+    Assert.Equal("access-1", session.GetAuthSnapshot().BearerToken);
+    Assert.Equal(ControlrAuthSessionState.Disposed, session.State);
+  }
+
+  [Fact]
   public async Task RunRefreshLoop_WhenRefreshFailsRepeatedly_ExpiresSessionAfterRetryCap()
   {
     var timeProvider = new FakeTimeProvider();
@@ -452,7 +478,6 @@ public sealed class ControlrAuthSessionTests
         new InteractiveLoginResponseDto(false, Tokens: Tokens("access-late", "refresh-late"))));
     }
   }
-
   private sealed class GatedRefreshHandler(Task gate) : HttpMessageHandler
   {
     public bool RefreshStarted { get; private set; }
