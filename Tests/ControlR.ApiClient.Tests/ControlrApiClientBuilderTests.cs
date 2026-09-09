@@ -5,8 +5,9 @@ namespace ControlR.ApiClient.Tests;
 /// </summary>
 /// <remarks>
 ///   The builder holds one static client for the whole process, so this class must remain the only
-///   one that touches it. xUnit runs distinct test classes concurrently, and a second class using the
-///   builder would race against these tests over the shared fields.
+///   one that touches it. That is enforced rather than merely requested: test parallelization is
+///   disabled for this assembly in <c>AssemblyInfo.cs</c>. Keep it that way if another class ever
+///   needs the builder, or move both into one serialized collection.
 /// </remarks>
 public sealed class ControlrApiClientBuilderTests : IDisposable
 {

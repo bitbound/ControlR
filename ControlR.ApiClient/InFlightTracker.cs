@@ -54,6 +54,11 @@ internal sealed class InFlightTracker
     {
       _releaseHttpStack = releaseHttpStack;
     }
+
+    // Whichever of attach and teardown happens last performs the release. Without this, a teardown
+    // requested before the release was attached would latch _released with nothing to run, and the
+    // HTTP stack would never be freed.
+    TryRelease();
   }
 
   /// <summary>
@@ -107,7 +112,9 @@ internal sealed class InFlightTracker
 
     lock (_gate)
     {
-      if (_teardownRequested && _inFlight == 0 && !_released)
+      // The release check is part of the condition, not just the assignment, so that a teardown
+      // arriving before AttachRelease leaves _released unset for the attach to act on.
+      if (_teardownRequested && _inFlight == 0 && !_released && _releaseHttpStack is not null)
       {
         _released = true;
         release = _releaseHttpStack;

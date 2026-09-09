@@ -79,7 +79,7 @@ public partial class ControlrApi(
 
     if (!lease.Acquired)
     {
-      return LogFailure(ApiResult.Fail(DisposedTargetReason, HttpStatusCode.InternalServerError));
+      return LogFailure(ApiResult.Fail(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown));
     }
 
     try
@@ -124,7 +124,7 @@ public partial class ControlrApi(
     {
       // The target was removed or evicted while this client was still in use. Reporting that as a
       // server failure would send the caller looking at the wrong end of the connection.
-      var apiResult = ApiResult.Fail(DisposedTargetReason, HttpStatusCode.InternalServerError);
+      var apiResult = ApiResult.Fail(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown);
       return LogFailure(apiResult, ex);
     }
     catch (Exception ex)

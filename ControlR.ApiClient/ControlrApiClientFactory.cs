@@ -548,6 +548,13 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     return evicted;
   }
 
+  /// <summary>
+  /// Stamps an entry as just used. The two writes are not atomic, and the cache-hit path in
+  /// <see cref="GetOrCreateClient"/> calls this without holding <see cref="_createLock"/>, so
+  /// <see cref="EvictToTrackLimit"/> can observe a new tick count paired with an older ordinal. That
+  /// only perturbs which of two near-equal entries the cap picks, which an LRU heuristic tolerates,
+  /// and taking the lock on the hot path to prevent it would cost more than the imprecision.
+  /// </summary>
   private void Touch(ClientEntry entry)
   {
     Volatile.Write(ref entry.LastUsedTicks, _timeProvider.GetUtcNow().UtcTicks);
