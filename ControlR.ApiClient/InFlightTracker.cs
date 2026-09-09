@@ -13,7 +13,7 @@ namespace ControlR.ApiClient;
 /// </remarks>
 internal sealed class InFlightTracker
 {
-  private readonly object _gate = new();
+  private readonly Lock _gate = new();
 
   private int _inFlight;
   private bool _released;

@@ -16,7 +16,7 @@ namespace ControlR.ApiClient;
 ///   and <see cref="TryRemoveClient"/>.
 /// </para>
 /// <para>
-///   This type is server-only. Do not use from Blazor WebAssembly; use <c>AddControlrApiClient</c>
+///   This type is server-only. Do not use from Blazor WebAssembly. Use <c>AddControlrApiClient</c>
 ///   there instead, which routes through the platform's browser HTTP handler.
 /// </para>
 /// </summary>
@@ -36,7 +36,7 @@ public interface IControlrApiClientFactory : IDisposable
   /// <remarks>
   /// The session is created lazily so service-account-only consumers never pay for it. The target
   /// must already have been created via <see cref="GetOrCreateClient"/>. Do not dispose the returned
-  /// session directly; the factory owns it and disposes it with the target.
+  /// session directly. The factory owns it and disposes it with the target.
   /// </remarks>
   /// <param name="name">The target name previously passed to <see cref="GetOrCreateClient"/>.</param>
   /// <returns>The session for the named target.</returns>
@@ -52,7 +52,7 @@ public interface IControlrApiClientFactory : IDisposable
   /// <remarks>
   /// <para>
   ///   First configuration wins. <paramref name="configureOptions"/> is applied only when the name is
-  ///   new; calls for an existing name ignore it entirely, including credential changes. To rotate
+  ///   new. Calls for an existing name ignore it entirely, including credential changes. To rotate
   ///   credentials, call <see cref="TryRemoveClient"/> and then <see cref="GetOrCreateClient"/> again
   ///   with the new options.
   /// </para>
@@ -93,7 +93,7 @@ public interface IControlrApiClientFactory : IDisposable
   /// </para>
   /// </remarks>
   /// <param name="name">The target name to remove.</param>
-  /// <returns><see langword="true"/> when a target was removed; <see langword="false"/> when no target with that name exists.</returns>
+  /// <returns><see langword="true"/> when a target was removed. <see langword="false"/> when no target with that name exists.</returns>
   /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
   bool TryRemoveClient(string name);
 }
@@ -487,7 +487,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
     /// <summary>
     /// Disposes the target's HTTP stacks, interactive session (if created), and bearer-refresh lock.
-    /// Safe to call multiple times and concurrently; only the first call does work. When the target
+    /// Safe to call multiple times and concurrently. Only the first call does work. When the target
     /// still has requests in flight, the HTTP stacks are released by the last of them instead.
     /// </summary>
     public void DisposeOnce()
