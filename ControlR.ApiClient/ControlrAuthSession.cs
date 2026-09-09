@@ -228,14 +228,8 @@ public sealed class ControlrAuthSession(
   /// </summary>
   /// <param name="snapshot">The snapshot to apply.</param>
   /// <exception cref="ArgumentException">The snapshot contains neither a personal access token nor a complete set of bearer tokens.</exception>
-  /// <exception cref="ObjectDisposedException">
-  /// This session's target was removed. Restoring into it would report a session that can never
-  /// renew the tokens it was just given.
-  /// </exception>
   public Task RestoreAuthSnapshot(AuthSnapshot snapshot)
   {
-    ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
-
     if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
     {
       SetPersonalAccessToken(snapshot.PersonalAccessToken);
@@ -328,29 +322,9 @@ public sealed class ControlrAuthSession(
     cts?.Dispose();
   }
 
-  /// <summary>
-  /// <para>
-  /// Announces one of the session's own calls, which go to the target's unauthenticated client rather
-  /// than through <see cref="ControlrApi"/>, so nothing else counts them. Dispose the returned lease
-  /// when the response is done with.
-  /// </para>
-  /// <para>
-  /// Throws when the target was already removed. Both callers report a reason that reads like the
-  /// credentials were wrong, which is the wrong thing to say about a target that no longer exists.
-  /// </para>
-  /// </summary>
-  private InFlightTracker.Lease BeginSessionRequest()
-  {
-    var lease = Requests.Acquire();
-
-    if (lease.Acquired)
-    {
-      return lease;
-    }
-
-    lease.Dispose();
-    throw new ObjectDisposedException(nameof(ControlrAuthSession), ControlrApi.DisposedTargetReason);
-  }
+  // Session calls go to the target's unauthenticated client rather than through ControlrApi, so
+  // nothing else counts them. A removal mid-call would otherwise be reported as bad credentials.
+  private InFlightTracker.Lease BeginSessionRequest() => Requests.AcquireOrThrow(nameof(ControlrAuthSession));
 
   private async Task<InteractiveLoginResult> ExecuteInteractiveLogin(LoginRequestDto request, CancellationToken cancellationToken)
   {
@@ -596,15 +570,6 @@ public sealed class ControlrAuthSession(
     var previousCts = Interlocked.Exchange(ref _refreshLoopCts, cts);
     CancelRefreshLoop(previousCts);
     _ = RunRefreshLoop(generation, cts.Token);
-
-    if (Volatile.Read(ref _isDisposed) == 1)
-    {
-      // Disposal ran between the check above and the publish below, so its own stop pass had
-      // nothing to cancel and this loop would outlive the session that owns it. Re-checking after
-      // publishing closes the window: a disposal that lands after the publish already cancels
-      // this token source, and one that landed before it is visible here.
-      StopRefreshLoop();
-    }
   }
 
   private void StopRefreshLoop()

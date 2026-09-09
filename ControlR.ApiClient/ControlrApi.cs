@@ -71,18 +71,7 @@ public partial class ControlrApi(
   /// would read as an empty device list.
   /// </para>
   /// </summary>
-  internal InFlightTracker.Lease BeginTrackedRequest()
-  {
-    var lease = Requests.Acquire();
-
-    if (lease.Acquired)
-    {
-      return lease;
-    }
-
-    lease.Dispose();
-    throw new ObjectDisposedException(nameof(ControlrApi), DisposedTargetReason);
-  }
+  internal InFlightTracker.Lease BeginTrackedRequest() => Requests.AcquireOrThrow(nameof(ControlrApi));
 
   internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
   {

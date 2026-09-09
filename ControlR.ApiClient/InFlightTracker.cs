@@ -5,46 +5,55 @@ namespace ControlR.ApiClient;
 /// HTTP stack after they finish instead of cancelling them.
 /// </summary>
 /// <remarks>
-/// <para>
 /// Disposing an <see cref="HttpClient"/> aborts the buffered requests it still has in flight, so an
 /// eviction that disposes immediately turns a healthy server into a spurious failure for whoever
 /// issued the call. A request announces itself with <see cref="TryEnter"/> and clears itself with
-/// <see cref="Exit"/>; <see cref="RequestTeardown"/> leaves the release with whichever side loses
-/// the race.
-/// </para>
-/// <para>
-/// The pairing is a Dekker handshake between the teardown flag and the in-flight count: each side
-/// publishes its own state, fully fenced, before reading the other's. That is what makes exactly one
-/// of them observe the other, so the release can be neither lost nor run twice.
-/// </para>
-/// <para>
-/// The publishing must be a seq_cst <see cref="Interlocked"/> operation rather than a
-/// <see cref="Volatile.Write"/>. A release store followed by an acquire load orders each thread's own
-/// accesses around it, but never orders the store ahead of the load: the store can stay buffered
-/// locally while the load is answered from memory. Both threads doing that is the one outcome that
-/// breaks the handshake, and it is permitted on the ARM hosts this library ships to.
-/// </para>
+/// <see cref="Exit"/>. Whichever side of teardown observes the other performs the release, exactly
+/// once.
 /// </remarks>
 internal sealed class InFlightTracker
 {
+  private readonly object _gate = new();
+
   private int _inFlight;
-  private int _released;
+  private bool _released;
   private Action? _releaseHttpStack;
-  private int _teardownRequested;
+  private bool _teardownRequested;
 
   /// <summary>
   /// Announces a call for the duration of the returned lease. Dispose the lease when the caller is
-  /// done with the response, including any content read from it.
+  /// done with the response, including any content read from it. <see cref="Lease.Acquired"/>
+  /// reports whether the call may proceed.
   /// </summary>
   public Lease Acquire() => new(this, TryEnter());
 
   /// <summary>
-  /// Assigns the action that releases the target's HTTP stack. Call it once, while building the
-  /// target and before its client can be reached by anyone else.
+  /// Same as <see cref="Acquire"/>, for a caller that has no failed result to report and would
+  /// otherwise have to repeat the refusal.
+  /// </summary>
+  /// <exception cref="ObjectDisposedException">The target was removed or is being removed.</exception>
+  public Lease AcquireOrThrow(string ownerName)
+  {
+    var lease = Acquire();
+
+    if (lease.Acquired)
+    {
+      return lease;
+    }
+
+    lease.Dispose();
+    throw new ObjectDisposedException(ownerName, ControlrApi.DisposedTargetReason);
+  }
+
+  /// <summary>
+  /// Assigns the action that releases the target's HTTP stack.
   /// </summary>
   public void AttachRelease(Action releaseHttpStack)
   {
-    _releaseHttpStack = releaseHttpStack;
+    lock (_gate)
+    {
+      _releaseHttpStack = releaseHttpStack;
+    }
   }
 
   /// <summary>
@@ -52,31 +61,26 @@ internal sealed class InFlightTracker
   /// </summary>
   public void Exit()
   {
-    if (Interlocked.Decrement(ref _inFlight) > 0 || Volatile.Read(ref _teardownRequested) != 1)
+    lock (_gate)
     {
-      return;
+      _inFlight--;
     }
 
-    Release();
+    TryRelease();
   }
 
   /// <summary>
-  /// <para>
-  /// Marks teardown requested and releases the target's HTTP stack.
-  /// </para>
-  /// <para>
-  /// When nothing is in flight, the stack is released before this call returns. While requests are
-  /// still out there, the last one's <see cref="Exit"/> does it instead.
-  /// </para>
+  /// Marks teardown requested, releasing the HTTP stack now if nothing is in flight. Otherwise the
+  /// last outstanding <see cref="Exit"/> does it.
   /// </summary>
   public void RequestTeardown()
   {
-    Interlocked.Exchange(ref _teardownRequested, 1);
-
-    if (Volatile.Read(ref _inFlight) == 0)
+    lock (_gate)
     {
-      Release();
+      _teardownRequested = true;
     }
+
+    TryRelease();
   }
 
   /// <summary>
@@ -85,25 +89,34 @@ internal sealed class InFlightTracker
   /// </summary>
   public bool TryEnter()
   {
-    Interlocked.Increment(ref _inFlight);
-
-    if (Volatile.Read(ref _teardownRequested) == 1)
+    lock (_gate)
     {
-      Exit();
-      return false;
-    }
+      if (_teardownRequested)
+      {
+        return false;
+      }
 
-    return true;
+      _inFlight++;
+      return true;
+    }
   }
 
-  private void Release()
+  private void TryRelease()
   {
-    if (Interlocked.Exchange(ref _released, 1) == 1)
+    Action? release = null;
+
+    lock (_gate)
     {
-      return;
+      if (_teardownRequested && _inFlight == 0 && !_released)
+      {
+        _released = true;
+        release = _releaseHttpStack;
+      }
     }
 
-    _releaseHttpStack?.Invoke();
+    // Outside the gate: releasing disposes the HTTP stack, which must not run while holding a lock
+    // that an announced request is waiting to enter.
+    release?.Invoke();
   }
 
   /// <summary>

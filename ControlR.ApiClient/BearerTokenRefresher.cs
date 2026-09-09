@@ -68,13 +68,7 @@ public sealed class BearerTokenRefresher(
     // factory teardown disposes that lock together with the target, and a waiter that is already
     // queued when the dispose lands is never resumed. Reporting "nothing to refresh" instead lets
     // the caller continue to its own call, which reports the removed target on its own.
-    using var lease = Requests.Acquire();
-    if (!lease.Acquired)
-    {
-      throw new ObjectDisposedException(
-        nameof(BearerTokenRefresher),
-        ControlrApi.DisposedTargetReason);
-    }
+    using var lease = Requests.AcquireOrThrow(nameof(BearerTokenRefresher));
 
     await auth.BearerRefreshLock.WaitAsync(cancellationToken);
     try

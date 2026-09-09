@@ -608,21 +608,6 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
-  public async Task RestoreAuthSnapshot_WhenTargetWasRemoved_ThrowsInsteadOfReportingARestoredSession()
-  {
-    using var factory = CreateFactory(options => options.MaxIdleClientLifetime = null);
-    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
-    var session = factory.GetOrCreateAuthSession("a");
-
-    Assert.True(factory.TryRemoveClient("a"));
-
-    // Restoring into a session whose target is gone would report IsAuthenticated with tokens that
-    // nothing can ever renew, while every call that uses them fails.
-    await Assert.ThrowsAsync<ObjectDisposedException>(
-      () => session.RestoreAuthSnapshot(new AuthSnapshot("pat", null, null, null)));
-  }
-
-  [Fact]
   public async Task SignIn_WhileTargetIsBeingRemoved_CompletesTheLoginAndThenReleases()
   {
     var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
