@@ -360,7 +360,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     {
       authInnerHandler = CreateHandler();
       unauthenticatedInnerHandler = CreateHandler();
-      var authState = new ControlrApiClientAuthState(options.PersonalAccessToken);
+      var authState = new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
       var authHeaderHandler = new ControlrApiAuthHeaderHandler(authState) { InnerHandler = authInnerHandler };
       httpClient = new HttpClient(authHeaderHandler) { BaseAddress = baseUrl };
       authInnerHandler = null;

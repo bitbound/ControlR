@@ -89,6 +89,7 @@ public class ViewerConnectionAuthProviderTests
     public bool IsAuthenticated => false;
     public string? PersonalAccessToken { get; private set; }
     public bool RequiresTwoFactor => false;
+    public string? ServiceAccountApiKey { get; private set; }
     public ControlrAuthSessionState State => ControlrAuthSessionState.SignedOut;
 
     public Task<ControlR.Libraries.Api.Contracts.Dtos.ApiResult> ChangePasswordWithCredentials(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
@@ -102,7 +103,7 @@ public class ViewerConnectionAuthProviderTests
 
     public AuthSnapshot GetAuthSnapshot()
     {
-      return new AuthSnapshot(PersonalAccessToken, BearerToken, null, null);
+      return new AuthSnapshot(PersonalAccessToken, BearerToken, null, null, ServiceAccountApiKey);
     }
 
     public Task<string?> GetBearerToken(CancellationToken cancellationToken = default) => Task.FromResult(BearerToken);
@@ -111,6 +112,7 @@ public class ViewerConnectionAuthProviderTests
     {
       BearerToken = snapshot.BearerToken;
       PersonalAccessToken = snapshot.PersonalAccessToken;
+      ServiceAccountApiKey = snapshot.ServiceAccountApiKey;
       return Task.CompletedTask;
     }
 
@@ -122,6 +124,11 @@ public class ViewerConnectionAuthProviderTests
     public void SetPersonalAccessToken(string? personalAccessToken)
     {
       PersonalAccessToken = personalAccessToken;
+    }
+
+    public void SetServiceAccountApiKey(string? serviceAccountApiKey)
+    {
+      ServiceAccountApiKey = serviceAccountApiKey;
     }
 
     public Task<InteractiveLoginResult> SignIn(InteractiveSignInRequest request, CancellationToken cancellationToken = default)

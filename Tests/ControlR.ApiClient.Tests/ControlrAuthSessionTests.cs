@@ -13,7 +13,7 @@ public sealed class ControlrAuthSessionTests
 {
   private static readonly Uri _server = new("https://server.test/");
 
-    [Fact]
+  [Fact]
   public async Task FactoryEviction_WhileRefreshInFlight_DoesNotThrowObjectDisposed()
   {
     var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

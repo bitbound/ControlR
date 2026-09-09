@@ -5,7 +5,7 @@ using ControlR.Libraries.DataRedaction;
 
 namespace ControlR.ApiClient;
 
-public class ControlrApiClientAuthState(string? personalAccessToken = null)
+public class ControlrApiClientAuthState(string? personalAccessToken = null, string? serviceAccountApiKey = null)
 {
   public const string AuthorizationHeader = "Authorization";
 
@@ -13,35 +13,19 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
 
   private AuthState _state = new(
     BearerStateVersion: 0,
-    Snapshot: new AuthSnapshot(personalAccessToken, null, null, null));
+    Snapshot: new AuthSnapshot(personalAccessToken, null, null, null, serviceAccountApiKey));
 
   public SemaphoreSlim BearerRefreshLock { get; } = new(1, 1);
   [ProtectedDataClassification]
   public string? BearerToken => GetSnapshot().BearerToken;
   public DateTimeOffset? BearerTokenExpiresAt => GetSnapshot().BearerTokenExpiresAt;
-  public bool CanRefreshBearerToken
-  {
-    get
-    {
-      var snapshot = GetSnapshot();
-      return !string.IsNullOrWhiteSpace(snapshot.BearerToken) &&
-        !string.IsNullOrWhiteSpace(snapshot.RefreshToken) &&
-        snapshot.BearerTokenExpiresAt is not null;
-    }
-  }
-  public bool HasAuthConfigured
-  {
-    get
-    {
-      var snapshot = GetSnapshot();
-      return !string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken) ||
-        !string.IsNullOrWhiteSpace(snapshot.BearerToken);
-    }
-  }
+  public bool CanRefreshBearerToken => CanRefresh(GetSnapshot());
   [ProtectedDataClassification]
   public string? PersonalAccessToken => GetSnapshot().PersonalAccessToken;
   [ProtectedDataClassification]
   public string? RefreshToken => GetSnapshot().RefreshToken;
+  [ProtectedDataClassification]
+  public string? ServiceAccountApiKey => GetSnapshot().ServiceAccountApiKey;
 
   public void ClearBearerTokens()
   {
@@ -64,6 +48,11 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
   public void ClearPersonalAccessToken()
   {
     SetPersonalAccessToken(null);
+  }
+
+  public void ClearServiceAccountApiKey()
+  {
+    SetServiceAccountApiKey(null);
   }
 
   public AuthSnapshot GetSnapshot() => Volatile.Read(ref _state).Snapshot;
@@ -109,17 +98,19 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
     }
   }
 
-  public bool ShouldRefreshBearerToken(TimeProvider timeProvider, TimeSpan refreshWindow)
+  public void SetServiceAccountApiKey(string? serviceAccountApiKey)
   {
-    var snapshot = GetSnapshot();
-    if (string.IsNullOrWhiteSpace(snapshot.BearerToken) ||
-        string.IsNullOrWhiteSpace(snapshot.RefreshToken) ||
-        snapshot.BearerTokenExpiresAt is null)
+    lock (_stateLock)
     {
-      return false;
+      var state = _state;
+      _state = state with
+      {
+        Snapshot = state.Snapshot with
+        {
+          ServiceAccountApiKey = serviceAccountApiKey
+        }
+      };
     }
-
-    return snapshot.BearerTokenExpiresAt <= timeProvider.GetUtcNow() + refreshWindow;
   }
 
   public override string ToString() => "[REDACTED]";
@@ -131,19 +122,24 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
   {
     var state = Volatile.Read(ref _state);
     var snapshot = state.Snapshot;
+    var refreshToken = snapshot.RefreshToken;
+    var bearerTokenExpiresAt = snapshot.BearerTokenExpiresAt;
+
+    // Restates CanRefresh because nullable flow analysis cannot narrow record members through a
+    // bool-returning helper, and BearerRefreshContext requires a non-null refresh token.
     if (string.IsNullOrWhiteSpace(snapshot.BearerToken) ||
-        string.IsNullOrWhiteSpace(snapshot.RefreshToken) ||
-        snapshot.BearerTokenExpiresAt is null)
+        string.IsNullOrWhiteSpace(refreshToken) ||
+        bearerTokenExpiresAt is null)
     {
       return null;
     }
 
-    if (!forceRefresh && snapshot.BearerTokenExpiresAt > timeProvider.GetUtcNow() + refreshWindow)
+    if (!forceRefresh && bearerTokenExpiresAt > timeProvider.GetUtcNow() + refreshWindow)
     {
       return null;
     }
 
-    return new BearerRefreshContext(state.BearerStateVersion, snapshot.RefreshToken);
+    return new BearerRefreshContext(state.BearerStateVersion, refreshToken);
   }
 
   public bool TryGetAuthHeader(
@@ -162,6 +158,16 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
     {
       headerName = AuthorizationHeader;
       headerValue = $"Bearer {snapshot.BearerToken}";
+      return true;
+    }
+
+    // Last, so a service account key never silently displaces an already-configured credential.
+    // The server's dynamic scheme selector likewise tests x-api-key after Authorization and
+    // x-personal-token.
+    if (!string.IsNullOrWhiteSpace(snapshot.ServiceAccountApiKey))
+    {
+      headerName = ControlrApiClientOptions.ServiceAccountApiKeyHeader;
+      headerValue = snapshot.ServiceAccountApiKey;
       return true;
     }
 
@@ -196,5 +202,10 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null)
       return true;
     }
   }
+
+  private static bool CanRefresh(AuthSnapshot snapshot) =>
+    !string.IsNullOrWhiteSpace(snapshot.BearerToken) &&
+    !string.IsNullOrWhiteSpace(snapshot.RefreshToken) &&
+    snapshot.BearerTokenExpiresAt is not null;
 
 }

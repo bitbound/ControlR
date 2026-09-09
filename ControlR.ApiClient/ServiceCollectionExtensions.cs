@@ -50,7 +50,7 @@ public static class ServiceCollectionExtensions
     services.TryAddSingleton(sp =>
     {
       var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
-      return new ControlrApiClientAuthState(options.PersonalAccessToken);
+      return new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
     });
 
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
@@ -126,7 +126,7 @@ public static class ServiceCollectionExtensions
     services.TryAddSingleton(sp =>
     {
       var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
-      return new ControlrApiClientAuthState(options.PersonalAccessToken);
+      return new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
     });
 
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();

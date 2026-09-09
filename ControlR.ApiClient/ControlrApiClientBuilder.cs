@@ -25,8 +25,8 @@ public static class ControlrApiClientBuilder
 
   /// <summary>
   /// Disposes the process-wide client created by <see cref="Initialize"/>. A subsequent call to
-  /// <see cref="GetClient"/> throws <see cref="InvalidOperationException"/> until
-  /// <see cref="Initialize"/> is called again.
+  /// <see cref="GetClient"/> or <see cref="GetAuthSession"/> throws
+  /// <see cref="InvalidOperationException"/> until <see cref="Initialize"/> is called again.
   /// </summary>
   public static void Dispose()
   {
@@ -39,6 +39,37 @@ public static class ControlrApiClientBuilder
     }
 
     factory?.Dispose();
+  }
+
+  /// <summary>
+  ///   Gets the interactive auth session for the process-wide client created by <see cref="Initialize"/>,
+  ///   creating it on first call.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  ///   Use this to sign in with email and password, or to restore a previously captured snapshot via
+  ///   <see cref="IControlrAuthSession.RestoreAuthSnapshot"/>, when the client authenticates with
+  ///   bearer tokens rather than with a personal access token. The session is created lazily, so a
+  ///   personal-access-token-only consumer never pays for it.
+  /// </para>
+  /// <para>
+  ///   Do not dispose the returned session. The builder's underlying factory owns it and releases it
+  ///   together with the target when <see cref="Dispose"/> is called.
+  /// </para>
+  /// </remarks>
+  /// <exception cref="InvalidOperationException">
+  ///   Thrown when <see cref="Initialize"/> has not been called (or <see cref="Dispose"/> was called since).
+  /// </exception>
+  public static IControlrAuthSession GetAuthSession()
+  {
+    using var lockScope = _servicesLock.EnterScope();
+    if (_factory is null)
+    {
+      throw new InvalidOperationException(
+        $"The API client builder has not been initialized.  Call {nameof(Initialize)} first.");
+    }
+
+    return _factory.GetOrCreateAuthSession(DefaultTargetName);
   }
 
   /// <summary>

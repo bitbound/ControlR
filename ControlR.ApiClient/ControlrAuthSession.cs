@@ -40,6 +40,11 @@ public interface IControlrAuthSession : IDisposable
   /// </summary>
   bool RequiresTwoFactor { get; }
   /// <summary>
+  /// Gets the configured service account credential, if one is being used instead of interactive
+  /// bearer auth. Sent as the <c>x-api-key</c> header.
+  /// </summary>
+  string? ServiceAccountApiKey { get; }
+  /// <summary>
   /// Gets the current session state.
   /// </summary>
   ControlrAuthSessionState State { get; }
@@ -67,12 +72,14 @@ public interface IControlrAuthSession : IDisposable
   /// </summary>
   /// <param name="cancellationToken">Cancels the token retrieval operation.</param>
   /// <returns>
-  /// The current bearer access token, or <see langword="null"/> when the session is using a personal access token.
+  /// The current bearer access token, or <see langword="null"/> when the session authenticates with a
+  /// configured credential (a personal access token or a service account key) instead of a bearer token.
   /// </returns>
   Task<string?> GetBearerToken(CancellationToken cancellationToken = default);
   /// <summary>
   /// Restores a previously captured <see cref="AuthSnapshot"/>.
   /// If the snapshot contains a personal access token it is restored as a PAT session (state: <see cref="ControlrAuthSessionState.PatConfigured"/>).
+  /// Otherwise, if it contains a service account credential it is restored as a service account session (state: <see cref="ControlrAuthSessionState.ServiceAccountConfigured"/>).
   /// Otherwise bearer tokens are restored and the background token-refresh loop is started (state: <see cref="ControlrAuthSessionState.Authenticated"/>).
   /// </summary>
   /// <param name="snapshot">The previously captured auth snapshot.</param>
@@ -87,6 +94,15 @@ public interface IControlrAuthSession : IDisposable
   /// </summary>
   /// <param name="personalAccessToken">The personal access token to use, or <see langword="null"/> to clear it.</param>
   void SetPersonalAccessToken(string? personalAccessToken);
+  /// <summary>
+  /// Configures a service account credential for the session, sent as the <c>x-api-key</c> header, and
+  /// clears any interactive bearer state. A personal access token takes precedence over this credential
+  /// when both are present.
+  /// </summary>
+  /// <param name="serviceAccountApiKey">
+  /// The composite credential (<c>{credentialIdHex}:{secret}</c>) to use, or <see langword="null"/> to clear it.
+  /// </param>
+  void SetServiceAccountApiKey(string? serviceAccountApiKey);
   /// <summary>
   /// Starts an interactive sign-in using an email and password, with optional two-factor credentials.
   /// </summary>
@@ -139,6 +155,7 @@ public sealed class ControlrAuthSession(
   public bool IsAuthenticated => State == ControlrAuthSessionState.Authenticated;
   public string? PersonalAccessToken => _authState.PersonalAccessToken;
   public bool RequiresTwoFactor => State == ControlrAuthSessionState.AwaitingTwoFactor;
+  public string? ServiceAccountApiKey => _authState.ServiceAccountApiKey;
   public ControlrAuthSessionState State => _state;
 
   /// <summary>
@@ -227,7 +244,7 @@ public sealed class ControlrAuthSession(
   /// Restores a previously saved auth snapshot into this session.
   /// </summary>
   /// <param name="snapshot">The snapshot to apply.</param>
-  /// <exception cref="ArgumentException">The snapshot contains neither a personal access token nor a complete set of bearer tokens.</exception>
+  /// <exception cref="ArgumentException">The snapshot contains no personal access token, service account credential, or complete set of bearer tokens.</exception>
   public Task RestoreAuthSnapshot(AuthSnapshot snapshot)
   {
     if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
@@ -236,16 +253,22 @@ public sealed class ControlrAuthSession(
       return Task.CompletedTask;
     }
 
+    if (!string.IsNullOrWhiteSpace(snapshot.ServiceAccountApiKey))
+    {
+      SetServiceAccountApiKey(snapshot.ServiceAccountApiKey);
+      return Task.CompletedTask;
+    }
+
     if (string.IsNullOrWhiteSpace(snapshot.BearerToken) ||
         string.IsNullOrWhiteSpace(snapshot.RefreshToken) ||
         snapshot.BearerTokenExpiresAt is null)
     {
       throw new ArgumentException(
-        "Snapshot must contain a personal access token or valid bearer and refresh tokens with an expiration.",
+        "Snapshot must contain a personal access token, a service account credential, or valid bearer and refresh tokens with an expiration.",
         nameof(snapshot));
     }
 
-    ResetSession(clearPersonalAccessToken: true);
+    ResetSession(clearConfiguredCredentials: true);
     _authState.SetBearerTokens(snapshot.BearerToken, snapshot.RefreshToken, snapshot.BearerTokenExpiresAt);
     UpdateState(ControlrAuthSessionState.Authenticated);
     StartRefreshLoop();
@@ -259,12 +282,27 @@ public sealed class ControlrAuthSession(
 
   public void SetPersonalAccessToken(string? personalAccessToken)
   {
-    ResetSession(clearPersonalAccessToken: true);
+    ResetSession(clearConfiguredCredentials: true);
 
     if (!string.IsNullOrWhiteSpace(personalAccessToken))
     {
       _authState.SetPersonalAccessToken(personalAccessToken);
       UpdateState(ControlrAuthSessionState.PatConfigured);
+    }
+    else
+    {
+      UpdateState(ControlrAuthSessionState.SignedOut);
+    }
+  }
+
+  public void SetServiceAccountApiKey(string? serviceAccountApiKey)
+  {
+    ResetSession(clearConfiguredCredentials: true);
+
+    if (!string.IsNullOrWhiteSpace(serviceAccountApiKey))
+    {
+      _authState.SetServiceAccountApiKey(serviceAccountApiKey);
+      UpdateState(ControlrAuthSessionState.ServiceAccountConfigured);
     }
     else
     {
@@ -311,7 +349,7 @@ public sealed class ControlrAuthSession(
 
   public Task SignOut()
   {
-    ResetSession(clearPersonalAccessToken: true);
+    ResetSession(clearConfiguredCredentials: true);
     UpdateState(ControlrAuthSessionState.SignedOut);
     return Task.CompletedTask;
   }
@@ -389,7 +427,9 @@ public sealed class ControlrAuthSession(
 
   private void ExpireSession(string message)
   {
-    ResetSession(clearPersonalAccessToken: false);
+    // An expired bearer session must not discard a configured credential. The client falls back to
+    // it, which is what a caller who configured both a key and interactive sign-in expects.
+    ResetSession(clearConfiguredCredentials: false);
     UpdateState(ControlrAuthSessionState.Expired, message);
   }
 
@@ -440,14 +480,15 @@ public sealed class ControlrAuthSession(
     }
   }
 
-  private void ResetSession(bool clearPersonalAccessToken)
+  private void ResetSession(bool clearConfiguredCredentials)
   {
     StopRefreshLoop();
     _authState.ClearBearerTokens();
 
-    if (clearPersonalAccessToken)
+    if (clearConfiguredCredentials)
     {
       _authState.ClearPersonalAccessToken();
+      _authState.ClearServiceAccountApiKey();
     }
   }
 

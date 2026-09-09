@@ -10,7 +10,7 @@ A .NET client library for interacting with the ControlR API. This library provid
 - Multi-server factory for backend integrations that target different servers with different credentials at runtime
 - Efficient HTTP connection management via `IHttpClientFactory`
 - Automatic request/response serialization
-- Two authentication modes: Personal Access Token (stateless) and Interactive Bearer (email/password with automatic token refresh)
+- Three authentication modes: Personal Access Token (stateless), service account credential (stateless, authenticates as the service account's own principal), and Interactive Bearer (email/password with automatic token refresh)
 - Interactive bearer session supports two-factor authentication and password-change flows
 - Session snapshot/restore for persisting tokens (e.g., caching in a secure keychain for automatic re-auth across app restarts)
 
@@ -141,6 +141,38 @@ foreach (var device in devices)
 }
 ```
 
+#### Interactive Sign-In
+
+Omit `PersonalAccessToken` and reach for the session when the client should authenticate with bearer
+tokens instead:
+
+```csharp
+using ControlR.ApiClient.Auth;
+
+ControlrApiClientBuilder.Initialize(options =>
+{
+    options.BaseUrl = new Uri("https://your-controlr-server.com");
+});
+
+var session = ControlrApiClientBuilder.GetAuthSession();
+var result = await session.SignIn(new InteractiveSignInRequest
+{
+    Email = "user@example.com",
+    Password = "user-password"
+});
+
+if (result.Status == InteractiveLoginStatus.Authenticated)
+{
+    var client = ControlrApiClientBuilder.GetClient();
+    // The client now sends the session's bearer token and refreshes it automatically.
+}
+```
+
+`GetAuthSession()` returns the same session for the process-wide target on every call. Do not dispose
+it — the builder owns it and releases it with `ControlrApiClientBuilder.Dispose()`. For two-factor or
+forced password-change flows, re-call `SignIn` with the additional fields; see
+[Authentication](#authentication) below.
+
 ### Option 3: Multi-Server Factory
 
 Backend integrations that talk to several ControlR servers at once (e.g. a service account
@@ -215,6 +247,29 @@ To rotate a target's credentials, call `TryRemoveClient(name)` and then `GetOrCr
 
 See `IControlrApiClientFactory` and `ControlrApiClientFactoryOptions` for the full surface.
 
+#### Idle eviction and interactive sessions
+
+Idle eviction is driven by calls into the factory, not by traffic the target generates on its own. A
+target's last-used stamp is refreshed by `GetOrCreateClient` and `GetOrCreateAuthSession`. An
+interactive session's background token refresh does **not** refresh it: the session and its refresher
+hold the `HttpClient` they were built with, so a refresh never routes back through
+`GetOrCreateClient`.
+
+A signed-in target that receives no API calls is therefore swept once `MaxIdleClientLifetime` elapses,
+and sweeping it disposes the session along with the target. Whether you see this depends on how the two
+intervals compare. The refresh loop wakes only at token expiry minus `BearerRefreshLeadTime`, so a
+server that issues 60-minute tokens leaves the target idle for roughly 55 minutes, which the default
+30-minute lifetime evicts. Shorter-lived tokens refresh often enough to keep the target alive.
+
+This is not a problem for the factory's intended audience. A fleet consumer authenticating with a
+personal access token or a service account key is stateless, so eviction only releases a connection
+pool and the next `GetOrCreateClient` rebuilds it. If you host long-lived interactive sessions on a
+factory, do one of:
+
+- set `MaxIdleClientLifetime` to `null` to disable idle eviction,
+- fetch the client from the factory on each unit of work rather than caching the `IControlrApi`, or
+- use `ControlrApiClientBuilder`, whose process-wide target is created with idle eviction disabled.
+
 ## Configuration
 
 ### ControlrApiClientOptions
@@ -223,7 +278,7 @@ See `IControlrApiClientFactory` and `ControlrApiClientFactoryOptions` for the fu
 |------------------------------|----------|----------|---------------------------------------------------|
 | `BaseUrl`                   | `Uri`    | Yes      | The base URL of your ControlR server             |
 | `PersonalAccessToken`       | `string` | No       | A personal access token for stateless auth (omit or leave null for interactive bearer auth) |
-| `AuthenticationMethod`      | `ViewerAuthenticationMethod` | No | `PersonalAccessToken` (default) or `InteractiveBearer` |
+| `ServiceAccountApiKey`      | `string` | No       | A service account credential for stateless auth, sent as `x-api-key`. See [Service Account](#service-account). |
 
 ### ControlrApiClientFactoryOptions
 
@@ -231,18 +286,61 @@ For `AddControlrApiClientFactory` (server-side only):
 
 | Property                  | Type        | Default          | Description                                                                                                |
 |---------------------------|-------------|------------------|------------------------------------------------------------------------------------------------------------|
-| `MaxIdleClientLifetime`   | `TimeSpan?` | 30 minutes       | How long a target may go unused before the sweeper evicts it. `null` disables idle eviction.               |
+| `MaxIdleClientLifetime`   | `TimeSpan?` | 30 minutes       | How long a target may go unused before the sweeper evicts it. `null` disables idle eviction. A background token refresh does not count as use, so see [Idle eviction and interactive sessions](#idle-eviction-and-interactive-sessions).               |
 | `SweeperInterval`         | `TimeSpan`  | 1 minute         | How often the sweeper checks for idle targets. Must be greater than zero.                                  |
 | `MaxTrackedClients`       | `int?`      | `null`           | Maximum tracked targets. When reached, creating a new target evicts the least-recently-used one. `null` means unlimited; values below 1 are rejected at startup. |
 | `HttpMessageHandlerFactory` | `Func<HttpMessageHandler>?` | `null` | Creates the primary handler per target (proxy, custom TLS, etc.). Must return a NEW instance per call. |
 
 ### Authentication
 
-The client supports two authentication modes:
+The client supports three authentication modes. Exactly one credential header is sent per request.
+When more than one credential is populated, the client prefers the personal access token, then the
+bearer token, then the service account key, so a newly configured key never silently displaces an
+existing credential.
 
 #### Personal Access Token (PAT)
 
 Stateless — set `PersonalAccessToken` in options or call `SetPersonalAccessToken()` on the session. Works without any sign-in flow.
+
+#### Service Account
+
+Stateless — set `ServiceAccountApiKey` in options or call `SetServiceAccountApiKey()` on the session.
+The client sends the value in the `x-api-key` header and the server authenticates the request as the
+service account's own principal rather than as a user.
+
+```csharp
+builder.Services.AddControlrApiClient(options =>
+{
+    options.BaseUrl = new Uri("https://your-controlr-server.com");
+    options.ServiceAccountApiKey = "0123456789ABCDEF0123456789ABCDEF0123:....";
+});
+```
+
+The value is the composite credential, `{credentialIdHex}:{secret}`, not the secret alone. It is
+returned exactly once by the create-credential endpoint and only its hash is stored server-side, so
+persist it at creation time:
+
+```csharp
+var created = await client.V1.ServerServiceAccounts.AddCredential(
+    serviceAccountId,
+    new CreateServiceAccountCredentialRequestDto("fleet-integration", ExpiresAt: null),
+    cancellationToken);
+
+var apiKey = created.Value.PlainTextSecretKey; // send this whole string as x-api-key
+```
+
+There is no token exchange and nothing to refresh. A service account credential is presented on every
+request, so a long-lived key is the normal case. Rotation means issuing a new credential and revoking
+the old one, because there is no dedicated rotate endpoint:
+
+```csharp
+await client.V1.ServerServiceAccounts.AddCredential(serviceAccountId, newRequest, ct);
+await client.V1.ServerServiceAccounts.RevokeCredential(serviceAccountId, oldCredentialId, ct);
+```
+
+Mint a key with a personal access token or an interactive session, then use it on a client that is
+authenticated as the service account. Service accounts are managed through the V1 routes, which are
+the stable contract for this credential; the unversioned internal routes exist for the web UI.
 
 #### Interactive Bearer
 

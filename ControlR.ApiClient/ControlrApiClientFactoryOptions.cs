@@ -38,8 +38,11 @@ public class ControlrApiClientFactoryOptions
   /// <c>null</c> disables idle eviction. Defaults to 30 minutes.
   /// </summary>
   /// <remarks>
+  /// "Unused" means no call into the factory. A target's background bearer-token refresh does not
+  /// count as use, so a signed-in target that receives no requests can still be evicted between
+  /// refreshes. Set this to <c>null</c> to host long-lived interactive sessions on a factory.
   /// Eviction discards the target's interactive-session state (if any). Keep this non-null for
-  /// service-account fleets as a backstop for servers that were deregistered without a matching
+  /// credential-only fleets as a backstop for servers that were deregistered without a matching
   /// <see cref="IControlrApiClientFactory.TryRemoveClient"/> call.
   /// </remarks>
   public TimeSpan? MaxIdleClientLifetime { get; set; } = TimeSpan.FromMinutes(30);

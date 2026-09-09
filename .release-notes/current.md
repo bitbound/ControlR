@@ -26,6 +26,9 @@
 - Added `Customer` input to the deploy page, allowing for the device to get added to a specific customer during agent installation.
 - Refactored `Deploy` page for better usability (back button, pre-populated expiration for time-based keys, grid sizing).
 - Added `IControlrApiClientFactory` to the `ControlR.ApiClient` library: register one factory and produce `IControlrApi` clients that target different ControlR servers, each with its own server-scoped service-account credentials. Includes idle-target eviction, an optional tracked-target cap with least-recently-used eviction, and credential rotation via remove-and-recreate. Removing or evicting a target never cancels a call that is already running: its HTTP stack is released once those calls finish, and a call made through a stale reference returns a failed result naming the disposed target instead of one shaped like a server fault. `MaxTrackedClients` must be greater than zero when set, or `null` for no limit. Server-side only; existing `AddControlrApiClient` and `ControlrApiClientBuilder` usage is unchanged.
+- `ControlR.ApiClient` can now authenticate as a service account. Set `ServiceAccountApiKey` and requests carry the credential in the `x-api-key` header, authenticating as the service account instead of as a user.
+  - Available on `AddControlrApiClient`, `ControlrApiClientBuilder`, and each factory target. A personal access token or bearer token takes precedence when it is also configured.
+- Added `ControlrApiClientBuilder.GetAuthSession()`, which exposes the interactive bearer session for the process-wide client.
 
 ## Fixes
 
