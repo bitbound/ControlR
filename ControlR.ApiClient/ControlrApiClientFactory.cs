@@ -120,7 +120,7 @@ public interface IControlrApiClientFactory : IDisposable
   /// </para>
   /// <para>
   ///   Calls already in flight are not cancelled. That includes a streamed response that is still
-  ///   being read: the target's HTTP stack is released once the last of them finishes, which for an
+  ///   being read. The target's HTTP stack is released once the last of them finishes, which for an
   ///   <see cref="IAsyncEnumerable{T}"/> means once the caller finishes or disposes the enumeration.
   ///   Holding a slow enumeration open therefore holds the target open with it.
   /// </para>
@@ -253,7 +253,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     }
 
     // Reading the entry's disposal state only after the session is published is what closes the
-    // leak: DisposeOnce publishes disposal before it tests IsValueCreated, so whichever side starts
+    // leak. DisposeOnce publishes disposal before it tests IsValueCreated, so whichever side starts
     // second sees the other. Without this, a session that finished constructing during teardown was
     // handed out alive, unreachable, and with a refresh loop aimed at disposed clients.
     var session = entry.AuthSession.Value;
@@ -326,7 +326,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
     // Deliberately no Touch. A status page that polls this must not reset the idle clock, or it
     // would pin every target it inspects forever. Reading Value is safe because IsValueCreated was
-    // checked first; evaluating Value on an uncreated Lazy would build the session.
+    // checked first. Evaluating Value on an uncreated Lazy would build the session.
     if (_clients.TryGetValue(name, out var entry) && entry.AuthSession.IsValueCreated)
     {
       session = entry.AuthSession.Value;
@@ -395,7 +395,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
   /// <remarks>
   /// <para>
   /// A live login pins its target. The session keeps renewing on its own, so the idle clock never
-  /// catches up to it. Reclamation comes from the login dying instead: a sign-out, a revoked security
+  /// catches up to it. Reclamation comes from the login dying instead. A sign-out, a revoked security
   /// stamp, or a rejected refresh token moves the session to
   /// <see cref="ControlrAuthSessionState.Expired"/>, which makes it sweepable again. Use
   /// <see cref="ControlrApiClientFactoryOptions.MaxTrackedClients"/> when the target count must have a
@@ -494,7 +494,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
           },
           LazyThreadSafetyMode.ExecutionAndPublication));
 
-      // Wiring the release last is safe: nothing outside BuildEntry can reach this entry, and
+      // Wiring the release last is safe. Nothing outside BuildEntry can reach this entry, and
       // therefore no request can be counted, until the caller of GetOrCreateClient has it.
       requests.AttachRelease(entry.ReleaseHttpStack);
       return entry;

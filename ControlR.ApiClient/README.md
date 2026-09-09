@@ -170,7 +170,7 @@ if (result.Status == InteractiveLoginStatus.Authenticated)
 
 `GetAuthSession()` returns the same session for the process-wide target on every call. Do not dispose
 it — the builder owns it and releases it with `ControlrApiClientBuilder.Dispose()`. For two-factor or
-forced password-change flows, re-call `SignIn` with the additional fields; see
+forced password-change flows, re-call `SignIn` with the additional fields. See
 [Authentication](#authentication) below.
 
 ### Option 3: Multi-Server Factory
@@ -182,7 +182,7 @@ connection pool.
 
 #### Service Registration
 
-Server-side only. Do not use from Blazor WebAssembly; use `AddControlrApiClient` there.
+Server-side only. Do not use from Blazor WebAssembly. Use `AddControlrApiClient` there.
 
 ```csharp
 using ControlR.ApiClient;
@@ -191,7 +191,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddControlrApiClientFactory(options =>
 {
-    // Idle targets are evicted after 30 minutes by default; null disables eviction.
+    // Idle targets are evicted after 30 minutes by default. A null value disables eviction.
     options.MaxIdleClientLifetime = TimeSpan.FromMinutes(30);
     // Optional cap. When reached, the least-recently-used target is evicted.
     options.MaxTrackedClients = 100;
@@ -251,7 +251,7 @@ See `IControlrApiClientFactory` and `ControlrApiClientFactoryOptions` for the fu
 
 Idle eviction is driven by calls into the factory, not by traffic the target generates on its own. A
 target's last-used stamp is refreshed by `GetOrCreateClient` and `GetOrCreateAuthSession`. An
-interactive session's background token refresh does **not** refresh it: the session and its refresher
+interactive session's background token refresh does **not** refresh it. The session and its refresher
 hold the `HttpClient` they were built with, so a refresh never routes back through
 `GetOrCreateClient`.
 
@@ -261,7 +261,7 @@ session is `Authenticated`, or is mid-flow awaiting a two-factor code or a passw
 taken by idle eviction.
 
 The cost is that a live login pins its target. The session keeps renewing, so the idle clock never
-catches up to it. What frees the target is the login dying: a sign-out, a revoked security stamp, or
+catches up to it. What frees the target is the login dying. A sign-out, a revoked security stamp, or
 a rejected refresh token puts the session in `Expired`, and the next sweep takes it. So idle eviction
 still does its job for credential-only targets, which hold nothing worth keeping, and for interactive
 targets whose login is over. `TryRemoveClient` is immediate in every case.
@@ -302,7 +302,7 @@ For `AddControlrApiClientFactory` (server-side only):
 |---------------------------|-------------|------------------|------------------------------------------------------------------------------------------------------------|
 | `MaxIdleClientLifetime`   | `TimeSpan?` | 30 minutes       | How long a target may go unused before the sweeper evicts it. `null` disables idle eviction. A target holding a live interactive session is never swept, so see [Idle eviction and interactive sessions](#idle-eviction-and-interactive-sessions).               |
 | `SweeperInterval`         | `TimeSpan`  | 1 minute         | How often the sweeper checks for idle targets. Must be greater than zero.                                  |
-| `MaxTrackedClients`       | `int?`      | `null`           | Maximum tracked targets. When reached, creating a new target evicts the least-recently-used one. Unlike idle eviction, this can evict a target holding a live interactive session. `null` means unlimited; values below 1 are rejected at startup. |
+| `MaxTrackedClients`       | `int?`      | `null`           | Maximum tracked targets. When reached, creating a new target evicts the least-recently-used one. Unlike idle eviction, this can evict a target holding a live interactive session. `null` means unlimited. Values below 1 are rejected at startup. |
 | `HttpMessageHandlerFactory` | `Func<HttpMessageHandler>?` | `null` | Creates the primary handler per target (proxy, custom TLS, etc.). Must return a NEW instance per call. |
 
 ### Authentication
@@ -354,7 +354,7 @@ await client.V1.ServerServiceAccounts.RevokeCredential(serviceAccountId, oldCred
 
 Mint a key with a personal access token or an interactive session, then use it on a client that is
 authenticated as the service account. Service accounts are managed through the V1 routes, which are
-the stable contract for this credential; the unversioned internal routes exist for the web UI.
+the stable contract for this credential. The unversioned internal routes exist for the web UI.
 
 #### Interactive Bearer
 

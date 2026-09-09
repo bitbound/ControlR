@@ -10,7 +10,7 @@ namespace ControlR.ApiClient;
 /// <para>
 ///   Internally this is a thin wrapper over <see cref="ControlrApiClientFactory"/> using the target
 ///   name <c>"default"</c>. Prefer the factory (or <c>AddControlrApiClient</c>) when hosting an app
-///   with a service provider. Call <see cref="Initialize"/> once per process; call
+///   with a service provider. Call <see cref="Initialize"/> once per process. Call
 ///   <see cref="Dispose"/> to tear the client down and allow re-initialization.
 /// </para>
 /// </summary>
@@ -82,7 +82,7 @@ public static class ControlrApiClientBuilder
   ///   so you don't have to worry about socket exhaustion.
   /// </para>
   /// <para>
-  ///   This builder is server-only. Do not use it from Blazor WebAssembly; register the client with
+  ///   This builder is server-only. Do not use it from Blazor WebAssembly. Register the client with
   ///   <c>AddControlrApiClient</c> there instead.
   /// </para>
   /// </remarks>

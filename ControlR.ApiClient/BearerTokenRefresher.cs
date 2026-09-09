@@ -46,7 +46,7 @@ public sealed class BearerTokenRefresher(
 
   /// <summary>
   /// Counts refreshes so that a tracked target is not released while one is waiting or in flight.
-  /// The factory assigns the target's tracker here; the single-client registration keeps the default
+  /// The factory assigns the target's tracker here. The single-client registration keeps the default
   /// instance, where nothing ever requests teardown.
   /// </summary>
   internal InFlightTracker Requests { get; set; } = new();
@@ -124,7 +124,7 @@ public sealed class BearerTokenRefresher(
       catch (ObjectDisposedException)
       {
         // Backstop. The lease taken above is what normally keeps a tracked target's teardown from
-        // disposing this semaphore while it is held; this covers any other owner that disposes the
+        // disposing this semaphore while it is held. This covers any other owner that disposes the
         // auth state mid-flight. The refresh result is already applied to the auth state, which is
         // being discarded anyway, so swallowing keeps a successful refresh from crashing in the
         // finally block.

@@ -269,7 +269,7 @@ public partial class ControlrApi(
       // The target began being removed after this call announced itself, so the refresher was
       // refused. This call still holds the target, which means its stack is alive and stays alive
       // until the call returns. Sending with the token in hand is what the in-flight guarantee
-      // promises; a resulting 401 takes the normal refresh-and-retry path.
+      // promises. A resulting 401 takes the normal refresh-and-retry path.
     }
   }
 

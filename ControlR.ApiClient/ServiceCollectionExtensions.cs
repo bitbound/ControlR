@@ -202,7 +202,7 @@ public static class ServiceCollectionExtensions
   ///   named target via <see cref="IControlrApiClientFactory.GetOrCreateClient"/>.
   /// </para>
   /// <para>
-  ///   This registration is server-only. Do not use it from Blazor WebAssembly; use
+  ///   This registration is server-only. Do not use it from Blazor WebAssembly. Use
   ///   <see cref="AddControlrApiClient(IServiceCollection, Action{ControlrApiClientOptions})"/> there instead.
   /// </para>
   /// </summary>

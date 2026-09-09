@@ -130,7 +130,7 @@ public class ControlrApiClientFactoryIntegrationTests(ITestOutputHelper testOutp
       TestContext.Current.CancellationToken);
 
     // Creating a tenant is server-scoped, so a tenant credential must not succeed. What this test is
-    // really asserting is that the credential authenticated: 403 is an authorized-decision on a known
+    // really asserting is that the credential authenticated. 403 is an authorized-decision on a known
     // principal, whereas 401 would mean the composite key was never accepted, which is
     // indistinguishable from a client that sent no header at all.
     Assert.False(result.IsSuccess);
@@ -143,8 +143,8 @@ public class ControlrApiClientFactoryIntegrationTests(ITestOutputHelper testOutp
   {
     var options = new ControlrApiClientFactoryOptions
     {
-      // The factory requires a new handler per call, and TestServer.CreateHandler() satisfies that:
-      // each of the target's two clients gets its own route into the test server.
+      // The factory requires a new handler per call, and TestServer.CreateHandler() satisfies that.
+      // Each of the target's two clients gets its own route into the test server.
       HttpMessageHandlerFactory = () => testServer.TestServer.CreateHandler(),
       MaxIdleClientLifetime = null
     };

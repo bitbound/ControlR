@@ -88,7 +88,7 @@ public sealed class ControlrAuthSessionTests
     var result = await signIn;
 
     // The server accepted the login while the session was being disposed. The result stays truthful
-    // about the server, and the state stays truthful about the session: reporting Authenticated here
+    // about the server, and the state stays truthful about the session. Reporting Authenticated here
     // would resurrect a terminal state on an object with no transport left.
     Assert.Equal(InteractiveLoginStatus.Authenticated, result.Status);
     Assert.Equal(ControlrAuthSessionState.Disposed, session.State);

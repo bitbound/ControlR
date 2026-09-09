@@ -82,11 +82,11 @@ public sealed class ControlrApiClientFactoryTests
     await WaitUntilAsyncInline(() => handlers.Count > 0 && handlers[0].RequestStarted);
 
     // Removal publishes teardown, but the outstanding call keeps the stack alive. This is the window
-    // the refused lease exists for: a call arriving now has to be refused, not issued into a stack
+    // the refused lease exists for. A call arriving now has to be refused, not issued into a stack
     // that the outstanding call's completion is about to release.
     Assert.True(factory.TryRemoveClient("a"));
 
-    // The short timeout is a backstop: if the refused-lease guard regresses, this call reaches the
+    // The short timeout is a backstop. If the refused-lease guard regresses, this call reaches the
     // gated handler and would otherwise block the run instead of failing it.
     using var refusalTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 

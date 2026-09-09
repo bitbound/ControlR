@@ -30,7 +30,7 @@ public class ControlrApiClientFactoryOptions
   /// </para>
   /// <para>
   /// This is intended for server-side handler customization (e.g. proxy configuration, custom
-  /// TLS validation). The factory itself is server-only; see <see cref="IControlrApiClientFactory"/>.
+  /// TLS validation). The factory itself is server-only. See <see cref="IControlrApiClientFactory"/>.
   /// </para>
   /// </remarks>
   public Func<HttpMessageHandler>? HttpMessageHandlerFactory { get; set; }
@@ -49,7 +49,7 @@ public class ControlrApiClientFactoryOptions
   /// </para>
   /// <para>
   /// That means a live login pins its target indefinitely, since the session keeps renewing and the
-  /// idle clock never catches it. The bound is the login dying: a sign-out, a revoked security stamp,
+  /// idle clock never catches it. The bound is the login dying. A sign-out, a revoked security stamp,
   /// or a rejected refresh token moves it to <see cref="ControlrAuthSessionState.Expired"/> and the
   /// next sweep takes it. Set <see cref="MaxTrackedClients"/> when the target count needs a hard bound
   /// regardless, or call <see cref="IControlrApiClientFactory.TryRemoveClient"/> to drop a target on
