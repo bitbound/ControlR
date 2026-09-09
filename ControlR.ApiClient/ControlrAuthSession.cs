@@ -509,6 +509,14 @@ public sealed class ControlrAuthSession(
         var expiresAt = _authState.GetSnapshot().BearerTokenExpiresAt;
         if (expiresAt is null)
         {
+          // The tokens can be cleared from under this loop. ControlrApi clears the shared auth state
+          // when the server rejects a refresh during an ordinary call, and it has no way to reach
+          // this session's state machine. Returning silently used to leave the session reporting
+          // Authenticated with no tokens, no loop, and no event, which also pinned its factory target
+          // forever because a live-looking session is exempt from idle eviction.
+          _logger.LogWarning(
+            "The bearer tokens were cleared outside the refresh loop. Expiring the session.");
+          await HandleRefreshLoopFault(generation, "The session expired. Sign in again.");
           return;
         }
 

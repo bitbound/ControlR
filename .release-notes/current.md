@@ -33,6 +33,7 @@
 ## Fixes
 
 - The `ControlR.ApiClient` background token-refresh no longer ends the session on transient failures. Previously a single network hiccup or server error during a background refresh wiped the bearer and refresh tokens, forcing a full re-login (including 2FA). Now only a server-rejected refresh token expires the session. Transient errors are retried with backoff.
+- The `ControlR.ApiClient` interactive session no longer keeps reporting itself as signed in after the server rejects its refresh token during an ordinary API call. The tokens were cleared but the session state was not, so it stayed `Authenticated` with no tokens, raised no state change, and its background refresh loop exited silently. Every later call then failed as unauthorized while the session still looked healthy.
 
 ## Removals
 
