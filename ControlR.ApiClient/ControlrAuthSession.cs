@@ -146,7 +146,10 @@ public sealed class ControlrAuthSession(
   private int _isDisposed;
   private CancellationTokenSource? _refreshLoopCts;
   private long _refreshLoopGeneration;
-  private ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
+  // Volatile because the factory's sweeper reads State from its own thread to decide whether a
+  // target holds a live login. A plain store can sit in the writer's store buffer on a weak memory
+  // model, and a stale read there evicts a session that is in fact still authenticated.
+  private volatile ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
 
   public event EventHandler<ControlrAuthSessionStateChangedEventArgs>? StateChanged;
 
