@@ -409,6 +409,36 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
+  public async Task GetOrCreateClient_WhenCapReached_EvictsEntryWithLiveSession()
+  {
+    var timeProvider = new FakeTimeProvider();
+    using var factory = CreateFactory(
+      options =>
+      {
+        options.MaxTrackedClients = 2;
+        options.MaxIdleClientLifetime = null;
+      },
+      timeProvider);
+
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    await factory.GetOrCreateAuthSession("a").RestoreAuthSnapshot(new AuthSnapshot(
+      null,
+      "access-a",
+      timeProvider.GetUtcNow().AddHours(1),
+      "refresh-a"));
+    factory.GetOrCreateClient("b", o => o.BaseUrl = _serverB);
+    factory.GetOrCreateClient("b", o => o.BaseUrl = _serverB);
+    timeProvider.Advance(TimeSpan.FromMinutes(1));
+
+    // Idle eviction leaves a live login alone. The tracked-target cap cannot, or it would stop being
+    // a bound, so the signed-in target is the one that goes.
+    factory.GetOrCreateClient("c", o => o.BaseUrl = new Uri("https://server-c.test/"));
+
+    Assert.Equal(["b", "c"], factory.GetClientNames().OrderBy(x => x));
+    Assert.False(factory.TryGetAuthSession("a", out _));
+  }
+
+  [Fact]
   public void GetOrCreateClient_WhenCapReached_EvictsLeastRecentlyUsedNotJustCreated()
   {
     var timeProvider = new FakeTimeProvider();
@@ -679,6 +709,32 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
+  public void SweepIdleClients_WhenEntryOnlyProbedByTryGetAuthSession_EvictsEntry()
+  {
+    var timeProvider = new FakeTimeProvider();
+    using var factory = CreateFactory(
+      options =>
+      {
+        options.MaxIdleClientLifetime = TimeSpan.FromMinutes(5);
+        options.SweeperInterval = TimeSpan.FromHours(1);
+      },
+      timeProvider);
+
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    var session = factory.GetOrCreateAuthSession("a");
+    timeProvider.Advance(TimeSpan.FromMinutes(6));
+
+    Assert.True(factory.TryGetAuthSession("a", out var probed));
+    Assert.Same(session, probed);
+
+    ((ControlrApiClientFactory)factory).SweepIdleClients();
+
+    // Probing is a read. If it refreshed the last-used stamp, a fleet status page polling every few
+    // seconds would hold every target open forever and idle eviction would never fire.
+    Assert.Empty(factory.GetClientNames());
+  }
+
+  [Fact]
   public void SweepIdleClients_WhenEntryTouchedBetweenSweeps_KeepsEntry()
   {
     var timeProvider = new FakeTimeProvider();
@@ -710,6 +766,146 @@ public sealed class ControlrApiClientFactoryTests
     ((ControlrApiClientFactory)factory).SweepIdleClients();
 
     Assert.Equal(["a"], factory.GetClientNames());
+  }
+
+  [Fact]
+  public void SweepIdleClients_WhenSessionCreatedButNeverSignedIn_EvictsEntry()
+  {
+    var timeProvider = new FakeTimeProvider();
+    using var factory = CreateFactory(
+      options =>
+      {
+        options.MaxIdleClientLifetime = TimeSpan.FromMinutes(5);
+        options.SweeperInterval = TimeSpan.FromHours(1);
+      },
+      timeProvider);
+
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    factory.GetOrCreateAuthSession("a");
+    timeProvider.Advance(TimeSpan.FromMinutes(6));
+
+    ((ControlrApiClientFactory)factory).SweepIdleClients();
+
+    // Materializing the session object is not the same as holding a login.
+    Assert.Empty(factory.GetClientNames());
+  }
+
+  [Fact]
+  public async Task SweepIdleClients_WhenSessionIsAuthenticated_KeepsEntry()
+  {
+    var timeProvider = new FakeTimeProvider();
+    var handlers = new List<RecordingHttpMessageHandler>();
+    using var factory = CreateFactory(
+      options =>
+      {
+        options.MaxIdleClientLifetime = TimeSpan.FromMinutes(5);
+        // Keep the periodic sweeper out of it so the explicit call below is the only sweep, and so
+        // advancing the fake clock cannot fire the session's refresh timer either.
+        options.SweeperInterval = TimeSpan.FromHours(1);
+        options.HttpMessageHandlerFactory = () =>
+        {
+          var handler = new RecordingHttpMessageHandler();
+          handlers.Add(handler);
+          return handler;
+        };
+      },
+      timeProvider);
+
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    await factory.GetOrCreateAuthSession("a").RestoreAuthSnapshot(new AuthSnapshot(
+      null,
+      "access-a",
+      timeProvider.GetUtcNow().AddHours(8),
+      "refresh-a"));
+    timeProvider.Advance(TimeSpan.FromMinutes(30));
+
+    // The background refresh never routes through the factory, so the idle clock says the target is
+    // abandoned. It is not. Sweeping it would destroy a login the target cannot rebuild.
+    ((ControlrApiClientFactory)factory).SweepIdleClients();
+
+    Assert.Equal(["a"], factory.GetClientNames());
+    Assert.All(handlers, handler => Assert.Equal(0, handler.DisposeCount));
+
+    timeProvider.Advance(TimeSpan.FromMinutes(30));
+    ((ControlrApiClientFactory)factory).SweepIdleClients();
+
+    Assert.Equal(["a"], factory.GetClientNames());
+  }
+
+  [Fact]
+  public async Task SweepIdleClients_WhenSessionSignedOutAfterSignIn_EvictsEntry()
+  {
+    var timeProvider = new FakeTimeProvider();
+    using var factory = CreateFactory(
+      options =>
+      {
+        options.MaxIdleClientLifetime = TimeSpan.FromMinutes(5);
+        options.SweeperInterval = TimeSpan.FromHours(1);
+      },
+      timeProvider);
+
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    var session = factory.GetOrCreateAuthSession("a");
+    await session.RestoreAuthSnapshot(new AuthSnapshot(
+      null,
+      "access-a",
+      timeProvider.GetUtcNow().AddHours(8),
+      "refresh-a"));
+    timeProvider.Advance(TimeSpan.FromMinutes(6));
+
+    Assert.Equal(["a"], factory.GetClientNames());
+
+    await session.SignOut();
+    ((ControlrApiClientFactory)factory).SweepIdleClients();
+
+    // A live login pins its target, so reclamation keys off the login dying instead. Once it is
+    // signed out, or once the server rejects its refresh token, the session is no longer live and the
+    // sweep takes the target.
+    Assert.Empty(factory.GetClientNames());
+  }
+
+  [Fact]
+  public void TryGetAuthSession_WhenFactoryDisposed_Throws()
+  {
+    var factory = CreateFactory();
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    factory.GetOrCreateAuthSession("a");
+    factory.Dispose();
+
+    Assert.Throws<ObjectDisposedException>(() => factory.TryGetAuthSession("a", out _));
+  }
+
+  [Fact]
+  public void TryGetAuthSession_WhenNameUnknown_ReturnsFalse()
+  {
+    using var factory = CreateFactory();
+
+    Assert.False(factory.TryGetAuthSession("missing", out var session));
+    Assert.Null(session);
+  }
+
+  [Fact]
+  public void TryGetAuthSession_WhenSessionCreated_ReturnsSameSession()
+  {
+    using var factory = CreateFactory();
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    var created = factory.GetOrCreateAuthSession("a");
+
+    Assert.True(factory.TryGetAuthSession("a", out var probed));
+    Assert.Same(created, probed);
+  }
+
+  [Fact]
+  public void TryGetAuthSession_WhenSessionNotYetCreated_ReturnsFalse()
+  {
+    using var factory = CreateFactory();
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+
+    Assert.False(factory.TryGetAuthSession("a", out var session));
+    Assert.Null(session);
+
+    // The probe must not have built the thing it was only asking about.
+    Assert.NotNull(factory.GetOrCreateAuthSession("a"));
   }
 
   [Fact]

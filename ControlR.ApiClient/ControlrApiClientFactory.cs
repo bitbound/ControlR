@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using ControlR.ApiClient.Auth;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -35,9 +36,18 @@ public interface IControlrApiClientFactory : IDisposable
   /// Gets the interactive auth session for the named target, creating it on first call.
   /// </summary>
   /// <remarks>
-  /// The session is created lazily so service-account-only consumers never pay for it. The target
-  /// must already have been created via <see cref="GetOrCreateClient"/>. Do not dispose the returned
-  /// session directly. The factory owns it and disposes it with the target.
+  /// <para>
+  ///   The session is created lazily so service-account-only consumers never pay for it. The target
+  ///   must already have been created via <see cref="GetOrCreateClient"/>. Do not dispose the returned
+  ///   session directly. The factory owns it and disposes it with the target.
+  /// </para>
+  /// <para>
+  ///   The only way this fails on a live factory is a name that was never passed to
+  ///   <see cref="GetOrCreateClient"/>, which is a caller bug rather than a state to handle. Once the
+  ///   target exists the session is created and cached, and idle eviction will not take that target
+  ///   while the session holds a live login. See
+  ///   <see cref="ControlrApiClientFactoryOptions.MaxIdleClientLifetime"/>.
+  /// </para>
   /// </remarks>
   /// <param name="name">The target name previously passed to <see cref="GetOrCreateClient"/>.</param>
   /// <returns>The session for the named target.</returns>
@@ -69,6 +79,33 @@ public interface IControlrApiClientFactory : IDisposable
   /// <exception cref="OptionsValidationException">The configured options are invalid (e.g. <see cref="ControlrApiClientOptions.BaseUrl"/> is missing).</exception>
   /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
   IControlrApi GetOrCreateClient(string name, Action<ControlrApiClientOptions> configureOptions);
+
+  /// <summary>
+  /// Gets the target's interactive auth session when one has already been created.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  ///   This creates nothing. It is the non-throwing probe for whether
+  ///   <see cref="GetOrCreateAuthSession"/> has been called for <paramref name="name"/> before. Use it
+  ///   to report or reconcile sign-in state across targets without materializing a session on each.
+  /// </para>
+  /// <para>
+  ///   Unlike the other members, this does not refresh the target's last-used stamp. A consumer that
+  ///   polls it cannot hold a target open, which is what lets idle eviction still reclaim a target
+  ///   whose login has expired.
+  /// </para>
+  /// <para>
+  ///   The returned session is owned by the factory. Do not dispose it, and expect that a later
+  ///   removal of the target disposes it, leaving this reference disposed.
+  /// </para>
+  /// </remarks>
+  /// <param name="name">The target name to look up.</param>
+  /// <param name="session">
+  /// The target's session when this returns <see langword="true"/>; <see langword="null"/> otherwise.
+  /// </param>
+  /// <returns><see langword="true"/> when a session already exists for the named target.</returns>
+  /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
+  bool TryGetAuthSession(string name, [NotNullWhen(true)] out IControlrAuthSession? session);
 
   /// <summary>
   /// Removes and disposes the client registered under <paramref name="name"/>.
@@ -280,6 +317,26 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
   }
 
   /// <inheritdoc />
+  public bool TryGetAuthSession(string name, [NotNullWhen(true)] out IControlrAuthSession? session)
+  {
+    ArgumentException.ThrowIfNullOrWhiteSpace(name);
+    ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
+
+    session = null;
+
+    // Deliberately no Touch. A status page that polls this must not reset the idle clock, or it
+    // would pin every target it inspects forever. Reading Value is safe because IsValueCreated was
+    // checked first; evaluating Value on an uncreated Lazy would build the session.
+    if (_clients.TryGetValue(name, out var entry) && entry.AuthSession.IsValueCreated)
+    {
+      session = entry.AuthSession.Value;
+      return true;
+    }
+
+    return false;
+  }
+
+  /// <inheritdoc />
   public bool TryRemoveClient(string name)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -297,6 +354,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
   /// <summary>
   /// Evicts entries that have been idle longer than <see cref="ControlrApiClientFactoryOptions.MaxIdleClientLifetime"/>.
+  /// Entries holding a live interactive session are never selected. See <see cref="HasLiveSession"/>.
   /// </summary>
   internal void SweepIdleClients()
   {
@@ -309,7 +367,8 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     ClientEntry[] idleClients;
     using (_createLock.EnterScope())
     {
-      idleClients = [.. _clients.Values.Where(entry => Volatile.Read(ref entry.LastUsedTicks) < cutoff)];
+      idleClients = [.. _clients.Values.Where(entry =>
+        Volatile.Read(ref entry.LastUsedTicks) < cutoff && !HasLiveSession(entry))];
       foreach (var idleClient in idleClients)
       {
         _clients.TryRemove(idleClient.Name, out _);
@@ -327,6 +386,38 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     {
       PooledConnectionLifetime = ControlrApiClientFactoryOptions.DefaultPooledConnectionLifetime
     };
+
+  /// <summary>
+  /// Whether the target holds an interactive session that a caller is still signed in to or still
+  /// has to finish. Idle eviction leaves these alone because sweeping them would destroy a live
+  /// login, which is state the target cannot rebuild on its own.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  /// A live login pins its target. The session keeps renewing on its own, so the idle clock never
+  /// catches up to it. Reclamation comes from the login dying instead: a sign-out, a revoked security
+  /// stamp, or a rejected refresh token moves the session to
+  /// <see cref="ControlrAuthSessionState.Expired"/>, which makes it sweepable again. Use
+  /// <see cref="ControlrApiClientFactoryOptions.MaxTrackedClients"/> when the target count must have a
+  /// bound, or <see cref="IControlrApiClientFactory.TryRemoveClient"/> to drop one on purpose.
+  /// </para>
+  /// <para>
+  /// Reading <c>Value</c> is guarded by <see cref="Lazy{T}.IsValueCreated"/>. Evaluating it on an
+  /// uncreated <see cref="Lazy{T}"/> would construct a session that nobody asked for, so the guard
+  /// cannot be folded into a property pattern.
+  /// </para>
+  /// </remarks>
+  private static bool HasLiveSession(ClientEntry entry)
+  {
+    if (!entry.AuthSession.IsValueCreated)
+    {
+      return false;
+    }
+
+    return entry.AuthSession.Value.State is ControlrAuthSessionState.Authenticated
+      or ControlrAuthSessionState.AwaitingPasswordChange
+      or ControlrAuthSessionState.AwaitingTwoFactor;
+  }
 
   private static bool IsConfiguredBaseUrl([NotNullWhen(true)] Uri? baseUrl) =>
     baseUrl is not null &&

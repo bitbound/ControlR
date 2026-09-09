@@ -1,3 +1,5 @@
+using ControlR.ApiClient.Auth;
+
 namespace ControlR.ApiClient;
 
 /// <summary>
@@ -38,12 +40,26 @@ public class ControlrApiClientFactoryOptions
   /// <c>null</c> disables idle eviction. Defaults to 30 minutes.
   /// </summary>
   /// <remarks>
+  /// <para>
   /// "Unused" means no call into the factory. A target's background bearer-token refresh does not
-  /// count as use, so a signed-in target that receives no requests can still be evicted between
-  /// refreshes. Set this to <c>null</c> to host long-lived interactive sessions on a factory.
-  /// Eviction discards the target's interactive-session state (if any). Keep this non-null for
-  /// credential-only fleets as a backstop for servers that were deregistered without a matching
-  /// <see cref="IControlrApiClientFactory.TryRemoveClient"/> call.
+  /// count as use, but a target holding a live interactive session is never swept. A session is live
+  /// while it is <see cref="ControlrAuthSessionState.Authenticated"/> or is mid-flow awaiting a
+  /// two-factor code or a password change. Sweeping one would destroy a login that the target cannot
+  /// rebuild, so the login is left in place.
+  /// </para>
+  /// <para>
+  /// That means a live login pins its target indefinitely, since the session keeps renewing and the
+  /// idle clock never catches it. The bound is the login dying: a sign-out, a revoked security stamp,
+  /// or a rejected refresh token moves it to <see cref="ControlrAuthSessionState.Expired"/> and the
+  /// next sweep takes it. Set <see cref="MaxTrackedClients"/> when the target count needs a hard bound
+  /// regardless, or call <see cref="IControlrApiClientFactory.TryRemoveClient"/> to drop a target on
+  /// purpose.
+  /// </para>
+  /// <para>
+  /// Keep this non-null as the backstop for servers that were deregistered without a matching
+  /// <see cref="IControlrApiClientFactory.TryRemoveClient"/> call. It reclaims credential-only
+  /// targets, which hold no state worth keeping, and interactive targets whose login has died.
+  /// </para>
   /// </remarks>
   public TimeSpan? MaxIdleClientLifetime { get; set; } = TimeSpan.FromMinutes(30);
 
@@ -52,6 +68,11 @@ public class ControlrApiClientFactoryOptions
   /// evicts the least-recently-used existing client. <c>null</c> (default) means unlimited.
   /// Values below <c>1</c> are rejected at startup.
   /// </summary>
+  /// <remarks>
+  /// Unlike <see cref="MaxIdleClientLifetime"/>, this can evict a target that holds a live interactive
+  /// session, because a hard cap has to be able to evict something. Set it for a fleet that hosts
+  /// sign-ins only when losing a login and re-authenticating is acceptable.
+  /// </remarks>
   public int? MaxTrackedClients { get; set; }
 
   /// <summary>

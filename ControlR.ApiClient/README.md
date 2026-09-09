@@ -243,7 +243,7 @@ public class FleetService
 }
 ```
 
-To rotate a target's credentials, call `TryRemoveClient(name)` and then `GetOrCreateClient(name, newOptions)`. Interactive auth sessions come from `GetOrCreateAuthSession(name)`, created lazily so service-account-only consumers never pay for one.
+To rotate a target's credentials, call `TryRemoveClient(name)` and then `GetOrCreateClient(name, newOptions)`. Interactive auth sessions come from `GetOrCreateAuthSession(name)`, created lazily so service-account-only consumers never pay for one. Use `TryGetAuthSession(name, out session)` to ask whether a target already has one without creating it.
 
 See `IControlrApiClientFactory` and `ControlrApiClientFactoryOptions` for the full surface.
 
@@ -255,20 +255,33 @@ interactive session's background token refresh does **not** refresh it: the sess
 hold the `HttpClient` they were built with, so a refresh never routes back through
 `GetOrCreateClient`.
 
-A signed-in target that receives no API calls is therefore swept once `MaxIdleClientLifetime` elapses,
-and sweeping it disposes the session along with the target. Whether you see this depends on how the two
-intervals compare. The refresh loop wakes only at token expiry minus `BearerRefreshLeadTime`, so a
-server that issues 60-minute tokens leaves the target idle for roughly 55 minutes, which the default
-30-minute lifetime evicts. Shorter-lived tokens refresh often enough to keep the target alive.
+Left alone, that would sweep a signed-in target that merely happens to be quiet. It is the one
+eviction that destroys state the target cannot rebuild, so the sweeper skips it. A target whose
+session is `Authenticated`, or is mid-flow awaiting a two-factor code or a password change, is never
+taken by idle eviction.
 
-This is not a problem for the factory's intended audience. A fleet consumer authenticating with a
-personal access token or a service account key is stateless, so eviction only releases a connection
-pool and the next `GetOrCreateClient` rebuilds it. If you host long-lived interactive sessions on a
-factory, do one of:
+The cost is that a live login pins its target. The session keeps renewing, so the idle clock never
+catches up to it. What frees the target is the login dying: a sign-out, a revoked security stamp, or
+a rejected refresh token puts the session in `Expired`, and the next sweep takes it. So idle eviction
+still does its job for credential-only targets, which hold nothing worth keeping, and for interactive
+targets whose login is over. `TryRemoveClient` is immediate in every case.
 
-- set `MaxIdleClientLifetime` to `null` to disable idle eviction,
-- fetch the client from the factory on each unit of work rather than caching the `IControlrApi`, or
-- use `ControlrApiClientBuilder`, whose process-wide target is created with idle eviction disabled.
+Two consequences worth knowing:
+
+- `MaxTrackedClients` can still evict a target holding a live session, because a hard cap has to be
+  able to evict something or it is not a cap. Set it for a fleet that hosts sign-ins only when losing
+  a login and re-authenticating is acceptable.
+- A cached `IControlrAuthSession` goes dead when its target is removed by either path, and disposal
+  does not raise `StateChanged`, so its `State` keeps reporting the last value it held. Probe with
+  `TryGetAuthSession(name, out session)` and compare the instance to find out whether the session you
+  are holding is still the factory's.
+
+`TryGetAuthSession` creates nothing and does not refresh the last-used stamp, so a status page that
+polls it across every target cannot accidentally hold them open.
+
+For a consumer that authenticates only with a personal access token or a service account key, none of
+this matters. Those clients are stateless, so eviction only releases a connection pool and the next
+`GetOrCreateClient` rebuilds it.
 
 ## Configuration
 
@@ -286,9 +299,9 @@ For `AddControlrApiClientFactory` (server-side only):
 
 | Property                  | Type        | Default          | Description                                                                                                |
 |---------------------------|-------------|------------------|------------------------------------------------------------------------------------------------------------|
-| `MaxIdleClientLifetime`   | `TimeSpan?` | 30 minutes       | How long a target may go unused before the sweeper evicts it. `null` disables idle eviction. A background token refresh does not count as use, so see [Idle eviction and interactive sessions](#idle-eviction-and-interactive-sessions).               |
+| `MaxIdleClientLifetime`   | `TimeSpan?` | 30 minutes       | How long a target may go unused before the sweeper evicts it. `null` disables idle eviction. A target holding a live interactive session is never swept, so see [Idle eviction and interactive sessions](#idle-eviction-and-interactive-sessions).               |
 | `SweeperInterval`         | `TimeSpan`  | 1 minute         | How often the sweeper checks for idle targets. Must be greater than zero.                                  |
-| `MaxTrackedClients`       | `int?`      | `null`           | Maximum tracked targets. When reached, creating a new target evicts the least-recently-used one. `null` means unlimited; values below 1 are rejected at startup. |
+| `MaxTrackedClients`       | `int?`      | `null`           | Maximum tracked targets. When reached, creating a new target evicts the least-recently-used one. Unlike idle eviction, this can evict a target holding a live interactive session. `null` means unlimited; values below 1 are rejected at startup. |
 | `HttpMessageHandlerFactory` | `Func<HttpMessageHandler>?` | `null` | Creates the primary handler per target (proxy, custom TLS, etc.). Must return a NEW instance per call. |
 
 ### Authentication
