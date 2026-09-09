@@ -15,6 +15,20 @@ public sealed class ControlrApiClientFactoryTests
   private static readonly Uri _serverB = new("https://server-b.test/");
 
   [Fact]
+  public void Constructor_WhenMaxTrackedClientsIsBelowOne_ThrowsArgumentOutOfRangeException()
+  {
+    var zero = new ControlrApiClientFactoryOptions { MaxTrackedClients = 0 };
+    var negative = new ControlrApiClientFactoryOptions { MaxTrackedClients = -5 };
+
+    // A value below one used to mean "no limit", the opposite of what an operator setting a cap
+    // intends, and nothing rejected it.
+    Assert.Throws<ArgumentOutOfRangeException>(
+      () => new ControlrApiClientFactory(zero, TimeProvider.System, NullLoggerFactory.Instance));
+    Assert.Throws<ArgumentOutOfRangeException>(
+      () => new ControlrApiClientFactory(negative, TimeProvider.System, NullLoggerFactory.Instance));
+  }
+
+  [Fact]
   public void Dispose_DisposesTrackedEntries()
   {
     RecordingHttpMessageHandler? handler = null;
@@ -37,6 +51,59 @@ public sealed class ControlrApiClientFactoryTests
 
     factory.Dispose();
     factory.Dispose();
+  }
+
+  [Fact]
+  public async Task ExecuteApiCall_WhenTeardownBeganWhileAnotherRequestIsOutstanding_RefusesWithoutUsingTheStack()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var handlers = new List<GatedRequestHandlerInline>();
+    using var factory = CreateFactory(options =>
+    {
+      options.MaxIdleClientLifetime = null;
+      options.HttpMessageHandlerFactory = () =>
+      {
+        var handler = new GatedRequestHandlerInline(gate.Task);
+        handlers.Add(handler);
+        return handler;
+      };
+    });
+
+    var client = factory.GetOrCreateClient("a", o =>
+    {
+      o.BaseUrl = _serverA;
+      o.PersonalAccessToken = "pat";
+    });
+
+    var outstanding = client.Internal.Devices.DeleteDevice(
+      Guid.NewGuid(),
+      TestContext.Current.CancellationToken);
+
+    await WaitUntilAsyncInline(() => handlers.Count > 0 && handlers[0].RequestStarted);
+
+    // Removal publishes teardown, but the outstanding call keeps the stack alive. This is the window
+    // the refused lease exists for: a call arriving now has to be refused, not issued into a stack
+    // that the outstanding call's completion is about to release.
+    Assert.True(factory.TryRemoveClient("a"));
+
+    // The short timeout is a backstop: if the refused-lease guard regresses, this call reaches the
+    // gated handler and would otherwise block the run instead of failing it.
+    using var refusalTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+    var refused = await client.Internal.Devices.DeleteDevice(
+      Guid.NewGuid(),
+      refusalTimeout.Token);
+
+    Assert.False(refused.IsSuccess);
+    Assert.Contains("was disposed", refused.Reason, StringComparison.Ordinal);
+
+    // Without the refused lease, the call reaches the handler and this becomes two.
+    Assert.Equal(1, handlers[0].RequestCount);
+
+    gate.SetResult();
+
+    Assert.True((await outstanding).IsSuccess);
+    await WaitUntilAsyncInline(() => handlers[0].DisposeCount > 0);
   }
 
   [Fact]
@@ -91,6 +158,57 @@ public sealed class ControlrApiClientFactoryTests
     var retriedRequest = handlers[0].Requests.ToArray()[^1];
     Assert.Equal("Bearer", retriedRequest.Headers.Authorization?.Scheme);
     Assert.Equal("renewed-token", retriedRequest.Headers.Authorization?.Parameter);
+  }
+
+  [Fact]
+  public async Task GetAllDevices_WhenTeardownBeganWhileAnotherRequestIsOutstanding_RefusesTheEnumeration()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var handlers = new List<GatedRequestHandlerInline>();
+    using var factory = CreateFactory(options =>
+    {
+      options.MaxIdleClientLifetime = null;
+      options.HttpMessageHandlerFactory = () =>
+      {
+        var handler = new GatedRequestHandlerInline(gate.Task);
+        handlers.Add(handler);
+        return handler;
+      };
+    });
+
+    var client = factory.GetOrCreateClient("a", o =>
+    {
+      o.BaseUrl = _serverA;
+      o.PersonalAccessToken = "pat";
+    });
+
+    var outstanding = client.Internal.Devices.DeleteDevice(
+      Guid.NewGuid(),
+      TestContext.Current.CancellationToken);
+
+    await WaitUntilAsyncInline(() => handlers.Count > 0 && handlers[0].RequestStarted);
+
+    Assert.True(factory.TryRemoveClient("a"));
+
+    // The stack is still alive at this point, held by the outstanding call, so this is the case where
+    // only the enumeration's own lease can refuse it. A streaming endpoint has no failed result to
+    // return, and ending the sequence quietly would look exactly like a server that has no devices.
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+    var ex = await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+    {
+      await foreach (var device in client.Internal.Devices.GetAllDevices(timeout.Token))
+      {
+        Assert.Fail($"Expected no devices, but got {device}.");
+      }
+    });
+
+    Assert.Contains("was disposed", ex.Message, StringComparison.Ordinal);
+
+    gate.SetResult();
+
+    Assert.True((await outstanding).IsSuccess);
+    Assert.Equal(1, handlers[0].RequestCount);
   }
 
   [Fact]
@@ -150,6 +268,64 @@ public sealed class ControlrApiClientFactoryTests
     using var factory = CreateFactory();
 
     Assert.Throws<InvalidOperationException>(() => factory.GetOrCreateAuthSession("missing"));
+  }
+
+  [Fact]
+  public async Task GetOrCreateClient_AfterTargetWasRemoved_DoesNotIssueTheRequestAtAll()
+  {
+    var handlers = new List<RecordingHttpMessageHandler>();
+    using var factory = CreateFactory(options =>
+    {
+      options.MaxIdleClientLifetime = null;
+      options.HttpMessageHandlerFactory = () =>
+      {
+        var handler = new RecordingHttpMessageHandler();
+        handlers.Add(handler);
+        return handler;
+      };
+    });
+
+    var client = factory.GetOrCreateClient("a", o =>
+    {
+      o.BaseUrl = _serverA;
+      o.PersonalAccessToken = "pat";
+    });
+
+    Assert.True(factory.TryRemoveClient("a"));
+
+    var staleResult = await client.Internal.Devices.DeleteDevice(
+      Guid.NewGuid(),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(staleResult.IsSuccess);
+
+    // Nothing was in flight, so removal released the stack synchronously and the caller is told the
+    // HTTP stack is gone rather than being handed a server-fault-shaped failure. The refused-lease
+    // guard itself is pinned by ExecuteApiCall_WhenTeardownBeganWhileAnotherRequestIsOutstanding,
+    // where the stack is still alive and only the guard can stop the call.
+    Assert.NotEmpty(handlers);
+    Assert.All(handlers, handler => Assert.Empty(handler.Requests));
+  }
+
+  [Fact]
+  public async Task GetOrCreateClient_AfterTargetWasRemoved_ReportsDisposedTarget()
+  {
+    using var factory = CreateFactory(options => options.MaxIdleClientLifetime = null);
+    var client = factory.GetOrCreateClient("a", o =>
+    {
+      o.BaseUrl = _serverA;
+      o.PersonalAccessToken = "pat";
+    });
+
+    Assert.True(factory.TryRemoveClient("a"));
+
+    // A caller holding the removed reference gets a failure that names the disposed HTTP stack, not
+    // one shaped like a server fault.
+    var staleResult = await client.Internal.Devices.DeleteDevice(
+      Guid.NewGuid(),
+      TestContext.Current.CancellationToken);
+    Assert.False(staleResult.IsSuccess);
+    Assert.Contains("was disposed", staleResult.Reason, StringComparison.Ordinal);
   }
 
   [Fact]
@@ -361,6 +537,136 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
+  public async Task RefreshIfNeeded_WhenTargetWasAlreadyRemoved_ThrowsInsteadOfReportingNoRefreshNeeded()
+  {
+    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
+    authState.SetBearerTokens("access-old", "refresh-old", DateTimeOffset.UnixEpoch);
+    using var client = new HttpClient(new RecordingHttpMessageHandler());
+
+    var tracker = new InFlightTracker();
+    tracker.RequestTeardown();
+
+    var refresher = new BearerTokenRefresher(
+      authState,
+      new SingleClientHttpClientFactory(client),
+      TimeProvider.System)
+    {
+      Requests = tracker
+    };
+
+    // NoRefreshNeeded reads as a healthy outcome wherever it is returned. The background refresh loop
+    // resets its failure count on that value and would go on polling a target that no longer exists,
+    // and a caller asking for a bearer token would be handed one it has been told is expired.
+    var ex = await Assert.ThrowsAsync<ObjectDisposedException>(
+      () => refresher.RefreshIfNeeded(
+        forceRefresh: true,
+        refreshWindow: TimeSpan.FromMinutes(1),
+        cancellationToken: TestContext.Current.CancellationToken));
+
+    Assert.Contains("was disposed", ex.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task RefreshIfNeeded_WhileTrackedTargetIsTornDown_DefersTheReleaseUntilTheRefreshCompletes()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var handler = new GatedRefreshHandlerInline(gate.Task);
+    using var client = new HttpClient(handler) { BaseAddress = new Uri("https://server.test/") };
+    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
+    authState.SetBearerTokens("access-old", "refresh-old", DateTimeOffset.UnixEpoch);
+
+    var released = 0;
+    var tracker = new InFlightTracker();
+    tracker.AttachRelease(() => Interlocked.Increment(ref released));
+
+    var refresher = new BearerTokenRefresher(
+      authState,
+      new SingleClientHttpClientFactory(client),
+      TimeProvider.System)
+    {
+      Requests = tracker
+    };
+
+    var refreshTask = refresher.RefreshIfNeeded(
+      forceRefresh: true,
+      refreshWindow: TimeSpan.FromMinutes(1),
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    await WaitUntilAsyncInline(() => handler.RefreshStarted);
+
+    tracker.RequestTeardown();
+
+    // Releasing the stack here disposes the refresh lock, and SemaphoreSlim never resumes a waiter
+    // that was already queued when the dispose landed. A caller waiting on a bearer token would hang
+    // with no exception. Session-driven refreshes are counted for this reason.
+    Assert.Equal(0, Volatile.Read(ref released));
+
+    gate.SetResult();
+
+    Assert.Equal(BearerTokenRefreshResult.Refreshed, await refreshTask);
+    Assert.Equal(1, Volatile.Read(ref released));
+  }
+
+  [Fact]
+  public async Task RestoreAuthSnapshot_WhenTargetWasRemoved_ThrowsInsteadOfReportingARestoredSession()
+  {
+    using var factory = CreateFactory(options => options.MaxIdleClientLifetime = null);
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    var session = factory.GetOrCreateAuthSession("a");
+
+    Assert.True(factory.TryRemoveClient("a"));
+
+    // Restoring into a session whose target is gone would report IsAuthenticated with tokens that
+    // nothing can ever renew, while every call that uses them fails.
+    await Assert.ThrowsAsync<ObjectDisposedException>(
+      () => session.RestoreAuthSnapshot(new AuthSnapshot("pat", null, null, null)));
+  }
+
+  [Fact]
+  public async Task SignIn_WhileTargetIsBeingRemoved_CompletesTheLoginAndThenReleases()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var handlers = new List<GatedLoginHandlerInline>();
+    using var factory = CreateFactory(options =>
+    {
+      options.MaxIdleClientLifetime = null;
+      options.HttpMessageHandlerFactory = () =>
+      {
+        var handler = new GatedLoginHandlerInline(gate.Task);
+        handlers.Add(handler);
+        return handler;
+      };
+    });
+
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    var session = factory.GetOrCreateAuthSession("a");
+
+    var signIn = session.SignIn(
+      new InteractiveSignInRequest
+      {
+        Email = "user@test.test",
+        Password = "password"
+      },
+      TestContext.Current.CancellationToken);
+
+    await WaitUntilAsyncInline(() => handlers.Any(handler => handler.RequestStarted));
+    var loginHandler = handlers.First(handler => handler.RequestStarted);
+
+    Assert.True(factory.TryRemoveClient("a"));
+
+    // Releasing the client here cancelled the sign-in, and the session's catch-all reported that as
+    // bad credentials for a login the server had already accepted.
+    Assert.Equal(0, loginHandler.DisposeCount);
+
+    gate.SetResult();
+
+    var result = await signIn;
+
+    Assert.Equal(InteractiveLoginStatus.Authenticated, result.Status);
+    await WaitUntilAsyncInline(() => loginHandler.DisposeCount > 0);
+  }
+
+  [Fact]
   public void SweepIdleClients_WhenEntryIdleBeyondWindow_EvictsEntry()
   {
     var timeProvider = new FakeTimeProvider();
@@ -470,6 +776,44 @@ public sealed class ControlrApiClientFactoryTests
       request.Headers.GetValues(ControlrApiClientOptions.PersonalAccessTokenHeader).Single());
   }
 
+  [Fact]
+  public async Task TryRemoveClient_WhileRequestIsInFlight_LetsTheRequestFinishThenReleases()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var handlers = new List<GatedRequestHandlerInline>();
+    using var factory = CreateFactory(options =>
+    {
+      options.MaxIdleClientLifetime = null;
+      options.HttpMessageHandlerFactory = () =>
+      {
+        var handler = new GatedRequestHandlerInline(gate.Task);
+        handlers.Add(handler);
+        return handler;
+      };
+    });
+
+    var client = factory.GetOrCreateClient("a", o =>
+    {
+      o.BaseUrl = _serverA;
+      o.PersonalAccessToken = "pat";
+    });
+
+    var call = client.Internal.Devices.DeleteDevice(Guid.NewGuid(), TestContext.Current.CancellationToken);
+    await WaitUntilAsyncInline(() => handlers.Count > 0 && handlers[0].RequestStarted);
+
+    Assert.True(factory.TryRemoveClient("a"));
+    gate.SetResult();
+
+    // Disposing the HTTP stack while the call was still out there cancelled it, so a healthy
+    // server was reported to the caller as a failed request.
+    var result = await call;
+    Assert.True(result.IsSuccess, result.Reason);
+
+    // The stack is released once the last in-flight request drains.
+    await WaitUntilAsyncInline(() => handlers[0].DisposeCount > 0);
+    Assert.Equal(1, handlers[0].DisposeCount);
+  }
+
   private static ControlrApiClientFactory CreateFactory(
     Action<ControlrApiClientFactoryOptions>? configure = null,
     TimeProvider? timeProvider = null)
@@ -496,6 +840,41 @@ public sealed class ControlrApiClientFactoryTests
     }
   }
 
+  private sealed class GatedLoginHandlerInline(Task gate) : HttpMessageHandler
+  {
+    public int DisposeCount { get; private set; }
+
+    public bool RequestStarted { get; private set; }
+
+    protected override void Dispose(bool disposing)
+    {
+      if (disposing)
+      {
+        DisposeCount++;
+      }
+
+      base.Dispose(disposing);
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+      HttpRequestMessage request,
+      CancellationToken cancellationToken)
+    {
+      RequestStarted = true;
+      await gate.WaitAsync(cancellationToken);
+      return RecordingHttpMessageHandler.Json(
+        System.Text.Json.JsonSerializer.Serialize(
+          new ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.InteractiveLoginResponseDto(
+            false,
+            false,
+            false,
+            new ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.AccessTokenResponseDto(
+              "Bearer",
+              "access-new",
+              3600,
+              "refresh-new"))));
+    }
+  }
   private sealed class GatedRefreshHandlerInline(Task gate) : HttpMessageHandler
   {
     public bool RefreshStarted { get; private set; }
@@ -513,6 +892,34 @@ public sealed class ControlrApiClientFactoryTests
             "access-renewed",
             3600,
             "refresh-renewed")));
+    }
+  }
+  private sealed class GatedRequestHandlerInline(Task gate) : HttpMessageHandler
+  {
+    public int DisposeCount { get; private set; }
+
+    public int RequestCount { get; private set; }
+
+    public bool RequestStarted { get; private set; }
+
+    protected override void Dispose(bool disposing)
+    {
+      if (disposing)
+      {
+        DisposeCount++;
+      }
+
+      base.Dispose(disposing);
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+      HttpRequestMessage request,
+      CancellationToken cancellationToken)
+    {
+      RequestStarted = true;
+      RequestCount++;
+      await gate.WaitAsync(cancellationToken);
+      return new HttpResponseMessage(HttpStatusCode.OK);
     }
   }
 }

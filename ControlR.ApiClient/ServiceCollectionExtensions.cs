@@ -228,6 +228,9 @@ public static class ServiceCollectionExtensions
       .Validate(
         options => options.MaxIdleClientLifetime is null || options.MaxIdleClientLifetime > TimeSpan.Zero,
         $"{nameof(ControlrApiClientFactoryOptions.MaxIdleClientLifetime)} must be greater than zero when set.")
+      .Validate(
+        options => options.MaxTrackedClients is null || options.MaxTrackedClients > 0,
+        $"{nameof(ControlrApiClientFactoryOptions.MaxTrackedClients)} must be greater than zero when set. Leave it null for no limit.")
       .ValidateOnStart();
 
     if (configureFactoryOptions is not null)
@@ -280,6 +283,9 @@ public static class ServiceCollectionExtensions
       .Validate(
         options => options.MaxIdleClientLifetime is null || options.MaxIdleClientLifetime > TimeSpan.Zero,
         $"{nameof(ControlrApiClientFactoryOptions.MaxIdleClientLifetime)} must be greater than zero when set.")
+      .Validate(
+        options => options.MaxTrackedClients is null || options.MaxTrackedClients > 0,
+        $"{nameof(ControlrApiClientFactoryOptions.MaxTrackedClients)} must be greater than zero when set. Leave it null for no limit.")
       .ValidateOnStart();
 
     services.TryAddSingleton<IControlrApiClientFactory>(sp => new ControlrApiClientFactory(

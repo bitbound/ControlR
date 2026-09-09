@@ -47,6 +47,7 @@ public class ControlrApiClientFactoryOptions
   /// <summary>
   /// The maximum number of tracked targets. When the limit is reached, creating a new client
   /// evicts the least-recently-used existing client. <c>null</c> (default) means unlimited.
+  /// Values below <c>1</c> are rejected at startup.
   /// </summary>
   public int? MaxTrackedClients { get; set; }
 

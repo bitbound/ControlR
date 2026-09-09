@@ -41,7 +41,9 @@ public interface IControlrApiClientFactory : IDisposable
   /// <param name="name">The target name previously passed to <see cref="GetOrCreateClient"/>.</param>
   /// <returns>The session for the named target.</returns>
   /// <exception cref="InvalidOperationException">No client has been created for <paramref name="name"/> yet.</exception>
-  /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
+  /// <exception cref="ObjectDisposedException">
+  /// The factory has been disposed, or the target was removed while its session was being created.
+  /// </exception>
   IControlrAuthSession GetOrCreateAuthSession(string name);
 
   /// <summary>
@@ -72,9 +74,17 @@ public interface IControlrApiClientFactory : IDisposable
   /// </summary>
   /// <remarks>
   /// <para>
-  ///   Removal unlinks the target immediately and begins teardown. Sockets held by in-flight
-  ///   requests are released when those requests complete. Callers still holding a reference to the
-  ///   removed <see cref="IControlrApi"/> will see <see cref="ObjectDisposedException"/> on next use.
+  ///   Removal unlinks the target immediately. A caller still holding a reference to the removed
+  ///   <see cref="IControlrApi"/> keeps getting results, but every later call fails with a reason
+  ///   naming the disposed HTTP stack rather than a server fault. A streaming endpoint has no result
+  ///   to fail, so it throws <see cref="ObjectDisposedException"/> carrying that same reason instead
+  ///   of ending its sequence, which would read as an empty device list.
+  /// </para>
+  /// <para>
+  ///   Calls already in flight are not cancelled. That includes a streamed response that is still
+  ///   being read: the target's HTTP stack is released once the last of them finishes, which for an
+  ///   <see cref="IAsyncEnumerable{T}"/> means once the caller finishes or disposes the enumeration.
+  ///   Holding a slow enumeration open therefore holds the target open with it.
   /// </para>
   /// <para>
   ///   Whatever is currently linked under the name is removed, regardless of when it was created.
@@ -141,6 +151,14 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
         $"The {nameof(ControlrApiClientFactoryOptions.MaxIdleClientLifetime)} must be greater than zero when set.");
     }
 
+    if (options.MaxTrackedClients is { } max && max < 1)
+    {
+      throw new ArgumentOutOfRangeException(
+        nameof(options),
+        options,
+        $"The {nameof(ControlrApiClientFactoryOptions.MaxTrackedClients)} must be greater than zero when set. Leave it null for no limit.");
+    }
+
     _factoryOptions = options;
     _timeProvider = timeProvider;
     _loggerFactory = loggerFactory;
@@ -196,8 +214,27 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
         $"No client has been created for target '{name}'. Call {nameof(GetOrCreateClient)} first.");
     }
 
+    // Reading the entry's disposal state only after the session is published is what closes the
+    // leak: DisposeOnce publishes disposal before it tests IsValueCreated, so whichever side starts
+    // second sees the other. Without this, a session that finished constructing during teardown was
+    // handed out alive, unreachable, and with a refresh loop aimed at disposed clients.
+    var session = entry.AuthSession.Value;
+
+    // The publish above happens inside Lazy, which is a release rather than a seq_cst store, so it
+    // does not by itself order the read below. Without the fence this is the same store-buffering
+    // outcome InFlightTracker guards against, and both sides can miss each other.
+    Thread.MemoryBarrier();
+
+    if (entry.IsDisposed)
+    {
+      session.Dispose();
+      throw new ObjectDisposedException(
+        nameof(ControlrApiClientFactory),
+        $"The target '{name}' was removed while its auth session was being created.");
+    }
+
     Touch(entry);
-    return entry.AuthSession.Value;
+    return session;
   }
 
   /// <inheritdoc />
@@ -317,6 +354,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     HttpMessageHandler? unauthenticatedInnerHandler = null;
     HttpClient? httpClient = null;
     HttpClient? unauthenticatedHttpClient = null;
+    var requests = new InFlightTracker();
 
     try
     {
@@ -330,20 +368,27 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
       unauthenticatedInnerHandler = null;
 
       var unauthenticatedClientFactory = new SingleClientHttpClientFactory(unauthenticatedHttpClient);
-      var refresher = new BearerTokenRefresher(authState, unauthenticatedClientFactory, _timeProvider);
+      var refresher = new BearerTokenRefresher(authState, unauthenticatedClientFactory, _timeProvider)
+      {
+        Requests = requests
+      };
       var api = new ControlrApi(
         httpClient,
         authState,
         refresher,
         _loggerFactory.CreateLogger<ControlrApi>(),
-        new OptionsWrapper<ControlrApiClientOptions>(options));
+        new OptionsWrapper<ControlrApiClientOptions>(options))
+      {
+        Requests = requests
+      };
 
-      return new ClientEntry(
+      var entry = new ClientEntry(
         name,
         api,
         httpClient,
         unauthenticatedHttpClient,
         authState,
+        requests,
         new Lazy<IControlrAuthSession>(
           () => new ControlrAuthSession(
             unauthenticatedClientFactory,
@@ -351,8 +396,16 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
             refresher,
             _loggerFactory.CreateLogger<ControlrAuthSession>(),
             new FrozenOptionsMonitor<ControlrApiClientOptions>(options),
-            _timeProvider),
+            _timeProvider)
+          {
+            Requests = requests
+          },
           LazyThreadSafetyMode.ExecutionAndPublication));
+
+      // Wiring the release last is safe: nothing outside BuildEntry can reach this entry, and
+      // therefore no request can be counted, until the caller of GetOrCreateClient has it.
+      requests.AttachRelease(entry.ReleaseHttpStack);
+      return entry;
     }
     catch
     {
@@ -415,6 +468,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     HttpClient httpClient,
     HttpClient unauthenticatedHttpClient,
     ControlrApiClientAuthState authState,
+    InFlightTracker requests,
     Lazy<IControlrAuthSession> authSession)
   {
     public long LastUsedOrdinal;
@@ -426,12 +480,15 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     public Lazy<IControlrAuthSession> AuthSession { get; } = authSession;
     public ControlrApiClientAuthState AuthState { get; } = authState;
     public HttpClient HttpClient { get; } = httpClient;
+    public bool IsDisposed => Volatile.Read(ref _disposeState) == 1;
     public string Name { get; } = name;
+    public InFlightTracker Requests { get; } = requests;
     public HttpClient UnauthenticatedHttpClient { get; } = unauthenticatedHttpClient;
 
     /// <summary>
     /// Disposes the target's HTTP stacks, interactive session (if created), and bearer-refresh lock.
-    /// Safe to call multiple times and concurrently; only the first call does work.
+    /// Safe to call multiple times and concurrently; only the first call does work. When the target
+    /// still has requests in flight, the HTTP stacks are released by the last of them instead.
     /// </summary>
     public void DisposeOnce()
     {
@@ -445,6 +502,11 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
         AuthSession.Value.Dispose();
       }
 
+      Requests.RequestTeardown();
+    }
+
+    public void ReleaseHttpStack()
+    {
       HttpClient.Dispose();
       UnauthenticatedHttpClient.Dispose();
       AuthState.BearerRefreshLock.Dispose();

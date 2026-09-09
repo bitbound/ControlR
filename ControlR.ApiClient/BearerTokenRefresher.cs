@@ -44,6 +44,13 @@ public sealed class BearerTokenRefresher(
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly TimeProvider _timeProvider = timeProvider;
 
+  /// <summary>
+  /// Counts refreshes so that a tracked target is not released while one is waiting or in flight.
+  /// The factory assigns the target's tracker here; the single-client registration keeps the default
+  /// instance, where nothing ever requests teardown.
+  /// </summary>
+  internal InFlightTracker Requests { get; set; } = new();
+
   public async Task<BearerTokenRefreshResult> RefreshIfNeeded(
     bool forceRefresh,
     TimeSpan refreshWindow,
@@ -55,6 +62,18 @@ public sealed class BearerTokenRefresher(
     if (refreshContext is null)
     {
       return BearerTokenRefreshResult.NoRefreshNeeded;
+    }
+
+    // Queuing for the refresh lock has to be tracked, not just the request that follows it. A
+    // factory teardown disposes that lock together with the target, and a waiter that is already
+    // queued when the dispose lands is never resumed. Reporting "nothing to refresh" instead lets
+    // the caller continue to its own call, which reports the removed target on its own.
+    using var lease = Requests.Acquire();
+    if (!lease.Acquired)
+    {
+      throw new ObjectDisposedException(
+        nameof(BearerTokenRefresher),
+        ControlrApi.DisposedTargetReason);
     }
 
     await auth.BearerRefreshLock.WaitAsync(cancellationToken);
@@ -110,10 +129,10 @@ public sealed class BearerTokenRefresher(
       }
       catch (ObjectDisposedException)
       {
-        // The owning client entry was evicted while this refresh was in flight (the factory
-        // disposes the semaphore with the entry). The refresh result is already applied to the
-        // auth state, and the state itself is being discarded, so there is nothing left to
-        // guard. Swallowing here keeps a successful refresh from surfacing as a crash in the
+        // Backstop. The lease taken above is what normally keeps a tracked target's teardown from
+        // disposing this semaphore while it is held; this covers any other owner that disposes the
+        // auth state mid-flight. The refresh result is already applied to the auth state, which is
+        // being discarded anyway, so swallowing keeps a successful refresh from crashing in the
         // finally block.
       }
     }

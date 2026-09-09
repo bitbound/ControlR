@@ -127,6 +127,7 @@ public sealed class ControlrAuthSession(
 
   private Uri _baseUrl = optionsMonitor.CurrentValue.BaseUrl;
   private int _consecutiveRefreshFailures;
+  private int _isDisposed;
   private CancellationTokenSource? _refreshLoopCts;
   private long _refreshLoopGeneration;
   private ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
@@ -140,8 +141,17 @@ public sealed class ControlrAuthSession(
   public bool RequiresTwoFactor => State == ControlrAuthSessionState.AwaitingTwoFactor;
   public ControlrAuthSessionState State => _state;
 
+  /// <summary>
+  /// Counts this session's calls so that a tracked target is not released while a sign-in or password
+  /// change is still on the wire. The factory assigns the target's tracker here; the single-client
+  /// registration keeps the default instance, where nothing ever requests teardown.
+  /// </summary>
+  internal InFlightTracker Requests { get; set; } = new();
+
   public async Task<ApiResult> ChangePasswordWithCredentials(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
   {
+    using var tracked = BeginSessionRequest();
+
     try
     {
       var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
@@ -184,6 +194,7 @@ public sealed class ControlrAuthSession(
 
   public void Dispose()
   {
+    Volatile.Write(ref _isDisposed, 1);
     StopRefreshLoop();
   }
 
@@ -192,6 +203,15 @@ public sealed class ControlrAuthSession(
     return _authState.GetSnapshot();
   }
 
+  /// <summary>
+  /// Gets the current bearer token, refreshing it first when it is near expiration.
+  /// </summary>
+  /// <param name="cancellationToken">Cancels the refresh request.</param>
+  /// <returns>The bearer token, or <see langword="null"/> when this session authenticates with a personal access token.</returns>
+  /// <exception cref="ObjectDisposedException">
+  /// The session's target was removed, so the token cannot be renewed. A token that is already dead
+  /// is not handed out as if it were usable.
+  /// </exception>
   public async Task<string?> GetBearerToken(CancellationToken cancellationToken = default)
   {
     if (!string.IsNullOrWhiteSpace(_authState.PersonalAccessToken))
@@ -203,8 +223,19 @@ public sealed class ControlrAuthSession(
     return _authState.BearerToken;
   }
 
+  /// <summary>
+  /// Restores a previously saved auth snapshot into this session.
+  /// </summary>
+  /// <param name="snapshot">The snapshot to apply.</param>
+  /// <exception cref="ArgumentException">The snapshot contains neither a personal access token nor a complete set of bearer tokens.</exception>
+  /// <exception cref="ObjectDisposedException">
+  /// This session's target was removed. Restoring into it would report a session that can never
+  /// renew the tokens it was just given.
+  /// </exception>
   public Task RestoreAuthSnapshot(AuthSnapshot snapshot)
   {
+    ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
+
     if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
     {
       SetPersonalAccessToken(snapshot.PersonalAccessToken);
@@ -297,8 +328,34 @@ public sealed class ControlrAuthSession(
     cts?.Dispose();
   }
 
+  /// <summary>
+  /// <para>
+  /// Announces one of the session's own calls, which go to the target's unauthenticated client rather
+  /// than through <see cref="ControlrApi"/>, so nothing else counts them. Dispose the returned lease
+  /// when the response is done with.
+  /// </para>
+  /// <para>
+  /// Throws when the target was already removed. Both callers report a reason that reads like the
+  /// credentials were wrong, which is the wrong thing to say about a target that no longer exists.
+  /// </para>
+  /// </summary>
+  private InFlightTracker.Lease BeginSessionRequest()
+  {
+    var lease = Requests.Acquire();
+
+    if (lease.Acquired)
+    {
+      return lease;
+    }
+
+    lease.Dispose();
+    throw new ObjectDisposedException(nameof(ControlrAuthSession), ControlrApi.DisposedTargetReason);
+  }
+
   private async Task<InteractiveLoginResult> ExecuteInteractiveLogin(LoginRequestDto request, CancellationToken cancellationToken)
   {
+    using var tracked = BeginSessionRequest();
+
     try
     {
       var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
@@ -459,6 +516,14 @@ public sealed class ControlrAuthSession(
             return;
           }
 
+          if (ex is ObjectDisposedException)
+          {
+            // The target this session belongs to was removed, so there is no transport left to
+            // renew it with. Counting this against the transient-failure budget would spend the
+            // backoff schedule reporting a fault on a target that is simply gone.
+            return;
+          }
+
           if (State == ControlrAuthSessionState.Expired)
           {
             // The server rejected the refresh token itself. RefreshBearerTokenIfNeeded has
@@ -509,6 +574,13 @@ public sealed class ControlrAuthSession(
 
   private void StartRefreshLoop()
   {
+    if (Volatile.Read(ref _isDisposed) == 1)
+    {
+      // A sign-in that was still on the wire when the target was removed lands here after the
+      // factory already disposed this session. A loop started now has nobody left to stop it.
+      return;
+    }
+
     if (!_authState.CanRefreshBearerToken)
     {
       StopRefreshLoop();
@@ -524,6 +596,15 @@ public sealed class ControlrAuthSession(
     var previousCts = Interlocked.Exchange(ref _refreshLoopCts, cts);
     CancelRefreshLoop(previousCts);
     _ = RunRefreshLoop(generation, cts.Token);
+
+    if (Volatile.Read(ref _isDisposed) == 1)
+    {
+      // Disposal ran between the check above and the publish below, so its own stop pass had
+      // nothing to cancel and this loop would outlive the session that owns it. Re-checking after
+      // publishing closes the window: a disposal that lands after the publish already cancels
+      // this token source, and one that landed before it is visible here.
+      StopRefreshLoop();
+    }
   }
 
   private void StopRefreshLoop()

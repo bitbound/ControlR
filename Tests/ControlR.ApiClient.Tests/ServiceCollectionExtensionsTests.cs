@@ -1,6 +1,7 @@
 using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.ApiClient.Interfaces.V1;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace ControlR.ApiClient.Tests;
 
@@ -21,6 +22,22 @@ public sealed class ServiceCollectionExtensionsTests
     Assert.NotNull(client);
     Assert.Equal(["a"], factory.GetClientNames());
     await Task.CompletedTask;
+  }
+
+  [Fact]
+  public void AddControlrApiClientFactory_WhenMaxTrackedClientsIsBelowOne_FailsStartupValidation()
+  {
+    var services = new ServiceCollection();
+    services.AddLogging();
+
+    services.AddControlrApiClientFactory(options => options.MaxTrackedClients = 0);
+
+    using var provider = services.BuildServiceProvider();
+
+    // A cap below one used to mean "unlimited", the opposite of what setting a cap intends. It now
+    // fails at first resolution, which is what ValidateOnStart makes loud at startup.
+    Assert.Throws<OptionsValidationException>(
+      () => provider.GetRequiredService<IOptions<ControlrApiClientFactoryOptions>>().Value);
   }
 
   [Fact]

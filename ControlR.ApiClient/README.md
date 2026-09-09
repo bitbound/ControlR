@@ -197,7 +197,7 @@ public class FleetService
         });
 
         var devices = new List<DeviceResponseDto>();
-        await foreach (var device in client.Devices
+        await foreach (var device in client.Internal.Devices
             .GetAllDevices(cancellationToken)
             .WithCancellation(cancellationToken))
         {
@@ -233,7 +233,7 @@ For `AddControlrApiClientFactory` (server-side only):
 |---------------------------|-------------|------------------|------------------------------------------------------------------------------------------------------------|
 | `MaxIdleClientLifetime`   | `TimeSpan?` | 30 minutes       | How long a target may go unused before the sweeper evicts it. `null` disables idle eviction.               |
 | `SweeperInterval`         | `TimeSpan`  | 1 minute         | How often the sweeper checks for idle targets. Must be greater than zero.                                  |
-| `MaxTrackedClients`       | `int?`      | `null`           | Maximum tracked targets. When reached, creating a new target evicts the least-recently-used one.           |
+| `MaxTrackedClients`       | `int?`      | `null`           | Maximum tracked targets. When reached, creating a new target evicts the least-recently-used one. `null` means unlimited; values below 1 are rejected at startup. |
 | `HttpMessageHandlerFactory` | `Func<HttpMessageHandler>?` | `null` | Creates the primary handler per target (proxy, custom TLS, etc.). Must return a NEW instance per call. |
 
 ### Authentication
