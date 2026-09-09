@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ControlR.ApiClient\ControlR.ApiClient.csproj" />
+    <ProjectReference Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
   </ItemGroup>
 
   <ItemGroup>

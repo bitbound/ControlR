@@ -958,6 +958,39 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
+  public async Task TryRemoveClient_WhenSessionIsAuthenticated_LeavesTheCachedSessionDisposed()
+  {
+    var timeProvider = new FakeTimeProvider();
+    using var factory = CreateFactory(
+      options =>
+      {
+        options.MaxIdleClientLifetime = null;
+        options.SweeperInterval = TimeSpan.FromHours(1);
+      },
+      timeProvider);
+
+    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
+    var session = factory.GetOrCreateAuthSession("a");
+    await session.RestoreAuthSnapshot(new AuthSnapshot(
+      null,
+      "access-a",
+      timeProvider.GetUtcNow().AddHours(8),
+      "refresh-a"));
+
+    var raised = new List<ControlrAuthSessionState>();
+    session.StateChanged += (_, args) => raised.Add(args.State);
+
+    Assert.True(factory.TryRemoveClient("a"));
+
+    // The caller is still holding this reference and the factory told them not to dispose it. It used
+    // to keep reporting Authenticated with no event, so nothing observable said the target was gone.
+    Assert.Equal(ControlrAuthSessionState.Disposed, session.State);
+    Assert.False(session.IsAuthenticated);
+    Assert.Contains(ControlrAuthSessionState.Disposed, raised);
+    Assert.False(factory.TryGetAuthSession("a", out _));
+  }
+
+  [Fact]
   public async Task TryRemoveClient_WhileRequestIsInFlight_LetsTheRequestFinishThenReleases()
   {
     var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

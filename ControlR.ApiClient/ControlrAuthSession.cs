@@ -15,7 +15,10 @@ namespace ControlR.ApiClient;
 public interface IControlrAuthSession : IDisposable
 {
   /// <summary>
-  /// Raised whenever the session state changes.
+  /// Raised whenever the session state changes, including the transition to
+  /// <see cref="ControlrAuthSessionState.Disposed"/> when the session is disposed. Disposing a session
+  /// that was still <see cref="ControlrAuthSessionState.SignedOut"/> raises nothing, because that state
+  /// already tells an observer the session cannot authenticate.
   /// </summary>
   event EventHandler<ControlrAuthSessionStateChangedEventArgs>? StateChanged;
 
@@ -212,10 +215,48 @@ public sealed class ControlrAuthSession(
     }
   }
 
+  /// <summary>
+  /// Stops the background refresh loop and moves the session to
+  /// <see cref="ControlrAuthSessionState.Disposed"/>.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  ///   Disposal is terminal and is not a sign-out. The server-side session is untouched and the
+  ///   credential may still be perfectly valid, but this object has lost the transport it needs and
+  ///   can never authenticate again. <see cref="StateChanged"/> is raised so an observer still
+  ///   holding this reference stops reporting a usable session. It is deliberately not raised when
+  ///   the session was still <see cref="ControlrAuthSessionState.SignedOut"/>, which already tells an
+  ///   observer it cannot authenticate, and which is the state a never-used session is disposed in
+  ///   during host shutdown.
+  /// </para>
+  /// <para>
+  ///   Subsequent state changes are ignored. A sign-in that was still on the wire when disposal
+  ///   landed completes and would otherwise report <see cref="ControlrAuthSessionState.Authenticated"/>
+  ///   for an object that can no longer act.
+  /// </para>
+  /// </remarks>
   public void Dispose()
   {
-    Volatile.Write(ref _isDisposed, 1);
+    if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+    {
+      return;
+    }
+
     StopRefreshLoop();
+
+    var previousState = _state;
+    _state = ControlrAuthSessionState.Disposed;
+
+    if (previousState == ControlrAuthSessionState.SignedOut)
+    {
+      return;
+    }
+
+    StateChanged?.Invoke(
+      this,
+      new ControlrAuthSessionStateChangedEventArgs(
+        ControlrAuthSessionState.Disposed,
+        "The session was disposed. Obtain a new session to authenticate again."));
   }
 
   public AuthSnapshot GetAuthSnapshot()
@@ -633,6 +674,14 @@ public sealed class ControlrAuthSession(
 
   private void UpdateState(ControlrAuthSessionState state, string? message = null)
   {
+    if (_state == ControlrAuthSessionState.Disposed)
+    {
+      // Terminal. A sign-in or password change that was still on the wire when the session was
+      // disposed lands here after the fact, and reporting Authenticated for an object that can no
+      // longer act is exactly the lie Disposed exists to prevent.
+      return;
+    }
+
     _state = state;
     StateChanged?.Invoke(this, new ControlrAuthSessionStateChangedEventArgs(state, message));
   }

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using ControlR.ApiClient.Auth;
@@ -6,12 +5,95 @@ using ControlR.ApiClient.Tests.Helpers;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
+using Waiter = ControlR.Libraries.Shared.Services.Waiter;
 
 namespace ControlR.ApiClient.Tests;
 
 public sealed class ControlrAuthSessionTests
 {
   private static readonly Uri _server = new("https://server.test/");
+
+  [Fact]
+  public async Task Dispose_WhenAuthenticated_RaisesDisposedAndClearsIsAuthenticated()
+  {
+    var handler = new RecordingHttpMessageHandler(TokenIssuingResponder());
+    using var session = CreateSession(handler, new FakeTimeProvider());
+    var raised = new List<ControlrAuthSessionState>();
+    session.StateChanged += (_, args) => raised.Add(args.State);
+
+    var login = await session.SignIn(
+      new InteractiveSignInRequest { Email = "u@test.test", Password = "pw" },
+      TestContext.Current.CancellationToken);
+    Assert.Equal(InteractiveLoginStatus.Authenticated, login.Status);
+
+    session.Dispose();
+
+    // A caller still holding this reference used to see Authenticated forever with no event, because
+    // disposal only stopped the refresh loop and never touched the state.
+    Assert.Equal(ControlrAuthSessionState.Disposed, session.State);
+    Assert.False(session.IsAuthenticated);
+    Assert.Contains(ControlrAuthSessionState.Disposed, raised);
+  }
+
+  [Fact]
+  public async Task Dispose_WhenCalledTwice_RaisesTheChangeOnce()
+  {
+    var handler = new RecordingHttpMessageHandler(TokenIssuingResponder());
+    var session = CreateSession(handler, new FakeTimeProvider());
+    var raised = new List<ControlrAuthSessionState>();
+    session.StateChanged += (_, args) => raised.Add(args.State);
+
+    await session.SignIn(
+      new InteractiveSignInRequest { Email = "u@test.test", Password = "pw" },
+      TestContext.Current.CancellationToken);
+
+    session.Dispose();
+    session.Dispose();
+
+    Assert.Equal(1, raised.Count(state => state == ControlrAuthSessionState.Disposed));
+  }
+
+  [Fact]
+  public void Dispose_WhenSignedOut_TransitionsToDisposedWithoutRaisingTheChange()
+  {
+    using var session = CreateSession(new RecordingHttpMessageHandler(), new FakeTimeProvider());
+    var raised = new List<ControlrAuthSessionState>();
+    session.StateChanged += (_, args) => raised.Add(args.State);
+
+    session.Dispose();
+
+    // SignedOut already tells an observer the session cannot authenticate, and this is the state a
+    // never-used session is disposed in during host shutdown, where an extra event is only noise.
+    Assert.Equal(ControlrAuthSessionState.Disposed, session.State);
+    Assert.Empty(raised);
+  }
+
+  [Fact]
+  public async Task Dispose_WhenSignInCompletesAfterwards_KeepsTheTerminalState()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    var handler = new GatedLoginHandler(gate.Task);
+    var session = CreateSession(handler, new FakeTimeProvider());
+
+    var signIn = session.SignIn(
+      new InteractiveSignInRequest { Email = "u@test.test", Password = "pw" },
+      TestContext.Current.CancellationToken);
+
+    Assert.True(await Waiter.Default.WaitFor(() => handler.LoginStarted, cancellationToken: cts.Token));
+
+    session.Dispose();
+    gate.SetResult();
+
+    var result = await signIn;
+
+    // The server accepted the login while the session was being disposed. The result stays truthful
+    // about the server, and the state stays truthful about the session: reporting Authenticated here
+    // would resurrect a terminal state on an object with no transport left.
+    Assert.Equal(InteractiveLoginStatus.Authenticated, result.Status);
+    Assert.Equal(ControlrAuthSessionState.Disposed, session.State);
+    Assert.False(session.IsAuthenticated);
+  }
 
   [Fact]
   public async Task FactoryEviction_WhileRefreshInFlight_DoesNotThrowObjectDisposed()
@@ -37,8 +119,10 @@ public sealed class ControlrAuthSessionTests
     var session = factory.GetOrCreateAuthSession("a");
     await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
 
-    // Wait until the refresh request is actually in flight (semaphore held).
-    await WaitUntilAsync(() => handler.RefreshStarted, cts.Token);
+    // Wait until the refresh request is actually in flight (semaphore held). Use a real-time
+    // waiter so the poll delay isn't tied to the fake clock driving the session.
+    var waitResult = await Waiter.Default.WaitFor(() => handler.RefreshStarted, cancellationToken: cts.Token);
+    Assert.True(waitResult);
 
     // Evict mid-flight: the entry teardown disposes the bearer-refresh lock while the
     // refresher's finally-block Release() is still pending.
@@ -104,9 +188,11 @@ public sealed class ControlrAuthSessionTests
     var session = CreateSession(handler, timeProvider);
     await session.RestoreAuthSnapshot(snapshot);
 
-    await WaitUntilAsync(
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    var waitResult = await Waiter.Default.WaitFor(
       () => Equal(session.GetAuthSnapshot().BearerToken, "access-renewed"),
-      TestContext.Current.CancellationToken);
+      cancellationToken: cts.Token);
+    Assert.True(waitResult);
 
     Assert.Equal(ControlrAuthSessionState.Authenticated, session.State);
     Assert.DoesNotContain(
@@ -123,6 +209,7 @@ public sealed class ControlrAuthSessionTests
   public async Task RunRefreshLoop_WhenRefreshFailsRepeatedly_ExpiresSessionAfterRetryCap()
   {
     var timeProvider = new FakeTimeProvider();
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
     var session = CreateSession(
       new RecordingHttpMessageHandler(_ => throw new HttpRequestException("Simulated persistent failure.")),
       timeProvider,
@@ -130,9 +217,10 @@ public sealed class ControlrAuthSessionTests
 
     await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
 
-    await WaitUntilAsync(
+    var waitResult = await Waiter.Default.WaitFor(
       () => session.State == ControlrAuthSessionState.Expired,
-      TestContext.Current.CancellationToken);
+      cancellationToken: cts.Token);
+    Assert.True(waitResult);
 
     Assert.Equal(ControlrAuthSessionState.Expired, session.State);
     // After a dead-broken refresh, the session ends expired with tokens cleared rather than
@@ -168,9 +256,11 @@ public sealed class ControlrAuthSessionTests
 
     await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
 
-    await WaitUntilAsync(
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    var waitResult = await Waiter.Default.WaitFor(
       () => Equal(session.GetAuthSnapshot().BearerToken, "access-renewed"),
-      TestContext.Current.CancellationToken);
+      cancellationToken: cts.Token);
+    Assert.True(waitResult);
 
     // The regression under test: a transient error must never expire the session or wipe the
     // still-server-valid refresh token.
@@ -183,6 +273,7 @@ public sealed class ControlrAuthSessionTests
   public async Task RunRefreshLoop_WhenRefreshUnauthorized_ExpiresSession()
   {
     var timeProvider = new FakeTimeProvider();
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
     var session = CreateSession(
       new RecordingHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)),
       timeProvider,
@@ -190,13 +281,70 @@ public sealed class ControlrAuthSessionTests
 
     await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
 
-    await WaitUntilAsync(
+    var waitResult = await Waiter.Default.WaitFor(
       () => session.State == ControlrAuthSessionState.Expired,
-      TestContext.Current.CancellationToken);
+      cancellationToken: cts.Token);
+    Assert.True(waitResult);
 
     Assert.Equal(ControlrAuthSessionState.Expired, session.State);
     Assert.Null(session.GetAuthSnapshot().RefreshToken);
     session.Dispose();
+  }
+
+  [Fact]
+  public async Task RunRefreshLoop_WhenTokensAreClearedOutsideTheLoop_ExpiresSessionAndRaisesTheChange()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    var handler = new GatedTokenRefreshHandler(gate.Task);
+    var timeProvider = new FakeTimeProvider();
+    var options = new ControlrApiClientOptions
+    {
+      BaseUrl = _server,
+      BearerRefreshLeadTime = TimeSpan.FromMilliseconds(1)
+    };
+
+    var httpClient = new HttpClient(handler) { BaseAddress = _server };
+    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
+    var refresher = new BearerTokenRefresher(
+      authState,
+      new SingleClientHttpClientFactory(httpClient),
+      timeProvider);
+
+    using var session = new ControlrAuthSession(
+      new SingleClientHttpClientFactory(httpClient),
+      authState,
+      refresher,
+      NullLogger<ControlrAuthSession>.Instance,
+      new FrozenOptionsMonitor<ControlrApiClientOptions>(options),
+      timeProvider);
+
+    var raised = new List<ControlrAuthSessionState>();
+    session.StateChanged += (_, args) => raised.Add(args.State);
+
+    await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
+
+    // The lead time is already past, so the loop fires at once and blocks in the handler while
+    // holding the refresh semaphore.
+    Assert.True(await Waiter.Default.WaitFor(() => handler.RefreshStarted, cancellationToken: cts.Token));
+    Assert.Equal(ControlrAuthSessionState.Authenticated, session.State);
+
+    // This is what ControlrApi does when the server rejects a refresh during an ordinary call. It
+    // clears the auth state it shares with the session and has no way to reach the state machine.
+    authState.ClearBearerTokens();
+    gate.SetResult();
+
+    Assert.True(await Waiter.Default.WaitFor(
+      () => session.State == ControlrAuthSessionState.Expired,
+      cancellationToken: cts.Token));
+
+    // The version bump from the clear makes the gated refresh's own result stale, so the loop
+    // iterates, finds no expiry, and must expire the session rather than return silently. Returning
+    // silently left State at Authenticated with no tokens and no loop, and pinned the factory target
+    // because a live-looking session is exempt from idle eviction.
+    Assert.False(session.IsAuthenticated);
+    Assert.Null(session.GetAuthSnapshot().BearerToken);
+    Assert.Contains(ControlrAuthSessionState.Expired, raised);
   }
 
   [Fact]
@@ -281,17 +429,27 @@ public sealed class ControlrAuthSessionTests
   private static AccessTokenResponseDto Tokens(string accessToken, string refreshToken) =>
     new("Bearer", accessToken, 3600, refreshToken);
 
-  private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken cancellationToken)
+  /// <summary>
+  /// Blocks the interactive login until released, then answers it with a valid token response. Used to
+  /// hold a sign-in on the wire while the session is disposed underneath it.
+  /// </summary>
+  private sealed class GatedLoginHandler(Task gate) : HttpMessageHandler
   {
-    var stopwatch = Stopwatch.StartNew();
-    while (!condition())
+    public bool LoginStarted { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+      HttpRequestMessage request,
+      CancellationToken cancellationToken)
     {
-      if (stopwatch.Elapsed > TimeSpan.FromSeconds(10))
+      if (!request.RequestUri!.AbsolutePath.EndsWith("/interactive-login", StringComparison.Ordinal))
       {
-        throw new TimeoutException("The condition was not met within the allotted time.");
+        return new HttpResponseMessage(HttpStatusCode.OK);
       }
 
-      await Task.Delay(10, cancellationToken);
+      LoginStarted = true;
+      await gate.WaitAsync(cancellationToken);
+      return RecordingHttpMessageHandler.Json(JsonSerializer.Serialize(
+        new InteractiveLoginResponseDto(false, Tokens: Tokens("access-late", "refresh-late"))));
     }
   }
 
@@ -310,6 +468,30 @@ public sealed class ControlrAuthSessionTests
       }
 
       return new HttpResponseMessage(HttpStatusCode.OK);
+    }
+  }
+
+  /// <summary>
+  /// Blocks the refresh until released, then answers it with a valid token response. Used to hold the
+  /// refresh semaphore while another component changes the auth state underneath the loop.
+  /// </summary>
+  private sealed class GatedTokenRefreshHandler(Task gate) : HttpMessageHandler
+  {
+    public bool RefreshStarted { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+      HttpRequestMessage request,
+      CancellationToken cancellationToken)
+    {
+      if (!request.RequestUri!.AbsolutePath.EndsWith("/refresh", StringComparison.Ordinal))
+      {
+        return new HttpResponseMessage(HttpStatusCode.OK);
+      }
+
+      RefreshStarted = true;
+      await gate.WaitAsync(cancellationToken);
+      return RecordingHttpMessageHandler.Json(
+        JsonSerializer.Serialize(Tokens("access-gated", "refresh-gated")));
     }
   }
 }

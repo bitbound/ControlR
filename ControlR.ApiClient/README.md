@@ -271,10 +271,11 @@ Two consequences worth knowing:
 - `MaxTrackedClients` can still evict a target holding a live session, because a hard cap has to be
   able to evict something or it is not a cap. Set it for a fleet that hosts sign-ins only when losing
   a login and re-authenticating is acceptable.
-- A cached `IControlrAuthSession` goes dead when its target is removed by either path, and disposal
-  does not raise `StateChanged`, so its `State` keeps reporting the last value it held. Probe with
-  `TryGetAuthSession(name, out session)` and compare the instance to find out whether the session you
-  are holding is still the factory's.
+- A cached `IControlrAuthSession` goes dead when its target is removed by either path. Disposal moves
+  it to the terminal `Disposed` state and raises `StateChanged`, so an observer still holding the
+  reference stops reporting a usable session. `Disposed` is deliberately distinct from `Expired`: an
+  expired session can be signed in again on the same object, a disposed one cannot, and its caller
+  needs a fresh session from `GetOrCreateAuthSession`.
 
 `TryGetAuthSession` creates nothing and does not refresh the last-used stamp, so a status page that
 polls it across every target cannot accidentally hold them open.
