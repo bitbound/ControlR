@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -270,9 +271,9 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     }
 
     // Dispose outside the lock so a slow handler teardown cannot stall unrelated factory calls.
-    foreach (var victim in evicted)
+    foreach (var clientEntry in evicted)
     {
-      victim.DisposeOnce();
+      clientEntry.DisposeOnce();
     }
 
     return entry.Api;
@@ -305,19 +306,19 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     }
 
     var cutoff = _timeProvider.GetUtcNow().UtcTicks - lifetime.Ticks;
-    ClientEntry[] victims;
+    ClientEntry[] idleClients;
     using (_createLock.EnterScope())
     {
-      victims = [.. _clients.Values.Where(entry => Volatile.Read(ref entry.LastUsedTicks) < cutoff)];
-      foreach (var victim in victims)
+      idleClients = [.. _clients.Values.Where(entry => Volatile.Read(ref entry.LastUsedTicks) < cutoff)];
+      foreach (var idleClient in idleClients)
       {
-        _clients.TryRemove(victim.Name, out _);
+        _clients.TryRemove(idleClient.Name, out _);
       }
     }
 
-    foreach (var victim in victims)
+    foreach (var idleClient in idleClients)
     {
-      victim.DisposeOnce();
+      idleClient.DisposeOnce();
     }
   }
 
@@ -327,7 +328,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
       PooledConnectionLifetime = ControlrApiClientFactoryOptions.DefaultPooledConnectionLifetime
     };
 
-  private static bool IsConfiguredBaseUrl([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] Uri? baseUrl) =>
+  private static bool IsConfiguredBaseUrl([NotNullWhen(true)] Uri? baseUrl) =>
     baseUrl is not null &&
     !ReferenceEquals(baseUrl, _unconfiguredBaseUrl) &&
     baseUrl.IsAbsoluteUri &&
@@ -439,18 +440,18 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
     while (_clients.Count > max)
     {
-      var victim = _clients.Values
+      var client = _clients.Values
         .Where(entry => !StringComparer.Ordinal.Equals(entry.Name, excludedName))
         .OrderBy(entry => (Volatile.Read(ref entry.LastUsedTicks), Volatile.Read(ref entry.LastUsedOrdinal)))
         .FirstOrDefault();
 
-      if (victim is null)
+      if (client is null)
       {
         return evicted;
       }
 
-      _clients.TryRemove(victim.Name, out _);
-      evicted.Add(victim);
+      _clients.TryRemove(client.Name, out _);
+      evicted.Add(client);
     }
 
     return evicted;
