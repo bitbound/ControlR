@@ -11,6 +11,9 @@
 
 - Added `Customers`, `Device Groups`, and `User Groups`.
 - Added Tenant and Server service accounts, including API-credential issuance with configurable expiration.
+  - Revoked and expired credentials can be deleted manually from the service accounts pages, and are
+    permanently removed by a background service after `AppOptions:ServiceAccountCredentialCleanupAfterDays`
+    days (default 30; 0 disables automatic deletion).
 - Replaced roles with a granular permissions system.
   - You can now grant users and service accounts specific permissions, scoped to the whole tenant, a customer, a device group, or an individual device.
 - Existing roles get migrated to permission presets, which are bundles of related permissions that can be applied at once.

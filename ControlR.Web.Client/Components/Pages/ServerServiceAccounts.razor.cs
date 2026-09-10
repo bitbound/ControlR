@@ -231,6 +231,29 @@ public partial class ServerServiceAccounts : ComponentBase
     return state.User.HasClientPolicy(policyName);
   }
 
+  private async Task PurgeCredential(Guid serviceAccountId, Guid credentialId)
+  {
+    var confirmed = await DialogService.ShowMessageBoxAsync(
+      "Delete Credential",
+      "Are you sure you want to permanently delete this credential? This cannot be undone.",
+      "Delete", "Cancel");
+
+    if (!confirmed.GetValueOrDefault())
+    {
+      return;
+    }
+
+    var result = await ControlrApi.Internal.ServerServiceAccounts.PurgeCredential(serviceAccountId, credentialId);
+    if (!result.IsSuccess)
+    {
+      Snackbar.Add(result.Reason, Severity.Error);
+      return;
+    }
+
+    Snackbar.Add("Credential deleted", Severity.Success);
+    await Refresh();
+  }
+
   private async Task Refresh()
   {
     _loading = true;

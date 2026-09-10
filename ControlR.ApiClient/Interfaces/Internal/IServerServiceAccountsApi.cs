@@ -21,6 +21,9 @@ public interface IServerServiceAccountsApi
   [ApiRoute($"{HttpConstants.Internal.ServerServiceAccountsEndpoint}", "GET")]
   Task<ApiResult<InternalDtos.ServerServiceAccountDto[]>> GetAll(CancellationToken cancellationToken = default);
 
+  [ApiRoute($"{HttpConstants.Internal.ServerServiceAccountsEndpoint}/{{serviceAccountId}}/credentials/{{credentialId}}/purge", "DELETE")]
+  Task<ApiResult> PurgeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken = default);
+
   [ApiRoute($"{HttpConstants.Internal.ServerServiceAccountsEndpoint}/{{serviceAccountId}}/credentials/{{credentialId}}", "DELETE")]
   Task<ApiResult> RevokeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken = default);
 
