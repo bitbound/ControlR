@@ -3,22 +3,9 @@ using ControlR.Web.Server.Services.Authorization.PermissionRules;
 
 namespace ControlR.Web.Server.Services.Authorization;
 
-public interface IPermissionDecisionEvaluator
+public static class PermissionRuleEvaluator
 {
-  PermissionEvaluationResult Evaluate(
-    PermissionEvaluationContext context,
-    string permissionName,
-    ResourceDescriptor resource);
-
-  PermissionEvaluationResult EvaluateRules(
-    IReadOnlyList<PermissionRule> rules,
-    string permissionName,
-    ResourceDescriptor resource);
-}
-
-public sealed class PermissionDecisionEvaluator : IPermissionDecisionEvaluator
-{
-  public PermissionEvaluationResult Evaluate(
+  public static PermissionEvaluationResult Evaluate(
     PermissionEvaluationContext context,
     string permissionName,
     ResourceDescriptor resource)
@@ -61,8 +48,8 @@ public sealed class PermissionDecisionEvaluator : IPermissionDecisionEvaluator
 
     if (context.HasExplicitPatScope)
     {
-      var ownerDecision = EvaluateRules(context.OwnerRules, permissionName, resource);
-      if (!ownerDecision.Allowed)
+      var ownerCheck = EvaluateRules(context.OwnerRules, permissionName, resource);
+      if (!ownerCheck.Allowed)
       {
         return PermissionEvaluationResult.Deny(
           "Credential scope grants are outside the user's effective permissions.");
@@ -74,7 +61,7 @@ public sealed class PermissionDecisionEvaluator : IPermissionDecisionEvaluator
     return EvaluateRules(context.EffectiveRules, permissionName, resource);
   }
 
-  public PermissionEvaluationResult EvaluateRules(
+  public static PermissionEvaluationResult EvaluateRules(
     IReadOnlyList<PermissionRule> rules,
     string permissionName,
     ResourceDescriptor resource)

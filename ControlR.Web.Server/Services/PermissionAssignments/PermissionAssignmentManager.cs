@@ -64,7 +64,6 @@ public interface IPermissionAssignmentManager
 
 public class PermissionAssignmentManager(
   AppDb appDb,
-  IPermissionDecisionEvaluator decisionEvaluator,
   IPermissionEvaluator permissionEvaluator,
   ICredentialScopeService credentialScopeService,
   IAuthorizationChangeLogFactory changeLogFactory,
@@ -74,7 +73,6 @@ public class PermissionAssignmentManager(
   private readonly IAsyncLock _asyncLock = asyncLock;
   private readonly IAuthorizationChangeLogFactory _changeLogFactory = changeLogFactory;
   private readonly ICredentialScopeService _credentialScopeService = credentialScopeService;
-  private readonly IPermissionDecisionEvaluator _decisionEvaluator = decisionEvaluator;
   private readonly IPermissionEvaluator _permissionEvaluator = permissionEvaluator;
 
   public async Task<HttpResult<int>> ApplyPresets(
@@ -1057,8 +1055,8 @@ public class PermissionAssignmentManager(
       var resource = PermissionCatalog.Get(permissionName)?.AllowedScopeKinds.Contains(PermissionScopeKind.Server) == true
         ? serverResource
         : tenantResource;
-      var allowedBefore = _decisionEvaluator.EvaluateRules(beforeRules, permissionName, resource).Allowed;
-      var allowedAfter = _decisionEvaluator.EvaluateRules(afterRules, permissionName, resource).Allowed;
+      var allowedBefore = PermissionRuleEvaluator.EvaluateRules(beforeRules, permissionName, resource).Allowed;
+      var allowedAfter = PermissionRuleEvaluator.EvaluateRules(afterRules, permissionName, resource).Allowed;
       if (allowedBefore && !allowedAfter)
       {
         var metadata = PermissionCatalog.Get(permissionName)

@@ -28,11 +28,9 @@ public interface IPermissionEvaluator
 
 public sealed class PermissionEvaluator(
   IPermissionEvaluationContextLoader contextLoader,
-  IPermissionDecisionEvaluator decisionEvaluator,
   IResourceDescriptorFactory resourceDescriptorFactory) : IPermissionEvaluator
 {
   private readonly IPermissionEvaluationContextLoader _contextLoader = contextLoader;
-  private readonly IPermissionDecisionEvaluator _decisionEvaluator = decisionEvaluator;
   private readonly IResourceDescriptorFactory _resourceDescriptorFactory = resourceDescriptorFactory;
 
   public async Task<PermissionEvaluationResult> Evaluate(
@@ -42,7 +40,7 @@ public sealed class PermissionEvaluator(
     CancellationToken cancellationToken)
   {
     var context = await _contextLoader.Load(principal, cancellationToken);
-    return _decisionEvaluator.Evaluate(context, permissionName, resource);
+    return PermissionRuleEvaluator.Evaluate(context, permissionName, resource);
   }
 
   public async Task<IReadOnlyDictionary<PermissionEvaluationRequest, PermissionEvaluationResult>> EvaluateBatch(
@@ -59,7 +57,7 @@ public sealed class PermissionEvaluator(
     var context = await _contextLoader.Load(principal, cancellationToken);
     return requests.ToFrozenDictionary(
       request => request,
-      request => _decisionEvaluator.Evaluate(context, request.PermissionName, request.Resource),
+      request => PermissionRuleEvaluator.Evaluate(context, request.PermissionName, request.Resource),
       ReferenceEqualityComparer<PermissionEvaluationRequest>.Instance);
   }
 
@@ -79,7 +77,7 @@ public sealed class PermissionEvaluator(
       .Distinct(StringComparer.Ordinal)
       .ToFrozenDictionary(
         permissionName => permissionName,
-        permissionName => _decisionEvaluator.Evaluate(context, permissionName, resource),
+        permissionName => PermissionRuleEvaluator.Evaluate(context, permissionName, resource),
         StringComparer.Ordinal);
   }
 

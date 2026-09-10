@@ -73,7 +73,6 @@ public static class AuthorizationRegistrationExtensions
     hostBuilder.Services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
     hostBuilder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
     hostBuilder.Services.AddSingleton<IDesktopSessionAccessAuthorizer, DesktopSessionAccessAuthorizer>();
-    hostBuilder.Services.AddSingleton<IPermissionDecisionEvaluator, PermissionDecisionEvaluator>();
     hostBuilder.Services.AddScoped<IResourceDescriptorFactory, ResourceDescriptorFactory>();
     hostBuilder.Services.AddScoped<IPermissionEvaluationContextLoader, PermissionEvaluationContextLoader>();
     hostBuilder.Services.AddScoped<IPermissionEvaluator, PermissionEvaluator>();

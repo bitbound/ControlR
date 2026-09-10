@@ -12,7 +12,6 @@ public class PermissionEvaluatorBulkTests
     var contextLoader = new Mock<IPermissionEvaluationContextLoader>();
     var evaluator = new PermissionEvaluator(
       contextLoader.Object,
-      Mock.Of<IPermissionDecisionEvaluator>(),
       Mock.Of<IResourceDescriptorFactory>());
     var principal = CreatePrincipal();
     var resource = new ResourceDescriptor(PermissionScopeKind.Server);
@@ -38,16 +37,12 @@ public class PermissionEvaluatorBulkTests
   public async Task EvaluateBatch_WithMultipleResources_LoadsContextOnce()
   {
     var contextLoader = new Mock<IPermissionEvaluationContextLoader>();
-    var decisionEvaluator = new Mock<IPermissionDecisionEvaluator>();
     var principal = CreatePrincipal();
     var context = new PermissionEvaluationContext(principal, false, [], [], false);
     contextLoader
       .Setup(loader => loader.Load(principal, It.IsAny<CancellationToken>()))
       .ReturnsAsync(context);
-    decisionEvaluator
-      .Setup(evaluator => evaluator.Evaluate(context, It.IsAny<string>(), It.IsAny<ResourceDescriptor>()))
-      .Returns(PermissionEvaluationResult.Deny("denied"));
-    var evaluator = new PermissionEvaluator(contextLoader.Object, decisionEvaluator.Object, Mock.Of<IResourceDescriptorFactory>());
+    var evaluator = new PermissionEvaluator(contextLoader.Object, Mock.Of<IResourceDescriptorFactory>());
     var requests = new[]
     {
       new PermissionEvaluationRequest(
@@ -64,6 +59,7 @@ public class PermissionEvaluatorBulkTests
       TestContext.Current.CancellationToken);
 
     Assert.Equal(requests.Length, results.Count);
+    Assert.All(results.Values, result => Assert.False(result.Allowed));
     contextLoader.Verify(
       loader => loader.Load(principal, It.IsAny<CancellationToken>()),
       Times.Once);
@@ -73,16 +69,12 @@ public class PermissionEvaluatorBulkTests
   public async Task EvaluateMany_WithMultiplePermissions_LoadsContextOnce()
   {
     var contextLoader = new Mock<IPermissionEvaluationContextLoader>();
-    var decisionEvaluator = new Mock<IPermissionDecisionEvaluator>();
     var principal = CreatePrincipal();
     var context = new PermissionEvaluationContext(principal, false, [], [], false);
     contextLoader
       .Setup(loader => loader.Load(principal, It.IsAny<CancellationToken>()))
       .ReturnsAsync(context);
-    decisionEvaluator
-      .Setup(evaluator => evaluator.Evaluate(context, It.IsAny<string>(), It.IsAny<ResourceDescriptor>()))
-      .Returns(PermissionEvaluationResult.Deny("denied"));
-    var evaluator = new PermissionEvaluator(contextLoader.Object, decisionEvaluator.Object, Mock.Of<IResourceDescriptorFactory>());
+    var evaluator = new PermissionEvaluator(contextLoader.Object, Mock.Of<IResourceDescriptorFactory>());
 
     var results = await evaluator.EvaluateMany(
       principal,
@@ -91,12 +83,11 @@ public class PermissionEvaluatorBulkTests
       TestContext.Current.CancellationToken);
 
     Assert.Equal(2, results.Count);
+    Assert.Contains(PermissionNames.DeviceRead, results.Keys);
+    Assert.Contains(PermissionNames.DeviceDelete, results.Keys);
     contextLoader.Verify(
       loader => loader.Load(principal, It.IsAny<CancellationToken>()),
       Times.Once);
-    decisionEvaluator.Verify(
-      decision => decision.Evaluate(context, It.IsAny<string>(), It.IsAny<ResourceDescriptor>()),
-      Times.Exactly(2));
   }
 
   private static PrincipalDescriptor CreatePrincipal() =>
