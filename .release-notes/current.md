@@ -34,9 +34,10 @@
 
 ## Fixes
 
-- The `ControlR.ApiClient` background token-refresh no longer ends the session on transient failures. Previously a single network hiccup or server error during a background refresh wiped the bearer and refresh tokens, forcing a full re-login (including 2FA). Now only a server-rejected refresh token expires the session. Transient errors are retried with backoff.
-- The `ControlR.ApiClient` interactive session no longer keeps reporting itself as signed in after the server rejects its refresh token during an ordinary API call. The tokens were cleared but the session state was not, so it stayed `Authenticated` with no tokens, raised no state change, and its background refresh loop exited silently. Every later call then failed as unauthorized while the session still looked healthy.
-- Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`. Disposal previously only stopped the background refresh, which left `State` at `Authenticated` and `IsAuthenticated` true on an object that could never authenticate again, so removing or evicting a factory target gave a caller holding the session no signal at all. State changes after disposal are ignored, so a sign-in that completes after its session was disposed can no longer resurrect it. Restoring an auth snapshot onto a disposed session now throws `ObjectDisposedException`. It previously stored the credential while the state stayed `Disposed`, so the session reported a credential it could never use and raised nothing.
+- The `ControlR.ApiClient` background token-refresh no longer ends the session on transient failures.
+- The `ControlR.ApiClient` interactive session no longer keeps reporting itself as signed in after the server rejects its refresh token during an ordinary API call.
+- Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`.
+- Interactive sign-in in `ControlR.ApiClient` now clears a personal access token or service account key if one was already configured on the session.
 
 ## Removals
 
