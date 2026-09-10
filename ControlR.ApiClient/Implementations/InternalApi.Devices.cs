@@ -42,6 +42,8 @@ internal partial class InternalApi
 
   async IAsyncEnumerable<InternalDtos.DeviceResponseDto> IDevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
   {
+    using var tracked = _client.BeginTrackedRequest();
+
     var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<InternalDtos.DeviceResponseDto>(
       HttpConstants.Internal.DevicesEndpoint,
       cancellationToken: cancellationToken);
@@ -81,6 +83,8 @@ internal partial class InternalApi
 
   async IAsyncEnumerable<InternalDtos.DeviceSummaryDto> IDevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
   {
+    using var tracked = _client.BeginTrackedRequest();
+
     var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<InternalDtos.DeviceSummaryDto>(
       $"{HttpConstants.Internal.DevicesEndpoint}/summary",
       cancellationToken: cancellationToken);

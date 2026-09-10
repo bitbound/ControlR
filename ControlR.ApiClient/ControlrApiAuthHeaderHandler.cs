@@ -14,7 +14,11 @@ public sealed class ControlrApiAuthHeaderHandler(ControlrApiClientAuthState auth
 
   private void ApplyAuthHeader(HttpRequestHeaders headers)
   {
+    // Scrub every credential header the client can emit before applying one, so the outgoing headers
+    // are a function of the current auth state alone. A caller may have seeded a header on
+    // HttpClient.DefaultRequestHeaders, which is merged into the request before this handler runs.
     headers.Remove(ControlrApiClientOptions.PersonalAccessTokenHeader);
+    headers.Remove(ControlrApiClientOptions.ServiceAccountApiKeyHeader);
     headers.Remove(ControlrApiClientAuthState.AuthorizationHeader);
     headers.Authorization = null;
 

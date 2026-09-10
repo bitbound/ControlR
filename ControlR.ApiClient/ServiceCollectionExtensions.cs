@@ -2,6 +2,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.ApiClient.Interfaces.V1;
@@ -48,7 +50,7 @@ public static class ServiceCollectionExtensions
     services.TryAddSingleton(sp =>
     {
       var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
-      return new ControlrApiClientAuthState(options.PersonalAccessToken);
+      return new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
     });
 
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
@@ -72,8 +74,8 @@ public static class ServiceCollectionExtensions
       })
       .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
     services.TryAddTransient<IControlrApi>(sp => sp.GetRequiredService<ControlrApi>());
-    services.TryAddTransient<IControlrInternalApi>(sp => sp.GetRequiredService<IControlrApi>().Internal);
-    services.TryAddTransient<IControlrV1Api>(sp => sp.GetRequiredService<IControlrApi>().V1);
+    services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().Internal);
+    services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().V1);
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
     return services;
@@ -124,7 +126,7 @@ public static class ServiceCollectionExtensions
     services.TryAddSingleton(sp =>
     {
       var options = sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue;
-      return new ControlrApiClientAuthState(options.PersonalAccessToken);
+      return new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
     });
 
     services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
@@ -148,8 +150,8 @@ public static class ServiceCollectionExtensions
       })
       .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
     services.TryAddTransient<IControlrApi>(sp => sp.GetRequiredService<ControlrApi>());
-    services.TryAddTransient<IControlrInternalApi>(sp => sp.GetRequiredService<IControlrApi>().Internal);
-    services.TryAddTransient<IControlrV1Api>(sp => sp.GetRequiredService<IControlrApi>().V1);
+    services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().Internal);
+    services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().V1);
 
     services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
 
@@ -186,6 +188,134 @@ public static class ServiceCollectionExtensions
     string configurationSectionName)
   {
     builder.Services.AddControlrApiClient(builder.Configuration, configurationSectionName);
+    return builder;
+  }
+
+  /// <summary>
+  /// <para>
+  ///   Adds the <see cref="IControlrApiClientFactory"/> service for applications that integrate with
+  ///   multiple, runtime-discovered ControlR servers.
+  /// </para>
+  /// <para>
+  ///   Unlike <see cref="AddControlrApiClient(IServiceCollection, Action{ControlrApiClientOptions})"/>,
+  ///   which configures a single server statically, the factory creates one self-contained client per
+  ///   named target via <see cref="IControlrApiClientFactory.GetOrCreateClient"/>.
+  /// </para>
+  /// <para>
+  ///   This registration is server-only. Do not use it from Blazor WebAssembly. Use
+  ///   <see cref="AddControlrApiClient(IServiceCollection, Action{ControlrApiClientOptions})"/> there instead.
+  /// </para>
+  /// </summary>
+  /// <param name="services">
+  ///   The <see cref="IServiceCollection"/> to which the services are added.
+  /// </param>
+  /// <param name="configureFactoryOptions">
+  ///   An optional action used to configure the <see cref="ControlrApiClientFactoryOptions"/>.
+  /// </param>
+  /// <returns>
+  ///   The <see cref="IServiceCollection"/> to allow for chaining further calls.
+  /// </returns>
+  public static IServiceCollection AddControlrApiClientFactory(
+    this IServiceCollection services,
+    Action<ControlrApiClientFactoryOptions>? configureFactoryOptions = null)
+  {
+    services.TryAddSingleton(TimeProvider.System);
+
+    var optionsBuilder = services
+      .AddOptions<ControlrApiClientFactoryOptions>()
+      .Validate(options => options.SweeperInterval > TimeSpan.Zero,
+        $"{nameof(ControlrApiClientFactoryOptions.SweeperInterval)} must be greater than zero.")
+      .Validate(
+        options => options.MaxIdleClientLifetime is null || options.MaxIdleClientLifetime > TimeSpan.Zero,
+        $"{nameof(ControlrApiClientFactoryOptions.MaxIdleClientLifetime)} must be greater than zero when set.")
+      .Validate(
+        options => options.MaxTrackedClients is null || options.MaxTrackedClients > 0,
+        $"{nameof(ControlrApiClientFactoryOptions.MaxTrackedClients)} must be greater than zero when set. Leave it null for no limit.")
+      .ValidateOnStart();
+
+    if (configureFactoryOptions is not null)
+    {
+      optionsBuilder.Configure(configureFactoryOptions);
+    }
+
+    services.TryAddSingleton<IControlrApiClientFactory>(sp => new ControlrApiClientFactory(
+      sp.GetRequiredService<IOptions<ControlrApiClientFactoryOptions>>().Value,
+      sp.GetRequiredService<TimeProvider>(),
+      sp.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance));
+
+    return services;
+  }
+
+  /// <summary>
+  /// <para>
+  ///   Adds the <see cref="IControlrApiClientFactory"/> service, loading factory configuration from the
+  ///   specified configuration section.
+  /// </para>
+  /// <para>
+  ///   Per-server options are still supplied at client-creation time via
+  ///   <see cref="IControlrApiClientFactory.GetOrCreateClient"/>.
+  /// </para>
+  /// </summary>
+  /// <param name="services">
+  ///   The <see cref="IServiceCollection"/> to which the services are added.
+  /// </param>
+  /// <param name="configuration">
+  ///   The <see cref="IConfiguration"/> instance to bind factory options from.
+  /// </param>
+  /// <param name="configurationSectionName">
+  ///   The name of the configuration section containing the <see cref="ControlrApiClientFactoryOptions"/>.
+  /// </param>
+  /// <returns>
+  ///   The <see cref="IServiceCollection"/> to allow for chaining further calls.
+  /// </returns>
+  public static IServiceCollection AddControlrApiClientFactory(
+    this IServiceCollection services,
+    IConfiguration configuration,
+    string configurationSectionName)
+  {
+    services.TryAddSingleton(TimeProvider.System);
+
+    services
+      .AddOptions<ControlrApiClientFactoryOptions>()
+      .Bind(configuration.GetSection(configurationSectionName))
+      .Validate(options => options.SweeperInterval > TimeSpan.Zero,
+        $"{nameof(ControlrApiClientFactoryOptions.SweeperInterval)} must be greater than zero.")
+      .Validate(
+        options => options.MaxIdleClientLifetime is null || options.MaxIdleClientLifetime > TimeSpan.Zero,
+        $"{nameof(ControlrApiClientFactoryOptions.MaxIdleClientLifetime)} must be greater than zero when set.")
+      .Validate(
+        options => options.MaxTrackedClients is null || options.MaxTrackedClients > 0,
+        $"{nameof(ControlrApiClientFactoryOptions.MaxTrackedClients)} must be greater than zero when set. Leave it null for no limit.")
+      .ValidateOnStart();
+
+    services.TryAddSingleton<IControlrApiClientFactory>(sp => new ControlrApiClientFactory(
+      sp.GetRequiredService<IOptions<ControlrApiClientFactoryOptions>>().Value,
+      sp.GetRequiredService<TimeProvider>(),
+      sp.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance));
+
+    return services;
+  }
+
+  /// <summary>
+  /// <para>
+  ///   Adds the <see cref="IControlrApiClientFactory"/> service, loading factory configuration from the
+  ///   specified configuration section using the builder's <see cref="IHostApplicationBuilder.Configuration"/>.
+  /// </para>
+  /// </summary>
+  /// <param name="builder">
+  ///   The <see cref="IHostApplicationBuilder"/> to add the services to.
+  /// </param>
+  /// <param name="configurationSectionName">
+  ///   The name of the configuration section containing the <see cref="ControlrApiClientFactoryOptions"/>.
+  /// </param>
+  /// <returns>
+  ///   The <see cref="IHostApplicationBuilder"/> to allow for chaining further calls.
+  /// </returns>
+  public static IHostApplicationBuilder AddControlrApiClientFactory(
+    this IHostApplicationBuilder builder,
+    string configurationSectionName)
+  {
+    builder.Services.AddControlrApiClientFactory(builder.Configuration, configurationSectionName);
     return builder;
   }
 }

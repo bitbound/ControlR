@@ -44,6 +44,13 @@ public sealed class BearerTokenRefresher(
   private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
   private readonly TimeProvider _timeProvider = timeProvider;
 
+  /// <summary>
+  /// Counts refreshes so that a tracked target is not released while one is waiting or in flight.
+  /// The factory assigns the target's tracker here. The single-client registration keeps the default
+  /// instance, where nothing ever requests teardown.
+  /// </summary>
+  internal InFlightTracker Requests { get; set; } = new();
+
   public async Task<BearerTokenRefreshResult> RefreshIfNeeded(
     bool forceRefresh,
     TimeSpan refreshWindow,
@@ -56,6 +63,12 @@ public sealed class BearerTokenRefresher(
     {
       return BearerTokenRefreshResult.NoRefreshNeeded;
     }
+
+    // Queuing for the refresh lock has to be tracked, not just the request that follows it. A
+    // factory teardown disposes that lock together with the target, and a waiter that is already
+    // queued when the dispose lands is never resumed. Reporting "nothing to refresh" instead lets
+    // the caller continue to its own call, which reports the removed target on its own.
+    using var lease = Requests.AcquireOrThrow(nameof(BearerTokenRefresher));
 
     await auth.BearerRefreshLock.WaitAsync(cancellationToken);
     try
@@ -104,7 +117,18 @@ public sealed class BearerTokenRefresher(
     }
     finally
     {
-      auth.BearerRefreshLock.Release();
+      try
+      {
+        auth.BearerRefreshLock.Release();
+      }
+      catch (ObjectDisposedException)
+      {
+        // Backstop. The lease taken above is what normally keeps a tracked target's teardown from
+        // disposing this semaphore while it is held. This covers any other owner that disposes the
+        // auth state mid-flight. The refresh result is already applied to the auth state, which is
+        // being discarded anyway, so swallowing keeps a successful refresh from crashing in the
+        // finally block.
+      }
     }
   }
 }

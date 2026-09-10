@@ -25,10 +25,18 @@
 - Added an Effective Permissions page that shows exactly what a user or service account can do.
 - Added `Customer` input to the deploy page, allowing for the device to get added to a specific customer during agent installation.
 - Refactored `Deploy` page for better usability (back button, pre-populated expiration for time-based keys, grid sizing).
+- Added `IControlrApiClientFactory` to the `ControlR.ApiClient` library. Register one factory and produce `IControlrApi` clients that target different ControlR servers, each with its own credentials.
+  - Includes idle-target eviction, an optional tracked-target cap with least-recently-used eviction, and credential rotation via remove-and-recreate.
+  - Existing `AddControlrApiClient` and `ControlrApiClientBuilder` usage is unchanged.
+- `ControlR.ApiClient` can now authenticate as a service account. Set `ServiceAccountApiKey` and requests carry the credential in the `x-api-key` header, authenticating as the service account instead of as a user.
+  - Available on `AddControlrApiClient`, `ControlrApiClientBuilder`, and each factory target. A personal access token or bearer token takes precedence when it is also configured.
+- Added `ControlrApiClientBuilder.GetAuthSession()`, which exposes the interactive bearer session for the process-wide client.
 
 ## Fixes
 
-None.
+- The `ControlR.ApiClient` background token-refresh no longer ends the session on transient failures. Previously a single network hiccup or server error during a background refresh wiped the bearer and refresh tokens, forcing a full re-login (including 2FA). Now only a server-rejected refresh token expires the session. Transient errors are retried with backoff.
+- The `ControlR.ApiClient` interactive session no longer keeps reporting itself as signed in after the server rejects its refresh token during an ordinary API call. The tokens were cleared but the session state was not, so it stayed `Authenticated` with no tokens, raised no state change, and its background refresh loop exited silently. Every later call then failed as unauthorized while the session still looked healthy.
+- Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`. Disposal previously only stopped the background refresh, which left `State` at `Authenticated` and `IsAuthenticated` true on an object that could never authenticate again, so removing or evicting a factory target gave a caller holding the session no signal at all. State changes after disposal are ignored, so a sign-in that completes after its session was disposed can no longer resurrect it. Restoring an auth snapshot onto a disposed session now throws `ObjectDisposedException`. It previously stored the credential while the state stayed `Disposed`, so the session reported a credential it could never use and raised nothing.
 
 ## Removals
 

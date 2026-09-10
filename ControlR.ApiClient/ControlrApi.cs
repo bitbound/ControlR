@@ -23,6 +23,9 @@ public partial class ControlrApi(
   ILogger<ControlrApi> logger,
   IOptions<ControlrApiClientOptions> options) : IControlrApi
 {
+  internal const string DisposedTargetReason =
+    "The HTTP client for this target was disposed. Obtain the client again from the factory.";
+
   private readonly ControlrApiClientAuthState _authState = authState;
   private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly HttpClient _client = httpClient;
@@ -38,14 +41,47 @@ public partial class ControlrApi(
   internal InternalApi InternalApi => _internal ??= new(this);
   internal ILogger<ControlrApi> Logger => _logger;
   internal IOptions<ControlrApiClientOptions> Options => _options;
+
+  /// <summary>
+  /// Counts this client's calls so that evicting the target releases its HTTP stack once they
+  /// finish. The factory assigns it while building the target. A client nobody evicts keeps the
+  /// instance it was given, where acquiring a lease costs a counter pair.
+  /// </summary>
+  internal InFlightTracker Requests { get; set; } = new();
   internal V1Api V1 => _v1 ??= new(this);
 
   IControlrAgentApi IControlrApi.Agent => AgentApi;
   IControlrInternalApi IControlrApi.Internal => InternalApi;
   IControlrV1Api IControlrApi.V1 => V1;
 
+  /// <summary>
+  /// <para>
+  /// Announces a call that <see cref="ExecuteApiCall(Func{Task}, bool)"/> does not wrap, which is how
+  /// a streamed response stays counted for as long as its body is still being read. Dispose the
+  /// returned lease when the caller is done with the response.
+  /// </para>
+  /// <para>
+  /// The JSON read from a streaming endpoint is buffered by <see cref="HttpClient"/> before it reaches
+  /// the caller, so the lease is cleared when that read finishes rather than when the response starts.
+  /// A caller that hands items out slowly holds the target for the duration of the whole stream.
+  /// </para>
+  /// <para>
+  /// Throws when the target was removed or is being removed. A streaming endpoint returns
+  /// <see cref="IAsyncEnumerable{T}"/>, so it has no failed result to report and yielding nothing
+  /// would read as an empty device list.
+  /// </para>
+  /// </summary>
+  internal InFlightTracker.Lease BeginTrackedRequest() => Requests.AcquireOrThrow(nameof(ControlrApi));
+
   internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
   {
+    using var lease = Requests.Acquire();
+
+    if (!lease.Acquired)
+    {
+      return LogFailure(ApiResult.Fail(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown));
+    }
+
     try
     {
       await PrepareClientForRequest(allowAutoRefresh);
@@ -84,6 +120,13 @@ public partial class ControlrApi(
       var apiResult = ApiResult.Fail(message, HttpStatusCode.RequestTimeout);
       return LogFailure(apiResult, ex);
     }
+    catch (ObjectDisposedException ex)
+    {
+      // The target was removed or evicted while this client was still in use. Reporting that as a
+      // server failure would send the caller looking at the wrong end of the connection.
+      var apiResult = ApiResult.Fail(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown);
+      return LogFailure(apiResult, ex);
+    }
     catch (Exception ex)
     {
       const string message = "The request to the server failed.";
@@ -94,6 +137,13 @@ public partial class ControlrApi(
 
   internal async Task<ApiResult<T>> ExecuteApiCall<T>(Func<Task<T?>> func, bool allowAutoRefresh = true)
   {
+    using var lease = Requests.Acquire();
+
+    if (!lease.Acquired)
+    {
+      return LogFailure(ApiResult.Fail<T>(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown));
+    }
+
     try
     {
       await PrepareClientForRequest(allowAutoRefresh);
@@ -164,6 +214,13 @@ public partial class ControlrApi(
       var apiResult = ApiResult.Fail<T>(message, HttpStatusCode.RequestTimeout);
       return LogFailure(apiResult, ex);
     }
+    catch (ObjectDisposedException ex)
+    {
+      // The target was removed or evicted while this client was still in use. Reporting that as a
+      // server failure would send the caller looking at the wrong end of the connection.
+      var apiResult = ApiResult.Fail<T>(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown);
+      return LogFailure(apiResult, ex);
+    }
     catch (Exception ex)
     {
       const string message = "The request to the server failed.";
@@ -198,9 +255,21 @@ public partial class ControlrApi(
 
   private async Task PrepareClientForRequest(bool allowAutoRefresh)
   {
-    if (allowAutoRefresh)
+    if (!allowAutoRefresh)
+    {
+      return;
+    }
+
+    try
     {
       await RefreshBearerTokenIfNeeded(forceRefresh: false);
+    }
+    catch (ObjectDisposedException)
+    {
+      // The target began being removed after this call announced itself, so the refresher was
+      // refused. This call still holds the target, which means its stack is alive and stays alive
+      // until the call returns. Sending with the token in hand is what the in-flight guarantee
+      // promises. A resulting 401 takes the normal refresh-and-retry path.
     }
   }
 
