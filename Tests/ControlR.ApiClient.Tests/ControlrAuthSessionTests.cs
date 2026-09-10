@@ -375,6 +375,53 @@ public sealed class ControlrAuthSessionTests
   }
 
   [Fact]
+  public async Task SignIn_WhenPersonalAccessTokenIsConfigured_ClearsTokenAndUsesBearerHeader()
+  {
+    var authState = new ControlrApiClientAuthState(personalAccessToken: "pat-old");
+    var session = CreateSession(
+      new RecordingHttpMessageHandler(TokenIssuingResponder()),
+      new FakeTimeProvider(),
+      authState);
+
+    var login = await session.SignIn(
+      new InteractiveSignInRequest { Email = "u@test.test", Password = "pw" },
+      TestContext.Current.CancellationToken);
+    Assert.Equal(InteractiveLoginStatus.Authenticated, login.Status);
+
+    // Sign-in is a deliberate identity switch, so it must honor the exclusivity rule the rest of the
+    // class follows. Without the reset the configured token survives, and TryGetAuthHeader's precedence
+    // (PAT before bearer) keeps authenticating every request as the PAT principal while the session
+    // reports itself as the signed-in user.
+    Assert.Null(session.PersonalAccessToken);
+    Assert.Null(session.GetAuthSnapshot().PersonalAccessToken);
+    Assert.True(authState.TryGetAuthHeader(out var headerName, out var headerValue));
+    Assert.Equal(ControlrApiClientAuthState.AuthorizationHeader, headerName);
+    Assert.Equal("Bearer access-1", headerValue);
+    session.Dispose();
+  }
+
+  [Fact]
+  public async Task SignIn_WhenPersonalAccessTokenIsConfigured_GetBearerTokenReturnsNewAccessToken()
+  {
+    var authState = new ControlrApiClientAuthState(personalAccessToken: "pat-old");
+    var session = CreateSession(
+      new RecordingHttpMessageHandler(TokenIssuingResponder()),
+      new FakeTimeProvider(),
+      authState);
+
+    await session.SignIn(
+      new InteractiveSignInRequest { Email = "u@test.test", Password = "pw" },
+      TestContext.Current.CancellationToken);
+
+    // GetBearerToken short-circuited to null while a personal access token was present, so the viewer's
+    // SignalR AccessTokenProvider and WebSocket relay headers went out without a token after an
+    // interactive sign-in that had a stale token in its configuration.
+    var token = await session.GetBearerToken(TestContext.Current.CancellationToken);
+    Assert.Equal("access-1", token);
+    session.Dispose();
+  }
+
+  [Fact]
   public async Task SignIn_WhenServerRequiresTwoFactor_RequiresCodeThenAuthenticates()
   {
     var loginCount = 0;
@@ -410,15 +457,43 @@ public sealed class ControlrAuthSessionTests
     session.Dispose();
   }
 
+  [Fact]
+  public async Task SignIn_WhenServiceAccountApiKeyIsConfigured_ClearsCredentialAndUsesBearerHeader()
+  {
+    var authState = new ControlrApiClientAuthState(serviceAccountApiKey: "0123456789abcdef:secret-value");
+    var session = CreateSession(
+      new RecordingHttpMessageHandler(TokenIssuingResponder()),
+      new FakeTimeProvider(),
+      authState);
+
+    var login = await session.SignIn(
+      new InteractiveSignInRequest { Email = "u@test.test", Password = "pw" },
+      TestContext.Current.CancellationToken);
+    Assert.Equal(InteractiveLoginStatus.Authenticated, login.Status);
+
+    Assert.Null(session.ServiceAccountApiKey);
+    Assert.Null(session.GetAuthSnapshot().ServiceAccountApiKey);
+    Assert.True(authState.TryGetAuthHeader(out var headerName, out var headerValue));
+    Assert.Equal(ControlrApiClientAuthState.AuthorizationHeader, headerName);
+    Assert.Equal("Bearer access-1", headerValue);
+    session.Dispose();
+  }
+
   private static ControlrAuthSession CreateSession(
     HttpMessageHandler handler,
     FakeTimeProvider timeProvider,
+    Action<ControlrApiClientOptions>? configure = null) =>
+    CreateSession(handler, timeProvider, new ControlrApiClientAuthState(personalAccessToken: null), configure);
+
+  private static ControlrAuthSession CreateSession(
+    HttpMessageHandler handler,
+    FakeTimeProvider timeProvider,
+    ControlrApiClientAuthState authState,
     Action<ControlrApiClientOptions>? configure = null)
   {
     var options = new ControlrApiClientOptions { BaseUrl = _server };
     configure?.Invoke(options);
     var client = new HttpClient(handler) { BaseAddress = _server };
-    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
     var refresher = new BearerTokenRefresher(authState, new SingleClientHttpClientFactory(client), timeProvider);
     return new ControlrAuthSession(
       new SingleClientHttpClientFactory(client),

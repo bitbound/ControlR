@@ -460,6 +460,12 @@ public sealed class ControlrAuthSession(
         throw new HttpRequestException("The interactive login response did not include tokens.");
       }
 
+      // Sign-in is a deliberate identity switch, so it must honor the same exclusivity rule the rest
+      // of the class follows. Without the reset, a previously configured personal access token or
+      // service account key survives alongside the new bearer token, and TryGetAuthHeader's precedence
+      // keeps authenticating every request as the old principal while the session reports itself as
+      // the signed-in one.
+      ResetSession(clearConfiguredCredentials: true);
       _authState.SetBearerTokenResponse(payload.Tokens, _timeProvider);
       UpdateState(ControlrAuthSessionState.Authenticated);
       StartRefreshLoop();
