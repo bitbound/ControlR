@@ -135,6 +135,30 @@ public class ServerServiceAccountsController(
     });
   }
 
+  [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}/purge")]
+  [Authorize(Policy = PolicyNames.RequireServerServiceAccountsRotateCredentials)]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> PurgeCredential(
+    Guid serviceAccountId,
+    Guid credentialId,
+    CancellationToken cancellationToken)
+  {
+    if (User.ToPrincipalDescriptor() is not { } actor)
+    {
+      return Unauthorized();
+    }
+
+    var result = await _serviceAccountManager.PurgeCredentialForServer(serviceAccountId, credentialId, actor, cancellationToken);
+    if (!result.IsSuccess)
+    {
+      return result.ToActionResult();
+    }
+
+    return NoContent();
+  }
+
   [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}")]
   [Authorize(Policy = PolicyNames.RequireServerServiceAccountsRotateCredentials)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]

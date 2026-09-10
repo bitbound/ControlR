@@ -69,6 +69,19 @@ internal partial class V1Api
     });
   }
 
+  async Task<ApiResult> IServerServiceAccountsApi.PurgeCredential(
+    Guid serviceAccountId,
+    Guid credentialId,
+    CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.DeleteAsync(
+        $"{HttpConstants.V1.ServerServiceAccountsEndpoint}/{serviceAccountId}/credentials/{credentialId}/purge", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
   async Task<ApiResult> IServerServiceAccountsApi.RevokeCredential(
     Guid serviceAccountId,
     Guid credentialId,
