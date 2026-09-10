@@ -29,7 +29,9 @@
               Class="pa-4"
               Style="max-height: 80vh; overflow-y: auto;">
     <div @onclick:stopPropagation="true">
-      @ChildContent
+      <CascadingValue Value="ClosePopover" IsFixed="true">
+        @ChildContent
+      </CascadingValue>
     </div>
   </MudPopover>
 </div>

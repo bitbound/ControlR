@@ -8,6 +8,9 @@ public partial class InputPopover : DisposableComponent
   public required IClipboardManager ClipboardManager { get; init; }
 
   [CascadingParameter]
+  public Func<Task>? ClosePopover { get; set; }
+
+  [CascadingParameter]
   public DeviceAccessPermissionsDto? DeviceAccessPermissions { get; set; }
 
   [Inject]
@@ -146,6 +149,11 @@ public partial class InputPopover : DisposableComponent
       {
         Logger.LogWarning("Failed to log ReceiveClipboardText activity: {Reason}", activityResult.Reason);
       }
+
+      if (ClosePopover is not null)
+      {
+        await ClosePopover();
+      }
     }
     catch (Exception ex)
     {
@@ -179,6 +187,11 @@ public partial class InputPopover : DisposableComponent
       {
         Logger.LogWarning("Failed to log SendClipboardText activity: {Reason}", activityResult.Reason);
       }
+
+      if (ClosePopover is not null)
+      {
+        await ClosePopover();
+      }
     }
     catch (Exception ex)
     {
@@ -201,6 +214,11 @@ public partial class InputPopover : DisposableComponent
       Snackbar.Add("Sending clipboard to type", Severity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       await RemoteControlStream.SendTypeText(text, cts.Token);
+
+      if (ClosePopover is not null)
+      {
+        await ClosePopover();
+      }
     }
     catch (Exception ex)
     {
