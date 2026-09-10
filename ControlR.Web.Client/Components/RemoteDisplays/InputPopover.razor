@@ -8,7 +8,7 @@
                ThumbIcon="@(Icons.Material.Filled.RemoveRedEye)" />
   </MudTooltip>
 
-  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows && DeviceAccessPermissions?.CanBlockRemoteInput == true)
+  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows && DeviceAccessPermissionsState.Permissions?.CanBlockRemoteInput == true)
   {
     <MudTooltip Text="Block user input on the remote device">
       <MudSwitch @bind-Value:get="RemoteControlState.IsBlockUserInputEnabled" @bind-Value:set="HandleBlockInputToggled"
@@ -17,12 +17,12 @@
     </MudTooltip>
   }
 
-  @if (DeviceAccessPermissions?.CanReadClipboard == true || DeviceAccessPermissions?.CanWriteClipboard == true)
+  @if (DeviceAccessPermissionsState.Permissions?.CanReadClipboard == true || DeviceAccessPermissionsState.Permissions?.CanWriteClipboard == true)
   {
     <MudText Typo="Typo.caption" Class="mt-2">Clipboard</MudText>
   }
 
-  @if (DeviceAccessPermissions?.CanWriteClipboard == true)
+  @if (DeviceAccessPermissionsState.Permissions?.CanWriteClipboard == true)
   {
     <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Send)" Size="Size.Small"
                OnClick="HandleSendClipboardClicked" FullWidth>
@@ -30,7 +30,7 @@
     </MudButton>
   }
 
-  @if (DeviceAccessPermissions?.CanReadClipboard == true)
+  @if (DeviceAccessPermissionsState.Permissions?.CanReadClipboard == true)
   {
     <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.CallReceived)" Size="Size.Small"
                OnClick="HandleReceiveClipboardClicked" FullWidth>
@@ -38,7 +38,7 @@
     </MudButton>
   }
 
-  @if (DeviceAccessPermissions?.CanWriteClipboard == true)
+  @if (DeviceAccessPermissionsState.Permissions?.CanWriteClipboard == true)
   {
     <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Keyboard)" Size="Size.Small"
                OnClick="HandleTypeClipboardClicked" FullWidth>
@@ -46,7 +46,7 @@
     </MudButton>
   }
 
-  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows && DeviceAccessPermissions?.CanSendCtrlAltDel == true)
+  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows && DeviceAccessPermissionsState.Permissions?.CanSendCtrlAltDel == true)
   {
     <MudText Typo="Typo.caption" Class="mt-2">Security</MudText>
     <MudButton Variant="Variant.Outlined" StartIcon="@(Icons.Material.Filled.Shield)" Size="Size.Small"

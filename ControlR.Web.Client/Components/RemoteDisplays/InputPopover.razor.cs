@@ -10,8 +10,8 @@ public partial class InputPopover : DisposableComponent
   [CascadingParameter]
   public Func<Task>? ClosePopover { get; set; }
 
-  [CascadingParameter]
-  public DeviceAccessPermissionsDto? DeviceAccessPermissions { get; set; }
+  [Inject]
+  public required IDeviceAccessPermissionsState DeviceAccessPermissionsState { get; init; }
 
   [Inject]
   public required IDeviceState DeviceState { get; init; }
@@ -37,6 +37,7 @@ public partial class InputPopover : DisposableComponent
     {
       Disposables.AddRange(
         RemoteControlState.OnStateChanged(() => InvokeAsync(StateHasChanged)),
+        DeviceAccessPermissionsState.OnStateChanged(() => InvokeAsync(StateHasChanged)),
         RemoteControlStream.RegisterMessageHandler(this, HandleDtoReceived));
     }
     await base.OnAfterRenderAsync(firstRender);

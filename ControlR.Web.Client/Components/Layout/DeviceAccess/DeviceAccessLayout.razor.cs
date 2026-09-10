@@ -6,7 +6,6 @@ namespace ControlR.Web.Client.Components.Layout.DeviceAccess;
 public partial class DeviceAccessLayout
 {
   private bool _canGoBack;
-  private DeviceAccessPermissionsDto? _deviceAccessPermissions;
   private Guid _deviceId;
   private string? _deviceName;
   private string? _errorText;
@@ -19,6 +18,9 @@ public partial class DeviceAccessLayout
 
   [Inject]
   public required ILazyInjector<IControlrApi> ControlrApi { get; init; }
+
+  [Inject]
+  public required ILazyInjector<IDeviceAccessPermissionsState> DeviceAccessPermissionsState { get; init; }
 
   [Inject]
   public required ILazyInjector<IDeviceState> DeviceAccessState { get; init; }
@@ -79,6 +81,7 @@ public partial class DeviceAccessLayout
         await TryDisposeRemoteControlSession();
         await TryUnsubscribeHeartbeat();
         ChatState.Value.Clear();
+        DeviceAccessPermissionsState.Value.Clear();
       }
       await base.DisposeAsync();
     }
@@ -126,7 +129,7 @@ public partial class DeviceAccessLayout
 
       await GetDeviceInfo();
       _previousDeviceId = _deviceId;
-      _deviceAccessPermissions = null;
+      DeviceAccessPermissionsState.Value.Clear();
 
       // Registrations are removed in BaseLayout when disposing.
       Messenger.Value.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage);
@@ -171,7 +174,7 @@ public partial class DeviceAccessLayout
       {
         await GetDeviceInfo();
         _previousDeviceId = _deviceId;
-        _deviceAccessPermissions = null;
+        DeviceAccessPermissionsState.Value.Clear();
         await RefreshDeviceAccessPermissions();
         await SyncHeartbeatSubscription();
       }
@@ -185,13 +188,14 @@ public partial class DeviceAccessLayout
 
   private void EnforceCurrentPagePermission()
   {
-    if (_deviceAccessPermissions is null)
+    var permissions = DeviceAccessPermissionsState.Value.Permissions;
+    if (permissions is null)
     {
       return;
     }
 
     var currentPath = new Uri(NavManager.Uri).AbsolutePath;
-    if (!DeviceAccessPagePermissions.CanAccess(_deviceAccessPermissions, currentPath))
+    if (!DeviceAccessPagePermissions.CanAccess(permissions, currentPath))
     {
       NavigateToFirstAllowedPage();
     }
@@ -315,7 +319,7 @@ public partial class DeviceAccessLayout
 
   private void NavigateToFirstAllowedPage()
   {
-    var targetPath = DeviceAccessPagePermissions.FirstAllowedRoute(_deviceAccessPermissions);
+    var targetPath = DeviceAccessPagePermissions.FirstAllowedRoute(DeviceAccessPermissionsState.Value.Permissions);
     if (targetPath is null)
     {
       _errorText = "You are not authorized to access any device-access page.";
@@ -339,7 +343,7 @@ public partial class DeviceAccessLayout
       Snackbar.Value.Add("Failed to get device access permissions", Severity.Error);
     }
 
-    _deviceAccessPermissions = result.IsSuccess ? result.Value : null;
+    DeviceAccessPermissionsState.Value.Permissions = result.IsSuccess ? result.Value : null;
     EnforceCurrentPagePermission();
     await InvokeAsync(StateHasChanged);
   }

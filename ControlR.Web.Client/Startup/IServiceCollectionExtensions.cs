@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<ISessionStorageAccessor, SessionStorageAccessor>();
     services.AddScoped<ILocalStorageAccessor, LocalStorageAccessor>();
     services.AddScoped<IDeviceState, DeviceState>();
+    services.AddScoped<IDeviceAccessPermissionsState, DeviceAccessPermissionsState>();
     services.AddScoped<IRemoteControlState, RemoteControlState>();
     services.AddScoped<ITerminalState, TerminalState>();
     services.AddScoped<IChatState, ChatState>();

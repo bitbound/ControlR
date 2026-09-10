@@ -58,7 +58,7 @@
             </MudText>
           </MudLink>
         </MudDrawerHeader>
-        <DeviceAccessNavMenu IsDisabled="@(IsNavMenuDisabled)" Permissions="@_deviceAccessPermissions" />
+        <DeviceAccessNavMenu IsDisabled="@(IsNavMenuDisabled)" Permissions="@DeviceAccessPermissionsState.Maybe?.Permissions" />
       </MudDrawer>
       <MudMainContent Class="h-100">
         @if (RendererInfo.IsInteractive)
@@ -95,9 +95,8 @@
               @(BrandingConstants.BrandName) - @(_deviceName)
             </PageTitle>
           }
-          <CascadingValue Value="@_deviceAccessPermissions">
-            @Body
-          </CascadingValue>
+
+          @Body
         }
       </MudMainContent>
     </MudLayout>
