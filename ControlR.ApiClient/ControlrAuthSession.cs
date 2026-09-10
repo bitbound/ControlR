@@ -460,6 +460,9 @@ public sealed class ControlrAuthSession(
         throw new HttpRequestException("The interactive login response did not include tokens.");
       }
 
+      // Clear any configured credential first. A leftover personal access token otherwise keeps
+      // winning header precedence, so requests would authenticate as the old principal after sign-in.
+      ResetSession(clearConfiguredCredentials: true);
       _authState.SetBearerTokenResponse(payload.Tokens, _timeProvider);
       UpdateState(ControlrAuthSessionState.Authenticated);
       StartRefreshLoop();
