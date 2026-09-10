@@ -1,3 +1,5 @@
+using ControlR.ApiClient.Internal;
+
 namespace ControlR.ApiClient.Tests;
 
 public sealed class InFlightTrackerTests

@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace ControlR.ApiClient;
+namespace ControlR.ApiClient.Internal;
 
 internal static class DtoValidatorFactory
 {

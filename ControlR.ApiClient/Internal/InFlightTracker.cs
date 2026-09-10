@@ -1,4 +1,4 @@
-namespace ControlR.ApiClient;
+namespace ControlR.ApiClient.Internal;
 
 /// <summary>
 /// Counts the requests a tracked target has in flight so that teardown can release the target's

@@ -1,4 +1,5 @@
 using ControlR.ApiClient.Auth;
+using ControlR.ApiClient.Internal;
 using ControlR.ApiClient.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;

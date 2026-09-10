@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.ApiClient.Interfaces.V1;
+using ControlR.ApiClient.Internal;
 
 namespace ControlR.ApiClient;
 

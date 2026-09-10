@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using ControlR.ApiClient.Auth;
+using ControlR.ApiClient.Internal;
 using ControlR.ApiClient.Tests.Helpers;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.Extensions.Logging.Abstractions;

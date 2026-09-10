@@ -1,4 +1,4 @@
-namespace ControlR.ApiClient;
+namespace ControlR.ApiClient.Internal;
 
 internal static class ControlrApiClientNames
 {

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using ControlR.ApiClient.Auth;
+using ControlR.ApiClient.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -611,29 +612,4 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
       AuthState.BearerRefreshLock.Dispose();
     }
   }
-}
-
-
-/// <summary>
-/// An <see cref="IHttpClientFactory"/> that always returns one pre-built client. The unauthenticated
-/// endpoints (token refresh, interactive sign-in) already pass absolute URIs, so a single shared
-/// client serves every target.
-/// </summary>
-internal sealed class SingleClientHttpClientFactory(HttpClient client) : IHttpClientFactory
-{
-  public HttpClient CreateClient(string name) => client;
-}
-
-
-/// <summary>
-/// An <see cref="IOptionsMonitor{TOptions}"/> that hands out one immutable, pre-built value.
-/// Per-target options are frozen at creation (first-config-wins), so change tracking is meaningless.
-/// </summary>
-internal sealed class FrozenOptionsMonitor<TOptions>(TOptions options) : IOptionsMonitor<TOptions>
-{
-  public TOptions CurrentValue => options;
-
-  public TOptions Get(string? name) => options;
-
-  public IDisposable? OnChange(Action<TOptions, string?> listener) => null;
 }

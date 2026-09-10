@@ -2,6 +2,7 @@ using System.Net;
 using ControlR.ApiClient.Interfaces.Agent;
 using ControlR.ApiClient.Interfaces.Internal;
 using ControlR.ApiClient.Interfaces.V1;
+using ControlR.ApiClient.Internal;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
