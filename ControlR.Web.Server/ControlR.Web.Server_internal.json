@@ -1976,6 +1976,7 @@
         "tags": [
           "EffectiveUserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/effective-user-preferences?tenantId={tenantId}` instead. Use GET /api/v1/effective-user-preferences with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -2021,6 +2022,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2028,7 +2030,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/effective-user-preferences?tenantId={tenantId}"
       }
     },
     "/api/installer-keys": {
@@ -4091,6 +4094,7 @@
         "tags": [
           "UserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use GET /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -4136,6 +4140,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4143,12 +4148,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-preferences?tenantId={tenantId}"
       },
       "post": {
         "tags": [
           "UserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use POST /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -4214,6 +4221,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4221,12 +4229,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-preferences?tenantId={tenantId}"
       },
       "put": {
         "tags": [
           "UserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use PUT /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -4292,6 +4302,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4299,7 +4310,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-preferences?tenantId={tenantId}"
       }
     },
     "/api/user-preferences/{name}": {
@@ -4307,6 +4319,7 @@
         "tags": [
           "UserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/user-preferences/{name}?tenantId={tenantId}` instead. Use GET /api/v1/user-preferences/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
@@ -4360,6 +4373,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4367,7 +4381,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-preferences/{name}?tenantId={tenantId}"
       }
     },
     "/api/users/{userId}/reset-password": {
@@ -5109,6 +5124,7 @@
         "tags": [
           "UserStorage"
         ],
+        "description": "Deprecated. Use `/api/v1/user-storage/{key}?tenantId={tenantId}` instead. Use DELETE /api/v1/user-storage/{key} with an explicit tenantId.",
         "parameters": [
           {
             "name": "key",
@@ -5165,6 +5181,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5172,12 +5189,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-storage/{key}?tenantId={tenantId}"
       },
       "get": {
         "tags": [
           "UserStorage"
         ],
+        "description": "Deprecated. Use `/api/v1/user-storage/{key}?tenantId={tenantId}` instead. Use GET /api/v1/user-storage/{key} with an explicit tenantId.",
         "parameters": [
           {
             "name": "key",
@@ -5234,6 +5253,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5241,7 +5261,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-storage/{key}?tenantId={tenantId}"
       }
     },
     "/api/user-storage": {
@@ -5249,6 +5270,7 @@
         "tags": [
           "UserStorage"
         ],
+        "description": "Deprecated. Use `/api/v1/user-storage?tenantId={tenantId}` instead. Use POST /api/v1/user-storage with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -5334,6 +5356,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5341,7 +5364,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-storage?tenantId={tenantId}"
       }
     },
     "/api/version/agent": {

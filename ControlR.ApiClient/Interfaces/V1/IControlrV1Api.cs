@@ -9,6 +9,7 @@ public interface IControlrV1Api
   IDevicesApi Devices { get; }
   IDeviceTagsApi DeviceTags { get; }
   IEffectivePermissionsApi EffectivePermissions { get; }
+  IEffectiveUserPreferencesApi EffectiveUserPreferences { get; }
   IInstallerKeysApi InstallerKeys { get; }
   IInvitesApi Invites { get; }
   ILogonTokensApi LogonTokens { get; }
@@ -20,5 +21,7 @@ public interface IControlrV1Api
   ITenantServiceAccountsApi TenantServiceAccounts { get; }
   ITenantSettingsApi TenantSettings { get; }
   IUserGroupsApi UserGroups { get; }
+  IUserPreferencesApi UserPreferences { get; }
   IUsersApi Users { get; }
+  IUserStorageApi UserStorage { get; }
 }

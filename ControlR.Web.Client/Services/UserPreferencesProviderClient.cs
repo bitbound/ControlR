@@ -1,25 +1,29 @@
 using ControlR.Libraries.Api.Contracts.Settings;
+using Microsoft.AspNetCore.Components.Authorization;
+using PrefsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
 
 namespace ControlR.Web.Client.Services;
 
 public interface IUserPreferencesProvider
 {
-  Task<UserPreferencesDto> GetPreferences();
+  Task<PrefsDtos.UserPreferencesDto> GetPreferences();
   Task SetPreference<T>(string preferenceName, T value);
 }
 
 internal class UserPreferencesProviderClient(
   IControlrApi controlrApi,
+  AuthenticationStateProvider authState,
   ISnackbar snackbar,
   ILogger<UserPreferencesProviderClient> logger) : IUserPreferencesProvider
 {
+  private readonly AuthenticationStateProvider _authState = authState;
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly ILogger<UserPreferencesProviderClient> _logger = logger;
   private readonly ISnackbar _snackbar = snackbar;
 
-  private UserPreferencesDto? _preferences;
+  private PrefsDtos.UserPreferencesDto? _preferences;
 
-  public async Task<UserPreferencesDto> GetPreferences()
+  public async Task<PrefsDtos.UserPreferencesDto> GetPreferences()
   {
     try
     {
@@ -28,7 +32,12 @@ internal class UserPreferencesProviderClient(
         return _preferences;
       }
 
-      var getResult = await _controlrApi.Internal.UserPreferences.GetUserPreferences();
+      if (await GetTenantId() is not { } tenantId)
+      {
+        return CreateDefaultPreferences();
+      }
+
+      var getResult = await _controlrApi.V1.UserPreferences.GetPreferences(tenantId);
       if (!getResult.IsSuccess)
       {
         _snackbar.Add(getResult.Reason, Severity.Error);
@@ -50,6 +59,12 @@ internal class UserPreferencesProviderClient(
   {
     try
     {
+      if (await GetTenantId() is not { } tenantId)
+      {
+        _logger.LogWarning("Cannot set preference {PreferenceName} - no tenant claim on the signed-in user.", preferenceName);
+        return;
+      }
+
       var stringValue = UserPreferenceDefinitions.FormatValue(preferenceName, value)?.Trim();
       Guard.IsNotNull(stringValue);
       var normalizationResult = UserPreferenceDefinitions.Normalize(preferenceName, stringValue);
@@ -60,8 +75,8 @@ internal class UserPreferencesProviderClient(
         return;
       }
 
-      var request = new UserPreferenceRequestDto(preferenceName, normalizationResult.Value ?? string.Empty);
-      var setResult = await _controlrApi.Internal.UserPreferences.SetUserPreference(request);
+      var request = new PrefsDtos.UserPreferenceRequestDto(preferenceName, normalizationResult.Value ?? string.Empty);
+      var setResult = await _controlrApi.V1.UserPreferences.SetPreference(tenantId, request);
 
       if (!setResult.IsSuccess)
       {
@@ -82,9 +97,36 @@ internal class UserPreferencesProviderClient(
     }
   }
 
-  private static UserPreferencesDto CreateDefaultPreferences()
+  private static PrefsDtos.UserPreferencesDto CreateDefaultPreferences()
   {
     Dictionary<string, string> values = [];
-    return UserPreferenceDefinitions.CreateDto(values);
+    var defaults = UserPreferenceDefinitions.CreateDto(values);
+    return new PrefsDtos.UserPreferencesDto(
+      defaults.AutoQualityLowerThresholdMbps,
+      defaults.AutoQualityMaximum,
+      defaults.AutoQualityMinimum,
+      defaults.AutoQualityUpperThresholdMbps,
+      defaults.CaptureCursor,
+      defaults.EncodingFormat,
+      defaults.EnableDirectX,
+      defaults.HideOfflineDevices,
+      defaults.ShowOnlyUntaggedDevices,
+      defaults.ShowOnlyUngroupedDevices,
+      defaults.IsAutoQualityEnabled,
+      defaults.IsMaxBandwidthEnabled,
+      defaults.KeyboardInputMode,
+      defaults.ManualQuality,
+      defaults.MaxBandwidthMbps,
+      defaults.NotifyUserOnSessionStart,
+      defaults.OpenDeviceInNewTab,
+      defaults.ThemeMode,
+      defaults.UserDisplayName,
+      defaults.ViewMode);
+  }
+
+  private async Task<Guid?> GetTenantId()
+  {
+    var state = await _authState.GetAuthenticationStateAsync();
+    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
   }
 }

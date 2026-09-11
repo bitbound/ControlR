@@ -14,6 +14,7 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   private readonly IUserPreferencesManager _userPreferencesManager = userPreferencesManager;
 
   [HttpGet]
+  [ApiDeprecated("/api/v1/user-preferences?tenantId={tenantId}", Note = "Use GET /api/v1/user-preferences with an explicit tenantId.")]
   public async Task<ActionResult<InternalDtos.UserPreferencesDto>> GetAll(CancellationToken cancellationToken)
   {
     if (!User.TryGetUserId(out var userId))
@@ -26,6 +27,7 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   }
 
   [HttpGet("{name}")]
+  [ApiDeprecated("/api/v1/user-preferences/{name}?tenantId={tenantId}", Note = "Use GET /api/v1/user-preferences/{name} with an explicit tenantId.")]
   public async Task<ActionResult<InternalDtos.UserPreferenceResponseDto?>> GetPreference(string name)
   {
     if (User.Identity is null)
@@ -55,6 +57,7 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   }
 
   [HttpPost]
+  [ApiDeprecated("/api/v1/user-preferences?tenantId={tenantId}", Note = "Use POST /api/v1/user-preferences with an explicit tenantId.")]
   public async Task<ActionResult<InternalDtos.UserPreferenceResponseDto>> SetPreference([FromBody] InternalDtos.UserPreferenceRequestDto preference)
   {
     if (!User.TryGetUserId(out var userId))
@@ -67,6 +70,7 @@ public class UserPreferencesController(AppDb appDb, IUserPreferencesManager user
   }
 
   [HttpPut]
+  [ApiDeprecated("/api/v1/user-preferences?tenantId={tenantId}", Note = "Use PUT /api/v1/user-preferences with an explicit tenantId.")]
   public async Task<ActionResult<InternalDtos.UserPreferencesDto>> SetPreferences(
     [FromBody] InternalDtos.UserPreferencesDto preferences,
     CancellationToken cancellationToken)

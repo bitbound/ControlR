@@ -43,6 +43,7 @@ public static class HttpConstants
     public const string DevicesEndpoint = "/api/v1/devices";
     public const string DeviceTagsEndpoint = "/api/v1/device-tags";
     public const string EffectivePermissionsEndpoint = "/api/v1/effective-permissions";
+    public const string EffectiveUserPreferencesEndpoint = "/api/v1/effective-user-preferences";
     public const string InstallerKeysEndpoint = "/api/v1/installer-keys";
     public const string InvitesEndpoint = "/api/v1/invites";
     public const string LogonTokensEndpoint = "/api/v1/logon-tokens";
@@ -54,6 +55,8 @@ public static class HttpConstants
     public const string TenantServiceAccountsEndpoint = "/api/v1/tenant-service-accounts";
     public const string TenantSettingsEndpoint = "/api/v1/tenant-settings";
     public const string UserGroupsEndpoint = "/api/v1/user-groups";
+    public const string UserPreferencesEndpoint = "/api/v1/user-preferences";
     public const string UsersEndpoint = "/api/v1/users";
+    public const string UserStorageEndpoint = "/api/v1/user-storage";
   }
 }

@@ -1,36 +1,44 @@
 using System.Net;
+using System.Security.Claims;
 using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Dtos;
+using ControlR.Web.Client.Authz;
 using ControlR.Web.Client.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using Moq;
+using UserStorageRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage.UserStorageRequestDto;
+using UserStorageResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage.UserStorageResponseDto;
+using V1UserStorageApi = ControlR.ApiClient.Interfaces.V1.IUserStorageApi;
 
 namespace ControlR.Web.Client.Tests;
 
 public class UserStorageClientTests
 {
+  private static readonly Guid _tenantId = Guid.NewGuid();
   private readonly UserStorageClient _client;
   private readonly Mock<IControlrApi> _mockApi;
-  private readonly Mock<IControlrInternalApi> _mockInternalApi;
   private readonly Mock<ILogger<UserStorageClient>> _mockLogger;
-  private readonly Mock<IUserStorageApi> _mockUserStorageApi;
+  private readonly Mock<V1UserStorageApi> _mockUserStorageApi;
 
   public UserStorageClientTests()
   {
-    _mockUserStorageApi = new Mock<IUserStorageApi>();
-    _mockInternalApi = new Mock<IControlrInternalApi>();
-    _mockInternalApi
+    _mockUserStorageApi = new Mock<V1UserStorageApi>();
+
+    var mockV1Api = new Mock<ControlR.ApiClient.Interfaces.V1.IControlrV1Api>();
+    mockV1Api
       .Setup(x => x.UserStorage)
       .Returns(_mockUserStorageApi.Object);
 
     _mockApi = new Mock<IControlrApi>();
     _mockApi
-      .Setup(x => x.Internal)
-      .Returns(_mockInternalApi.Object);
+      .Setup(x => x.V1)
+      .Returns(mockV1Api.Object);
 
     _mockLogger = new Mock<ILogger<UserStorageClient>>();
     _client = new UserStorageClient(
       _mockApi.Object,
+      new StubAuthStateProvider(_tenantId),
       _mockLogger.Object);
   }
 
@@ -45,7 +53,7 @@ public class UserStorageClientTests
       var key = $"key-{i}";
       var localKey = key;
       _mockUserStorageApi
-        .Setup(x => x.GetUserStorageItem(localKey, It.IsAny<CancellationToken>()))
+        .Setup(x => x.GetUserStorageItem(localKey, _tenantId, It.IsAny<CancellationToken>()))
         .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
           new UserStorageResponseDto(localKey, $"value-{i}"),
           true,
@@ -56,7 +64,7 @@ public class UserStorageClientTests
 
     // Update an existing key - should not evict
     _mockUserStorageApi
-      .Setup(x => x.SetUserStorageItem(It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.SetUserStorageItem(_tenantId, It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         new UserStorageResponseDto("key-0", "updated-value"),
         true,
@@ -75,7 +83,7 @@ public class UserStorageClientTests
     var cancellationToken = TestContext.Current.CancellationToken;
 
     _mockUserStorageApi
-      .Setup(x => x.GetUserStorageItem("failing-key", It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetUserStorageItem("failing-key", _tenantId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         null,
         false,
@@ -93,7 +101,7 @@ public class UserStorageClientTests
     var cancellationToken = TestContext.Current.CancellationToken;
 
     _mockUserStorageApi
-      .Setup(x => x.GetUserStorageItem("null-value-key", It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetUserStorageItem("null-value-key", _tenantId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         new UserStorageResponseDto("null-value-key", null),
         true,
@@ -107,7 +115,7 @@ public class UserStorageClientTests
     Assert.Null(result2);
 
     _mockUserStorageApi.Verify(
-      x => x.GetUserStorageItem("null-value-key", It.IsAny<CancellationToken>()),
+      x => x.GetUserStorageItem("null-value-key", _tenantId, It.IsAny<CancellationToken>()),
       Times.Exactly(2));
   }
 
@@ -117,7 +125,7 @@ public class UserStorageClientTests
     var cancellationToken = TestContext.Current.CancellationToken;
 
     _mockUserStorageApi
-      .Setup(x => x.GetUserStorageItem("error-key", It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetUserStorageItem("error-key", _tenantId, It.IsAny<CancellationToken>()))
       .ThrowsAsync(new HttpRequestException("Network error"));
 
     await Assert.ThrowsAsync<HttpRequestException>(() =>
@@ -131,7 +139,7 @@ public class UserStorageClientTests
     cts.Cancel();
 
     _mockUserStorageApi
-      .Setup(x => x.GetUserStorageItem("cancel-key", It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetUserStorageItem("cancel-key", _tenantId, It.IsAny<CancellationToken>()))
       .ThrowsAsync(new OperationCanceledException());
 
     await Assert.ThrowsAsync<OperationCanceledException>(() =>
@@ -145,7 +153,7 @@ public class UserStorageClientTests
 
     // Set up the API to be called once
     _mockUserStorageApi
-      .Setup(x => x.GetUserStorageItem("existing-key", It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetUserStorageItem("existing-key", _tenantId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         new UserStorageResponseDto("existing-key", "cached-value"),
         true,
@@ -161,7 +169,7 @@ public class UserStorageClientTests
 
     // Verify API was called only once
     _mockUserStorageApi.Verify(
-      x => x.GetUserStorageItem("existing-key", It.IsAny<CancellationToken>()),
+      x => x.GetUserStorageItem("existing-key", _tenantId, It.IsAny<CancellationToken>()),
       Times.Once);
   }
 
@@ -171,7 +179,7 @@ public class UserStorageClientTests
     var cancellationToken = TestContext.Current.CancellationToken;
 
     _mockUserStorageApi
-      .Setup(x => x.SetUserStorageItem(It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.SetUserStorageItem(_tenantId, It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         new UserStorageResponseDto("my-key", "my-value"),
         true,
@@ -190,7 +198,7 @@ public class UserStorageClientTests
     var cancellationToken = TestContext.Current.CancellationToken;
 
     _mockUserStorageApi
-      .Setup(x => x.SetUserStorageItem(It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.SetUserStorageItem(_tenantId, It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         null,
         false,
@@ -201,7 +209,7 @@ public class UserStorageClientTests
 
     // Should still hit API on get since not cached
     _mockUserStorageApi
-      .Setup(x => x.GetUserStorageItem("fail-key", It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetUserStorageItem("fail-key", _tenantId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         null,
         false,
@@ -218,7 +226,7 @@ public class UserStorageClientTests
     var cancellationToken = TestContext.Current.CancellationToken;
 
     _mockUserStorageApi
-      .Setup(x => x.SetUserStorageItem(It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.SetUserStorageItem(_tenantId, It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         new UserStorageResponseDto("null-result", null),
         true,
@@ -228,7 +236,7 @@ public class UserStorageClientTests
 
     // API should still be hit on get since null response was not cached
     _mockUserStorageApi
-      .Setup(x => x.GetUserStorageItem("null-result", It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetUserStorageItem("null-result", _tenantId, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new ApiResult<UserStorageResponseDto>(
         new UserStorageResponseDto("null-result", "actual-value"),
         true,
@@ -244,7 +252,7 @@ public class UserStorageClientTests
     var cancellationToken = TestContext.Current.CancellationToken;
 
     _mockUserStorageApi
-      .Setup(x => x.SetUserStorageItem(It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.SetUserStorageItem(_tenantId, It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
       .ThrowsAsync(new HttpRequestException("Network error"));
 
     await Assert.ThrowsAsync<HttpRequestException>(() =>
@@ -258,10 +266,19 @@ public class UserStorageClientTests
     cts.Cancel();
 
     _mockUserStorageApi
-      .Setup(x => x.SetUserStorageItem(It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.SetUserStorageItem(_tenantId, It.IsAny<UserStorageRequestDto>(), It.IsAny<CancellationToken>()))
       .ThrowsAsync(new OperationCanceledException());
 
     await Assert.ThrowsAsync<OperationCanceledException>(() =>
         _client.SetItem("cancel-key", "value", cts.Token));
+  }
+
+  private sealed class StubAuthStateProvider(Guid tenantId) : AuthenticationStateProvider
+  {
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+    {
+      var identity = new ClaimsIdentity([new Claim(UserClaimTypes.TenantId, tenantId.ToString())], "test");
+      return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
+    }
   }
 }

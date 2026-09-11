@@ -3,6 +3,7 @@ using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Primitives;
 using Microsoft.AspNetCore.Components.Authorization;
 using ControlR.Web.Server.Extensions.Dtos.Internal;
+using V1PrefsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
 
 namespace ControlR.Web.Server.Services.Settings;
 
@@ -49,16 +50,16 @@ public class UserPreferencesManager(
         value));
   }
 
-  public async Task<InternalDtos.UserPreferencesDto> GetPreferences()
+  public async Task<V1PrefsDtos.UserPreferencesDto> GetPreferences()
   {
     var authState = await _authStateProvider.GetAuthenticationStateAsync();
     if (!authState.User.TryGetUserId(out var userId) || !await _authStateProvider.IsAuthenticated())
     {
       Dictionary<string, string> values = [];
-      return UserPreferenceDefinitions.CreateDto(values);
+      return ToV1Dto(UserPreferenceDefinitions.CreateDto(values));
     }
 
-    return await GetAllPreferences(userId);
+    return ToV1Dto(await GetAllPreferences(userId));
   }
 
   public async Task<HttpResult<InternalDtos.UserPreferenceResponseDto>> SetPreference(
@@ -216,5 +217,30 @@ public class UserPreferencesManager(
 
     await appDb.SaveChangesAsync(cancellationToken);
     return HttpResult.Ok(await GetAllPreferences(userId, cancellationToken));
+  }
+
+  private static V1PrefsDtos.UserPreferencesDto ToV1Dto(InternalDtos.UserPreferencesDto preferences)
+  {
+    return new V1PrefsDtos.UserPreferencesDto(
+      preferences.AutoQualityLowerThresholdMbps,
+      preferences.AutoQualityMaximum,
+      preferences.AutoQualityMinimum,
+      preferences.AutoQualityUpperThresholdMbps,
+      preferences.CaptureCursor,
+      preferences.EncodingFormat,
+      preferences.EnableDirectX,
+      preferences.HideOfflineDevices,
+      preferences.ShowOnlyUntaggedDevices,
+      preferences.ShowOnlyUngroupedDevices,
+      preferences.IsAutoQualityEnabled,
+      preferences.IsMaxBandwidthEnabled,
+      preferences.KeyboardInputMode,
+      preferences.ManualQuality,
+      preferences.MaxBandwidthMbps,
+      preferences.NotifyUserOnSessionStart,
+      preferences.OpenDeviceInNewTab,
+      preferences.ThemeMode,
+      preferences.UserDisplayName,
+      preferences.ViewMode);
   }
 }

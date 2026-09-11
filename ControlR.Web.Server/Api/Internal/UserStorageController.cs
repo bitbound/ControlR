@@ -12,6 +12,7 @@ public class UserStorageController(IUserStorageManager userStorageManager) : Con
   private readonly IUserStorageManager _userStorageManager = userStorageManager;
 
   [HttpDelete("{key}")]
+  [ApiDeprecated("/api/v1/user-storage/{key}?tenantId={tenantId}", Note = "Use DELETE /api/v1/user-storage/{key} with an explicit tenantId.")]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> DeleteItem(string key, CancellationToken cancellationToken)
@@ -26,6 +27,7 @@ public class UserStorageController(IUserStorageManager userStorageManager) : Con
   }
 
   [HttpGet("{key}")]
+  [ApiDeprecated("/api/v1/user-storage/{key}?tenantId={tenantId}", Note = "Use GET /api/v1/user-storage/{key} with an explicit tenantId.")]
   [ProducesResponseType(typeof(InternalDtos.UserStorageResponseDto), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   public async Task<ActionResult<InternalDtos.UserStorageResponseDto>> GetItem(string key, CancellationToken cancellationToken)
@@ -41,6 +43,7 @@ public class UserStorageController(IUserStorageManager userStorageManager) : Con
   }
 
   [HttpPost]
+  [ApiDeprecated("/api/v1/user-storage?tenantId={tenantId}", Note = "Use POST /api/v1/user-storage with an explicit tenantId.")]
   [ProducesResponseType(typeof(InternalDtos.UserStorageResponseDto), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   public async Task<ActionResult<InternalDtos.UserStorageResponseDto>> SetItem([FromBody] InternalDtos.UserStorageRequestDto request, CancellationToken cancellationToken)

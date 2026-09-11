@@ -11,6 +11,7 @@ internal partial class V1Api(ControlrApi client) :
   IDeviceTagsApi,
   IDevicesApi,
   IEffectivePermissionsApi,
+  IEffectiveUserPreferencesApi,
   IInstallerKeysApi,
   IInvitesApi,
   ILogonTokensApi,
@@ -22,7 +23,9 @@ internal partial class V1Api(ControlrApi client) :
   ITenantsApi,
   ITenantSettingsApi,
   IUserGroupsApi,
-  IUsersApi
+  IUserPreferencesApi,
+  IUsersApi,
+  IUserStorageApi
 {
   private readonly ControlrApi _client = client;
 
@@ -33,6 +36,7 @@ internal partial class V1Api(ControlrApi client) :
   public IDevicesApi Devices => this;
   public IDeviceTagsApi DeviceTags => this;
   public IEffectivePermissionsApi EffectivePermissions => this;
+  public IEffectiveUserPreferencesApi EffectiveUserPreferences => this;
   public IInstallerKeysApi InstallerKeys => this;
   public IInvitesApi Invites => this;
   public ILogonTokensApi LogonTokens => this;
@@ -44,5 +48,7 @@ internal partial class V1Api(ControlrApi client) :
   public ITenantServiceAccountsApi TenantServiceAccounts => this;
   public ITenantSettingsApi TenantSettings => this;
   public IUserGroupsApi UserGroups => this;
+  public IUserPreferencesApi UserPreferences => this;
   public IUsersApi Users => this;
+  public IUserStorageApi UserStorage => this;
 }
