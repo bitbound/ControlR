@@ -97,6 +97,11 @@ public class AuthorizationChangeLogsController : ControllerBase
       query = query.Where(x => x.TargetType == searchQuery.TargetType);
     }
 
+    if (!string.IsNullOrWhiteSpace(searchQuery.ActorType))
+    {
+      query = query.Where(x => x.ActorPrincipalType == searchQuery.ActorType);
+    }
+
     if (!string.IsNullOrWhiteSpace(searchQuery.SearchText))
     {
       var trimmed = searchQuery.SearchText.Trim();

@@ -127,6 +127,34 @@ public class TenantServiceAccountsController(IServiceAccountManager serviceAccou
     return Ok(accounts.Select(MapToDto).ToList());
   }
 
+  [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}/purge")]
+  [Authorize(Policy = PolicyNames.RequireServiceAccountRotateCredentials)]
+  public async Task<IActionResult> PurgeCredential(
+    [FromRoute] Guid serviceAccountId,
+    [FromRoute] Guid credentialId,
+    CancellationToken cancellationToken)
+  {
+    if (!User.TryGetTenantId(out var tenantId))
+    {
+      return BadRequest("User tenant not found.");
+    }
+
+    if (User.ToPrincipalDescriptor() is not { } actor)
+    {
+      return BadRequest("User ID not found.");
+    }
+
+    var result = await _serviceAccountManager.PurgeCredentialForTenant(
+      serviceAccountId, credentialId, tenantId, actor, cancellationToken);
+
+    if (!result.IsSuccess)
+    {
+      return result.ToActionResult();
+    }
+
+    return NoContent();
+  }
+
   [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}")]
   [Authorize(Policy = PolicyNames.RequireServiceAccountRotateCredentials)]
   public async Task<IActionResult> RevokeCredential(

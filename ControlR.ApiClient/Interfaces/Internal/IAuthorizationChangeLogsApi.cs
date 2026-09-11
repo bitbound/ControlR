@@ -11,6 +11,7 @@ public interface IAuthorizationChangeLogsApi
     int page = 0,
     int pageSize = 50,
     string? actionType = null,
+    string? actorType = null,
     string? targetType = null,
     string? searchText = null,
     Guid? tenantId = null,

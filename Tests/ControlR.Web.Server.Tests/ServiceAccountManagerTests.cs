@@ -10,7 +10,7 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ControlR.Web.Server.Tests.V1;
+namespace ControlR.Web.Server.Tests;
 
 public class ServiceAccountManagerTests(ITestOutputHelper testOutput)
 {

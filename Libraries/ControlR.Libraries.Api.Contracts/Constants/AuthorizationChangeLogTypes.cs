@@ -25,6 +25,7 @@ public static class AuthorizationChangeLogActions
   public const string PermissionAssignmentUpdated = "permission-assignment-updated";
   public const string ServiceAccountCreated = "service-account-created";
   public const string ServiceAccountCredentialCreated = "service-account-credential-created";
+  public const string ServiceAccountCredentialDeleted = "service-account-credential-deleted";
   public const string ServiceAccountCredentialRevoked = "service-account-credential-revoked";
   public const string ServiceAccountDeleted = "service-account-deleted";
   public const string ServiceAccountUpdated = "service-account-updated";

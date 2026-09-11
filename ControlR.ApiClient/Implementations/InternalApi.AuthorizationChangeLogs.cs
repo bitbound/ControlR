@@ -12,6 +12,7 @@ internal partial class InternalApi
     int page,
     int pageSize,
     string? actionType,
+    string? actorType,
     string? targetType,
     string? searchText,
     Guid? tenantId,
@@ -27,6 +28,11 @@ internal partial class InternalApi
     if (!string.IsNullOrWhiteSpace(actionType))
     {
       parameters.Add($"actionType={Uri.EscapeDataString(actionType)}");
+    }
+
+    if (!string.IsNullOrWhiteSpace(actorType))
+    {
+      parameters.Add($"actorType={Uri.EscapeDataString(actorType)}");
     }
 
     if (!string.IsNullOrWhiteSpace(targetType))
@@ -61,6 +67,7 @@ internal partial class InternalApi
     int page,
     int pageSize,
     string? actionType,
+    string? actorType,
     string? targetType,
     string? searchText,
     Guid? tenantId,
@@ -71,7 +78,7 @@ internal partial class InternalApi
     return await _client.ExecuteApiCall(async () =>
     {
       var query = BuildAuthorizationChangeLogsQuery(
-        page, pageSize, actionType, targetType, searchText, tenantId, from, to);
+        page, pageSize, actionType, actorType, targetType, searchText, tenantId, from, to);
 
       return await _client.HttpClient.GetFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
         $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}{query}", cancellationToken)

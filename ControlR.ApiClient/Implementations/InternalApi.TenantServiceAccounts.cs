@@ -52,6 +52,16 @@ internal partial class InternalApi
       await _client.HttpClient.GetFromJsonAsync<InternalDtos.TenantServiceAccountDto[]>(HttpConstants.Internal.TenantServiceAccountsEndpoint, cancellationToken));
   }
 
+  async Task<ApiResult> ITenantServiceAccountsApi.PurgeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.DeleteAsync(
+        $"{HttpConstants.Internal.TenantServiceAccountsEndpoint}/{serviceAccountId}/credentials/{credentialId}/purge", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
   async Task<ApiResult> ITenantServiceAccountsApi.RevokeCredential(Guid serviceAccountId, Guid credentialId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>

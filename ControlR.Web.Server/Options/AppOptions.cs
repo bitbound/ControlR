@@ -264,6 +264,14 @@ public class AppOptions
   public int ServiceAccountAuthFailureWindowMinutes { get; init; } = 5;
 
   /// <summary>
+  /// Number of days after which service account credentials that were revoked or expired are
+  /// permanently deleted from the database by a background service. Applies to both
+  /// server-scoped and tenant-scoped credentials. Set to 0 or less to disable automatic deletion.
+  /// Credentials can also be deleted manually from the service accounts pages at any time.
+  /// </summary>
+  public int ServiceAccountCredentialCleanupAfterDays { get; init; } = 30;
+
+  /// <summary>
   /// Whether to check certificate revocation for SMTP connections.
   /// Enabled by default for security.
   /// </summary>

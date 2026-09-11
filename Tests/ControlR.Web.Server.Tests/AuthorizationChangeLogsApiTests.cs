@@ -78,6 +78,35 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task Get_WithActorTypeFilter_RestrictsToMatchingActorTypes()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
+    var (_, _, serverAdmin, _) = await SetupTenantsWithEntries(testServer);
+
+    using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, serverAdmin.Id, serverAdmin.TenantId, "test"));
+
+    var userResponse = await httpClient.GetAsync(
+      $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}?actorType=user",
+      TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.OK, userResponse.StatusCode);
+    var userResult = await userResponse.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+      TestContext.Current.CancellationToken);
+    Assert.NotNull(userResult);
+    Assert.NotEmpty(userResult.Items);
+    Assert.All(userResult.Items, x => Assert.Equal(AuthorizationChangeLogActorTypes.User, x.ActorPrincipalType));
+
+    // The setup has no service-account actors; the filtered result must be empty.
+    var saResponse = await httpClient.GetAsync(
+      $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}?actorType=service-account",
+      TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.OK, saResponse.StatusCode);
+    var saResult = await saResponse.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+      TestContext.Current.CancellationToken);
+    Assert.NotNull(saResult);
+    Assert.Empty(saResult.Items);
+  }
+
+  [Fact]
   public async Task Get_WithSearchText_MatchesExactAndPartialGuid()
   {
     // Real Postgres exercises the Npgsql translation of Guid?.Value.ToString() in the filter.

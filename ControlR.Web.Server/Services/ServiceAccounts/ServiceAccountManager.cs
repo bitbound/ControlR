@@ -81,6 +81,20 @@ public interface IServiceAccountManager
   Task<HttpResult<ServiceAccountResult>> GetForTenant(Guid serviceAccountId, Guid tenantId, CancellationToken cancellationToken);
 
   /// <summary>
+  /// Permanently deletes a credential on a server-scoped service account. Only credentials that
+  /// are already revoked or expired can be deleted; active credentials must be revoked first.
+  /// </summary>
+  Task<HttpResult> PurgeCredentialForServer(
+    Guid serviceAccountId, Guid credentialId, PrincipalDescriptor actor, CancellationToken cancellationToken);
+
+  /// <summary>
+  /// Permanently deletes a credential on a tenant-scoped service account. Only credentials that
+  /// are already revoked or expired can be deleted; active credentials must be revoked first.
+  /// </summary>
+  Task<HttpResult> PurgeCredentialForTenant(
+    Guid serviceAccountId, Guid credentialId, Guid tenantId, PrincipalDescriptor actor, CancellationToken cancellationToken);
+
+  /// <summary>
   /// Revokes a credential on a server-scoped service account.
   /// </summary>
   Task<HttpResult> RevokeCredentialForServer(
@@ -600,6 +614,40 @@ public class ServiceAccountManager(
     return HttpResult.Ok(MapToResult(account));
   }
 
+  public async Task<HttpResult> PurgeCredentialForServer(
+    Guid serviceAccountId,
+    Guid credentialId,
+    PrincipalDescriptor actor,
+    CancellationToken cancellationToken)
+  {
+    var credential = await appDb.ServiceAccountCredentials
+      .FirstOrDefaultAsync(
+        x => x.Id == credentialId &&
+             x.ServiceAccountId == serviceAccountId &&
+             x.ServiceAccount!.Kind == ServiceAccountKind.Server,
+        cancellationToken);
+
+    return await PurgeCredentialAsync(credential, serviceAccountId, owningTenantId: null, actor, cancellationToken);
+  }
+
+  public async Task<HttpResult> PurgeCredentialForTenant(
+    Guid serviceAccountId,
+    Guid credentialId,
+    Guid tenantId,
+    PrincipalDescriptor actor,
+    CancellationToken cancellationToken)
+  {
+    var credential = await appDb.ServiceAccountCredentials
+      .FirstOrDefaultAsync(
+        x => x.Id == credentialId &&
+             x.ServiceAccountId == serviceAccountId &&
+             x.ServiceAccount!.Kind == ServiceAccountKind.Tenant &&
+             x.ServiceAccount.TenantId == tenantId,
+        cancellationToken);
+
+    return await PurgeCredentialAsync(credential, serviceAccountId, tenantId, actor, cancellationToken);
+  }
+
   public async Task<HttpResult> RevokeCredentialForServer(
     Guid serviceAccountId,
     Guid credentialId,
@@ -960,6 +1008,41 @@ public class ServiceAccountManager(
     }
     credential.LastUsedAt = now;
     await appDb.SaveChangesAsync(cancellationToken);
+  }
+
+  private async Task<HttpResult> PurgeCredentialAsync(
+    ServiceAccountCredential? credential,
+    Guid serviceAccountId,
+    Guid? owningTenantId,
+    PrincipalDescriptor actor,
+    CancellationToken cancellationToken)
+  {
+    if (credential is null)
+    {
+      return HttpResult.Fail(HttpResultErrorCode.NotFound, "Credential not found.");
+    }
+
+    var now = timeProvider.GetUtcNow();
+    var isDead = credential.RevokedAt is not null || (credential.ExpiresAt is not null && credential.ExpiresAt <= now);
+
+    if (!isDead)
+    {
+      return HttpResult.Fail(HttpResultErrorCode.BadRequest, "Only revoked or expired credentials can be deleted. Revoke the credential first.");
+    }
+
+    appDb.AuthorizationChangeLogs.Add(_changeLogFactory.Create(
+      AuthorizationChangeLogActions.ServiceAccountCredentialDeleted,
+      actor,
+      AuthorizationChangeLogTargetTypes.ServiceAccountCredential,
+      credential.Id,
+      owningTenantId,
+      before: new ServiceAccountCredentialSnapshot(credential.Name, serviceAccountId)));
+
+    appDb.ServiceAccountCredentials.Remove(credential);
+    await appDb.SaveChangesAsync(cancellationToken);
+
+    EvictCredentialFromCache(credential.Id);
+    return HttpResult.Ok();
   }
 
   private bool ValidateExpiration(DateTimeOffset? expiresAt, out string error)

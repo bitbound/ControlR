@@ -155,6 +155,38 @@ public class TenantServiceAccountsController(
     });
   }
 
+  [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}/purge")]
+  [Authorize(Policy = PolicyNames.RequireServiceAccountRotateCredentials)]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> PurgeCredential(
+    Guid tenantId,
+    Guid serviceAccountId,
+    Guid credentialId,
+    CancellationToken cancellationToken)
+  {
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
+    {
+      return Forbid();
+    }
+
+    if (User.ToPrincipalDescriptor() is not { } actor)
+    {
+      return Unauthorized();
+    }
+
+    var result = await _serviceAccountManager.PurgeCredentialForTenant(
+      serviceAccountId, credentialId, resolvedTenantId, actor, cancellationToken);
+    if (!result.IsSuccess)
+    {
+      return result.ToActionResult();
+    }
+
+    return NoContent();
+  }
+
   [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}")]
   [Authorize(Policy = PolicyNames.RequireServiceAccountRotateCredentials)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]

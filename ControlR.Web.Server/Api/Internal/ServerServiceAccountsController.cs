@@ -119,6 +119,28 @@ public class ServerServiceAccountsController(IServiceAccountManager serviceAccou
     return Ok(accounts.Select(MapToDto).ToList());
   }
 
+  [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}/purge")]
+  [Authorize(Policy = PolicyNames.RequireServerServiceAccountsRotateCredentials)]
+  public async Task<IActionResult> PurgeCredential(
+    [FromRoute] Guid serviceAccountId,
+    [FromRoute] Guid credentialId,
+    CancellationToken cancellationToken)
+  {
+    if (User.ToPrincipalDescriptor() is not { } actor)
+    {
+      return BadRequest("User ID not found.");
+    }
+
+    var result = await _serviceAccountManager.PurgeCredentialForServer(serviceAccountId, credentialId, actor, cancellationToken);
+
+    if (!result.IsSuccess)
+    {
+      return result.ToActionResult();
+    }
+
+    return NoContent();
+  }
+
   [HttpDelete("{serviceAccountId:guid}/credentials/{credentialId:guid}")]
   [Authorize(Policy = PolicyNames.RequireServerServiceAccountsRotateCredentials)]
   public async Task<IActionResult> RevokeCredential(

@@ -5,7 +5,7 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace ControlR.Web.Server.Tests.V1;
+namespace ControlR.Web.Server.Tests;
 
 public class ServiceAccountSecretLoggingTests(ITestOutputHelper testOutput)
 {

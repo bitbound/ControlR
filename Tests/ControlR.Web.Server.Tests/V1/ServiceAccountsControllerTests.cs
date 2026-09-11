@@ -333,6 +333,63 @@ public class ServerServiceAccountsControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task PurgeCredential_ActiveCredential_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IServiceAccountManager>();
+
+    var saResult = await manager.CreateForServer("Purge Active SA", null, ServiceAccountAccessMode.Unrestricted, TestContext.Current.CancellationToken);
+    Assert.True(saResult.IsSuccess);
+
+    var credResult = await manager.AddCredentialForServer(
+      saResult.Value.Id, "Live", null, TestActors.User(), TestContext.Current.CancellationToken);
+    Assert.True(credResult.IsSuccess);
+
+    var controller = await TestPrincipalHelper.CreateControllerWithServerServiceAccountAsync<
+      ServerServiceAccountsController>(scope, accountName: "Controller SA", cancellationToken: TestContext.Current.CancellationToken);
+
+    var result = await controller.PurgeCredential(
+      saResult.Value.Id, credResult.Value.Credential.Id, TestContext.Current.CancellationToken);
+    var badRequest = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(400, badRequest.StatusCode);
+  }
+
+  [Fact]
+  public async Task PurgeCredential_RevokedCredential_ReturnsNoContentAndRemovesIt()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var manager = services.GetRequiredService<IServiceAccountManager>();
+
+    var saResult = await manager.CreateForServer("Purge Credential SA", null, ServiceAccountAccessMode.Unrestricted, TestContext.Current.CancellationToken);
+    Assert.True(saResult.IsSuccess);
+    var accountId = saResult.Value.Id;
+
+    var credResult = await manager.AddCredentialForServer(
+      accountId, "Purge Me", null, TestActors.User(), TestContext.Current.CancellationToken);
+    Assert.True(credResult.IsSuccess);
+    var credentialId = credResult.Value.Credential.Id;
+
+    var revokeResult = await manager.RevokeCredentialForServer(
+      accountId, credentialId, TestActors.User(), TestContext.Current.CancellationToken);
+    Assert.True(revokeResult.IsSuccess);
+
+    var controller = await TestPrincipalHelper.CreateControllerWithServerServiceAccountAsync<
+      ServerServiceAccountsController>(scope, accountName: "Controller SA", cancellationToken: TestContext.Current.CancellationToken);
+
+    var result = await controller.PurgeCredential(accountId, credentialId, TestContext.Current.CancellationToken);
+    Assert.IsType<NoContentResult>(result);
+
+    await using var appDb = services.GetRequiredService<AppDb>();
+    var stillExists = await appDb.ServiceAccountCredentials
+      .IgnoreQueryFilters()
+      .AnyAsync(x => x.Id == credentialId, TestContext.Current.CancellationToken);
+    Assert.False(stillExists);
+  }
+
+  [Fact]
   public async Task RevokeCredential_Credential_ReturnsNoContent()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput);
