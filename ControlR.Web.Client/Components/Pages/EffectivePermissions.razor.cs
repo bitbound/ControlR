@@ -1,12 +1,12 @@
 using EPDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class EffectivePermissions : ComponentBase
 {
-  private List<InternalDtos.PermissionCatalogEntryDto> _catalog = [];
+  private List<PADtos.PermissionCatalogEntryDto> _catalog = [];
   private string _permissionName = string.Empty;
   private PermissionPrincipalKind _principalKind = PermissionPrincipalKind.User;
   private EPDtos.EffectivePermissionQueryResponseDto? _result;
@@ -40,10 +40,10 @@ public partial class EffectivePermissions : ComponentBase
 
       _tenantId = tenantId;
 
-      var result = await ControlrApi.Internal.PermissionAssignments.GetCatalog();
+      var result = await ControlrApi.V1.PermissionAssignments.GetCatalog(_tenantId);
       if (result.IsSuccess)
       {
-        _catalog = [.. result.Value];
+        _catalog = [.. result.Value.Items];
       }
       else
       {

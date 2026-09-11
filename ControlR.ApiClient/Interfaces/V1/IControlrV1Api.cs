@@ -10,6 +10,7 @@ public interface IControlrV1Api
   IEffectivePermissionsApi EffectivePermissions { get; }
   IInstallerKeysApi InstallerKeys { get; }
   ILogonTokensApi LogonTokens { get; }
+  IPermissionAssignmentsApi PermissionAssignments { get; }
   IServerServiceAccountsApi ServerServiceAccounts { get; }
   ITenantsApi Tenants { get; }
   ITenantServiceAccountsApi TenantServiceAccounts { get; }

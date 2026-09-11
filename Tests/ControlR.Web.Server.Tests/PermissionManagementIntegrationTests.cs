@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using EPDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
 using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
 using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -165,8 +166,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     Assert.NotNull(group);
 
     var createAssignmentResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         "device.read",
@@ -175,7 +176,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         group.Id,
         null),
       TestContext.Current.CancellationToken);
-    Assert.Equal(HttpStatusCode.OK, createAssignmentResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.Created, createAssignmentResponse.StatusCode);
 
     var deleteResponse = await client.DeleteAsync(
       DeviceGroupsUrl(tenantId, $"/{group.Id}"),
@@ -279,8 +280,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     Assert.NotNull(account);
 
     var createAssignmentResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.ServiceAccount,
         account.Id,
         PermissionNames.DeviceRead,
@@ -289,7 +290,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         tenantId,
         null),
       TestContext.Current.CancellationToken);
-    Assert.Equal(HttpStatusCode.OK, createAssignmentResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.Created, createAssignmentResponse.StatusCode);
 
     var queryResponse = await client.GetAsync(
       EffectivePermissionUrl(PermissionPrincipalKind.ServiceAccount, account.Id, PermissionNames.DeviceRead, tenantId),
@@ -318,8 +319,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     Assert.NotNull(group);
 
     var createAssignmentResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.UserGroup,
         group.Id,
         PermissionNames.DeviceRead,
@@ -328,7 +329,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         tenantId,
         null),
       TestContext.Current.CancellationToken);
-    Assert.Equal(HttpStatusCode.OK, createAssignmentResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.Created, createAssignmentResponse.StatusCode);
 
     // Query the group's effective permission — should be allowed.
     var queryResponse = await client.GetAsync(
@@ -382,8 +383,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     using var _ = testServer;
 
     var createResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         "device.read",
@@ -393,8 +394,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         "Test assignment"),
       TestContext.Current.CancellationToken);
 
-    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto>(
+    Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
     Assert.Equal("device.read", created.PermissionName);
@@ -404,13 +405,13 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     Assert.True(created.IsEnabled);
 
     var getResponse = await client.GetAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}?principalKind=User&principalId={userId}",
+      $"{PaUrl(tenantId)}&principalKind=User&principalId={userId}",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-    var assignments = await getResponse.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto[]>(
+    var assignments = await getResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(assignments);
-    Assert.Contains(assignments, a => a.Id == created.Id);
+    Assert.Contains(assignments.Items, a => a.Id == created.Id);
   }
 
   [Fact]
@@ -451,8 +452,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       credResult.Value.PlainTextSecretKey);
 
     var createResponse = await httpClient.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenant.Id),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         targetUser.Id,
         PermissionNames.DeviceRead,
@@ -461,8 +462,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         tenant.Id,
         null),
       TestContext.Current.CancellationToken);
-    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto>(
+    Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
 
@@ -492,8 +493,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       tenantId, $"target-{Guid.NewGuid():N}@t.local");
 
     var createResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         targetUser.Id,
         PermissionNames.DeviceRead,
@@ -502,8 +503,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         tenantId,
         null),
       TestContext.Current.CancellationToken);
-    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto>(
+    Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
 
@@ -532,8 +533,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     // Creating with IsEnabled=false must persist a disabled assignment
     // previously CreateGrant hardcoded IsEnabled=true, silently ignoring the switch).
     var createResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         "device.read",
@@ -544,16 +545,16 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         IsEnabled: false),
       TestContext.Current.CancellationToken);
 
-    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto>(
+    Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
     Assert.False(created.IsEnabled);
 
     // The default (omitted) remains enabled.
     var defaultResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         "device.overview.read",
@@ -562,8 +563,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         tenantId,
         null),
       TestContext.Current.CancellationToken);
-    Assert.Equal(HttpStatusCode.OK, defaultResponse.StatusCode);
-    var defaultAssignment = await defaultResponse.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto>(
+    Assert.Equal(HttpStatusCode.Created, defaultResponse.StatusCode);
+    var defaultAssignment = await defaultResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(defaultAssignment);
     Assert.True(defaultAssignment.IsEnabled);
@@ -576,8 +577,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     using var _ = testServer;
 
     var createResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         PermissionNames.DeviceRead,
@@ -586,22 +587,22 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         tenantId,
         null),
       TestContext.Current.CancellationToken);
-    var created = await createResponse.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto>(
+    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
 
     var deleteResponse = await client.DeleteAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/{created.Id}",
+      PaUrl(tenantId, $"/{created.Id}"),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
     var getResponse = await client.GetAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}?principalKind=User&principalId={userId}",
+      $"{PaUrl(tenantId)}&principalKind=User&principalId={userId}",
       TestContext.Current.CancellationToken);
-    var assignments = await getResponse.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto[]>(
+    var assignments = await getResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(assignments);
-    Assert.DoesNotContain(assignments, a => a.Id == created.Id);
+    Assert.DoesNotContain(assignments.Items, a => a.Id == created.Id);
   }
 
   [Fact]
@@ -799,8 +800,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     Assert.NotNull(group);
 
     var createAssignmentResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.UserGroup,
         group.Id,
         "device.read",
@@ -809,7 +810,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         tenantId,
         null),
       TestContext.Current.CancellationToken);
-    Assert.Equal(HttpStatusCode.OK, createAssignmentResponse.StatusCode);
+    Assert.Equal(HttpStatusCode.Created, createAssignmentResponse.StatusCode);
 
     var deleteResponse = await client.DeleteAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}/{group.Id}?tenantId={tenantId}",
@@ -891,6 +892,9 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
            $"&permissionName={Uri.EscapeDataString(permissionName)}" +
            $"&scopeKind={PermissionScopeKind.Tenant}&scopeId={tenantId}";
   }
+
+  private static string PaUrl(Guid tenantId, string suffix = "") =>
+    $"{HttpConstants.V1.PermissionAssignmentsEndpoint}{suffix}?tenantId={tenantId}";
 
   private static async Task ReplaceGroupAssignment(
     IServiceProvider services,

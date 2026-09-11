@@ -7,6 +7,7 @@ using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
+using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -26,8 +27,8 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
 
     // A tenant-A admin attempts to create an assignment whose target principal is a tenant-B user.
     var response = await clientA.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantA),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userB.Id,
         PermissionNames.DeviceRead,
@@ -53,8 +54,8 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
     var customerB = await CreateCustomer(testServer, tenantB, "Customer B");
 
     var response = await clientA.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantA),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userA.Id,
         PermissionNames.DeviceRead,
@@ -74,11 +75,11 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
   public async Task Create_ServerScopeByTenantAdmin_ReturnsForbidden()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
-    var (clientA, _, _, userA) = await CreateTenantAdminEnvironment(testServer, "Tenant A");
+    var (clientA, tenantA, _, userA) = await CreateTenantAdminEnvironment(testServer, "Tenant A");
 
     var response = await clientA.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantA),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userA.Id,
         PermissionNames.ServerPermissionsWrite,
@@ -96,17 +97,17 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
     var (clientA, tenantA, _, userA) = await CreateTenantAdminEnvironment(testServer, "Tenant A");
-    var (clientB, _, _, _) = await CreateTenantAdminEnvironment(testServer, "Tenant B");
+    var (clientB, tenantB, _, _) = await CreateTenantAdminEnvironment(testServer, "Tenant B");
 
     var assignmentId = await CreateDeviceReadAssignment(clientA, tenantA, userA.Id);
 
     var response = await clientB.DeleteAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/{assignmentId}",
+      PaUrl(tenantB, $"/{assignmentId}"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
-    var remaining = await GetAssignments(clientA, userA.Id);
+    var remaining = await GetAssignments(clientA, tenantA, userA.Id);
     Assert.Contains(remaining, a => a.Id == assignmentId);
   }
 
@@ -115,11 +116,11 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
     var (clientA, tenantA, _, userA) = await CreateTenantAdminEnvironment(testServer, "Tenant A");
-    var (clientB, _, _, _) = await CreateTenantAdminEnvironment(testServer, "Tenant B");
+    var (clientB, tenantB, _, _) = await CreateTenantAdminEnvironment(testServer, "Tenant B");
 
     await CreateDeviceReadAssignment(clientA, tenantA, userA.Id);
 
-    var assignments = await GetAssignments(clientB, userA.Id);
+    var assignments = await GetAssignments(clientB, tenantB, userA.Id);
 
     Assert.Empty(assignments);
   }
@@ -141,8 +142,8 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
   private static async Task<Guid> CreateDeviceReadAssignment(HttpClient client, Guid tenantId, Guid principalId)
   {
     var response = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new PADtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         principalId,
         PermissionNames.DeviceRead,
@@ -153,24 +154,27 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
       TestContext.Current.CancellationToken);
     response.EnsureSuccessStatusCode();
 
-    var created = await response.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto>(
+    var created = await response.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
     return created.Id;
   }
 
-  private static async Task<InternalDtos.PermissionAssignmentDto[]> GetAssignments(HttpClient client, Guid principalId)
+  private static async Task<PADtos.PermissionAssignmentDto[]> GetAssignments(HttpClient client, Guid tenantId, Guid principalId)
   {
     var response = await client.GetAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}?principalKind=User&principalId={principalId}",
+      $"{PaUrl(tenantId)}&principalKind=User&principalId={principalId}",
       TestContext.Current.CancellationToken);
     response.EnsureSuccessStatusCode();
 
-    var assignments = await response.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto[]>(
+    var assignments = await response.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(assignments);
-    return assignments;
+    return [.. assignments.Items];
   }
+
+  private static string PaUrl(Guid tenantId, string suffix = "") =>
+    $"{HttpConstants.V1.PermissionAssignmentsEndpoint}{suffix}?tenantId={tenantId}";
 
   private async Task<HttpClient> CreatePatClient(TestWebServer testServer, PrincipalDescriptor actor)
   {

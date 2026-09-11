@@ -1,14 +1,15 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 
 namespace ControlR.Web.Client.Components.Shared;
 
 public partial class PermissionAssignmentPanel : ComponentBase
 {
+  private Guid _tenantId;
   private readonly HashSet<Guid> _togglingIds = [];
 
-  private InternalDtos.PermissionAssignmentDto[]? _assignments;
+  private PADtos.PermissionAssignmentDto[]? _assignments;
   private bool _bulkDeleting;
   private bool _canManageServerScope;
   private Guid? _currentUserId;
@@ -16,10 +17,10 @@ public partial class PermissionAssignmentPanel : ComponentBase
   private bool _hasWritePermission;
   private bool _loading;
   private PresetApplyMode _presetMode = PresetApplyMode.Merge;
-  private InternalDtos.PermissionPresetDto[] _presets = [];
+  private PADtos.PermissionPresetDto[] _presets = [];
   private PermissionPrincipalKind _principalKind = PermissionPrincipalKind.User;
   private string _searchString = string.Empty;
-  private HashSet<InternalDtos.PermissionAssignmentDto> _selectedAssignments = [];
+  private HashSet<PADtos.PermissionAssignmentDto> _selectedAssignments = [];
   private IReadOnlyCollection<string> _selectedPresetNames = [];
   private Guid? _selectedPrincipalId;
 
@@ -53,7 +54,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<InternalDtos.PermissionAssignmentDto, bool> QuickFilter => assignment =>
+  private Func<PADtos.PermissionAssignmentDto, bool> QuickFilter => assignment =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -72,6 +73,14 @@ public partial class PermissionAssignmentPanel : ComponentBase
       _currentUserId = currentUserId;
     }
 
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _tenantId = tenantId;
+
     _hasTenantWritePermission = HasPolicy(state.User, PolicyNames.RequirePermissionAssignmentsWrite);
     _hasWritePermission = _hasTenantWritePermission || HasPolicy(state.User, PolicyNames.RequireServerPermissionsWrite);
     _canManageServerScope = HasPolicy(state.User, PolicyNames.RequireServerPermissionsWrite);
@@ -83,10 +92,10 @@ public partial class PermissionAssignmentPanel : ComponentBase
 
     try
     {
-      var presetsResult = await ControlrApi.Internal.PermissionAssignments.GetPresets();
+      var presetsResult = await ControlrApi.V1.PermissionAssignments.GetPresets(_tenantId);
       if (presetsResult.IsSuccess)
       {
-        _presets = presetsResult.Value;
+        _presets = [.. presetsResult.Value.Items];
       }
       else
       {
@@ -143,8 +152,9 @@ public partial class PermissionAssignmentPanel : ComponentBase
       }
     }
 
-    var result = await ControlrApi.Internal.PermissionAssignments.ApplyPresets(
-      new InternalDtos.ApplyPermissionPresetsRequestDto(
+    var result = await ControlrApi.V1.PermissionAssignments.ApplyPresets(
+      _tenantId,
+      new PADtos.ApplyPermissionPresetsRequestDto(
         _principalKind,
         _selectedPrincipalId.Value,
         [.. _selectedPresetNames],
@@ -177,7 +187,8 @@ public partial class PermissionAssignmentPanel : ComponentBase
       { x => x.PrincipalKind, kind },
       { x => x.PrincipalId, principalId },
       { x => x.AccountKind, AccountKind },
-      { x => x.CanManageServerScope, _canManageServerScope }
+      { x => x.CanManageServerScope, _canManageServerScope },
+      { x => x.TenantId, _tenantId }
     };
 
     var dialogOptions = PermissionAssignmentDialog.DefaultOptions;
@@ -191,7 +202,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
     }
   }
 
-  private async Task DeleteAssignment(InternalDtos.PermissionAssignmentDto assignment)
+  private async Task DeleteAssignment(PADtos.PermissionAssignmentDto assignment)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete Assignment",
@@ -203,7 +214,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.PermissionAssignments.Delete(assignment.Id);
+    var result = await ControlrApi.V1.PermissionAssignments.Delete(assignment.Id, _tenantId);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
@@ -237,8 +248,9 @@ public partial class PermissionAssignmentPanel : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.PermissionAssignments.DeleteMany(
-        new InternalDtos.DeleteManyPermissionAssignmentsRequestDto(
+      var result = await ControlrApi.V1.PermissionAssignments.DeleteMany(
+        _tenantId,
+        new PADtos.DeleteManyPermissionAssignmentsRequestDto(
           [.. selected.Select(x => x.Id)]));
 
       if (!result.IsSuccess)
@@ -273,7 +285,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
     }
   }
 
-  private async Task EditAssignment(InternalDtos.PermissionAssignmentDto assignment)
+  private async Task EditAssignment(PADtos.PermissionAssignmentDto assignment)
   {
     var parameters = new DialogParameters<PermissionAssignmentDialog>
     {
@@ -281,7 +293,8 @@ public partial class PermissionAssignmentPanel : ComponentBase
       { x => x.PrincipalId, assignment.PrincipalId },
       { x => x.PrincipalKind, assignment.PrincipalKind },
       { x => x.AccountKind, AccountKind },
-      { x => x.CanManageServerScope, _canManageServerScope }
+      { x => x.CanManageServerScope, _canManageServerScope },
+      { x => x.TenantId, _tenantId }
     };
 
     var dialogOptions = PermissionAssignmentDialog.DefaultOptions;
@@ -300,7 +313,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
   /// non-self-removable permission, so removing or disabling it would lock them out. Mirrors
   /// the server-side guard; the server remains authoritative.
   /// </summary>
-  private bool IsProtectedSelfLastGrant(InternalDtos.PermissionAssignmentDto assignment)
+  private bool IsProtectedSelfLastGrant(PADtos.PermissionAssignmentDto assignment)
   {
     if (_principalKind != PermissionPrincipalKind.User || _selectedPrincipalId != _currentUserId)
     {
@@ -338,11 +351,11 @@ public partial class PermissionAssignmentPanel : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.PermissionAssignments.GetByPrincipal(
-        _principalKind.ToString(), _selectedPrincipalId.Value);
+      var result = await ControlrApi.V1.PermissionAssignments.GetByPrincipal(
+        _tenantId, _principalKind, _selectedPrincipalId.Value);
       if (result.IsSuccess)
       {
-        _assignments = result.Value;
+        _assignments = [.. result.Value.Items];
       }
       else
       {
@@ -424,7 +437,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
     await DialogService.ShowAsync<NotesDialog>("Notes", parameters, dialogOptions);
   }
 
-  private async Task ToggleEnabled(InternalDtos.PermissionAssignmentDto assignment, bool enabled)
+  private async Task ToggleEnabled(PADtos.PermissionAssignmentDto assignment, bool enabled)
   {
     if (_togglingIds.Contains(assignment.Id))
     {
@@ -435,7 +448,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
 
     try
     {
-      var updateRequest = new InternalDtos.UpdatePermissionAssignmentRequestDto(
+      var updateRequest = new PADtos.UpdatePermissionAssignmentRequestDto(
         assignment.PermissionName,
         assignment.Effect,
         assignment.ScopeKind,
@@ -443,7 +456,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
         assignment.Notes,
         enabled);
 
-      var result = await ControlrApi.Internal.PermissionAssignments.Update(assignment.Id, updateRequest);
+      var result = await ControlrApi.V1.PermissionAssignments.Update(assignment.Id, _tenantId, updateRequest);
       if (!result.IsSuccess)
       {
         Snackbar.Add(result.Reason, Severity.Error);

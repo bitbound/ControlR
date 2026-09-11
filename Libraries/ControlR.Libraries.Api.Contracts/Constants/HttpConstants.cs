@@ -20,7 +20,6 @@ public static class HttpConstants
     public const string InstallerKeysEndpoint = "/api/installer-keys";
     public const string InvitesEndpoint = "/api/invites";
     public const string LogonTokensEndpoint = "/api/logon-tokens";
-    public const string PermissionAssignmentsEndpoint = "/api/permission-assignments";
     public const string PersonalAccessTokensEndpoint = "/api/personal-access-tokens";
     public const string PublicServerSettingsEndpoint = "/api/public-server-settings";
     public const string ServerAlertEndpoint = "/api/server-alert";
@@ -46,6 +45,7 @@ public static class HttpConstants
     public const string EffectivePermissionsEndpoint = "/api/v1/effective-permissions";
     public const string InstallerKeysEndpoint = "/api/v1/installer-keys";
     public const string LogonTokensEndpoint = "/api/v1/logon-tokens";
+    public const string PermissionAssignmentsEndpoint = "/api/v1/permission-assignments";
     public const string ServerServiceAccountsEndpoint = "/api/v1/server-service-accounts";
     public const string TenantsEndpoint = "/api/v1/tenants";
     public const string TenantServiceAccountsEndpoint = "/api/v1/tenant-service-accounts";

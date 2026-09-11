@@ -1025,7 +1025,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       patResult.Value.PlainTextToken);
 
     var response = await httpClient.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
+      $"{HttpConstants.V1.PermissionAssignmentsEndpoint}?tenantId={tenant.Id}",
       new InternalDtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         user.Id,

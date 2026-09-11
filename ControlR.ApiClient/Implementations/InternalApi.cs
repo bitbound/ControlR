@@ -14,7 +14,6 @@ internal partial class InternalApi(ControlrApi client) :
   IInvitesApi,
   ILogonTokensApi,
   IPersonalAccessTokensApi,
-  IPermissionAssignmentsApi,
   IPublicServerSettingsApi,
   IServerAlertApi,
   IServerLogsApi,
@@ -40,7 +39,6 @@ internal partial class InternalApi(ControlrApi client) :
   public IInstallerKeysApi InstallerKeys => this;
   public IInvitesApi Invites => this;
   public ILogonTokensApi LogonTokens => this;
-  public IPermissionAssignmentsApi PermissionAssignments => this;
   public IPersonalAccessTokensApi PersonalAccessTokens => this;
   public IPublicServerSettingsApi PublicServerSettings => this;
   public IServerAlertApi ServerAlert => this;

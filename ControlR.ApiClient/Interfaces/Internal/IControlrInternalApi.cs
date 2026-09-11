@@ -11,7 +11,6 @@ public interface IControlrInternalApi
   IInstallerKeysApi InstallerKeys { get; }
   IInvitesApi Invites { get; }
   ILogonTokensApi LogonTokens { get; }
-  IPermissionAssignmentsApi PermissionAssignments { get; }
   IPersonalAccessTokensApi PersonalAccessTokens { get; }
   IPublicServerSettingsApi PublicServerSettings { get; }
   IServerAlertApi ServerAlert { get; }
