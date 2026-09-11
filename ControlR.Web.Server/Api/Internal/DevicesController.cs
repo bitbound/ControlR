@@ -18,6 +18,7 @@ public class DevicesController(
   private readonly IDeviceAccessScopeResolver _deviceAccessScopeResolver = deviceAccessScopeResolver;
 
   [HttpDelete("{deviceId:guid}")]
+  [ApiDeprecated("/api/v1/devices/{deviceId}", Note = "The replacement resolves the device across tenants and enforces tenant access before the resource policy.")]
   public async Task<IActionResult> DeleteDevice(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
@@ -50,6 +51,7 @@ public class DevicesController(
   }
 
   [HttpPost("delete-many")]
+  [ApiDeprecated("/api/v1/devices/delete-many", Note = "The replacement evaluates tenant access per candidate device instead of pre-filtering by the caller's tenant claim, so server-scoped principals are supported.")]
   public async Task<ActionResult<InternalDtos.DeleteManyDevicesResponseDto>> DeleteMany(
     [FromServices] AppDb appDb,
     [FromServices] IPermissionEvaluator permissionEvaluator,
@@ -124,6 +126,7 @@ public class DevicesController(
   }
 
   [HttpGet]
+  [ApiDeprecated("/api/v1/devices")]
   public async IAsyncEnumerable<InternalDtos.DeviceResponseDto> Get(
     [FromServices] AppDb appDb,
     [FromServices] IAgentVersionProvider agentVersionProvider)
@@ -144,6 +147,7 @@ public class DevicesController(
   }
 
   [HttpGet("{deviceId:guid}")]
+  [ApiDeprecated("/api/v1/devices/{deviceId}", Note = "The replacement resolves the device across tenants and enforces tenant access before the resource policy.")]
   public async Task<ActionResult<InternalDtos.DeviceResponseDto>> GetDevice(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
@@ -173,6 +177,7 @@ public class DevicesController(
   }
 
   [HttpGet("summary")]
+  [ApiDeprecated("/api/v1/devices/summary")]
   public async IAsyncEnumerable<InternalDtos.DeviceSummaryDto> GetDeviceSummaries(
     [FromServices] AppDb appDb)
   {
@@ -186,6 +191,7 @@ public class DevicesController(
   }
 
   [HttpPost("search")]
+  [ApiDeprecated("/api/v1/devices/search", Note = "The replacement evaluates device access via the caller's access scope without requiring a tenant claim, so server-scoped principals are supported.")]
   public async Task<ActionResult<InternalDtos.DeviceSearchResponseDto>> SearchDevices(
     [FromBody] InternalDtos.DeviceSearchRequestDto requestDto,
     [FromServices] AppDb appDb,
@@ -251,6 +257,7 @@ public class DevicesController(
 
   [HttpPatch("{deviceId:guid}/alias")]
   [Authorize]
+  [ApiDeprecated("/api/v1/devices/{deviceId}/alias", Note = "The replacement resolves the device across tenants and enforces tenant access before the resource policy.")]
   public async Task<ActionResult<InternalDtos.DeviceResponseDto>> UpdateDeviceAlias(
     [FromRoute] Guid deviceId,
     [FromBody] InternalDtos.UpdateDeviceAliasRequestDto requestDto,

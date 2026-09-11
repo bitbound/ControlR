@@ -48,7 +48,9 @@ public static class EntityToV1DtoExtensions
       device.DnsHostName)
     {
       Alias = device.Alias,
-      TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray()
+      TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray(),
+      CustomerId = device.CustomerId,
+      CustomerName = device.Customer?.Name
     };
   }
 

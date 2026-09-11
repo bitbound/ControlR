@@ -39,6 +39,10 @@ public record DeviceResponseDto(
 
   public string? Alias { get; init; }
 
+  public Guid? CustomerId { get; init; }
+
+  public string? CustomerName { get; init; }
+
   [IgnoreDataMember]
   [JsonIgnore]
   public double UsedMemoryPercent => UsedMemory / TotalMemory;

@@ -1232,6 +1232,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/{deviceId}` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1269,6 +1270,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1276,12 +1278,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/{deviceId}"
       },
       "get": {
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/{deviceId}` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1336,6 +1340,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1343,7 +1348,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/{deviceId}"
       }
     },
     "/api/devices/delete-many": {
@@ -1351,6 +1357,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/delete-many` instead. The replacement evaluates tenant access per candidate device instead of pre-filtering by the caller's tenant claim, so server-scoped principals are supported.",
         "parameters": [
           {
             "name": "api-version",
@@ -1416,6 +1423,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1423,7 +1431,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/delete-many"
       }
     },
     "/api/devices": {
@@ -1431,6 +1440,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -1485,6 +1495,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1492,7 +1503,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices"
       },
       "post": {
         "tags": [
@@ -1570,6 +1582,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/summary` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -1624,6 +1637,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1631,7 +1645,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/summary"
       }
     },
     "/api/devices/search": {
@@ -1639,6 +1654,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/search` instead. The replacement evaluates device access via the caller's access scope without requiring a tenant claim, so server-scoped principals are supported.",
         "parameters": [
           {
             "name": "api-version",
@@ -1704,6 +1720,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1711,7 +1728,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/search"
       }
     },
     "/api/devices/{deviceId}/alias": {
@@ -1719,6 +1737,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/{deviceId}/alias` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1793,6 +1812,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1800,7 +1820,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/{deviceId}/alias"
       }
     },
     "/api/device-tags": {
