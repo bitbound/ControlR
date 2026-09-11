@@ -3279,6 +3279,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys` instead. The replacement requires TenantId in the request body.",
         "parameters": [
           {
             "name": "api-version",
@@ -3344,6 +3345,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3351,12 +3353,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys"
       },
       "get": {
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "api-version",
@@ -3411,6 +3415,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3418,7 +3423,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys?tenantId="
       }
     },
     "/api/installer-keys/{id}": {
@@ -3426,6 +3432,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "id",
@@ -3463,6 +3470,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3470,7 +3478,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys/{keyId}?tenantId="
       }
     },
     "/api/installer-keys/usages/{keyId}": {
@@ -3478,6 +3487,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}/usages?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "keyId",
@@ -3541,6 +3551,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3548,7 +3559,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys/{keyId}/usages?tenantId="
       }
     },
     "/api/installer-keys/rename": {
@@ -3556,6 +3568,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}?tenantId=` instead. The replacement takes the key id in the route, tenantId as a query parameter, a body with only friendlyName, and returns 204.",
         "parameters": [
           {
             "name": "api-version",
@@ -3604,6 +3617,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3611,7 +3625,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys/{keyId}?tenantId="
       }
     },
     "/api/invites/accept": {
@@ -3898,6 +3913,7 @@
         "tags": [
           "LogonTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/logon-tokens/user` instead. The replacement requires TenantId in the request body; see also /api/v1/logon-tokens/external for server-scoped callers.",
         "parameters": [
           {
             "name": "api-version",
@@ -3996,6 +4012,7 @@
             "description": "Internal Server Error"
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4003,7 +4020,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/logon-tokens/user"
       }
     },
     "/api/permission-assignments/presets/apply": {
@@ -5596,75 +5614,6 @@
         "responses": {
           "200": {
             "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/tenants": {
-      "get": {
-        "tags": [
-          "Tenants"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSummaryDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSummaryDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSummaryDto"
-                  }
-                }
-              }
-            }
           },
           "500": {
             "description": "Internal Server Error",
@@ -12297,25 +12246,6 @@
           }
         }
       },
-      "TenantSummaryDto": {
-        "required": [
-          "id",
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "ThemeMode": {
         "type": "integer"
       },
@@ -12984,9 +12914,6 @@
     },
     {
       "name": "Tags"
-    },
-    {
-      "name": "Tenants"
     },
     {
       "name": "TenantServiceAccounts"

@@ -23,7 +23,6 @@ public interface IControlrInternalApi
   IServerLogsApi ServerLogs { get; }
   IServerStatsApi ServerStats { get; }
   ITagsApi Tags { get; }
-  ITenantsApi Tenants { get; }
   ITenantServiceAccountsApi TenantServiceAccounts { get; }
   ITenantSettingsApi TenantSettings { get; }
   ITestEmailApi TestEmail { get; }

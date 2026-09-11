@@ -1,3 +1,4 @@
+@using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys
 @attribute [Route(ClientRoutes.Deploy)]
 @attribute [Authorize(Policy = PolicyNames.RequireAgentInstall)]
 
@@ -76,7 +77,7 @@
             Key secrets are not persisted to the database in a reversible way.
             You must provide the key secret in order to re-use it.
           </MudText>
-          <MudSelect T="AgentInstallerKeyDto" Label="Select Key" @bind-Value="_selectedExistingKey"
+          <MudSelect T="IKDtos.InstallerKeyDto" Label="Select Key" @bind-Value="_selectedExistingKey"
             ToStringFunc="@(GetInstallerKeyDisplay)">
             @foreach (var key in _existingKeys)
             {

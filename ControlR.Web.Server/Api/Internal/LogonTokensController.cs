@@ -11,6 +11,7 @@ namespace ControlR.Web.Server.Api.Internal;
 public class LogonTokensController : ControllerBase
 {
   [HttpPost]
+  [ApiDeprecated("/api/v1/logon-tokens/user", Note = "The replacement requires TenantId in the request body; see also /api/v1/logon-tokens/external for server-scoped callers.")]
   [ProducesResponseType<InternalDtos.LogonTokenResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]

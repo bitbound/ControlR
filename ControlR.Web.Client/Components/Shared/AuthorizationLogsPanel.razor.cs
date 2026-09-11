@@ -1,3 +1,5 @@
+using V1Flat = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+
 namespace ControlR.Web.Client.Components.Shared;
 
 public partial class AuthorizationLogsPanel
@@ -11,7 +13,7 @@ public partial class AuthorizationLogsPanel
   private Guid? _selectedTenantId;
   private MudTable<AuthorizationChangeLogDto>? _table;
   private string? _targetTypeFilter;
-  private TenantSummaryDto[] _tenants = [];
+  private V1Flat.TenantSummaryDto[] _tenants = [];
   private DateTime? _toDate;
 
   [Inject]
@@ -106,10 +108,10 @@ public partial class AuthorizationLogsPanel
   {
     try
     {
-      var result = await ControlrApi.Internal.Tenants.Get();
+      var result = await ControlrApi.V1.Tenants.GetAllTenants();
       if (result.IsSuccess)
       {
-        _tenants = result.Value;
+        _tenants = [.. result.Value.Items];
       }
     }
     catch (Exception ex)

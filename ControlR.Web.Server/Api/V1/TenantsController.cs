@@ -64,6 +64,25 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
     return Ok(result.Value.ToV1GetTenantDto());
   }
 
+  [HttpGet]
+  [Authorize(Policy = PolicyNames.RequireServerTenantsRead)]
+  [ProducesResponseType<TenantsResponseDto>(StatusCodes.Status200OK)]
+  public async Task<ActionResult<TenantsResponseDto>> GetAll(
+    [FromServices] AppDb appDb,
+    CancellationToken cancellationToken)
+  {
+    var tenants = await appDb.Tenants
+      .AsNoTracking()
+      .OrderBy(x => x.Name)
+      .Select(x => new TenantSummaryDto(x.Id, x.Name ?? string.Empty))
+      .ToListAsync(cancellationToken);
+
+    return Ok(new TenantsResponseDto
+    {
+      Items = [.. tenants]
+    });
+  }
+
   [HttpPut("{id:guid}")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsWrite)]
   [ProducesResponseType<GetTenantResponseDto>(StatusCodes.Status200OK)]

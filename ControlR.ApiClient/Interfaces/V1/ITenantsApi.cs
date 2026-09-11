@@ -6,6 +6,8 @@ namespace ControlR.ApiClient.Interfaces.V1;
 
 public interface ITenantsApi
 {
+  [ApiRoute($"{HttpConstants.V1.TenantsEndpoint}", "GET")]
+  Task<ApiResult<TenantsResponseDto>> GetAllTenants(CancellationToken cancellationToken = default);
   [ApiRoute($"{HttpConstants.V1.TenantsEndpoint}", "POST")]
   Task<ApiResult<CreateTenantResponseDto>> CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken = default);
   [ApiRoute($"{HttpConstants.V1.TenantsEndpoint}/{{tenantId}}", "DELETE")]
