@@ -8,12 +8,14 @@ internal partial class V1Api(ControlrApi client) :
   ICustomersApi,
   IDeploymentOptionsApi,
   IDeviceGroupsApi,
+  IDeviceTagsApi,
   IDevicesApi,
   IEffectivePermissionsApi,
   IInstallerKeysApi,
   ILogonTokensApi,
   IPermissionAssignmentsApi,
   IServerServiceAccountsApi,
+  ITagsApi,
   ITenantServiceAccountsApi,
   ITenantsApi,
   IUserGroupsApi
@@ -25,11 +27,13 @@ internal partial class V1Api(ControlrApi client) :
   public IDeploymentOptionsApi DeploymentOptions => this;
   public IDeviceGroupsApi DeviceGroups => this;
   public IDevicesApi Devices => this;
+  public IDeviceTagsApi DeviceTags => this;
   public IEffectivePermissionsApi EffectivePermissions => this;
   public IInstallerKeysApi InstallerKeys => this;
   public ILogonTokensApi LogonTokens => this;
   public IPermissionAssignmentsApi PermissionAssignments => this;
   public IServerServiceAccountsApi ServerServiceAccounts => this;
+  public ITagsApi Tags => this;
   public ITenantsApi Tenants => this;
   public ITenantServiceAccountsApi TenantServiceAccounts => this;
   public IUserGroupsApi UserGroups => this;

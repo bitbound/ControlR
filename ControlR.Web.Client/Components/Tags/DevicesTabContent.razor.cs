@@ -1,4 +1,6 @@
 ﻿using System.Collections.Immutable;
+using Microsoft.AspNetCore.Components.Authorization;
+using DeviceTagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
 
 namespace ControlR.Web.Client.Components.Tags;
 
@@ -7,6 +9,9 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
   private ImmutableArray<IDisposable>? _changeHandlers;
   private DeviceResponseDto? _selectedDevice;
   private string _tagSearchPattern = string.Empty;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -44,10 +49,17 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
   {
     try
     {
+      var state = await AuthState.GetAuthenticationStateAsync();
+      if (!state.User.TryGetTenantId(out var tenantId))
+      {
+        Snackbar.Add("No tenant found for the current user", Severity.Error);
+        return;
+      }
+
       if (isToggled)
       {
-        var addRequest = new DeviceTagAddRequestDto(deviceId, tag.Id);
-        var addResult = await ControlrApi.Internal.DeviceTags.AddDeviceTag(addRequest);
+        var addRequest = new DeviceTagsDtos.DeviceTagAddRequestDto(deviceId, tag.Id);
+        var addResult = await ControlrApi.V1.DeviceTags.AddDeviceTag(tenantId, addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -57,7 +69,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.Internal.DeviceTags.RemoveDeviceTag(deviceId, tag.Id);
+        var removeResult = await ControlrApi.V1.DeviceTags.RemoveDeviceTag(deviceId, tag.Id, tenantId);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);

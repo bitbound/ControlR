@@ -41,11 +41,13 @@ public static class HttpConstants
     public const string DeploymentOptionsEndpoint = "/api/v1/deployment-options";
     public const string DeviceGroupsEndpoint = "/api/v1/device-groups";
     public const string DevicesEndpoint = "/api/v1/devices";
+    public const string DeviceTagsEndpoint = "/api/v1/device-tags";
     public const string EffectivePermissionsEndpoint = "/api/v1/effective-permissions";
     public const string InstallerKeysEndpoint = "/api/v1/installer-keys";
     public const string LogonTokensEndpoint = "/api/v1/logon-tokens";
     public const string PermissionAssignmentsEndpoint = "/api/v1/permission-assignments";
     public const string ServerServiceAccountsEndpoint = "/api/v1/server-service-accounts";
+    public const string TagsEndpoint = "/api/v1/tags";
     public const string TenantsEndpoint = "/api/v1/tenants";
     public const string TenantServiceAccountsEndpoint = "/api/v1/tenant-service-accounts";
     public const string UserGroupsEndpoint = "/api/v1/user-groups";

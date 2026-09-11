@@ -1829,6 +1829,7 @@
         "tags": [
           "DeviceTags"
         ],
+        "description": "Deprecated. Use `/api/v1/device-tags?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "api-version",
@@ -1877,6 +1878,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1884,7 +1886,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/device-tags?tenantId="
       }
     },
     "/api/device-tags/{deviceId}/{tagId}": {
@@ -1892,6 +1895,7 @@
         "tags": [
           "DeviceTags"
         ],
+        "description": "Deprecated. Use `/api/v1/device-tags/{deviceId}/{tagId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1955,6 +1959,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1962,7 +1967,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/device-tags/{deviceId}/{tagId}?tenantId="
       }
     },
     "/api/effective-user-preferences": {
@@ -3376,6 +3382,7 @@
         "tags": [
           "Tags"
         ],
+        "description": "Deprecated. Use `/api/v1/tags?tenantId=` instead. The replacement requires tenantId as a query parameter, returns 201, and takes the tenant from the required parameter instead of the caller claim.",
         "parameters": [
           {
             "name": "api-version",
@@ -3441,6 +3448,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3448,12 +3456,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tags?tenantId="
       },
       "get": {
         "tags": [
           "Tags"
         ],
+        "description": "Deprecated. Use `/api/v1/tags?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "includeLinkedIds",
@@ -3516,6 +3526,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3523,12 +3534,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tags?tenantId="
       },
       "put": {
         "tags": [
           "Tags"
         ],
+        "description": "Deprecated. Use `/api/v1/tags/{tagId}?tenantId=` instead. The replacement takes the tag id in the route, tenantId as a query parameter, and a body with only name.",
         "parameters": [
           {
             "name": "api-version",
@@ -3594,6 +3607,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3601,7 +3615,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tags/{tagId}?tenantId="
       }
     },
     "/api/tags/{tagId}": {
@@ -3609,6 +3624,7 @@
         "tags": [
           "Tags"
         ],
+        "description": "Deprecated. Use `/api/v1/tags/{tagId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "tagId",
@@ -3646,6 +3662,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3653,7 +3670,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tags/{tagId}?tenantId="
       }
     },
     "/api/tenant-settings/{name}": {

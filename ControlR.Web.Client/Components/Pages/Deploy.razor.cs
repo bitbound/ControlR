@@ -4,6 +4,7 @@ using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
 using DODtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
 using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
 using V1Flat = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+using TagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 
 namespace ControlR.Web.Client.Components.Pages;
 
@@ -29,8 +30,8 @@ public partial class Deploy
   private string? _keyExpiration;
   private CustDtos.CustomerDto? _selectedCustomer;
   private IKDtos.InstallerKeyDto? _selectedExistingKey;
-  private IReadOnlyCollection<TagResponseDto>? _selectedTags;
-  private TagResponseDto[] _tags = [];
+  private IReadOnlyCollection<TagsDtos.TagResponseDto>? _selectedTags;
+  private TagsDtos.TagResponseDto[] _tags = [];
   private Guid? _tenantId;
   private uint _totalUsesAllowed = 1;
   private bool _useExistingKey;
@@ -173,10 +174,15 @@ public partial class Deploy
       return;
     }
 
-    var result = await ControlrApi.Internal.Tags.GetAllTags();
+    if (_tenantId is not { } tagsTenantId)
+    {
+      return;
+    }
+
+    var result = await ControlrApi.V1.Tags.GetAllTags(tagsTenantId);
     if (result.IsSuccess)
     {
-      _tags = result.Value;
+      _tags = [.. result.Value.Items];
     }
     else
     {
@@ -501,10 +507,15 @@ public partial class Deploy
       {
         // The target became taggable (e.g. by narrowing to an allowed existing device). Load the
         // available tags now so the selector has options.
-        var result = await ControlrApi.Internal.Tags.GetAllTags();
+        if (_tenantId is not { } tagsTenantId)
+        {
+          return;
+        }
+
+        var result = await ControlrApi.V1.Tags.GetAllTags(tagsTenantId);
         if (result.IsSuccess)
         {
-          _tags = result.Value;
+          _tags = [.. result.Value.Items];
         }
         else
         {

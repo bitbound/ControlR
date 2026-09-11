@@ -9,6 +9,7 @@ namespace ControlR.Web.Server.Api.Internal;
 public class DeviceTagsController : ControllerBase
 {
   [HttpPost]
+  [ApiDeprecated("/api/v1/device-tags?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   public async Task<IActionResult> AddTag(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
@@ -49,6 +50,7 @@ public class DeviceTagsController : ControllerBase
   }
 
   [HttpDelete("{deviceId:guid}/{tagId:guid}")]
+  [ApiDeprecated("/api/v1/device-tags/{deviceId}/{tagId}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   public async Task<ActionResult<InternalDtos.TagResponseDto>> RemoveTag(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,

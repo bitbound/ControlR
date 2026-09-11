@@ -54,6 +54,20 @@ public static class EntityToV1DtoExtensions
     };
   }
 
+  public static V1Dtos.Tags.TagResponseDto ToV1ResponseDto(this Tag tag)
+  {
+    var deviceIds = tag
+      .Devices?
+      .Select(x => x.Id)
+      .ToList() ?? [];
+
+    return new V1Dtos.Tags.TagResponseDto(
+      tag.Id,
+      tag.Name,
+      tag.Type,
+      deviceIds);
+  }
+
   public static V1Dtos.DeviceSummaryDto ToV1SummaryDto(this Device device)
   {
     return new V1Dtos.DeviceSummaryDto(
