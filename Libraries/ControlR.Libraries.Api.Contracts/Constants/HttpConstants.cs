@@ -51,5 +51,6 @@ public static class HttpConstants
     public const string TenantsEndpoint = "/api/v1/tenants";
     public const string TenantServiceAccountsEndpoint = "/api/v1/tenant-service-accounts";
     public const string UserGroupsEndpoint = "/api/v1/user-groups";
+    public const string UsersEndpoint = "/api/v1/users";
   }
 }

@@ -1,29 +1,46 @@
-using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Services.Users;
+using Microsoft.AspNetCore.Mvc;
+using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
+using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
-namespace ControlR.Web.Server.Api.Internal;
+namespace ControlR.Web.Server.Api.V1;
 
-[Route(HttpConstants.Internal.UsersEndpoint)]
+/// <summary>
+/// User management plus the per-user personal-access-token sub-resource. Tenant scoping is
+/// enforced by the required tenantId query parameter: the caller's tenant claim must match it
+/// (or the caller must be a server principal), and every lookup carries an explicit TenantId
+/// predicate so the checks stay meaningful even for server principals running against an
+/// unfiltered AppDb context. Preset assignment keeps its authority gates: granting the
+/// ServerAdministrator preset requires ServerPermissionsWrite, presets that seed tenant-scope
+/// grants require ServerPermissionsWrite or TenantPermissionsWrite, and TenantAdministrator
+/// additionally requires TenantPermissionsDeny unless the caller has server writes.
+/// </summary>
+[Route(HttpConstants.V1.UsersEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName(OpenApiConstants.InternalGroupName)]
+[ApiVersion(ApiVersions.V1)]
 public class UsersController : ControllerBase
 {
-  [ApiDeprecated("/api/v1/users/{userId}/reset-password?tenantId=", Note = "The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.")]
   [HttpPost("{userId:guid}/reset-password")]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
-  public async Task<ActionResult<InternalDtos.AdminResetPasswordResponseDto>> AdminResetPassword(
+  [ProducesResponseType<UsersDtos.AdminResetPasswordResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<ActionResult<UsersDtos.AdminResetPasswordResponseDto>> AdminResetPassword(
+    [FromServices] IPasswordManager passwordManager,
     [FromRoute] Guid userId,
-    [FromServices] IPasswordManager passwordManager)
+    [FromQuery] Guid tenantId)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
-      return BadRequest("User tenant not found.");
+      return Forbid();
     }
 
-    var result = await passwordManager.AdminResetPassword(tenantId, userId);
+    var result = await passwordManager.AdminResetPassword(resolvedTenantId, userId);
     if (!result.IsSuccess)
     {
       if (string.Equals(result.Reason, "User not found.", StringComparison.Ordinal))
@@ -34,21 +51,26 @@ public class UsersController : ControllerBase
       return BadRequest(result.Reason);
     }
 
-    return Ok(result.Value);
+    return Ok(new UsersDtos.AdminResetPasswordResponseDto(result.Value.TemporaryPassword));
   }
 
-  [ApiDeprecated("/api/v1/users?tenantId=", Note = "The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.")]
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
-  public async Task<ActionResult<InternalDtos.UserResponseDto>> Create(
+  [ProducesResponseType<UsersDtos.UserResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public async Task<ActionResult<UsersDtos.UserResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromServices] IPermissionEvaluator permissionEvaluator,
     [FromServices] IUserCreator userCreator,
-    [FromBody] InternalDtos.CreateUserRequestDto request)
+    [FromQuery] Guid tenantId,
+    [FromBody] UsersDtos.CreateUserRequestDto request,
+    CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
-      return BadRequest("User tenant not found.");
+      return Forbid();
     }
 
     var presetNames = request.PresetNames?.ToArray();
@@ -82,8 +104,8 @@ public class UsersController : ControllerBase
         var serverResource = new ResourceDescriptor(PermissionScopeKind.Server);
         var tenantResource = new ResourceDescriptor(
           PermissionScopeKind.Tenant,
-          tenantId,
-          tenantId);
+          resolvedTenantId,
+          resolvedTenantId);
         // Granting the ServerAdministrator preset is a server permission-management action, so
         // the authority check is ServerPermissionsWrite (the same permission that governs
         // creating server-scoped assignments), not a blanket admin knob.
@@ -94,7 +116,7 @@ public class UsersController : ControllerBase
         var requestTenantPermsWrite = new PermissionEvaluationRequest(
           PermissionNames.TenantPermissionsWrite,
           tenantResource);
-          
+
         var requestTenantPermsDeny = new PermissionEvaluationRequest(
           PermissionNames.TenantPermissionsDeny,
           tenantResource);
@@ -128,7 +150,7 @@ public class UsersController : ControllerBase
     var createResult = await userCreator.CreateUser(
       string.IsNullOrWhiteSpace(request.Email) ? request.UserName : request.Email,
       request.Password ?? string.Empty,
-      tenantId,
+      resolvedTenantId,
       presetNames,
       cancellationToken: HttpContext.RequestAborted);
 
@@ -146,7 +168,7 @@ public class UsersController : ControllerBase
     var createdAt = await appDb.Users
       .Where(x => x.Id == user.Id)
       .Select(x => x.CreatedAt)
-      .FirstOrDefaultAsync();
+      .FirstOrDefaultAsync(cancellationToken);
     var permissions = await appDb.PermissionAssignments
       .Where(x => x.PrincipalId == user.Id &&
                   x.PrincipalKind == PermissionPrincipalKind.User &&
@@ -154,28 +176,34 @@ public class UsersController : ControllerBase
                   x.IsEnabled)
       .Select(x => x.PermissionName)
       .Distinct()
-      .ToListAsync();
+      .ToListAsync(cancellationToken);
 
-    var response = new InternalDtos.UserResponseDto(user.Id, user.UserName, user.Email, createdAt, [.. permissions]);
-    return CreatedAtAction(nameof(GetAll), new { id = user.Id }, response);
+    var response = new UsersDtos.UserResponseDto(user.Id, user.UserName, user.Email, createdAt, [.. permissions]);
+    return CreatedAtAction(nameof(GetAll), new { tenantId = resolvedTenantId }, response);
   }
 
-  [ApiDeprecated("/api/v1/users/{userId}/personal-access-tokens?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns 201.")]
   [HttpPost("{userId:guid}/personal-access-tokens")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersWrite)]
-  public async Task<ActionResult<InternalDtos.CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
-    [FromRoute] Guid userId,
+  [ProducesResponseType<PATDtos.CreatePersonalAccessTokenResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<ActionResult<PATDtos.CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb,
-    [FromBody] InternalDtos.CreatePersonalAccessTokenRequestDto request)
+    [FromRoute] Guid userId,
+    [FromQuery] Guid tenantId,
+    [FromBody] PATDtos.CreatePersonalAccessTokenRequestDto request,
+    CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
-      return BadRequest("User tenant not found.");
+      return Forbid();
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .AnyAsync(x => x.Id == userId && x.TenantId == resolvedTenantId, cancellationToken);
 
     if (!targetExists)
     {
@@ -187,26 +215,51 @@ public class UsersController : ControllerBase
       return BadRequest("User ID not found.");
     }
 
-    var result = await personalAccessTokenManager.CreateToken(request, userId, actor);
+    var result = await personalAccessTokenManager.CreateToken(
+      new InternalDtos.CreatePersonalAccessTokenRequestDto(
+        request.Name,
+        request.PermissionMode,
+        request.Scopes
+          ?.Select(scope => new InternalDtos.CredentialScopeDto(
+            scope.PermissionName,
+            scope.ScopeKind,
+            scope.ScopeId))
+          .ToList()),
+      userId,
+      actor);
+
     if (!result.IsSuccess)
     {
       return BadRequest(result.Reason);
     }
 
-    return Ok(result.Value);
+    var response = new PATDtos.CreatePersonalAccessTokenResponseDto(
+      ToV1ResponseDto(result.Value.PersonalAccessToken),
+      result.Value.PlainTextToken);
+
+    return CreatedAtAction(
+      nameof(GetUserPersonalAccessTokens),
+      new { userId, tenantId = resolvedTenantId },
+      response);
   }
 
-  [ApiDeprecated("/api/v1/users/{userId}?tenantId=", Note = "The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.")]
   [HttpDelete("{userId:guid}")]
   [Authorize(Policy = PolicyNames.RequireTenantUsersDelete)]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> Delete(
-    [FromRoute] Guid userId,
     [FromServices] UserManager<AppUser> userManager,
-    [FromServices] AppDb appDb)
+    [FromServices] AppDb appDb,
+    [FromRoute] Guid userId,
+    [FromQuery] Guid tenantId,
+    CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
-      return BadRequest("User tenant not found.");
+      return Forbid();
     }
 
     if (User.TryGetUserId(out var callerUserId) && callerUserId == userId)
@@ -216,7 +269,7 @@ public class UsersController : ControllerBase
 
     var user = await appDb.Users
       .Include(x => x.UserPreferences)
-      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == resolvedTenantId, cancellationToken);
 
     if (user == null)
     {
@@ -232,22 +285,28 @@ public class UsersController : ControllerBase
     return NoContent();
   }
 
-  [ApiDeprecated("/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   [HttpDelete("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersWrite)]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> DeleteUserPersonalAccessToken(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] AppDb appDb,
     [FromRoute] Guid userId,
     [FromRoute] Guid tokenId,
-    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
-    [FromServices] AppDb appDb)
+    [FromQuery] Guid tenantId,
+    CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
-      return BadRequest("User tenant not found.");
+      return Forbid();
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .AnyAsync(x => x.Id == userId && x.TenantId == resolvedTenantId, cancellationToken);
 
     if (!targetExists)
     {
@@ -263,30 +322,34 @@ public class UsersController : ControllerBase
     return NoContent();
   }
 
-  [ApiDeprecated("/api/v1/users?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns an Items envelope.")]
   [HttpGet]
   [Authorize(Policy = PolicyNames.RequireUsersRead)]
-  public async Task<ActionResult<List<InternalDtos.UserResponseDto>>> GetAll(
-    [FromServices] AppDb appDb)
+  [ProducesResponseType<UsersDtos.UsersResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public async Task<ActionResult<UsersDtos.UsersResponseDto>> GetAll(
+    [FromServices] AppDb appDb,
+    [FromQuery] Guid tenantId,
+    CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
-      return BadRequest("User tenant not found.");
+      return Forbid();
     }
 
     var users = await appDb.Users
-      .Where(x => x.TenantId == tenantId)
+      .Where(x => x.TenantId == resolvedTenantId)
       .OrderBy(x => x.UserName)
       .ThenBy(x => x.Id)
       .Select(x => new { x.Id, x.UserName, x.Email, x.CreatedAt })
-      .ToListAsync();
+      .ToListAsync(cancellationToken);
 
     var userIds = users.Select(x => x.Id).ToList();
 
     var displayNames = await appDb.UserPreferences
       .Where(x => userIds.Contains(x.UserId) && x.Name == UserPreferenceNames.UserDisplayName)
       .Select(x => new { x.UserId, x.Value })
-      .ToListAsync();
+      .ToListAsync(cancellationToken);
 
     var displayNamesLookup = displayNames.ToDictionary(x => x.UserId, x => x.Value);
 
@@ -296,35 +359,42 @@ public class UsersController : ControllerBase
                   x.Effect == PermissionEffect.Allow &&
                   x.IsEnabled)
       .Select(x => new { x.PrincipalId, x.PermissionName })
-      .ToListAsync();
+      .ToListAsync(cancellationToken);
 
     var permissionsLookup = permissionsByUser
       .GroupBy(x => x.PrincipalId)
       .ToDictionary(group => group.Key, group => group.Select(x => x.PermissionName).Distinct().ToList());
 
-    return users
-      .Select(x => new InternalDtos.UserResponseDto(
+    var items = users
+      .Select(x => new UsersDtos.UserResponseDto(
         x.Id, x.UserName, x.Email, x.CreatedAt,
         permissionsLookup.GetValueOrDefault(x.Id) ?? [],
         displayNamesLookup.GetValueOrDefault(x.Id)))
       .ToList();
+
+    return Ok(new UsersDtos.UsersResponseDto { Items = items });
   }
 
-  [ApiDeprecated("/api/v1/users/{userId}/personal-access-tokens?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   [HttpGet("{userId:guid}/personal-access-tokens")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersRead)]
-  public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenResponseDto>>> GetUserPersonalAccessTokens(
-    [FromRoute] Guid userId,
+  [ProducesResponseType<PATDtos.PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<ActionResult<IReadOnlyList<PATDtos.PersonalAccessTokenResponseDto>>> GetUserPersonalAccessTokens(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
-    [FromServices] AppDb appDb)
+    [FromServices] AppDb appDb,
+    [FromRoute] Guid userId,
+    [FromQuery] Guid tenantId,
+    CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
-      return BadRequest("User tenant not found.");
+      return Forbid();
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .AnyAsync(x => x.Id == userId && x.TenantId == resolvedTenantId, cancellationToken);
 
     if (!targetExists)
     {
@@ -332,38 +402,60 @@ public class UsersController : ControllerBase
     }
 
     var tokens = await personalAccessTokenManager.GetForUser(userId);
-    return Ok(tokens);
+    return Ok(tokens.Select(ToV1ResponseDto).ToList());
   }
 
-  [ApiDeprecated("/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersWrite)]
-  public async Task<ActionResult<InternalDtos.PersonalAccessTokenResponseDto>> UpdateUserPersonalAccessToken(
-    [FromRoute] Guid userId,
-    [FromRoute] Guid tokenId,
+  [ProducesResponseType<PATDtos.PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<ActionResult<PATDtos.PersonalAccessTokenResponseDto>> UpdateUserPersonalAccessToken(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb,
-    [FromBody] InternalDtos.UpdatePersonalAccessTokenRequestDto request)
+    [FromRoute] Guid userId,
+    [FromRoute] Guid tokenId,
+    [FromQuery] Guid tenantId,
+    [FromBody] PATDtos.UpdatePersonalAccessTokenRequestDto request,
+    CancellationToken cancellationToken)
   {
-    if (!User.TryGetTenantId(out var tenantId))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
-      return BadRequest("User tenant not found.");
+      return Forbid();
     }
 
     var targetExists = await appDb.Users
-      .AnyAsync(x => x.Id == userId && x.TenantId == tenantId);
+      .AnyAsync(x => x.Id == userId && x.TenantId == resolvedTenantId, cancellationToken);
 
     if (!targetExists)
     {
       return NotFound();
     }
 
-    var result = await personalAccessTokenManager.Update(tokenId, request, userId);
+    var result = await personalAccessTokenManager.Update(
+      tokenId,
+      new InternalDtos.UpdatePersonalAccessTokenRequestDto(request.Name),
+      userId);
+
     if (!result.IsSuccess)
     {
       return BadRequest(result.Reason);
     }
 
-    return Ok(result.Value);
+    return Ok(ToV1ResponseDto(result.Value));
+  }
+
+  private static PATDtos.PersonalAccessTokenResponseDto ToV1ResponseDto(
+    InternalDtos.PersonalAccessTokenResponseDto token)
+  {
+    return new PATDtos.PersonalAccessTokenResponseDto(
+      token.Id,
+      token.Name,
+      token.CreatedAt,
+      token.LastUsed,
+      token.PermissionCount,
+      token.PermissionMode);
   }
 }

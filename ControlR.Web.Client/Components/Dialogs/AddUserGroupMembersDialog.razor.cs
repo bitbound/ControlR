@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
 public partial class AddUserGroupMembersDialog : ComponentBase
 {
-  private List<InternalDtos.UserResponseDto> _allUsers = [];
+  private List<UsersDtos.UserResponseDto> _allUsers = [];
   private bool _loading;
   private string _searchText = string.Empty;
   private HashSet<Guid> _selectedIds = [];
@@ -30,7 +30,7 @@ public partial class AddUserGroupMembersDialog : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private List<InternalDtos.UserResponseDto> FilteredUsers
+  private List<UsersDtos.UserResponseDto> FilteredUsers
   {
     get
     {
@@ -64,10 +64,10 @@ public partial class AddUserGroupMembersDialog : ComponentBase
 
       _tenantId = tenantId;
 
-      var result = await ControlrApi.Internal.Users.GetAllUsers();
+      var result = await ControlrApi.V1.Users.GetAllUsers(tenantId);
       if (result.IsSuccess)
       {
-        _allUsers = [.. result.Value];
+        _allUsers = [.. result.Value.Items];
       }
       else
       {

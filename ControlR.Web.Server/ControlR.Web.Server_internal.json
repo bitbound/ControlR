@@ -4339,6 +4339,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/reset-password?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
             "name": "userId",
@@ -4393,6 +4394,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4400,7 +4402,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/reset-password?tenantId="
       }
     },
     "/api/users": {
@@ -4408,6 +4411,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
             "name": "api-version",
@@ -4473,6 +4477,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4480,12 +4485,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users?tenantId="
       },
       "get": {
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "api-version",
@@ -4540,6 +4547,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4547,7 +4555,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users?tenantId="
       }
     },
     "/api/users/{userId}/personal-access-tokens": {
@@ -4555,6 +4564,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter and returns 201.",
         "parameters": [
           {
             "name": "userId",
@@ -4629,6 +4639,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4636,12 +4647,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/personal-access-tokens?tenantId="
       },
       "get": {
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
@@ -4705,6 +4718,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4712,7 +4726,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/personal-access-tokens?tenantId="
       }
     },
     "/api/users/{userId}": {
@@ -4720,6 +4735,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
             "name": "userId",
@@ -4757,6 +4773,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4764,7 +4781,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}?tenantId="
       }
     },
     "/api/users/{userId}/personal-access-tokens/{tokenId}": {
@@ -4772,6 +4790,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
@@ -4818,6 +4837,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4825,12 +4845,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId="
       },
       "put": {
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
@@ -4914,6 +4936,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4921,7 +4944,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId="
       }
     },
     "/api/user-server-settings/file-upload-max-size": {

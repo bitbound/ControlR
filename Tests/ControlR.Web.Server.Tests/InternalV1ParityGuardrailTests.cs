@@ -84,14 +84,6 @@ public partial class InternalV1ParityGuardrailTests
     ["GET /api/user-server-settings/file-upload-max-size"] = "Client-environment capability probe.",
 
     // Pending V1 twins - migration packages prune these entries when the twin lands.
-    ["DELETE /api/users/{}"] = "Planned V1 twin (WP8 users).",
-    ["GET /api/users"] = "Planned V1 twin (WP8 users).",
-    ["POST /api/users"] = "Planned V1 twin (WP8 users).",
-    ["POST /api/users/{}/reset-password"] = "Planned V1 twin (WP8 users).",
-    ["DELETE /api/users/{}/personal-access-tokens/{}"] = "Planned V1 twin (WP8 users, per-user PAT sub-resource).",
-    ["GET /api/users/{}/personal-access-tokens"] = "Planned V1 twin (WP8 users, per-user PAT sub-resource).",
-    ["PUT /api/users/{}/personal-access-tokens/{}"] = "Planned V1 twin (WP8 users, per-user PAT sub-resource).",
-    ["POST /api/users/{}/personal-access-tokens"] = "Planned V1 twin (WP8 users, per-user PAT sub-resource).",
     ["DELETE /api/personal-access-tokens/{}"] = "Planned V1 twin (self-service personal access tokens).",
     ["GET /api/personal-access-tokens"] = "Planned V1 twin (self-service personal access tokens).",
     ["POST /api/personal-access-tokens"] = "Planned V1 twin (self-service personal access tokens).",

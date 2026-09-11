@@ -153,13 +153,19 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolveUser(Guid id)
   {
-    var result = await ControlrApi.Internal.Users.GetAllUsers();
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return null;
+    }
+
+    var result = await ControlrApi.V1.Users.GetAllUsers(tenantId);
     if (!result.IsSuccess)
     {
       return null;
     }
 
-    var match = result.Value.FirstOrDefault(x => x.Id == id);
+    var match = result.Value.Items.FirstOrDefault(x => x.Id == id);
     if (match is null)
     {
       return null;
@@ -269,13 +275,19 @@ public partial class PrincipalAutocomplete
 
   private async Task<IEnumerable<PrincipalOption>> SearchUsers(string query, CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.Users.GetAllUsers(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.Users.GetAllUsers(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-return result.Value
+return result.Value.Items
        .Where(x => Matches(x.UserName, query) ||
                    Matches(x.Email, query) ||
                    Matches(x.DisplayName, query))

@@ -18,7 +18,8 @@ internal partial class V1Api(ControlrApi client) :
   ITagsApi,
   ITenantServiceAccountsApi,
   ITenantsApi,
-  IUserGroupsApi
+  IUserGroupsApi,
+  IUsersApi
 {
   private readonly ControlrApi _client = client;
 
@@ -37,4 +38,5 @@ internal partial class V1Api(ControlrApi client) :
   public ITenantsApi Tenants => this;
   public ITenantServiceAccountsApi TenantServiceAccounts => this;
   public IUserGroupsApi UserGroups => this;
+  public IUsersApi Users => this;
 }
