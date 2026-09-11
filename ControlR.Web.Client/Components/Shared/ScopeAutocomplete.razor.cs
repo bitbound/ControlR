@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components.Authorization;
+
 namespace ControlR.Web.Client.Components.Shared;
 
 public sealed record ScopeOption(Guid Id, string DisplayName);
@@ -12,6 +14,9 @@ public partial class ScopeAutocomplete
 
   [Parameter]
   public string? Class { get; set; }
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -93,26 +98,38 @@ public partial class ScopeAutocomplete
 
   private async Task<IReadOnlyList<ScopeOption>> LoadCustomers(CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.Customers.GetAll(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.Customers.GetAllCustomers(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return [.. result.Value
+    return [.. result.Value.Items
       .OrderBy(x => x.Name)
       .Select(x => new ScopeOption(x.Id, x.Name))];
   }
 
   private async Task<IReadOnlyList<ScopeOption>> LoadDeviceGroups(CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.DeviceGroups.GetAll(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.DeviceGroups.GetAllDeviceGroups(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return [.. result.Value
+    return [.. result.Value.Items
       .OrderBy(x => x.Name)
       .Select(x => new ScopeOption(x.Id, x.Name))];
   }
@@ -130,13 +147,19 @@ public partial class ScopeAutocomplete
 
   private async Task<IReadOnlyList<ScopeOption>> LoadUserGroups(CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.UserGroups.GetAll(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.UserGroups.GetAllUserGroups(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return [.. result.Value
+    return [.. result.Value.Items
       .OrderBy(x => x.Name)
       .Select(x => new ScopeOption(x.Id, x.Name))];
   }

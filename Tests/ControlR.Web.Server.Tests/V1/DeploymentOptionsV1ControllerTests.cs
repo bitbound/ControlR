@@ -34,7 +34,7 @@ public class DeploymentOptionsV1ControllerTests(ITestOutputHelper testOutput)
       new InternalDtos.CreateInstallerKeyRequestDto(InstallerKeyType.Persistent),
       TestContext.Current.CancellationToken);
     var customersResponse = await httpClient.GetAsync(
-      HttpConstants.Internal.CustomersEndpoint,
+      $"{HttpConstants.V1.CustomersEndpoint}?tenantId={tenant.Id}",
       TestContext.Current.CancellationToken);
     var tenantSettingsResponse = await httpClient.GetAsync(
       HttpConstants.Internal.TenantSettingsEndpoint,

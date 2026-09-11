@@ -1,12 +1,17 @@
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using Microsoft.AspNetCore.Components.Authorization;
+using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class UserGroups : ComponentBase
 {
-  private IEnumerable<InternalDtos.UserGroupDto> _groups = [];
+  private IEnumerable<UGDtos.UserGroupDto> _groups = [];
   private bool _loading;
   private string _searchString = string.Empty;
+  private Guid _tenantId;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -23,7 +28,7 @@ public partial class UserGroups : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<InternalDtos.UserGroupDto, bool> QuickFilter => group =>
+  private Func<UGDtos.UserGroupDto, bool> QuickFilter => group =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -36,6 +41,14 @@ public partial class UserGroups : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _tenantId = tenantId;
     await Refresh();
   }
 
@@ -57,8 +70,8 @@ public partial class UserGroups : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.UserGroups.Create(
-      new InternalDtos.CreateUserGroupRequestDto(name, null));
+    var result = await ControlrApi.V1.UserGroups.CreateUserGroup(
+      _tenantId, new UGDtos.CreateUserGroupRequestDto(name, null));
 
     if (!result.IsSuccess)
     {
@@ -70,7 +83,7 @@ public partial class UserGroups : ComponentBase
     await Refresh();
   }
 
-  private async Task DeleteGroup(InternalDtos.UserGroupDto group)
+  private async Task DeleteGroup(UGDtos.UserGroupDto group)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete User Group",
@@ -82,7 +95,7 @@ public partial class UserGroups : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.UserGroups.Delete(group.Id);
+    var result = await ControlrApi.V1.UserGroups.DeleteUserGroup(group.Id, _tenantId);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
@@ -93,7 +106,7 @@ public partial class UserGroups : ComponentBase
     await Refresh();
   }
 
-  private async Task EditPermissions(InternalDtos.UserGroupDto group)
+  private async Task EditPermissions(UGDtos.UserGroupDto group)
   {
     var parameters = new DialogParameters<PermissionAssignmentPanelDialog>
     {
@@ -114,10 +127,10 @@ public partial class UserGroups : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.UserGroups.GetAll();
+      var result = await ControlrApi.V1.UserGroups.GetAllUserGroups(_tenantId);
       if (result.IsSuccess)
       {
-        _groups = result.Value;
+        _groups = result.Value.Items;
       }
       else
       {
@@ -136,7 +149,7 @@ public partial class UserGroups : ComponentBase
     return $"{id.ToString()[..8]}...";
   }
 
-  private void ViewGroup(InternalDtos.UserGroupDto group)
+  private void ViewGroup(UGDtos.UserGroupDto group)
   {
     Navigation.NavigateTo($"/user-groups/{group.Id}");
   }

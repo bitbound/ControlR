@@ -3,10 +3,8 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 public interface IControlrInternalApi
 {
   IAuthApi Auth { get; }
-  ICustomersApi Customers { get; }
   IDesktopPreviewApi DesktopPreview { get; }
   IDeviceFileSystemApi DeviceFileSystem { get; }
-  IDeviceGroupsApi DeviceGroups { get; }
   IDevicesApi Devices { get; }
   IDeviceTagsApi DeviceTags { get; }
   IEffectiveUserPreferencesApi EffectiveUserPreferences { get; }
@@ -23,7 +21,6 @@ public interface IControlrInternalApi
   ITenantServiceAccountsApi TenantServiceAccounts { get; }
   ITenantSettingsApi TenantSettings { get; }
   ITestEmailApi TestEmail { get; }
-  IUserGroupsApi UserGroups { get; }
   IUserPreferencesApi UserPreferences { get; }
   IUsersApi Users { get; }
   IUserServerSettingsApi UserServerSettings { get; }

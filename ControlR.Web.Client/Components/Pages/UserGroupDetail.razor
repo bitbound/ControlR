@@ -1,3 +1,4 @@
+@using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups
 @attribute [Route(ClientRoutes.UserGroupDetail)]
 @attribute [Authorize(Policy = PolicyNames.RequireUserGroupsRead)]
 
@@ -49,7 +50,7 @@ else
     </div>
   </MudPaper>
 
-  <MudDataGrid T="UserGroupMemberDto" Items="_group.Members" Hover="true" Breakpoint="Breakpoint.Sm">
+  <MudDataGrid T="UGDtos.UserGroupMemberDto" Items="_group.Members" Hover="true" Breakpoint="Breakpoint.Sm">
     <ToolBarContent>
       <MudText Typo="Typo.subtitle1">Members (@_group.Members.Count)</MudText>
       <MudSpacer />
@@ -86,7 +87,7 @@ else
       </TemplateColumn>
     </Columns>
     <PagerContent>
-      <MudDataGridPager T="UserGroupMemberDto" />
+      <MudDataGridPager T="UGDtos.UserGroupMemberDto" />
     </PagerContent>
   </MudDataGrid>
 }

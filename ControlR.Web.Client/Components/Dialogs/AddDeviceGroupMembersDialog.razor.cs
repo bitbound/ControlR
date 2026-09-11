@@ -1,5 +1,5 @@
 using ControlR.Libraries.Api.Contracts.FilterSort;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
@@ -23,6 +23,9 @@ public partial class AddDeviceGroupMembersDialog : ComponentBase
   [Parameter]
   public required Guid GroupId { get; set; }
 
+  [Parameter]
+  public required Guid TenantId { get; set; }
+
   [CascadingParameter]
   public required IMudDialogInstance MudDialog { get; init; }
 
@@ -36,8 +39,8 @@ public partial class AddDeviceGroupMembersDialog : ComponentBase
 
   private async Task Add()
   {
-    var result = await ControlrApi.Internal.DeviceGroups.AddMembers(
-      GroupId, new InternalDtos.AddDeviceGroupMembersRequestDto([.. _selectedIds]));
+    var result = await ControlrApi.V1.DeviceGroups.AddDeviceGroupMembers(
+      GroupId, TenantId, new DGDtos.AddDeviceGroupMembersRequestDto([.. _selectedIds]));
 
     if (!result.IsSuccess)
     {

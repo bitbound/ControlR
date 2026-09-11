@@ -1,5 +1,6 @@
 using ControlR.Libraries.Branding;
 using Microsoft.AspNetCore.Components.Authorization;
+using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
 using DODtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
 using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
 using V1Flat = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
@@ -14,7 +15,7 @@ public partial class Deploy
   private bool _appendInstanceId = true;
   private bool _canAssignDeviceTags;
   private bool _canReadCustomers;
-  private IReadOnlyList<CustomerDto> _customers = [];
+  private IReadOnlyList<CustDtos.CustomerDto> _customers = [];
   private string? _deviceId;
   private IEnumerable<IKDtos.InstallerKeyDto> _existingKeys = [];
   private string? _existingKeySecretInput;
@@ -26,7 +27,7 @@ public partial class Deploy
   private InstallerKeyType _installerKeyType;
   private string? _instanceId;
   private string? _keyExpiration;
-  private CustomerDto? _selectedCustomer;
+  private CustDtos.CustomerDto? _selectedCustomer;
   private IKDtos.InstallerKeyDto? _selectedExistingKey;
   private IReadOnlyCollection<TagResponseDto>? _selectedTags;
   private TagResponseDto[] _tags = [];
@@ -156,10 +157,10 @@ public partial class Deploy
 
     if (_canReadCustomers)
     {
-      var customersResult = await ControlrApi.Internal.Customers.GetAll();
+      var customersResult = await ControlrApi.V1.Customers.GetAllCustomers(deploymentTenantId);
       if (customersResult.IsSuccess)
       {
-        _customers = customersResult.Value;
+        _customers = customersResult.Value.Items;
       }
       else
       {
@@ -454,7 +455,7 @@ public partial class Deploy
     return result.Value.Allowed;
   }
 
-  private async Task OnCustomerChanged(CustomerDto? customer)
+  private async Task OnCustomerChanged(CustDtos.CustomerDto? customer)
   {
     _selectedCustomer = customer;
     await RefreshTagCapability();

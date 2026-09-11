@@ -1,12 +1,17 @@
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class DeviceGroups : ComponentBase
 {
-  private IEnumerable<InternalDtos.DeviceGroupDto> _groups = [];
+  private IEnumerable<DGDtos.DeviceGroupDto> _groups = [];
   private bool _loading;
   private string _searchString = string.Empty;
+  private Guid _tenantId;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -23,7 +28,7 @@ public partial class DeviceGroups : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<InternalDtos.DeviceGroupDto, bool> QuickFilter => group =>
+  private Func<DGDtos.DeviceGroupDto, bool> QuickFilter => group =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -36,6 +41,14 @@ public partial class DeviceGroups : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _tenantId = tenantId;
     await Refresh();
   }
 
@@ -57,8 +70,9 @@ public partial class DeviceGroups : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.DeviceGroups.Create(
-      new InternalDtos.CreateDeviceGroupRequestDto(name, null));
+    var result = await ControlrApi.V1.DeviceGroups.CreateDeviceGroup(
+      _tenantId,
+      new DGDtos.CreateDeviceGroupRequestDto(name, null));
 
     if (!result.IsSuccess)
     {
@@ -70,7 +84,7 @@ public partial class DeviceGroups : ComponentBase
     await Refresh();
   }
 
-  private async Task DeleteGroup(InternalDtos.DeviceGroupDto group)
+  private async Task DeleteGroup(DGDtos.DeviceGroupDto group)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete Device Group",
@@ -82,7 +96,7 @@ public partial class DeviceGroups : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.DeviceGroups.Delete(group.Id);
+    var result = await ControlrApi.V1.DeviceGroups.DeleteDeviceGroup(group.Id, _tenantId);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
@@ -100,10 +114,10 @@ public partial class DeviceGroups : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.DeviceGroups.GetAll();
+      var result = await ControlrApi.V1.DeviceGroups.GetAllDeviceGroups(_tenantId);
       if (result.IsSuccess)
       {
-        _groups = result.Value;
+        _groups = result.Value.Items;
       }
       else
       {
@@ -122,7 +136,7 @@ public partial class DeviceGroups : ComponentBase
     return $"{id.ToString()[..8]}...";
   }
 
-  private void ViewGroup(InternalDtos.DeviceGroupDto group)
+  private void ViewGroup(DGDtos.DeviceGroupDto group)
   {
     Navigation.NavigateTo($"/device-groups/{group.Id}");
   }

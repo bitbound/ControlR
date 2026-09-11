@@ -1,5 +1,6 @@
 using ControlR.Libraries.Api.Contracts.FilterSort;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
@@ -14,7 +15,11 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
   private List<DeviceResponseDto> _devices = [];
   private bool _loading;
   private string _searchText = string.Empty;
+  private Guid _tenantId;
   private int _totalPages = 1;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -36,6 +41,12 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (state.User.TryGetTenantId(out var tenantId))
+    {
+      _tenantId = tenantId;
+    }
+
     await LoadDevices();
   }
 
@@ -43,9 +54,10 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
   {
     try
     {
-      var result = await ControlrApi.Internal.Customers.AssignDevices(
+      var result = await ControlrApi.V1.Customers.AssignCustomerDevices(
         CustomerId,
-        new InternalDtos.AssignCustomerDevicesRequestDto([.. _selectedIds], [.. _removedIds]));
+        _tenantId,
+        new CustDtos.AssignCustomerDevicesRequestDto([.. _selectedIds], [.. _removedIds]));
 
       if (!result.IsSuccess)
       {

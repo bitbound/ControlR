@@ -1,3 +1,4 @@
+@using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers
 @using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys
 @attribute [Route(ClientRoutes.Deploy)]
 @attribute [Authorize(Policy = PolicyNames.RequireAgentInstall)]
@@ -198,7 +199,7 @@ else
         <MudText Typo="Typo.body1" GutterBottom>
           Optionally assign the device to a customer upon installation.
         </MudText>
-        <MudSelect T="CustomerDto" Value="_selectedCustomer" ValueChanged="@OnCustomerChanged" Label="Customer" Clearable
+        <MudSelect T="CustDtos.CustomerDto" Value="_selectedCustomer" ValueChanged="@OnCustomerChanged" Label="Customer" Clearable
           ToStringFunc="@(c => c?.Name ?? "")">
           @foreach (var customer in _customers)
           {

@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+
 namespace ControlR.Web.Client.Components.Shared;
 
 public sealed record PrincipalOption(Guid Id, string DisplayName, PermissionPrincipalKind Kind);
@@ -11,6 +14,9 @@ public partial class PrincipalAutocomplete
 
   [Parameter]
   public string? Class { get; set; }
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -61,7 +67,7 @@ public partial class PrincipalAutocomplete
     return $"{name}  ({kind}  |  Enabled: {enabled}  |  Account ID: {id.ToString()[..8]}...)";
   }
 
-  private static string FormatUserGroupDisplayName(UserGroupDto group) =>
+  private static string FormatUserGroupDisplayName(UGDtos.UserGroupDto group) =>
     $"{group.Name}  (Members: {group.MemberCount}  |  Group ID: {group.Id.ToString()[..8]}...)";
 
   private static bool Matches(string? value, string query) =>
@@ -153,13 +159,19 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolveUserGroup(Guid id)
   {
-    var result = await ControlrApi.Internal.UserGroups.GetAll();
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return null;
+    }
+
+    var result = await ControlrApi.V1.UserGroups.GetAllUserGroups(tenantId);
     if (!result.IsSuccess)
     {
       return null;
     }
 
-    var match = result.Value.FirstOrDefault(x => x.Id == id);
+    var match = result.Value.Items.FirstOrDefault(x => x.Id == id);
     return match is null ? null : new PrincipalOption(match.Id, FormatUserGroupDisplayName(match), PermissionPrincipalKind.UserGroup);
   }
 
@@ -222,13 +234,19 @@ public partial class PrincipalAutocomplete
 
   private async Task<IEnumerable<PrincipalOption>> SearchUserGroups(string query, CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.UserGroups.GetAll(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.UserGroups.GetAllUserGroups(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return result.Value
+    return result.Value.Items
       .Where(x => Matches(x.Name, query))
       .Select(x => new PrincipalOption(x.Id, FormatUserGroupDisplayName(x), PermissionPrincipalKind.UserGroup));
   }

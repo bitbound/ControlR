@@ -1,4 +1,7 @@
 using ControlR.Libraries.Api.Contracts.FilterSort;
+using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
@@ -21,10 +24,10 @@ public partial class Dashboard : IAsyncDisposable
   };
 
   private bool? _anyDevicesForUser;
-  private List<CustomerDto> _customers = [];
+  private List<CustDtos.CustomerDto> _customers = [];
   private MudDataGrid<DeviceViewModel>? _dataGrid;
   private FilterMatchMode _deviceGroupFilterMatchMode = FilterMatchMode.Any;
-  private List<DeviceGroupDto> _deviceGroups = [];
+  private List<DGDtos.DeviceGroupDto> _deviceGroups = [];
   private DeviceSearchFilterCountsDto _filterCounts = new();
   private bool _hideOfflineDevices;
   private bool _loading = true;
@@ -38,7 +41,11 @@ public partial class Dashboard : IAsyncDisposable
   private bool _showOnlyUntagged;
   private HashSet<Guid> _subscribedDeviceIds = [];
   private FilterMatchMode _tagFilterMatchMode = FilterMatchMode.Any;
+  private Guid _tenantId;
   private int _totalFilteredDevices;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -115,21 +122,30 @@ public partial class Dashboard : IAsyncDisposable
       _showOnlyUntagged = preferences.ShowOnlyUntaggedDevices;
       _showOnlyUngrouped = preferences.ShowOnlyUngroupedDevices;
 
+      var state = await AuthState.GetAuthenticationStateAsync();
+      if (!state.User.TryGetTenantId(out var tenantId))
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        return;
+      }
+
+      _tenantId = tenantId;
+
       if (TagStore.Items.Count == 0)
       {
         await TagStore.Refresh();
       }
 
-      var customersResult = await ControlrApi.Internal.Customers.GetAll();
+      var customersResult = await ControlrApi.V1.Customers.GetAllCustomers(_tenantId);
       if (customersResult.IsSuccess)
       {
-        _customers = [.. customersResult.Value];
+        _customers = [.. customersResult.Value.Items];
       }
 
-      var deviceGroupsResult = await ControlrApi.Internal.DeviceGroups.GetAll();
+      var deviceGroupsResult = await ControlrApi.V1.DeviceGroups.GetAllDeviceGroups(_tenantId);
       if (deviceGroupsResult.IsSuccess)
       {
-        _deviceGroups = [.. deviceGroupsResult.Value];
+        _deviceGroups = [.. deviceGroupsResult.Value.Items];
       }
 
       _disposables.AddRange(
