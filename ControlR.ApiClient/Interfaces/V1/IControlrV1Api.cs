@@ -18,6 +18,7 @@ public interface IControlrV1Api
   ITagsApi Tags { get; }
   ITenantsApi Tenants { get; }
   ITenantServiceAccountsApi TenantServiceAccounts { get; }
+  ITenantSettingsApi TenantSettings { get; }
   IUserGroupsApi UserGroups { get; }
   IUsersApi Users { get; }
 }

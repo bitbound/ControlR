@@ -85,11 +85,6 @@ public partial class InternalV1ParityGuardrailTests
     ["POST /api/invites/accept"] = "Anonymous token-bearing accept ceremony; the activation code in the invite URL is the credential, not a principal.",
 
     // Pending V1 twins - migration packages prune these entries when the twin lands.
-    ["DELETE /api/tenant-settings/{}"] = "Planned V1 twin (tenant settings KV).",
-    ["GET /api/tenant-settings"] = "Planned V1 twin (tenant settings KV).",
-    ["GET /api/tenant-settings/{}"] = "Planned V1 twin (tenant settings KV).",
-    ["POST /api/tenant-settings"] = "Planned V1 twin (tenant settings KV).",
-    ["PUT /api/tenant-settings"] = "Planned V1 twin (tenant settings KV).",
     ["GET /api/user-preferences"] = "Planned V1 twin (user preferences KV).",
     ["GET /api/user-preferences/{}"] = "Planned V1 twin (user preferences KV).",
     ["POST /api/user-preferences"] = "Planned V1 twin (user preferences KV).",

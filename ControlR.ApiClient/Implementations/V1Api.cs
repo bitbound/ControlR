@@ -20,6 +20,7 @@ internal partial class V1Api(ControlrApi client) :
   ITagsApi,
   ITenantServiceAccountsApi,
   ITenantsApi,
+  ITenantSettingsApi,
   IUserGroupsApi,
   IUsersApi
 {
@@ -41,6 +42,7 @@ internal partial class V1Api(ControlrApi client) :
   public ITagsApi Tags => this;
   public ITenantsApi Tenants => this;
   public ITenantServiceAccountsApi TenantServiceAccounts => this;
+  public ITenantSettingsApi TenantSettings => this;
   public IUserGroupsApi UserGroups => this;
   public IUsersApi Users => this;
 }

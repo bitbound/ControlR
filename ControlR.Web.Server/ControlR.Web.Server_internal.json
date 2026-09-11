@@ -3700,6 +3700,7 @@
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings/{name}?tenantId={tenantId}` instead. Use DELETE /api/v1/tenant-settings/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
@@ -3736,6 +3737,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3743,12 +3745,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings/{name}?tenantId={tenantId}"
       },
       "get": {
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings/{name}?tenantId={tenantId}` instead. Use GET /api/v1/tenant-settings/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
@@ -3802,6 +3806,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3809,7 +3814,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings/{name}?tenantId={tenantId}"
       }
     },
     "/api/tenant-settings": {
@@ -3817,6 +3823,7 @@
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use GET /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -3862,6 +3869,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3869,12 +3877,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings?tenantId={tenantId}"
       },
       "post": {
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use POST /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -3940,6 +3950,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3947,12 +3958,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings?tenantId={tenantId}"
       },
       "put": {
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use PUT /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -4018,6 +4031,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4025,7 +4039,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings?tenantId={tenantId}"
       }
     },
     "/api/test-email": {
