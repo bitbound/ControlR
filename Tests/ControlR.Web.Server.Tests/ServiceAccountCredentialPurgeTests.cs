@@ -176,45 +176,6 @@ public class ServiceAccountCredentialPurgeTests(ITestOutputHelper testOutput)
 public class ServiceAccountCredentialCleanupBackgroundServiceTests(ITestOutputHelper testOutput)
 {
   [Fact]
-  public async Task CleanDeadCredentials_PurgesCredentialCacheSoValidationFails()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput,
-      extraConfiguration: new Dictionary<string, string?>
-      {
-        { "AppOptions:ServiceAccountCredentialCleanupAfterDays", "1" }
-      });
-
-    var backgroundService = testApp.Services.GetRequiredService<ServiceAccountCredentialCleanupBackgroundService>();
-    var manager = testApp.Services.GetRequiredService<IServiceAccountManager>();
-
-    var accountResult = await manager.CreateForServer(
-      "Cache Purge SA", null, ServiceAccountAccessMode.Unrestricted, TestContext.Current.CancellationToken);
-    Assert.True(accountResult.IsSuccess, accountResult.Reason);
-
-    var credResult = await manager.AddCredentialForServer(
-      accountResult.Value.Id, "Stale Cache", null, TestActors.User(), TestContext.Current.CancellationToken);
-    Assert.True(credResult.IsSuccess, credResult.Reason);
-
-    // Populate the validation cache with a successful validation, then revoke and clean up.
-    var validateResult = await manager.ValidateCredential(
-      credResult.Value.PlainTextSecretKey, TestContext.Current.CancellationToken);
-    Assert.True(validateResult.IsSuccess, validateResult.Reason);
-
-    await manager.RevokeCredentialForServer(
-      accountResult.Value.Id, credResult.Value.Credential.Id, TestActors.User(), TestContext.Current.CancellationToken);
-
-    testApp.TimeProvider.Advance(TimeSpan.FromDays(2));
-
-    var removedCount = await backgroundService.CleanDeadCredentials(TestContext.Current.CancellationToken);
-    Assert.Equal(1, removedCount);
-
-    var postPurge = await manager.ValidateCredential(
-      credResult.Value.PlainTextSecretKey, TestContext.Current.CancellationToken);
-    Assert.False(postPurge.IsSuccess);
-    Assert.Equal(HttpResultErrorCode.Unauthorized, postPurge.ErrorCode);
-  }
-
-  [Fact]
   public async Task CleanDeadCredentials_RemovesOldRevokedAndExpiredKeepsRecentAndActive()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(testOutput,
@@ -316,5 +277,47 @@ public class ServiceAccountCredentialCleanupBackgroundServiceTests(ITestOutputHe
       .IgnoreQueryFilters()
       .AnyAsync(x => x.Id == credResult.Value.Credential.Id, TestContext.Current.CancellationToken);
     Assert.True(stillExists);
+  }
+
+  [Fact]
+  public async Task ValidateCredential_AfterRevokeAndCleanup_ReturnsUnauthorized()
+  {
+    // The revoke evicts the validation cache; cleanup additionally deletes the row and
+    // evicts defensively. Post-condition under test: a deleted credential's API key
+    // fails validation against the (now-missing) database row.
+    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput,
+      extraConfiguration: new Dictionary<string, string?>
+      {
+        { "AppOptions:ServiceAccountCredentialCleanupAfterDays", "1" }
+      });
+
+    var backgroundService = testApp.Services.GetRequiredService<ServiceAccountCredentialCleanupBackgroundService>();
+    var manager = testApp.Services.GetRequiredService<IServiceAccountManager>();
+
+    var accountResult = await manager.CreateForServer(
+      "Cache Purge SA", null, ServiceAccountAccessMode.Unrestricted, TestContext.Current.CancellationToken);
+    Assert.True(accountResult.IsSuccess, accountResult.Reason);
+
+    var credResult = await manager.AddCredentialForServer(
+      accountResult.Value.Id, "Stale Cache", null, TestActors.User(), TestContext.Current.CancellationToken);
+    Assert.True(credResult.IsSuccess, credResult.Reason);
+
+    // Populate the validation cache with a successful validation, then revoke and clean up.
+    var validateResult = await manager.ValidateCredential(
+      credResult.Value.PlainTextSecretKey, TestContext.Current.CancellationToken);
+    Assert.True(validateResult.IsSuccess, validateResult.Reason);
+
+    await manager.RevokeCredentialForServer(
+      accountResult.Value.Id, credResult.Value.Credential.Id, TestActors.User(), TestContext.Current.CancellationToken);
+
+    testApp.TimeProvider.Advance(TimeSpan.FromDays(2));
+
+    var removedCount = await backgroundService.CleanDeadCredentials(TestContext.Current.CancellationToken);
+    Assert.Equal(1, removedCount);
+
+    var postPurge = await manager.ValidateCredential(
+      credResult.Value.PlainTextSecretKey, TestContext.Current.CancellationToken);
+    Assert.False(postPurge.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.Unauthorized, postPurge.ErrorCode);
   }
 }

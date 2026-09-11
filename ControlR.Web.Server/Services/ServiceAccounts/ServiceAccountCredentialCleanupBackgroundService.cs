@@ -1,5 +1,6 @@
 using ControlR.Libraries.Hosting;
 using ControlR.Web.Server.Services.Authorization;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ControlR.Web.Server.Services.ServiceAccounts;
 
@@ -14,6 +15,7 @@ namespace ControlR.Web.Server.Services.ServiceAccounts;
 public class ServiceAccountCredentialCleanupBackgroundService(
   IDbContextFactory<AppDb> dbContextFactory,
   IAuthorizationChangeLogFactory changeLogFactory,
+  IMemoryCache memoryCache,
   IOptions<AppOptions> appOptions,
   TimeProvider timeProvider,
   ILogger<PeriodicBackgroundService> logger)
@@ -25,6 +27,7 @@ public class ServiceAccountCredentialCleanupBackgroundService(
   private readonly IAuthorizationChangeLogFactory _changeLogFactory = changeLogFactory;
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
   private readonly ILogger _logger = logger;
+  private readonly IMemoryCache _memoryCache = memoryCache;
   private readonly TimeProvider _timeProvider = timeProvider;
 
   public async Task<int> CleanDeadCredentials(CancellationToken cancellationToken = default)
@@ -111,6 +114,14 @@ public class ServiceAccountCredentialCleanupBackgroundService(
 
     db.ServiceAccountCredentials.RemoveRange(batch);
     await db.SaveChangesAsync(cancellationToken);
+
+    // Mirror ServiceAccountManager.PurgeCredentialAsync: drop any cached validation
+    // result so a deleted credential's API key fails immediately instead of waiting
+    // out the cache TTL.
+    foreach (var credential in batch)
+    {
+      _memoryCache.Remove(credential.Id);
+    }
 
     return batch.Count;
   }

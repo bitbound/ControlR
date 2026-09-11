@@ -9,6 +9,7 @@ public partial class ServerServiceAccounts : ComponentBase
   private readonly HashSet<Guid> _togglingIds = [];
 
   private InternalDtos.ServerServiceAccountDto[] _accounts = [];
+  private bool _canRotateCredentials;
   private bool _loading;
   private string _searchString = string.Empty;
 
@@ -43,6 +44,7 @@ public partial class ServerServiceAccounts : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
+    _canRotateCredentials = await HasPolicy(PolicyNames.RequireServerServiceAccountsRotateCredentials);
     await Refresh();
   }
 
