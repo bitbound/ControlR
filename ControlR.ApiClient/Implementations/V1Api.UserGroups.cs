@@ -39,18 +39,18 @@ internal partial class V1Api
     });
   }
 
-  async Task<ApiResult<UGDtos.UserGroupDetailDto>> IUserGroupsApi.GetUserGroup(Guid userGroupId, Guid tenantId, CancellationToken cancellationToken)
-  {
-    return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<UGDtos.UserGroupDetailDto>(
-        $"{HttpConstants.V1.UserGroupsEndpoint}/{userGroupId}?tenantId={tenantId}", cancellationToken));
-  }
-
   async Task<ApiResult<UGDtos.UserGroupsResponseDto>> IUserGroupsApi.GetAllUserGroups(Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
       await _client.HttpClient.GetFromJsonAsync<UGDtos.UserGroupsResponseDto>(
         $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}", cancellationToken));
+  }
+
+  async Task<ApiResult<UGDtos.UserGroupDetailDto>> IUserGroupsApi.GetUserGroup(Guid userGroupId, Guid tenantId, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+      await _client.HttpClient.GetFromJsonAsync<UGDtos.UserGroupDetailDto>(
+        $"{HttpConstants.V1.UserGroupsEndpoint}/{userGroupId}?tenantId={tenantId}", cancellationToken));
   }
 
   async Task<ApiResult> IUserGroupsApi.RemoveUserGroupMembers(Guid userGroupId, Guid tenantId, UGDtos.RemoveUserGroupMembersRequestDto request, CancellationToken cancellationToken)

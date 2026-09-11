@@ -23,14 +23,14 @@ public partial class AddDeviceGroupMembersDialog : ComponentBase
   [Parameter]
   public required Guid GroupId { get; set; }
 
-  [Parameter]
-  public required Guid TenantId { get; set; }
-
   [CascadingParameter]
   public required IMudDialogInstance MudDialog { get; init; }
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
+
+  [Parameter]
+  public required Guid TenantId { get; set; }
 
   protected override async Task OnInitializedAsync()
   {

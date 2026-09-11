@@ -1,6 +1,6 @@
 using ControlR.Web.Client.Components.Shared;
 using Microsoft.AspNetCore.Components.Authorization;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using SATos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
 
 namespace ControlR.Web.Client.Components.Pages;
 
@@ -8,10 +8,11 @@ public partial class ServiceAccounts : ComponentBase
 {
   private readonly HashSet<Guid> _togglingIds = [];
 
-  private InternalDtos.TenantServiceAccountDto[] _accounts = [];
+  private SATos.TenantServiceAccountDto[] _accounts = [];
   private bool _canRotateCredentials;
   private bool _loading;
   private string _searchString = string.Empty;
+  private Guid _tenantId;
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -31,7 +32,7 @@ public partial class ServiceAccounts : ComponentBase
   [Inject]
   public required TimeProvider TimeProvider { get; init; }
 
-  private Func<InternalDtos.TenantServiceAccountDto, bool> QuickFilter => account =>
+  private Func<SATos.TenantServiceAccountDto, bool> QuickFilter => account =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -44,7 +45,15 @@ public partial class ServiceAccounts : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
-    _canRotateCredentials = await HasPolicy(PolicyNames.RequireServiceAccountRotateCredentials);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _tenantId = tenantId;
+    _canRotateCredentials = state.User.HasClientPolicy(PolicyNames.RequireServiceAccountRotateCredentials);
     await Refresh();
   }
 
@@ -53,7 +62,7 @@ public partial class ServiceAccounts : ComponentBase
     return $"{id.ToString()[..8]}...";
   }
 
-  private async Task AddCredential(InternalDtos.TenantServiceAccountDto account)
+  private async Task AddCredential(SATos.TenantServiceAccountDto account)
   {
     var options = new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small };
     var dialog = await DialogService.ShowAsync<CreateServiceAccountCredentialDialog>(
@@ -65,8 +74,8 @@ public partial class ServiceAccounts : ComponentBase
       return;
     }
 
-    var apiResult = await ControlrApi.Internal.TenantServiceAccounts.AddCredential(
-      account.Id, new InternalDtos.CreateTenantServiceAccountCredentialRequestDto(dialogResult.Name, dialogResult.ExpiresAt));
+    var apiResult = await ControlrApi.V1.TenantServiceAccounts.AddCredential(
+      _tenantId, account.Id, new SATos.CreateServiceAccountCredentialRequestDto(dialogResult.Name, dialogResult.ExpiresAt));
 
     if (!apiResult.IsSuccess)
     {
@@ -104,8 +113,8 @@ public partial class ServiceAccounts : ComponentBase
       return;
     }
 
-    var createResult = await ControlrApi.Internal.TenantServiceAccounts.Create(
-      new InternalDtos.CreateTenantServiceAccountRequestDto(dialogResult.Name, dialogResult.Description));
+    var createResult = await ControlrApi.V1.TenantServiceAccounts.Create(
+      _tenantId, new SATos.CreateServiceAccountRequestDto(dialogResult.Name, dialogResult.Description));
 
     if (!createResult.IsSuccess)
     {
@@ -117,8 +126,8 @@ public partial class ServiceAccounts : ComponentBase
 
     if (dialogResult.CredentialName is { } credentialName)
     {
-      var credResult = await ControlrApi.Internal.TenantServiceAccounts.AddCredential(
-        account.Id, new InternalDtos.CreateTenantServiceAccountCredentialRequestDto(credentialName, dialogResult.CredentialExpiresAt));
+      var credResult = await ControlrApi.V1.TenantServiceAccounts.AddCredential(
+        _tenantId, account.Id, new SATos.CreateServiceAccountCredentialRequestDto(credentialName, dialogResult.CredentialExpiresAt));
 
       if (!credResult.IsSuccess)
       {
@@ -138,7 +147,7 @@ public partial class ServiceAccounts : ComponentBase
     await Refresh();
   }
 
-  private async Task DeleteAccount(InternalDtos.TenantServiceAccountDto account)
+  private async Task DeleteAccount(SATos.TenantServiceAccountDto account)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete Service Account",
@@ -150,7 +159,7 @@ public partial class ServiceAccounts : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.TenantServiceAccounts.Delete(account.Id);
+    var result = await ControlrApi.V1.TenantServiceAccounts.Delete(_tenantId, account.Id);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
@@ -161,7 +170,7 @@ public partial class ServiceAccounts : ComponentBase
     await Refresh();
   }
 
-  private async Task EditAccount(InternalDtos.TenantServiceAccountDto account)
+  private async Task EditAccount(SATos.TenantServiceAccountDto account)
   {
     var parameters = new DialogParameters<EditServiceAccountDialog>
     {
@@ -181,8 +190,8 @@ public partial class ServiceAccounts : ComponentBase
     var index = Array.FindIndex(_accounts, x => x.Id == account.Id);
     var currentEnabled = index >= 0 ? _accounts[index].IsEnabled : account.IsEnabled;
 
-    var updateResult = await ControlrApi.Internal.TenantServiceAccounts.Update(
-      account.Id, new InternalDtos.UpdateTenantServiceAccountRequestDto(editResult.Name, editResult.Description, currentEnabled));
+    var updateResult = await ControlrApi.V1.TenantServiceAccounts.Update(
+      _tenantId, account.Id, new SATos.UpdateServiceAccountRequestDto(editResult.Name, editResult.Description, currentEnabled));
 
     if (!updateResult.IsSuccess)
     {
@@ -194,7 +203,7 @@ public partial class ServiceAccounts : ComponentBase
     await Refresh();
   }
 
-  private async Task EditPermissions(InternalDtos.TenantServiceAccountDto account)
+  private async Task EditPermissions(SATos.TenantServiceAccountDto account)
   {
     var parameters = new DialogParameters<PermissionAssignmentPanelDialog>
     {
@@ -208,7 +217,7 @@ public partial class ServiceAccounts : ComponentBase
     await Refresh();
   }
 
-  private int GetActiveCount(IReadOnlyList<InternalDtos.TenantServiceAccountCredentialDto> credentials)
+  private int GetActiveCount(IReadOnlyList<SATos.ServiceAccountCredentialDto> credentials)
   {
     return credentials.Count(cred =>
       cred.RevokedAt is null && (cred.ExpiresAt is null || cred.ExpiresAt > TimeProvider.GetUtcNow()));
@@ -232,7 +241,7 @@ public partial class ServiceAccounts : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.TenantServiceAccounts.PurgeCredential(serviceAccountId, credentialId);
+    var result = await ControlrApi.V1.TenantServiceAccounts.PurgeCredential(_tenantId, serviceAccountId, credentialId);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
@@ -250,10 +259,10 @@ public partial class ServiceAccounts : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.TenantServiceAccounts.GetAll();
+      var result = await ControlrApi.V1.TenantServiceAccounts.GetAll(_tenantId);
       if (result.IsSuccess)
       {
-        _accounts = result.Value;
+        _accounts = [.. result.Value.Items];
       }
       else
       {
@@ -279,7 +288,7 @@ public partial class ServiceAccounts : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.TenantServiceAccounts.RevokeCredential(serviceAccountId, credentialId);
+    var result = await ControlrApi.V1.TenantServiceAccounts.RevokeCredential(_tenantId, serviceAccountId, credentialId);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
@@ -307,7 +316,7 @@ public partial class ServiceAccounts : ComponentBase
     await dialogRef.Result;
   }
 
-  private async Task ToggleEnabled(InternalDtos.TenantServiceAccountDto account, bool enabled)
+  private async Task ToggleEnabled(SATos.TenantServiceAccountDto account, bool enabled)
   {
     if (_togglingIds.Contains(account.Id)) return;
 
@@ -318,8 +327,8 @@ public partial class ServiceAccounts : ComponentBase
       if (index < 0) return;
 
       var latest = _accounts[index];
-      var result = await ControlrApi.Internal.TenantServiceAccounts.Update(latest.Id,
-        new InternalDtos.UpdateTenantServiceAccountRequestDto(latest.Name, latest.Description, enabled));
+      var result = await ControlrApi.V1.TenantServiceAccounts.Update(_tenantId, latest.Id,
+        new SATos.UpdateServiceAccountRequestDto(latest.Name, latest.Description, enabled));
 
       if (!result.IsSuccess)
       {

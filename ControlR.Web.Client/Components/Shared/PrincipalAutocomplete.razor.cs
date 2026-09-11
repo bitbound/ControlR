@@ -12,11 +12,11 @@ public partial class PrincipalAutocomplete
   [Parameter]
   public ServiceAccountKind AccountKind { get; set; } = ServiceAccountKind.Tenant;
 
-  [Parameter]
-  public string? Class { get; set; }
-
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
+
+  [Parameter]
+  public string? Class { get; set; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -73,6 +73,12 @@ public partial class PrincipalAutocomplete
   private static bool Matches(string? value, string query) =>
     string.IsNullOrWhiteSpace(query) || (value?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false);
 
+  private async Task<Guid?> GetTenantId()
+  {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
+  }
+
   private async Task HandleValueChanged(PrincipalOption? value)
   {
     _selected = value;
@@ -124,13 +130,18 @@ public partial class PrincipalAutocomplete
           PermissionPrincipalKind.ServiceAccount);
     }
 
-    var tenantResult = await ControlrApi.Internal.TenantServiceAccounts.GetAll();
+    if (await GetTenantId() is not { } tenantId)
+    {
+      return null;
+    }
+
+    var tenantResult = await ControlrApi.V1.TenantServiceAccounts.GetAll(tenantId);
     if (!tenantResult.IsSuccess)
     {
       return null;
     }
 
-    var tenantMatch = tenantResult.Value.FirstOrDefault(x => x.Id == id);
+    var tenantMatch = tenantResult.Value.Items.FirstOrDefault(x => x.Id == id);
     return tenantMatch is null
       ? null
       : new PrincipalOption(
@@ -218,13 +229,18 @@ public partial class PrincipalAutocomplete
           PermissionPrincipalKind.ServiceAccount));
     }
 
-    var tenantResult = await ControlrApi.Internal.TenantServiceAccounts.GetAll(cancellationToken);
+    if (await GetTenantId() is not { } tenantId)
+    {
+      return [];
+    }
+
+    var tenantResult = await ControlrApi.V1.TenantServiceAccounts.GetAll(tenantId, cancellationToken);
     if (!tenantResult.IsSuccess)
     {
       return [];
     }
 
-    return tenantResult.Value
+    return tenantResult.Value.Items
       .Where(x => Matches(x.Name, query))
       .Select(x => new PrincipalOption(
         x.Id,

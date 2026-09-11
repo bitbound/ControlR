@@ -6,7 +6,6 @@ namespace ControlR.Web.Client.Components.Shared;
 
 public partial class PermissionAssignmentPanel : ComponentBase
 {
-  private Guid _tenantId;
   private readonly HashSet<Guid> _togglingIds = [];
 
   private PADtos.PermissionAssignmentDto[]? _assignments;
@@ -23,6 +22,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
   private HashSet<PADtos.PermissionAssignmentDto> _selectedAssignments = [];
   private IReadOnlyCollection<string> _selectedPresetNames = [];
   private Guid? _selectedPrincipalId;
+  private Guid _tenantId;
 
   [Parameter]
   public ServiceAccountKind AccountKind { get; set; } = ServiceAccountKind.Tenant;
@@ -65,6 +65,7 @@ public partial class PermissionAssignmentPanel : ComponentBase
            assignment.Effect.ToString().Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
            assignment.ScopeKind.ToString().Contains(_searchString, StringComparison.OrdinalIgnoreCase);
   };
+
   protected override async Task OnInitializedAsync()
   {
     var state = await AuthState.GetAuthenticationStateAsync();

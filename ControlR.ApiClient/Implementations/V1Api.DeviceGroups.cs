@@ -39,18 +39,18 @@ internal partial class V1Api
     });
   }
 
-  async Task<ApiResult<DGDtos.DeviceGroupDetailDto>> IDeviceGroupsApi.GetDeviceGroup(Guid deviceGroupId, Guid tenantId, CancellationToken cancellationToken)
-  {
-    return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
-        $"{HttpConstants.V1.DeviceGroupsEndpoint}/{deviceGroupId}?tenantId={tenantId}", cancellationToken));
-  }
-
   async Task<ApiResult<DGDtos.DeviceGroupsResponseDto>> IDeviceGroupsApi.GetAllDeviceGroups(Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
       await _client.HttpClient.GetFromJsonAsync<DGDtos.DeviceGroupsResponseDto>(
         $"{HttpConstants.V1.DeviceGroupsEndpoint}?tenantId={tenantId}", cancellationToken));
+  }
+
+  async Task<ApiResult<DGDtos.DeviceGroupDetailDto>> IDeviceGroupsApi.GetDeviceGroup(Guid deviceGroupId, Guid tenantId, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+      await _client.HttpClient.GetFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+        $"{HttpConstants.V1.DeviceGroupsEndpoint}/{deviceGroupId}?tenantId={tenantId}", cancellationToken));
   }
 
   async Task<ApiResult> IDeviceGroupsApi.RemoveDeviceGroupMembers(Guid deviceGroupId, Guid tenantId, DGDtos.RemoveDeviceGroupMembersRequestDto request, CancellationToken cancellationToken)

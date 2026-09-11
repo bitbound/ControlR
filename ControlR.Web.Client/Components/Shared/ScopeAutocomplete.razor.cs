@@ -12,11 +12,11 @@ public partial class ScopeAutocomplete
   private ScopeOption? _selected;
   private DeviceResponseDto? _selectedDevice;
 
-  [Parameter]
-  public string? Class { get; set; }
-
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
+
+  [Parameter]
+  public string? Class { get; set; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }

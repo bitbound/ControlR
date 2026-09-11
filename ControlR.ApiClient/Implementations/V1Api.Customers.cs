@@ -39,18 +39,18 @@ internal partial class V1Api
     });
   }
 
-  async Task<ApiResult<CustDtos.CustomerDto>> ICustomersApi.GetCustomer(Guid customerId, Guid tenantId, CancellationToken cancellationToken)
-  {
-    return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<CustDtos.CustomerDto>(
-        $"{HttpConstants.V1.CustomersEndpoint}/{customerId}?tenantId={tenantId}", cancellationToken));
-  }
-
   async Task<ApiResult<CustDtos.CustomersResponseDto>> ICustomersApi.GetAllCustomers(Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
       await _client.HttpClient.GetFromJsonAsync<CustDtos.CustomersResponseDto>(
         $"{HttpConstants.V1.CustomersEndpoint}?tenantId={tenantId}", cancellationToken));
+  }
+
+  async Task<ApiResult<CustDtos.CustomerDto>> ICustomersApi.GetCustomer(Guid customerId, Guid tenantId, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+      await _client.HttpClient.GetFromJsonAsync<CustDtos.CustomerDto>(
+        $"{HttpConstants.V1.CustomersEndpoint}/{customerId}?tenantId={tenantId}", cancellationToken));
   }
 
   async Task<ApiResult<CustDtos.CustomerDto>> ICustomersApi.UpdateCustomer(Guid customerId, Guid tenantId, CustDtos.UpdateCustomerRequestDto request, CancellationToken cancellationToken)

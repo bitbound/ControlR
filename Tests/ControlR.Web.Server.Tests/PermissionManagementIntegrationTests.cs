@@ -16,6 +16,7 @@ using EPDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermi
 using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
 using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
 using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
+using SATos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -272,10 +273,10 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     // Create a tenant service account and grant it device.read at tenant scope.
     var createAccountResponse = await client.PostAsJsonAsync(
-      HttpConstants.Internal.TenantServiceAccountsEndpoint,
-      new InternalDtos.CreateTenantServiceAccountRequestDto("Effective Query SA", null),
+      $"{HttpConstants.V1.TenantServiceAccountsEndpoint}/{tenantId}",
+      new SATos.CreateServiceAccountRequestDto("Effective Query SA", null),
       TestContext.Current.CancellationToken);
-    var account = await createAccountResponse.Content.ReadFromJsonAsync<InternalDtos.TenantServiceAccountDto>(
+    var account = await createAccountResponse.Content.ReadFromJsonAsync<SATos.TenantServiceAccountDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(account);
 

@@ -15,11 +15,11 @@ public interface IUserGroupsApi
   [ApiRoute($"{HttpConstants.V1.UserGroupsEndpoint}/{{userGroupId}}?tenantId={{tenantId}}", "DELETE")]
   Task<ApiResult> DeleteUserGroup(Guid userGroupId, Guid tenantId, CancellationToken cancellationToken = default);
 
-  [ApiRoute($"{HttpConstants.V1.UserGroupsEndpoint}/{{userGroupId}}?tenantId={{tenantId}}", "GET")]
-  Task<ApiResult<UGDtos.UserGroupDetailDto>> GetUserGroup(Guid userGroupId, Guid tenantId, CancellationToken cancellationToken = default);
-
   [ApiRoute($"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={{tenantId}}", "GET")]
   Task<ApiResult<UGDtos.UserGroupsResponseDto>> GetAllUserGroups(Guid tenantId, CancellationToken cancellationToken = default);
+
+  [ApiRoute($"{HttpConstants.V1.UserGroupsEndpoint}/{{userGroupId}}?tenantId={{tenantId}}", "GET")]
+  Task<ApiResult<UGDtos.UserGroupDetailDto>> GetUserGroup(Guid userGroupId, Guid tenantId, CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.UserGroupsEndpoint}/{{userGroupId}}/members?tenantId={{tenantId}}", "DELETE")]
   Task<ApiResult> RemoveUserGroupMembers(Guid userGroupId, Guid tenantId, UGDtos.RemoveUserGroupMembersRequestDto request, CancellationToken cancellationToken = default);
