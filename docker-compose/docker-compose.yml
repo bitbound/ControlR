@@ -89,6 +89,12 @@ services:
       # Set this to 0 or a negative value to disable history expiration.
       ControlR_AppOptions__AgentInstallerKeyHistoryDays: 90
 
+      # Number of days after which service account credentials that were revoked or expired are
+      # permanently deleted from the database by a background service. Applies to both server-scoped
+      # and tenant-scoped credentials. Set to 0 or less to disable automatic deletion.
+      # Credentials can also be deleted manually from the service accounts pages at any time.
+      ControlR_AppOptions__ServiceAccountCredentialCleanupAfterDays: 30
+
       # The maximum allowed time difference between the agent's signed timestamp and the server's
       # current time. If the difference exceeds this value, the agent's connection request is rejected.
       # Set to null to disable timestamp verification. For most deployments, 30-60 seconds is
