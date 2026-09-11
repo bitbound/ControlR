@@ -9,7 +9,7 @@ namespace ControlR.ApiClient;
 internal partial class V1Api
 {
   private static string BuildAuthorizationChangeLogsQuery(
-    Guid tenantId,
+    Guid? tenantId,
     int page,
     int pageSize,
     string? actionType,
@@ -21,10 +21,14 @@ internal partial class V1Api
   {
     var parameters = new List<string>
     {
-      $"tenantId={Uri.EscapeDataString(tenantId.ToString())}",
       $"page={Uri.EscapeDataString(page.ToString())}",
       $"pageSize={Uri.EscapeDataString(pageSize.ToString())}"
     };
+
+    if (tenantId.HasValue)
+    {
+      parameters.Insert(0, $"tenantId={Uri.EscapeDataString(tenantId.Value.ToString())}");
+    }
 
     if (!string.IsNullOrWhiteSpace(actionType))
     {
@@ -79,6 +83,28 @@ internal partial class V1Api
       return await _client.HttpClient.GetFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
         $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}{query}", cancellationToken)
         ?? throw new InvalidOperationException("Empty response from authorization change logs endpoint.");
+    });
+  }
+
+  async Task<ApiResult<ACLDtos.AuthorizationChangeLogsResponseDto>> IAuthorizationChangeLogsApi.GetServerAuthorizationChangeLogs(
+    int page,
+    int pageSize,
+    string? actionType,
+    string? actorType,
+    string? targetType,
+    string? searchText,
+    DateTimeOffset? from,
+    DateTimeOffset? to,
+    CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      var query = BuildAuthorizationChangeLogsQuery(
+        null, page, pageSize, actionType, actorType, targetType, searchText, from, to);
+
+      return await _client.HttpClient.GetFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
+        $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}/server{query}", cancellationToken)
+        ?? throw new InvalidOperationException("Empty response from server authorization change logs endpoint.");
     });
   }
 }

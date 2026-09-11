@@ -193,7 +193,9 @@ public partial class InternalV1ParityGuardrailTests
 
     return ReadOperations(v1Path)
       .Where(op => op.Path.StartsWith("/api/v1", StringComparison.Ordinal))
-      .Select(op => Key(op.Verb, op.Path["/api/v1".Length..]))
+      // Re-key the twin into the internal document's coordinate system: internal routes live at
+      // /api/* (no /internal segment), so the twin of /api/v1/users/{} is /api/users/{}.
+      .Select(op => Key(op.Verb, "/api" + op.Path["/api/v1".Length..]))
       .ToHashSet(StringComparer.Ordinal);
   }
 

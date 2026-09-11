@@ -54,6 +54,7 @@ public class DeploymentOptionsController(
   public async Task<ActionResult<DeploymentTagCapabilityResponseDto>> GetTagCapability(
     [FromQuery] Guid tenantId,
     [FromBody] DeploymentTagCapabilityRequestDto request,
+    [FromServices] UserManager<AppUser> userManager,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -70,6 +71,14 @@ public class DeploymentOptionsController(
     if (User.ToPrincipalDescriptor() is not { } principal)
     {
       return Unauthorized();
+    }
+
+    // The identity-liveness check the superseded internal endpoint performed: a caller whose
+    // user record no longer exists (deleted user with a still-valid token) must not receive a
+    // capability answer.
+    if (await userManager.FindByIdAsync($"{principal.PrincipalId}") is null)
+    {
+      return Forbid();
     }
 
     var allowed = await _deviceAuthorizationService.CanAssignTagOnProspectiveDevice(

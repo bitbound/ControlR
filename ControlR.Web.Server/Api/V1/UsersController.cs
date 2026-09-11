@@ -11,9 +11,10 @@ namespace ControlR.Web.Server.Api.V1;
 /// <summary>
 /// User management plus the per-user personal-access-token sub-resource. Tenant scoping is
 /// enforced by the required tenantId query parameter: the caller's tenant claim must match it
-/// (or the caller must be a server principal), and every lookup carries an explicit TenantId
-/// predicate so the checks stay meaningful even for server principals running against an
-/// unfiltered AppDb context. Preset assignment keeps its authority gates: granting the
+/// (or the caller must be a server principal). Reads keyed by the caller-resolved tenant carry
+/// an explicit TenantId predicate so the boundary survives the unfiltered AppDb context a server
+/// principal runs against; the lookups that run after a create address the user by its globally
+/// unique id, where the id itself is the constraint. Preset assignment keeps its authority gates: granting the
 /// ServerAdministrator preset requires ServerPermissionsWrite, presets that seed tenant-scope
 /// grants require ServerPermissionsWrite or TenantPermissionsWrite, and TenantAdministrator
 /// additionally requires TenantPermissionsDeny unless the caller has server writes.
@@ -71,6 +72,14 @@ public class UsersController : ControllerBase
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
       return Forbid();
+    }
+
+    // A server principal's tenant claim check is a no-op, so without this existence check a
+    // create against a tenant that does not (or no longer) exists would write a user row that
+    // no tenant owns.
+    if (!await appDb.Tenants.AnyAsync(x => x.Id == resolvedTenantId, HttpContext.RequestAborted))
+    {
+      return BadRequest("Tenant not found.");
     }
 
     var presetNames = request.PresetNames?.ToArray();

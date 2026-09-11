@@ -40,11 +40,6 @@ public class CustomersController(ICustomerManager customerManager) : ControllerB
       return Forbid();
     }
 
-    if (!User.CanAccessTenant(resolvedTenantId))
-    {
-      return Forbid();
-    }
-
     if (User.ToPrincipalDescriptor() is not { } actor)
     {
       return BadRequest("User ID not found.");
@@ -113,11 +108,6 @@ public class CustomersController(ICustomerManager customerManager) : ControllerB
       return Forbid();
     }
 
-    if (!User.CanAccessTenant(resolvedTenantId))
-    {
-      return Forbid();
-    }
-
     if (User.ToPrincipalDescriptor() is not { } actor)
     {
       return BadRequest("User ID not found.");
@@ -144,11 +134,6 @@ public class CustomersController(ICustomerManager customerManager) : ControllerB
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
-    {
-      return Forbid();
-    }
-
-    if (!User.CanAccessTenant(resolvedTenantId))
     {
       return Forbid();
     }
@@ -199,11 +184,6 @@ public class CustomersController(ICustomerManager customerManager) : ControllerB
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
-    {
-      return Forbid();
-    }
-
-    if (!User.CanAccessTenant(resolvedTenantId))
     {
       return Forbid();
     }

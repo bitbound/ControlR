@@ -13,6 +13,9 @@ namespace ControlR.Web.Server.Api.V1;
 /// (tenant scope) inspect their own tenant. No single authorization policy models that union,
 /// so the audience check runs in the handler (evaluating both permissions, as the superseded
 /// internal endpoint did) rather than as a method-level policy.
+/// Server-scoped entries (OwningTenantId is null) belong to no tenant and are therefore not
+/// reachable through the tenant-addressed list; they are served by the separate, parameterless
+/// GET /server route, which is restricted to server principals without tenant context.
 /// </summary>
 [Route(HttpConstants.V1.AuthorizationChangeLogsEndpoint)]
 [ApiController]
@@ -72,7 +75,7 @@ public class AuthorizationChangeLogsController(
       return Forbid();
     }
 
-    Guid? scopedTenantId;
+    Guid scopedTenantId;
     if (canReadServer)
     {
       // Server-scoped readers hold server.authorization-logs.read, which authorizes inspecting
@@ -90,13 +93,67 @@ public class AuthorizationChangeLogsController(
       scopedTenantId = callerTenantId;
     }
 
-    var query = _appDb.AuthorizationChangeLogs.AsNoTracking();
+    var query = ApplySearchFilters(
+      _appDb.AuthorizationChangeLogs.AsNoTracking().Where(x => x.OwningTenantId == scopedTenantId),
+      searchQuery);
 
-    if (scopedTenantId is { } scopeTenant)
+    return Ok(await BuildResponseAsync(query, searchQuery, cancellationToken));
+  }
+
+  /// <summary>
+  /// Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,
+  /// server administrator grants, and other changes that belong to no tenant. The route takes
+  /// no tenantId - the rows it serves have no tenant - and refuses any caller carrying a tenant
+  /// claim before permission evaluation, so the server-scoped view is exclusively the domain of
+  /// server principals holding server.authorization-logs.read.
+  /// </summary>
+  [HttpGet("server")]
+  [ProducesResponseType<AuthorizationChangeLogsResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public async Task<ActionResult<AuthorizationChangeLogsResponseDto>> GetServerScoped(
+    [FromQuery] AuthorizationChangeLogSearchQueryDto searchQuery,
+    CancellationToken cancellationToken)
+  {
+    // Fail early for tenant-context principals: this endpoint answers only for callers that act
+    // across tenants, never for principals bound to one.
+    if (User.TryGetTenantId(out _))
     {
-      query = query.Where(x => x.OwningTenantId == scopeTenant);
+      return Forbid();
     }
 
+    var principal = User.ToPrincipalDescriptor();
+    if (principal is null)
+    {
+      return BadRequest("User principal not found.");
+    }
+
+    var requestServer = new PermissionEvaluationRequest(
+      PermissionNames.ServerAuthorizationLogsRead,
+      new ResourceDescriptor(PermissionScopeKind.Server));
+
+    var decisions = await _permissionEvaluator.EvaluateBatch(
+      principal,
+      [requestServer],
+      cancellationToken);
+
+    if (!decisions[requestServer].Allowed)
+    {
+      return Forbid();
+    }
+
+    var query = ApplySearchFilters(
+      _appDb.AuthorizationChangeLogs.AsNoTracking().Where(x => x.OwningTenantId == null),
+      searchQuery);
+
+    return Ok(await BuildResponseAsync(query, searchQuery, cancellationToken));
+  }
+
+  private IQueryable<AuthorizationChangeLog> ApplySearchFilters(
+    IQueryable<AuthorizationChangeLog> query,
+    AuthorizationChangeLogSearchQueryDto searchQuery)
+  {
     if (!string.IsNullOrWhiteSpace(searchQuery.ActionType))
     {
       query = query.Where(x => x.ActionType == searchQuery.ActionType);
@@ -123,11 +180,12 @@ public class AuthorizationChangeLogsController(
           x.ActorPrincipalId == parsedGuid ||
           x.TargetId == parsedGuid);
       }
-      else
+      else if (_appDb.Database.IsRelational())
       {
         // Partial ID query: match against the canonical text form of the UUID,
         // case-insensitively (ILIKE). Escape LIKE wildcards so user input such as '%' or '_'
-        // is matched literally instead of acting as a wildcard.
+        // is matched literally instead of acting as a wildcard. ILIKE is PostgreSQL syntax;
+        // PostgreSQL is this application's only relational provider.
         var escaped = trimmed
           .Replace("\\", "\\\\")
           .Replace("%", "\\%")
@@ -135,6 +193,14 @@ public class AuthorizationChangeLogsController(
         query = query.Where(x =>
           (x.ActorPrincipalId != null && EF.Functions.ILike(x.ActorPrincipalId.Value.ToString(), $"%{escaped}%")) ||
           (x.TargetId != null && EF.Functions.ILike(x.TargetId.Value.ToString(), $"%{escaped}%")));
+      }
+      else
+      {
+        // The in-memory provider has no ILIKE translation; compare lowercased text instead.
+        var lowered = trimmed.ToLower();
+        query = query.Where(x =>
+          (x.ActorPrincipalId != null && x.ActorPrincipalId.Value.ToString().ToLower().Contains(lowered)) ||
+          (x.TargetId != null && x.TargetId.Value.ToString().ToLower().Contains(lowered)));
       }
     }
 
@@ -148,6 +214,14 @@ public class AuthorizationChangeLogsController(
       query = query.Where(x => x.CreatedAt <= searchQuery.To.Value);
     }
 
+    return query;
+  }
+
+  private async Task<AuthorizationChangeLogsResponseDto> BuildResponseAsync(
+    IQueryable<AuthorizationChangeLog> query,
+    AuthorizationChangeLogSearchQueryDto searchQuery,
+    CancellationToken cancellationToken)
+  {
     var totalItems = await query.CountAsync(cancellationToken);
 
     var clampedPageSize = Math.Clamp(searchQuery.PageSize, 1, DtoLimits.AuthorizationChangeLogMaxPageSize);
@@ -172,10 +246,10 @@ public class AuthorizationChangeLogsController(
         x.AfterJson))
       .ToListAsync(cancellationToken);
 
-    return Ok(new AuthorizationChangeLogsResponseDto
+    return new AuthorizationChangeLogsResponseDto
     {
       Items = items,
       TotalItems = totalItems
-    });
+    };
   }
 }

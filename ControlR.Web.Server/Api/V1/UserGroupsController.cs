@@ -43,11 +43,6 @@ public class UserGroupsController(
       return Forbid();
     }
 
-    if (!User.CanAccessTenant(resolvedTenantId))
-    {
-      return Forbid();
-    }
-
     if (User.ToPrincipalDescriptor() is not { } actor)
     {
       return BadRequest("User ID not found.");
@@ -124,11 +119,6 @@ public class UserGroupsController(
       return Forbid();
     }
 
-    if (!User.CanAccessTenant(resolvedTenantId))
-    {
-      return Forbid();
-    }
-
     if (User.ToPrincipalDescriptor() is not { } actor)
     {
       return BadRequest("User ID not found.");
@@ -155,11 +145,6 @@ public class UserGroupsController(
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
-    {
-      return Forbid();
-    }
-
-    if (!User.CanAccessTenant(resolvedTenantId))
     {
       return Forbid();
     }
@@ -213,11 +198,6 @@ public class UserGroupsController(
       return Forbid();
     }
 
-    if (!User.CanAccessTenant(resolvedTenantId))
-    {
-      return Forbid();
-    }
-
     if (User.ToPrincipalDescriptor() is not { } actor)
     {
       return BadRequest("User ID not found.");
@@ -257,11 +237,6 @@ public class UserGroupsController(
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
-    {
-      return Forbid();
-    }
-
-    if (!User.CanAccessTenant(resolvedTenantId))
     {
       return Forbid();
     }

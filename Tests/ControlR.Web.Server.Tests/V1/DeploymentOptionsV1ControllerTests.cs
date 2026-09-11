@@ -3,8 +3,10 @@ using System.Net.Http.Json;
 using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
+using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using DODtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
@@ -151,6 +153,31 @@ public class DeploymentOptionsV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task GetTagCapability_WhenUserRecordDeleted_ReturnsForbid()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var (controller, tenant, user) = await scope.CreateControllerWithTestData<DeploymentOptionsController>();
+
+    // A deleted user can keep presenting a previously issued token. The route must refuse to
+    // answer capability questions for a principal whose user record no longer exists.
+    using (var deleteScope = testApp.Services.CreateScope())
+    {
+      await using var db = deleteScope.ServiceProvider.GetRequiredService<Data.AppDb>();
+      db.Users.Remove(db.Users.Single(x => x.Id == user.Id));
+      db.SaveChanges();
+    }
+
+    var result = await controller.GetTagCapability(
+      tenant.Id,
+      new DODtos.DeploymentTagCapabilityRequestDto(null, null),
+      scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>(),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result.Result);
+  }
+
+  [Fact]
   public async Task GetTagCapability_WithServerPrincipal_AllowsNewDevice()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -161,6 +188,7 @@ public class DeploymentOptionsV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.GetTagCapability(
       tenant.Id,
       new DODtos.DeploymentTagCapabilityRequestDto(null, null),
+      scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>(),
       TestContext.Current.CancellationToken);
 
     var response = Assert.IsType<DODtos.DeploymentTagCapabilityResponseDto>(

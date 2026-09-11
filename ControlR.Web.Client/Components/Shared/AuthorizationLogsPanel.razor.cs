@@ -69,9 +69,11 @@ public partial class AuthorizationLogsPanel
 
   private string GetTenantName(Guid? tenantId)
   {
+    // Tenant-scoped rows always carry OwningTenantId; the server-scoped rows live behind a
+    // separate endpoint this panel never calls. The old "(server)" label here was misleading.
     if (tenantId is null)
     {
-      return "(server)";
+      return "—";
     }
 
     var tenant = _tenants.FirstOrDefault(x => x.Id == tenantId.Value);

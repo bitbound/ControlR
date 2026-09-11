@@ -8,6 +8,7 @@ namespace ControlR.Web.Server.Api.V1;
 
 [Route(HttpConstants.V1.TenantsEndpoint)]
 [ApiController]
+[Authorize]
 [ApiVersion(ApiVersions.V1)]
 public class TenantsController(ITenantProvisioningService tenantProvisioningService) : ControllerBase
 {

@@ -82,7 +82,7 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 
 | Root | URL prefix | Stability | Consumer |
 |---|---|---|---|
-| `Api/Internal` | `/api/internal/*` | Unversioned, volatile | Internal. BFF (Blazor UI) |
+| `Api/Internal` | `/api/*` | Unversioned, volatile | Internal. BFF (Blazor UI) |
 | `Api/V1` | `/api/v1/*` | Stable contract | Endpoint-specific authorization; may accept users, PATs, server service accounts, or tenant service accounts |
 | `Api/Agent` | `/api/agent/*`, | Unversioned, volatile | Internal. Public APIs for agent. |
 
