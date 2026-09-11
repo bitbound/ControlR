@@ -1,8 +1,6 @@
 using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Authz.Permissions;
-using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

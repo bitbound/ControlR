@@ -98,7 +98,7 @@ public class TenantServiceAccountsV1ControllerTests(ITestOutputHelper testOutput
     var tenantB = await testApp.Services.CreateTestTenant("Tenant B");
     var foreignAccount = await CreateTenantAccount(testApp, tenantB.Id, "Foreign Tenant SA");
 
-    // The caller addresses its own tenant; the manager must not resolve an id it does not own.
+    // The caller addresses its own tenant. The manager must not resolve an id it does not own.
     var result = await controller.Delete(
       tenantA.Id, foreignAccount.Id, TestContext.Current.CancellationToken);
 

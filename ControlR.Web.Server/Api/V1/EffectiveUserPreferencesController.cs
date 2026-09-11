@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
 /// The calling user's effective preferences: tenant setting overrides beat user preferences.
-/// The caller's user id comes from claims; tenantId is required so the read works for the
+/// The caller's user id comes from claims. TenantId is required so the read works for the
 /// same set of principals as the other V1 surfaces.
 /// </summary>
 [Route(HttpConstants.V1.EffectiveUserPreferencesEndpoint)]

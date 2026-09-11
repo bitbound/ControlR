@@ -2,14 +2,13 @@ using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Primitives;
-using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
 /// Customer management. Tenant scoping is enforced by the required tenantId query
-/// parameter: the caller's tenant claim must match it (or the caller must be a server
+/// parameter. The caller's tenant claim must match it (or the caller must be a server
 /// principal), and the resolved id is passed into every manager call, whose queries all
 /// carry explicit TenantId predicates (so the checks stay meaningful even for server
 /// principals running against an unfiltered AppDb context).

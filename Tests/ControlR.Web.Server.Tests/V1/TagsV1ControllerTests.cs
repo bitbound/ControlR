@@ -142,7 +142,7 @@ public class TagsV1ControllerTests(ITestOutputHelper testOutput)
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
 
-    // The user gets device.read for exactly one device; the tag must not leak the other id.
+    // The user gets device.read for exactly one device. The tag must not leak the other id.
     var (controller, tenant, user) = await scope.CreateControllerWithTestData<TagsController>(
       userEmail: "tags-all@test.local");
 

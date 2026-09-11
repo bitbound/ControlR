@@ -105,7 +105,7 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
       userEmail: "pat-self-crossdelete@test.local",
       presets: PermissionPresets.TenantAdministrator);
 
-    // Seed a token for a different user in the same tenant; deleting it must fail because
+    // Seed a token for a different user in the same tenant. Deleting it must fail because
     // the self-service surface only ever manages the caller's own tokens.
     var otherUser = await services.CreateTestUser(tenant.Id, "pat-other-owner@t.local");
     var manager = services.GetRequiredService<IPersonalAccessTokenManager>();

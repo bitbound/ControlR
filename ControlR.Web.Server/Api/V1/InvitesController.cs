@@ -90,7 +90,7 @@ public class InvitesController : ControllerBase
       return Forbid();
     }
 
-    // Only invite managers (TenantUsersWrite) may see the activation code; read-only users
+    // Only invite managers (TenantUsersWrite) may see the activation code. Read-only users
     // receive the invite metadata without the bearer secret. Evaluate the current credential
     // directly so a narrowed PAT cannot inherit the owning user's write permission.
     var callerPrincipal = User.ToPrincipalDescriptor();

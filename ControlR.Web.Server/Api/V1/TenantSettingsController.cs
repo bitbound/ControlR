@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
 using SettingsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;

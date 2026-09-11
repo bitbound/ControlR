@@ -43,7 +43,7 @@ public class DeploymentOptionsController(
 
   /// <summary>
   /// Returns whether the current principal may assign tags to a prospective deployment target.
-  /// The UI uses this to decide whether to offer tag selection; the agent registration endpoint
+  /// The UI uses this to decide whether to offer tag selection. The agent registration endpoint
   /// remains the final enforcement boundary.
   /// </summary>
   [HttpPost("tag-capability")]

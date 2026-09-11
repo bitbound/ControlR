@@ -8,13 +8,13 @@ namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
 /// Authorization change log inspection. The read audience is the union of two disjoint
-/// permissions: holders of server.authorization-logs.read (server scope) inspect the tenant
+/// permissions. Holders of server.authorization-logs.read (server scope) inspect the tenant
 /// named by the required tenantId query parameter, and holders of tenant.authorization-logs.read
 /// (tenant scope) inspect their own tenant. No single authorization policy models that union,
 /// so the audience check runs in the handler (evaluating both permissions, as the superseded
 /// internal endpoint did) rather than as a method-level policy.
 /// Server-scoped entries (OwningTenantId is null) belong to no tenant and are therefore not
-/// reachable through the tenant-addressed list; they are served by the separate, parameterless
+/// reachable through the tenant-addressed list. They are served by the separate, parameterless
 /// GET /server route, which is restricted to server principals without tenant context.
 /// </summary>
 [Route(HttpConstants.V1.AuthorizationChangeLogsEndpoint)]
@@ -79,7 +79,7 @@ public class AuthorizationChangeLogsController(
     if (canReadServer)
     {
       // Server-scoped readers hold server.authorization-logs.read, which authorizes inspecting
-      // any tenant; the required tenantId query parameter is the tenant they select.
+      // any tenant. The required tenantId query parameter is the tenant they select.
       scopedTenantId = tenantId;
     }
     else
@@ -116,7 +116,7 @@ public class AuthorizationChangeLogsController(
     [FromQuery] AuthorizationChangeLogSearchQueryDto searchQuery,
     CancellationToken cancellationToken)
   {
-    // Fail early for tenant-context principals: this endpoint answers only for callers that act
+    // Fail early for tenant-context principals. This endpoint answers only for callers that act
     // across tenants, never for principals bound to one.
     if (User.TryGetTenantId(out _))
     {
@@ -184,7 +184,7 @@ public class AuthorizationChangeLogsController(
       {
         // Partial ID query: match against the canonical text form of the UUID,
         // case-insensitively (ILIKE). Escape LIKE wildcards so user input such as '%' or '_'
-        // is matched literally instead of acting as a wildcard. ILIKE is PostgreSQL syntax;
+        // is matched literally instead of acting as a wildcard. ILIKE is PostgreSQL syntax.
         // PostgreSQL is this application's only relational provider.
         var escaped = trimmed
           .Replace("\\", "\\\\")
@@ -196,11 +196,10 @@ public class AuthorizationChangeLogsController(
       }
       else
       {
-        // The in-memory provider has no ILIKE translation; compare lowercased text instead.
-        var lowered = trimmed.ToLower();
+        // The in-memory provider has no ILIKE translation. Compare lowercased text instead.
         query = query.Where(x =>
-          (x.ActorPrincipalId != null && x.ActorPrincipalId.Value.ToString().ToLower().Contains(lowered)) ||
-          (x.TargetId != null && x.TargetId.Value.ToString().ToLower().Contains(lowered)));
+          (x.ActorPrincipalId != null && x.ActorPrincipalId.Value.ToString().Contains(trimmed, StringComparison.CurrentCultureIgnoreCase)) ||
+          (x.TargetId != null && x.TargetId.Value.ToString().Contains(trimmed, StringComparison.CurrentCultureIgnoreCase)));
       }
     }
 

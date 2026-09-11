@@ -2,7 +2,7 @@ namespace ControlR.Web.Server.OpenApi;
 
 /// <summary>
 /// Marks an endpoint as deprecated. Emitting <c>deprecated: true</c> in the OpenAPI document
-/// is the entire deprecation mechanism; removal timing is governed by release notes.
+/// is the entire deprecation mechanism. Removal timing is governed by release notes.
 /// Used instead of <c>[Obsolete]</c> because warnings-as-errors would break every caller
 /// that consumes the generated client.
 /// </summary>

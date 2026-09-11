@@ -161,7 +161,7 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
       tenant.Id,
       new InviteDtos.CreateInviteRequestDto("mine@test.local"));
 
-    // Seed an invite in a foreign tenant directly; the V1 list must never surface it.
+    // Seed an invite in a foreign tenant directly. The V1 list must never surface it.
     var foreignTenant = await services.CreateTestTenant("Invites Isolation Foreign");
     var foreignOrigin = new Uri("https://foreign.example");
     var foreignInvite = await provider.CreateInvite(
@@ -201,7 +201,7 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
       tenant.Id,
       new InviteDtos.CreateInviteRequestDto("coded@test.local"));
 
-    // A device-scoped user has no users.read or tenant.users.write grants; the endpoint is
+    // A device-scoped user has no users.read or tenant.users.write grants. The endpoint is
     // invoked directly here, so only the in-handler code gate applies.
     var readOnlyUser = await services.CreateTestUser(
       tenant.Id,

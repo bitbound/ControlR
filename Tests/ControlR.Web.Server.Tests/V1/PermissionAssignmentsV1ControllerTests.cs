@@ -73,7 +73,7 @@ public class PermissionAssignmentsV1ControllerTests(ITestOutputHelper testOutput
         null),
       TestContext.Current.CancellationToken);
 
-    // Manager write-authority refusals pass through as 403 (not collapsed to 404): they are
+    // Manager write-authority refusals pass through as 403 (not collapsed to 404). They are
     // caller-authorization feedback within the caller's own tenant, never existence signals.
     ActionResultAsserts.AssertHttpStatus(result.Result, StatusCodes.Status403Forbidden);
   }

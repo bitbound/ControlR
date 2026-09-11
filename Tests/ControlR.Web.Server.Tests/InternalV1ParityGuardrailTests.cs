@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Tests;
 /// Ratchet for the V1-first rule. Every operation published in the internal OpenAPI document
 /// must be deprecated, have a V1 twin (same verb and path template under /api/v1), or appear in
 /// <see cref="IrregularShapeAllowList"/> naming the constraint that forces it to stay internal.
-/// New endpoints belong in V1; adding an Internal operation requires either a V1 twin or an
+/// New endpoints belong in V1. Adding an Internal operation requires either a V1 twin or an
 /// explicit allow-list entry, so the non-standard surface cannot grow silently.
 /// </summary>
 public partial class InternalV1ParityGuardrailTests
@@ -85,7 +85,7 @@ public partial class InternalV1ParityGuardrailTests
     ["POST /api/invites/accept"] = "Anonymous token-bearing accept ceremony; the activation code in the invite URL is the credential, not a principal.",
 
     // Pending V1 twins - migration packages prune these entries when the twin lands.
-    // The full migration surface is complete as of this revision; any new pending entry
+    // The full migration surface is complete as of this revision. Any new pending entry
     // added here must name the package that will remove it.
   };
 
@@ -193,7 +193,7 @@ public partial class InternalV1ParityGuardrailTests
 
     return ReadOperations(v1Path)
       .Where(op => op.Path.StartsWith("/api/v1", StringComparison.Ordinal))
-      // Re-key the twin into the internal document's coordinate system: internal routes live at
+      // Re-key the twin into the internal document's coordinate system. Internal routes live at
       // /api/* (no /internal segment), so the twin of /api/v1/users/{} is /api/users/{}.
       .Select(op => Key(op.Verb, "/api" + op.Path["/api/v1".Length..]))
       .ToHashSet(StringComparer.Ordinal);

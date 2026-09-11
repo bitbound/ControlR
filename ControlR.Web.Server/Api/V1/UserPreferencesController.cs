@@ -7,10 +7,10 @@ namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
 /// Self-service user preferences for the calling user. The preferences are always owned by
-/// the caller, so no operation addresses another principal; tenantId stays required on every
+/// the caller, so no operation addresses another principal. TenantId stays required on every
 /// operation to keep the V1 convention uniform (server principals resolve the tenant check
 /// but then fail the caller-has-no-user-id lookup, so the surface is user-only in practice).
-/// Manager failures surface as ProblemDetails; a get of an unset name answers 204.
+/// Manager failures surface as ProblemDetails. A get of an unset name answers 204.
 /// </summary>
 [Route(HttpConstants.V1.UserPreferencesEndpoint)]
 [ApiController]

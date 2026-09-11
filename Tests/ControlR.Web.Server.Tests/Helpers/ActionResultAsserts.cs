@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Tests.Helpers;
 /// Assertions for controller action results. Manager-backed failures surface as
 /// ProblemDetails <see cref="ObjectResult"/> instances (status carried in StatusCode),
 /// while handler-generated shortcuts (Forbid, direct NotFound collapse) are bare result
-/// types - assert intent through the status code, not the concrete class.
+/// types. Assert intent through the status code, not the concrete class.
 /// </summary>
 internal static class ActionResultAsserts
 {

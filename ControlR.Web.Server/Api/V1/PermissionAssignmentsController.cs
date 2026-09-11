@@ -2,19 +2,17 @@ using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Primitives;
-using ControlR.Web.Server.Services.PermissionAssignments;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
 /// Permission assignment management. Tenant scoping is enforced by the required tenantId query
-/// parameter: the caller's tenant claim must match it (or the caller must be a server
+/// parameter. The caller's tenant claim must match it (or the caller must be a server
 /// principal), and the resolved id is passed into every manager call in place of the claims
 /// tenant id the superseded internal endpoint used. The manager's own write-authority and
 /// tenant checks (ValidateWriteAuthority, IsVisibleToTenant, ValidatePermissionScope,
-/// ValidatePrincipalExists) are untouched: server-scope writes still require the
+/// ValidatePrincipalExists) are untouched. Server-scope writes still require the
 /// server.permissions.write grant and tenant-scoped targets are validated against the resolved
 /// tenant.
 /// </summary>
@@ -438,7 +436,7 @@ public class PermissionAssignmentsController(
 
   // Manager failures pass through verbatim, as they did on the superseded internal endpoint.
   // The manager's Forbidden results are caller-authorization refusals (missing server-scope or
-  // deny-effect grants, server service account targets), never cross-tenant probes - collapsing
+  // deny-effect grants, server service account targets), never cross-tenant probes. Collapsing
   // them to NotFound would hide actionable authorization feedback. Cross-tenant access is
   // already refused earlier: TryResolveTenantId, CanAccessTenant, and the manager's own
   // principal/scope tenant validations.

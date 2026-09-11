@@ -199,7 +199,7 @@ public class UserGroupsV1ControllerTests(ITestOutputHelper testOutput)
     var groupId = await CreateGroupAsync(ownerController, tenantA.Id, "Tenant A Group");
     var tenantB = await scope.ServiceProvider.CreateTestTenant("Tenant B");
 
-    // Server principals trust the requested tenant id; the manager's explicit TenantId
+    // Server principals trust the requested tenant id. The manager's explicit TenantId
     // predicate must surface the mismatch as NotFound, not expose the cross-tenant group.
     var serverController = await scope.CreateControllerWithServerPrincipal<UserGroupsController>();
     var result = await serverController.Get(groupId, tenantB.Id, TestContext.Current.CancellationToken);
