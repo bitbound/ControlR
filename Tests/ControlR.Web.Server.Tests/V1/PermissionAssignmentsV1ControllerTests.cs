@@ -1,6 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 using ControlR.Web.Server.Api.V1;
-using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

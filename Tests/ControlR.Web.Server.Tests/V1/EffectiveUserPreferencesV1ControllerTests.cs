@@ -1,4 +1,3 @@
-using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.Tests.Helpers;
