@@ -80,18 +80,6 @@ internal partial class InternalApi
       await _client.HttpClient.GetFromJsonAsync<InternalDtos.PermissionPresetDto[]>(
         $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/presets", cancellationToken));
   }
-
-  async Task<ApiResult<InternalDtos.EffectivePermissionQueryResponseDto>> IEffectivePermissionsApi.Query(InternalDtos.EffectivePermissionQueryRequestDto request, CancellationToken cancellationToken)
-  {
-    return await _client.ExecuteApiCall(async () =>
-    {
-      using var response = await _client.HttpClient.PostAsJsonAsync(
-        $"{HttpConstants.Internal.EffectivePermissionsEndpoint}/query", request, cancellationToken);
-      await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<InternalDtos.EffectivePermissionQueryResponseDto>(cancellationToken);
-    });
-  }
-
   async Task<ApiResult> IPermissionAssignmentsApi.Replace(InternalDtos.ReplacePermissionAssignmentsRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>

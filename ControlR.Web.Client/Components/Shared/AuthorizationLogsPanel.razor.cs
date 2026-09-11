@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using V1Flat = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+using ACLDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 
 namespace ControlR.Web.Client.Components.Shared;
 
@@ -6,15 +8,20 @@ public partial class AuthorizationLogsPanel
 {
   private string? _actionTypeFilter;
   private string? _actorTypeFilter;
-  private AuthorizationChangeLogDto? _expandedItem;
+  private Guid _callerTenantId;
+  private ACLDtos.AuthorizationChangeLogDto? _expandedItem;
   private DateTime? _fromDate;
+  private bool _hasTenantContext;
   private bool _isLoading;
   private string _searchText = string.Empty;
   private Guid? _selectedTenantId;
-  private MudTable<AuthorizationChangeLogDto>? _table;
+  private MudTable<ACLDtos.AuthorizationChangeLogDto>? _table;
   private string? _targetTypeFilter;
   private V1Flat.TenantSummaryDto[] _tenants = [];
   private DateTime? _toDate;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -30,6 +37,15 @@ public partial class AuthorizationLogsPanel
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var callerTenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _callerTenantId = callerTenantId;
+    _hasTenantContext = true;
     await LoadTenants();
   }
 
@@ -62,20 +78,25 @@ public partial class AuthorizationLogsPanel
     return tenant?.Name ?? tenantId.Value.ToString();
   }
 
-  private async Task<TableData<AuthorizationChangeLogDto>> LoadTableData(
+  private async Task<TableData<ACLDtos.AuthorizationChangeLogDto>> LoadTableData(
     TableState state, CancellationToken cancellationToken)
   {
+    if (!_hasTenantContext)
+    {
+      return new TableData<ACLDtos.AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
+    }
+
     _isLoading = true;
     try
     {
-      var result = await ControlrApi.Internal.AuthorizationChangeLogs.Get(
+      var result = await ControlrApi.V1.AuthorizationChangeLogs.GetAuthorizationChangeLogs(
+        tenantId: _selectedTenantId ?? _callerTenantId,
         page: state.Page,
         pageSize: state.PageSize,
         actionType: string.IsNullOrWhiteSpace(_actionTypeFilter) ? null : _actionTypeFilter.Trim(),
         actorType: string.IsNullOrWhiteSpace(_actorTypeFilter) ? null : _actorTypeFilter.Trim(),
         targetType: string.IsNullOrWhiteSpace(_targetTypeFilter) ? null : _targetTypeFilter.Trim(),
         searchText: string.IsNullOrWhiteSpace(_searchText) ? null : _searchText.Trim(),
-        tenantId: _selectedTenantId,
         from: _fromDate is { } from ? new DateTimeOffset(from) : null,
         to: _toDate is { } to ? new DateTimeOffset(to).AddDays(1) : null,
         cancellationToken: cancellationToken);
@@ -83,10 +104,10 @@ public partial class AuthorizationLogsPanel
       if (!result.IsSuccess)
       {
         Snackbar.Add($"Failed to load authorization logs: {result.Reason}", Severity.Error);
-        return new TableData<AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
+        return new TableData<ACLDtos.AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
       }
 
-      return new TableData<AuthorizationChangeLogDto>
+      return new TableData<ACLDtos.AuthorizationChangeLogDto>
       {
         Items = result.Value.Items,
         TotalItems = result.Value.TotalItems
@@ -96,7 +117,7 @@ public partial class AuthorizationLogsPanel
     {
       Logger.LogError(ex, "Error loading authorization logs.");
       Snackbar.Add($"Error loading authorization logs: {ex.Message}", Severity.Error);
-      return new TableData<AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
+      return new TableData<ACLDtos.AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
     }
     finally
     {
@@ -137,6 +158,6 @@ public partial class AuthorizationLogsPanel
   private Task<IEnumerable<string>> SearchTargetTypes(string query, CancellationToken cancellationToken) =>
     Task.FromResult(SearchVocabulary(ChangeLogVocabulary.TargetTypes, query));
 
-  private void ToggleExpanded(AuthorizationChangeLogDto item) =>
+  private void ToggleExpanded(ACLDtos.AuthorizationChangeLogDto item) =>
     _expandedItem = _expandedItem == item ? null : item;
 }

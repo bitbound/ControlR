@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 using ControlR.Libraries.Api.Contracts.Constants;
 
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 
 public class AuthorizationChangeLogSearchQueryDto
 {
@@ -20,8 +20,6 @@ public class AuthorizationChangeLogSearchQueryDto
   public string? SearchText { get; set; }
 
   public string? TargetType { get; set; }
-
-  public Guid? TenantId { get; set; }
 
   public DateTimeOffset? To { get; set; }
 }

@@ -1,27 +1,39 @@
+using Asp.Versioning;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api.Internal;
+namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Authorization change log inspection. Holders of server.authorization-logs.read see all
-/// entries (optionally filtered by tenant); holders of tenant.authorization-logs.read see
-/// only their own tenant's entries. Entries with no owning tenant (server-scoped changes)
-/// are visible to server.authorization-logs.read holders only.
+/// Authorization change log inspection. The read audience is the union of two disjoint
+/// permissions: holders of server.authorization-logs.read (server scope) inspect the tenant
+/// named by the required tenantId query parameter, and holders of tenant.authorization-logs.read
+/// (tenant scope) inspect their own tenant. No single authorization policy models that union,
+/// so the audience check runs in the handler (evaluating both permissions, as the superseded
+/// internal endpoint did) rather than as a method-level policy.
 /// </summary>
-[Route(HttpConstants.Internal.AuthorizationChangeLogsEndpoint)]
+[Route(HttpConstants.V1.AuthorizationChangeLogsEndpoint)]
 [ApiController]
 [Authorize]
-[EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class AuthorizationChangeLogsController : ControllerBase
+[ApiVersion(ApiVersions.V1)]
+public class AuthorizationChangeLogsController(
+  AppDb appDb,
+  IPermissionEvaluator permissionEvaluator) : ControllerBase
 {
+  private readonly AppDb _appDb = appDb;
+  private readonly IPermissionEvaluator _permissionEvaluator = permissionEvaluator;
+
   [HttpGet]
-  public async Task<ActionResult<InternalDtos.AuthorizationChangeLogSearchResponseDto>> Get(
-    [FromServices] AppDb appDb,
-    [FromServices] IPermissionEvaluator permissionEvaluator,
-    [FromQuery] InternalDtos.AuthorizationChangeLogSearchQueryDto searchQuery,
-    CancellationToken cancellationToken = default)
+  [ProducesResponseType<AuthorizationChangeLogsResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public async Task<ActionResult<AuthorizationChangeLogsResponseDto>> Get(
+    [FromQuery] Guid tenantId,
+    [FromQuery] AuthorizationChangeLogSearchQueryDto searchQuery,
+    CancellationToken cancellationToken)
   {
     var principal = User.ToPrincipalDescriptor();
     if (principal is null)
@@ -47,7 +59,7 @@ public class AuthorizationChangeLogsController : ControllerBase
       ? [requestServer]
       : [requestServer, requestTenant];
 
-    var decisions = await permissionEvaluator.EvaluateBatch(
+    var decisions = await _permissionEvaluator.EvaluateBatch(
       principal,
       requests,
       cancellationToken);
@@ -63,16 +75,14 @@ public class AuthorizationChangeLogsController : ControllerBase
     Guid? scopedTenantId;
     if (canReadServer)
     {
-      scopedTenantId = searchQuery.TenantId;
+      // Server-scoped readers hold server.authorization-logs.read, which authorizes inspecting
+      // any tenant; the required tenantId query parameter is the tenant they select.
+      scopedTenantId = tenantId;
     }
     else
     {
-      if (!User.TryGetTenantId(out var callerTenantId))
-      {
-        return BadRequest("User tenant not found.");
-      }
-
-      if (searchQuery.TenantId.HasValue && searchQuery.TenantId.Value != callerTenantId)
+      // Tenant-scoped readers see their own tenant only.
+      if (!User.TryResolveTenantId(tenantId, out var callerTenantId))
       {
         return Forbid();
       }
@@ -80,7 +90,7 @@ public class AuthorizationChangeLogsController : ControllerBase
       scopedTenantId = callerTenantId;
     }
 
-    var query = appDb.AuthorizationChangeLogs.AsNoTracking();
+    var query = _appDb.AuthorizationChangeLogs.AsNoTracking();
 
     if (scopedTenantId is { } scopeTenant)
     {
@@ -148,7 +158,7 @@ public class AuthorizationChangeLogsController : ControllerBase
       .OrderByDescending(x => x.CreatedAt)
       .Skip(clampedPage * clampedPageSize)
       .Take(clampedPageSize)
-      .Select(x => new InternalDtos.AuthorizationChangeLogDto(
+      .Select(x => new AuthorizationChangeLogDto(
         x.Id,
         x.ActionType,
         x.ActorPrincipalType,
@@ -162,6 +172,10 @@ public class AuthorizationChangeLogsController : ControllerBase
         x.AfterJson))
       .ToListAsync(cancellationToken);
 
-    return Ok(new InternalDtos.AuthorizationChangeLogSearchResponseDto(items, totalItems));
+    return Ok(new AuthorizationChangeLogsResponseDto
+    {
+      Items = items,
+      TotalItems = totalItems
+    });
   }
 }

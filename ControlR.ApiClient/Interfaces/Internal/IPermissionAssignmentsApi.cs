@@ -36,9 +36,3 @@ public interface IPermissionAssignmentsApi
   [ApiRoute($"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/{{assignmentId}}", "PUT")]
   Task<ApiResult<InternalDtos.PermissionAssignmentDto>> Update(Guid assignmentId, InternalDtos.UpdatePermissionAssignmentRequestDto request, CancellationToken cancellationToken = default);
 }
-
-public interface IEffectivePermissionsApi
-{
-  [ApiRoute($"{HttpConstants.Internal.EffectivePermissionsEndpoint}/query", "POST")]
-  Task<ApiResult<InternalDtos.EffectivePermissionQueryResponseDto>> Query(InternalDtos.EffectivePermissionQueryRequestDto request, CancellationToken cancellationToken = default);
-}

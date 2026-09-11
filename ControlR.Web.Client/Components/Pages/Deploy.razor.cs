@@ -1,5 +1,6 @@
 using ControlR.Libraries.Branding;
 using Microsoft.AspNetCore.Components.Authorization;
+using DODtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
 using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
 using V1Flat = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 
@@ -137,7 +138,13 @@ public partial class Deploy
     _canAssignDeviceTags = await GetTagCapability();
     _canReadCustomers = state.User.HasClientPolicy(PolicyNames.RequireCustomersRead);
 
-    var deploymentOptionsResult = await ControlrApi.Internal.DeploymentOptions.GetDeploymentOptions();
+    if (_tenantId is not { } deploymentTenantId)
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    var deploymentOptionsResult = await ControlrApi.V1.DeploymentOptions.GetDeploymentOptions(deploymentTenantId);
     if (!deploymentOptionsResult.IsSuccess)
     {
       Snackbar.Add(deploymentOptionsResult.Reason, Severity.Error);
@@ -425,7 +432,7 @@ public partial class Deploy
 
   private async Task<bool> GetTagCapability()
   {
-    if (!_tenantId.HasValue)
+    if (_tenantId is not { } tenantId)
     {
       return false;
     }
@@ -434,11 +441,11 @@ public partial class Deploy
       ? parsedDeviceId
       : null;
 
-    var request = new DeploymentTagCapabilityRequestDto(
+    var request = new DODtos.DeploymentTagCapabilityRequestDto(
       deviceId,
       _selectedCustomer?.Id);
 
-    var result = await ControlrApi.Internal.DeploymentOptions.GetTagCapability(request);
+    var result = await ControlrApi.V1.DeploymentOptions.GetTagCapability(tenantId, request);
     if (!result.IsSuccess)
     {
       return false;

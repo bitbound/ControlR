@@ -1,26 +1,27 @@
 using System.Net.Http.Json;
-using ControlR.ApiClient.Interfaces.Internal;
+using ControlR.ApiClient.Interfaces.V1;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ACLDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 
 namespace ControlR.ApiClient;
 
-internal partial class InternalApi
+internal partial class V1Api
 {
   private static string BuildAuthorizationChangeLogsQuery(
+    Guid tenantId,
     int page,
     int pageSize,
     string? actionType,
     string? actorType,
     string? targetType,
     string? searchText,
-    Guid? tenantId,
     DateTimeOffset? from,
     DateTimeOffset? to)
   {
     var parameters = new List<string>
     {
+      $"tenantId={Uri.EscapeDataString(tenantId.ToString())}",
       $"page={Uri.EscapeDataString(page.ToString())}",
       $"pageSize={Uri.EscapeDataString(pageSize.ToString())}"
     };
@@ -45,11 +46,6 @@ internal partial class InternalApi
       parameters.Add($"searchText={Uri.EscapeDataString(searchText)}");
     }
 
-    if (tenantId.HasValue)
-    {
-      parameters.Add($"tenantId={Uri.EscapeDataString(tenantId.Value.ToString())}");
-    }
-
     if (from.HasValue)
     {
       parameters.Add($"from={Uri.EscapeDataString(from.Value.ToString("O"))}");
@@ -63,14 +59,14 @@ internal partial class InternalApi
     return $"?{string.Join("&", parameters)}";
   }
 
-  async Task<ApiResult<InternalDtos.AuthorizationChangeLogSearchResponseDto>> IAuthorizationChangeLogsApi.Get(
+  async Task<ApiResult<ACLDtos.AuthorizationChangeLogsResponseDto>> IAuthorizationChangeLogsApi.GetAuthorizationChangeLogs(
+    Guid tenantId,
     int page,
     int pageSize,
     string? actionType,
     string? actorType,
     string? targetType,
     string? searchText,
-    Guid? tenantId,
     DateTimeOffset? from,
     DateTimeOffset? to,
     CancellationToken cancellationToken)
@@ -78,10 +74,10 @@ internal partial class InternalApi
     return await _client.ExecuteApiCall(async () =>
     {
       var query = BuildAuthorizationChangeLogsQuery(
-        page, pageSize, actionType, actorType, targetType, searchText, tenantId, from, to);
+        tenantId, page, pageSize, actionType, actorType, targetType, searchText, from, to);
 
-      return await _client.HttpClient.GetFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
-        $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}{query}", cancellationToken)
+      return await _client.HttpClient.GetFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
+        $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}{query}", cancellationToken)
         ?? throw new InvalidOperationException("Empty response from authorization change logs endpoint.");
     });
   }

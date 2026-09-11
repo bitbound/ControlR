@@ -3,15 +3,12 @@ namespace ControlR.ApiClient.Interfaces.Internal;
 public interface IControlrInternalApi
 {
   IAuthApi Auth { get; }
-  IAuthorizationChangeLogsApi AuthorizationChangeLogs { get; }
   ICustomersApi Customers { get; }
-  IDeploymentOptionsApi DeploymentOptions { get; }
   IDesktopPreviewApi DesktopPreview { get; }
   IDeviceFileSystemApi DeviceFileSystem { get; }
   IDeviceGroupsApi DeviceGroups { get; }
   IDevicesApi Devices { get; }
   IDeviceTagsApi DeviceTags { get; }
-  IEffectivePermissionsApi EffectivePermissions { get; }
   IEffectiveUserPreferencesApi EffectiveUserPreferences { get; }
   IInstallerKeysApi InstallerKeys { get; }
   IInvitesApi Invites { get; }

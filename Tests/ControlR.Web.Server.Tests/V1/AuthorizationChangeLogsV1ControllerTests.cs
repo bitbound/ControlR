@@ -7,35 +7,37 @@ using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.PermissionAssignments;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
+using ACLDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests.V1;
 
 /// <summary>
-/// Authorization change log endpoint audience scoping: holders of server.authorization-logs.read
-/// see all tenants, holders of tenant.authorization-logs.read see only their own tenant, and
-/// other principals are forbidden.
+/// V1 authorization change log endpoint audience scoping: holders of server.authorization-logs.read
+/// inspect the tenant the required tenantId query parameter selects (any tenant), holders of
+/// tenant.authorization-logs.read see only their own tenant, and other principals are forbidden.
 /// </summary>
-public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
+public class AuthorizationChangeLogsV1ControllerTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutput = testOutput;
 
   [Fact]
-  public async Task Get_AsServerAdmin_ReturnsEntriesFromAllTenants()
+  public async Task Get_AsServerAdmin_ReturnsEntriesFromRequestedTenant()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
     var (tenantA, tenantB, serverAdmin, _) = await SetupTenantsWithEntries(testServer);
 
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, serverAdmin.Id, serverAdmin.TenantId, "test"));
 
+    // Server-scoped readers may inspect any tenant, including one other than their own.
     var response = await httpClient.GetAsync(
-      HttpConstants.Internal.AuthorizationChangeLogsEndpoint, TestContext.Current.CancellationToken);
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantB.Id}", TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    var result = await response.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var result = await response.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
-    Assert.Contains(result.Items, x => x.OwningTenantId == tenantA.Id);
-    Assert.Contains(result.Items, x => x.OwningTenantId == tenantB.Id);
+    Assert.NotEmpty(result.Items);
+    Assert.All(result.Items, x => Assert.Equal(tenantB.Id, x.OwningTenantId));
   }
 
   [Fact]
@@ -47,17 +49,17 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, tenantAdminA.Id, tenantAdminA.TenantId, "test"));
 
     var response = await httpClient.GetAsync(
-      HttpConstants.Internal.AuthorizationChangeLogsEndpoint, TestContext.Current.CancellationToken);
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantA.Id}", TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    var result = await response.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var result = await response.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.NotEmpty(result.Items);
     Assert.All(result.Items, x => Assert.Equal(tenantA.Id, x.OwningTenantId));
 
     var crossTenantResponse = await httpClient.GetAsync(
-      $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}?tenantId={tenantB.Id}",
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantB.Id}",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Forbidden, crossTenantResponse.StatusCode);
   }
@@ -73,7 +75,7 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, plainUser.Id, plainUser.TenantId, "test"));
 
     var response = await httpClient.GetAsync(
-      HttpConstants.Internal.AuthorizationChangeLogsEndpoint, TestContext.Current.CancellationToken);
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenant.Id}", TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
   }
 
@@ -81,15 +83,15 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
   public async Task Get_WithActorTypeFilter_RestrictsToMatchingActorTypes()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
-    var (_, _, serverAdmin, _) = await SetupTenantsWithEntries(testServer);
+    var (tenantA, _, serverAdmin, _) = await SetupTenantsWithEntries(testServer);
 
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, serverAdmin.Id, serverAdmin.TenantId, "test"));
 
     var userResponse = await httpClient.GetAsync(
-      $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}?actorType=user",
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantA.Id}&actorType=user",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, userResponse.StatusCode);
-    var userResult = await userResponse.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var userResult = await userResponse.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(userResult);
     Assert.NotEmpty(userResult.Items);
@@ -97,10 +99,10 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
 
     // The setup has no service-account actors; the filtered result must be empty.
     var saResponse = await httpClient.GetAsync(
-      $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}?actorType=service-account",
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantA.Id}&actorType=service-account",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, saResponse.StatusCode);
-    var saResult = await saResponse.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var saResult = await saResponse.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(saResult);
     Assert.Empty(saResult.Items);
@@ -118,9 +120,9 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
 
     // The tenant-admin assignment created in Setup creates a change-log row with a real target ID.
     var allResponse = await httpClient.GetAsync(
-      HttpConstants.Internal.AuthorizationChangeLogsEndpoint, TestContext.Current.CancellationToken);
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantA.Id}", TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, allResponse.StatusCode);
-    var allResult = await allResponse.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var allResult = await allResponse.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(allResult);
     Assert.NotEmpty(allResult.Items);
@@ -130,10 +132,10 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
 
     // Exact GUID match.
     var exactResponse = await httpClient.GetAsync(
-      $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}?searchText={Uri.EscapeDataString(targetId.Value.ToString())}",
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantA.Id}&searchText={Uri.EscapeDataString(targetId.Value.ToString())}",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, exactResponse.StatusCode);
-    var exactResult = await exactResponse.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var exactResult = await exactResponse.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(exactResult);
     Assert.NotEmpty(exactResult.Items);
@@ -142,10 +144,10 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
     // Partial GUID match (first 8 hex chars).
     var partial = targetId.Value.ToString("D")[..8];
     var partialResponse = await httpClient.GetAsync(
-      $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}?searchText={partial}",
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantA.Id}&searchText={partial}",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, partialResponse.StatusCode);
-    var partialResult = await partialResponse.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var partialResult = await partialResponse.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(partialResult);
     Assert.NotEmpty(partialResult.Items);
@@ -162,9 +164,9 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, serverAdmin.Id, serverAdmin.TenantId, "test"));
 
     var allResponse = await httpClient.GetAsync(
-      HttpConstants.Internal.AuthorizationChangeLogsEndpoint, TestContext.Current.CancellationToken);
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantA.Id}", TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, allResponse.StatusCode);
-    var allResult = await allResponse.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var allResult = await allResponse.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(allResult);
     Assert.NotEmpty(allResult.Items);
@@ -175,10 +177,10 @@ public class AuthorizationChangeLogsApiTests(ITestOutputHelper testOutput)
     // Uppercase partial GUID must still match (case-insensitive ILIKE).
     var partialUpper = targetId.Value.ToString("D")[..8].ToUpperInvariant();
     var response = await httpClient.GetAsync(
-      $"{HttpConstants.Internal.AuthorizationChangeLogsEndpoint}?searchText={partialUpper}",
+      $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={tenantA.Id}&searchText={partialUpper}",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    var result = await response.Content.ReadFromJsonAsync<InternalDtos.AuthorizationChangeLogSearchResponseDto>(
+    var result = await response.Content.ReadFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.NotEmpty(result.Items);

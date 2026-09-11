@@ -12,15 +12,12 @@ public static class HttpConstants
   public static class Internal
   {
     public const string AuthEndpoint = "/api/auth";
-    public const string AuthorizationChangeLogsEndpoint = "/api/authorization-change-logs";
     public const string CustomersEndpoint = "/api/customers";
-    public const string DeploymentOptionsEndpoint = "/api/deployment-options";
     public const string DesktopPreviewEndpoint = "/api/desktop-preview";
     public const string DeviceFileSystemEndpoint = "/api/device-file-system";
     public const string DeviceGroupsEndpoint = "/api/device-groups";
     public const string DevicesEndpoint = "/api/devices";
     public const string DeviceTagsEndpoint = "/api/device-tags";
-    public const string EffectivePermissionsEndpoint = "/api/effective-permissions";
     public const string EffectiveUserPreferencesEndpoint = "/api/effective-user-preferences";
     public const string InstallerKeysEndpoint = "/api/installer-keys";
     public const string InvitesEndpoint = "/api/invites";
@@ -44,7 +41,10 @@ public static class HttpConstants
   }
   public static class V1
   {
+    public const string AuthorizationChangeLogsEndpoint = "/api/v1/authorization-change-logs";
+    public const string DeploymentOptionsEndpoint = "/api/v1/deployment-options";
     public const string DevicesEndpoint = "/api/v1/devices";
+    public const string EffectivePermissionsEndpoint = "/api/v1/effective-permissions";
     public const string InstallerKeysEndpoint = "/api/v1/installer-keys";
     public const string LogonTokensEndpoint = "/api/v1/logon-tokens";
     public const string ServerServiceAccountsEndpoint = "/api/v1/server-service-accounts";

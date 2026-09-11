@@ -1,3 +1,4 @@
+@using ACLDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs
 <MudCard Class="mb-4">
   <MudCardContent>
     <MudGrid>
@@ -50,7 +51,7 @@
   </MudCardContent>
 </MudCard>
 
-<MudTable T="AuthorizationChangeLogDto" ServerData="LoadTableData" @ref="_table"
+<MudTable T="ACLDtos.AuthorizationChangeLogDto" ServerData="LoadTableData" @ref="_table"
           Hover="true" Dense="true" Striped="true" Loading="_isLoading"
           RowsPerPage="25">
   <ToolBarContent>

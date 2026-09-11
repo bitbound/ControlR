@@ -5,15 +5,12 @@ namespace ControlR.ApiClient;
 internal partial class InternalApi(ControlrApi client) :
   IControlrInternalApi,
   IAuthApi,
-  IAuthorizationChangeLogsApi,
   ICustomersApi,
   IDesktopPreviewApi,
   IDeviceFileSystemApi,
   IDeviceGroupsApi,
   IDeviceTagsApi,
   IDevicesApi,
-  IDeploymentOptionsApi,
-  IEffectivePermissionsApi,
   IEffectiveUserPreferencesApi,
   IInstallerKeysApi,
   IInvitesApi,
@@ -38,15 +35,12 @@ internal partial class InternalApi(ControlrApi client) :
   private readonly ControlrApi _client = client;
 
   public IAuthApi Auth => this;
-  public IAuthorizationChangeLogsApi AuthorizationChangeLogs => this;
   public ICustomersApi Customers => this;
-  public IDeploymentOptionsApi DeploymentOptions => this;
   public IDesktopPreviewApi DesktopPreview => this;
   public IDeviceFileSystemApi DeviceFileSystem => this;
   public IDeviceGroupsApi DeviceGroups => this;
   public IDevicesApi Devices => this;
   public IDeviceTagsApi DeviceTags => this;
-  public IEffectivePermissionsApi EffectivePermissions => this;
   public IEffectiveUserPreferencesApi EffectiveUserPreferences => this;
   public IInstallerKeysApi InstallerKeys => this;
   public IInvitesApi Invites => this;

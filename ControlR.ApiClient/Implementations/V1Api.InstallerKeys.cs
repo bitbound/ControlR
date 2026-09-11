@@ -19,6 +19,15 @@ internal partial class V1Api
     });
   }
 
+  async Task<ApiResult> IInstallerKeysApi.DeleteInstallerKey(Guid keyId, Guid tenantId, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.V1.InstallerKeysEndpoint}/{keyId}?tenantId={tenantId}", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+    });
+  }
+
   async Task<ApiResult<IKDtos.InstallerKeysResponseDto>> IInstallerKeysApi.GetAllInstallerKeys(Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
@@ -36,15 +45,6 @@ internal partial class V1Api
       using var response = await _client.HttpClient.GetAsync($"{HttpConstants.V1.InstallerKeysEndpoint}/{keyId}/usages?tenantId={tenantId}", cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<IKDtos.InstallerKeyUsagesResponseDto>(cancellationToken);
-    });
-  }
-
-  async Task<ApiResult> IInstallerKeysApi.DeleteInstallerKey(Guid keyId, Guid tenantId, CancellationToken cancellationToken)
-  {
-    return await _client.ExecuteApiCall(async () =>
-    {
-      using var response = await _client.HttpClient.DeleteAsync($"{HttpConstants.V1.InstallerKeysEndpoint}/{keyId}?tenantId={tenantId}", cancellationToken);
-      await response.EnsureSuccessStatusCodeWithDetails();
     });
   }
 

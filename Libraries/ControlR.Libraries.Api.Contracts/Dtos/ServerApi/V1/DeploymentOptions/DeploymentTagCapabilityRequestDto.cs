@@ -1,4 +1,4 @@
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
 
 /// <summary>
 /// Requests whether the current principal may assign tags to a prospective deployment target.

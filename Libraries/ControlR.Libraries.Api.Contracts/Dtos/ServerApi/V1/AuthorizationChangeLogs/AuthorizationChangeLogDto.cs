@@ -1,4 +1,4 @@
-namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 
 public record AuthorizationChangeLogDto(
   Guid Id,

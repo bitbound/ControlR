@@ -1,14 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
+using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using DODtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Web.Server.Tests.V1;
 
-public class DeploymentOptionsControllerTests(ITestOutputHelper testOutput)
+public class DeploymentOptionsV1ControllerTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutput = testOutput;
 
@@ -57,10 +60,10 @@ public class DeploymentOptionsControllerTests(ITestOutputHelper testOutput)
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, installer.Id, installer.TenantId, "test"));
 
     var response = await httpClient.PostAsJsonAsync(
-      HttpConstants.Internal.DeploymentOptionsEndpoint + "/tag-capability",
-      new InternalDtos.DeploymentTagCapabilityRequestDto(null, null),
+      $"{HttpConstants.V1.DeploymentOptionsEndpoint}/tag-capability?tenantId={tenant.Id}",
+      new DODtos.DeploymentTagCapabilityRequestDto(null, null),
       TestContext.Current.CancellationToken);
-    var result = await response.Content.ReadFromJsonAsync<InternalDtos.DeploymentTagCapabilityResponseDto>(
+    var result = await response.Content.ReadFromJsonAsync<DODtos.DeploymentTagCapabilityResponseDto>(
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -93,17 +96,17 @@ public class DeploymentOptionsControllerTests(ITestOutputHelper testOutput)
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, user.Id, user.TenantId, "test"));
 
     var allowedResponse = await httpClient.PostAsJsonAsync(
-      HttpConstants.Internal.DeploymentOptionsEndpoint + "/tag-capability",
-      new InternalDtos.DeploymentTagCapabilityRequestDto(device.Id, null),
+      $"{HttpConstants.V1.DeploymentOptionsEndpoint}/tag-capability?tenantId={tenant.Id}",
+      new DODtos.DeploymentTagCapabilityRequestDto(device.Id, null),
       TestContext.Current.CancellationToken);
-    var allowed = await allowedResponse.Content.ReadFromJsonAsync<InternalDtos.DeploymentTagCapabilityResponseDto>(
+    var allowed = await allowedResponse.Content.ReadFromJsonAsync<DODtos.DeploymentTagCapabilityResponseDto>(
       TestContext.Current.CancellationToken);
 
     var deniedResponse = await httpClient.PostAsJsonAsync(
-      HttpConstants.Internal.DeploymentOptionsEndpoint + "/tag-capability",
-      new InternalDtos.DeploymentTagCapabilityRequestDto(Guid.NewGuid(), null),
+      $"{HttpConstants.V1.DeploymentOptionsEndpoint}/tag-capability?tenantId={tenant.Id}",
+      new DODtos.DeploymentTagCapabilityRequestDto(Guid.NewGuid(), null),
       TestContext.Current.CancellationToken);
-    var denied = await deniedResponse.Content.ReadFromJsonAsync<InternalDtos.DeploymentTagCapabilityResponseDto>(
+    var denied = await deniedResponse.Content.ReadFromJsonAsync<DODtos.DeploymentTagCapabilityResponseDto>(
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, allowedResponse.StatusCode);
@@ -136,15 +139,33 @@ public class DeploymentOptionsControllerTests(ITestOutputHelper testOutput)
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, user.Id, user.TenantId, "test"));
 
     var response = await httpClient.PostAsJsonAsync(
-      HttpConstants.Internal.DeploymentOptionsEndpoint + "/tag-capability",
-      new InternalDtos.DeploymentTagCapabilityRequestDto(null, null),
+      $"{HttpConstants.V1.DeploymentOptionsEndpoint}/tag-capability?tenantId={tenant.Id}",
+      new DODtos.DeploymentTagCapabilityRequestDto(null, null),
       TestContext.Current.CancellationToken);
-    var result = await response.Content.ReadFromJsonAsync<InternalDtos.DeploymentTagCapabilityResponseDto>(
+    var result = await response.Content.ReadFromJsonAsync<DODtos.DeploymentTagCapabilityResponseDto>(
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     Assert.NotNull(result);
     Assert.True(result.Allowed);
+  }
+
+  [Fact]
+  public async Task GetTagCapability_WithServerPrincipal_AllowsNewDevice()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var tenant = await scope.ServiceProvider.CreateTestTenant("Server Principal Tenant");
+
+    var controller = await scope.CreateControllerWithServerPrincipal<DeploymentOptionsController>();
+    var result = await controller.GetTagCapability(
+      tenant.Id,
+      new DODtos.DeploymentTagCapabilityRequestDto(null, null),
+      TestContext.Current.CancellationToken);
+
+    var response = Assert.IsType<DODtos.DeploymentTagCapabilityResponseDto>(
+      Assert.IsType<OkObjectResult>(result.Result!).Value);
+    Assert.True(response.Allowed);
   }
 
   [Fact]
@@ -172,9 +193,9 @@ public class DeploymentOptionsControllerTests(ITestOutputHelper testOutput)
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, installer.Id, installer.TenantId, "test"));
 
     var response = await httpClient.GetAsync(
-      HttpConstants.Internal.DeploymentOptionsEndpoint,
+      $"{HttpConstants.V1.DeploymentOptionsEndpoint}?tenantId={tenant.Id}",
       TestContext.Current.CancellationToken);
-    var options = await response.Content.ReadFromJsonAsync<InternalDtos.DeploymentOptionsDto>(
+    var options = await response.Content.ReadFromJsonAsync<DODtos.DeploymentOptionsDto>(
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -197,10 +218,36 @@ public class DeploymentOptionsControllerTests(ITestOutputHelper testOutput)
     using var httpClient = await CreatePatClient(testServer, new PrincipalDescriptor(PrincipalType.User, user.Id, user.TenantId, "test"));
 
     var response = await httpClient.GetAsync(
-      HttpConstants.Internal.DeploymentOptionsEndpoint,
+      $"{HttpConstants.V1.DeploymentOptionsEndpoint}?tenantId={tenant.Id}",
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task Get_WithServerPrincipal_ReturnsConfiguredDeploymentSettings()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var tenant = await scope.ServiceProvider.CreateTestTenant("Server Principal Tenant");
+
+    using (var settingsScope = testApp.CreateScope())
+    {
+      var settingsManager = settingsScope.ServiceProvider.GetRequiredService<Services.Settings.ITenantSettingsManager>();
+      var result = await settingsManager.SetSettings(
+        tenant.Id,
+        new InternalDtos.TenantSettingsDto(true, "server-instance", null),
+        TestContext.Current.CancellationToken);
+      Assert.True(result.IsSuccess);
+    }
+
+    var controller = await scope.CreateControllerWithServerPrincipal<DeploymentOptionsController>();
+    var response = await controller.Get(tenant.Id, TestContext.Current.CancellationToken);
+
+    var options = Assert.IsType<DODtos.DeploymentOptionsDto>(
+      Assert.IsType<OkObjectResult>(response.Result!).Value);
+    Assert.True(options.AppendInstanceId);
+    Assert.Equal("server-instance", options.InstanceId);
   }
 
   private static Data.Entities.PermissionAssignment CreateAssignment(

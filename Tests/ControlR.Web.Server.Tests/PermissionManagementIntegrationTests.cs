@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 
+using EPDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
+
 namespace ControlR.Web.Server.Tests;
 
 public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
@@ -235,14 +237,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       otherTenant.Id, $"other-{Guid.NewGuid():N}@t.local");
 
     // Querying that user from this tenant's context should return 404.
-    var queryResponse = await client.PostAsJsonAsync(
-      $"{HttpConstants.Internal.EffectivePermissionsEndpoint}/query",
-      new InternalDtos.EffectivePermissionQueryRequestDto(
-        PermissionPrincipalKind.User,
-        otherUser.Id,
-        PermissionNames.DeviceRead,
-        PermissionScopeKind.Tenant,
-        tenantId),
+    var queryResponse = await client.GetAsync(
+      EffectivePermissionUrl(PermissionPrincipalKind.User, otherUser.Id, PermissionNames.DeviceRead, tenantId),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.NotFound, queryResponse.StatusCode);
@@ -254,18 +250,12 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     var (testServer, client, tenantId, userId) = await CreateAuthenticatedServer();
     using var _ = testServer;
 
-    var queryResponse = await client.PostAsJsonAsync(
-      $"{HttpConstants.Internal.EffectivePermissionsEndpoint}/query",
-      new InternalDtos.EffectivePermissionQueryRequestDto(
-        PermissionPrincipalKind.User,
-        userId,
-        "tenant.permissions.read",
-        PermissionScopeKind.Tenant,
-        tenantId),
+    var queryResponse = await client.GetAsync(
+      EffectivePermissionUrl(PermissionPrincipalKind.User, userId, "tenant.permissions.read", tenantId),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-    var result = await queryResponse.Content.ReadFromJsonAsync<InternalDtos.EffectivePermissionQueryResponseDto>(
+    var result = await queryResponse.Content.ReadFromJsonAsync<EPDtos.EffectivePermissionQueryResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.True(result.IsAllowed);
@@ -299,18 +289,12 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, createAssignmentResponse.StatusCode);
 
-    var queryResponse = await client.PostAsJsonAsync(
-      $"{HttpConstants.Internal.EffectivePermissionsEndpoint}/query",
-      new InternalDtos.EffectivePermissionQueryRequestDto(
-        PermissionPrincipalKind.ServiceAccount,
-        account.Id,
-        PermissionNames.DeviceRead,
-        PermissionScopeKind.Tenant,
-        tenantId),
+    var queryResponse = await client.GetAsync(
+      EffectivePermissionUrl(PermissionPrincipalKind.ServiceAccount, account.Id, PermissionNames.DeviceRead, tenantId),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-    var result = await queryResponse.Content.ReadFromJsonAsync<InternalDtos.EffectivePermissionQueryResponseDto>(
+    var result = await queryResponse.Content.ReadFromJsonAsync<EPDtos.EffectivePermissionQueryResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.True(result.IsAllowed);
@@ -345,18 +329,12 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     Assert.Equal(HttpStatusCode.OK, createAssignmentResponse.StatusCode);
 
     // Query the group's effective permission — should be allowed.
-    var queryResponse = await client.PostAsJsonAsync(
-      $"{HttpConstants.Internal.EffectivePermissionsEndpoint}/query",
-      new InternalDtos.EffectivePermissionQueryRequestDto(
-        PermissionPrincipalKind.UserGroup,
-        group.Id,
-        PermissionNames.DeviceRead,
-        PermissionScopeKind.Tenant,
-        tenantId),
+    var queryResponse = await client.GetAsync(
+      EffectivePermissionUrl(PermissionPrincipalKind.UserGroup, group.Id, PermissionNames.DeviceRead, tenantId),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-    var result = await queryResponse.Content.ReadFromJsonAsync<InternalDtos.EffectivePermissionQueryResponseDto>(
+    var result = await queryResponse.Content.ReadFromJsonAsync<EPDtos.EffectivePermissionQueryResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.True(result.IsAllowed);
@@ -371,18 +349,12 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     var normalUser = await testServer.Services.CreateTestUser(
       tenantId, $"normal-{Guid.NewGuid():N}@t.local");
 
-    var queryResponse = await client.PostAsJsonAsync(
-      $"{HttpConstants.Internal.EffectivePermissionsEndpoint}/query",
-      new InternalDtos.EffectivePermissionQueryRequestDto(
-        PermissionPrincipalKind.User,
-        normalUser.Id,
-        "tenant.permissions.write",
-        PermissionScopeKind.Tenant,
-        tenantId),
+    var queryResponse = await client.GetAsync(
+      EffectivePermissionUrl(PermissionPrincipalKind.User, normalUser.Id, "tenant.permissions.write", tenantId),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-    var result = await queryResponse.Content.ReadFromJsonAsync<InternalDtos.EffectivePermissionQueryResponseDto>(
+    var result = await queryResponse.Content.ReadFromJsonAsync<EPDtos.EffectivePermissionQueryResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.False(result.IsAllowed);
@@ -394,14 +366,8 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     var (testServer, client, tenantId, _) = await CreateAuthenticatedServer();
     using var _ = testServer;
 
-    var queryResponse = await client.PostAsJsonAsync(
-      $"{HttpConstants.Internal.EffectivePermissionsEndpoint}/query",
-      new InternalDtos.EffectivePermissionQueryRequestDto(
-        PermissionPrincipalKind.PersonalAccessToken,
-        Guid.NewGuid(),
-        PermissionNames.DeviceRead,
-        PermissionScopeKind.Tenant,
-        tenantId),
+    var queryResponse = await client.GetAsync(
+      EffectivePermissionUrl(PermissionPrincipalKind.PersonalAccessToken, Guid.NewGuid(), PermissionNames.DeviceRead, tenantId),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, queryResponse.StatusCode);
@@ -905,6 +871,18 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     response.EnsureSuccessStatusCode();
     return await response.Content.ReadFromJsonAsync<InternalDtos.UserGroupDetailDto>(
       TestContext.Current.CancellationToken) ?? throw new InvalidOperationException("User group response was empty.");
+  }
+
+  private static string EffectivePermissionUrl(
+    PermissionPrincipalKind principalKind,
+    Guid principalId,
+    string permissionName,
+    Guid tenantId)
+  {
+    return $"{HttpConstants.V1.EffectivePermissionsEndpoint}/{principalId}" +
+           $"?tenantId={tenantId}&principalKind={principalKind}" +
+           $"&permissionName={Uri.EscapeDataString(permissionName)}" +
+           $"&scopeKind={PermissionScopeKind.Tenant}&scopeId={tenantId}";
   }
 
   private static async Task ReplaceGroupAssignment(
