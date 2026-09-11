@@ -2786,6 +2786,7 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter, returns 201, and answers delete with 204.",
         "parameters": [
           {
             "name": "api-version",
@@ -2851,6 +2852,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2858,12 +2860,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/personal-access-tokens?tenantId="
       },
       "get": {
         "tags": [
           "PersonalAccessTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "api-version",
@@ -2918,6 +2922,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2925,7 +2930,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/personal-access-tokens?tenantId="
       }
     },
     "/api/personal-access-tokens/{id}": {
@@ -2933,6 +2939,7 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/personal-access-tokens/{id}?tenantId=` instead. The replacement requires tenantId as a query parameter and answers with 204.",
         "parameters": [
           {
             "name": "id",
@@ -2970,6 +2977,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2977,12 +2985,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/personal-access-tokens/{id}?tenantId="
       },
       "put": {
         "tags": [
           "PersonalAccessTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/personal-access-tokens/{id}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "id",
@@ -3057,6 +3067,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3064,7 +3075,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/personal-access-tokens/{id}?tenantId="
       }
     },
     "/api/public-server-settings": {

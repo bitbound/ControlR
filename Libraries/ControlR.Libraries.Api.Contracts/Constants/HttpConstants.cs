@@ -46,6 +46,7 @@ public static class HttpConstants
     public const string InstallerKeysEndpoint = "/api/v1/installer-keys";
     public const string LogonTokensEndpoint = "/api/v1/logon-tokens";
     public const string PermissionAssignmentsEndpoint = "/api/v1/permission-assignments";
+    public const string PersonalAccessTokensEndpoint = "/api/v1/personal-access-tokens";
     public const string ServerServiceAccountsEndpoint = "/api/v1/server-service-accounts";
     public const string TagsEndpoint = "/api/v1/tags";
     public const string TenantsEndpoint = "/api/v1/tenants";

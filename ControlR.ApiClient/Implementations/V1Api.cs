@@ -14,6 +14,7 @@ internal partial class V1Api(ControlrApi client) :
   IInstallerKeysApi,
   ILogonTokensApi,
   IPermissionAssignmentsApi,
+  IPersonalAccessTokensApi,
   IServerServiceAccountsApi,
   ITagsApi,
   ITenantServiceAccountsApi,
@@ -33,6 +34,7 @@ internal partial class V1Api(ControlrApi client) :
   public IInstallerKeysApi InstallerKeys => this;
   public ILogonTokensApi LogonTokens => this;
   public IPermissionAssignmentsApi PermissionAssignments => this;
+  public IPersonalAccessTokensApi PersonalAccessTokens => this;
   public IServerServiceAccountsApi ServerServiceAccounts => this;
   public ITagsApi Tags => this;
   public ITenantsApi Tenants => this;

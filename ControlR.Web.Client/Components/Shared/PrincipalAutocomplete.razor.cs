@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
 using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
 
 namespace ControlR.Web.Client.Components.Shared;
@@ -50,7 +51,7 @@ public partial class PrincipalAutocomplete
     await base.OnParametersSetAsync();
   }
 
-  private static string FormatPatDisplayName(PersonalAccessTokenResponseDto token)
+  private static string FormatPatDisplayName(PATDtos.PersonalAccessTokenResponseDto token)
   {
     var lastUsed = token.LastUsed is { } used ? used.ToLocalTime().ToString("d") : "Never";
     return $"{token.Name}  (Last Used: {lastUsed}  |  Token ID: {token.Id.ToString()[..8]}...)";
@@ -88,13 +89,18 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolvePersonalAccessToken(Guid id)
   {
-    var result = await ControlrApi.Internal.PersonalAccessTokens.GetPersonalAccessTokens();
+    if (await GetTenantId() is not { } tenantId)
+    {
+      return null;
+    }
+
+    var result = await ControlrApi.V1.PersonalAccessTokens.GetPersonalAccessTokens(tenantId);
     if (!result.IsSuccess)
     {
       return null;
     }
 
-    var match = result.Value.FirstOrDefault(x => x.Id == id);
+    var match = result.Value.Items.FirstOrDefault(x => x.Id == id);
     return match is null ? null : new PrincipalOption(match.Id, FormatPatDisplayName(match), PermissionPrincipalKind.PersonalAccessToken);
   }
 
@@ -206,13 +212,18 @@ public partial class PrincipalAutocomplete
 
   private async Task<IEnumerable<PrincipalOption>> SearchPersonalAccessTokens(string query, CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.PersonalAccessTokens.GetPersonalAccessTokens(cancellationToken);
+    if (await GetTenantId() is not { } tenantId)
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.PersonalAccessTokens.GetPersonalAccessTokens(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return result.Value
+    return result.Value.Items
       .Where(x => Matches(x.Name, query))
       .Select(x => new PrincipalOption(x.Id, FormatPatDisplayName(x), PermissionPrincipalKind.PersonalAccessToken));
   }

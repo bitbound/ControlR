@@ -84,10 +84,6 @@ public partial class InternalV1ParityGuardrailTests
     ["GET /api/user-server-settings/file-upload-max-size"] = "Client-environment capability probe.",
 
     // Pending V1 twins - migration packages prune these entries when the twin lands.
-    ["DELETE /api/personal-access-tokens/{}"] = "Planned V1 twin (self-service personal access tokens).",
-    ["GET /api/personal-access-tokens"] = "Planned V1 twin (self-service personal access tokens).",
-    ["POST /api/personal-access-tokens"] = "Planned V1 twin (self-service personal access tokens).",
-    ["PUT /api/personal-access-tokens/{}"] = "Planned V1 twin (self-service personal access tokens).",
     ["DELETE /api/invites/{}"] = "Planned V1 twin (invites; accept may stay internal if its shape proves irregular).",
     ["GET /api/invites"] = "Planned V1 twin (invites).",
     ["POST /api/invites"] = "Planned V1 twin (invites).",

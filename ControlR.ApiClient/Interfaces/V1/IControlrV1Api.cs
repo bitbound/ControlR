@@ -12,6 +12,7 @@ public interface IControlrV1Api
   IInstallerKeysApi InstallerKeys { get; }
   ILogonTokensApi LogonTokens { get; }
   IPermissionAssignmentsApi PermissionAssignments { get; }
+  IPersonalAccessTokensApi PersonalAccessTokens { get; }
   IServerServiceAccountsApi ServerServiceAccounts { get; }
   ITagsApi Tags { get; }
   ITenantsApi Tenants { get; }
