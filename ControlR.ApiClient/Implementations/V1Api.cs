@@ -12,6 +12,7 @@ internal partial class V1Api(ControlrApi client) :
   IDevicesApi,
   IEffectivePermissionsApi,
   IInstallerKeysApi,
+  IInvitesApi,
   ILogonTokensApi,
   IPermissionAssignmentsApi,
   IPersonalAccessTokensApi,
@@ -32,6 +33,7 @@ internal partial class V1Api(ControlrApi client) :
   public IDeviceTagsApi DeviceTags => this;
   public IEffectivePermissionsApi EffectivePermissions => this;
   public IInstallerKeysApi InstallerKeys => this;
+  public IInvitesApi Invites => this;
   public ILogonTokensApi LogonTokens => this;
   public IPermissionAssignmentsApi PermissionAssignments => this;
   public IPersonalAccessTokensApi PersonalAccessTokens => this;

@@ -2471,6 +2471,7 @@
         "tags": [
           "Invites"
         ],
+        "description": "Deprecated. Use `/api/v1/invites?tenantId={tenantId}` instead. Use POST /api/v1/invites with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -2536,6 +2537,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2543,12 +2545,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/invites?tenantId={tenantId}"
       },
       "get": {
         "tags": [
           "Invites"
         ],
+        "description": "Deprecated. Use `/api/v1/invites?tenantId={tenantId}` instead. Use GET /api/v1/invites with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -2603,6 +2607,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2610,7 +2615,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/invites?tenantId={tenantId}"
       }
     },
     "/api/invites/{inviteId}": {
@@ -2618,6 +2624,7 @@
         "tags": [
           "Invites"
         ],
+        "description": "Deprecated. Use `/api/v1/invites/{inviteId}?tenantId={tenantId}` instead. Use DELETE /api/v1/invites/{inviteId} with an explicit tenantId.",
         "parameters": [
           {
             "name": "inviteId",
@@ -2655,6 +2662,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2662,7 +2670,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/invites/{inviteId}?tenantId={tenantId}"
       }
     },
     "/api/logon-tokens": {

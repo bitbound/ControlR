@@ -10,6 +10,7 @@ public interface IControlrV1Api
   IDeviceTagsApi DeviceTags { get; }
   IEffectivePermissionsApi EffectivePermissions { get; }
   IInstallerKeysApi InstallerKeys { get; }
+  IInvitesApi Invites { get; }
   ILogonTokensApi LogonTokens { get; }
   IPermissionAssignmentsApi PermissionAssignments { get; }
   IPersonalAccessTokensApi PersonalAccessTokens { get; }

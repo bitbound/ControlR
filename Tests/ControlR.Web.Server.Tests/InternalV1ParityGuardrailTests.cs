@@ -82,12 +82,9 @@ public partial class InternalV1ParityGuardrailTests
     ["POST /api/test-email"] = "SMTP connectivity test action.",
     ["GET /api/user-server-settings/decommission-status"] = "Client-environment capability probe.",
     ["GET /api/user-server-settings/file-upload-max-size"] = "Client-environment capability probe.",
+    ["POST /api/invites/accept"] = "Anonymous token-bearing accept ceremony; the activation code in the invite URL is the credential, not a principal.",
 
     // Pending V1 twins - migration packages prune these entries when the twin lands.
-    ["DELETE /api/invites/{}"] = "Planned V1 twin (invites; accept may stay internal if its shape proves irregular).",
-    ["GET /api/invites"] = "Planned V1 twin (invites).",
-    ["POST /api/invites"] = "Planned V1 twin (invites).",
-    ["POST /api/invites/accept"] = "Planned V1 twin (invites; token-bearing accept may remain an irregular-shape keeper).",
     ["DELETE /api/tenant-settings/{}"] = "Planned V1 twin (tenant settings KV).",
     ["GET /api/tenant-settings"] = "Planned V1 twin (tenant settings KV).",
     ["GET /api/tenant-settings/{}"] = "Planned V1 twin (tenant settings KV).",

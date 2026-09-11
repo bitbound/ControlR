@@ -1,30 +1,42 @@
-﻿namespace ControlR.Web.Client.StateManagement.Stores;
+﻿using Microsoft.AspNetCore.Components.Authorization;
+using InviteDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites;
 
-public interface IInviteStore : IStoreBase<TenantInviteResponseDto>
+namespace ControlR.Web.Client.StateManagement.Stores;
+
+public interface IInviteStore : IStoreBase<InviteDtos.InviteResponseDto>
 { }
 
 public class InviteStore(
   IControlrApi controlrApi,
+  AuthenticationStateProvider authState,
   ISnackbar snackbar,
-  ILogger<StoreBase<TenantInviteResponseDto>> logger)
-  : StoreBase<TenantInviteResponseDto>(controlrApi, snackbar, logger), IInviteStore
+  ILogger<StoreBase<InviteDtos.InviteResponseDto>> logger)
+  : StoreBase<InviteDtos.InviteResponseDto>(controlrApi, snackbar, logger), IInviteStore
 {
+  private readonly AuthenticationStateProvider _authState = authState;
   private readonly IControlrApi _controlrApi = controlrApi;
 
-  protected override Guid GetItemId(TenantInviteResponseDto dto)
+  protected override Guid GetItemId(InviteDtos.InviteResponseDto dto)
   {
     return dto.Id;
   }
 
   protected override async Task RefreshImpl()
   {
-    var getResult = await _controlrApi.Internal.Invites.GetPendingTenantInvites();
+    var authClaim = await _authState.GetAuthenticationStateAsync();
+    if (!authClaim.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    var getResult = await _controlrApi.V1.Invites.GetInvites(tenantId);
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);
       return;
     }
 
-    SetItems(getResult.Value);
+    SetItems(getResult.Value.Items);
   }
 }
