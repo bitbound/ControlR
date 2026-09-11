@@ -12,6 +12,14 @@
                          ResetValueOnEmptyText="true" Dense="true" MaxItems="50" />
       </MudItem>
       <MudItem xs="12" sm="6" md="3">
+        <MudSelect T="string" @bind-Value="_actorTypeFilter" Label="Actor Type" Clearable="true" Dense="true">
+          @foreach (var actorType in ChangeLogVocabulary.ActorTypes)
+          {
+            <MudSelectItem T="string" Value="actorType">@actorType</MudSelectItem>
+          }
+        </MudSelect>
+      </MudItem>
+      <MudItem xs="12" sm="6" md="3">
         <MudTextField @bind-Value="_searchText" Label="Actor / Target ID"
                       Placeholder="GUID or partial ID" Immediate="true" />
       </MudItem>

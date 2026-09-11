@@ -3,6 +3,7 @@ namespace ControlR.Web.Client.Components.Shared;
 public partial class AuthorizationLogsPanel
 {
   private string? _actionTypeFilter;
+  private string? _actorTypeFilter;
   private AuthorizationChangeLogDto? _expandedItem;
   private DateTime? _fromDate;
   private bool _isLoading;
@@ -69,6 +70,7 @@ public partial class AuthorizationLogsPanel
         page: state.Page,
         pageSize: state.PageSize,
         actionType: string.IsNullOrWhiteSpace(_actionTypeFilter) ? null : _actionTypeFilter.Trim(),
+        actorType: string.IsNullOrWhiteSpace(_actorTypeFilter) ? null : _actorTypeFilter.Trim(),
         targetType: string.IsNullOrWhiteSpace(_targetTypeFilter) ? null : _targetTypeFilter.Trim(),
         searchText: string.IsNullOrWhiteSpace(_searchText) ? null : _searchText.Trim(),
         tenantId: _selectedTenantId,

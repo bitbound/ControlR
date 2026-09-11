@@ -8,6 +8,8 @@ public class AuthorizationChangeLogSearchQueryDto
 {
   public string? ActionType { get; set; }
 
+  public string? ActorType { get; set; }
+
   public DateTimeOffset? From { get; set; }
 
   public int Page { get; set; }

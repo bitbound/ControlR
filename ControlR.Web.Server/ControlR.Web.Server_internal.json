@@ -392,6 +392,13 @@
             }
           },
           {
+            "name": "ActorType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "From",
             "in": "query",
             "schema": {
