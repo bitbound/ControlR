@@ -133,7 +133,7 @@ jobs:
           case "$RID" in
             linux-x64)   LABEL="linux-amd64" ;;
             linux-arm64) LABEL="linux-arm64" ;;
-            win-x64)     LABEL="win-amd64" ;;
+            win-x64)     LABEL="win-x64" ;;
             *)
               echo "::error::Unsupported server runtime '$RID'. Expected linux-x64, linux-arm64, or win-x64."
               exit 1
