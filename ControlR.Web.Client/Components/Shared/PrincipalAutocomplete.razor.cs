@@ -102,13 +102,13 @@ public partial class PrincipalAutocomplete
   {
     if (AccountKind == ServiceAccountKind.Server)
     {
-      var serverResult = await ControlrApi.Internal.ServerServiceAccounts.GetAll();
+      var serverResult = await ControlrApi.V1.ServerServiceAccounts.GetAll();
       if (!serverResult.IsSuccess)
       {
         return null;
       }
 
-      var serverMatch = serverResult.Value.FirstOrDefault(x => x.Id == id);
+      var serverMatch = serverResult.Value.Items.FirstOrDefault(x => x.Id == id);
       return serverMatch is null
         ? null
         : new PrincipalOption(
@@ -192,13 +192,13 @@ public partial class PrincipalAutocomplete
   {
     if (AccountKind == ServiceAccountKind.Server)
     {
-      var serverResult = await ControlrApi.Internal.ServerServiceAccounts.GetAll(cancellationToken);
+      var serverResult = await ControlrApi.V1.ServerServiceAccounts.GetAll(cancellationToken);
       if (!serverResult.IsSuccess)
       {
         return [];
       }
 
-      return serverResult.Value
+      return serverResult.Value.Items
         .Where(x => Matches(x.Name, query))
         .Select(x => new PrincipalOption(
           x.Id,

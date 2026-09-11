@@ -24,7 +24,6 @@ internal partial class InternalApi(ControlrApi client) :
   IServerAlertApi,
   IServerLogsApi,
   IServerStatsApi,
-  IServerServiceAccountsApi,
   ITenantServiceAccountsApi,
   ITagsApi,
   ITenantsApi,
@@ -58,7 +57,6 @@ internal partial class InternalApi(ControlrApi client) :
   public IPublicServerSettingsApi PublicServerSettings => this;
   public IServerAlertApi ServerAlert => this;
   public IServerLogsApi ServerLogs => this;
-  public IServerServiceAccountsApi ServerServiceAccounts => this;
   public IServerStatsApi ServerStats => this;
   public ITagsApi Tags => this;
   public ITenantsApi Tenants => this;
