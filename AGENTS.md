@@ -94,6 +94,12 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
   - ❌ `V1DevicesController.cs` — version noise in the class name
 - Only add controllers to a new version when stakeholders request them. Don't pre-build.
 
+### V1-first rule
+
+- New endpoints go to `Api/V1` by default. Standard CRUD shape means ID-addressed resources, required `tenantId` (query param, or path segment for tenant service accounts) on collection/create operations, and plain envelopes.
+- An `Api/Internal` endpoint exists only because its shape is irregular (streaming, live-session, interactive, auth/session flow, pre-auth probe, agent negotiation). It must name that constraint in `InternalV1ParityGuardrailTests.IrregularShapeAllowList`.
+- The guardrail test fails when an Internal operation is neither deprecated, V1-twinned (same verb + path template under `/api/v1`), nor allow-listed. Migration packages prune their entries as twins land.
+
 ## Cross-Platform
 
 - Platform implementations in `ControlR.Agent.Common` under `Services.Windows/`, `Services.Linux/`, `Services.Mac/`.
