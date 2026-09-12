@@ -80,7 +80,6 @@ public class RoleBackfillMigrationTests(ITestOutputHelper output)
     // Server-scoped subset of the Server Administrator preset (server-only permissions).
     var expectedServer = new[]
     {
-      PermissionNames.ServerAlertsRead,
       PermissionNames.ServerAuthorizationLogsRead,
       PermissionNames.ServerPermissionsRead,
       PermissionNames.ServerPermissionsWrite,

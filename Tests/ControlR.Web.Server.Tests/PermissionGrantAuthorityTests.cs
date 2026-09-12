@@ -199,7 +199,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
       PermissionPrincipalKind.User,
       owner.Id,
-      PermissionNames.ServerAlertsRead,
+      PermissionNames.ServerTelemetryRead,
       PermissionScopeKind.Server,
       null,
       tenant.Id,
@@ -212,7 +212,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       new InternalDtos.CreatePersonalAccessTokenRequestDto(
         "Server admin PAT",
         PersonalAccessTokenPermissionMode.Restricted,
-        [new InternalDtos.CredentialScopeDto(PermissionNames.ServerAlertsRead, PermissionScopeKind.Server, null)]),
+        [new InternalDtos.CredentialScopeDto(PermissionNames.ServerTelemetryRead, PermissionScopeKind.Server, null)]),
       owner.Id,
       Actor(owner.Id, tenant.Id));
 
@@ -250,7 +250,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       new InternalDtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.ServiceAccount,
         accountId,
-        PermissionNames.ServerAlertsRead,
+        PermissionNames.ServerTelemetryRead,
         PermissionEffect.Allow,
         PermissionScopeKind.Server,
         null,
@@ -957,7 +957,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       new InternalDtos.CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         target.Id,
-        PermissionNames.ServerAlertsRead,
+        PermissionNames.ServerTelemetryRead,
         PermissionEffect.Allow,
         PermissionScopeKind.Server,
         null,
@@ -1169,7 +1169,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     var serverRow = PermissionAssignment.CreateGrant(
       PermissionPrincipalKind.User,
       target.Id,
-      PermissionNames.ServerAlertsRead,
+      PermissionNames.ServerTelemetryRead,
       PermissionScopeKind.Server,
       null,
       tenant.Id,
@@ -1209,7 +1209,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
 
     Assert.Equal(2, remaining.Count);
     Assert.Contains(remaining, assignment => assignment.PermissionName == PermissionNames.DeviceLogsRead);
-    Assert.Contains(remaining, assignment => assignment.PermissionName == PermissionNames.ServerAlertsRead);
+    Assert.Contains(remaining, assignment => assignment.PermissionName == PermissionNames.ServerTelemetryRead);
   }
 
   [Fact]
@@ -1249,7 +1249,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     var serverRow = PermissionAssignment.CreateGrant(
       PermissionPrincipalKind.User,
       target.Id,
-      PermissionNames.ServerAlertsRead,
+      PermissionNames.ServerTelemetryRead,
       PermissionScopeKind.Server,
       null,
       tenant.Id,
@@ -1476,7 +1476,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       var assignment = PermissionAssignment.CreateGrant(
         PermissionPrincipalKind.User,
         target.Id,
-        PermissionNames.ServerAlertsRead,
+        PermissionNames.ServerTelemetryRead,
         PermissionScopeKind.Server,
         null,
         tenant.Id,
@@ -1515,7 +1515,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     var assignment = PermissionAssignment.CreateGrant(
       PermissionPrincipalKind.User,
       target.Id,
-      PermissionNames.ServerAlertsRead,
+      PermissionNames.ServerTelemetryRead,
       PermissionScopeKind.Tenant,
       tenant.Id,
       tenant.Id,
@@ -1529,7 +1529,7 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     var result = await manager.Update(
       assignment.Id,
       new InternalDtos.UpdatePermissionAssignmentRequestDto(
-        PermissionNames.ServerAlertsRead,
+        PermissionNames.ServerTelemetryRead,
         PermissionEffect.Allow,
         PermissionScopeKind.Server,
         null,

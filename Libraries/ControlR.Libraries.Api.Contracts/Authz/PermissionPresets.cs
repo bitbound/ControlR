@@ -27,7 +27,6 @@ public static class PermissionPresets
     {
       [ServerAdministrator] =
       [
-        PermissionNames.ServerAlertsRead,
         PermissionNames.ServerAuthorizationLogsRead,
         PermissionNames.ServerTenantsDelete,
         PermissionNames.ServerTenantsRead,

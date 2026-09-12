@@ -48,7 +48,7 @@ public class PermissionRuleFactoryTests
     var tenantId = Guid.NewGuid();
     var assignments = new[]
     {
-      CreateScopedAssignment(tenantId, PermissionNames.ServerAlertsRead, PermissionScopeKind.Server, null)
+      CreateScopedAssignment(tenantId, PermissionNames.ServerTelemetryRead, PermissionScopeKind.Server, null)
     };
 
     var rules = PermissionRuleFactory.CreateDirectRules(assignments, tenantId);

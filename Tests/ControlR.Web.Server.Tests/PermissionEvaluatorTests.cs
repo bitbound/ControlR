@@ -1404,7 +1404,7 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task PatScopes_WhenZeroRows_AllowsServerAlertsRead_WhenOwnerHasIt()
+  public async Task PatScopes_WhenZeroRows_AllowsServerTelemetryRead_WhenOwnerHasIt()
   {
     // An inherit-owner PAT with no explicit scope rows acts as its owning user, so it inherits
     // the user's server-level permissions (including server topic subscriptions).
@@ -1419,7 +1419,7 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
     {
       PrincipalKind = PermissionPrincipalKind.User,
       PrincipalId = user.Id,
-      PermissionName = PermissionNames.ServerAlertsRead,
+      PermissionName = PermissionNames.ServerTelemetryRead,
       Effect = PermissionEffect.Allow,
       ScopeKind = PermissionScopeKind.Server,
       ScopeId = null,
@@ -1433,7 +1433,7 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
       credentialType: CredentialType.PersonalAccessToken);
     var serverResource = new ResourceDescriptor(PermissionScopeKind.Server);
 
-    var result = await evaluator.Evaluate(principal, PermissionNames.ServerAlertsRead, serverResource, TestContext.Current.CancellationToken);
+    var result = await evaluator.Evaluate(principal, PermissionNames.ServerTelemetryRead, serverResource, TestContext.Current.CancellationToken);
 
     Assert.True(result.Allowed);
   }
@@ -1475,9 +1475,9 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task PatScopes_WithDeviceRow_DeniesServerAlertsRead_EvenWhenOwnerHasIt()
+  public async Task PatScopes_WithDeviceRow_DeniesServerTelemetryRead_EvenWhenOwnerHasIt()
   {
-    // The owning user holds ServerAlertsRead at server scope, but the PAT has an explicit
+    // The owning user holds ServerTelemetryRead at server scope, but the PAT has an explicit
     // device-scoped row. ViewerHub.JoinServerTopics relies on Evaluate (not the name-level
     // projection) so the scoped credential cannot subscribe to server topics.
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -1490,7 +1490,7 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
     {
       PrincipalKind = PermissionPrincipalKind.User,
       PrincipalId = user.Id,
-      PermissionName = PermissionNames.ServerAlertsRead,
+      PermissionName = PermissionNames.ServerTelemetryRead,
       Effect = PermissionEffect.Allow,
       ScopeKind = PermissionScopeKind.Server,
       ScopeId = null,
@@ -1528,7 +1528,7 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
       credentialType: CredentialType.PersonalAccessToken);
     var serverResource = new ResourceDescriptor(PermissionScopeKind.Server);
 
-    var result = await evaluator.Evaluate(principal, PermissionNames.ServerAlertsRead, serverResource, TestContext.Current.CancellationToken);
+    var result = await evaluator.Evaluate(principal, PermissionNames.ServerTelemetryRead, serverResource, TestContext.Current.CancellationToken);
 
     Assert.False(result.Allowed);
   }

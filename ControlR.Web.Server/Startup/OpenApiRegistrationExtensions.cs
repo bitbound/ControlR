@@ -1,4 +1,6 @@
 using Asp.Versioning;
+using ControlR.Web.Server.Api.V1;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OpenApi;
 
 namespace ControlR.Web.Server.Startup;
@@ -14,9 +16,9 @@ public static class OpenApiRegistrationExtensions
         options.DefaultApiVersion = new ApiVersion(1, 0);
         options.ReportApiVersions = true;
       })
-      .AddApiExplorer(options => 
+      .AddApiExplorer(options =>
       {
-        options.GroupNameFormat = "'v'VVV"; 
+        options.GroupNameFormat = "'v'VVV";
       })
       .AddMvc()
       .AddOpenApi(options =>
@@ -33,6 +35,12 @@ public static class OpenApiRegistrationExtensions
             throw new InvalidOperationException($"Unknown API version/group: {options.Description.GroupName}");
         }
       });
+
+    // The empty-tenant-id check is scoped to the V1 controllers, so it is registered as an
+    // action-model convention rather than a global filter, which would also reach the deprecated
+    // internal endpoints and change their shipped 403.
+    builder.Services.Configure<MvcOptions>(options =>
+      options.Conventions.Add(new RequireTenantIdActionConvention()));
 
     builder.Services.AddOpenApi("internal", options =>
     {
