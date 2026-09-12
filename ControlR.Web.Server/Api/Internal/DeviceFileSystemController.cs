@@ -1,6 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Web.Server.Services.DeviceFileSystem;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -14,14 +15,13 @@ namespace ControlR.Web.Server.Api.Internal;
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class DeviceFileSystemController : ControllerBase
 {
+  private const string DeviceOfflineMessage = "Device is not currently online.";
+
   [HttpPost("create-directory/{deviceId:guid}")]
   public async Task<IActionResult> CreateDirectory(
     [FromRoute] Guid deviceId,
     [FromBody] InternalDtos.CreateDirectoryRequestDto request,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileSystemController> logger,
+    [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(request.ParentPath) || string.IsNullOrWhiteSpace(request.DirectoryName))
@@ -29,63 +29,26 @@ public class DeviceFileSystemController : ControllerBase
       return BadRequest("Parent path and directory name are required.");
     }
 
-    var device = await appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var outcome = await deviceFileSystem.CreateDirectory(User, deviceId, request, cancellationToken);
 
-    if (device is null)
+    // This endpoint has answered 204 as soon as the request reached the agent, whether or not the
+    // agent accepted it. The rejection the service reports is left unused here deliberately; making
+    // it mean something is a behavior change that does not belong in an extraction.
+    return outcome.Failure switch
     {
-      logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return NotFound();
-    }
-
-    var authResult = await authorizationService.AuthorizeAsync(
-      User,
-      device,
-      DeviceResourcePolicies.FileSystemWrite);
-
-    if (!authResult.Succeeded)
-    {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        User.Identity?.Name, deviceId);
-      return Forbid();
-    }
-
-    if (!device.IsOnline)
-    {
-      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
-      return BadRequest("Device is not currently online.");
-    }
-
-    var createDirectoryRequest = new CreateDirectoryHubDto(request.ParentPath, request.DirectoryName);
-
-    try
-    {
-      await agentHub.Clients
-        .Client(device.ConnectionId)
-        .CreateDirectory(createDirectoryRequest);
-
-      logger.LogInformation("Directory creation requested for {DirectoryName} in {ParentPath} on device {DeviceId}",
-        request.DirectoryName, request.ParentPath, deviceId);
-
-      return NoContent();
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error creating directory {DirectoryName} in {ParentPath} on device {DeviceId}",
-        request.DirectoryName, request.ParentPath, deviceId);
-      return StatusCode(500, "An error occurred during directory creation.");
-    }
+      FileSystemFailure.DeviceNotFound => NotFound(),
+      FileSystemFailure.Forbidden => Forbid(),
+      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.Cancelled or FileSystemFailure.Unexpected => StatusCode(500, "An error occurred during directory creation."),
+      _ => NoContent(),
+    };
   }
 
   [HttpDelete("delete-path/{deviceId:guid}")]
   public async Task<IActionResult> DeletePath(
     [FromRoute] Guid deviceId,
     [FromBody] InternalDtos.FileDeleteRequestDto request,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileSystemController> logger,
+    [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(request.FilePath))
@@ -93,53 +56,19 @@ public class DeviceFileSystemController : ControllerBase
       return BadRequest("File path is required.");
     }
 
-    var device = await appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var outcome = await deviceFileSystem.DeletePath(User, deviceId, request, cancellationToken);
 
-    if (device is null)
+    // As with directory creation, the agent's verdict is discarded: what this endpoint reports is the
+    // deletion it requested. The payload is an anonymous type, so its property order is the response
+    // body's key order.
+    return outcome.Failure switch
     {
-      logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return NotFound();
-    }
-
-    var authResult = await authorizationService.AuthorizeAsync(
-      User,
-      device,
-      DeviceResourcePolicies.FileSystemDelete);
-
-    if (!authResult.Succeeded)
-    {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        User.Identity?.Name, deviceId);
-      return Forbid();
-    }
-
-    if (!device.IsOnline)
-    {
-      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
-      return BadRequest("Device is not currently online.");
-    }
-
-    var deleteRequest = new FileDeleteHubDto(request.FilePath);
-
-    try
-    {
-      await agentHub.Clients
-        .Client(device.ConnectionId)
-        .DeleteFile(deleteRequest);
-
-      logger.LogInformation("File deletion requested for {FilePath} on device {DeviceId}",
-        request.FilePath, deviceId);
-
-      return Ok(new { Message = "File deletion completed", request.FilePath });
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error deleting file {FilePath} on device {DeviceId}",
-        request.FilePath, deviceId);
-      return StatusCode(500, "An error occurred during file deletion.");
-    }
+      FileSystemFailure.DeviceNotFound => NotFound(),
+      FileSystemFailure.Forbidden => Forbid(),
+      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.Cancelled or FileSystemFailure.Unexpected => StatusCode(500, "An error occurred during file deletion."),
+      _ => Ok(new { Message = "File deletion completed", request.FilePath }),
+    };
   }
 
   [HttpPost("download-archive/{deviceId:guid}")]
@@ -287,76 +216,21 @@ public class DeviceFileSystemController : ControllerBase
   [HttpPost("contents")]
   public async Task<IActionResult> GetDirectoryContents(
     [FromBody] InternalDtos.GetDirectoryContentsRequestDto request,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-    [FromServices] IHubStreamStore hubStreamStore,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileSystemController> logger,
+    [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
-    var device = await appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+    var outcome = await deviceFileSystem.GetDirectoryContents(User, request, cancellationToken);
 
-    if (device is null)
+    return outcome.Failure switch
     {
-      logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
-      return NotFound();
-    }
-
-    var authResult = await authorizationService.AuthorizeAsync(
-      User,
-      device,
-      DeviceResourcePolicies.FileSystemRead);
-
-    if (!authResult.Succeeded)
-    {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        User.Identity?.Name, request.DeviceId);
-      return Forbid();
-    }
-
-    if (!device.IsOnline)
-    {
-      logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
-      return BadRequest("Device is not currently online.");
-    }
-
-    var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<InternalDtos.FileSystemEntryDto[]>(streamId);
-    try
-    {
-      var streamRequest = new DirectoryContentsStreamRequestHubDto(streamId, request.DeviceId, request.DirectoryPath);
-      var result = await agentHub.Clients
-        .Client(device.ConnectionId)
-        .StreamDirectoryContents(streamRequest);
-
-      if (!result.IsSuccess)
-      {
-        logger.LogWarning("Failed to initiate directory contents stream for device {DeviceId} path {DirectoryPath}: {Reason}",
-          request.DeviceId, request.DirectoryPath, result.Reason);
-        return BadRequest(result.Reason);
-      }
-
-      var entries = new List<InternalDtos.FileSystemEntryDto>();
-      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
-      {
-        entries.AddRange(chunk);
-      }
-
-      var directoryExists = signaler.Metadata is bool b && b;
-      return Ok(new InternalDtos.GetDirectoryContentsResponseDto([.. entries], directoryExists));
-    }
-    catch (OperationCanceledException)
-    {
-      logger.LogWarning("Directory contents stream canceled/timed out for device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
-      return StatusCode(StatusCodes.Status408RequestTimeout);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error while streaming directory contents for device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
-      return StatusCode(500, "An error occurred while retrieving directory contents.");
-    }
+      FileSystemFailure.DeviceNotFound => NotFound(),
+      FileSystemFailure.Forbidden => Forbid(),
+      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.HubRejected => BadRequest(outcome.Reason),
+      FileSystemFailure.Cancelled => StatusCode(StatusCodes.Status408RequestTimeout),
+      FileSystemFailure.Unexpected => StatusCode(500, "An error occurred while retrieving directory contents."),
+      _ => Ok(outcome.Value),
+    };
   }
 
   [HttpGet("logs/{deviceId:guid}/contents")]
@@ -456,256 +330,89 @@ public class DeviceFileSystemController : ControllerBase
   [HttpGet("logs/{deviceId:guid}")]
   public async Task<IActionResult> GetLogFiles(
     [FromRoute] Guid deviceId,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileSystemController> logger,
+    [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
-    var device = await appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var outcome = await deviceFileSystem.GetLogFiles(User, deviceId, cancellationToken);
 
-    if (device is null)
+    return outcome.Failure switch
     {
-      logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return NotFound();
-    }
-
-    var authResult = await authorizationService.AuthorizeAsync(
-      User,
-      device,
-      DeviceResourcePolicies.LogsRead);
-
-    if (!authResult.Succeeded)
-    {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        User.Identity?.Name, deviceId);
-      return Forbid();
-    }
-
-    if (!device.IsOnline)
-    {
-      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
-      return BadRequest("Device is not currently online.");
-    }
-
-    try
-    {
-      var result = await agentHub
-        .Clients
-        .Client(device.ConnectionId)
-        .GetLogFiles();
-
-      if (!result.IsSuccess)
-      {
-        logger.LogError("Get log files request failed for device {DeviceId}: {Reason}",
-          deviceId, result.Reason);
-        return Problem(
-          detail: result.Reason,
-          statusCode: StatusCodes.Status500InternalServerError,
-          title: "A failure occurred on the remote device.");
-      }
-
-      return Ok(result.Value);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error getting log files from device {DeviceId}", deviceId);
-      return Problem(
+      FileSystemFailure.DeviceNotFound => NotFound(),
+      FileSystemFailure.Forbidden => Forbid(),
+      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.HubRejected => Problem(
+        detail: outcome.Reason,
+        statusCode: StatusCodes.Status500InternalServerError,
+        title: "A failure occurred on the remote device."),
+      FileSystemFailure.Cancelled or FileSystemFailure.Unexpected => Problem(
         detail: "An error occurred while retrieving log files.",
         statusCode: StatusCodes.Status500InternalServerError,
-        title: "Error retrieving log files.");
-    }
+        title: "Error retrieving log files."),
+      _ => Ok(outcome.Value),
+    };
   }
 
   [HttpPost("path-segments")]
   public async Task<IActionResult> GetPathSegments(
     [FromBody] InternalDtos.GetPathSegmentsRequestDto request,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileSystemController> logger,
+    [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
-    try
+    var outcome = await deviceFileSystem.GetPathSegments(User, request, cancellationToken);
+
+    // Of the eight endpoints, this is the only one that answers a missing device with 400, the only
+    // one that leaves a rejected authorization unlogged, and the only one that distinguishes an agent
+    // that never answered from an agent that answered with a rejection.
+    return outcome.Failure switch
     {
-      var device = await appDb.Devices
-        .AsNoTracking()
-        .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
-
-      if (device is null)
-      {
-        logger.LogWarning("Device not found for path segments request: {DeviceId}", request.DeviceId);
-        return BadRequest("Device not found.");
-      }
-
-      var authResult = await authorizationService.AuthorizeAsync(
-        User,
-        device,
-        DeviceResourcePolicies.FileSystemRead);
-      if (!authResult.Succeeded)
-      {
-        return Forbid();
-      }
-
-      if (!device.IsOnline)
-      {
-        logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
-        return BadRequest("Device is not currently online.");
-      }
-
-      logger.LogInformation("Getting path segments for device {DeviceId} path {TargetPath}", request.DeviceId, request.TargetPath);
-
-      var hubDto = new GetPathSegmentsHubDto { TargetPath = request.TargetPath };
-      var result = await agentHub.Clients
-        .Client(device.ConnectionId)
-        .GetPathSegments(hubDto);
-
-      if (result is null)
-      {
-        logger.LogWarning("No response received from agent for path segments request on device {DeviceId} path {TargetPath}", request.DeviceId, request.TargetPath);
-        return StatusCode(500, "No response received from device agent.");
-      }
-
-      return Ok(result);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error while getting path segments for device {DeviceId} path {TargetPath}", request.DeviceId, request.TargetPath);
-      return StatusCode(500, "An error occurred while getting path segments.");
-    }
+      FileSystemFailure.DeviceNotFound => BadRequest("Device not found."),
+      FileSystemFailure.Forbidden => Forbid(),
+      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.HubRejected => StatusCode(500, "No response received from device agent."),
+      FileSystemFailure.Cancelled or FileSystemFailure.Unexpected => StatusCode(500, "An error occurred while getting path segments."),
+      _ => Ok(outcome.Value),
+    };
   }
 
   [HttpPost("root-drives")]
   public async Task<IActionResult> GetRootDrives(
     [FromBody] InternalDtos.GetRootDrivesRequestDto request,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileSystemController> logger,
+    [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
-    var device = await appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+    var outcome = await deviceFileSystem.GetRootDrives(User, request, cancellationToken);
 
-    if (device is null)
+    return outcome.Failure switch
     {
-      logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
-      return NotFound();
-    }
-
-    var authResult = await authorizationService.AuthorizeAsync(
-      User,
-      device,
-      DeviceResourcePolicies.FileSystemRead);
-
-    if (!authResult.Succeeded)
-    {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        User.Identity?.Name, request.DeviceId);
-      return Forbid();
-    }
-
-    if (!device.IsOnline)
-    {
-      logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
-      return BadRequest("Device is not currently online.");
-    }
-
-    try
-    {
-      var result = await agentHub.Clients.Client(device.ConnectionId)
-        .GetRootDrives(request);
-
-      if (result.IsSuccess)
-      {
-        return Ok(result.Value);
-      }
-
-      logger.LogWarning("Failed to get root drives for device {DeviceId}: {Reason}",
-        request.DeviceId, result.Reason);
-      return BadRequest(result.Reason);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error while getting root drives for device {DeviceId}", request.DeviceId);
-      return StatusCode(500, "An error occurred while retrieving root drives.");
-    }
+      FileSystemFailure.DeviceNotFound => NotFound(),
+      FileSystemFailure.Forbidden => Forbid(),
+      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.HubRejected => BadRequest(outcome.Reason),
+      FileSystemFailure.Cancelled or FileSystemFailure.Unexpected => StatusCode(500, "An error occurred while retrieving root drives."),
+      _ => Ok(outcome.Value),
+    };
   }
 
   [HttpPost("subdirectories")]
   public async Task<IActionResult> GetSubdirectories(
     [FromBody] InternalDtos.GetSubdirectoriesRequestDto request,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-  [FromServices] IHubStreamStore hubStreamStore,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileSystemController> logger,
+    [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
-    var device = await appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+    var outcome = await deviceFileSystem.GetSubdirectories(User, request, cancellationToken);
 
-    if (device is null)
+    // The directory-exists signal the agent leaves in the stream metadata has no place in this
+    // endpoint's response, unlike its directory contents sibling.
+    return outcome.Failure switch
     {
-      logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
-      return NotFound();
-    }
-
-    var authResult = await authorizationService.AuthorizeAsync(
-      User,
-      device,
-      DeviceResourcePolicies.FileSystemRead);
-
-    if (!authResult.Succeeded)
-    {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        User.Identity?.Name, request.DeviceId);
-      return Forbid();
-    }
-
-    if (!device.IsOnline)
-    {
-      logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
-      return BadRequest("Device is not currently online.");
-    }
-
-    var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<InternalDtos.FileSystemEntryDto[]>(streamId);
-    try
-    {
-      var streamRequest = new SubdirectoriesStreamRequestHubDto(streamId, request.DeviceId, request.DirectoryPath);
-      var result = await agentHub.Clients.Client(device.ConnectionId)
-        .StreamSubdirectories(streamRequest);
-
-      if (!result.IsSuccess)
-      {
-        logger.LogWarning("Failed to initiate subdirectories stream for device {DeviceId} path {DirectoryPath}: {Reason}",
-          request.DeviceId, request.DirectoryPath, result.Reason);
-        return BadRequest(result.Reason);
-      }
-
-      var entries = new List<InternalDtos.FileSystemEntryDto>();
-      await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
-      {
-        entries.AddRange(chunk);
-      }
-
-      return Ok(new InternalDtos.GetSubdirectoriesResponseDto(entries.ToArray()));
-    }
-    catch (OperationCanceledException)
-    {
-      logger.LogWarning("Subdirectories stream canceled/timed out for device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
-      return StatusCode(StatusCodes.Status408RequestTimeout);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error while streaming subdirectories for device {DeviceId} path {DirectoryPath}", request.DeviceId, request.DirectoryPath);
-      return StatusCode(500, "An error occurred while retrieving subdirectories.");
-    }
+      FileSystemFailure.DeviceNotFound => NotFound(),
+      FileSystemFailure.Forbidden => Forbid(),
+      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.HubRejected => BadRequest(outcome.Reason),
+      FileSystemFailure.Cancelled => StatusCode(StatusCodes.Status408RequestTimeout),
+      FileSystemFailure.Unexpected => StatusCode(500, "An error occurred while retrieving subdirectories."),
+      _ => Ok(outcome.Value),
+    };
   }
 
   // Note: [FromForm] parameters are intentionally omitted, so large files aren't
@@ -828,10 +535,7 @@ public class DeviceFileSystemController : ControllerBase
   public async Task<IActionResult> ValidateFilePath(
     [FromRoute] Guid deviceId,
     [FromBody] InternalDtos.ValidateFilePathRequestDto request,
-    [FromServices] AppDb appDb,
-    [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
-    [FromServices] IAuthorizationService authorizationService,
-    [FromServices] ILogger<DeviceFileSystemController> logger,
+    [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(request.DirectoryPath) || string.IsNullOrWhiteSpace(request.FileName))
@@ -839,54 +543,19 @@ public class DeviceFileSystemController : ControllerBase
       return BadRequest("Directory path and file name are required.");
     }
 
-    var device = await appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var outcome = await deviceFileSystem.ValidateFilePath(User, deviceId, request, cancellationToken);
 
-    if (device is null)
+    // The agent's answer is returned whole, including an answer that the path is invalid. There is no
+    // rejection for this endpoint to report, because the agent's reply is the answer itself rather
+    // than a hub result wrapping it.
+    return outcome.Failure switch
     {
-      logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return NotFound();
-    }
-
-    var authResult = await authorizationService.AuthorizeAsync(
-      User,
-      device,
-      DeviceResourcePolicies.FileSystemRead);
-
-    if (!authResult.Succeeded)
-    {
-      logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        User.Identity?.Name, deviceId);
-      return Forbid();
-    }
-
-    if (!device.IsOnline)
-    {
-      logger.LogWarning("Device {DeviceId} is not online.", deviceId);
-      return BadRequest("Device is not currently online.");
-    }
-
-    var validateRequest = new ValidateFilePathHubDto(request.DirectoryPath, request.FileName);
-
-    try
-    {
-      var result = await agentHub.Clients
-        .Client(device.ConnectionId)
-        .ValidateFilePath(validateRequest);
-
-      logger.LogInformation(
-        "File path validation completed for {FileName} in {DirectoryPath} on device {DeviceId}: {IsValid}",
-        request.FileName, request.DirectoryPath, deviceId, result.IsValid);
-
-      return Ok(result);
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Error validating file path {FileName} in {DirectoryPath} on device {DeviceId}",
-        request.FileName, request.DirectoryPath, deviceId);
-      return StatusCode(500, "An error occurred while validating the file path.");
-    }
+      FileSystemFailure.DeviceNotFound => NotFound(),
+      FileSystemFailure.Forbidden => Forbid(),
+      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.Cancelled or FileSystemFailure.Unexpected => StatusCode(500, "An error occurred while validating the file path."),
+      _ => Ok(outcome.Value),
+    };
   }
 
   private async Task<IActionResult> ExecuteDownloadArchive(

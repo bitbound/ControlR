@@ -4,6 +4,7 @@ using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;
+using ControlR.Web.Server.Services.DeviceFileSystem;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -50,10 +51,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.CreateDirectory(
       harness.Device.Id,
       new InternalDtos.CreateDirectoryRequestDto(harness.Device.Id, "/parent", "new-dir"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result);
@@ -80,10 +78,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.CreateDirectory(
       foreignDevice.Id,
       new InternalDtos.CreateDirectoryRequestDto(foreignDevice.Id, "/parent", "new-dir"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result);
@@ -99,10 +94,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.CreateDirectory(
       Guid.NewGuid(),
       new InternalDtos.CreateDirectoryRequestDto(Guid.NewGuid(), "/parent", "new-dir"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<NotFoundResult>(result);
@@ -120,10 +112,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.CreateDirectory(
       harness.Device.Id,
       new InternalDtos.CreateDirectoryRequestDto(harness.Device.Id, "/parent", "new-dir"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     var badRequest = Assert.IsType<BadRequestObjectResult>(result);
@@ -143,10 +132,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.CreateDirectory(
       harness.Device.Id,
       new InternalDtos.CreateDirectoryRequestDto(harness.Device.Id, "/parent", "new-dir"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<NoContentResult>(result);
@@ -166,10 +152,8 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.CreateDirectory(
       harness.Device.Id,
       new InternalDtos.CreateDirectoryRequestDto(harness.Device.Id, "/parent", "new-dir"),
-      harness.Db,
-      Harness.CreateAgentHubContext(harness.AgentClient, connectionIds).Object,
-      harness.Authz,
-      harness.Logger,
+      harness.CreateDeviceFileSystem(
+        Harness.CreateAgentHubContext(harness.AgentClient, connectionIds).Object),
       TestContext.Current.CancellationToken);
 
     Assert.IsType<NoContentResult>(result);
@@ -193,10 +177,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.CreateDirectory(
       harness.Device.Id,
       new InternalDtos.CreateDirectoryRequestDto(harness.Device.Id, "/parent", "new-dir"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     var objectResult = Assert.IsType<ObjectResult>(result);
@@ -220,10 +201,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
       var result = await harness.Controller.CreateDirectory(
         harness.Device.Id,
         request,
-        harness.Db,
-        harness.AgentHub.Object,
-        harness.Authz,
-        harness.Logger,
+        harness.DeviceFileSystem,
         TestContext.Current.CancellationToken);
 
       var badRequest = Assert.IsType<BadRequestObjectResult>(result);
@@ -248,10 +226,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.CreateDirectory(
       harness.Device.Id,
       new InternalDtos.CreateDirectoryRequestDto(Guid.NewGuid(), "/parent", "new-dir"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<NoContentResult>(result);
@@ -270,10 +245,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.DeletePath(
       harness.Device.Id,
       new InternalDtos.FileDeleteRequestDto(harness.Device.Id, "/parent/file.txt", false),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result);
@@ -289,10 +261,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.DeletePath(
       Guid.NewGuid(),
       new InternalDtos.FileDeleteRequestDto(Guid.NewGuid(), "/parent/file.txt", false),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<NotFoundResult>(result);
@@ -309,10 +278,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.DeletePath(
       harness.Device.Id,
       new InternalDtos.FileDeleteRequestDto(harness.Device.Id, "/parent/file.txt", false),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     var badRequest = Assert.IsType<BadRequestObjectResult>(result);
@@ -329,10 +295,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.DeletePath(
       harness.Device.Id,
       new InternalDtos.FileDeleteRequestDto(harness.Device.Id, "", false),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     var badRequest = Assert.IsType<BadRequestObjectResult>(result);
@@ -353,10 +316,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.DeletePath(
       harness.Device.Id,
       new InternalDtos.FileDeleteRequestDto(harness.Device.Id, "/parent/file.txt", false),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     var ok = Assert.IsType<OkObjectResult>(result);
@@ -378,10 +338,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.DeletePath(
       harness.Device.Id,
       new InternalDtos.FileDeleteRequestDto(harness.Device.Id, "/parent/file.txt", false),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     var ok = Assert.IsType<OkObjectResult>(result);
@@ -414,10 +371,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.DeletePath(
       harness.Device.Id,
       new InternalDtos.FileDeleteRequestDto(harness.Device.Id, "/parent/file.txt", false),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     var objectResult = Assert.IsType<ObjectResult>(result);
@@ -440,10 +394,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.DeletePath(
       harness.Device.Id,
       new InternalDtos.FileDeleteRequestDto(harness.Device.Id, "/parent/some-dir", IsDirectory: true),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<OkObjectResult>(result);
@@ -612,11 +563,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
     var result = await harness.Controller.GetDirectoryContents(
       new InternalDtos.GetDirectoryContentsRequestDto(harness.Device.Id, "/parent"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.HubStreamStore,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       requestCts.Token);
 
     // The timeout path uses StatusCode(int), which yields a bodyless StatusCodeResult. That
@@ -1109,11 +1056,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
     var result = await harness.Controller.GetSubdirectories(
       new InternalDtos.GetSubdirectoriesRequestDto(harness.Device.Id, "/parent"),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.HubStreamStore,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       requestCts.Token);
 
     // The timeout path uses StatusCode(int), which yields a bodyless StatusCodeResult. That
@@ -1305,28 +1248,23 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
       CanWrite: true,
       HasSubfolders: isDirectory);
 
-  // Action invocations. Every dependency arrives as a [FromServices] parameter, so each one is
-  // resolved from the request scope exactly as the framework would resolve it.
+  // Action invocations. The dependencies still arrive as [FromServices] parameters, resolved from the
+  // request scope as the framework would resolve them, except that the service is built by the harness
+  // because it needs the mock hub context rather than the container's real one. See
+  // Harness.CreateDeviceFileSystem.
   private static async Task<IActionResult> GetDirectoryContentsAsync(
     Harness harness,
     Guid deviceId,
     string directoryPath) =>
     await harness.Controller.GetDirectoryContents(
       new InternalDtos.GetDirectoryContentsRequestDto(deviceId, directoryPath),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.HubStreamStore,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
   private static async Task<IActionResult> GetLogFilesAsync(Harness harness, Guid deviceId) =>
     await harness.Controller.GetLogFiles(
       deviceId,
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
   private static async Task<IActionResult> GetPathSegmentsAsync(
@@ -1335,19 +1273,13 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     string targetPath) =>
     await harness.Controller.GetPathSegments(
       new InternalDtos.GetPathSegmentsRequestDto(deviceId, targetPath),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
   private static async Task<IActionResult> GetRootDrivesAsync(Harness harness, Guid deviceId) =>
     await harness.Controller.GetRootDrives(
       new InternalDtos.GetRootDrivesRequestDto(deviceId),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
   private static async Task<IActionResult> GetSubdirectoriesAsync(
@@ -1356,11 +1288,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     string directoryPath) =>
     await harness.Controller.GetSubdirectories(
       new InternalDtos.GetSubdirectoriesRequestDto(deviceId, directoryPath),
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.HubStreamStore,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
   private static async Task<IActionResult> ValidateFilePathAsync(
@@ -1369,10 +1297,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     await harness.Controller.ValidateFilePath(
       request.DeviceId,
       request,
-      harness.Db,
-      harness.AgentHub.Object,
-      harness.Authz,
-      harness.Logger,
+      harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
   /// <summary>
@@ -1387,7 +1312,6 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     Mock<IAgentHubClient> agentClient,
     Mock<IHubContext<AgentHub, IAgentHubClient>> agentHub,
     IAuthorizationService authz,
-    ILogger<DeviceFileSystemController> logger,
     IHubStreamStore hubStreamStore)
   {
     public Mock<IAgentHubClient> AgentClient { get; } = agentClient;
@@ -1402,9 +1326,14 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
     public Device Device { get; } = device;
 
-    public IHubStreamStore HubStreamStore { get; } = hubStreamStore;
+    /// <summary>
+    /// The extracted service over the same dependencies the actions used to take as [FromServices]
+    /// arguments, built here because the hub context each test arms is this harness's mock rather
+    /// than something the container hands out.
+    /// </summary>
+    public IDeviceFileSystemService DeviceFileSystem => CreateDeviceFileSystem(AgentHub.Object);
 
-    public ILogger<DeviceFileSystemController> Logger { get; } = logger;
+    public IHubStreamStore HubStreamStore { get; } = hubStreamStore;
 
     public IServiceProvider Services { get; } = services;
 
@@ -1448,12 +1377,20 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
         agentClient,
         CreateAgentHubContext(agentClient),
         services.GetRequiredService<IAuthorizationService>(),
-        services.GetRequiredService<ILogger<DeviceFileSystemController>>(),
         services.GetRequiredService<IHubStreamStore>());
 
       await harness.SetDeviceOnline(isOnline: true);
       return harness;
     }
+
+    public IDeviceFileSystemService CreateDeviceFileSystem(
+      IHubContext<AgentHub, IAgentHubClient> agentHub) =>
+      new DeviceFileSystemService(
+        Db,
+        agentHub,
+        HubStreamStore,
+        Authz,
+        Services.GetRequiredService<ILogger<DeviceFileSystemService>>());
 
     public async Task SetDeviceOnline(bool isOnline)
     {
