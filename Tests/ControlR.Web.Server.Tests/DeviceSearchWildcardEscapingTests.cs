@@ -24,7 +24,7 @@ namespace ControlR.Web.Server.Tests;
 /// </summary>
 /// <remarks>
 /// Every test here must run with <c>useInMemoryDatabase: false</c>. The <c>ILIKE</c> branches are
-/// only reached on a relational provider; the in-memory path uses literal <see cref="string"/>
+/// only reached on a relational provider. The in-memory path uses literal <see cref="string"/>
 /// comparisons and would pass regardless of the escaping under test.
 /// </remarks>
 public class DeviceSearchWildcardEscapingTests(ITestOutputHelper testOutput)
@@ -185,7 +185,7 @@ public class DeviceSearchWildcardEscapingTests(ITestOutputHelper testOutput)
     // wildcard side each operator adds is pinned. If an operator put its wildcards on the wrong
     // side, StartsWith and EndsWith would return each other's expected set.
     // testDatabaseName is passed explicitly because TestAppBuilder defaults it to
-    // [CallerMemberName], which is identical for every case of a theory; sharing one database
+    // [CallerMemberName], which is identical for every case of a theory. Sharing one database
     // makes the cases collide on the seeded Identity user.
     await using var testApp = await TestAppBuilder.CreateTestApp(
       _testOutputHelper,

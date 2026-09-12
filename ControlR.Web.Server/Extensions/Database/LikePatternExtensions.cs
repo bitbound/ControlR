@@ -18,13 +18,13 @@ public static class LikePatternExtensions
 
   /// <summary>
   /// Escapes PostgreSQL <c>LIKE</c>/<c>ILIKE</c> wildcards in caller-supplied text so that the text
-  /// is matched literally instead of contributing query semantics. Backslash is escaped first;
-  /// escaping it afterward would double-escape the sequences this method introduces for
+  /// is matched literally instead of contributing query semantics. Backslash is escaped first.
+  /// Escaping it afterward would double-escape the sequences this method introduces for
   /// <c>%</c> and <c>_</c>.
   /// </summary>
   /// <remarks>
   /// The result is only correct when <see cref="LikeEscapeCharacter"/> is supplied to
-  /// <c>EF.Functions.ILike</c>. Only the PostgreSQL <c>ILIKE</c> path needs this — the in-memory
+  /// <c>EF.Functions.ILike</c>. Only the PostgreSQL <c>ILIKE</c> path needs this. The in-memory
   /// provider fallback uses literal <see cref="string"/> comparisons, which need no escaping.
   /// </remarks>
   public static string EscapeLikePattern(this string value)
