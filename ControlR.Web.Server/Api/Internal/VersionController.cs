@@ -13,6 +13,7 @@ public class VersionController(
 {
   [HttpGet("agent")]
   [OutputCache]
+  [ApiDeprecated("/api/v1/version/agent")]
   public async Task<ActionResult<Version>> GetCurrentAgentVersion(CancellationToken cancellationToken)
   {
     var result = await agentVersionProvider.TryGetAgentVersion(cancellationToken);
@@ -21,6 +22,7 @@ public class VersionController(
 
   [HttpGet("release-notes")]
   [OutputCache]
+  [ApiDeprecated("/api/v1/version/release-notes")]
   public async Task<ActionResult<string>> GetReleaseNotes(CancellationToken cancellationToken)
   {
     var result = await releaseNotesProvider.GetReleaseNotes(cancellationToken);
@@ -29,6 +31,7 @@ public class VersionController(
 
   [HttpGet("server")]
   [OutputCache]
+  [ApiDeprecated("/api/v1/version/server")]
   public ActionResult<Version> GetServerVersion()
   {
     var version = typeof(VersionController)

@@ -1,4 +1,7 @@
-﻿namespace ControlR.Web.Client.StateManagement.Stores;
+﻿using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
+
+namespace ControlR.Web.Client.StateManagement.Stores;
 
 public interface IUserStore : IStoreBase<UserResponseDto>
 {
@@ -7,8 +10,11 @@ public interface IUserStore : IStoreBase<UserResponseDto>
 public class UserStore(
   IControlrApi controlrApi,
   ISnackbar snackbar,
-  ILogger<UserStore> logger) : StoreBase<UserResponseDto>(controlrApi, snackbar, logger), IUserStore
+  ILogger<UserStore> logger,
+  AuthenticationStateProvider authState) : StoreBase<UserResponseDto>(controlrApi, snackbar, logger), IUserStore
 {
+  private readonly AuthenticationStateProvider _authState = authState;
+
   protected override Guid GetItemId(UserResponseDto dto)
   {
     return dto.Id;
@@ -16,12 +22,18 @@ public class UserStore(
 
   protected override async Task RefreshImpl()
   {
-    var getResult = await ControlrApi.Internal.Users.GetAllUsers();
+    var state = await _authState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return;
+    }
+
+    var getResult = await ControlrApi.V1.Users.GetAllUsers(tenantId);
     if (!getResult.IsSuccess)
     {
       Snackbar.Add(getResult.Reason, Severity.Error);
       return;
     }
-    SetItems(getResult.Value);
+    SetItems(getResult.Value.Items);
   }
 }

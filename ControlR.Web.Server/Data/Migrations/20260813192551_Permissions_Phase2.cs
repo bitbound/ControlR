@@ -192,7 +192,6 @@ public partial class Permissions_Phase2 : Migration
               INNER JOIN "AspNetUsers" u ON ur."UserId" = u."Id"
               INNER JOIN (
                 VALUES
-                  ('Server Administrator', '{PermissionNames.ServerAlertsRead}', '{PermissionScopeKind.Server}'),
                   ('Server Administrator', '{PermissionNames.ServerAuthorizationLogsRead}', '{PermissionScopeKind.Server}'),
                   ('Server Administrator', '{PermissionNames.ServerPermissionsRead}', '{PermissionScopeKind.Server}'),
                   ('Server Administrator', '{PermissionNames.ServerPermissionsWrite}', '{PermissionScopeKind.Server}'),

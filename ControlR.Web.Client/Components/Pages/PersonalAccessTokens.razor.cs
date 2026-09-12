@@ -1,5 +1,7 @@
 using ControlR.Web.Client.Components.Shared;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
 
 namespace ControlR.Web.Client.Components.Pages;
 
@@ -9,6 +11,9 @@ public partial class PersonalAccessTokens
   private PersonalAccessTokenPermissionMode _newTokenMode = PersonalAccessTokenPermissionMode.Restricted;
   private string _newTokenName = string.Empty;
   private PersonalAccessTokenResponseDto[] _personalAccessTokens = [];
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -36,10 +41,16 @@ public partial class PersonalAccessTokens
     _isLoading = true;
     try
     {
+      if (await GetTenantId() is not { } tenantId)
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        return;
+      }
+
       var request = new CreatePersonalAccessTokenRequestDto(
         _newTokenName.Trim(),
         _newTokenMode);
-      var result = await ControlrApi.Internal.PersonalAccessTokens.CreatePersonalAccessToken(request);
+      var result = await ControlrApi.V1.PersonalAccessTokens.CreatePersonalAccessToken(tenantId, request);
 
       if (result.IsSuccess)
       {
@@ -97,7 +108,13 @@ public partial class PersonalAccessTokens
     {
       try
       {
-        var result = await ControlrApi.Internal.PersonalAccessTokens.DeletePersonalAccessToken(personalAccessToken.Id);
+        if (await GetTenantId() is not { } tenantId)
+        {
+          Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+          return;
+        }
+
+        var result = await ControlrApi.V1.PersonalAccessTokens.DeletePersonalAccessToken(personalAccessToken.Id, tenantId);
         if (result.IsSuccess)
         {
           await LoadPersonalAccessTokens();
@@ -115,15 +132,27 @@ public partial class PersonalAccessTokens
     }
   }
 
+  private async Task<Guid?> GetTenantId()
+  {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
+  }
+
   private async Task LoadPersonalAccessTokens()
   {
     _isLoading = true;
     try
     {
-      var result = await ControlrApi.Internal.PersonalAccessTokens.GetPersonalAccessTokens();
+      if (await GetTenantId() is not { } tenantId)
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        return;
+      }
+
+      var result = await ControlrApi.V1.PersonalAccessTokens.GetPersonalAccessTokens(tenantId);
       if (result.IsSuccess)
       {
-        _personalAccessTokens = result.Value;
+        _personalAccessTokens = [.. result.Value.Items];
       }
       else
       {
@@ -196,8 +225,14 @@ public partial class PersonalAccessTokens
 
     try
     {
+      if (await GetTenantId() is not { } tenantId)
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        return;
+      }
+
       var updateRequest = new UpdatePersonalAccessTokenRequestDto(newTokenName.Trim());
-      var updateResult = await ControlrApi.Internal.PersonalAccessTokens.UpdatePersonalAccessToken(personalAccessToken.Id, updateRequest);
+      var updateResult = await ControlrApi.V1.PersonalAccessTokens.UpdatePersonalAccessToken(personalAccessToken.Id, tenantId, updateRequest);
       if (updateResult.IsSuccess)
       {
         await LoadPersonalAccessTokens();

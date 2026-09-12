@@ -14,6 +14,7 @@ public class ServerLogsController(
   private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
   
   [HttpGet("get-aspire-url")]
+  [ApiDeprecated("/api/v1/server-logs/get-aspire-url")]
   public async Task<ActionResult<InternalDtos.GetAspireUrlResponseDto>> GetAspireUrl()
   {
     var aspireToken = _aspireOptions.CurrentValue.Token;

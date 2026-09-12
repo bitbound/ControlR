@@ -1,16 +1,22 @@
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class EffectivePermissions : ComponentBase
 {
-  private List<InternalDtos.PermissionCatalogEntryDto> _catalog = [];
+  private List<PermissionCatalogEntryDto> _catalog = [];
   private string _permissionName = string.Empty;
   private PermissionPrincipalKind _principalKind = PermissionPrincipalKind.User;
-  private InternalDtos.EffectivePermissionQueryResponseDto? _result;
+  private EffectivePermissionQueryResponseDto? _result;
   private Guid? _scopeId;
   private PermissionScopeKind _scopeKind = PermissionScopeKind.Tenant;
   private Guid? _selectedPrincipalId;
+  private Guid _tenantId;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -25,10 +31,19 @@ public partial class EffectivePermissions : ComponentBase
   {
     try
     {
-      var result = await ControlrApi.Internal.PermissionAssignments.GetCatalog();
+      var state = await AuthState.GetAuthenticationStateAsync();
+      if (!state.User.TryGetTenantId(out var tenantId))
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        return;
+      }
+
+      _tenantId = tenantId;
+
+      var result = await ControlrApi.V1.PermissionAssignments.GetCatalog(_tenantId);
       if (result.IsSuccess)
       {
-        _catalog = [.. result.Value];
+        _catalog = [.. result.Value.Items];
       }
       else
       {
@@ -56,16 +71,16 @@ public partial class EffectivePermissions : ComponentBase
       return;
     }
 
-    var request = new InternalDtos.EffectivePermissionQueryRequestDto(
-      _principalKind,
-      principalId,
-      _permissionName,
-      _scopeKind,
-      _scopeId);
-
     try
     {
-      var result = await ControlrApi.Internal.EffectivePermissions.Query(request);
+      var result = await ControlrApi.V1.EffectivePermissions.GetEffectivePermission(
+        principalId,
+        _tenantId,
+        _principalKind,
+        _permissionName,
+        _scopeKind,
+        _scopeId);
+
       if (!result.IsSuccess)
       {
         Snackbar.Add(result.Reason, Severity.Error);

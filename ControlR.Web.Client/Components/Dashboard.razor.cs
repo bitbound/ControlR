@@ -1,4 +1,7 @@
 using ControlR.Libraries.Api.Contracts.FilterSort;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
@@ -25,7 +28,7 @@ public partial class Dashboard : IAsyncDisposable
   private MudDataGrid<DeviceViewModel>? _dataGrid;
   private FilterMatchMode _deviceGroupFilterMatchMode = FilterMatchMode.Any;
   private List<DeviceGroupDto> _deviceGroups = [];
-  private DeviceSearchFilterCountsDto _filterCounts = new();
+  private InternalDtos.DeviceSearchFilterCountsDto _filterCounts = new();
   private bool _hideOfflineDevices;
   private bool _loading = true;
   private bool _openDeviceInNewTab;
@@ -38,7 +41,11 @@ public partial class Dashboard : IAsyncDisposable
   private bool _showOnlyUntagged;
   private HashSet<Guid> _subscribedDeviceIds = [];
   private FilterMatchMode _tagFilterMatchMode = FilterMatchMode.Any;
+  private Guid _tenantId;
   private int _totalFilteredDevices;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -115,26 +122,35 @@ public partial class Dashboard : IAsyncDisposable
       _showOnlyUntagged = preferences.ShowOnlyUntaggedDevices;
       _showOnlyUngrouped = preferences.ShowOnlyUngroupedDevices;
 
+      var state = await AuthState.GetAuthenticationStateAsync();
+      if (!state.User.TryGetTenantId(out var tenantId))
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        return;
+      }
+
+      _tenantId = tenantId;
+
       if (TagStore.Items.Count == 0)
       {
         await TagStore.Refresh();
       }
 
-      var customersResult = await ControlrApi.Internal.Customers.GetAll();
+      var customersResult = await ControlrApi.V1.Customers.GetAllCustomers(_tenantId);
       if (customersResult.IsSuccess)
       {
-        _customers = [.. customersResult.Value];
+        _customers = [.. customersResult.Value.Items];
       }
 
-      var deviceGroupsResult = await ControlrApi.Internal.DeviceGroups.GetAll();
+      var deviceGroupsResult = await ControlrApi.V1.DeviceGroups.GetAllDeviceGroups(_tenantId);
       if (deviceGroupsResult.IsSuccess)
       {
-        _deviceGroups = [.. deviceGroupsResult.Value];
+        _deviceGroups = [.. deviceGroupsResult.Value.Items];
       }
 
       _disposables.AddRange(
         Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage),
-        Messenger.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceived)
+        Messenger.Register<DtoReceivedMessage<InternalDtos.DeviceResponseDto>>(this, HandleDeviceDtoReceived)
       );
 
 
@@ -188,7 +204,7 @@ public partial class Dashboard : IAsyncDisposable
     return $"{_selectedDeviceGroupIds.Count} {groupNoun} selected";
   }
 
-  private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceResponseDto> message)
+  private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<InternalDtos.DeviceResponseDto> message)
   {
     var viewModel = new DeviceViewModel(message.Dto);
     if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true ||
@@ -270,7 +286,7 @@ public partial class Dashboard : IAsyncDisposable
       ? null
       : _selectedDeviceGroupIds.Count > 0 ? [.. _selectedDeviceGroupIds] : null;
 
-    var request = new DeviceSearchRequestDto
+    var request = new InternalDtos.DeviceSearchRequestDto
     {
       SearchText = _searchText,
       HideOfflineDevices = _hideOfflineDevices && !ShouldBypassHideOfflineDevices,
@@ -302,7 +318,7 @@ public partial class Dashboard : IAsyncDisposable
     var result = await ControlrApi.Internal.Devices.SearchDevices(request, cancellationToken);
     if (!result.IsSuccess)
     {
-      _filterCounts = new DeviceSearchFilterCountsDto();
+      _filterCounts = new InternalDtos.DeviceSearchFilterCountsDto();
       _totalFilteredDevices = 0;
       await InvokeAsync(StateHasChanged);
       Snackbar.Add("Failed to load devices", Severity.Error);

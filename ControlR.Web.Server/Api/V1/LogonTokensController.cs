@@ -27,6 +27,8 @@ public class LogonTokensController : ControllerBase
       return BadRequest("Device not found");
     }
 
+    // Redundant while the device is loaded through the filtered AppDb, since a tenant-bound
+    // caller can only see its own tenant. Kept because it becomes live on an IgnoreQueryFilters load.
     if (!User.IsServerPrincipal() &&
       (!User.TryGetTenantId(out var callerTenantId) || callerTenantId != device.TenantId))
     {
@@ -73,6 +75,8 @@ public class LogonTokensController : ControllerBase
       return BadRequest("Device not found");
     }
 
+    // Redundant while the device is loaded through the filtered AppDb, since a tenant-bound
+    // caller can only see its own tenant. Kept because it becomes live on an IgnoreQueryFilters load.
     if (!User.IsServerPrincipal() &&
       (!User.TryGetTenantId(out var callerTenantId) || callerTenantId != device.TenantId))
     {

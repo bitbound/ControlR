@@ -8,8 +8,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.CreateInstallerKeyRequestDto;
-using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceResponseDto;
 
 namespace ControlR.Web.Server.Tests.V1;
 

@@ -1,6 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using V1Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 
 namespace ControlR.ApiClient.Interfaces.V1;
 
@@ -10,23 +10,23 @@ public interface IDevicesApi
   Task<ApiResult> DeleteDevice(Guid deviceId, CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.DevicesEndpoint}/delete-many", "POST")]
-  Task<ApiResult<V1Dtos.DeleteManyDevicesResponseDto>> DeleteManyDevices(V1Dtos.DeleteDevicesRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<DeleteManyDevicesResponseDto>> DeleteManyDevices(DeleteDevicesRequestDto request, CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.DevicesEndpoint}/{{deviceId}}/desktop-sessions", "GET")]
-  Task<ApiResult<V1Dtos.DesktopSessionsResponseDto>> GetActiveDesktopSessions(Guid deviceId, CancellationToken cancellationToken = default);
+  Task<ApiResult<DesktopSessionsResponseDto>> GetActiveDesktopSessions(Guid deviceId, CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.DevicesEndpoint}", "GET")]
-  IAsyncEnumerable<V1Dtos.DeviceResponseDto> GetAllDevices(CancellationToken cancellationToken = default);
+  IAsyncEnumerable<DeviceResponseDto> GetAllDevices(CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.DevicesEndpoint}/{{deviceId}}", "GET")]
-  Task<ApiResult<V1Dtos.DeviceResponseDto>> GetDevice(Guid deviceId, CancellationToken cancellationToken = default);
+  Task<ApiResult<DeviceResponseDto>> GetDevice(Guid deviceId, CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.DevicesEndpoint}/summary", "GET")]
-  IAsyncEnumerable<V1Dtos.DeviceSummaryDto> GetDeviceSummaries(CancellationToken cancellationToken = default);
+  IAsyncEnumerable<DeviceSummaryDto> GetDeviceSummaries(CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.DevicesEndpoint}/search", "POST")]
-  Task<ApiResult<V1Dtos.DeviceSearchResponseDto>> SearchDevices(V1Dtos.DeviceSearchRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<DeviceSearchResponseDto>> SearchDevices(DeviceSearchRequestDto request, CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.DevicesEndpoint}/{{deviceId}}/alias", "PATCH")]
-  Task<ApiResult<V1Dtos.DeviceResponseDto>> UpdateDeviceAlias(V1Dtos.UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult<DeviceResponseDto>> UpdateDeviceAlias(UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken = default);
 }

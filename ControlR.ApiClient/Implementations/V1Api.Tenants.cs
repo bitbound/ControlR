@@ -27,6 +27,16 @@ internal partial class V1Api
     });
   }
 
+  async Task<ApiResult<TenantsResponseDto>> ITenantsApi.GetAllTenants(CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.GetAsync(HttpConstants.V1.TenantsEndpoint, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<TenantsResponseDto>(cancellationToken);
+    });
+  }
+
   async Task<ApiResult<GetTenantResponseDto>> ITenantsApi.GetTenant(Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>

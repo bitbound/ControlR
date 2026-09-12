@@ -1,4 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Settings;
+using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectiveUserPreferences;
 
 namespace ControlR.Web.Client.Services;
 
@@ -10,9 +12,11 @@ public interface IEffectiveUserPreferences
 
 internal sealed class EffectiveUserPreferences(
   IControlrApi controlrApi,
+  AuthenticationStateProvider authState,
   ILogger<EffectiveUserPreferences> logger,
   ISnackbar snackbar) : IEffectiveUserPreferences
 {
+  private readonly AuthenticationStateProvider _authState = authState;
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly ILogger<EffectiveUserPreferences> _logger = logger;
   private readonly ISnackbar _snackbar = snackbar;
@@ -24,7 +28,13 @@ internal sealed class EffectiveUserPreferences(
     {
       if (_preferences is null)
       {
-        var result = await _controlrApi.Internal.EffectiveUserPreferences.GetEffectiveUserPreferences();
+        var state = await _authState.GetAuthenticationStateAsync();
+        if (!state.User.TryGetTenantId(out var tenantId))
+        {
+          return new EffectivePreference<bool>(EffectivePreferenceDefinitions.NotifyUserOnSessionStart.DefaultValue, false);
+        }
+
+        var result = await _controlrApi.V1.EffectiveUserPreferences.GetEffectiveUserPreferences(tenantId);
         if (!result.IsSuccess)
         {
           _snackbar.Add(result.Reason, Severity.Error);

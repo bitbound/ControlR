@@ -1,14 +1,15 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class Customers : ComponentBase
 {
   private bool _canWrite;
-  private IEnumerable<InternalDtos.CustomerDto> _customers = [];
+  private IEnumerable<CustomerDto> _customers = [];
   private bool _loading;
   private string _searchString = string.Empty;
+  private Guid _tenantId;
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -25,7 +26,7 @@ public partial class Customers : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<InternalDtos.CustomerDto, bool> QuickFilter => customer =>
+  private Func<CustomerDto, bool> QuickFilter => customer =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -41,10 +42,18 @@ public partial class Customers : ComponentBase
   {
     var state = await AuthState.GetAuthenticationStateAsync();
     _canWrite = state.User.HasClientPolicy(PolicyNames.RequireCustomersWrite);
+
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _tenantId = tenantId;
     await Refresh();
   }
 
-  private async Task AssignDevices(InternalDtos.CustomerDto customer)
+  private async Task AssignDevices(CustomerDto customer)
   {
     var parameters = new DialogParameters<AssignCustomerDevicesDialog>
     {
@@ -83,8 +92,9 @@ public partial class Customers : ComponentBase
       return;
     }
 
-    var createResult = await ControlrApi.Internal.Customers.Create(
-      new InternalDtos.CreateCustomerRequestDto(dialogResult.Name, dialogResult.Description, dialogResult.Notes));
+    var createResult = await ControlrApi.V1.Customers.CreateCustomer(
+      _tenantId,
+      new CreateCustomerRequestDto(dialogResult.Name, dialogResult.Description, dialogResult.Notes));
 
     if (!createResult.IsSuccess)
     {
@@ -96,7 +106,7 @@ public partial class Customers : ComponentBase
     await Refresh();
   }
 
-  private async Task DeleteCustomer(InternalDtos.CustomerDto customer)
+  private async Task DeleteCustomer(CustomerDto customer)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete Customer",
@@ -108,7 +118,7 @@ public partial class Customers : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.Customers.Delete(customer.Id);
+    var result = await ControlrApi.V1.Customers.DeleteCustomer(customer.Id, _tenantId);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
@@ -119,7 +129,7 @@ public partial class Customers : ComponentBase
     await Refresh();
   }
 
-  private async Task EditCustomer(InternalDtos.CustomerDto customer)
+  private async Task EditCustomer(CustomerDto customer)
   {
     var parameters = new DialogParameters<CustomerDialog>
     {
@@ -137,9 +147,10 @@ public partial class Customers : ComponentBase
       return;
     }
 
-    var updateResult = await ControlrApi.Internal.Customers.Update(
+    var updateResult = await ControlrApi.V1.Customers.UpdateCustomer(
       customer.Id,
-      new InternalDtos.UpdateCustomerRequestDto(dialogResult.Name, dialogResult.Description, dialogResult.Notes));
+      _tenantId,
+      new UpdateCustomerRequestDto(dialogResult.Name, dialogResult.Description, dialogResult.Notes));
 
     if (!updateResult.IsSuccess)
     {
@@ -158,10 +169,10 @@ public partial class Customers : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.Customers.GetAll();
+      var result = await ControlrApi.V1.Customers.GetAllCustomers(_tenantId);
       if (result.IsSuccess)
       {
-        _customers = result.Value;
+        _customers = result.Value.Items;
       }
       else
       {

@@ -12,6 +12,7 @@ public class PublicServerSettingsController(
   IPublicServerSettingsProvider serverSettings) : ControllerBase
 {
   [HttpGet]
+  [ApiDeprecated("/api/v1/public-server-settings")]
   public async Task<InternalDtos.PublicServerSettings> Get()
   {
     var settings = await serverSettings.GetPublicServerSettings();

@@ -50,9 +50,9 @@ public class PermissionWriteMatrixTests(ITestOutputHelper testOutput)
     { PrincipalCase.PersonalAccessToken, PermissionNames.DeviceRead, PermissionEffect.Deny, PermissionScopeKind.Tenant, true },
     // Control-plane carve-out: server-only permissions are Server-scoped by nature and users
     // must be able to hold them (allow and deny).
-    { PrincipalCase.User, PermissionNames.ServerAlertsRead, PermissionEffect.Allow, PermissionScopeKind.Server, true },
-    { PrincipalCase.User, PermissionNames.ServerAlertsRead, PermissionEffect.Deny, PermissionScopeKind.Server, true },
-    { PrincipalCase.ServerServiceAccount, PermissionNames.ServerAlertsRead, PermissionEffect.Allow, PermissionScopeKind.Server, true },
+    { PrincipalCase.User, PermissionNames.ServerTelemetryRead, PermissionEffect.Allow, PermissionScopeKind.Server, true },
+    { PrincipalCase.User, PermissionNames.ServerTelemetryRead, PermissionEffect.Deny, PermissionScopeKind.Server, true },
+    { PrincipalCase.ServerServiceAccount, PermissionNames.ServerTelemetryRead, PermissionEffect.Allow, PermissionScopeKind.Server, true },
     // Whitelist rejections that predate I1 stay rejected at Server for the right reasons.
     { PrincipalCase.User, PermissionNames.TenantRead, PermissionEffect.Allow, PermissionScopeKind.Server, false },
     { PrincipalCase.User, PermissionNames.UserGroupAssignUsers, PermissionEffect.Allow, PermissionScopeKind.Server, false }

@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components.Authorization;
+
 namespace ControlR.Web.Client.Components.Shared;
 
 public sealed record ScopeOption(Guid Id, string DisplayName);
@@ -8,7 +10,10 @@ public partial class ScopeAutocomplete
   private IReadOnlyList<ScopeOption> _options = [];
   private PermissionScopeKind _previousScopeKind;
   private ScopeOption? _selected;
-  private DeviceResponseDto? _selectedDevice;
+  private InternalDtos.DeviceResponseDto? _selectedDevice;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Parameter]
   public string? Class { get; set; }
@@ -93,26 +98,38 @@ public partial class ScopeAutocomplete
 
   private async Task<IReadOnlyList<ScopeOption>> LoadCustomers(CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.Customers.GetAll(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.Customers.GetAllCustomers(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return [.. result.Value
+    return [.. result.Value.Items
       .OrderBy(x => x.Name)
       .Select(x => new ScopeOption(x.Id, x.Name))];
   }
 
   private async Task<IReadOnlyList<ScopeOption>> LoadDeviceGroups(CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.DeviceGroups.GetAll(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.DeviceGroups.GetAllDeviceGroups(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return [.. result.Value
+    return [.. result.Value.Items
       .OrderBy(x => x.Name)
       .Select(x => new ScopeOption(x.Id, x.Name))];
   }
@@ -130,13 +147,19 @@ public partial class ScopeAutocomplete
 
   private async Task<IReadOnlyList<ScopeOption>> LoadUserGroups(CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.UserGroups.GetAll(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.UserGroups.GetAllUserGroups(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return [.. result.Value
+    return [.. result.Value.Items
       .OrderBy(x => x.Name)
       .Select(x => new ScopeOption(x.Id, x.Name))];
   }
@@ -147,7 +170,7 @@ public partial class ScopeAutocomplete
     var dialog = await DialogService.ShowAsync<DevicePickerDialog>("Select Device", options);
     var result = await dialog.Result;
 
-    if (result is null || result.Canceled || result.Data is not DeviceResponseDto device)
+    if (result is null || result.Canceled || result.Data is not InternalDtos.DeviceResponseDto device)
     {
       return;
     }

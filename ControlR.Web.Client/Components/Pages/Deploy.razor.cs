@@ -1,5 +1,10 @@
 using ControlR.Libraries.Branding;
 using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 
 namespace ControlR.Web.Client.Components.Pages;
 
@@ -13,7 +18,7 @@ public partial class Deploy
   private bool _canReadCustomers;
   private IReadOnlyList<CustomerDto> _customers = [];
   private string? _deviceId;
-  private IEnumerable<AgentInstallerKeyDto> _existingKeys = [];
+  private IEnumerable<InstallerKeyDto> _existingKeys = [];
   private string? _existingKeySecretInput;
   private string? _friendlyName;
   private DateTime? _inputExpirationDate;
@@ -24,7 +29,7 @@ public partial class Deploy
   private string? _instanceId;
   private string? _keyExpiration;
   private CustomerDto? _selectedCustomer;
-  private AgentInstallerKeyDto? _selectedExistingKey;
+  private InstallerKeyDto? _selectedExistingKey;
   private IReadOnlyCollection<TagResponseDto>? _selectedTags;
   private TagResponseDto[] _tags = [];
   private Guid? _tenantId;
@@ -135,7 +140,13 @@ public partial class Deploy
     _canAssignDeviceTags = await GetTagCapability();
     _canReadCustomers = state.User.HasClientPolicy(PolicyNames.RequireCustomersRead);
 
-    var deploymentOptionsResult = await ControlrApi.Internal.DeploymentOptions.GetDeploymentOptions();
+    if (_tenantId is not { } deploymentTenantId)
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    var deploymentOptionsResult = await ControlrApi.V1.DeploymentOptions.GetDeploymentOptions(deploymentTenantId);
     if (!deploymentOptionsResult.IsSuccess)
     {
       Snackbar.Add(deploymentOptionsResult.Reason, Severity.Error);
@@ -147,10 +158,10 @@ public partial class Deploy
 
     if (_canReadCustomers)
     {
-      var customersResult = await ControlrApi.Internal.Customers.GetAll();
+      var customersResult = await ControlrApi.V1.Customers.GetAllCustomers(deploymentTenantId);
       if (customersResult.IsSuccess)
       {
-        _customers = customersResult.Value;
+        _customers = customersResult.Value.Items;
       }
       else
       {
@@ -163,10 +174,15 @@ public partial class Deploy
       return;
     }
 
-    var result = await ControlrApi.Internal.Tags.GetAllTags();
+    if (_tenantId is not { } tagsTenantId)
+    {
+      return;
+    }
+
+    var result = await ControlrApi.V1.Tags.GetAllTags(tagsTenantId);
     if (result.IsSuccess)
     {
-      _tags = result.Value;
+      _tags = [.. result.Value.Items];
     }
     else
     {
@@ -254,11 +270,18 @@ public partial class Deploy
 
   private async Task GeneratePersistentKey()
   {
+    if (_tenantId is not { } tenantId)
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
     var dto = new CreateInstallerKeyRequestDto(
+      TenantId: tenantId,
       KeyType: InstallerKeyType.Persistent,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.Internal.InstallerKeys.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.V1.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add(createResult.Reason, Severity.Error);
@@ -271,6 +294,12 @@ public partial class Deploy
 
   private async Task GenerateTimeBasedKey()
   {
+    if (_tenantId is not { } tenantId)
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
     if (_inputExpirationDate is null || _inputExpirationTime is null)
     {
       Snackbar.Add("Expiration date and time are required", Severity.Error);
@@ -288,11 +317,12 @@ public partial class Deploy
     }
 
     var dto = new CreateInstallerKeyRequestDto(
+      TenantId: tenantId,
       KeyType: InstallerKeyType.TimeBased,
       Expiration: expirationDate,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.Internal.InstallerKeys.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.V1.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add(createResult.Reason, Severity.Error);
@@ -306,6 +336,12 @@ public partial class Deploy
 
   private async Task GenerateUsageBasedKey()
   {
+    if (_tenantId is not { } tenantId)
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
     if (_totalUsesAllowed < 1)
     {
       Snackbar.Add("Total uses must be greater than 0");
@@ -313,11 +349,12 @@ public partial class Deploy
     }
 
     var dto = new CreateInstallerKeyRequestDto(
+      TenantId: tenantId,
       KeyType: InstallerKeyType.UsageBased,
       AllowedUses: _totalUsesAllowed,
       FriendlyName: _friendlyName);
 
-    var createResult = await ControlrApi.Internal.InstallerKeys.CreateInstallerKey(dto);
+    var createResult = await ControlrApi.V1.InstallerKeys.CreateInstallerKey(dto);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add(createResult.Reason, Severity.Error);
@@ -383,7 +420,7 @@ public partial class Deploy
     return GetServerUri().Host;
   }
 
-  private string GetInstallerKeyDisplay(AgentInstallerKeyDto? key)
+  private string GetInstallerKeyDisplay(InstallerKeyDto? key)
   {
     if (key is null)
     {
@@ -402,7 +439,7 @@ public partial class Deploy
 
   private async Task<bool> GetTagCapability()
   {
-    if (!_tenantId.HasValue)
+    if (_tenantId is not { } tenantId)
     {
       return false;
     }
@@ -415,7 +452,7 @@ public partial class Deploy
       deviceId,
       _selectedCustomer?.Id);
 
-    var result = await ControlrApi.Internal.DeploymentOptions.GetTagCapability(request);
+    var result = await ControlrApi.V1.DeploymentOptions.GetTagCapability(tenantId, request);
     if (!result.IsSuccess)
     {
       return false;
@@ -470,10 +507,15 @@ public partial class Deploy
       {
         // The target became taggable (e.g. by narrowing to an allowed existing device). Load the
         // available tags now so the selector has options.
-        var result = await ControlrApi.Internal.Tags.GetAllTags();
+        if (_tenantId is not { } tagsTenantId)
+        {
+          return;
+        }
+
+        var result = await ControlrApi.V1.Tags.GetAllTags(tagsTenantId);
         if (result.IsSuccess)
         {
-          _tags = result.Value;
+          _tags = [.. result.Value.Items];
         }
         else
         {
@@ -506,12 +548,12 @@ public partial class Deploy
   private async Task ToggleKeyMode(bool useExisting)
   {
     _useExistingKey = useExisting;
-    if (_useExistingKey && !_existingKeys.Any())
+    if (_useExistingKey && !_existingKeys.Any() && _tenantId is { } existingKeyTenantId)
     {
-      var result = await ControlrApi.Internal.InstallerKeys.GetAllInstallerKeys();
+      var result = await ControlrApi.V1.InstallerKeys.GetAllInstallerKeys(existingKeyTenantId);
       if (result.IsSuccess)
       {
-        _existingKeys = [.. result.Value.OrderByDescending(x => x.CreatedAt)];
+        _existingKeys = [.. result.Value.Items.OrderByDescending(x => x.CreatedAt)];
       }
       else
       {

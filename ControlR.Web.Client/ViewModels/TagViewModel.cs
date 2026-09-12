@@ -1,6 +1,8 @@
-﻿namespace ControlR.Web.Client.ViewModels;
+﻿using TagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 
-public class TagViewModel(TagResponseDto dto)
+namespace ControlR.Web.Client.ViewModels;
+
+public class TagViewModel(TagsDtos.TagResponseDto dto)
 {
   public ConcurrentHashSet<Guid> DeviceIds { get; } = [.. dto.DeviceIds];
 

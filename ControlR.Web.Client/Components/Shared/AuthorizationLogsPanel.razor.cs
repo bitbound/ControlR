@@ -1,11 +1,17 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
+
 namespace ControlR.Web.Client.Components.Shared;
 
 public partial class AuthorizationLogsPanel
 {
   private string? _actionTypeFilter;
   private string? _actorTypeFilter;
+  private Guid _callerTenantId;
   private AuthorizationChangeLogDto? _expandedItem;
   private DateTime? _fromDate;
+  private bool _hasTenantContext;
   private bool _isLoading;
   private string _searchText = string.Empty;
   private Guid? _selectedTenantId;
@@ -13,6 +19,9 @@ public partial class AuthorizationLogsPanel
   private string? _targetTypeFilter;
   private TenantSummaryDto[] _tenants = [];
   private DateTime? _toDate;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -28,6 +37,15 @@ public partial class AuthorizationLogsPanel
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var callerTenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _callerTenantId = callerTenantId;
+    _hasTenantContext = true;
     await LoadTenants();
   }
 
@@ -51,9 +69,11 @@ public partial class AuthorizationLogsPanel
 
   private string GetTenantName(Guid? tenantId)
   {
+    // Tenant-scoped rows always carry OwningTenantId. The server-scoped rows live behind a
+    // separate endpoint this panel never calls. The old "(server)" label here was misleading.
     if (tenantId is null)
     {
-      return "(server)";
+      return "—";
     }
 
     var tenant = _tenants.FirstOrDefault(x => x.Id == tenantId.Value);
@@ -63,17 +83,22 @@ public partial class AuthorizationLogsPanel
   private async Task<TableData<AuthorizationChangeLogDto>> LoadTableData(
     TableState state, CancellationToken cancellationToken)
   {
+    if (!_hasTenantContext)
+    {
+      return new TableData<AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
+    }
+
     _isLoading = true;
     try
     {
-      var result = await ControlrApi.Internal.AuthorizationChangeLogs.Get(
+      var result = await ControlrApi.V1.AuthorizationChangeLogs.GetAuthorizationChangeLogs(
+        tenantId: _selectedTenantId ?? _callerTenantId,
         page: state.Page,
         pageSize: state.PageSize,
         actionType: string.IsNullOrWhiteSpace(_actionTypeFilter) ? null : _actionTypeFilter.Trim(),
         actorType: string.IsNullOrWhiteSpace(_actorTypeFilter) ? null : _actorTypeFilter.Trim(),
         targetType: string.IsNullOrWhiteSpace(_targetTypeFilter) ? null : _targetTypeFilter.Trim(),
         searchText: string.IsNullOrWhiteSpace(_searchText) ? null : _searchText.Trim(),
-        tenantId: _selectedTenantId,
         from: _fromDate is { } from ? new DateTimeOffset(from) : null,
         to: _toDate is { } to ? new DateTimeOffset(to).AddDays(1) : null,
         cancellationToken: cancellationToken);
@@ -106,10 +131,10 @@ public partial class AuthorizationLogsPanel
   {
     try
     {
-      var result = await ControlrApi.Internal.Tenants.Get();
+      var result = await ControlrApi.V1.Tenants.GetAllTenants();
       if (result.IsSuccess)
       {
-        _tenants = result.Value;
+        _tenants = [.. result.Value.Items];
       }
     }
     catch (Exception ex)

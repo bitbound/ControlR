@@ -1,12 +1,12 @@
 @using ControlR.Libraries.Api.Contracts.Enums
 @using ControlR.Web.Client.Components.Shared
-@using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal
+@using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments
 
 <MudDialog>
   <DialogContent>
     <MudGrid Spacing="2">
       <MudItem xs="12">
-        <MudAutocomplete T="InternalDtos.PermissionCatalogEntryDto"
+        <MudAutocomplete T="PADtos.PermissionCatalogEntryDto"
                          Value="_selectedPermission"
                          ValueChanged="HandlePermissionChanged"
                          SearchFunc="SearchPermissions"

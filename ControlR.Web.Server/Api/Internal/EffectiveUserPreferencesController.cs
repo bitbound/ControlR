@@ -12,6 +12,7 @@ public class EffectiveUserPreferencesController(IEffectiveUserPreferencesResolve
   private readonly IEffectiveUserPreferencesResolver _effectiveUserPreferencesResolver = effectiveUserPreferencesResolver;
 
   [HttpGet]
+  [ApiDeprecated("/api/v1/effective-user-preferences?tenantId={tenantId}", Note = "Use GET /api/v1/effective-user-preferences with an explicit tenantId.")]
   public async Task<ActionResult<InternalDtos.EffectiveUserPreferencesDto>> GetAll(CancellationToken cancellationToken)
   {
     if (!User.TryGetTenantId(out var tenantId) || !User.TryGetUserId(out var userId))

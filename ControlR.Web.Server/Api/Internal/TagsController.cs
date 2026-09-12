@@ -12,6 +12,7 @@ public class TagsController : ControllerBase
 {
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTagsWrite)]
+  [ApiDeprecated("/api/v1/tags?tenantId=", Note = "The replacement requires tenantId as a query parameter, returns 201, and takes the tenant from the required parameter instead of the caller claim.")]
   public async Task<ActionResult<InternalDtos.TagResponseDto>> CreateTag(
     [FromServices] AppDb appDb,
     [FromBody] InternalDtos.TagCreateRequestDto dto)
@@ -36,6 +37,7 @@ public class TagsController : ControllerBase
 
   [HttpDelete("{tagId:guid}")]
   [Authorize(Policy = PolicyNames.RequireTagsWrite)]
+  [ApiDeprecated("/api/v1/tags/{tagId}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   public async Task<ActionResult> DeleteTag(
     [FromServices] AppDb appDb,
     [FromRoute] Guid tagId)
@@ -61,6 +63,7 @@ public class TagsController : ControllerBase
   }
 
   [HttpGet]
+  [ApiDeprecated("/api/v1/tags?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns an Items envelope.")]
   public async Task<ActionResult<InternalDtos.TagResponseDto[]>> GetAllTags(
     [FromServices] AppDb appDb,
     [FromServices] IDeviceAccessScopeResolver scopeResolver,
@@ -113,6 +116,7 @@ public class TagsController : ControllerBase
 
   [HttpPut]
   [Authorize(Policy = PolicyNames.RequireTagsWrite)]
+  [ApiDeprecated("/api/v1/tags/{tagId}?tenantId=", Note = "The replacement takes the tag id in the route, tenantId as a query parameter, and a body with only name.")]
   public async Task<ActionResult<InternalDtos.TagResponseDto>> RenameTag(
     [FromServices] AppDb appDb,
     [FromBody] InternalDtos.TagRenameRequestDto dto)
