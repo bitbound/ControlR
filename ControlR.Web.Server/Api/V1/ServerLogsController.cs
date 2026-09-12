@@ -1,21 +1,29 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using LogsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerLogs;
 
-namespace ControlR.Web.Server.Api.Internal;
+namespace ControlR.Web.Server.Api.V1;
 
-[Route(HttpConstants.Internal.ServerLogsEndpoint)]
+/// <summary>
+/// Server log surface. Currently the Aspire dashboard link, which is a diagnostics probe
+/// guarded by the server telemetry read permission.
+/// </summary>
+[Route(HttpConstants.V1.ServerLogsEndpoint)]
 [ApiController]
 [Authorize(Policy = PolicyNames.RequireServerTelemetryRead)]
-[EndpointGroupName(OpenApiConstants.InternalGroupName)]
+[ApiVersion(ApiVersions.V1)]
 public class ServerLogsController(
   IWebHostEnvironment webHostEnvironment,
   IOptionsMonitor<AspireDashboardOptions> aspireOptions) : ControllerBase
 {
   private readonly IOptionsMonitor<AspireDashboardOptions> _aspireOptions = aspireOptions;
   private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
-  
+
   [HttpGet("get-aspire-url")]
-  [ApiDeprecated("/api/v1/server-logs/get-aspire-url")]
-  public async Task<ActionResult<InternalDtos.GetAspireUrlResponseDto>> GetAspireUrl()
+  [ProducesResponseType<LogsDtos.GetAspireUrlResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
+  public ActionResult<LogsDtos.GetAspireUrlResponseDto> GetAspireUrl()
   {
     var aspireToken = _aspireOptions.CurrentValue.Token;
     var aspireUrl = _aspireOptions.CurrentValue.PublicWebUrl;
@@ -24,19 +32,19 @@ public class ServerLogsController(
     {
       if (_webHostEnvironment.IsDevelopment())
       {
-        return Ok(new InternalDtos.GetAspireUrlResponseDto(
-          IsConfigured: true, 
+        return Ok(new LogsDtos.GetAspireUrlResponseDto(
+          IsConfigured: true,
           AspireUrl: new Uri("http://localhost:18888")));
       }
 
-      return Ok(new InternalDtos.GetAspireUrlResponseDto(
-        IsConfigured: false, 
+      return Ok(new LogsDtos.GetAspireUrlResponseDto(
+        IsConfigured: false,
         AspireUrl: null));
-    } 
+    }
 
     var aspireBaseUrl = new Uri(aspireUrl, $"/login?t={Uri.EscapeDataString(aspireToken)}");
-    return Ok(new InternalDtos.GetAspireUrlResponseDto(
-      IsConfigured: true, 
+    return Ok(new LogsDtos.GetAspireUrlResponseDto(
+      IsConfigured: true,
       AspireUrl: aspireBaseUrl));
   }
 }

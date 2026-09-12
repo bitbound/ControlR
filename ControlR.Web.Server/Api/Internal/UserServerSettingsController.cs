@@ -11,6 +11,7 @@ namespace ControlR.Web.Server.Api.Internal;
 public class UserServerSettingsController : ControllerBase
 {
   [HttpGet("file-upload-max-size")]
+  [ApiDeprecated("/api/v1/user-server-settings/file-upload-max-size")]
   public ActionResult<InternalDtos.FileUploadMaxSizeResponseDto> Get(
     [FromServices] IOptionsMonitor<AppOptions> appOptions
   )
@@ -20,6 +21,7 @@ public class UserServerSettingsController : ControllerBase
   }
 
   [HttpGet("decommission-status")]
+  [ApiDeprecated("/api/v1/user-server-settings/decommission-status")]
   public ActionResult<InternalDtos.DecommissionServerResponseDto> GetDecommissionStatus(
     [FromServices] IOptionsMonitor<ServerLifecycleOptions> serverLifecycleOptions
   )

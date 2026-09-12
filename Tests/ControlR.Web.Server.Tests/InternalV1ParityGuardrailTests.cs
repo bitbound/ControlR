@@ -6,9 +6,9 @@ namespace ControlR.Web.Server.Tests;
 /// <summary>
 /// Ratchet for the V1-first rule. Every operation published in the internal OpenAPI document
 /// must be deprecated, have a V1 twin (same verb and path template under /api/v1), or appear in
-/// <see cref="_irregularShapeAllowList"/> naming the constraint that forces it to stay internal.
-/// New endpoints belong in V1. Adding an Internal operation requires either a V1 twin or an
-/// explicit allow-list entry, so the non-standard surface cannot grow silently.
+/// <see cref="_irregularShapeAllowList"/> naming the reason it stays internal. New endpoints
+/// belong in V1. Adding an Internal operation requires either a V1 twin or an explicit
+/// allow-list entry, so the non-standard surface cannot grow silently.
 /// </summary>
 public partial class InternalV1ParityGuardrailTests
 {
@@ -16,37 +16,43 @@ public partial class InternalV1ParityGuardrailTests
 
   /// <summary>
   /// Internal operations without a V1 twin, keyed by "VERB /path/template" (route parameters
-  /// normalized to "{}"). Every value states why the operation is not standard CRUD (keeper) or
-  /// which migration package will twin it (pending). Entries become stale - and fail the second
-  /// test - once their operation is deprecated or gains a V1 twin, which keeps this list honest.
+  /// normalized to "{}"). Every value states the outcome of the V1 test, which asks whether an
+  /// API consumer might want the operation and whether it would work naturally in the API
+  /// client. A value names either the reason the test fails or the package that will twin the
+  /// operation (pending). Entries become stale - and fail the second test - once their operation
+  /// is deprecated or gains a V1 twin, which keeps this list honest.
+  /// Handler shape is never a reason. Operating on a live device over SignalR and running a
+  /// public or diagnostic probe both belong in V1 when the payload is expressible in the client.
   /// </summary>
   private static readonly Dictionary<string, string> _irregularShapeAllowList = new(StringComparer.Ordinal)
   {
-    // MVC identity UI - page-flow endpoints, not REST resources.
-    ["POST /Account/Logout"] = "ASP.NET Core Identity MVC endpoint, not a REST resource.",
-    ["POST /Account/Manage/DownloadPersonalData"] = "ASP.NET Core Identity MVC endpoint, not a REST resource.",
-    ["POST /Account/Manage/LinkExternalLogin"] = "ASP.NET Core Identity MVC endpoint, not a REST resource.",
-    ["POST /Account/PasskeyCreationOptions"] = "ASP.NET Core Identity MVC endpoint, not a REST resource.",
-    ["POST /Account/PasskeyRequestOptions"] = "ASP.NET Core Identity MVC endpoint, not a REST resource.",
-    ["POST /Account/PerformExternalLogin"] = "ASP.NET Core Identity MVC endpoint, not a REST resource.",
+    // MVC identity UI - HTML page flows. No API consumer wants the markup, and the API client
+    // cannot read it.
+    ["POST /Account/Logout"] = "ASP.NET Core Identity MVC HTML page flow, not a resource the API client can read.",
+    ["POST /Account/Manage/DownloadPersonalData"] = "ASP.NET Core Identity MVC HTML page flow, not a resource the API client can read.",
+    ["POST /Account/Manage/LinkExternalLogin"] = "ASP.NET Core Identity MVC HTML page flow, not a resource the API client can read.",
+    ["POST /Account/PasskeyCreationOptions"] = "ASP.NET Core Identity MVC HTML page flow, not a resource the API client can read.",
+    ["POST /Account/PasskeyRequestOptions"] = "ASP.NET Core Identity MVC HTML page flow, not a resource the API client can read.",
+    ["POST /Account/PerformExternalLogin"] = "ASP.NET Core Identity MVC HTML page flow, not a resource the API client can read.",
 
-    // Interactive authentication and session lifecycle - no tenant-resource CRUD shape.
-    ["GET /api/auth/confirmEmail"] = "Interactive authentication/session lifecycle flow.",
-    ["GET /api/auth/manage/info"] = "Interactive authentication/session lifecycle flow.",
-    ["GET /api/auth/me"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/change-password"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/change-password-with-credentials"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/complete-password-reset"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/forgotPassword"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/interactive-login"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/login"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/logout"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/manage/2fa"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/manage/info"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/refresh"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/register"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/resendConfirmationEmail"] = "Interactive authentication/session lifecycle flow.",
-    ["POST /api/auth/resetPassword"] = "Interactive authentication/session lifecycle flow.",
+    // Interactive authentication and session lifecycle. These are cookie-session browser
+    // ceremonies, and the API client authenticates with headers, so it cannot use them.
+    ["GET /api/auth/confirmEmail"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["GET /api/auth/manage/info"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["GET /api/auth/me"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/change-password"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/change-password-with-credentials"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/complete-password-reset"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/forgotPassword"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/interactive-login"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/login"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/logout"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/manage/2fa"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/manage/info"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/refresh"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/register"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/resendConfirmationEmail"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
+    ["POST /api/auth/resetPassword"] = "Cookie-session browser ceremony; the API client authenticates with headers.",
 
     // Agent-facing registration and update negotiation - consumed by the installed agent,
     // versioned by agent-server compatibility rather than API version.
@@ -55,38 +61,32 @@ public partial class InternalV1ParityGuardrailTests
     ["GET /api/agent/updates/get-bundle-metadata/{}"] = "Agent update-bundle negotiation.",
     ["GET /api/agent-update/get-bundle-metadata/{}"] = "Legacy agent update-bundle negotiation alias.",
 
-    // Live-session/interactive surfaces - operate on a running device, not stored resources.
-    ["GET /api/desktop-preview/{}/{}"] = "Remote-desktop preview handshake.",
-    ["DELETE /api/device-file-system/delete-path/{}"] = "Interactive file operation against a live agent session.",
-    ["GET /api/device-file-system/download/{}"] = "Interactive file operation against a live agent session.",
-    ["GET /api/device-file-system/logs/{}"] = "Interactive file operation against a live agent session.",
-    ["GET /api/device-file-system/logs/{}/contents"] = "Interactive file operation against a live agent session.",
-    ["POST /api/device-file-system/contents"] = "Interactive file operation against a live agent session.",
-    ["POST /api/device-file-system/create-directory/{}"] = "Interactive file operation against a live agent session.",
-    ["POST /api/device-file-system/download-archive/{}"] = "Interactive file operation against a live agent session.",
-    ["POST /api/device-file-system/path-segments"] = "Interactive file operation against a live agent session.",
-    ["POST /api/device-file-system/root-drives"] = "Interactive file operation against a live agent session.",
-    ["POST /api/device-file-system/subdirectories"] = "Interactive file operation against a live agent session.",
-    ["POST /api/device-file-system/upload/{}"] = "Interactive file operation against a live agent session.",
-    ["POST /api/device-file-system/validate-path/{}"] = "Interactive file operation against a live agent session.",
+    // Device file system - payloads the JSON API client cannot express. The JSON operations in
+    // the same controller are pending V1 twins below.
+    ["GET /api/device-file-system/download/{}"] = "Returns a raw octet-stream file; the API client has no result model for a binary body.",
+    ["POST /api/device-file-system/download-archive/{}"] = "Returns a raw octet-stream archive; the API client has no result model for a binary body.",
+    ["GET /api/device-file-system/logs/{}/contents"] = "Returns a raw text/plain log stream; the API client has no streaming result model.",
+    ["POST /api/device-file-system/upload/{}"] = "Accepts a multipart/form-data upload; the API client sends JSON bodies.",
 
-    // Public/diagnostic probes - pre-auth or server-ops, not tenant CRUD.
-    ["GET /api/version/agent"] = "Public version/release-notes discovery probe.",
-    ["GET /api/version/release-notes"] = "Public version/release-notes discovery probe.",
-    ["GET /api/version/server"] = "Public version/release-notes discovery probe.",
-    ["GET /api/public-server-settings"] = "Pre-authentication server discovery.",
-    ["GET /api/server-alert"] = "Server alert polling.",
-    ["POST /api/server-alert"] = "Server alert acknowledgement.",
-    ["GET /api/server-logs/get-aspire-url"] = "Server diagnostics probe.",
-    ["GET /api/server-stats"] = "Server diagnostics snapshot.",
-    ["POST /api/test-email"] = "SMTP connectivity test action.",
-    ["GET /api/user-server-settings/decommission-status"] = "Client-environment capability probe.",
-    ["GET /api/user-server-settings/file-upload-max-size"] = "Client-environment capability probe.",
-    ["POST /api/invites/accept"] = "Anonymous token-bearing accept ceremony; the activation code in the invite URL is the credential, not a principal.",
+    // Remote-desktop preview - a raw image stream from a live agent session, which the JSON
+    // result model cannot carry.
+    ["GET /api/desktop-preview/{}/{}"] = "Returns a raw image/jpeg stream from a live agent session; the API client has no streaming result model.",
 
-    // Pending V1 twins - migration packages prune these entries when the twin lands.
-    // The full migration surface is complete as of this revision. Any new pending entry
-    // added here must name the package that will remove it.
+    // Invite acceptance - an anonymous browser ceremony. The emailed token is the credential,
+    // and the invitee is a person in a browser, so no API-consumer flow exists to serve.
+    ["POST /api/invites/accept"] = "Anonymous browser ceremony; the emailed invite token is the credential, so there is no API-consumer flow to serve.",
+
+    // Pending V1 twins. These operations pass the V1 test, because their payloads are JSON, but
+    // the hub round-trip lives in the controller. The twin waits for that logic to move into a
+    // service rather than be duplicated. Prune each entry when its twin lands.
+    ["DELETE /api/device-file-system/delete-path/{}"] = "Pending V1 twin; extract the delete-path hub round-trip into a service first.",
+    ["GET /api/device-file-system/logs/{}"] = "Pending V1 twin; extract the log-listing hub round-trip into a service first.",
+    ["POST /api/device-file-system/contents"] = "Pending V1 twin; extract the directory-contents hub round-trip into a service first.",
+    ["POST /api/device-file-system/create-directory/{}"] = "Pending V1 twin; extract the create-directory hub round-trip into a service first.",
+    ["POST /api/device-file-system/path-segments"] = "Pending V1 twin; extract the path-segments hub round-trip into a service first.",
+    ["POST /api/device-file-system/root-drives"] = "Pending V1 twin; extract the root-drives hub round-trip into a service first.",
+    ["POST /api/device-file-system/subdirectories"] = "Pending V1 twin; extract the subdirectories hub round-trip into a service first.",
+    ["POST /api/device-file-system/validate-path/{}"] = "Pending V1 twin; extract the validate-path hub round-trip into a service first.",
   };
 
   [Fact]
@@ -130,8 +130,8 @@ public partial class InternalV1ParityGuardrailTests
     Assert.True(
       unclassified.Length == 0,
       "Internal operations with no V1 twin and no allow-list reason. New endpoints belong in V1; " +
-      "an Internal endpoint must name the irregular-shape constraint that forces it in " +
-      $"InternalV1ParityGuardrailTests.IrregularShapeAllowList: {string.Join(" | ", unclassified)}");
+      "an Internal endpoint must name the reason the V1 test fails. Handler shape is not a reason. " +
+      $"See InternalV1ParityGuardrailTests.IrregularShapeAllowList: {string.Join(" | ", unclassified)}");
   }
 
   private static string FindRepositoryRoot()

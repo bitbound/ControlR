@@ -3096,6 +3096,7 @@
         "tags": [
           "PublicServerSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/public-server-settings` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -3140,7 +3141,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "x-replacement-route": "/api/v1/public-server-settings"
       }
     },
     "/api/server-alert": {
@@ -3148,6 +3151,7 @@
         "tags": [
           "ServerAlert"
         ],
+        "description": "Deprecated. Use `/api/v1/server-alert` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -3193,6 +3197,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3200,12 +3205,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/server-alert"
       },
       "post": {
         "tags": [
           "ServerAlert"
         ],
+        "description": "Deprecated. Use `/api/v1/server-alert` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -3271,6 +3278,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3278,7 +3286,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/server-alert"
       }
     },
     "/api/server-logs/get-aspire-url": {
@@ -3286,6 +3295,7 @@
         "tags": [
           "ServerLogs"
         ],
+        "description": "Deprecated. Use `/api/v1/server-logs/get-aspire-url` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -3331,6 +3341,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3338,7 +3349,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/server-logs/get-aspire-url"
       }
     },
     "/api/server-stats": {
@@ -3346,6 +3358,7 @@
         "tags": [
           "ServerStats"
         ],
+        "description": "Deprecated. Use `/api/v1/server-stats` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -3391,6 +3404,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3398,7 +3412,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/server-stats"
       }
     },
     "/api/tags": {
@@ -4051,6 +4066,7 @@
         "tags": [
           "TestEmail"
         ],
+        "description": "Deprecated. Use `/api/v1/test-email` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -4079,6 +4095,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4086,7 +4103,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/test-email"
       }
     },
     "/api/user-preferences": {
@@ -5004,6 +5022,7 @@
         "tags": [
           "UserServerSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/user-server-settings/file-upload-max-size` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5049,6 +5068,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5056,7 +5076,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-server-settings/file-upload-max-size"
       }
     },
     "/api/user-server-settings/decommission-status": {
@@ -5064,6 +5085,7 @@
         "tags": [
           "UserServerSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/user-server-settings/decommission-status` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5109,6 +5131,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5116,7 +5139,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-server-settings/decommission-status"
       }
     },
     "/api/user-storage/{key}": {
@@ -5373,6 +5397,7 @@
         "tags": [
           "Version"
         ],
+        "description": "Deprecated. Use `/api/v1/version/agent` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5420,7 +5445,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "x-replacement-route": "/api/v1/version/agent"
       }
     },
     "/api/version/release-notes": {
@@ -5428,6 +5455,7 @@
         "tags": [
           "Version"
         ],
+        "description": "Deprecated. Use `/api/v1/version/release-notes` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5472,7 +5500,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "x-replacement-route": "/api/v1/version/release-notes"
       }
     },
     "/api/version/server": {
@@ -5480,6 +5510,7 @@
         "tags": [
           "Version"
         ],
+        "description": "Deprecated. Use `/api/v1/version/server` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5527,7 +5558,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "x-replacement-route": "/api/v1/version/server"
       }
     },
     "/api/agent/updates/get-bundle-metadata/{runtime}": {

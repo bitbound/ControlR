@@ -17,15 +17,22 @@ internal partial class V1Api(ControlrApi client) :
   ILogonTokensApi,
   IPermissionAssignmentsApi,
   IPersonalAccessTokensApi,
+  IPublicServerSettingsApi,
+  IServerAlertApi,
+  IServerLogsApi,
   IServerServiceAccountsApi,
+  IServerStatsApi,
   ITagsApi,
   ITenantServiceAccountsApi,
   ITenantsApi,
   ITenantSettingsApi,
+  ITestEmailApi,
   IUserGroupsApi,
   IUserPreferencesApi,
+  IUserServerSettingsApi,
   IUsersApi,
-  IUserStorageApi
+  IUserStorageApi,
+  IVersionApi
 {
   private readonly ControlrApi _client = client;
 
@@ -42,13 +49,20 @@ internal partial class V1Api(ControlrApi client) :
   public ILogonTokensApi LogonTokens => this;
   public IPermissionAssignmentsApi PermissionAssignments => this;
   public IPersonalAccessTokensApi PersonalAccessTokens => this;
+  public IPublicServerSettingsApi PublicServerSettings => this;
+  public IServerAlertApi ServerAlert => this;
+  public IServerLogsApi ServerLogs => this;
   public IServerServiceAccountsApi ServerServiceAccounts => this;
+  public IServerStatsApi ServerStats => this;
   public ITagsApi Tags => this;
   public ITenantsApi Tenants => this;
   public ITenantServiceAccountsApi TenantServiceAccounts => this;
   public ITenantSettingsApi TenantSettings => this;
+  public ITestEmailApi TestEmail => this;
   public IUserGroupsApi UserGroups => this;
   public IUserPreferencesApi UserPreferences => this;
   public IUsersApi Users => this;
+  public IUserServerSettingsApi UserServerSettings => this;
   public IUserStorageApi UserStorage => this;
+  public IVersionApi Version => this;
 }

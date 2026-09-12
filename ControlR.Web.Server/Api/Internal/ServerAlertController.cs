@@ -15,6 +15,7 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
 
 
   [HttpGet]
+  [ApiDeprecated("/api/v1/server-alert")]
   public async Task<ActionResult<InternalDtos.ServerAlertResponseDto>> GetAlert()
   {
     var alert = await _appDb.ServerAlerts
@@ -31,6 +32,7 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
 
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireServerSettingsWrite)]
+  [ApiDeprecated("/api/v1/server-alert")]
   public async Task<ActionResult<InternalDtos.ServerAlertResponseDto>> UpdateAlert([FromBody] InternalDtos.ServerAlertRequestDto request)
   {
     var alert = await _appDb

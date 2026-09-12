@@ -1,20 +1,27 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ControlR.Web.Server.Api.Internal;
+namespace ControlR.Web.Server.Api.V1;
 
-[Route(HttpConstants.Internal.TestEmailEndpoint)]
+/// <summary>
+/// Sends a test email to the calling user, so an administrator can verify SMTP configuration.
+/// The target address comes from the caller's own user record, never from the request.
+/// </summary>
+[Route(HttpConstants.V1.TestEmailEndpoint)]
 [ApiController]
 [Authorize(Policy = PolicyNames.RequireServerSettingsWrite)]
-[EndpointGroupName(OpenApiConstants.InternalGroupName)]
-public class TestEmailController() : ControllerBase
+[ApiVersion(ApiVersions.V1)]
+public class TestEmailController : ControllerBase
 {
-
   [HttpPost]
-  [ApiDeprecated("/api/v1/test-email")]
+  [ProducesResponseType(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status403Forbidden)]
   public async Task<IActionResult> SendTestEmail(
-    AppDb appDb,
-    IControlrEmailSender emailSender,
-    IOptionsMonitor<AppOptions> appOptions)
+    [FromServices] AppDb appDb,
+    [FromServices] IControlrEmailSender emailSender,
+    [FromServices] IOptionsMonitor<AppOptions> appOptions)
   {
     if (appOptions.CurrentValue.DisableEmailSending)
     {

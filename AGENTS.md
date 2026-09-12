@@ -97,8 +97,9 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 ### V1-first rule
 
 - New endpoints go to `Api/V1` by default. Standard CRUD shape means ID-addressed resources, required `tenantId` (query param, or path segment for tenant service accounts) on collection/create operations, and plain envelopes.
-- An `Api/Internal` endpoint exists only because its shape is irregular (streaming, live-session, interactive, auth/session flow, pre-auth probe, agent negotiation). It must name that constraint in `InternalV1ParityGuardrailTests.IrregularShapeAllowList`.
-- The guardrail test fails when an Internal operation is neither deprecated, V1-twinned (same verb + path template under `/api/v1`), nor allow-listed. Migration packages prune their entries as twins land.
+- The test for V1 is **"might an API consumer want this, and would it work naturally in the API client?"** When both answers are yes, it belongs in V1 whatever its handler looks like. Operating on a live device over SignalR, and public or diagnostic probes, are all valid V1 targets. Handler shape alone never disqualifies an endpoint.
+- An `Api/Internal` endpoint exists only when that test fails for a stated reason: no API consumer wants it (HTML page flows, browser-only ceremonies) or the API client cannot express it (raw binary or multipart payloads, cookie-session authentication). It must name that constraint in `InternalV1ParityGuardrailTests.IrregularShapeAllowList`.
+- The guardrail test fails when an Internal operation is neither deprecated, V1-twinned (same verb + path template under `/api/v1`), nor allow-listed. Twin packages prune their entries as twins land.
 
 ## Cross-Platform
 
