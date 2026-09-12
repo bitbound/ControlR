@@ -1,12 +1,12 @@
 using ControlR.Libraries.Api.Contracts.Settings;
 using Microsoft.AspNetCore.Components.Authorization;
-using PrefsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
 
 namespace ControlR.Web.Client.Services;
 
 public interface IUserPreferencesProvider
 {
-  Task<PrefsDtos.UserPreferencesDto> GetPreferences();
+  Task<UserPreferencesDto> GetPreferences();
   Task SetPreference<T>(string preferenceName, T value);
 }
 
@@ -21,9 +21,9 @@ internal class UserPreferencesProviderClient(
   private readonly ILogger<UserPreferencesProviderClient> _logger = logger;
   private readonly ISnackbar _snackbar = snackbar;
 
-  private PrefsDtos.UserPreferencesDto? _preferences;
+  private UserPreferencesDto? _preferences;
 
-  public async Task<PrefsDtos.UserPreferencesDto> GetPreferences()
+  public async Task<UserPreferencesDto> GetPreferences()
   {
     try
     {
@@ -75,7 +75,7 @@ internal class UserPreferencesProviderClient(
         return;
       }
 
-      var request = new PrefsDtos.UserPreferenceRequestDto(preferenceName, normalizationResult.Value ?? string.Empty);
+      var request = new UserPreferenceRequestDto(preferenceName, normalizationResult.Value ?? string.Empty);
       var setResult = await _controlrApi.V1.UserPreferences.SetPreference(tenantId, request);
 
       if (!setResult.IsSuccess)
@@ -97,11 +97,11 @@ internal class UserPreferencesProviderClient(
     }
   }
 
-  private static PrefsDtos.UserPreferencesDto CreateDefaultPreferences()
+  private static UserPreferencesDto CreateDefaultPreferences()
   {
     Dictionary<string, string> values = [];
     var defaults = UserPreferenceDefinitions.CreateDto(values);
-    return new PrefsDtos.UserPreferencesDto(
+    return new UserPreferencesDto(
       defaults.AutoQualityLowerThresholdMbps,
       defaults.AutoQualityMaximum,
       defaults.AutoQualityMinimum,

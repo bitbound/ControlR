@@ -6,7 +6,7 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -30,11 +30,11 @@ public class TagsV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.Create(
       scope.ServiceProvider.GetRequiredService<AppDb>(),
       tenant.Id,
-      new TagsDtos.TagCreateRequestDto("prod", TagType.Permission),
+      new TagCreateRequestDto("prod", TagType.Permission),
       TestContext.Current.CancellationToken);
 
     var created = Assert.IsType<CreatedAtActionResult>(result.Result);
-    var dto = Assert.IsType<TagsDtos.TagResponseDto>(created.Value);
+    var dto = Assert.IsType<TagResponseDto>(created.Value);
     Assert.Equal("prod", dto.Name);
     Assert.Empty(dto.DeviceIds);
   }
@@ -53,7 +53,7 @@ public class TagsV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.Create(
       scope.ServiceProvider.GetRequiredService<AppDb>(),
       foreignTenant.Id,
-      new TagsDtos.TagCreateRequestDto("stray", TagType.Permission),
+      new TagCreateRequestDto("stray", TagType.Permission),
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result.Result);
@@ -128,7 +128,7 @@ public class TagsV1ControllerTests(ITestOutputHelper testOutput)
       cancellationToken: TestContext.Current.CancellationToken);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var response = Assert.IsType<TagsDtos.TagsResponseDto>(ok.Value);
+    var response = Assert.IsType<TagsResponseDto>(ok.Value);
 
     Assert.Contains(response.Items, x => x.Name == "Mine");
     Assert.DoesNotContain(response.Items, x => x.Name == "Theirs");
@@ -183,7 +183,7 @@ public class TagsV1ControllerTests(ITestOutputHelper testOutput)
       cancellationToken: TestContext.Current.CancellationToken);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var response = Assert.IsType<TagsDtos.TagsResponseDto>(ok.Value);
+    var response = Assert.IsType<TagsResponseDto>(ok.Value);
 
     var tagDto = Assert.Single(response.Items, x => x.Name == "linked");
     Assert.Contains(deviceOne.Id, tagDto.DeviceIds);
@@ -227,11 +227,11 @@ public class TagsV1ControllerTests(ITestOutputHelper testOutput)
       scope.ServiceProvider.GetRequiredService<AppDb>(),
       tag.Id,
       tenant.Id,
-      new TagsDtos.UpdateTagRequestDto("new-name"),
+      new UpdateTagRequestDto("new-name"),
       TestContext.Current.CancellationToken);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var dto = Assert.IsType<TagsDtos.TagResponseDto>(ok.Value);
+    var dto = Assert.IsType<TagResponseDto>(ok.Value);
     Assert.Equal("new-name", dto.Name);
   }
 

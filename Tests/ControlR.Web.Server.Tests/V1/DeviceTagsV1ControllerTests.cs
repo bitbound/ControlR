@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using DeviceTagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -36,7 +36,7 @@ public class DeviceTagsV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>(),
       authorizationService,
       tenant.Id,
-      new DeviceTagsDtos.DeviceTagAddRequestDto(device.Id, tag.Id),
+      new DeviceTagAddRequestDto(device.Id, tag.Id),
       TestContext.Current.CancellationToken);
     Assert.IsType<NoContentResult>(addResult);
 
@@ -84,7 +84,7 @@ public class DeviceTagsV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<IAuthorizationService>(),
       tenantA.Id,
-      new DeviceTagsDtos.DeviceTagAddRequestDto(foreignDevice.Id, tag.Id),
+      new DeviceTagAddRequestDto(foreignDevice.Id, tag.Id),
       TestContext.Current.CancellationToken);
 
     Assert.IsType<NotFoundObjectResult>(result);
@@ -107,7 +107,7 @@ public class DeviceTagsV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<IAuthorizationService>(),
       tenant.Id,
-      new DeviceTagsDtos.DeviceTagAddRequestDto(device.Id, tag.Id),
+      new DeviceTagAddRequestDto(device.Id, tag.Id),
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result);

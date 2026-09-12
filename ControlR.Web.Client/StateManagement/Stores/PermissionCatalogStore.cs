@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 
 namespace ControlR.Web.Client.StateManagement.Stores;
 
-public interface IPermissionCatalogStore : IStoreBase<PADtos.PermissionCatalogEntryDto>
+public interface IPermissionCatalogStore : IStoreBase<PermissionCatalogEntryDto>
 {
 }
 
@@ -11,14 +11,14 @@ public class PermissionCatalogStore(
   IControlrApi controlrApi,
   AuthenticationStateProvider authState,
   ISnackbar snackbar,
-  ILogger<PermissionCatalogStore> logger) : StoreBase<PADtos.PermissionCatalogEntryDto>(controlrApi, snackbar, logger), IPermissionCatalogStore
+  ILogger<PermissionCatalogStore> logger) : StoreBase<PermissionCatalogEntryDto>(controlrApi, snackbar, logger), IPermissionCatalogStore
 {
-  protected override Guid GetItemId(PADtos.PermissionCatalogEntryDto dto)
+  protected override Guid GetItemId(PermissionCatalogEntryDto dto)
   {
     return StableId(dto.Name);
   }
 
-  protected override IEnumerable<PADtos.PermissionCatalogEntryDto> OrderItems(IEnumerable<PADtos.PermissionCatalogEntryDto> items)
+  protected override IEnumerable<PermissionCatalogEntryDto> OrderItems(IEnumerable<PermissionCatalogEntryDto> items)
   {
     return items.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase);
   }

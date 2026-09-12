@@ -1,13 +1,13 @@
 ﻿using System.Collections.Immutable;
 using Microsoft.AspNetCore.Components.Authorization;
-using DeviceTagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
 
 namespace ControlR.Web.Client.Components.Tags;
 
 public partial class DevicesTabContent : ComponentBase, IDisposable
 {
   private ImmutableArray<IDisposable>? _changeHandlers;
-  private DeviceResponseDto? _selectedDevice;
+  private InternalDtos.DeviceResponseDto? _selectedDevice;
   private string _tagSearchPattern = string.Empty;
 
   [Inject]
@@ -58,7 +58,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
 
       if (isToggled)
       {
-        var addRequest = new DeviceTagsDtos.DeviceTagAddRequestDto(deviceId, tag.Id);
+        var addRequest = new DeviceTagAddRequestDto(deviceId, tag.Id);
         var addResult = await ControlrApi.V1.DeviceTags.AddDeviceTag(tenantId, addRequest);
         if (!addResult.IsSuccess)
         {

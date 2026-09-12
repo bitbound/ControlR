@@ -9,7 +9,7 @@ using ControlR.Web.Server.Services.Authorization.Capabilities;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceResponseDto;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 
 namespace ControlR.Web.Server.Api.V1;
 

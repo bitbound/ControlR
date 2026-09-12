@@ -1,10 +1,10 @@
 using ControlR.Libraries.Branding;
 using Microsoft.AspNetCore.Components.Authorization;
-using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
-using DODtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
-using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
-using V1Flat = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
-using TagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeploymentOptions;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 
 namespace ControlR.Web.Client.Components.Pages;
 
@@ -16,9 +16,9 @@ public partial class Deploy
   private bool _appendInstanceId = true;
   private bool _canAssignDeviceTags;
   private bool _canReadCustomers;
-  private IReadOnlyList<CustDtos.CustomerDto> _customers = [];
+  private IReadOnlyList<CustomerDto> _customers = [];
   private string? _deviceId;
-  private IEnumerable<IKDtos.InstallerKeyDto> _existingKeys = [];
+  private IEnumerable<InstallerKeyDto> _existingKeys = [];
   private string? _existingKeySecretInput;
   private string? _friendlyName;
   private DateTime? _inputExpirationDate;
@@ -28,10 +28,10 @@ public partial class Deploy
   private InstallerKeyType _installerKeyType;
   private string? _instanceId;
   private string? _keyExpiration;
-  private CustDtos.CustomerDto? _selectedCustomer;
-  private IKDtos.InstallerKeyDto? _selectedExistingKey;
-  private IReadOnlyCollection<TagsDtos.TagResponseDto>? _selectedTags;
-  private TagsDtos.TagResponseDto[] _tags = [];
+  private CustomerDto? _selectedCustomer;
+  private InstallerKeyDto? _selectedExistingKey;
+  private IReadOnlyCollection<TagResponseDto>? _selectedTags;
+  private TagResponseDto[] _tags = [];
   private Guid? _tenantId;
   private uint _totalUsesAllowed = 1;
   private bool _useExistingKey;
@@ -276,7 +276,7 @@ public partial class Deploy
       return;
     }
 
-    var dto = new V1Flat.CreateInstallerKeyRequestDto(
+    var dto = new CreateInstallerKeyRequestDto(
       TenantId: tenantId,
       KeyType: InstallerKeyType.Persistent,
       FriendlyName: _friendlyName);
@@ -316,7 +316,7 @@ public partial class Deploy
       return;
     }
 
-    var dto = new V1Flat.CreateInstallerKeyRequestDto(
+    var dto = new CreateInstallerKeyRequestDto(
       TenantId: tenantId,
       KeyType: InstallerKeyType.TimeBased,
       Expiration: expirationDate,
@@ -348,7 +348,7 @@ public partial class Deploy
       return;
     }
 
-    var dto = new V1Flat.CreateInstallerKeyRequestDto(
+    var dto = new CreateInstallerKeyRequestDto(
       TenantId: tenantId,
       KeyType: InstallerKeyType.UsageBased,
       AllowedUses: _totalUsesAllowed,
@@ -420,7 +420,7 @@ public partial class Deploy
     return GetServerUri().Host;
   }
 
-  private string GetInstallerKeyDisplay(IKDtos.InstallerKeyDto? key)
+  private string GetInstallerKeyDisplay(InstallerKeyDto? key)
   {
     if (key is null)
     {
@@ -448,7 +448,7 @@ public partial class Deploy
       ? parsedDeviceId
       : null;
 
-    var request = new DODtos.DeploymentTagCapabilityRequestDto(
+    var request = new DeploymentTagCapabilityRequestDto(
       deviceId,
       _selectedCustomer?.Id);
 
@@ -461,7 +461,7 @@ public partial class Deploy
     return result.Value.Allowed;
   }
 
-  private async Task OnCustomerChanged(CustDtos.CustomerDto? customer)
+  private async Task OnCustomerChanged(CustomerDto? customer)
   {
     _selectedCustomer = customer;
     await RefreshTagCapability();

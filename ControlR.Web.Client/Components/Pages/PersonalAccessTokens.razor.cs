@@ -1,7 +1,7 @@
 using ControlR.Web.Client.Components.Shared;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
-using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
 
 namespace ControlR.Web.Client.Components.Pages;
 
@@ -10,7 +10,7 @@ public partial class PersonalAccessTokens
   private bool _isLoading = false;
   private PersonalAccessTokenPermissionMode _newTokenMode = PersonalAccessTokenPermissionMode.Restricted;
   private string _newTokenName = string.Empty;
-  private PATDtos.PersonalAccessTokenResponseDto[] _personalAccessTokens = [];
+  private PersonalAccessTokenResponseDto[] _personalAccessTokens = [];
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -47,7 +47,7 @@ public partial class PersonalAccessTokens
         return;
       }
 
-      var request = new PATDtos.CreatePersonalAccessTokenRequestDto(
+      var request = new CreatePersonalAccessTokenRequestDto(
         _newTokenName.Trim(),
         _newTokenMode);
       var result = await ControlrApi.V1.PersonalAccessTokens.CreatePersonalAccessToken(tenantId, request);
@@ -96,7 +96,7 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task DeletePersonalAccessToken(PATDtos.PersonalAccessTokenResponseDto personalAccessToken)
+  private async Task DeletePersonalAccessToken(PersonalAccessTokenResponseDto personalAccessToken)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Confirm Delete",
@@ -169,7 +169,7 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task ManagePermissions(PATDtos.PersonalAccessTokenResponseDto personalAccessToken)
+  private async Task ManagePermissions(PersonalAccessTokenResponseDto personalAccessToken)
   {
     var parameters = new DialogParameters<PermissionAssignmentPanelDialog>
     {
@@ -200,7 +200,7 @@ public partial class PersonalAccessTokens
     Snackbar.Add("Personal access tokens refreshed", Severity.Success);
   }
 
-  private async Task RenamePersonalAccessToken(PATDtos.PersonalAccessTokenResponseDto personalAccessToken)
+  private async Task RenamePersonalAccessToken(PersonalAccessTokenResponseDto personalAccessToken)
   {
     var parameters = new DialogParameters
     {
@@ -231,7 +231,7 @@ public partial class PersonalAccessTokens
         return;
       }
 
-      var updateRequest = new PATDtos.UpdatePersonalAccessTokenRequestDto(newTokenName.Trim());
+      var updateRequest = new UpdatePersonalAccessTokenRequestDto(newTokenName.Trim());
       var updateResult = await ControlrApi.V1.PersonalAccessTokens.UpdatePersonalAccessToken(personalAccessToken.Id, tenantId, updateRequest);
       if (updateResult.IsSuccess)
       {

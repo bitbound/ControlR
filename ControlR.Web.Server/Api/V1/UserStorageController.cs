@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
-using StorageDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -43,11 +43,11 @@ public class UserStorageController : ControllerBase
   }
 
   [HttpGet("{key}")]
-  [ProducesResponseType<StorageDtos.UserStorageResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UserStorageResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<StorageDtos.UserStorageResponseDto>> GetItem(
+  public async Task<ActionResult<UserStorageResponseDto>> GetItem(
     [FromServices] IUserStorageManager userStorageManager,
     [FromRoute] string key,
     [FromQuery] Guid tenantId,
@@ -73,14 +73,14 @@ public class UserStorageController : ControllerBase
   }
 
   [HttpPost]
-  [ProducesResponseType<StorageDtos.UserStorageResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UserStorageResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<StorageDtos.UserStorageResponseDto>> SetItem(
+  public async Task<ActionResult<UserStorageResponseDto>> SetItem(
     [FromServices] IUserStorageManager userStorageManager,
     [FromQuery] Guid tenantId,
-    [FromBody] StorageDtos.UserStorageRequestDto request,
+    [FromBody] UserStorageRequestDto request,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out _))
@@ -97,8 +97,8 @@ public class UserStorageController : ControllerBase
     return Ok(ToV1Dto(result));
   }
 
-  private static StorageDtos.UserStorageResponseDto ToV1Dto(InternalDtos.UserStorageResponseDto item)
+  private static UserStorageResponseDto ToV1Dto(InternalDtos.UserStorageResponseDto item)
   {
-    return new StorageDtos.UserStorageResponseDto(item.Key, item.Value);
+    return new UserStorageResponseDto(item.Key, item.Value);
   }
 }

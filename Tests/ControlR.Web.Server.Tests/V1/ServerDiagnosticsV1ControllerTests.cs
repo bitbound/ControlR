@@ -7,10 +7,10 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using AlertDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerAlerts;
-using PublicSettingsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PublicServerSettings;
-using StatsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerStats;
-using UserSettingsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserServerSettings;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerAlerts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PublicServerSettings;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerStats;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserServerSettings;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -46,7 +46,7 @@ public class ServerDiagnosticsV1ControllerTests(ITestOutputHelper testOutput)
     var result = controller.GetFileUploadMaxSize(
       scope.ServiceProvider.GetRequiredService<IOptionsMonitor<AppOptions>>());
 
-    var response = Assert.IsType<UserSettingsDtos.FileUploadMaxSizeResponseDto>(
+    var response = Assert.IsType<FileUploadMaxSizeResponseDto>(
       Assert.IsType<OkObjectResult>(result.Result).Value);
     Assert.Equal(
       scope.ServiceProvider.GetRequiredService<IOptionsMonitor<AppOptions>>().CurrentValue.MaxFileTransferSize,
@@ -64,7 +64,7 @@ public class ServerDiagnosticsV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    var settings = await response.Content.ReadFromJsonAsync<PublicSettingsDtos.PublicServerSettingsDto>(
+    var settings = await response.Content.ReadFromJsonAsync<PublicServerSettingsDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(settings);
   }
@@ -105,7 +105,7 @@ public class ServerDiagnosticsV1ControllerTests(ITestOutputHelper testOutput)
 
     var result = await controller.GetServerStats();
 
-    var stats = Assert.IsType<StatsDtos.ServerStatsDto>(result.Value);
+    var stats = Assert.IsType<ServerStatsDto>(result.Value);
     Assert.True(stats.TotalTenants >= 1);
   }
 
@@ -144,7 +144,7 @@ public class ServerDiagnosticsV1ControllerTests(ITestOutputHelper testOutput)
     using var scope = testApp.CreateScope();
     var controller = await scope.CreateControllerWithServerPrincipal<ServerAlertController>();
 
-    var request = new AlertDtos.ServerAlertRequestDto(
+    var request = new ServerAlertRequestDto(
       "Scheduled maintenance",
       MessageSeverity.Warning,
       IsDismissable: true,
@@ -153,7 +153,7 @@ public class ServerDiagnosticsV1ControllerTests(ITestOutputHelper testOutput)
 
     var result = await controller.UpdateAlert(request);
 
-    var response = Assert.IsType<AlertDtos.ServerAlertResponseDto>(result.Value);
+    var response = Assert.IsType<ServerAlertResponseDto>(result.Value);
     Assert.Equal("Scheduled maintenance", response.Message);
     Assert.True(response.HasAlertSet);
   }

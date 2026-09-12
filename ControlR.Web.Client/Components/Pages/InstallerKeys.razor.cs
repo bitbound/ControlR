@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class InstallerKeys
 {
-  private IEnumerable<IKDtos.InstallerKeyDto> _keys = [];
+  private IEnumerable<InstallerKeyDto> _keys = [];
   private bool _loading = true;
   private string _searchString = "";
   private Guid _tenantId;
@@ -24,7 +24,7 @@ public partial class InstallerKeys
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<IKDtos.InstallerKeyDto, bool> QuickFilter => key =>
+  private Func<InstallerKeyDto, bool> QuickFilter => key =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -65,7 +65,7 @@ public partial class InstallerKeys
     }
   }
 
-  private async Task DeleteKey(IKDtos.InstallerKeyDto key)
+  private async Task DeleteKey(InstallerKeyDto key)
   {
     try
     {
@@ -149,7 +149,7 @@ public partial class InstallerKeys
     }
   }
 
-  private async Task RenameKey(IKDtos.InstallerKeyDto key)
+  private async Task RenameKey(InstallerKeyDto key)
   {
     try
     {
@@ -165,7 +165,7 @@ public partial class InstallerKeys
       }
 
       var result = await ControlrApi.V1.InstallerKeys.RenameInstallerKey(
-          key.Id, _tenantId, new IKDtos.RenameInstallerKeyRequestDto(newName));
+          key.Id, _tenantId, new RenameInstallerKeyRequestDto(newName));
 
       if (result.IsSuccess)
       {
@@ -184,7 +184,7 @@ public partial class InstallerKeys
     }
   }
 
-  private async Task ShowUsages(IKDtos.InstallerKeyDto key)
+  private async Task ShowUsages(InstallerKeyDto key)
   {
     try
     {

@@ -12,11 +12,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 
-using EPDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
-using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
-using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
-using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
-using SATos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -33,22 +33,22 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createResponse = await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId),
-      new DGDtos.CreateDeviceGroupRequestDto("Member Test Group", null),
+      new CreateDeviceGroupRequestDto("Member Test Group", null),
       TestContext.Current.CancellationToken);
-    var group = await createResponse.Content.ReadFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+    var group = await createResponse.Content.ReadFromJsonAsync<DeviceGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(group);
 
     var addResponse = await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId, $"/{group.Id}/members"),
-      new DGDtos.AddDeviceGroupMembersRequestDto([device1.Id, device2.Id]),
+      new AddDeviceGroupMembersRequestDto([device1.Id, device2.Id]),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.NoContent, addResponse.StatusCode);
 
     var getResponse = await client.GetAsync(
       DeviceGroupsUrl(tenantId, $"/{group.Id}"),
       TestContext.Current.CancellationToken);
-    var withMembers = await getResponse.Content.ReadFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+    var withMembers = await getResponse.Content.ReadFromJsonAsync<DeviceGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(withMembers);
     Assert.Equal(2, withMembers.Members.Count);
@@ -56,14 +56,14 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     var removeResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete,
       DeviceGroupsUrl(tenantId, $"/{group.Id}/members"))
     {
-      Content = JsonContent.Create(new DGDtos.RemoveDeviceGroupMembersRequestDto([device1.Id]))
+      Content = JsonContent.Create(new RemoveDeviceGroupMembersRequestDto([device1.Id]))
     }, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.NoContent, removeResponse.StatusCode);
 
     var afterRemove = await client.GetAsync(
       DeviceGroupsUrl(tenantId, $"/{group.Id}"),
       TestContext.Current.CancellationToken);
-    var afterRemoveDto = await afterRemove.Content.ReadFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+    var afterRemoveDto = await afterRemove.Content.ReadFromJsonAsync<DeviceGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(afterRemoveDto);
     Assert.Single(afterRemoveDto.Members);
@@ -90,11 +90,11 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var authorizedResponse = await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId, $"/{authorizedGroup.Id}/members"),
-      new DGDtos.AddDeviceGroupMembersRequestDto([device.Id]),
+      new AddDeviceGroupMembersRequestDto([device.Id]),
       TestContext.Current.CancellationToken);
     var unauthorizedResponse = await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId, $"/{unauthorizedGroup.Id}/members"),
-      new DGDtos.AddDeviceGroupMembersRequestDto([device.Id]),
+      new AddDeviceGroupMembersRequestDto([device.Id]),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.NoContent, authorizedResponse.StatusCode);
@@ -109,11 +109,11 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createResponse = await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId),
-      new DGDtos.CreateDeviceGroupRequestDto("Production Servers", "Main production fleet"),
+      new CreateDeviceGroupRequestDto("Production Servers", "Main production fleet"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+    var created = await createResponse.Content.ReadFromJsonAsync<DeviceGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
     Assert.Equal("Production Servers", created.Name);
@@ -125,17 +125,17 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       DeviceGroupsUrl(tenantId, $"/{created.Id}"),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-    var fetched = await getResponse.Content.ReadFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+    var fetched = await getResponse.Content.ReadFromJsonAsync<DeviceGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(fetched);
     Assert.Equal(created.Id, fetched.Id);
 
     var updateResponse = await client.PutAsJsonAsync(
       DeviceGroupsUrl(tenantId, $"/{created.Id}"),
-      new DGDtos.UpdateDeviceGroupRequestDto("Staging Servers", "Staging fleet"),
+      new UpdateDeviceGroupRequestDto("Staging Servers", "Staging fleet"),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
-    var updated = await updateResponse.Content.ReadFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+    var updated = await updateResponse.Content.ReadFromJsonAsync<DeviceGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(updated);
     Assert.Equal("Staging Servers", updated.Name);
@@ -160,15 +160,15 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createGroupResponse = await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId),
-      new DGDtos.CreateDeviceGroupRequestDto("Cascade Test Group", null),
+      new CreateDeviceGroupRequestDto("Cascade Test Group", null),
       TestContext.Current.CancellationToken);
-    var group = await createGroupResponse.Content.ReadFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+    var group = await createGroupResponse.Content.ReadFromJsonAsync<DeviceGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(group);
 
     var createAssignmentResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         "device.read",
@@ -200,18 +200,18 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId),
-      new DGDtos.CreateDeviceGroupRequestDto("Group A", null),
+      new CreateDeviceGroupRequestDto("Group A", null),
       TestContext.Current.CancellationToken);
     await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId),
-      new DGDtos.CreateDeviceGroupRequestDto("Group B", null),
+      new CreateDeviceGroupRequestDto("Group B", null),
       TestContext.Current.CancellationToken);
 
     var response = await client.GetAsync(
       DeviceGroupsUrl(tenantId),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    var groups = await response.Content.ReadFromJsonAsync<DGDtos.DeviceGroupsResponseDto>(
+    var groups = await response.Content.ReadFromJsonAsync<DeviceGroupsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(groups);
     Assert.Equal(2, groups.Items.Count);
@@ -259,7 +259,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-    var result = await queryResponse.Content.ReadFromJsonAsync<EPDtos.EffectivePermissionQueryResponseDto>(
+    var result = await queryResponse.Content.ReadFromJsonAsync<EffectivePermissionQueryResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.True(result.IsAllowed);
@@ -274,15 +274,15 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     // Create a tenant service account and grant it device.read at tenant scope.
     var createAccountResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.TenantServiceAccountsEndpoint}/{tenantId}",
-      new SATos.CreateServiceAccountRequestDto("Effective Query SA", null),
+      new CreateServiceAccountRequestDto("Effective Query SA", null),
       TestContext.Current.CancellationToken);
-    var account = await createAccountResponse.Content.ReadFromJsonAsync<SATos.TenantServiceAccountDto>(
+    var account = await createAccountResponse.Content.ReadFromJsonAsync<TenantServiceAccountDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(account);
 
     var createAssignmentResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.ServiceAccount,
         account.Id,
         PermissionNames.DeviceRead,
@@ -298,7 +298,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-    var result = await queryResponse.Content.ReadFromJsonAsync<EPDtos.EffectivePermissionQueryResponseDto>(
+    var result = await queryResponse.Content.ReadFromJsonAsync<EffectivePermissionQueryResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.True(result.IsAllowed);
@@ -313,15 +313,15 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     // Create a user group and grant it device.read at tenant scope.
     var createGroupResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}",
-      new UGDtos.CreateUserGroupRequestDto("Effective Query Group", null),
+      new CreateUserGroupRequestDto("Effective Query Group", null),
       TestContext.Current.CancellationToken);
-    var group = await createGroupResponse.Content.ReadFromJsonAsync<UGDtos.UserGroupDetailDto>(
+    var group = await createGroupResponse.Content.ReadFromJsonAsync<UserGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(group);
 
     var createAssignmentResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.UserGroup,
         group.Id,
         PermissionNames.DeviceRead,
@@ -338,7 +338,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-    var result = await queryResponse.Content.ReadFromJsonAsync<EPDtos.EffectivePermissionQueryResponseDto>(
+    var result = await queryResponse.Content.ReadFromJsonAsync<EffectivePermissionQueryResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.True(result.IsAllowed);
@@ -358,7 +358,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
-    var result = await queryResponse.Content.ReadFromJsonAsync<EPDtos.EffectivePermissionQueryResponseDto>(
+    var result = await queryResponse.Content.ReadFromJsonAsync<EffectivePermissionQueryResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(result);
     Assert.False(result.IsAllowed);
@@ -385,7 +385,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         "device.read",
@@ -396,7 +396,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
+    var created = await createResponse.Content.ReadFromJsonAsync<PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
     Assert.Equal("device.read", created.PermissionName);
@@ -409,7 +409,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       $"{PaUrl(tenantId)}&principalKind=User&principalId={userId}",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-    var assignments = await getResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentsResponseDto>(
+    var assignments = await getResponse.Content.ReadFromJsonAsync<PermissionAssignmentsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(assignments);
     Assert.Contains(assignments.Items, a => a.Id == created.Id);
@@ -454,7 +454,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createResponse = await httpClient.PostAsJsonAsync(
       PaUrl(tenant.Id),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         targetUser.Id,
         PermissionNames.DeviceRead,
@@ -464,7 +464,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         null),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
+    var created = await createResponse.Content.ReadFromJsonAsync<PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
 
@@ -495,7 +495,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         targetUser.Id,
         PermissionNames.DeviceRead,
@@ -505,7 +505,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         null),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
+    var created = await createResponse.Content.ReadFromJsonAsync<PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
 
@@ -535,7 +535,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     // previously CreateGrant hardcoded IsEnabled=true, silently ignoring the switch).
     var createResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         "device.read",
@@ -547,7 +547,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
+    var created = await createResponse.Content.ReadFromJsonAsync<PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
     Assert.False(created.IsEnabled);
@@ -555,7 +555,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     // The default (omitted) remains enabled.
     var defaultResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         "device.overview.read",
@@ -565,7 +565,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         null),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Created, defaultResponse.StatusCode);
-    var defaultAssignment = await defaultResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
+    var defaultAssignment = await defaultResponse.Content.ReadFromJsonAsync<PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(defaultAssignment);
     Assert.True(defaultAssignment.IsEnabled);
@@ -579,7 +579,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         PermissionNames.DeviceRead,
@@ -588,7 +588,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
         tenantId,
         null),
       TestContext.Current.CancellationToken);
-    var created = await createResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
+    var created = await createResponse.Content.ReadFromJsonAsync<PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
 
@@ -600,7 +600,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     var getResponse = await client.GetAsync(
       $"{PaUrl(tenantId)}&principalKind=User&principalId={userId}",
       TestContext.Current.CancellationToken);
-    var assignments = await getResponse.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentsResponseDto>(
+    var assignments = await getResponse.Content.ReadFromJsonAsync<PermissionAssignmentsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(assignments);
     Assert.DoesNotContain(assignments.Items, a => a.Id == created.Id);
@@ -671,22 +671,22 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}",
-      new UGDtos.CreateUserGroupRequestDto("Member Test Group", null),
+      new CreateUserGroupRequestDto("Member Test Group", null),
       TestContext.Current.CancellationToken);
-    var group = await createResponse.Content.ReadFromJsonAsync<UGDtos.UserGroupDetailDto>(
+    var group = await createResponse.Content.ReadFromJsonAsync<UserGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(group);
 
     var addResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}/{group.Id}/members?tenantId={tenantId}",
-      new UGDtos.AddUserGroupMembersRequestDto([memberUser.Id]),
+      new AddUserGroupMembersRequestDto([memberUser.Id]),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.NoContent, addResponse.StatusCode);
 
     var getResponse = await client.GetAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}/{group.Id}?tenantId={tenantId}",
       TestContext.Current.CancellationToken);
-    var withMembers = await getResponse.Content.ReadFromJsonAsync<UGDtos.UserGroupDetailDto>(
+    var withMembers = await getResponse.Content.ReadFromJsonAsync<UserGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(withMembers);
     Assert.Single(withMembers.Members);
@@ -695,14 +695,14 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     var removeResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Delete,
       $"{HttpConstants.V1.UserGroupsEndpoint}/{group.Id}/members?tenantId={tenantId}")
     {
-      Content = JsonContent.Create(new UGDtos.RemoveUserGroupMembersRequestDto([memberUser.Id]))
+      Content = JsonContent.Create(new RemoveUserGroupMembersRequestDto([memberUser.Id]))
     }, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.NoContent, removeResponse.StatusCode);
 
     var afterRemove = await client.GetAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}/{group.Id}?tenantId={tenantId}",
       TestContext.Current.CancellationToken);
-    var afterRemoveDto = await afterRemove.Content.ReadFromJsonAsync<UGDtos.UserGroupDetailDto>(
+    var afterRemoveDto = await afterRemove.Content.ReadFromJsonAsync<UserGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(afterRemoveDto);
     Assert.Empty(afterRemoveDto.Members);
@@ -729,11 +729,11 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var authorizedResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}/{authorizedGroup.Id}/members?tenantId={tenantId}",
-      new UGDtos.AddUserGroupMembersRequestDto([memberUser.Id]),
+      new AddUserGroupMembersRequestDto([memberUser.Id]),
       TestContext.Current.CancellationToken);
     var unauthorizedResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}/{unauthorizedGroup.Id}/members?tenantId={tenantId}",
-      new UGDtos.AddUserGroupMembersRequestDto([memberUser.Id]),
+      new AddUserGroupMembersRequestDto([memberUser.Id]),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.NoContent, authorizedResponse.StatusCode);
@@ -748,11 +748,11 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}",
-      new UGDtos.CreateUserGroupRequestDto("Engineering", "Engineering team"),
+      new CreateUserGroupRequestDto("Engineering", "Engineering team"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
-    var created = await createResponse.Content.ReadFromJsonAsync<UGDtos.UserGroupDetailDto>(
+    var created = await createResponse.Content.ReadFromJsonAsync<UserGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
     Assert.Equal("Engineering", created.Name);
@@ -767,10 +767,10 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var updateResponse = await client.PutAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}/{created.Id}?tenantId={tenantId}",
-      new UGDtos.UpdateUserGroupRequestDto("Platform Engineering", "Platform team"),
+      new UpdateUserGroupRequestDto("Platform Engineering", "Platform team"),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
-    var updated = await updateResponse.Content.ReadFromJsonAsync<UGDtos.UserGroupDetailDto>(
+    var updated = await updateResponse.Content.ReadFromJsonAsync<UserGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(updated);
     Assert.Equal("Platform Engineering", updated.Name);
@@ -794,15 +794,15 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     var createGroupResponse = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}",
-      new UGDtos.CreateUserGroupRequestDto("Cascade Test User Group", null),
+      new CreateUserGroupRequestDto("Cascade Test User Group", null),
       TestContext.Current.CancellationToken);
-    var group = await createGroupResponse.Content.ReadFromJsonAsync<UGDtos.UserGroupDetailDto>(
+    var group = await createGroupResponse.Content.ReadFromJsonAsync<UserGroupDetailDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(group);
 
     var createAssignmentResponse = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.UserGroup,
         group.Id,
         "device.read",
@@ -834,48 +834,48 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
 
     await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}",
-      new UGDtos.CreateUserGroupRequestDto("Team A", null),
+      new CreateUserGroupRequestDto("Team A", null),
       TestContext.Current.CancellationToken);
     await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}",
-      new UGDtos.CreateUserGroupRequestDto("Team B", null),
+      new CreateUserGroupRequestDto("Team B", null),
       TestContext.Current.CancellationToken);
 
     var response = await client.GetAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}",
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    var groups = await response.Content.ReadFromJsonAsync<UGDtos.UserGroupsResponseDto>(
+    var groups = await response.Content.ReadFromJsonAsync<UserGroupsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(groups);
     Assert.Equal(2, groups.Items.Count);
   }
 
-  private static async Task<DGDtos.DeviceGroupDetailDto> CreateDeviceGroup(
+  private static async Task<DeviceGroupDetailDto> CreateDeviceGroup(
     HttpClient client,
     Guid tenantId,
     string name)
   {
     var response = await client.PostAsJsonAsync(
       DeviceGroupsUrl(tenantId),
-      new DGDtos.CreateDeviceGroupRequestDto(name, null),
+      new CreateDeviceGroupRequestDto(name, null),
       TestContext.Current.CancellationToken);
     response.EnsureSuccessStatusCode();
-    return await response.Content.ReadFromJsonAsync<DGDtos.DeviceGroupDetailDto>(
+    return await response.Content.ReadFromJsonAsync<DeviceGroupDetailDto>(
       TestContext.Current.CancellationToken) ?? throw new InvalidOperationException("Device group response was empty.");
   }
 
-  private static async Task<UGDtos.UserGroupDetailDto> CreateUserGroup(
+  private static async Task<UserGroupDetailDto> CreateUserGroup(
     HttpClient client,
     Guid tenantId,
     string name)
   {
     var response = await client.PostAsJsonAsync(
       $"{HttpConstants.V1.UserGroupsEndpoint}?tenantId={tenantId}",
-      new UGDtos.CreateUserGroupRequestDto(name, null),
+      new CreateUserGroupRequestDto(name, null),
       TestContext.Current.CancellationToken);
     response.EnsureSuccessStatusCode();
-    return await response.Content.ReadFromJsonAsync<UGDtos.UserGroupDetailDto>(
+    return await response.Content.ReadFromJsonAsync<UserGroupDetailDto>(
       TestContext.Current.CancellationToken) ?? throw new InvalidOperationException("User group response was empty.");
   }
 

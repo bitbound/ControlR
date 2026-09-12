@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using DeviceTagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -24,7 +24,7 @@ public class DeviceTagsController : ControllerBase
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromQuery] Guid tenantId,
-    [FromBody] DeviceTagsDtos.DeviceTagAddRequestDto request,
+    [FromBody] DeviceTagAddRequestDto request,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))

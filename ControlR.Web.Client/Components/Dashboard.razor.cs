@@ -1,6 +1,6 @@
 using ControlR.Libraries.Api.Contracts.FilterSort;
-using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
-using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Collections.Immutable;
@@ -24,11 +24,11 @@ public partial class Dashboard : IAsyncDisposable
   };
 
   private bool? _anyDevicesForUser;
-  private List<CustDtos.CustomerDto> _customers = [];
+  private List<CustomerDto> _customers = [];
   private MudDataGrid<DeviceViewModel>? _dataGrid;
   private FilterMatchMode _deviceGroupFilterMatchMode = FilterMatchMode.Any;
-  private List<DGDtos.DeviceGroupDto> _deviceGroups = [];
-  private DeviceSearchFilterCountsDto _filterCounts = new();
+  private List<DeviceGroupDto> _deviceGroups = [];
+  private InternalDtos.DeviceSearchFilterCountsDto _filterCounts = new();
   private bool _hideOfflineDevices;
   private bool _loading = true;
   private bool _openDeviceInNewTab;
@@ -150,7 +150,7 @@ public partial class Dashboard : IAsyncDisposable
 
       _disposables.AddRange(
         Messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChangedMessage),
-        Messenger.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceived)
+        Messenger.Register<DtoReceivedMessage<InternalDtos.DeviceResponseDto>>(this, HandleDeviceDtoReceived)
       );
 
 
@@ -204,7 +204,7 @@ public partial class Dashboard : IAsyncDisposable
     return $"{_selectedDeviceGroupIds.Count} {groupNoun} selected";
   }
 
-  private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<DeviceResponseDto> message)
+  private async Task HandleDeviceDtoReceived(object subscriber, DtoReceivedMessage<InternalDtos.DeviceResponseDto> message)
   {
     var viewModel = new DeviceViewModel(message.Dto);
     if (_dataGrid?.FilteredItems.Any(x => x.Id == viewModel.Id) == true ||
@@ -286,7 +286,7 @@ public partial class Dashboard : IAsyncDisposable
       ? null
       : _selectedDeviceGroupIds.Count > 0 ? [.. _selectedDeviceGroupIds] : null;
 
-    var request = new DeviceSearchRequestDto
+    var request = new InternalDtos.DeviceSearchRequestDto
     {
       SearchText = _searchText,
       HideOfflineDevices = _hideOfflineDevices && !ShouldBypassHideOfflineDevices,
@@ -318,7 +318,7 @@ public partial class Dashboard : IAsyncDisposable
     var result = await ControlrApi.Internal.Devices.SearchDevices(request, cancellationToken);
     if (!result.IsSuccess)
     {
-      _filterCounts = new DeviceSearchFilterCountsDto();
+      _filterCounts = new InternalDtos.DeviceSearchFilterCountsDto();
       _totalFilteredDevices = 0;
       await InvokeAsync(StateHasChanged);
       Snackbar.Add("Failed to load devices", Severity.Error);

@@ -1,6 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Settings;
 using Microsoft.AspNetCore.Components.Authorization;
-using EffectiveDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectiveUserPreferences;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectiveUserPreferences;
 
 namespace ControlR.Web.Client.Services;
 
@@ -20,7 +20,7 @@ internal sealed class EffectiveUserPreferences(
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly ILogger<EffectiveUserPreferences> _logger = logger;
   private readonly ISnackbar _snackbar = snackbar;
-  private EffectiveDtos.EffectiveUserPreferencesDto? _preferences;
+  private EffectiveUserPreferencesDto? _preferences;
 
   public async Task<EffectivePreference<bool>> GetNotifyUserOnSessionStart()
   {
@@ -42,7 +42,7 @@ internal sealed class EffectiveUserPreferences(
         }
 
         _preferences = result.Value ??
-          new EffectiveDtos.EffectiveUserPreferencesDto(EffectivePreferenceDefinitions.NotifyUserOnSessionStart.DefaultValue, false);
+          new EffectiveUserPreferencesDto(EffectivePreferenceDefinitions.NotifyUserOnSessionStart.DefaultValue, false);
       }
 
       return new EffectivePreference<bool>(

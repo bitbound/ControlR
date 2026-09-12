@@ -1,11 +1,11 @@
-using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class DeviceGroups : ComponentBase
 {
-  private IEnumerable<DGDtos.DeviceGroupDto> _groups = [];
+  private IEnumerable<DeviceGroupDto> _groups = [];
   private bool _loading;
   private string _searchString = string.Empty;
   private Guid _tenantId;
@@ -28,7 +28,7 @@ public partial class DeviceGroups : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<DGDtos.DeviceGroupDto, bool> QuickFilter => group =>
+  private Func<DeviceGroupDto, bool> QuickFilter => group =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -72,7 +72,7 @@ public partial class DeviceGroups : ComponentBase
 
     var result = await ControlrApi.V1.DeviceGroups.CreateDeviceGroup(
       _tenantId,
-      new DGDtos.CreateDeviceGroupRequestDto(name, null));
+      new CreateDeviceGroupRequestDto(name, null));
 
     if (!result.IsSuccess)
     {
@@ -84,7 +84,7 @@ public partial class DeviceGroups : ComponentBase
     await Refresh();
   }
 
-  private async Task DeleteGroup(DGDtos.DeviceGroupDto group)
+  private async Task DeleteGroup(DeviceGroupDto group)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete Device Group",
@@ -136,7 +136,7 @@ public partial class DeviceGroups : ComponentBase
     return $"{id.ToString()[..8]}...";
   }
 
-  private void ViewGroup(DGDtos.DeviceGroupDto group)
+  private void ViewGroup(DeviceGroupDto group)
   {
     Navigation.NavigateTo($"/device-groups/{group.Id}");
   }

@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Client.StateManagement.Stores;
 
-public interface IUserStore : IStoreBase<UsersDtos.UserResponseDto>
+public interface IUserStore : IStoreBase<UserResponseDto>
 {
 }
 
@@ -11,11 +11,11 @@ public class UserStore(
   IControlrApi controlrApi,
   ISnackbar snackbar,
   ILogger<UserStore> logger,
-  AuthenticationStateProvider authState) : StoreBase<UsersDtos.UserResponseDto>(controlrApi, snackbar, logger), IUserStore
+  AuthenticationStateProvider authState) : StoreBase<UserResponseDto>(controlrApi, snackbar, logger), IUserStore
 {
   private readonly AuthenticationStateProvider _authState = authState;
 
-  protected override Guid GetItemId(UsersDtos.UserResponseDto dto)
+  protected override Guid GetItemId(UserResponseDto dto)
   {
     return dto.Id;
   }

@@ -118,7 +118,7 @@ public partial class RemoteLogs : JsInteropableComponent
       ScrollToBottomOnLoad = true;
       await InvokeAsync(StateHasChanged);
 
-      var request = new GetLogFileContentsRequestDto(_selectedNode.Path);
+      var request = new InternalDtos.GetLogFileContentsRequestDto(_selectedNode.Path);
       var result = await ControlrApi.Internal.DeviceFileSystem.GetLogFileContents(DeviceId, request);
 
       if (!result.IsSuccess)

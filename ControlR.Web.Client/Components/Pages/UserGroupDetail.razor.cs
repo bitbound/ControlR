@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class UserGroupDetail : ComponentBase
 {
-  private UGDtos.UserGroupDetailDto? _group;
+  private UserGroupDetailDto? _group;
   private bool _loading;
   private Guid _tenantId;
 
@@ -107,7 +107,7 @@ public partial class UserGroupDetail : ComponentBase
     var updateResult = await ControlrApi.V1.UserGroups.UpdateUserGroup(
       _group.Id,
       _tenantId,
-      new UGDtos.UpdateUserGroupRequestDto(editResult.Name, editResult.Description));
+      new UpdateUserGroupRequestDto(editResult.Name, editResult.Description));
 
     if (!updateResult.IsSuccess)
     {
@@ -149,7 +149,7 @@ public partial class UserGroupDetail : ComponentBase
     Snackbar.Add("User group refreshed", Severity.Success);
   }
 
-  private async Task RemoveMember(UGDtos.UserGroupMemberDto member)
+  private async Task RemoveMember(UserGroupMemberDto member)
   {
     if (_group is null)
     {
@@ -167,7 +167,7 @@ public partial class UserGroupDetail : ComponentBase
     }
 
     var result = await ControlrApi.V1.UserGroups.RemoveUserGroupMembers(
-      _group.Id, _tenantId, new UGDtos.RemoveUserGroupMembersRequestDto([member.UserId]));
+      _group.Id, _tenantId, new RemoveUserGroupMembersRequestDto([member.UserId]));
 
     if (!result.IsSuccess)
     {

@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
-using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -41,7 +41,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       tenant.Id);
 
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
-    var dto = Assert.IsType<UsersDtos.AdminResetPasswordResponseDto>(okResult.Value);
+    var dto = Assert.IsType<AdminResetPasswordResponseDto>(okResult.Value);
 
     var identityOptions = services.GetRequiredService<IOptions<IdentityOptions>>();
     Assert.Equal(identityOptions.Value.Password.RequiredLength, dto.TemporaryPassword.Length);
@@ -95,7 +95,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>(),
       otherUser.Id,
       tenantA.Id,
-      new PATDtos.CreatePersonalAccessTokenRequestDto("Should Fail", PersonalAccessTokenPermissionMode.InheritOwner),
+      new CreatePersonalAccessTokenRequestDto("Should Fail", PersonalAccessTokenPermissionMode.InheritOwner),
       TestContext.Current.CancellationToken);
 
     Assert.IsType<NotFoundResult>(result.Result);
@@ -118,7 +118,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IPermissionEvaluator>(),
       services.GetRequiredService<IUserCreator>(),
       foreignTenant.Id,
-      new UsersDtos.CreateUserRequestDto("stray", "stray@t.local", "P@ssw0rd!", null),
+      new CreateUserRequestDto("stray", "stray@t.local", "P@ssw0rd!", null),
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result.Result);
@@ -139,7 +139,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IPermissionEvaluator>(),
       services.GetRequiredService<IUserCreator>(),
       tenant.Id,
-      new UsersDtos.CreateUserRequestDto("nouser", "nouser@t.local", "P@ssw0rd!", ["Nonexistent Preset"]),
+      new CreateUserRequestDto("nouser", "nouser@t.local", "P@ssw0rd!", ["Nonexistent Preset"]),
       TestContext.Current.CancellationToken);
 
     Assert.IsType<BadRequestObjectResult>(result.Result);
@@ -160,11 +160,11 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IPermissionEvaluator>(),
       services.GetRequiredService<IUserCreator>(),
       tenant.Id,
-      new UsersDtos.CreateUserRequestDto("newuser", "newuser@t.local", "P@ssw0rd!", [PermissionPresets.DeviceSuperUser]),
+      new CreateUserRequestDto("newuser", "newuser@t.local", "P@ssw0rd!", [PermissionPresets.DeviceSuperUser]),
       TestContext.Current.CancellationToken);
 
     var created = Assert.IsType<CreatedAtActionResult>(result.Result);
-    var dto = Assert.IsType<UsersDtos.UserResponseDto>(created.Value);
+    var dto = Assert.IsType<UserResponseDto>(created.Value);
     Assert.Equal("newuser@t.local", dto.Email);
 
     await using var db = services.GetRequiredService<AppDb>();
@@ -263,7 +263,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var response = Assert.IsType<UsersDtos.UsersResponseDto>(ok.Value);
+    var response = Assert.IsType<UsersResponseDto>(ok.Value);
 
     Assert.Contains(response.Items, x => x.Id == caller.Id);
     Assert.DoesNotContain(response.Items, x => x.Id == foreignUser.Id);
@@ -285,11 +285,11 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<AppDb>(),
       targetUser.Id,
       tenant.Id,
-      new PATDtos.CreatePersonalAccessTokenRequestDto("Admin Created PAT", PersonalAccessTokenPermissionMode.InheritOwner),
+      new CreatePersonalAccessTokenRequestDto("Admin Created PAT", PersonalAccessTokenPermissionMode.InheritOwner),
       TestContext.Current.CancellationToken);
 
     var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
-    var createDto = Assert.IsType<PATDtos.CreatePersonalAccessTokenResponseDto>(created.Value);
+    var createDto = Assert.IsType<CreatePersonalAccessTokenResponseDto>(created.Value);
     Assert.False(string.IsNullOrWhiteSpace(createDto.PlainTextToken));
 
     var getResult = await controller.GetUserPersonalAccessTokens(
@@ -300,7 +300,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     var getOk = Assert.IsType<OkObjectResult>(getResult.Result);
-    var tokens = Assert.IsAssignableFrom<IReadOnlyList<PATDtos.PersonalAccessTokenResponseDto>>(getOk.Value);
+    var tokens = Assert.IsAssignableFrom<IReadOnlyList<PersonalAccessTokenResponseDto>>(getOk.Value);
     var createdToken = Assert.Single(tokens);
     Assert.Equal(createDto.PersonalAccessToken.Id, createdToken.Id);
 
@@ -310,11 +310,11 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       targetUser.Id,
       createdToken.Id,
       tenant.Id,
-      new PATDtos.UpdatePersonalAccessTokenRequestDto("Renamed PAT"),
+      new UpdatePersonalAccessTokenRequestDto("Renamed PAT"),
       TestContext.Current.CancellationToken);
 
     var updateOk = Assert.IsType<OkObjectResult>(updateResult.Result);
-    var updatedToken = Assert.IsType<PATDtos.PersonalAccessTokenResponseDto>(updateOk.Value);
+    var updatedToken = Assert.IsType<PersonalAccessTokenResponseDto>(updateOk.Value);
     Assert.Equal("Renamed PAT", updatedToken.Name);
 
     var deleteResult = await controller.DeleteUserPersonalAccessToken(
@@ -335,7 +335,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     var finalGetOk = Assert.IsType<OkObjectResult>(finalGetResult.Result);
-    var finalTokens = Assert.IsAssignableFrom<IReadOnlyList<PATDtos.PersonalAccessTokenResponseDto>>(finalGetOk.Value);
+    var finalTokens = Assert.IsAssignableFrom<IReadOnlyList<PersonalAccessTokenResponseDto>>(finalGetOk.Value);
     Assert.Empty(finalTokens);
   }
 }

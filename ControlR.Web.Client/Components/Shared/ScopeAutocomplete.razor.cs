@@ -10,7 +10,7 @@ public partial class ScopeAutocomplete
   private IReadOnlyList<ScopeOption> _options = [];
   private PermissionScopeKind _previousScopeKind;
   private ScopeOption? _selected;
-  private DeviceResponseDto? _selectedDevice;
+  private InternalDtos.DeviceResponseDto? _selectedDevice;
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -170,7 +170,7 @@ public partial class ScopeAutocomplete
     var dialog = await DialogService.ShowAsync<DevicePickerDialog>("Select Device", options);
     var result = await dialog.Result;
 
-    if (result is null || result.Canceled || result.Data is not DeviceResponseDto device)
+    if (result is null || result.Canceled || result.Data is not InternalDtos.DeviceResponseDto device)
     {
       return;
     }

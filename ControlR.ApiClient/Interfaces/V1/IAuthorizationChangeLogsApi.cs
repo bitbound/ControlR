@@ -1,13 +1,13 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ACLDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 
 namespace ControlR.ApiClient.Interfaces.V1;
 
 public interface IAuthorizationChangeLogsApi
 {
   [ApiRoute($"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}?tenantId={{tenantId}}", "GET")]
-  Task<ApiResult<ACLDtos.AuthorizationChangeLogsResponseDto>> GetAuthorizationChangeLogs(
+  Task<ApiResult<AuthorizationChangeLogsResponseDto>> GetAuthorizationChangeLogs(
     Guid tenantId,
     int page = 0,
     int pageSize = 50,
@@ -23,7 +23,7 @@ public interface IAuthorizationChangeLogsApi
   // endpoint rather than carrying its own HttpConstants entry (an extra *Endpoint constant must
   // map to an IControlrApi sub-client property, which a sub-route cannot).
   [ApiRoute($"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}/server", "GET")]
-  Task<ApiResult<ACLDtos.AuthorizationChangeLogsResponseDto>> GetServerAuthorizationChangeLogs(
+  Task<ApiResult<AuthorizationChangeLogsResponseDto>> GetServerAuthorizationChangeLogs(
     int page = 0,
     int pageSize = 50,
     string? actionType = null,

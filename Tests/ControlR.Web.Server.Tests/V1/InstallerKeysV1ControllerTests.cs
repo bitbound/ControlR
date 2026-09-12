@@ -2,7 +2,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
 using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
-using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.CreateInstallerKeyRequestDto;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 
 namespace ControlR.Web.Server.Tests.V1;
 

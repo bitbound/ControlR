@@ -2,7 +2,7 @@ using Asp.Versioning;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using InviteDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -21,14 +21,14 @@ public class InvitesController : ControllerBase
 {
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
-  [ProducesResponseType<InviteDtos.InviteResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType<InviteResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status409Conflict)]
-  public async Task<ActionResult<InviteDtos.InviteResponseDto>> Create(
+  public async Task<ActionResult<InviteResponseDto>> Create(
     [FromServices] ITenantInvitesProvider tenantInvitesProvider,
     [FromQuery] Guid tenantId,
-    [FromBody] InviteDtos.CreateInviteRequestDto request)
+    [FromBody] CreateInviteRequestDto request)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
@@ -76,10 +76,10 @@ public class InvitesController : ControllerBase
 
   [HttpGet]
   [Authorize(Policy = PolicyNames.RequireUsersRead)]
-  [ProducesResponseType<InviteDtos.InvitesResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<InvitesResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<InviteDtos.InvitesResponseDto>> GetAll(
+  public async Task<ActionResult<InvitesResponseDto>> GetAll(
     [FromServices] ITenantInvitesProvider tenantInvitesProvider,
     [FromServices] IPermissionEvaluator permissionEvaluator,
     [FromServices] IResourceDescriptorFactory resourceFactory,
@@ -106,15 +106,15 @@ public class InvitesController : ControllerBase
     var origin = Request.ToOrigin();
     var invites = await tenantInvitesProvider.GetAllInvites(resolvedTenantId, origin, evalResult.Allowed);
 
-    return Ok(new InviteDtos.InvitesResponseDto
+    return Ok(new InvitesResponseDto
     {
       Items = [.. invites.Select(ToV1Dto)]
     });
   }
 
-  private static InviteDtos.InviteResponseDto ToV1Dto(InternalDtos.TenantInviteResponseDto invite)
+  private static InviteResponseDto ToV1Dto(InternalDtos.TenantInviteResponseDto invite)
   {
-    return new InviteDtos.InviteResponseDto(
+    return new InviteResponseDto(
       invite.Id,
       invite.CreatedAt,
       invite.InviteeEmail,

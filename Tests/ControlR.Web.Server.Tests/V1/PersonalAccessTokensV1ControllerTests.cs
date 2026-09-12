@@ -5,7 +5,7 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -31,10 +31,10 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IPersonalAccessTokenManager>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       tenant.Id,
-      new PATDtos.CreatePersonalAccessTokenRequestDto("self-token", PersonalAccessTokenPermissionMode.InheritOwner));
+      new CreatePersonalAccessTokenRequestDto("self-token", PersonalAccessTokenPermissionMode.InheritOwner));
 
     var created = Assert.IsType<CreatedAtActionResult>(result.Result);
-    var dto = Assert.IsType<PATDtos.CreatePersonalAccessTokenResponseDto>(created.Value);
+    var dto = Assert.IsType<CreatePersonalAccessTokenResponseDto>(created.Value);
     Assert.Equal("self-token", dto.PersonalAccessToken.Name);
     Assert.False(string.IsNullOrWhiteSpace(dto.PlainTextToken));
   }
@@ -55,7 +55,7 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IPersonalAccessTokenManager>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       foreignTenant.Id,
-      new PATDtos.CreatePersonalAccessTokenRequestDto("stray", PersonalAccessTokenPermissionMode.InheritOwner));
+      new CreatePersonalAccessTokenRequestDto("stray", PersonalAccessTokenPermissionMode.InheritOwner));
 
     Assert.IsType<ForbidResult>(result.Result);
   }
@@ -74,9 +74,9 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IPersonalAccessTokenManager>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       tenant.Id,
-      new PATDtos.CreatePersonalAccessTokenRequestDto("doomed", PersonalAccessTokenPermissionMode.InheritOwner));
+      new CreatePersonalAccessTokenRequestDto("doomed", PersonalAccessTokenPermissionMode.InheritOwner));
     var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
-    var dto = Assert.IsType<PATDtos.CreatePersonalAccessTokenResponseDto>(created.Value);
+    var dto = Assert.IsType<CreatePersonalAccessTokenResponseDto>(created.Value);
 
     var deleteResult = await controller.Delete(
       services.GetRequiredService<IPersonalAccessTokenManager>(),
@@ -91,7 +91,7 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<UserManager<AppUser>>(),
       tenant.Id);
     var ok = Assert.IsType<OkObjectResult>(getResult.Result);
-    var response = Assert.IsType<PATDtos.PersonalAccessTokensResponseDto>(ok.Value);
+    var response = Assert.IsType<PersonalAccessTokensResponseDto>(ok.Value);
     Assert.DoesNotContain(response.Items, x => x.Id == dto.PersonalAccessToken.Id);
   }
 
@@ -159,9 +159,9 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IPersonalAccessTokenManager>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       tenant.Id,
-      new PATDtos.CreatePersonalAccessTokenRequestDto("mine", PersonalAccessTokenPermissionMode.InheritOwner));
+      new CreatePersonalAccessTokenRequestDto("mine", PersonalAccessTokenPermissionMode.InheritOwner));
     var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
-    var mine = Assert.IsType<PATDtos.CreatePersonalAccessTokenResponseDto>(created.Value);
+    var mine = Assert.IsType<CreatePersonalAccessTokenResponseDto>(created.Value);
 
     var otherUser = await services.CreateTestUser(tenant.Id, "pat-self-other@t.local");
     var manager = services.GetRequiredService<IPersonalAccessTokenManager>();
@@ -179,7 +179,7 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
       tenant.Id);
 
     var ok = Assert.IsType<OkObjectResult>(getResult.Result);
-    var response = Assert.IsType<PATDtos.PersonalAccessTokensResponseDto>(ok.Value);
+    var response = Assert.IsType<PersonalAccessTokensResponseDto>(ok.Value);
 
     Assert.Contains(response.Items, x => x.Id == mine.PersonalAccessToken.Id);
     Assert.DoesNotContain(response.Items, x => x.Id == otherToken.Value.Id);
@@ -199,19 +199,19 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IPersonalAccessTokenManager>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       tenant.Id,
-      new PATDtos.CreatePersonalAccessTokenRequestDto("before", PersonalAccessTokenPermissionMode.InheritOwner));
+      new CreatePersonalAccessTokenRequestDto("before", PersonalAccessTokenPermissionMode.InheritOwner));
     var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
-    var dto = Assert.IsType<PATDtos.CreatePersonalAccessTokenResponseDto>(created.Value);
+    var dto = Assert.IsType<CreatePersonalAccessTokenResponseDto>(created.Value);
 
     var updateResult = await controller.Update(
       services.GetRequiredService<IPersonalAccessTokenManager>(),
       services.GetRequiredService<UserManager<AppUser>>(),
       dto.PersonalAccessToken.Id,
       tenant.Id,
-      new PATDtos.UpdatePersonalAccessTokenRequestDto("after"));
+      new UpdatePersonalAccessTokenRequestDto("after"));
 
     var ok = Assert.IsType<OkObjectResult>(updateResult.Result);
-    var updated = Assert.IsType<PATDtos.PersonalAccessTokenResponseDto>(ok.Value);
+    var updated = Assert.IsType<PersonalAccessTokenResponseDto>(ok.Value);
     Assert.Equal("after", updated.Name);
   }
 }

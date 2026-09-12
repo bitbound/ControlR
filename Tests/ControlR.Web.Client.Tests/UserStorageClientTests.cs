@@ -7,9 +7,8 @@ using ControlR.Web.Client.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using Moq;
-using UserStorageRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage.UserStorageRequestDto;
-using UserStorageResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage.UserStorageResponseDto;
-using V1UserStorageApi = ControlR.ApiClient.Interfaces.V1.IUserStorageApi;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage;
+using ControlR.ApiClient.Interfaces.V1;
 
 namespace ControlR.Web.Client.Tests;
 
@@ -19,11 +18,11 @@ public class UserStorageClientTests
   private readonly UserStorageClient _client;
   private readonly Mock<IControlrApi> _mockApi;
   private readonly Mock<ILogger<UserStorageClient>> _mockLogger;
-  private readonly Mock<V1UserStorageApi> _mockUserStorageApi;
+  private readonly Mock<IUserStorageApi> _mockUserStorageApi;
 
   public UserStorageClientTests()
   {
-    _mockUserStorageApi = new Mock<V1UserStorageApi>();
+    _mockUserStorageApi = new Mock<IUserStorageApi>();
 
     var mockV1Api = new Mock<ControlR.ApiClient.Interfaces.V1.IControlrV1Api>();
     mockV1Api

@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using StatsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerStats;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerStats;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -17,10 +17,10 @@ public class ServerStatsController(IServerStatsProvider serverStatsProvider) : C
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
 
   [HttpGet]
-  [ProducesResponseType<StatsDtos.ServerStatsDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<ServerStatsDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<StatsDtos.ServerStatsDto>> GetServerStats()
+  public async Task<ActionResult<ServerStatsDto>> GetServerStats()
   {
     var result = await _serverStatsProvider.GetServerStats();
 
@@ -32,7 +32,7 @@ public class ServerStatsController(IServerStatsProvider serverStatsProvider) : C
     }
 
     var stats = result.Value;
-    return new StatsDtos.ServerStatsDto(
+    return new ServerStatsDto(
       stats.TotalTenants,
       stats.OnlineAgents,
       stats.TotalAgents,

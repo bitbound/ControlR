@@ -1,11 +1,11 @@
-using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class DeviceGroupDetail : ComponentBase
 {
-  private DGDtos.DeviceGroupDetailDto? _group;
+  private DeviceGroupDetailDto? _group;
   private bool _loading;
   private Guid _tenantId;
 
@@ -108,7 +108,7 @@ public partial class DeviceGroupDetail : ComponentBase
     var updateResult = await ControlrApi.V1.DeviceGroups.UpdateDeviceGroup(
       _group.Id,
       _tenantId,
-      new DGDtos.UpdateDeviceGroupRequestDto(editResult.Name, editResult.Description));
+      new UpdateDeviceGroupRequestDto(editResult.Name, editResult.Description));
 
     if (!updateResult.IsSuccess)
     {
@@ -150,7 +150,7 @@ public partial class DeviceGroupDetail : ComponentBase
     Snackbar.Add("Device group refreshed", Severity.Success);
   }
 
-  private async Task RemoveMember(DGDtos.DeviceGroupMemberDto member)
+  private async Task RemoveMember(DeviceGroupMemberDto member)
   {
     if (_group is null)
     {
@@ -168,7 +168,7 @@ public partial class DeviceGroupDetail : ComponentBase
     }
 
     var result = await ControlrApi.V1.DeviceGroups.RemoveDeviceGroupMembers(
-      _group.Id, _tenantId, new DGDtos.RemoveDeviceGroupMembersRequestDto([member.DeviceId]));
+      _group.Id, _tenantId, new RemoveDeviceGroupMembersRequestDto([member.DeviceId]));
 
     if (!result.IsSuccess)
     {

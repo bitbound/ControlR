@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
-using SettingsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -55,10 +55,10 @@ public class TenantSettingsController : ControllerBase
 
   [HttpGet]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsRead)]
-  [ProducesResponseType<SettingsDtos.TenantSettingsDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<TenantSettingsDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<SettingsDtos.TenantSettingsDto>> GetAll(
+  public async Task<ActionResult<TenantSettingsDto>> GetAll(
     [FromServices] ITenantSettingsManager tenantSettingsManager,
     [FromQuery] Guid tenantId,
     CancellationToken cancellationToken)
@@ -74,12 +74,12 @@ public class TenantSettingsController : ControllerBase
 
   [HttpGet("{name}")]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsRead)]
-  [ProducesResponseType<SettingsDtos.TenantSettingResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<TenantSettingResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<SettingsDtos.TenantSettingResponseDto>> GetSetting(
+  public async Task<ActionResult<TenantSettingResponseDto>> GetSetting(
     [FromServices] AppDb appDb,
     [FromRoute] string name,
     [FromQuery] Guid tenantId)
@@ -112,14 +112,14 @@ public class TenantSettingsController : ControllerBase
 
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsWrite)]
-  [ProducesResponseType<SettingsDtos.TenantSettingResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<TenantSettingResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<SettingsDtos.TenantSettingResponseDto>> SetSetting(
+  public async Task<ActionResult<TenantSettingResponseDto>> SetSetting(
     [FromServices] ITenantSettingsManager tenantSettingsManager,
     [FromQuery] Guid tenantId,
-    [FromBody] SettingsDtos.TenantSettingRequestDto setting)
+    [FromBody] TenantSettingRequestDto setting)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
@@ -140,14 +140,14 @@ public class TenantSettingsController : ControllerBase
 
   [HttpPut]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsWrite)]
-  [ProducesResponseType<SettingsDtos.TenantSettingsDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<TenantSettingsDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<SettingsDtos.TenantSettingsDto>> SetSettings(
+  public async Task<ActionResult<TenantSettingsDto>> SetSettings(
     [FromServices] ITenantSettingsManager tenantSettingsManager,
     [FromQuery] Guid tenantId,
-    [FromBody] SettingsDtos.TenantSettingsDto settings,
+    [FromBody] TenantSettingsDto settings,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -171,19 +171,19 @@ public class TenantSettingsController : ControllerBase
     return Ok(ToV1Dto(result.Value));
   }
 
-  private static SettingsDtos.TenantSettingResponseDto ToV1Dto(Data.Entities.TenantSetting setting)
+  private static TenantSettingResponseDto ToV1Dto(Data.Entities.TenantSetting setting)
   {
-    return new SettingsDtos.TenantSettingResponseDto(setting.Id, setting.Name, setting.Value);
+    return new TenantSettingResponseDto(setting.Id, setting.Name, setting.Value);
   }
 
-  private static SettingsDtos.TenantSettingResponseDto ToV1Dto(InternalDtos.TenantSettingResponseDto setting)
+  private static TenantSettingResponseDto ToV1Dto(InternalDtos.TenantSettingResponseDto setting)
   {
-    return new SettingsDtos.TenantSettingResponseDto(setting.Id, setting.Name, setting.Value);
+    return new TenantSettingResponseDto(setting.Id, setting.Name, setting.Value);
   }
 
-  private static SettingsDtos.TenantSettingsDto ToV1Dto(InternalDtos.TenantSettingsDto settings)
+  private static TenantSettingsDto ToV1Dto(InternalDtos.TenantSettingsDto settings)
   {
-    return new SettingsDtos.TenantSettingsDto(
+    return new TenantSettingsDto(
       settings.AppendInstanceId,
       settings.InstanceId,
       settings.NotifyUserOnSessionStart);

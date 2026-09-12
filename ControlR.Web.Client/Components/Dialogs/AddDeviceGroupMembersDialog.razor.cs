@@ -1,5 +1,5 @@
 using ControlR.Libraries.Api.Contracts.FilterSort;
-using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
@@ -8,7 +8,7 @@ public partial class AddDeviceGroupMembersDialog : ComponentBase
   private const int PageSize = 10;
 
   private int _currentPage = 1;
-  private List<DeviceResponseDto> _devices = [];
+  private List<InternalDtos.DeviceResponseDto> _devices = [];
   private bool _loading;
   private string _searchText = string.Empty;
   private HashSet<Guid> _selectedIds = [];
@@ -40,7 +40,7 @@ public partial class AddDeviceGroupMembersDialog : ComponentBase
   private async Task Add()
   {
     var result = await ControlrApi.V1.DeviceGroups.AddDeviceGroupMembers(
-      GroupId, TenantId, new DGDtos.AddDeviceGroupMembersRequestDto([.. _selectedIds]));
+      GroupId, TenantId, new AddDeviceGroupMembersRequestDto([.. _selectedIds]));
 
     if (!result.IsSuccess)
     {
@@ -61,13 +61,13 @@ public partial class AddDeviceGroupMembersDialog : ComponentBase
 
     try
     {
-      var request = new DeviceSearchRequestDto
+      var request = new InternalDtos.DeviceSearchRequestDto
       {
         SearchText = _searchText,
         HideOfflineDevices = false,
         Page = _currentPage - 1,
         PageSize = PageSize,
-        SortDefinitions = [new DeviceColumnSort { PropertyName = nameof(DeviceResponseDto.Name), Descending = false, SortOrder = 0 }]
+        SortDefinitions = [new DeviceColumnSort { PropertyName = nameof(InternalDtos.DeviceResponseDto.Name), Descending = false, SortOrder = 0 }]
       };
 
       var response = await ControlrApi.Internal.Devices.SearchDevices(request);

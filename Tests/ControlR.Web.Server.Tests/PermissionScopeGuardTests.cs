@@ -6,7 +6,7 @@ using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -32,7 +32,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
 
     var response = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         PermissionNames.DeviceRead,
@@ -53,7 +53,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
 
     var response = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         PermissionNames.ServerTenantsWrite,
@@ -164,7 +164,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
 
     var response = await client.PutAsJsonAsync(
       PaUrl(tenantId, $"/{assignment.Id}"),
-      new PADtos.UpdatePermissionAssignmentRequestDto(
+      new UpdatePermissionAssignmentRequestDto(
         assignment.PermissionName,
         assignment.Effect,
         assignment.ScopeKind,
@@ -186,7 +186,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
 
     var response = await client.PutAsJsonAsync(
       PaUrl(tenantId, $"/{assignment.Id}"),
-      new PADtos.UpdatePermissionAssignmentRequestDto(
+      new UpdatePermissionAssignmentRequestDto(
         PermissionNames.TenantRead,
         PermissionEffect.Allow,
         PermissionScopeKind.Tenant,
@@ -345,11 +345,11 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
 
     var response = await client.PostAsJsonAsync(
       PaUrl(tenantId, "/replace"),
-      new PADtos.ReplacePermissionAssignmentsRequestDto(
+      new ReplacePermissionAssignmentsRequestDto(
         PermissionPrincipalKind.User,
         userId,
         [
-          new PADtos.CreatePermissionAssignmentRequestDto(
+          new CreatePermissionAssignmentRequestDto(
             PermissionPrincipalKind.User, userId, PermissionNames.TenantRead,
             PermissionEffect.Allow, PermissionScopeKind.Tenant, tenantId, null)
         ]),
@@ -386,7 +386,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
     return (testServer, httpClient, tenant.Id, user.Id);
   }
 
-  private async Task<PADtos.PermissionAssignmentDto> GetAssignment(
+  private async Task<PermissionAssignmentDto> GetAssignment(
     HttpClient client,
     Guid tenantId,
     Guid principalId,
@@ -397,7 +397,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
     response.EnsureSuccessStatusCode();
 
-    var assignments = await response.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentsResponseDto>(
+    var assignments = await response.Content.ReadFromJsonAsync<PermissionAssignmentsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(assignments);
 

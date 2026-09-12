@@ -1,14 +1,14 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class Users : ComponentBase
 {
-  private readonly Dictionary<string, SortDefinition<UsersDtos.UserResponseDto>> _sortDefinitions = new()
+  private readonly Dictionary<string, SortDefinition<UserResponseDto>> _sortDefinitions = new()
   {
-    ["UserName"] = new SortDefinition<UsersDtos.UserResponseDto>(
-      SortBy: nameof(UsersDtos.UserResponseDto.UserName),
+    ["UserName"] = new SortDefinition<UserResponseDto>(
+      SortBy: nameof(UserResponseDto.UserName),
       Descending: false,
       Index: 0,
       SortFunc: x => x.UserName)
@@ -18,7 +18,7 @@ public partial class Users : ComponentBase
   private bool _loading;
   private string _searchString = string.Empty;
   private Guid? _tenantId;
-  private IEnumerable<UsersDtos.UserResponseDto> _users = [];
+  private IEnumerable<UserResponseDto> _users = [];
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -35,7 +35,7 @@ public partial class Users : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<UsersDtos.UserResponseDto, bool> QuickFilter => user =>
+  private Func<UserResponseDto, bool> QuickFilter => user =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -69,7 +69,7 @@ public partial class Users : ComponentBase
     Snackbar.Add("Copied to clipboard", Severity.Success);
   }
 
-  private async Task DeleteUser(UsersDtos.UserResponseDto user)
+  private async Task DeleteUser(UserResponseDto user)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete User",
@@ -98,7 +98,7 @@ public partial class Users : ComponentBase
     await Refresh();
   }
 
-  private async Task EditPermissions(UsersDtos.UserResponseDto user)
+  private async Task EditPermissions(UserResponseDto user)
   {
     var parameters = new DialogParameters<PermissionAssignmentPanelDialog>
     {

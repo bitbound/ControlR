@@ -5,7 +5,7 @@ using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -28,11 +28,11 @@ public class UsersControllerV1Tests(ITestOutputHelper testOutput)
       scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>(),
       scope.ServiceProvider.GetRequiredService<IUserCreator>(),
       tenant.Id,
-      new UsersDtos.CreateUserRequestDto("cross-tenant", "cross-tenant@t.local", "T3stP@ssw0rd!", null),
+      new CreateUserRequestDto("cross-tenant", "cross-tenant@t.local", "T3stP@ssw0rd!", null),
       TestContext.Current.CancellationToken);
 
     var created = Assert.IsType<CreatedAtActionResult>(result.Result);
-    Assert.IsType<UsersDtos.UserResponseDto>(created.Value);
+    Assert.IsType<UserResponseDto>(created.Value);
   }
 
   [Fact]
@@ -51,7 +51,7 @@ public class UsersControllerV1Tests(ITestOutputHelper testOutput)
       scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>(),
       scope.ServiceProvider.GetRequiredService<IUserCreator>(),
       Guid.NewGuid(),
-      new UsersDtos.CreateUserRequestDto("ghost", "ghost@t.local", "T3stP@ssw0rd!", null),
+      new CreateUserRequestDto("ghost", "ghost@t.local", "T3stP@ssw0rd!", null),
       TestContext.Current.CancellationToken);
 
     Assert.IsType<BadRequestObjectResult>(result.Result);

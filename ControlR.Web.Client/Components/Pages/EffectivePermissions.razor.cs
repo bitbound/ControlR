@@ -1,15 +1,15 @@
-using EPDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
-using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class EffectivePermissions : ComponentBase
 {
-  private List<PADtos.PermissionCatalogEntryDto> _catalog = [];
+  private List<PermissionCatalogEntryDto> _catalog = [];
   private string _permissionName = string.Empty;
   private PermissionPrincipalKind _principalKind = PermissionPrincipalKind.User;
-  private EPDtos.EffectivePermissionQueryResponseDto? _result;
+  private EffectivePermissionQueryResponseDto? _result;
   private Guid? _scopeId;
   private PermissionScopeKind _scopeKind = PermissionScopeKind.Tenant;
   private Guid? _selectedPrincipalId;

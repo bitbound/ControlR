@@ -1,6 +1,6 @@
 using ControlR.Web.Client.Components.Shared;
 using Microsoft.AspNetCore.Components.Authorization;
-using V1Dtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
 
 namespace ControlR.Web.Client.Components.Pages;
 
@@ -8,7 +8,7 @@ public partial class ServerServiceAccounts : ComponentBase
 {
   private readonly HashSet<Guid> _togglingIds = [];
 
-  private V1Dtos.ServerServiceAccountDto[] _accounts = [];
+  private ServerServiceAccountDto[] _accounts = [];
   private bool _canRotateCredentials;
   private bool _loading;
   private string _searchString = string.Empty;
@@ -31,7 +31,7 @@ public partial class ServerServiceAccounts : ComponentBase
   [Inject]
   public required TimeProvider TimeProvider { get; init; }
 
-  private Func<V1Dtos.ServerServiceAccountDto, bool> QuickFilter => account =>
+  private Func<ServerServiceAccountDto, bool> QuickFilter => account =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -53,7 +53,7 @@ public partial class ServerServiceAccounts : ComponentBase
     return $"{id.ToString()[..8]}...";
   }
 
-  private async Task AddCredential(V1Dtos.ServerServiceAccountDto account)
+  private async Task AddCredential(ServerServiceAccountDto account)
   {
     var options = new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small };
     var dialog = await DialogService.ShowAsync<CreateServiceAccountCredentialDialog>(
@@ -67,7 +67,7 @@ public partial class ServerServiceAccounts : ComponentBase
 
     var apiResult = await ControlrApi.V1.ServerServiceAccounts.AddCredential(
       account.Id,
-      new V1Dtos.CreateServiceAccountCredentialRequestDto(dialogResult.Name, dialogResult.ExpiresAt));
+      new CreateServiceAccountCredentialRequestDto(dialogResult.Name, dialogResult.ExpiresAt));
 
     if (!apiResult.IsSuccess)
     {
@@ -108,7 +108,7 @@ public partial class ServerServiceAccounts : ComponentBase
     }
 
     var createResult = await ControlrApi.V1.ServerServiceAccounts.Create(
-      new V1Dtos.CreateServerServiceAccountRequestDto(
+      new CreateServerServiceAccountRequestDto(
         dialogResult.Name,
         dialogResult.Description,
         dialogResult.AccessMode));
@@ -124,7 +124,7 @@ public partial class ServerServiceAccounts : ComponentBase
     if (dialogResult.CredentialName is { } credentialName)
     {
       var credResult = await ControlrApi.V1.ServerServiceAccounts.AddCredential(
-        account.Id, new V1Dtos.CreateServiceAccountCredentialRequestDto(credentialName, dialogResult.CredentialExpiresAt));
+        account.Id, new CreateServiceAccountCredentialRequestDto(credentialName, dialogResult.CredentialExpiresAt));
 
       if (!credResult.IsSuccess)
       {
@@ -144,7 +144,7 @@ public partial class ServerServiceAccounts : ComponentBase
     await Refresh();
   }
 
-  private async Task DeleteAccount(V1Dtos.ServerServiceAccountDto account)
+  private async Task DeleteAccount(ServerServiceAccountDto account)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete Server Service Account",
@@ -167,7 +167,7 @@ public partial class ServerServiceAccounts : ComponentBase
     await Refresh();
   }
 
-  private async Task EditAccount(V1Dtos.ServerServiceAccountDto account)
+  private async Task EditAccount(ServerServiceAccountDto account)
   {
     var parameters = new DialogParameters<EditServiceAccountDialog>
     {
@@ -188,7 +188,7 @@ public partial class ServerServiceAccounts : ComponentBase
     var currentEnabled = index >= 0 ? _accounts[index].IsEnabled : account.IsEnabled;
 
     var updateResult = await ControlrApi.V1.ServerServiceAccounts.Update(
-      account.Id, new V1Dtos.UpdateServiceAccountRequestDto(editResult.Name, editResult.Description, currentEnabled));
+      account.Id, new UpdateServiceAccountRequestDto(editResult.Name, editResult.Description, currentEnabled));
 
     if (!updateResult.IsSuccess)
     {
@@ -200,7 +200,7 @@ public partial class ServerServiceAccounts : ComponentBase
     await Refresh();
   }
 
-  private async Task EditPermissions(V1Dtos.ServerServiceAccountDto account)
+  private async Task EditPermissions(ServerServiceAccountDto account)
   {
     if (account.AccessMode == ServiceAccountAccessMode.Unrestricted)
     {
@@ -221,7 +221,7 @@ public partial class ServerServiceAccounts : ComponentBase
     await Refresh();
   }
 
-  private int GetActiveCount(IReadOnlyList<V1Dtos.ServiceAccountCredentialDto> credentials)
+  private int GetActiveCount(IReadOnlyList<ServiceAccountCredentialDto> credentials)
   {
     return credentials.Count(cred =>
       cred.RevokedAt is null && (cred.ExpiresAt is null || cred.ExpiresAt > TimeProvider.GetUtcNow()));
@@ -320,7 +320,7 @@ public partial class ServerServiceAccounts : ComponentBase
     await dialogRef.Result;
   }
 
-  private async Task ToggleEnabled(V1Dtos.ServerServiceAccountDto account, bool enabled)
+  private async Task ToggleEnabled(ServerServiceAccountDto account, bool enabled)
   {
     if (_togglingIds.Contains(account.Id)) return;
 
@@ -332,7 +332,7 @@ public partial class ServerServiceAccounts : ComponentBase
 
       var latest = _accounts[index];
       var result = await ControlrApi.V1.ServerServiceAccounts.Update(latest.Id,
-        new V1Dtos.UpdateServiceAccountRequestDto(latest.Name, latest.Description, enabled));
+        new UpdateServiceAccountRequestDto(latest.Name, latest.Description, enabled));
 
       if (!result.IsSuccess)
       {

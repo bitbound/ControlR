@@ -5,7 +5,7 @@ using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.CreateInstallerKeyRequestDto;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 
 namespace ControlR.Web.Server.Api.V1;
 

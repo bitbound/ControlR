@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class UserGroups : ComponentBase
 {
-  private IEnumerable<UGDtos.UserGroupDto> _groups = [];
+  private IEnumerable<UserGroupDto> _groups = [];
   private bool _loading;
   private string _searchString = string.Empty;
   private Guid _tenantId;
@@ -28,7 +28,7 @@ public partial class UserGroups : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<UGDtos.UserGroupDto, bool> QuickFilter => group =>
+  private Func<UserGroupDto, bool> QuickFilter => group =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -71,7 +71,7 @@ public partial class UserGroups : ComponentBase
     }
 
     var result = await ControlrApi.V1.UserGroups.CreateUserGroup(
-      _tenantId, new UGDtos.CreateUserGroupRequestDto(name, null));
+      _tenantId, new CreateUserGroupRequestDto(name, null));
 
     if (!result.IsSuccess)
     {
@@ -83,7 +83,7 @@ public partial class UserGroups : ComponentBase
     await Refresh();
   }
 
-  private async Task DeleteGroup(UGDtos.UserGroupDto group)
+  private async Task DeleteGroup(UserGroupDto group)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete User Group",
@@ -106,7 +106,7 @@ public partial class UserGroups : ComponentBase
     await Refresh();
   }
 
-  private async Task EditPermissions(UGDtos.UserGroupDto group)
+  private async Task EditPermissions(UserGroupDto group)
   {
     var parameters = new DialogParameters<PermissionAssignmentPanelDialog>
     {
@@ -149,7 +149,7 @@ public partial class UserGroups : ComponentBase
     return $"{id.ToString()[..8]}...";
   }
 
-  private void ViewGroup(UGDtos.UserGroupDto group)
+  private void ViewGroup(UserGroupDto group)
   {
     Navigation.NavigateTo($"/user-groups/{group.Id}");
   }

@@ -2,7 +2,7 @@ using Asp.Versioning;
 using ControlR.Web.Server.Extensions.Dtos.V1;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
-using TagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -21,13 +21,13 @@ public class TagsController : ControllerBase
 {
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTagsWrite)]
-  [ProducesResponseType<TagsDtos.TagResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType<TagResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<TagsDtos.TagResponseDto>> Create(
+  public async Task<ActionResult<TagResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromQuery] Guid tenantId,
-    [FromBody] TagsDtos.TagCreateRequestDto request,
+    [FromBody] TagCreateRequestDto request,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -84,11 +84,11 @@ public class TagsController : ControllerBase
   }
 
   [HttpGet("{tagId:guid}")]
-  [ProducesResponseType<TagsDtos.TagResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<TagResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<TagsDtos.TagResponseDto>> Get(
+  public async Task<ActionResult<TagResponseDto>> Get(
     [FromServices] AppDb appDb,
     [FromServices] IDeviceAccessScopeResolver scopeResolver,
     [FromRoute] Guid tagId,
@@ -121,10 +121,10 @@ public class TagsController : ControllerBase
   }
 
   [HttpGet]
-  [ProducesResponseType<TagsDtos.TagsResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<TagsResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<TagsDtos.TagsResponseDto>> GetAll(
+  public async Task<ActionResult<TagsResponseDto>> GetAll(
     [FromServices] AppDb appDb,
     [FromServices] IDeviceAccessScopeResolver scopeResolver,
     [FromQuery] Guid tenantId,
@@ -171,20 +171,20 @@ public class TagsController : ControllerBase
       .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
       .ToList();
 
-    return Ok(new TagsDtos.TagsResponseDto { Items = items });
+    return Ok(new TagsResponseDto { Items = items });
   }
 
   [HttpPut("{tagId:guid}")]
   [Authorize(Policy = PolicyNames.RequireTagsWrite)]
-  [ProducesResponseType<TagsDtos.TagResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<TagResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<TagsDtos.TagResponseDto>> Update(
+  public async Task<ActionResult<TagResponseDto>> Update(
     [FromServices] AppDb appDb,
     [FromRoute] Guid tagId,
     [FromQuery] Guid tenantId,
-    [FromBody] TagsDtos.UpdateTagRequestDto request,
+    [FromBody] UpdateTagRequestDto request,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))

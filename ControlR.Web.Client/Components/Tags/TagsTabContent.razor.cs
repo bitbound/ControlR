@@ -3,8 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using ControlR.Web.Client.DataValidation;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
-using DeviceTagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
-using TagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 
 namespace ControlR.Web.Client.Components.Tags;
 
@@ -76,7 +76,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    var createRequest = new TagsDtos.TagCreateRequestDto(_newTagName, TagType.Permission);
+    var createRequest = new TagCreateRequestDto(_newTagName, TagType.Permission);
     var createResult = await ControlrApi.V1.Tags.CreateTag(tenantId, createRequest);
     if (!createResult.IsSuccess)
     {
@@ -131,7 +131,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
   }
 
-  private async Task HandleDeviceToggled((DeviceResponseDto device, bool isToggled) args)
+  private async Task HandleDeviceToggled((InternalDtos.DeviceResponseDto device, bool isToggled) args)
   {
     if (_selectedTag is null)
     {
@@ -187,7 +187,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     }
 
     var renameResult = await ControlrApi.V1.Tags.UpdateTag(
-      _selectedTag.Id, tenantId, new TagsDtos.UpdateTagRequestDto(response));
+      _selectedTag.Id, tenantId, new UpdateTagRequestDto(response));
     if (!renameResult.IsSuccess)
     {
       Snackbar.Add(renameResult.Reason, Severity.Error);
@@ -211,7 +211,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
 
       if (isToggled)
       {
-        var addRequest = new DeviceTagsDtos.DeviceTagAddRequestDto(deviceId, tag.Id);
+        var addRequest = new DeviceTagAddRequestDto(deviceId, tag.Id);
         var addResult = await ControlrApi.V1.DeviceTags.AddDeviceTag(tenantId, addRequest);
         if (!addResult.IsSuccess)
         {

@@ -2,7 +2,6 @@ using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.CreateInstallerKeyRequestDto;
 
 namespace ControlR.Web.Server.Api.Internal;
 
@@ -23,7 +22,7 @@ public class InstallerKeysController(
   [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
   [ApiDeprecated("/api/v1/installer-keys", Note = "The replacement requires TenantId in the request body.")]
   public async Task<ActionResult<InternalDtos.CreateInstallerKeyResponseDto>> Create(
-      [FromBody] CreateInstallerKeyRequestDto request)
+      [FromBody] InternalDtos.CreateInstallerKeyRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
         !User.TryGetUserId(out var creatorId))

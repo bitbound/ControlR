@@ -3,7 +3,7 @@ using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using StorageDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -29,7 +29,7 @@ public class UserStorageV1ControllerTests(ITestOutputHelper testOutput)
     await controller.SetItem(
       manager,
       tenant.Id,
-      new StorageDtos.UserStorageRequestDto("doomed-key", "x"),
+      new UserStorageRequestDto("doomed-key", "x"),
       CancellationToken.None);
 
     var deleteResult = await controller.DeleteItem(manager, "doomed-key", tenant.Id, CancellationToken.None);
@@ -91,16 +91,16 @@ public class UserStorageV1ControllerTests(ITestOutputHelper testOutput)
     var setResult = await controller.SetItem(
       manager,
       tenant.Id,
-      new StorageDtos.UserStorageRequestDto("ack-version", "1.2.3"),
+      new UserStorageRequestDto("ack-version", "1.2.3"),
       CancellationToken.None);
 
     var setOk = Assert.IsType<OkObjectResult>(setResult.Result);
-    var setDto = Assert.IsType<StorageDtos.UserStorageResponseDto>(setOk.Value);
+    var setDto = Assert.IsType<UserStorageResponseDto>(setOk.Value);
     Assert.Equal("1.2.3", setDto.Value);
 
     var getResult = await controller.GetItem(manager, "ack-version", tenant.Id, CancellationToken.None);
     var getOk = Assert.IsType<OkObjectResult>(getResult.Result);
-    var getDto = Assert.IsType<StorageDtos.UserStorageResponseDto>(getOk.Value);
+    var getDto = Assert.IsType<UserStorageResponseDto>(getOk.Value);
     Assert.Equal("ack-version", getDto.Key);
     Assert.Equal("1.2.3", getDto.Value);
   }
@@ -120,7 +120,7 @@ public class UserStorageV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.SetItem(
       services.GetRequiredService<IUserStorageManager>(),
       foreignTenant.Id,
-      new StorageDtos.UserStorageRequestDto("stray-key", "v"),
+      new UserStorageRequestDto("stray-key", "v"),
       CancellationToken.None);
 
     Assert.IsType<ForbidResult>(result.Result);

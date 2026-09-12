@@ -2,13 +2,13 @@ using System.Net.Http.Json;
 using ControlR.ApiClient.Interfaces.V1;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using DeviceTagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
 
 namespace ControlR.ApiClient;
 
 internal partial class V1Api
 {
-  async Task<ApiResult> IDeviceTagsApi.AddDeviceTag(Guid tenantId, DeviceTagsDtos.DeviceTagAddRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult> IDeviceTagsApi.AddDeviceTag(Guid tenantId, DeviceTagAddRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {

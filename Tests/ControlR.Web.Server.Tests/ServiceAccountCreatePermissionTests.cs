@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using ControlR.Web.Server.Api.V1;
-using V1SADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;
@@ -45,7 +45,7 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-    var account = await createResponse.Content.ReadFromJsonAsync<V1SADtos.ServerServiceAccountDto>(
+    var account = await createResponse.Content.ReadFromJsonAsync<ServerServiceAccountDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(account);
     Assert.Equal(ServiceAccountAccessMode.Restricted, account.AccessMode);
@@ -69,14 +69,14 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
 
     var createResponse = await httpClient.PostAsJsonAsync(
       HttpConstants.V1.ServerServiceAccountsEndpoint,
-      new V1SADtos.CreateServerServiceAccountRequestDto(
+      new CreateServerServiceAccountRequestDto(
         "Unrestricted Server SA",
         Description: null,
         AccessMode: ServiceAccountAccessMode.Unrestricted),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-    var account = await createResponse.Content.ReadFromJsonAsync<V1SADtos.ServerServiceAccountDto>(
+    var account = await createResponse.Content.ReadFromJsonAsync<ServerServiceAccountDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(account);
     Assert.Equal(ServiceAccountAccessMode.Unrestricted, account.AccessMode);
@@ -106,7 +106,7 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
       "A user with ServerServiceAccountsRotateCredentials must be allowed the server rotate permission.");
 
     var createResult = await controller.Create(
-      new V1SADtos.CreateServerServiceAccountRequestDto(
+      new CreateServerServiceAccountRequestDto(
         "Cred Server SA",
         Description: null,
         AccessMode: ServiceAccountAccessMode.Restricted),
@@ -114,17 +114,17 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     var createOk = Assert.IsType<CreatedAtActionResult>(createResult.Result);
-    var account = Assert.IsType<V1SADtos.ServerServiceAccountDto>(createOk.Value);
+    var account = Assert.IsType<ServerServiceAccountDto>(createOk.Value);
     Assert.Empty(account.Credentials);
 
     var expiresAt = DateTimeOffset.UtcNow.AddDays(30);
     var addCredResult = await controller.AddCredential(
       account.Id,
-      new V1SADtos.CreateServiceAccountCredentialRequestDto("Provisioned Key", expiresAt),
+      new CreateServiceAccountCredentialRequestDto("Provisioned Key", expiresAt),
       TestContext.Current.CancellationToken);
 
     var addOk = Assert.IsType<OkObjectResult>(addCredResult.Result);
-    var credentialResponse = Assert.IsType<V1SADtos.CreateServiceAccountCredentialResponseDto>(addOk.Value);
+    var credentialResponse = Assert.IsType<CreateServiceAccountCredentialResponseDto>(addOk.Value);
     Assert.NotEmpty(credentialResponse.PlainTextSecretKey);
     Assert.Equal("Provisioned Key", credentialResponse.Credential.Name);
     Assert.Equal(expiresAt, credentialResponse.Credential.ExpiresAt);
@@ -149,14 +149,14 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
     // this user holds, so it succeeds.
     var createResponse = await httpClient.PostAsJsonAsync(
       HttpConstants.V1.ServerServiceAccountsEndpoint,
-      new V1SADtos.CreateServerServiceAccountRequestDto(
+      new CreateServerServiceAccountRequestDto(
         "Restricted Server SA",
         Description: null,
         AccessMode: ServiceAccountAccessMode.Restricted),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-    var account = await createResponse.Content.ReadFromJsonAsync<V1SADtos.ServerServiceAccountDto>(
+    var account = await createResponse.Content.ReadFromJsonAsync<ServerServiceAccountDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(account);
     Assert.Equal(ServiceAccountAccessMode.Restricted, account.AccessMode);
@@ -164,7 +164,7 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
     // The credential endpoint requires the rotate policy, which this user lacks -> HTTP 403.
     var addCredResponse = await httpClient.PostAsJsonAsync(
       $"{HttpConstants.V1.ServerServiceAccountsEndpoint}/{account.Id}/credentials",
-      new V1SADtos.CreateServiceAccountCredentialRequestDto("Attempted Key", null),
+      new CreateServiceAccountCredentialRequestDto("Attempted Key", null),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Forbidden, addCredResponse.StatusCode);
   }
@@ -188,7 +188,7 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
     // server account, which grants full server bypass.
     var createResponse = await httpClient.PostAsJsonAsync(
       HttpConstants.V1.ServerServiceAccountsEndpoint,
-      new V1SADtos.CreateServerServiceAccountRequestDto(
+      new CreateServerServiceAccountRequestDto(
         "Forbidden Server SA",
         Description: null,
         AccessMode: ServiceAccountAccessMode.Unrestricted),
@@ -221,22 +221,22 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
 
     var createResult = await controller.Create(
       tenant.Id,
-      new V1SADtos.CreateServiceAccountRequestDto("Cred SA", null),
+      new CreateServiceAccountRequestDto("Cred SA", null),
       TestContext.Current.CancellationToken);
 
     var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
-    var account = Assert.IsType<V1SADtos.TenantServiceAccountDto>(created.Value);
+    var account = Assert.IsType<TenantServiceAccountDto>(created.Value);
     Assert.Empty(account.Credentials);
 
     var expiresAt = DateTimeOffset.UtcNow.AddDays(30);
     var addCredResult = await controller.AddCredential(
       tenant.Id,
       account.Id,
-      new V1SADtos.CreateServiceAccountCredentialRequestDto("Provisioned Key", expiresAt),
+      new CreateServiceAccountCredentialRequestDto("Provisioned Key", expiresAt),
       TestContext.Current.CancellationToken);
 
     var addOk = Assert.IsType<OkObjectResult>(addCredResult.Result);
-    var credentialResponse = Assert.IsType<V1SADtos.CreateServiceAccountCredentialResponseDto>(addOk.Value);
+    var credentialResponse = Assert.IsType<CreateServiceAccountCredentialResponseDto>(addOk.Value);
     Assert.NotEmpty(credentialResponse.PlainTextSecretKey);
     Assert.Equal("Provisioned Key", credentialResponse.Credential.Name);
     Assert.Equal(expiresAt, credentialResponse.Credential.ExpiresAt);
@@ -260,11 +260,11 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
     // Create succeeds with only the write permission.
     var createResponse = await httpClient.PostAsJsonAsync(
       $"{HttpConstants.V1.TenantServiceAccountsEndpoint}/{user.TenantId}",
-      new V1SADtos.CreateServiceAccountRequestDto("Cred SA", null),
+      new CreateServiceAccountRequestDto("Cred SA", null),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-    var account = await createResponse.Content.ReadFromJsonAsync<V1SADtos.TenantServiceAccountDto>(
+    var account = await createResponse.Content.ReadFromJsonAsync<TenantServiceAccountDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(account);
     Assert.Empty(account.Credentials);
@@ -272,7 +272,7 @@ public class ServiceAccountCreatePermissionTests(ITestOutputHelper testOutput)
     // The credential endpoint requires the rotate policy, which this user lacks -> HTTP 403.
     var addCredResponse = await httpClient.PostAsJsonAsync(
       $"{HttpConstants.V1.TenantServiceAccountsEndpoint}/{user.TenantId}/{account.Id}/credentials",
-      new V1SADtos.CreateServiceAccountCredentialRequestDto("Attempted Key", null),
+      new CreateServiceAccountCredentialRequestDto("Attempted Key", null),
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Forbidden, addCredResponse.StatusCode);
   }

@@ -1,6 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Settings;
 using Microsoft.AspNetCore.Components.Authorization;
-using SettingsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;
 
 namespace ControlR.Web.Client.Services;
 
@@ -9,7 +9,7 @@ public interface ITenantSettingsProvider
   Task<bool> GetAppendInstanceId();
   Task<string?> GetInstanceId();
   Task<bool?> GetNotifyUserOnSessionStart();
-  Task<SettingsDtos.TenantSettingsDto> GetSettings();
+  Task<TenantSettingsDto> GetSettings();
   Task<bool> SetAppendInstanceId(bool value);
   Task<bool> SetInstanceId(string? value);
   Task<bool> SetNotifyUserOnSessionStart(bool? value);
@@ -28,7 +28,7 @@ internal class TenantSettingsProvider(
   private readonly ILogger<TenantSettingsProvider> _logger = logger;
   private readonly ISnackbar _snackbar = snackbar;
 
-  private SettingsDtos.TenantSettingsDto? _settings;
+  private TenantSettingsDto? _settings;
 
   public async Task<bool> GetAppendInstanceId()
   {
@@ -48,7 +48,7 @@ internal class TenantSettingsProvider(
     return settings.NotifyUserOnSessionStart;
   }
 
-  public async Task<SettingsDtos.TenantSettingsDto> GetSettings()
+  public async Task<TenantSettingsDto> GetSettings()
   {
     if (_settings is not null)
     {
@@ -103,11 +103,11 @@ internal class TenantSettingsProvider(
     return await SetSetting(TenantSettingNames.NotifyUserOnSessionStart, value);
   }
 
-  private static SettingsDtos.TenantSettingsDto CreateDefaultSettings()
+  private static TenantSettingsDto CreateDefaultSettings()
   {
     Dictionary<string, string> values = [];
     var defaults = TenantSettingDefinitions.CreateDto(values);
-    return new SettingsDtos.TenantSettingsDto(
+    return new TenantSettingsDto(
       defaults.AppendInstanceId,
       defaults.InstanceId,
       defaults.NotifyUserOnSessionStart);
@@ -157,7 +157,7 @@ internal class TenantSettingsProvider(
         return false;
       }
 
-      var request = new SettingsDtos.TenantSettingRequestDto(settingName, normalizationResult.Value ?? string.Empty);
+      var request = new TenantSettingRequestDto(settingName, normalizationResult.Value ?? string.Empty);
       var setResult = await _controlrApi.V1.TenantSettings.SetTenantSetting(tenantId, request);
 
       if (!setResult.IsSuccess)

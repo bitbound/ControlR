@@ -3,8 +3,8 @@ using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Services.Users;
 using Microsoft.AspNetCore.Mvc;
-using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
-using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -27,11 +27,11 @@ public class UsersController : ControllerBase
 {
   [HttpPost("{userId:guid}/reset-password")]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
-  [ProducesResponseType<UsersDtos.AdminResetPasswordResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<AdminResetPasswordResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<UsersDtos.AdminResetPasswordResponseDto>> AdminResetPassword(
+  public async Task<ActionResult<AdminResetPasswordResponseDto>> AdminResetPassword(
     [FromServices] IPasswordManager passwordManager,
     [FromRoute] Guid userId,
     [FromQuery] Guid tenantId)
@@ -52,21 +52,21 @@ public class UsersController : ControllerBase
       return BadRequest(result.Reason);
     }
 
-    return Ok(new UsersDtos.AdminResetPasswordResponseDto(result.Value.TemporaryPassword));
+    return Ok(new AdminResetPasswordResponseDto(result.Value.TemporaryPassword));
   }
 
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
-  [ProducesResponseType<UsersDtos.UserResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType<UserResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<UsersDtos.UserResponseDto>> Create(
+  public async Task<ActionResult<UserResponseDto>> Create(
     [FromServices] AppDb appDb,
     [FromServices] IPermissionEvaluator permissionEvaluator,
     [FromServices] IUserCreator userCreator,
     [FromQuery] Guid tenantId,
-    [FromBody] UsersDtos.CreateUserRequestDto request,
+    [FromBody] CreateUserRequestDto request,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -187,23 +187,23 @@ public class UsersController : ControllerBase
       .Distinct()
       .ToListAsync(cancellationToken);
 
-    var response = new UsersDtos.UserResponseDto(user.Id, user.UserName, user.Email, createdAt, [.. permissions]);
+    var response = new UserResponseDto(user.Id, user.UserName, user.Email, createdAt, [.. permissions]);
     return CreatedAtAction(nameof(GetAll), new { tenantId = resolvedTenantId }, response);
   }
 
   [HttpPost("{userId:guid}/personal-access-tokens")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersWrite)]
-  [ProducesResponseType<PATDtos.CreatePersonalAccessTokenResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType<CreatePersonalAccessTokenResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<PATDtos.CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
+  public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb,
     [FromRoute] Guid userId,
     [FromQuery] Guid tenantId,
-    [FromBody] PATDtos.CreatePersonalAccessTokenRequestDto request,
+    [FromBody] CreatePersonalAccessTokenRequestDto request,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -242,7 +242,7 @@ public class UsersController : ControllerBase
       return BadRequest(result.Reason);
     }
 
-    var response = new PATDtos.CreatePersonalAccessTokenResponseDto(
+    var response = new CreatePersonalAccessTokenResponseDto(
       ToV1ResponseDto(result.Value.PersonalAccessToken),
       result.Value.PlainTextToken);
 
@@ -333,10 +333,10 @@ public class UsersController : ControllerBase
 
   [HttpGet]
   [Authorize(Policy = PolicyNames.RequireUsersRead)]
-  [ProducesResponseType<UsersDtos.UsersResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UsersResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<UsersDtos.UsersResponseDto>> GetAll(
+  public async Task<ActionResult<UsersResponseDto>> GetAll(
     [FromServices] AppDb appDb,
     [FromQuery] Guid tenantId,
     CancellationToken cancellationToken)
@@ -375,22 +375,22 @@ public class UsersController : ControllerBase
       .ToDictionary(group => group.Key, group => group.Select(x => x.PermissionName).Distinct().ToList());
 
     var items = users
-      .Select(x => new UsersDtos.UserResponseDto(
+      .Select(x => new UserResponseDto(
         x.Id, x.UserName, x.Email, x.CreatedAt,
         permissionsLookup.GetValueOrDefault(x.Id) ?? [],
         displayNamesLookup.GetValueOrDefault(x.Id)))
       .ToList();
 
-    return Ok(new UsersDtos.UsersResponseDto { Items = items });
+    return Ok(new UsersResponseDto { Items = items });
   }
 
   [HttpGet("{userId:guid}/personal-access-tokens")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersRead)]
-  [ProducesResponseType<PATDtos.PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<IReadOnlyList<PATDtos.PersonalAccessTokenResponseDto>>> GetUserPersonalAccessTokens(
+  public async Task<ActionResult<IReadOnlyList<PersonalAccessTokenResponseDto>>> GetUserPersonalAccessTokens(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb,
     [FromRoute] Guid userId,
@@ -416,18 +416,18 @@ public class UsersController : ControllerBase
 
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersWrite)]
-  [ProducesResponseType<PATDtos.PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<PATDtos.PersonalAccessTokenResponseDto>> UpdateUserPersonalAccessToken(
+  public async Task<ActionResult<PersonalAccessTokenResponseDto>> UpdateUserPersonalAccessToken(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb,
     [FromRoute] Guid userId,
     [FromRoute] Guid tokenId,
     [FromQuery] Guid tenantId,
-    [FromBody] PATDtos.UpdatePersonalAccessTokenRequestDto request,
+    [FromBody] UpdatePersonalAccessTokenRequestDto request,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -456,10 +456,10 @@ public class UsersController : ControllerBase
     return Ok(ToV1ResponseDto(result.Value));
   }
 
-  private static PATDtos.PersonalAccessTokenResponseDto ToV1ResponseDto(
+  private static PersonalAccessTokenResponseDto ToV1ResponseDto(
     InternalDtos.PersonalAccessTokenResponseDto token)
   {
-    return new PATDtos.PersonalAccessTokenResponseDto(
+    return new PersonalAccessTokenResponseDto(
       token.Id,
       token.Name,
       token.CreatedAt,

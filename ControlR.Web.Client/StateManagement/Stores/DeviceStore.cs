@@ -2,10 +2,10 @@
 
 namespace ControlR.Web.Client.StateManagement.Stores;
 
-public interface IDeviceStore : IStoreBase<DeviceResponseDto>
+public interface IDeviceStore : IStoreBase<InternalDtos.DeviceResponseDto>
 { }
 
-internal class DeviceStore : StoreBase<DeviceResponseDto>, IDeviceStore
+internal class DeviceStore : StoreBase<InternalDtos.DeviceResponseDto>, IDeviceStore
 {
   public DeviceStore(
     IControlrApi controlrApi,
@@ -17,19 +17,19 @@ internal class DeviceStore : StoreBase<DeviceResponseDto>, IDeviceStore
     messenger.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
   }
 
-  protected override Guid GetItemId(DeviceResponseDto dto)
+  protected override Guid GetItemId(InternalDtos.DeviceResponseDto dto)
   {
     return dto.Id;
   }
 
-  protected override IEnumerable<DeviceResponseDto> OrderItems(IEnumerable<DeviceResponseDto> items)
+  protected override IEnumerable<InternalDtos.DeviceResponseDto> OrderItems(IEnumerable<InternalDtos.DeviceResponseDto> items)
   {
     return items.OrderBy(d => d.Name);
   }
 
   protected override async Task RefreshImpl()
   {
-    var devices = new List<DeviceResponseDto>();
+    var devices = new List<InternalDtos.DeviceResponseDto>();
     await foreach (var device in ControlrApi.Internal.Devices.GetAllDevices())
     {
       devices.Add(device);

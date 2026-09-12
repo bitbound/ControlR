@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
-using UserSettingsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserServerSettings;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserServerSettings;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -17,22 +17,22 @@ namespace ControlR.Web.Server.Api.V1;
 public class UserServerSettingsController : ControllerBase
 {
   [HttpGet("decommission-status")]
-  [ProducesResponseType<UserSettingsDtos.DecommissionServerResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<DecommissionServerResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-  public ActionResult<UserSettingsDtos.DecommissionServerResponseDto> GetDecommissionStatus(
+  public ActionResult<DecommissionServerResponseDto> GetDecommissionStatus(
     [FromServices] IOptionsMonitor<ServerLifecycleOptions> serverLifecycleOptions)
   {
     var isEnabled = serverLifecycleOptions.CurrentValue.DecommissionServer;
-    return Ok(new UserSettingsDtos.DecommissionServerResponseDto(isEnabled));
+    return Ok(new DecommissionServerResponseDto(isEnabled));
   }
 
   [HttpGet("file-upload-max-size")]
-  [ProducesResponseType<UserSettingsDtos.FileUploadMaxSizeResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<FileUploadMaxSizeResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-  public ActionResult<UserSettingsDtos.FileUploadMaxSizeResponseDto> GetFileUploadMaxSize(
+  public ActionResult<FileUploadMaxSizeResponseDto> GetFileUploadMaxSize(
     [FromServices] IOptionsMonitor<AppOptions> appOptions)
   {
     var maxFileSize = appOptions.CurrentValue.MaxFileTransferSize;
-    return Ok(new UserSettingsDtos.FileUploadMaxSizeResponseDto(maxFileSize));
+    return Ok(new FileUploadMaxSizeResponseDto(maxFileSize));
   }
 }

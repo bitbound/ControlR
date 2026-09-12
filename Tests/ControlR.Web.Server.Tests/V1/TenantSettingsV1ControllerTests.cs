@@ -6,7 +6,7 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using SettingsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -32,7 +32,7 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
     await controller.SetSetting(
       manager,
       tenant.Id,
-      new SettingsDtos.TenantSettingRequestDto(
+      new TenantSettingRequestDto(
         TenantSettingNames.NotifyUserOnSessionStart,
         TenantSettingDefinitions.FormatValue(TenantSettingNames.NotifyUserOnSessionStart, true) ?? "true"));
 
@@ -44,7 +44,7 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
 
     var getResult = await controller.GetAll(manager, tenant.Id, CancellationToken.None);
     var settingsOk = Assert.IsType<OkObjectResult>(getResult.Result);
-    var settings = Assert.IsType<SettingsDtos.TenantSettingsDto>(settingsOk.Value);
+    var settings = Assert.IsType<TenantSettingsDto>(settingsOk.Value);
     Assert.Null(settings.NotifyUserOnSessionStart);
   }
 
@@ -84,7 +84,7 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
       CancellationToken.None);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var settings = Assert.IsType<SettingsDtos.TenantSettingsDto>(ok.Value);
+    var settings = Assert.IsType<TenantSettingsDto>(ok.Value);
     Assert.Null(settings.AppendInstanceId);
     Assert.Null(settings.NotifyUserOnSessionStart);
   }
@@ -103,7 +103,7 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
     await controller.SetSetting(
       manager,
       tenant.Id,
-      new SettingsDtos.TenantSettingRequestDto(
+      new TenantSettingRequestDto(
         TenantSettingNames.NotifyUserOnSessionStart,
         TenantSettingDefinitions.FormatValue(TenantSettingNames.NotifyUserOnSessionStart, true) ?? "true"));
 
@@ -112,7 +112,7 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
       TenantSettingNames.NotifyUserOnSessionStart,
       tenant.Id);
 
-    var dto = Assert.IsType<SettingsDtos.TenantSettingResponseDto>(result.Value);
+    var dto = Assert.IsType<TenantSettingResponseDto>(result.Value);
     Assert.Equal(TenantSettingNames.NotifyUserOnSessionStart, dto.Name);
   }
 
@@ -147,11 +147,11 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.SetSettings(
       services.GetRequiredService<ITenantSettingsManager>(),
       tenant.Id,
-      new SettingsDtos.TenantSettingsDto(true, null, true),
+      new TenantSettingsDto(true, null, true),
       CancellationToken.None);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var settings = Assert.IsType<SettingsDtos.TenantSettingsDto>(ok.Value);
+    var settings = Assert.IsType<TenantSettingsDto>(ok.Value);
     Assert.True(settings.AppendInstanceId);
     Assert.True(settings.NotifyUserOnSessionStart);
   }
@@ -170,17 +170,17 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.SetSetting(
       manager,
       tenant.Id,
-      new SettingsDtos.TenantSettingRequestDto(
+      new TenantSettingRequestDto(
         TenantSettingNames.NotifyUserOnSessionStart,
         TenantSettingDefinitions.FormatValue(TenantSettingNames.NotifyUserOnSessionStart, true) ?? "true"));
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var dto = Assert.IsType<SettingsDtos.TenantSettingResponseDto>(ok.Value);
+    var dto = Assert.IsType<TenantSettingResponseDto>(ok.Value);
     Assert.Equal(TenantSettingNames.NotifyUserOnSessionStart, dto.Name);
 
     var getResult = await controller.GetAll(manager, tenant.Id, CancellationToken.None);
     var settingsOk = Assert.IsType<OkObjectResult>(getResult.Result);
-    var settings = Assert.IsType<SettingsDtos.TenantSettingsDto>(settingsOk.Value);
+    var settings = Assert.IsType<TenantSettingsDto>(settingsOk.Value);
     Assert.True(settings.NotifyUserOnSessionStart);
   }
 
@@ -197,7 +197,7 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.SetSetting(
       services.GetRequiredService<ITenantSettingsManager>(),
       tenant.Id,
-      new SettingsDtos.TenantSettingRequestDto(TenantSettingNames.NotifyUserOnSessionStart, "maybe"));
+      new TenantSettingRequestDto(TenantSettingNames.NotifyUserOnSessionStart, "maybe"));
 
     var problem = Assert.IsType<ObjectResult>(result.Result);
     Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);

@@ -5,7 +5,7 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using InviteDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -34,10 +34,10 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.Create(
       services.GetRequiredService<ITenantInvitesProvider>(),
       tenant.Id,
-      new InviteDtos.CreateInviteRequestDto("invitee@test.local"));
+      new CreateInviteRequestDto("invitee@test.local"));
 
     var created = Assert.IsType<CreatedAtActionResult>(result.Result);
-    var dto = Assert.IsType<InviteDtos.InviteResponseDto>(created.Value);
+    var dto = Assert.IsType<InviteResponseDto>(created.Value);
     Assert.Equal("invitee@test.local", dto.InviteeEmail);
     Assert.StartsWith($"{InviteConfirmationBasePath}/", dto.InviteUrl.AbsolutePath);
   }
@@ -58,7 +58,7 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.Create(
       services.GetRequiredService<ITenantInvitesProvider>(),
       foreignTenant.Id,
-      new InviteDtos.CreateInviteRequestDto("stray@test.local"));
+      new CreateInviteRequestDto("stray@test.local"));
 
     Assert.IsType<ForbidResult>(result.Result);
   }
@@ -78,13 +78,13 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
     var first = await controller.Create(
       provider,
       tenant.Id,
-      new InviteDtos.CreateInviteRequestDto("dup@test.local"));
+      new CreateInviteRequestDto("dup@test.local"));
     Assert.IsType<CreatedAtActionResult>(first.Result);
 
     var second = await controller.Create(
       provider,
       tenant.Id,
-      new InviteDtos.CreateInviteRequestDto("dup@test.local"));
+      new CreateInviteRequestDto("dup@test.local"));
 
     var problem = Assert.IsType<ObjectResult>(second.Result);
     Assert.Equal(StatusCodes.Status409Conflict, problem.StatusCode);
@@ -105,9 +105,9 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
     var createResult = await controller.Create(
       provider,
       tenant.Id,
-      new InviteDtos.CreateInviteRequestDto("doomed@test.local"));
+      new CreateInviteRequestDto("doomed@test.local"));
     var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
-    var dto = Assert.IsType<InviteDtos.InviteResponseDto>(created.Value);
+    var dto = Assert.IsType<InviteResponseDto>(created.Value);
 
     var deleteResult = await controller.Delete(provider, dto.Id, tenant.Id);
     Assert.IsType<NoContentResult>(deleteResult);
@@ -118,7 +118,7 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
       services.GetRequiredService<IResourceDescriptorFactory>(),
       tenant.Id);
     var ok = Assert.IsType<OkObjectResult>(getResult.Result);
-    var response = Assert.IsType<InviteDtos.InvitesResponseDto>(ok.Value);
+    var response = Assert.IsType<InvitesResponseDto>(ok.Value);
     Assert.DoesNotContain(response.Items, x => x.Id == dto.Id);
   }
 
@@ -157,7 +157,7 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
     await controller.Create(
       provider,
       tenant.Id,
-      new InviteDtos.CreateInviteRequestDto("mine@test.local"));
+      new CreateInviteRequestDto("mine@test.local"));
 
     // Seed an invite in a foreign tenant directly. The V1 list must never surface it.
     var foreignTenant = await services.CreateTestTenant("Invites Isolation Foreign");
@@ -176,7 +176,7 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
       tenant.Id);
 
     var ok = Assert.IsType<OkObjectResult>(getResult.Result);
-    var response = Assert.IsType<InviteDtos.InvitesResponseDto>(ok.Value);
+    var response = Assert.IsType<InvitesResponseDto>(ok.Value);
 
     Assert.Contains(response.Items, x => x.InviteeEmail == "mine@test.local");
     Assert.DoesNotContain(response.Items, x => x.InviteeEmail == "theirs@test.local");
@@ -197,7 +197,7 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
     await controller.Create(
       provider,
       tenant.Id,
-      new InviteDtos.CreateInviteRequestDto("coded@test.local"));
+      new CreateInviteRequestDto("coded@test.local"));
 
     // A device-scoped user has no users.read or tenant.users.write grants. The endpoint is
     // invoked directly here, so only the in-handler code gate applies.
@@ -215,7 +215,7 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
       tenant.Id);
 
     var ok = Assert.IsType<OkObjectResult>(getResult.Result);
-    var response = Assert.IsType<InviteDtos.InvitesResponseDto>(ok.Value);
+    var response = Assert.IsType<InvitesResponseDto>(ok.Value);
     var invite = response.Items.Single(x => x.InviteeEmail == "coded@test.local");
 
     Assert.Equal(InviteConfirmationBasePath, invite.InviteUrl.AbsolutePath);

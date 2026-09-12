@@ -2,7 +2,7 @@ using Asp.Versioning;
 using ControlR.Web.Client.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
-using PublicSettingsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PublicServerSettings;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PublicServerSettings;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -21,11 +21,11 @@ public class PublicServerSettingsController(
   private readonly IPublicServerSettingsProvider _serverSettings = serverSettings;
 
   [HttpGet]
-  [ProducesResponseType<PublicSettingsDtos.PublicServerSettingsDto>(StatusCodes.Status200OK)]
-  public async Task<ActionResult<PublicSettingsDtos.PublicServerSettingsDto>> Get()
+  [ProducesResponseType<PublicServerSettingsDto>(StatusCodes.Status200OK)]
+  public async Task<ActionResult<PublicServerSettingsDto>> Get()
   {
     var settings = await _serverSettings.GetPublicServerSettings();
-    return new PublicSettingsDtos.PublicServerSettingsDto(
+    return new PublicServerSettingsDto(
       settings.IsPublicRegistrationEnabled,
       settings.DisableDesktopPreview);
   }

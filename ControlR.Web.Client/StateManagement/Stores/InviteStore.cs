@@ -1,22 +1,22 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using InviteDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites;
 
 namespace ControlR.Web.Client.StateManagement.Stores;
 
-public interface IInviteStore : IStoreBase<InviteDtos.InviteResponseDto>
+public interface IInviteStore : IStoreBase<InviteResponseDto>
 { }
 
 public class InviteStore(
   IControlrApi controlrApi,
   AuthenticationStateProvider authState,
   ISnackbar snackbar,
-  ILogger<StoreBase<InviteDtos.InviteResponseDto>> logger)
-  : StoreBase<InviteDtos.InviteResponseDto>(controlrApi, snackbar, logger), IInviteStore
+  ILogger<StoreBase<InviteResponseDto>> logger)
+  : StoreBase<InviteResponseDto>(controlrApi, snackbar, logger), IInviteStore
 {
   private readonly AuthenticationStateProvider _authState = authState;
   private readonly IControlrApi _controlrApi = controlrApi;
 
-  protected override Guid GetItemId(InviteDtos.InviteResponseDto dto)
+  protected override Guid GetItemId(InviteResponseDto dto)
   {
     return dto.Id;
   }

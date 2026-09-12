@@ -1,5 +1,5 @@
 using ControlR.Libraries.Api.Contracts.FilterSort;
-using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Dialogs;
@@ -12,7 +12,7 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
   private readonly HashSet<Guid> _selectedIds = [];
 
   private int _currentPage = 1;
-  private List<DeviceResponseDto> _devices = [];
+  private List<InternalDtos.DeviceResponseDto> _devices = [];
   private bool _loading;
   private string _searchText = string.Empty;
   private Guid _tenantId;
@@ -57,7 +57,7 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
       var result = await ControlrApi.V1.Customers.AssignCustomerDevices(
         CustomerId,
         _tenantId,
-        new CustDtos.AssignCustomerDevicesRequestDto([.. _selectedIds], [.. _removedIds]));
+        new AssignCustomerDevicesRequestDto([.. _selectedIds], [.. _removedIds]));
 
       if (!result.IsSuccess)
       {
@@ -87,7 +87,7 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
 
   private void Cancel() => MudDialog.Cancel();
 
-  private bool IsChecked(DeviceResponseDto device)
+  private bool IsChecked(InternalDtos.DeviceResponseDto device)
   {
     if (_removedIds.Contains(device.Id))
     {
@@ -105,13 +105,13 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
 
     try
     {
-      var request = new DeviceSearchRequestDto
+      var request = new InternalDtos.DeviceSearchRequestDto
       {
         SearchText = _searchText,
         HideOfflineDevices = false,
         Page = _currentPage - 1,
         PageSize = PageSize,
-        SortDefinitions = [new DeviceColumnSort { PropertyName = nameof(DeviceResponseDto.Name), Descending = false, SortOrder = 0 }]
+        SortDefinitions = [new DeviceColumnSort { PropertyName = nameof(InternalDtos.DeviceResponseDto.Name), Descending = false, SortOrder = 0 }]
       };
 
       var response = await ControlrApi.Internal.Devices.SearchDevices(request);
@@ -148,7 +148,7 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
     await LoadDevices();
   }
 
-  private void ToggleSelection(DeviceResponseDto device, bool isSelected)
+  private void ToggleSelection(InternalDtos.DeviceResponseDto device, bool isSelected)
   {
     if (!device.CustomerId.HasValue || device.CustomerId.Value != CustomerId)
     {

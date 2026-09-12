@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
-using PrefsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -19,10 +19,10 @@ namespace ControlR.Web.Server.Api.V1;
 public class UserPreferencesController : ControllerBase
 {
   [HttpGet]
-  [ProducesResponseType<PrefsDtos.UserPreferencesDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UserPreferencesDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<PrefsDtos.UserPreferencesDto>> GetAll(
+  public async Task<ActionResult<UserPreferencesDto>> GetAll(
     [FromServices] IUserPreferencesManager userPreferencesManager,
     [FromQuery] Guid tenantId,
     CancellationToken cancellationToken)
@@ -42,12 +42,12 @@ public class UserPreferencesController : ControllerBase
   }
 
   [HttpGet("{name}")]
-  [ProducesResponseType<PrefsDtos.UserPreferenceResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UserPreferenceResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<PrefsDtos.UserPreferenceResponseDto>> GetPreference(
+  public async Task<ActionResult<UserPreferenceResponseDto>> GetPreference(
     [FromServices] AppDb appDb,
     [FromRoute] string name,
     [FromQuery] Guid tenantId)
@@ -84,14 +84,14 @@ public class UserPreferencesController : ControllerBase
   }
 
   [HttpPost]
-  [ProducesResponseType<PrefsDtos.UserPreferenceResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UserPreferenceResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<PrefsDtos.UserPreferenceResponseDto>> SetPreference(
+  public async Task<ActionResult<UserPreferenceResponseDto>> SetPreference(
     [FromServices] IUserPreferencesManager userPreferencesManager,
     [FromQuery] Guid tenantId,
-    [FromBody] PrefsDtos.UserPreferenceRequestDto preference,
+    [FromBody] UserPreferenceRequestDto preference,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out _))
@@ -118,14 +118,14 @@ public class UserPreferencesController : ControllerBase
   }
 
   [HttpPut]
-  [ProducesResponseType<PrefsDtos.UserPreferencesDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UserPreferencesDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<PrefsDtos.UserPreferencesDto>> SetPreferences(
+  public async Task<ActionResult<UserPreferencesDto>> SetPreferences(
     [FromServices] IUserPreferencesManager userPreferencesManager,
     [FromQuery] Guid tenantId,
-    [FromBody] PrefsDtos.UserPreferencesDto preferences,
+    [FromBody] UserPreferencesDto preferences,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out _))
@@ -171,19 +171,19 @@ public class UserPreferencesController : ControllerBase
     return Ok(ToV1Dto(result.Value));
   }
 
-  private static PrefsDtos.UserPreferenceResponseDto ToV1Dto(InternalDtos.UserPreferenceResponseDto preference)
+  private static UserPreferenceResponseDto ToV1Dto(InternalDtos.UserPreferenceResponseDto preference)
   {
-    return new PrefsDtos.UserPreferenceResponseDto(preference.Id, preference.Name, preference.Value);
+    return new UserPreferenceResponseDto(preference.Id, preference.Name, preference.Value);
   }
 
-  private static PrefsDtos.UserPreferenceResponseDto ToV1Dto(Data.Entities.UserPreference preference)
+  private static UserPreferenceResponseDto ToV1Dto(Data.Entities.UserPreference preference)
   {
-    return new PrefsDtos.UserPreferenceResponseDto(preference.Id, preference.Name, preference.Value);
+    return new UserPreferenceResponseDto(preference.Id, preference.Name, preference.Value);
   }
 
-  private static PrefsDtos.UserPreferencesDto ToV1Dto(InternalDtos.UserPreferencesDto preferences)
+  private static UserPreferencesDto ToV1Dto(InternalDtos.UserPreferencesDto preferences)
   {
-    return new PrefsDtos.UserPreferencesDto(
+    return new UserPreferencesDto(
       preferences.AutoQualityLowerThresholdMbps,
       preferences.AutoQualityMaximum,
       preferences.AutoQualityMinimum,

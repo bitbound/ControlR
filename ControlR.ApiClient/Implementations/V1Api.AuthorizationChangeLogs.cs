@@ -2,7 +2,7 @@ using System.Net.Http.Json;
 using ControlR.ApiClient.Interfaces.V1;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using ACLDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 
 namespace ControlR.ApiClient;
 
@@ -63,7 +63,7 @@ internal partial class V1Api
     return $"?{string.Join("&", parameters)}";
   }
 
-  async Task<ApiResult<ACLDtos.AuthorizationChangeLogsResponseDto>> IAuthorizationChangeLogsApi.GetAuthorizationChangeLogs(
+  async Task<ApiResult<AuthorizationChangeLogsResponseDto>> IAuthorizationChangeLogsApi.GetAuthorizationChangeLogs(
     Guid tenantId,
     int page,
     int pageSize,
@@ -80,13 +80,13 @@ internal partial class V1Api
       var query = BuildAuthorizationChangeLogsQuery(
         tenantId, page, pageSize, actionType, actorType, targetType, searchText, from, to);
 
-      return await _client.HttpClient.GetFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
+      return await _client.HttpClient.GetFromJsonAsync<AuthorizationChangeLogsResponseDto>(
         $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}{query}", cancellationToken)
         ?? throw new InvalidOperationException("Empty response from authorization change logs endpoint.");
     });
   }
 
-  async Task<ApiResult<ACLDtos.AuthorizationChangeLogsResponseDto>> IAuthorizationChangeLogsApi.GetServerAuthorizationChangeLogs(
+  async Task<ApiResult<AuthorizationChangeLogsResponseDto>> IAuthorizationChangeLogsApi.GetServerAuthorizationChangeLogs(
     int page,
     int pageSize,
     string? actionType,
@@ -102,7 +102,7 @@ internal partial class V1Api
       var query = BuildAuthorizationChangeLogsQuery(
         null, page, pageSize, actionType, actorType, targetType, searchText, from, to);
 
-      return await _client.HttpClient.GetFromJsonAsync<ACLDtos.AuthorizationChangeLogsResponseDto>(
+      return await _client.HttpClient.GetFromJsonAsync<AuthorizationChangeLogsResponseDto>(
         $"{HttpConstants.V1.AuthorizationChangeLogsEndpoint}/server{query}", cancellationToken)
         ?? throw new InvalidOperationException("Empty response from server authorization change logs endpoint.");
     });

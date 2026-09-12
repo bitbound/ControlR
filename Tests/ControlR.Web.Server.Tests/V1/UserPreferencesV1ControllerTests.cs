@@ -6,7 +6,7 @@ using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using PrefsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -34,7 +34,7 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
       CancellationToken.None);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var preferences = Assert.IsType<PrefsDtos.UserPreferencesDto>(ok.Value);
+    var preferences = Assert.IsType<UserPreferencesDto>(ok.Value);
     Assert.True(preferences.NotifyUserOnSessionStart);
     Assert.True(preferences.HideOfflineDevices);
   }
@@ -73,7 +73,7 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
     await controller.SetPreference(
       manager,
       tenant.Id,
-      new PrefsDtos.UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, UserPreferenceDefinitions.FormatValue(UserPreferenceNames.ThemeMode, ThemeMode.Dark) ?? "dark"),
+      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, UserPreferenceDefinitions.FormatValue(UserPreferenceNames.ThemeMode, ThemeMode.Dark) ?? "dark"),
       CancellationToken.None);
 
     var result = await controller.GetPreference(
@@ -81,7 +81,7 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
       UserPreferenceNames.ThemeMode,
       tenant.Id);
 
-    var dto = Assert.IsType<PrefsDtos.UserPreferenceResponseDto>(result.Value);
+    var dto = Assert.IsType<UserPreferenceResponseDto>(result.Value);
     Assert.Equal(UserPreferenceNames.ThemeMode, dto.Name);
   }
 
@@ -116,7 +116,7 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
     var manager = services.GetRequiredService<IUserPreferencesManager>();
     var currentResult = await controller.GetAll(manager, tenant.Id, CancellationToken.None);
     var currentOk = Assert.IsType<OkObjectResult>(currentResult.Result);
-    var current = Assert.IsType<PrefsDtos.UserPreferencesDto>(currentOk.Value);
+    var current = Assert.IsType<UserPreferencesDto>(currentOk.Value);
 
     var result = await controller.SetPreferences(
       manager,
@@ -125,7 +125,7 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
       CancellationToken.None);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var preferences = Assert.IsType<PrefsDtos.UserPreferencesDto>(ok.Value);
+    var preferences = Assert.IsType<UserPreferencesDto>(ok.Value);
     Assert.Equal(ThemeMode.Light, preferences.ThemeMode);
     Assert.False(preferences.HideOfflineDevices);
   }
@@ -146,16 +146,16 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
     var setResult = await controller.SetPreference(
       manager,
       tenant.Id,
-      new PrefsDtos.UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, themeModeValue),
+      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, themeModeValue),
       CancellationToken.None);
 
     var ok = Assert.IsType<OkObjectResult>(setResult.Result);
-    var response = Assert.IsType<PrefsDtos.UserPreferenceResponseDto>(ok.Value);
+    var response = Assert.IsType<UserPreferenceResponseDto>(ok.Value);
     Assert.Equal(UserPreferenceNames.ThemeMode, response.Name);
 
     var getResult = await controller.GetAll(manager, tenant.Id, CancellationToken.None);
     var allOk = Assert.IsType<OkObjectResult>(getResult.Result);
-    var preferences = Assert.IsType<PrefsDtos.UserPreferencesDto>(allOk.Value);
+    var preferences = Assert.IsType<UserPreferencesDto>(allOk.Value);
     Assert.Equal(ThemeMode.Dark, preferences.ThemeMode);
   }
 
@@ -172,7 +172,7 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
     var result = await controller.SetPreference(
       services.GetRequiredService<IUserPreferencesManager>(),
       tenant.Id,
-      new PrefsDtos.UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, "not-a-theme"),
+      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, "not-a-theme"),
       CancellationToken.None);
 
     var problem = Assert.IsType<ObjectResult>(result.Result);

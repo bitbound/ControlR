@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class Customers : ComponentBase
 {
   private bool _canWrite;
-  private IEnumerable<CustDtos.CustomerDto> _customers = [];
+  private IEnumerable<CustomerDto> _customers = [];
   private bool _loading;
   private string _searchString = string.Empty;
   private Guid _tenantId;
@@ -26,7 +26,7 @@ public partial class Customers : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<CustDtos.CustomerDto, bool> QuickFilter => customer =>
+  private Func<CustomerDto, bool> QuickFilter => customer =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -53,7 +53,7 @@ public partial class Customers : ComponentBase
     await Refresh();
   }
 
-  private async Task AssignDevices(CustDtos.CustomerDto customer)
+  private async Task AssignDevices(CustomerDto customer)
   {
     var parameters = new DialogParameters<AssignCustomerDevicesDialog>
     {
@@ -94,7 +94,7 @@ public partial class Customers : ComponentBase
 
     var createResult = await ControlrApi.V1.Customers.CreateCustomer(
       _tenantId,
-      new CustDtos.CreateCustomerRequestDto(dialogResult.Name, dialogResult.Description, dialogResult.Notes));
+      new CreateCustomerRequestDto(dialogResult.Name, dialogResult.Description, dialogResult.Notes));
 
     if (!createResult.IsSuccess)
     {
@@ -106,7 +106,7 @@ public partial class Customers : ComponentBase
     await Refresh();
   }
 
-  private async Task DeleteCustomer(CustDtos.CustomerDto customer)
+  private async Task DeleteCustomer(CustomerDto customer)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete Customer",
@@ -129,7 +129,7 @@ public partial class Customers : ComponentBase
     await Refresh();
   }
 
-  private async Task EditCustomer(CustDtos.CustomerDto customer)
+  private async Task EditCustomer(CustomerDto customer)
   {
     var parameters = new DialogParameters<CustomerDialog>
     {
@@ -150,7 +150,7 @@ public partial class Customers : ComponentBase
     var updateResult = await ControlrApi.V1.Customers.UpdateCustomer(
       customer.Id,
       _tenantId,
-      new CustDtos.UpdateCustomerRequestDto(dialogResult.Name, dialogResult.Description, dialogResult.Notes));
+      new UpdateCustomerRequestDto(dialogResult.Name, dialogResult.Description, dialogResult.Notes));
 
     if (!updateResult.IsSuccess)
     {

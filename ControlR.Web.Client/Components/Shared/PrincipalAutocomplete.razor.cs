@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
-using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
 
 namespace ControlR.Web.Client.Components.Shared;
 
@@ -51,7 +51,7 @@ public partial class PrincipalAutocomplete
     await base.OnParametersSetAsync();
   }
 
-  private static string FormatPatDisplayName(PATDtos.PersonalAccessTokenResponseDto token)
+  private static string FormatPatDisplayName(PersonalAccessTokenResponseDto token)
   {
     var lastUsed = token.LastUsed is { } used ? used.ToLocalTime().ToString("d") : "Never";
     return $"{token.Name}  (Last Used: {lastUsed}  |  Token ID: {token.Id.ToString()[..8]}...)";
@@ -68,7 +68,7 @@ public partial class PrincipalAutocomplete
     return $"{name}  ({kind}  |  Enabled: {enabled}  |  Account ID: {id.ToString()[..8]}...)";
   }
 
-  private static string FormatUserGroupDisplayName(UGDtos.UserGroupDto group) =>
+  private static string FormatUserGroupDisplayName(UserGroupDto group) =>
     $"{group.Name}  (Members: {group.MemberCount}  |  Group ID: {group.Id.ToString()[..8]}...)";
 
   private static bool Matches(string? value, string query) =>

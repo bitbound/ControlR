@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using V1Flat = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
-using ACLDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 
 namespace ControlR.Web.Client.Components.Shared;
 
@@ -9,15 +9,15 @@ public partial class AuthorizationLogsPanel
   private string? _actionTypeFilter;
   private string? _actorTypeFilter;
   private Guid _callerTenantId;
-  private ACLDtos.AuthorizationChangeLogDto? _expandedItem;
+  private AuthorizationChangeLogDto? _expandedItem;
   private DateTime? _fromDate;
   private bool _hasTenantContext;
   private bool _isLoading;
   private string _searchText = string.Empty;
   private Guid? _selectedTenantId;
-  private MudTable<ACLDtos.AuthorizationChangeLogDto>? _table;
+  private MudTable<AuthorizationChangeLogDto>? _table;
   private string? _targetTypeFilter;
-  private V1Flat.TenantSummaryDto[] _tenants = [];
+  private TenantSummaryDto[] _tenants = [];
   private DateTime? _toDate;
 
   [Inject]
@@ -80,12 +80,12 @@ public partial class AuthorizationLogsPanel
     return tenant?.Name ?? tenantId.Value.ToString();
   }
 
-  private async Task<TableData<ACLDtos.AuthorizationChangeLogDto>> LoadTableData(
+  private async Task<TableData<AuthorizationChangeLogDto>> LoadTableData(
     TableState state, CancellationToken cancellationToken)
   {
     if (!_hasTenantContext)
     {
-      return new TableData<ACLDtos.AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
+      return new TableData<AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
     }
 
     _isLoading = true;
@@ -106,10 +106,10 @@ public partial class AuthorizationLogsPanel
       if (!result.IsSuccess)
       {
         Snackbar.Add($"Failed to load authorization logs: {result.Reason}", Severity.Error);
-        return new TableData<ACLDtos.AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
+        return new TableData<AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
       }
 
-      return new TableData<ACLDtos.AuthorizationChangeLogDto>
+      return new TableData<AuthorizationChangeLogDto>
       {
         Items = result.Value.Items,
         TotalItems = result.Value.TotalItems
@@ -119,7 +119,7 @@ public partial class AuthorizationLogsPanel
     {
       Logger.LogError(ex, "Error loading authorization logs.");
       Snackbar.Add($"Error loading authorization logs: {ex.Message}", Severity.Error);
-      return new TableData<ACLDtos.AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
+      return new TableData<AuthorizationChangeLogDto> { Items = [], TotalItems = 0 };
     }
     finally
     {
@@ -160,6 +160,6 @@ public partial class AuthorizationLogsPanel
   private Task<IEnumerable<string>> SearchTargetTypes(string query, CancellationToken cancellationToken) =>
     Task.FromResult(SearchVocabulary(ChangeLogVocabulary.TargetTypes, query));
 
-  private void ToggleExpanded(ACLDtos.AuthorizationChangeLogDto item) =>
+  private void ToggleExpanded(AuthorizationChangeLogDto item) =>
     _expandedItem = _expandedItem == item ? null : item;
 }

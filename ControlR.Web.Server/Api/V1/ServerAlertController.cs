@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using AlertDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerAlerts;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerAlerts;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -19,10 +19,10 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
   private readonly AppDb _appDb = appDb;
 
   [HttpGet]
-  [ProducesResponseType<AlertDtos.ServerAlertResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<ServerAlertResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<AlertDtos.ServerAlertResponseDto>> GetAlert()
+  public async Task<ActionResult<ServerAlertResponseDto>> GetAlert()
   {
     var alert = await _appDb.ServerAlerts
       .AsNoTracking()
@@ -38,11 +38,11 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
 
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireServerSettingsWrite)]
-  [ProducesResponseType<AlertDtos.ServerAlertResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<ServerAlertResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<AlertDtos.ServerAlertResponseDto>> UpdateAlert(
-    [FromBody] AlertDtos.ServerAlertRequestDto request)
+  public async Task<ActionResult<ServerAlertResponseDto>> UpdateAlert(
+    [FromBody] ServerAlertRequestDto request)
   {
     var alert = await _appDb
       .ServerAlerts
@@ -74,9 +74,9 @@ public class ServerAlertController(AppDb appDb) : ControllerBase
     return ToResponseDto(alert);
   }
 
-  private static AlertDtos.ServerAlertResponseDto ToResponseDto(ServerAlert alert)
+  private static ServerAlertResponseDto ToResponseDto(ServerAlert alert)
   {
-    return new AlertDtos.ServerAlertResponseDto(
+    return new ServerAlertResponseDto(
       alert.Id,
       alert.Message,
       alert.Severity,

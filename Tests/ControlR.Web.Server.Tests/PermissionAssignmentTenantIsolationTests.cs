@@ -7,7 +7,7 @@ using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -28,7 +28,7 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
     // A tenant-A admin attempts to create an assignment whose target principal is a tenant-B user.
     var response = await clientA.PostAsJsonAsync(
       PaUrl(tenantA),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userB.Id,
         PermissionNames.DeviceRead,
@@ -55,7 +55,7 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
 
     var response = await clientA.PostAsJsonAsync(
       PaUrl(tenantA),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userA.Id,
         PermissionNames.DeviceRead,
@@ -79,7 +79,7 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
 
     var response = await clientA.PostAsJsonAsync(
       PaUrl(tenantA),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userA.Id,
         PermissionNames.ServerPermissionsWrite,
@@ -143,7 +143,7 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
   {
     var response = await client.PostAsJsonAsync(
       PaUrl(tenantId),
-      new PADtos.CreatePermissionAssignmentRequestDto(
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         principalId,
         PermissionNames.DeviceRead,
@@ -154,20 +154,20 @@ public class PermissionAssignmentTenantIsolationTests(ITestOutputHelper testOutp
       TestContext.Current.CancellationToken);
     response.EnsureSuccessStatusCode();
 
-    var created = await response.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentDto>(
+    var created = await response.Content.ReadFromJsonAsync<PermissionAssignmentDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(created);
     return created.Id;
   }
 
-  private static async Task<PADtos.PermissionAssignmentDto[]> GetAssignments(HttpClient client, Guid tenantId, Guid principalId)
+  private static async Task<PermissionAssignmentDto[]> GetAssignments(HttpClient client, Guid tenantId, Guid principalId)
   {
     var response = await client.GetAsync(
       $"{PaUrl(tenantId)}&principalKind=User&principalId={principalId}",
       TestContext.Current.CancellationToken);
     response.EnsureSuccessStatusCode();
 
-    var assignments = await response.Content.ReadFromJsonAsync<PADtos.PermissionAssignmentsResponseDto>(
+    var assignments = await response.Content.ReadFromJsonAsync<PermissionAssignmentsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(assignments);
     return [.. assignments.Items];

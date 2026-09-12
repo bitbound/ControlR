@@ -3,7 +3,7 @@ using ControlR.Libraries.Api.Contracts.Settings;
 using ControlR.Web.Server.Primitives;
 using Microsoft.AspNetCore.Components.Authorization;
 using ControlR.Web.Server.Extensions.Dtos.Internal;
-using V1PrefsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
 
 namespace ControlR.Web.Server.Services.Settings;
 
@@ -50,7 +50,7 @@ public class UserPreferencesManager(
         value));
   }
 
-  public async Task<V1PrefsDtos.UserPreferencesDto> GetPreferences()
+  public async Task<UserPreferencesDto> GetPreferences()
   {
     var authState = await _authStateProvider.GetAuthenticationStateAsync();
     if (!authState.User.TryGetUserId(out var userId) || !await _authStateProvider.IsAuthenticated())
@@ -219,9 +219,9 @@ public class UserPreferencesManager(
     return HttpResult.Ok(await GetAllPreferences(userId, cancellationToken));
   }
 
-  private static V1PrefsDtos.UserPreferencesDto ToV1Dto(InternalDtos.UserPreferencesDto preferences)
+  private static UserPreferencesDto ToV1Dto(InternalDtos.UserPreferencesDto preferences)
   {
-    return new V1PrefsDtos.UserPreferencesDto(
+    return new UserPreferencesDto(
       preferences.AutoQualityLowerThresholdMbps,
       preferences.AutoQualityMaximum,
       preferences.AutoQualityMinimum,

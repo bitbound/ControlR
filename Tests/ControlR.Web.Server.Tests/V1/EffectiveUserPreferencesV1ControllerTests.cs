@@ -3,7 +3,7 @@ using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using EffectiveDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectiveUserPreferences;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectiveUserPreferences;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -58,7 +58,7 @@ public class EffectiveUserPreferencesV1ControllerTests(ITestOutputHelper testOut
       CancellationToken.None);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var preferences = Assert.IsType<EffectiveDtos.EffectiveUserPreferencesDto>(ok.Value);
+    var preferences = Assert.IsType<EffectiveUserPreferencesDto>(ok.Value);
     Assert.False(preferences.NotifyUserOnSessionStart);
     Assert.True(preferences.IsNotifyUserOnSessionStartTenantEnforced);
   }
@@ -79,7 +79,7 @@ public class EffectiveUserPreferencesV1ControllerTests(ITestOutputHelper testOut
       CancellationToken.None);
 
     var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var preferences = Assert.IsType<EffectiveDtos.EffectiveUserPreferencesDto>(ok.Value);
+    var preferences = Assert.IsType<EffectiveUserPreferencesDto>(ok.Value);
     Assert.True(preferences.NotifyUserOnSessionStart);
     Assert.False(preferences.IsNotifyUserOnSessionStartTenantEnforced);
   }

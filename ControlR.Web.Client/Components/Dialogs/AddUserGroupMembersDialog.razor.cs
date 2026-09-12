@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
-using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
 public partial class AddUserGroupMembersDialog : ComponentBase
 {
-  private List<UsersDtos.UserResponseDto> _allUsers = [];
+  private List<UserResponseDto> _allUsers = [];
   private bool _loading;
   private string _searchText = string.Empty;
   private HashSet<Guid> _selectedIds = [];
@@ -30,7 +30,7 @@ public partial class AddUserGroupMembersDialog : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private List<UsersDtos.UserResponseDto> FilteredUsers
+  private List<UserResponseDto> FilteredUsers
   {
     get
     {
@@ -84,7 +84,7 @@ public partial class AddUserGroupMembersDialog : ComponentBase
   private async Task Add()
   {
     var result = await ControlrApi.V1.UserGroups.AddUserGroupMembers(
-      GroupId, _tenantId, new UGDtos.AddUserGroupMembersRequestDto([.. _selectedIds]));
+      GroupId, _tenantId, new AddUserGroupMembersRequestDto([.. _selectedIds]));
 
     if (!result.IsSuccess)
     {

@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using ControlR.Web.Server.Authz.Permissions;
 using Microsoft.AspNetCore.Mvc;
-using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -20,15 +20,15 @@ public class PersonalAccessTokensController : ControllerBase
 {
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
-  [ProducesResponseType<PATDtos.CreatePersonalAccessTokenResponseDto>(StatusCodes.Status201Created)]
+  [ProducesResponseType<CreatePersonalAccessTokenResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<PATDtos.CreatePersonalAccessTokenResponseDto>> Create(
+  public async Task<ActionResult<CreatePersonalAccessTokenResponseDto>> Create(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] UserManager<AppUser> userManager,
     [FromQuery] Guid tenantId,
-    [FromBody] PATDtos.CreatePersonalAccessTokenRequestDto request)
+    [FromBody] CreatePersonalAccessTokenRequestDto request)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
@@ -64,7 +64,7 @@ public class PersonalAccessTokensController : ControllerBase
       return BadRequest(result.Reason);
     }
 
-    var response = new PATDtos.CreatePersonalAccessTokenResponseDto(
+    var response = new CreatePersonalAccessTokenResponseDto(
       ToV1ResponseDto(result.Value.PersonalAccessToken),
       result.Value.PlainTextToken);
 
@@ -108,11 +108,11 @@ public class PersonalAccessTokensController : ControllerBase
 
   [HttpGet]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfRead)]
-  [ProducesResponseType<PATDtos.PersonalAccessTokensResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<PersonalAccessTokensResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<PATDtos.PersonalAccessTokensResponseDto>> GetAll(
+  public async Task<ActionResult<PersonalAccessTokensResponseDto>> GetAll(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] UserManager<AppUser> userManager,
     [FromQuery] Guid tenantId)
@@ -129,7 +129,7 @@ public class PersonalAccessTokensController : ControllerBase
     }
 
     var tokens = await personalAccessTokenManager.GetForUser(user.Id);
-    return Ok(new PATDtos.PersonalAccessTokensResponseDto
+    return Ok(new PersonalAccessTokensResponseDto
     {
       Items = [.. tokens.Select(ToV1ResponseDto)]
     });
@@ -137,16 +137,16 @@ public class PersonalAccessTokensController : ControllerBase
 
   [HttpPut("{id:guid}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
-  [ProducesResponseType<PATDtos.PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
-  public async Task<ActionResult<PATDtos.PersonalAccessTokenResponseDto>> Update(
+  public async Task<ActionResult<PersonalAccessTokenResponseDto>> Update(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] UserManager<AppUser> userManager,
     [FromRoute] Guid id,
     [FromQuery] Guid tenantId,
-    [FromBody] PATDtos.UpdatePersonalAccessTokenRequestDto request)
+    [FromBody] UpdatePersonalAccessTokenRequestDto request)
   {
     if (!User.TryResolveTenantId(tenantId, out _))
     {
@@ -172,10 +172,10 @@ public class PersonalAccessTokensController : ControllerBase
     return Ok(ToV1ResponseDto(result.Value));
   }
 
-  private static PATDtos.PersonalAccessTokenResponseDto ToV1ResponseDto(
+  private static PersonalAccessTokenResponseDto ToV1ResponseDto(
     InternalDtos.PersonalAccessTokenResponseDto token)
   {
-    return new PATDtos.PersonalAccessTokenResponseDto(
+    return new PersonalAccessTokenResponseDto(
       token.Id,
       token.Name,
       token.CreatedAt,
