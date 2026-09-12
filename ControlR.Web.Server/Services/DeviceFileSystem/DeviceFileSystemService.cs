@@ -442,6 +442,8 @@ public class DeviceFileSystemService(
   /// Loads the device, applies the operation's device resource policy to the caller, and requires the
   /// agent to be connected. On success the value is the device to dispatch to; on failure the outcome
   /// carries the same condition the operation used to check inline, which is what the caller reports.
+  /// <paramref name="policyName"/> is always a <see cref="DeviceResourcePolicies"/> member, so that
+  /// every authorization decision this class makes stays greppable from its policy name.
   /// </summary>
   private async Task<FileSystemOutcome<Device>> Guard(
     ClaimsPrincipal user,

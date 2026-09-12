@@ -1248,8 +1248,10 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
       CanWrite: true,
       HasSubfolders: isDirectory);
 
-  // Action invocations. Every dependency arrives as a [FromServices] parameter, so each one is
-  // resolved from the request scope exactly as the framework would resolve it.
+  // Action invocations. The dependencies still arrive as [FromServices] parameters, resolved from the
+  // request scope as the framework would resolve them, except that the service is built by the harness
+  // because it needs the mock hub context rather than the container's real one. See
+  // Harness.CreateDeviceFileSystem.
   private static async Task<IActionResult> GetDirectoryContentsAsync(
     Harness harness,
     Guid deviceId,
