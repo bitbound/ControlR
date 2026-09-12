@@ -27,19 +27,19 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
       return result.ToActionResult(x => x.ToV1CreateTenantDto());
     }
 
-    return CreatedAtAction(nameof(Get), new { id = result.Value.Id }, result.Value.ToV1CreateTenantDto());
+    return CreatedAtAction(nameof(Get), new { tenantId = result.Value.Id }, result.Value.ToV1CreateTenantDto());
   }
 
-  [HttpDelete("{id:guid}")]
+  [HttpDelete("{tenantId:guid}")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsDelete)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult> Delete(
-    [FromRoute] Guid id,
+    [FromRoute] Guid tenantId,
     CancellationToken cancellationToken)
   {
-    var result = await tenantProvisioningService.DeleteTenant(id, cancellationToken);
+    var result = await tenantProvisioningService.DeleteTenant(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return result.ToActionResult();
@@ -48,15 +48,15 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
     return NoContent();
   }
 
-  [HttpGet("{id:guid}")]
+  [HttpGet("{tenantId:guid}")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsRead)]
   [ProducesResponseType<GetTenantResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<GetTenantResponseDto>> Get(
-    [FromRoute] Guid id,
+    [FromRoute] Guid tenantId,
     CancellationToken cancellationToken)
   {
-    var result = await tenantProvisioningService.GetTenant(id, cancellationToken);
+    var result = await tenantProvisioningService.GetTenant(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return result.ToActionResult(x => x.ToV1GetTenantDto());
@@ -84,18 +84,18 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
     });
   }
 
-  [HttpPut("{id:guid}")]
+  [HttpPut("{tenantId:guid}")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsWrite)]
   [ProducesResponseType<GetTenantResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status500InternalServerError)]
   public async Task<ActionResult<GetTenantResponseDto>> Update(
-    [FromRoute] Guid id,
+    [FromRoute] Guid tenantId,
     [FromBody] UpdateTenantRequestDto request,
     CancellationToken cancellationToken)
   {
-    var result = await tenantProvisioningService.UpdateTenant(id, request.Name, cancellationToken);
+    var result = await tenantProvisioningService.UpdateTenant(tenantId, request.Name, cancellationToken);
     if (!result.IsSuccess)
     {
       return result.ToActionResult(x => x.ToV1GetTenantDto());

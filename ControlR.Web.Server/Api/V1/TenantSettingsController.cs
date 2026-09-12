@@ -16,7 +16,7 @@ namespace ControlR.Web.Server.Api.V1;
 [ApiVersion(ApiVersions.V1)]
 public class TenantSettingsController : ControllerBase
 {
-  [HttpDelete("{name}")]
+  [HttpDelete("{settingName}")]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsWrite)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -24,7 +24,7 @@ public class TenantSettingsController : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> DeleteSetting(
     [FromServices] AppDb appDb,
-    [FromRoute] string name,
+    [FromRoute] string settingName,
     [FromQuery] Guid tenantId)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -42,7 +42,7 @@ public class TenantSettingsController : ControllerBase
     }
 
     tenant.TenantSettings ??= [];
-    var setting = tenant.TenantSettings.FirstOrDefault(x => x.Name == name);
+    var setting = tenant.TenantSettings.FirstOrDefault(x => x.Name == settingName);
 
     if (setting is not null)
     {
@@ -72,7 +72,7 @@ public class TenantSettingsController : ControllerBase
     return Ok(ToV1Dto(settings));
   }
 
-  [HttpGet("{name}")]
+  [HttpGet("{settingName}")]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsRead)]
   [ProducesResponseType<TenantSettingResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -81,7 +81,7 @@ public class TenantSettingsController : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<TenantSettingResponseDto>> GetSetting(
     [FromServices] AppDb appDb,
-    [FromRoute] string name,
+    [FromRoute] string settingName,
     [FromQuery] Guid tenantId)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -100,7 +100,7 @@ public class TenantSettingsController : ControllerBase
     }
 
     tenant.TenantSettings ??= [];
-    var setting = tenant.TenantSettings.FirstOrDefault(x => x.Name == name);
+    var setting = tenant.TenantSettings.FirstOrDefault(x => x.Name == settingName);
 
     if (setting is null)
     {

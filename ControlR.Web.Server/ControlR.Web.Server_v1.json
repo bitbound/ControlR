@@ -9347,14 +9347,14 @@
         ]
       }
     },
-    "/api/v1/tenants/{id}": {
+    "/api/v1/tenants/{tenantId}": {
       "delete": {
         "tags": [
           "Tenants"
         ],
         "parameters": [
           {
-            "name": "id",
+            "name": "tenantId",
             "in": "path",
             "required": true,
             "schema": {
@@ -9420,7 +9420,7 @@
         ],
         "parameters": [
           {
-            "name": "id",
+            "name": "tenantId",
             "in": "path",
             "required": true,
             "schema": {
@@ -9510,7 +9510,7 @@
         ],
         "parameters": [
           {
-            "name": "id",
+            "name": "tenantId",
             "in": "path",
             "required": true,
             "schema": {
@@ -10679,14 +10679,14 @@
         ]
       }
     },
-    "/api/v1/tenant-settings/{name}": {
+    "/api/v1/tenant-settings/{settingName}": {
       "delete": {
         "tags": [
           "TenantSettings"
         ],
         "parameters": [
           {
-            "name": "name",
+            "name": "settingName",
             "in": "path",
             "required": true,
             "schema": {
@@ -10806,7 +10806,7 @@
         ],
         "parameters": [
           {
-            "name": "name",
+            "name": "settingName",
             "in": "path",
             "required": true,
             "schema": {
