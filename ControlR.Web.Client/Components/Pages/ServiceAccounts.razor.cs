@@ -46,9 +46,8 @@ public partial class ServiceAccounts : ComponentBase
   protected override async Task OnInitializedAsync()
   {
     var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (!state.User.TryGetTenantId(Snackbar, out var tenantId))
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
       return;
     }
 

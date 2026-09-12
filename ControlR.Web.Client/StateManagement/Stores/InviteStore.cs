@@ -23,10 +23,8 @@ public class InviteStore(
 
   protected override async Task RefreshImpl()
   {
-    var authClaim = await _authState.GetAuthenticationStateAsync();
-    if (!authClaim.User.TryGetTenantId(out var tenantId))
+    if (await _authState.GetTenantIdAsync(Snackbar) is not { } tenantId)
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
       return;
     }
 

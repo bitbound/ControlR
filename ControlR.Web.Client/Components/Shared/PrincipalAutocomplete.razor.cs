@@ -74,12 +74,6 @@ public partial class PrincipalAutocomplete
   private static bool Matches(string? value, string query) =>
     string.IsNullOrWhiteSpace(query) || (value?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false);
 
-  private async Task<Guid?> GetTenantId()
-  {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
-  }
-
   private async Task HandleValueChanged(PrincipalOption? value)
   {
     _selected = value;
@@ -89,7 +83,7 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolvePersonalAccessToken(Guid id)
   {
-    if (await GetTenantId() is not { } tenantId)
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return null;
     }
@@ -136,7 +130,7 @@ public partial class PrincipalAutocomplete
           PermissionPrincipalKind.ServiceAccount);
     }
 
-    if (await GetTenantId() is not { } tenantId)
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return null;
     }
@@ -159,8 +153,7 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolveUser(Guid id)
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return null;
     }
@@ -182,8 +175,7 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolveUserGroup(Guid id)
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return null;
     }
@@ -212,7 +204,7 @@ public partial class PrincipalAutocomplete
 
   private async Task<IEnumerable<PrincipalOption>> SearchPersonalAccessTokens(string query, CancellationToken cancellationToken)
   {
-    if (await GetTenantId() is not { } tenantId)
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return [];
     }
@@ -246,7 +238,7 @@ public partial class PrincipalAutocomplete
           PermissionPrincipalKind.ServiceAccount));
     }
 
-    if (await GetTenantId() is not { } tenantId)
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return [];
     }
@@ -267,8 +259,7 @@ public partial class PrincipalAutocomplete
 
   private async Task<IEnumerable<PrincipalOption>> SearchUserGroups(string query, CancellationToken cancellationToken)
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return [];
     }
@@ -286,8 +277,7 @@ public partial class PrincipalAutocomplete
 
   private async Task<IEnumerable<PrincipalOption>> SearchUsers(string query, CancellationToken cancellationToken)
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return [];
     }

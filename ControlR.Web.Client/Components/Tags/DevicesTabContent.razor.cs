@@ -49,10 +49,8 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
   {
     try
     {
-      var state = await AuthState.GetAuthenticationStateAsync();
-      if (!state.User.TryGetTenantId(out var tenantId))
+      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
       {
-        Snackbar.Add("No tenant found for the current user", Severity.Error);
         return;
       }
 

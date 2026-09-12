@@ -25,10 +25,8 @@ public class PermissionCatalogStore(
 
   protected override async Task RefreshImpl()
   {
-    var state = await authState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await authState.GetTenantIdAsync(Snackbar) is not { } tenantId)
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
       return;
     }
 

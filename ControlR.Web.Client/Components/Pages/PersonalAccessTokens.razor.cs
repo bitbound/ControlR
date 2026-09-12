@@ -41,9 +41,8 @@ public partial class PersonalAccessTokens
     _isLoading = true;
     try
     {
-      if (await GetTenantId() is not { } tenantId)
+      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
       {
-        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
         return;
       }
 
@@ -108,9 +107,8 @@ public partial class PersonalAccessTokens
     {
       try
       {
-        if (await GetTenantId() is not { } tenantId)
+        if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
         {
-          Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
           return;
         }
 
@@ -132,20 +130,13 @@ public partial class PersonalAccessTokens
     }
   }
 
-  private async Task<Guid?> GetTenantId()
-  {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
-  }
-
   private async Task LoadPersonalAccessTokens()
   {
     _isLoading = true;
     try
     {
-      if (await GetTenantId() is not { } tenantId)
+      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
       {
-        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
         return;
       }
 
@@ -225,9 +216,8 @@ public partial class PersonalAccessTokens
 
     try
     {
-      if (await GetTenantId() is not { } tenantId)
+      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
       {
-        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
         return;
       }
 

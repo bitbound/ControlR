@@ -142,7 +142,7 @@ public partial class Deploy
 
     if (_tenantId is not { } deploymentTenantId)
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
       return;
     }
 
@@ -205,7 +205,7 @@ public partial class Deploy
   {
     if (_tenantId is null)
     {
-      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
       return;
     }
 
@@ -229,7 +229,7 @@ public partial class Deploy
   {
     if (_tenantId is null)
     {
-      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
       return;
     }
 
@@ -241,7 +241,7 @@ public partial class Deploy
   {
     if (_tenantId is null)
     {
-      Snackbar.Add("Failed to find TenantId", Severity.Error);
+      Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
       return;
     }
 
@@ -272,7 +272,7 @@ public partial class Deploy
   {
     if (_tenantId is not { } tenantId)
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
       return;
     }
 
@@ -296,7 +296,7 @@ public partial class Deploy
   {
     if (_tenantId is not { } tenantId)
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
       return;
     }
 
@@ -338,7 +338,7 @@ public partial class Deploy
   {
     if (_tenantId is not { } tenantId)
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
       return;
     }
 

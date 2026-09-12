@@ -98,8 +98,7 @@ public partial class ScopeAutocomplete
 
   private async Task<IReadOnlyList<ScopeOption>> LoadCustomers(CancellationToken cancellationToken)
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return [];
     }
@@ -117,8 +116,7 @@ public partial class ScopeAutocomplete
 
   private async Task<IReadOnlyList<ScopeOption>> LoadDeviceGroups(CancellationToken cancellationToken)
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return [];
     }
@@ -147,8 +145,7 @@ public partial class ScopeAutocomplete
 
   private async Task<IReadOnlyList<ScopeOption>> LoadUserGroups(CancellationToken cancellationToken)
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await AuthState.GetTenantIdAsync() is not { } tenantId)
     {
       return [];
     }

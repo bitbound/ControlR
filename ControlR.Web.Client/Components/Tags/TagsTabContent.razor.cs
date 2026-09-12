@@ -70,9 +70,8 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    if (await GetTenantId() is not { } tenantId)
+    if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
     {
-      Snackbar.Add("No tenant found for the current user", Severity.Error);
       return;
     }
 
@@ -107,9 +106,8 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    if (await GetTenantId() is not { } tenantId)
+    if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
     {
-      Snackbar.Add("No tenant found for the current user", Severity.Error);
       return;
     }
 
@@ -123,12 +121,6 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     await TagStore.Remove(_selectedTag.Id);
     _selectedTag = null;
     Snackbar.Add("Tag deleted", Severity.Success);
-  }
-
-  private async Task<Guid?> GetTenantId()
-  {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
   }
 
   private async Task HandleDeviceToggled((InternalDtos.DeviceResponseDto device, bool isToggled) args)
@@ -180,9 +172,8 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    if (await GetTenantId() is not { } tenantId)
+    if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
     {
-      Snackbar.Add("No tenant found for the current user", Severity.Error);
       return;
     }
 
@@ -203,9 +194,8 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   {
     try
     {
-      if (await GetTenantId() is not { } tenantId)
+      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
       {
-        Snackbar.Add("No tenant found for the current user", Severity.Error);
         return;
       }
 
