@@ -37,6 +37,7 @@
 
 ## Fixes
 
+- Device search and device string column filters now treat `%` and `_` in the text you type as literal characters instead of SQL `LIKE` wildcards (PostgreSQL). Previously a device search of `%` matched every device, and `host_1` also matched `hostX1`.
 - The `ControlR.ApiClient` background token-refresh no longer ends the session on transient failures.
 - The `ControlR.ApiClient` interactive session no longer keeps reporting itself as signed in after the server rejects its refresh token during an ordinary API call.
 - Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`.
