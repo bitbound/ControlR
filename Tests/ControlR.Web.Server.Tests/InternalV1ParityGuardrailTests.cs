@@ -6,13 +6,13 @@ namespace ControlR.Web.Server.Tests;
 /// <summary>
 /// Ratchet for the V1-first rule. Every operation published in the internal OpenAPI document
 /// must be deprecated, have a V1 twin (same verb and path template under /api/v1), or appear in
-/// <see cref="IrregularShapeAllowList"/> naming the constraint that forces it to stay internal.
+/// <see cref="_irregularShapeAllowList"/> naming the constraint that forces it to stay internal.
 /// New endpoints belong in V1. Adding an Internal operation requires either a V1 twin or an
 /// explicit allow-list entry, so the non-standard surface cannot grow silently.
 /// </summary>
 public partial class InternalV1ParityGuardrailTests
 {
-  private static readonly string[] HttpVerbs = ["get", "put", "post", "delete", "patch", "head", "options", "trace"];
+  private static readonly string[] _httpVerbs = ["get", "put", "post", "delete", "patch", "head", "options", "trace"];
 
   /// <summary>
   /// Internal operations without a V1 twin, keyed by "VERB /path/template" (route parameters
@@ -20,7 +20,7 @@ public partial class InternalV1ParityGuardrailTests
   /// which migration package will twin it (pending). Entries become stale - and fail the second
   /// test - once their operation is deprecated or gains a V1 twin, which keeps this list honest.
   /// </summary>
-  private static readonly Dictionary<string, string> IrregularShapeAllowList = new(StringComparer.Ordinal)
+  private static readonly Dictionary<string, string> _irregularShapeAllowList = new(StringComparer.Ordinal)
   {
     // MVC identity UI - page-flow endpoints, not REST resources.
     ["POST /Account/Logout"] = "ASP.NET Core Identity MVC endpoint, not a REST resource.",
@@ -101,7 +101,7 @@ public partial class InternalV1ParityGuardrailTests
       .Select(op => Key(op.Verb, op.Path))
       .ToHashSet(StringComparer.Ordinal);
 
-    var stale = IrregularShapeAllowList.Keys
+    var stale = _irregularShapeAllowList.Keys
       .Where(key => !stillUnresolved.Contains(key))
       .OrderBy(key => key, StringComparer.Ordinal)
       .ToArray();
@@ -121,7 +121,7 @@ public partial class InternalV1ParityGuardrailTests
     var unclassified = internalOps
       .Where(op => !op.Deprecated)
       .Where(op => !v1Twins.Contains(Key(op.Verb, op.Path)))
-      .Where(op => !IrregularShapeAllowList.ContainsKey(Key(op.Verb, op.Path)))
+      .Where(op => !_irregularShapeAllowList.ContainsKey(Key(op.Verb, op.Path)))
       .Select(op => Key(op.Verb, op.Path))
       .Distinct()
       .OrderBy(key => key, StringComparer.Ordinal)
@@ -172,7 +172,7 @@ public partial class InternalV1ParityGuardrailTests
 
       foreach (var verbProperty in pathProperty.Value.EnumerateObject())
       {
-        if (!HttpVerbs.Contains(verbProperty.Name, StringComparer.OrdinalIgnoreCase))
+        if (!_httpVerbs.Contains(verbProperty.Name, StringComparer.OrdinalIgnoreCase))
         {
           continue;
         }
