@@ -80,7 +80,7 @@ public class InputSimulatorWayland(
         if (ShouldUseLogicalKeysymInput(key, inputMode, modifiers) &&
             TryGetKeysym(key, out var keysym))
         {
-          await SendKeysymAsync(_sessionHandle, keysym, isPressed);
+          await SendKeysym(_sessionHandle, keysym, isPressed);
           return;
         }
 
@@ -96,7 +96,7 @@ public class InputSimulatorWayland(
           return;
         }
 
-        await SendKeycodeAsync(_sessionHandle, keycode, isPressed);
+        await SendKeycode(_sessionHandle, keycode, isPressed);
       }
       finally
       {
@@ -211,12 +211,12 @@ public class InputSimulatorWayland(
 
       foreach (var keycode in keycodes)
       {
-        await SendKeycodeAsync(_sessionHandle, keycode, false);
+        await SendKeycode(_sessionHandle, keycode, false);
       }
 
       foreach (var keysym in keysyms)
       {
-        await SendKeysymAsync(_sessionHandle, keysym, false);
+        await SendKeysym(_sessionHandle, keysym, false);
       }
 
       var releasedCount = keycodes.Length + keysyms.Length;
@@ -293,9 +293,9 @@ public class InputSimulatorWayland(
         {
           if (TryGetKeysym(ch.ToString(), out var keysym))
           {
-            await SendKeysymAsync(_sessionHandle, keysym, true);
+            await SendKeysym(_sessionHandle, keysym, true);
             await Task.Delay(delayMs);
-            await SendKeysymAsync(_sessionHandle, keysym, false);
+            await SendKeysym(_sessionHandle, keysym, false);
             continue;
           }
 
@@ -307,18 +307,18 @@ public class InputSimulatorWayland(
 
           if (needsShift)
           {
-            await SendKeycodeAsync(_sessionHandle, shiftKeycode, true);
+            await SendKeycode(_sessionHandle, shiftKeycode, true);
             await Task.Delay(delayMs);
           }
 
-          await SendKeycodeAsync(_sessionHandle, keycode, true);
+          await SendKeycode(_sessionHandle, keycode, true);
           await Task.Delay(delayMs);
-          await SendKeycodeAsync(_sessionHandle, keycode, false);
+          await SendKeycode(_sessionHandle, keycode, false);
           await Task.Delay(delayMs);
 
           if (needsShift)
           {
-            await SendKeycodeAsync(_sessionHandle, shiftKeycode, false);
+            await SendKeycode(_sessionHandle, shiftKeycode, false);
             await Task.Delay(delayMs);
           }
         }
@@ -488,7 +488,7 @@ public class InputSimulatorWayland(
     }
   }
 
-  private async Task SendKeycodeAsync(string sessionHandle, int keycode, bool isPressed)
+  private async Task SendKeycode(string sessionHandle, int keycode, bool isPressed)
   {
     await _desktopPortal.NotifyKeyboardKeycode(sessionHandle, keycode, isPressed);
     if (isPressed)
@@ -501,7 +501,7 @@ public class InputSimulatorWayland(
     }
   }
 
-  private async Task SendKeysymAsync(string sessionHandle, int keysym, bool isPressed)
+  private async Task SendKeysym(string sessionHandle, int keysym, bool isPressed)
   {
     await _desktopPortal.NotifyKeyboardKeysym(sessionHandle, keysym, isPressed);
     if (isPressed)
