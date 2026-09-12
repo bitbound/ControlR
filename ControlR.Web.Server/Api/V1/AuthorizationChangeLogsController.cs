@@ -103,9 +103,9 @@ public class AuthorizationChangeLogsController(
   /// <summary>
   /// Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,
   /// server administrator grants, and other changes that belong to no tenant. The route takes
-  /// no tenantId - the rows it serves have no tenant - and refuses any caller carrying a tenant
-  /// claim before permission evaluation, so the server-scoped view is exclusively the domain of
-  /// server principals holding server.authorization-logs.read.
+  /// no tenantId - the rows it serves have no tenant - and admits only server principals, so the
+  /// server-scoped view is exclusively the domain of server service accounts holding
+  /// server.authorization-logs.read.
   /// </summary>
   [HttpGet("server")]
   [ProducesResponseType<AuthorizationChangeLogsResponseDto>(StatusCodes.Status200OK)]
@@ -116,9 +116,9 @@ public class AuthorizationChangeLogsController(
     [FromQuery] AuthorizationChangeLogSearchQueryDto searchQuery,
     CancellationToken cancellationToken)
   {
-    // Fail early for tenant-context principals. This endpoint answers only for callers that act
-    // across tenants, never for principals bound to one.
-    if (User.TryGetTenantId(out _))
+    // Server principals only. This endpoint answers only for callers that act across tenants,
+    // never for principals bound to one.
+    if (!User.IsServerPrincipal())
     {
       return Forbid();
     }

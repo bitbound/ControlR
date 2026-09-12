@@ -167,11 +167,6 @@ public class PermissionAssignmentsController(
       return Forbid();
     }
 
-    if (!User.CanAccessTenant(resolvedTenantId))
-    {
-      return Forbid();
-    }
-
     if (User.ToPrincipalDescriptor() is not { } actor)
     {
       return BadRequest("Permission assignment context not found.");
@@ -234,11 +229,6 @@ public class PermissionAssignmentsController(
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
-    {
-      return Forbid();
-    }
-
-    if (!User.CanAccessTenant(resolvedTenantId))
     {
       return Forbid();
     }
@@ -375,11 +365,6 @@ public class PermissionAssignmentsController(
       return Forbid();
     }
 
-    if (!User.CanAccessTenant(resolvedTenantId))
-    {
-      return Forbid();
-    }
-
     if (User.ToPrincipalDescriptor() is not { } actor)
     {
       return BadRequest("Permission assignment context not found.");
@@ -438,7 +423,7 @@ public class PermissionAssignmentsController(
   // The manager's Forbidden results are caller-authorization refusals (missing server-scope or
   // deny-effect grants, server service account targets), never cross-tenant probes. Collapsing
   // them to NotFound would hide actionable authorization feedback. Cross-tenant access is
-  // already refused earlier: TryResolveTenantId, CanAccessTenant, and the manager's own
+  // already refused earlier: TryResolveTenantId, and the manager's own
   // principal/scope tenant validations.
   private static ActionResult ToV1Failure<T>(HttpResult<T> result) =>
     ToV1Failure(result.ToHttpResult());

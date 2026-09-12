@@ -54,8 +54,7 @@ public class EffectivePermissionsController(
     // guard for that kind. Server service accounts are excluded (server-level configuration,
     // not tenant business). A principal in another tenant is indistinguishable from one that
     // does not exist so the endpoint cannot act as an existence oracle.
-    if (!await PrincipalExistsInTenant(_appDb, principalKind, principalId, resolvedTenantId, cancellationToken) ||
-        !User.CanAccessTenant(resolvedTenantId))
+    if (!await PrincipalExistsInTenant(_appDb, principalKind, principalId, resolvedTenantId, cancellationToken))
     {
       return NotFound();
     }
