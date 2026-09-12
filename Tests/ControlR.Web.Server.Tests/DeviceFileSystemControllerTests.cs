@@ -57,6 +57,15 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     Assert.IsType<ForbidResult>(result);
   }
 
+  /// <remarks>
+  /// This asserts 403, which is what the harness produces but not what production produces, and the
+  /// difference is load-bearing for anyone extracting this code. The <c>AppDb</c> resolved from a test
+  /// scope has no <c>HttpContext</c>, so <c>UseUserClaims</c> leaves the tenant query filter inactive
+  /// and the foreign device is actually loaded, whereupon the resource policy denies it. In production
+  /// the filter removes the row first, so the same request answers a bare 404 and never reaches the
+  /// policy. Preserve both orderings: an extraction that keeps only the filtered path would turn this
+  /// 403 into a 404, and one that keeps only the unfiltered path would leak device existence.
+  /// </remarks>
   [Fact]
   public async Task CreateDirectory_WhenDeviceBelongsToAnotherTenant_Forbids()
   {
@@ -1182,6 +1191,12 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
+  /// <remarks>
+  /// The action has no null check on the hub response, so a null answer raises a
+  /// <c>NullReferenceException</c> that its catch-all turns into this 500. The 500 is the contract
+  /// being pinned, not the mechanism. Adding a real <c>result is null</c> branch here would be a
+  /// behavior change, so it needs its own decision rather than arriving as a cleanup.
+  /// </remarks>
   [Fact]
   public async Task ValidateFilePath_WhenHubCallReturnsNull_Returns500WithStringBody()
   {
