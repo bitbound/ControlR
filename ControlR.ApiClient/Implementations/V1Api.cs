@@ -7,6 +7,7 @@ internal partial class V1Api(ControlrApi client) :
   IAuthorizationChangeLogsApi,
   ICustomersApi,
   IDeploymentOptionsApi,
+  IDeviceFileSystemApi,
   IDeviceGroupsApi,
   IDeviceTagsApi,
   IDevicesApi,
@@ -39,6 +40,7 @@ internal partial class V1Api(ControlrApi client) :
   public IAuthorizationChangeLogsApi AuthorizationChangeLogs => this;
   public ICustomersApi Customers => this;
   public IDeploymentOptionsApi DeploymentOptions => this;
+  public IDeviceFileSystemApi DeviceFileSystem => this;
   public IDeviceGroupsApi DeviceGroups => this;
   public IDevicesApi Devices => this;
   public IDeviceTagsApi DeviceTags => this;

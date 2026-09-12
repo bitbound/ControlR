@@ -17,6 +17,12 @@ namespace ControlR.Web.Server.Services.DeviceFileSystem;
 /// response for it, and two of the write operations discard the agent's answer. Both belong to the
 /// caller, which is why the service reports the agent's rejection for every operation even where
 /// its caller ignores it today.
+/// <para>
+/// Every operation takes an optional <c>expectedTenantId</c>. A caller that has already resolved the
+/// tenant it is acting for (the versioned API does) passes it, and the device load then carries an
+/// explicit tenant predicate in addition to the device id. A caller that passes nothing relies on the
+/// context's claims-driven query filter, which is how the internal endpoints have always worked.
+/// </para>
 /// </remarks>
 public interface IDeviceFileSystemService
 {
@@ -29,7 +35,8 @@ public interface IDeviceFileSystemService
     ClaimsPrincipal user,
     Guid deviceId,
     InternalDtos.CreateDirectoryRequestDto request,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null);
 
   /// <summary>
   /// Asks the agent to delete a path. Only the path is forwarded; whether the caller described it as
@@ -40,7 +47,8 @@ public interface IDeviceFileSystemService
     ClaimsPrincipal user,
     Guid deviceId,
     InternalDtos.FileDeleteRequestDto request,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null);
 
   /// <summary>
   /// Asks the agent to stream a directory's entries and flattens what arrives before the stream
@@ -49,7 +57,8 @@ public interface IDeviceFileSystemService
   Task<FileSystemOutcome<InternalDtos.GetDirectoryContentsResponseDto>> GetDirectoryContents(
     ClaimsPrincipal user,
     InternalDtos.GetDirectoryContentsRequestDto request,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null);
 
   /// <summary>
   /// Asks the agent which log files it has on disk.
@@ -57,7 +66,8 @@ public interface IDeviceFileSystemService
   Task<FileSystemOutcome<InternalDtos.GetLogFilesResponseDto>> GetLogFiles(
     ClaimsPrincipal user,
     Guid deviceId,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null);
 
   /// <summary>
   /// Asks the agent to split a path into its segments. An agent that answers with nothing at all is
@@ -66,7 +76,8 @@ public interface IDeviceFileSystemService
   Task<FileSystemOutcome<InternalDtos.PathSegmentsResponseDto>> GetPathSegments(
     ClaimsPrincipal user,
     InternalDtos.GetPathSegmentsRequestDto request,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null);
 
   /// <summary>
   /// Asks the agent for the file system entries at its roots. The request is forwarded verbatim.
@@ -74,7 +85,8 @@ public interface IDeviceFileSystemService
   Task<FileSystemOutcome<InternalDtos.GetRootDrivesResponseDto>> GetRootDrives(
     ClaimsPrincipal user,
     InternalDtos.GetRootDrivesRequestDto request,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null);
 
   /// <summary>
   /// Asks the agent to stream the subdirectories of a directory and flattens what arrives before
@@ -83,7 +95,8 @@ public interface IDeviceFileSystemService
   Task<FileSystemOutcome<InternalDtos.GetSubdirectoriesResponseDto>> GetSubdirectories(
     ClaimsPrincipal user,
     InternalDtos.GetSubdirectoriesRequestDto request,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null);
 
   /// <summary>
   /// Asks the agent whether a directory and file name combine into a usable path. The agent's answer
@@ -93,7 +106,8 @@ public interface IDeviceFileSystemService
     ClaimsPrincipal user,
     Guid deviceId,
     InternalDtos.ValidateFilePathRequestDto request,
-    CancellationToken cancellationToken);
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null);
 }
 
 public class DeviceFileSystemService(
@@ -113,9 +127,15 @@ public class DeviceFileSystemService(
     ClaimsPrincipal user,
     Guid deviceId,
     InternalDtos.CreateDirectoryRequestDto request,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null)
   {
-    var guarded = await Guard(user, deviceId, DeviceResourcePolicies.FileSystemWrite, cancellationToken);
+    var guarded = await Guard(
+      user,
+      deviceId,
+      DeviceResourcePolicies.FileSystemWrite,
+      expectedTenantId,
+      cancellationToken);
 
     if (guarded is not { Succeeded: true, Value: { } device })
     {
@@ -154,9 +174,15 @@ public class DeviceFileSystemService(
     ClaimsPrincipal user,
     Guid deviceId,
     InternalDtos.FileDeleteRequestDto request,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null)
   {
-    var guarded = await Guard(user, deviceId, DeviceResourcePolicies.FileSystemDelete, cancellationToken);
+    var guarded = await Guard(
+      user,
+      deviceId,
+      DeviceResourcePolicies.FileSystemDelete,
+      expectedTenantId,
+      cancellationToken);
 
     if (guarded is not { Succeeded: true, Value: { } device })
     {
@@ -194,9 +220,15 @@ public class DeviceFileSystemService(
   public async Task<FileSystemOutcome<InternalDtos.GetDirectoryContentsResponseDto>> GetDirectoryContents(
     ClaimsPrincipal user,
     InternalDtos.GetDirectoryContentsRequestDto request,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null)
   {
-    var guarded = await Guard(user, request.DeviceId, DeviceResourcePolicies.FileSystemRead, cancellationToken);
+    var guarded = await Guard(
+      user,
+      request.DeviceId,
+      DeviceResourcePolicies.FileSystemRead,
+      expectedTenantId,
+      cancellationToken);
 
     if (guarded is not { Succeeded: true, Value: { } device })
     {
@@ -238,9 +270,15 @@ public class DeviceFileSystemService(
   public async Task<FileSystemOutcome<InternalDtos.GetLogFilesResponseDto>> GetLogFiles(
     ClaimsPrincipal user,
     Guid deviceId,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null)
   {
-    var guarded = await Guard(user, deviceId, DeviceResourcePolicies.LogsRead, cancellationToken);
+    var guarded = await Guard(
+      user,
+      deviceId,
+      DeviceResourcePolicies.LogsRead,
+      expectedTenantId,
+      cancellationToken);
 
     if (guarded is not { Succeeded: true, Value: { } device })
     {
@@ -273,16 +311,15 @@ public class DeviceFileSystemService(
   public async Task<FileSystemOutcome<InternalDtos.PathSegmentsResponseDto>> GetPathSegments(
     ClaimsPrincipal user,
     InternalDtos.GetPathSegmentsRequestDto request,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null)
   {
     // This operation stays off Guard. Lifting its guards out of the try would move device-load and
     // authorization failures out of this catch's view, and its guards log differently from the shared
     // ones: another message for a missing device, none at all for a rejected authorization.
     try
     {
-      var device = await _appDb.Devices
-        .AsNoTracking()
-        .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+      var device = await LoadDevice(request.DeviceId, expectedTenantId, cancellationToken);
 
       if (device is null)
       {
@@ -330,9 +367,15 @@ public class DeviceFileSystemService(
   public async Task<FileSystemOutcome<InternalDtos.GetRootDrivesResponseDto>> GetRootDrives(
     ClaimsPrincipal user,
     InternalDtos.GetRootDrivesRequestDto request,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null)
   {
-    var guarded = await Guard(user, request.DeviceId, DeviceResourcePolicies.FileSystemRead, cancellationToken);
+    var guarded = await Guard(
+      user,
+      request.DeviceId,
+      DeviceResourcePolicies.FileSystemRead,
+      expectedTenantId,
+      cancellationToken);
 
     if (guarded is not { Succeeded: true, Value: { } device })
     {
@@ -363,9 +406,15 @@ public class DeviceFileSystemService(
   public async Task<FileSystemOutcome<InternalDtos.GetSubdirectoriesResponseDto>> GetSubdirectories(
     ClaimsPrincipal user,
     InternalDtos.GetSubdirectoriesRequestDto request,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null)
   {
-    var guarded = await Guard(user, request.DeviceId, DeviceResourcePolicies.FileSystemRead, cancellationToken);
+    var guarded = await Guard(
+      user,
+      request.DeviceId,
+      DeviceResourcePolicies.FileSystemRead,
+      expectedTenantId,
+      cancellationToken);
 
     if (guarded is not { Succeeded: true, Value: { } device })
     {
@@ -407,9 +456,15 @@ public class DeviceFileSystemService(
     ClaimsPrincipal user,
     Guid deviceId,
     InternalDtos.ValidateFilePathRequestDto request,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Guid? expectedTenantId = null)
   {
-    var guarded = await Guard(user, deviceId, DeviceResourcePolicies.FileSystemRead, cancellationToken);
+    var guarded = await Guard(
+      user,
+      deviceId,
+      DeviceResourcePolicies.FileSystemRead,
+      expectedTenantId,
+      cancellationToken);
 
     if (guarded is not { Succeeded: true, Value: { } device })
     {
@@ -447,11 +502,10 @@ public class DeviceFileSystemService(
     ClaimsPrincipal user,
     Guid deviceId,
     string policyName,
+    Guid? expectedTenantId,
     CancellationToken cancellationToken)
   {
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var device = await LoadDevice(deviceId, expectedTenantId, cancellationToken);
 
     if (device is null)
     {
@@ -475,6 +529,30 @@ public class DeviceFileSystemService(
     }
 
     return new(FileSystemFailure.None, null, device);
+  }
+
+  /// <summary>
+  /// Loads the target device by id. When <paramref name="expectedTenantId"/> is supplied it joins the
+  /// query as an explicit tenant predicate, so a caller that resolved the tenant before dispatching
+  /// cannot be handed another tenant's device even in a context whose global query filter is inactive.
+  /// A caller that passes nothing keeps relying on the claims-driven filter, as the internal endpoints
+  /// always have.
+  /// </summary>
+  private async Task<Device?> LoadDevice(
+    Guid deviceId,
+    Guid? expectedTenantId,
+    CancellationToken cancellationToken)
+  {
+    var query = _appDb.Devices
+      .AsNoTracking()
+      .Where(x => x.Id == deviceId);
+
+    if (expectedTenantId is Guid tenantId)
+    {
+      query = query.Where(x => x.TenantId == tenantId);
+    }
+
+    return await query.FirstOrDefaultAsync(cancellationToken);
   }
 
   /// <summary>
