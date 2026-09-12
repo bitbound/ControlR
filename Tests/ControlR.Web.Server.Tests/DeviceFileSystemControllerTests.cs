@@ -1295,7 +1295,6 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     Mock<IAgentHubClient> agentClient,
     Mock<IHubContext<AgentHub, IAgentHubClient>> agentHub,
     IAuthorizationService authz,
-    ILogger<DeviceFileSystemController> logger,
     IHubStreamStore hubStreamStore)
   {
     public Mock<IAgentHubClient> AgentClient { get; } = agentClient;
@@ -1318,8 +1317,6 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     public IDeviceFileSystemService DeviceFileSystem => CreateDeviceFileSystem(AgentHub.Object);
 
     public IHubStreamStore HubStreamStore { get; } = hubStreamStore;
-
-    public ILogger<DeviceFileSystemController> Logger { get; } = logger;
 
     public IServiceProvider Services { get; } = services;
 
@@ -1363,7 +1360,6 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
         agentClient,
         CreateAgentHubContext(agentClient),
         services.GetRequiredService<IAuthorizationService>(),
-        services.GetRequiredService<ILogger<DeviceFileSystemController>>(),
         services.GetRequiredService<IHubStreamStore>());
 
       await harness.SetDeviceOnline(isOnline: true);

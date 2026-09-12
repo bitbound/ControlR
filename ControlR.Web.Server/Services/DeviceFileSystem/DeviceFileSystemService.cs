@@ -115,32 +115,11 @@ public class DeviceFileSystemService(
     InternalDtos.CreateDirectoryRequestDto request,
     CancellationToken cancellationToken)
   {
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var guarded = await Guard(user, deviceId, DeviceResourcePolicies.FileSystemWrite, cancellationToken);
 
-    if (device is null)
+    if (guarded is not { Succeeded: true, Value: { } device })
     {
-      _logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return new(FileSystemFailure.DeviceNotFound, null, null);
-    }
-
-    var authResult = await _authorizationService.AuthorizeAsync(
-      user,
-      device,
-      DeviceResourcePolicies.FileSystemWrite);
-
-    if (!authResult.Succeeded)
-    {
-      _logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        user.Identity?.Name, deviceId);
-      return new(FileSystemFailure.Forbidden, null, null);
-    }
-
-    if (!device.IsOnline)
-    {
-      _logger.LogWarning("Device {DeviceId} is not online.", deviceId);
-      return new(FileSystemFailure.DeviceOffline, null, null);
+      return new(guarded.Failure, guarded.Reason, null);
     }
 
     var createDirectoryRequest = new CreateDirectoryHubDto(request.ParentPath, request.DirectoryName);
@@ -177,32 +156,11 @@ public class DeviceFileSystemService(
     InternalDtos.FileDeleteRequestDto request,
     CancellationToken cancellationToken)
   {
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var guarded = await Guard(user, deviceId, DeviceResourcePolicies.FileSystemDelete, cancellationToken);
 
-    if (device is null)
+    if (guarded is not { Succeeded: true, Value: { } device })
     {
-      _logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return new(FileSystemFailure.DeviceNotFound, null, null);
-    }
-
-    var authResult = await _authorizationService.AuthorizeAsync(
-      user,
-      device,
-      DeviceResourcePolicies.FileSystemDelete);
-
-    if (!authResult.Succeeded)
-    {
-      _logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        user.Identity?.Name, deviceId);
-      return new(FileSystemFailure.Forbidden, null, null);
-    }
-
-    if (!device.IsOnline)
-    {
-      _logger.LogWarning("Device {DeviceId} is not online.", deviceId);
-      return new(FileSystemFailure.DeviceOffline, null, null);
+      return new(guarded.Failure, guarded.Reason, null);
     }
 
     var deleteRequest = new FileDeleteHubDto(request.FilePath);
@@ -238,32 +196,11 @@ public class DeviceFileSystemService(
     InternalDtos.GetDirectoryContentsRequestDto request,
     CancellationToken cancellationToken)
   {
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+    var guarded = await Guard(user, request.DeviceId, DeviceResourcePolicies.FileSystemRead, cancellationToken);
 
-    if (device is null)
+    if (guarded is not { Succeeded: true, Value: { } device })
     {
-      _logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
-      return new(FileSystemFailure.DeviceNotFound, null, null);
-    }
-
-    var authResult = await _authorizationService.AuthorizeAsync(
-      user,
-      device,
-      DeviceResourcePolicies.FileSystemRead);
-
-    if (!authResult.Succeeded)
-    {
-      _logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        user.Identity?.Name, request.DeviceId);
-      return new(FileSystemFailure.Forbidden, null, null);
-    }
-
-    if (!device.IsOnline)
-    {
-      _logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
-      return new(FileSystemFailure.DeviceOffline, null, null);
+      return new(guarded.Failure, guarded.Reason, null);
     }
 
     try
@@ -303,32 +240,11 @@ public class DeviceFileSystemService(
     Guid deviceId,
     CancellationToken cancellationToken)
   {
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var guarded = await Guard(user, deviceId, DeviceResourcePolicies.LogsRead, cancellationToken);
 
-    if (device is null)
+    if (guarded is not { Succeeded: true, Value: { } device })
     {
-      _logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return new(FileSystemFailure.DeviceNotFound, null, null);
-    }
-
-    var authResult = await _authorizationService.AuthorizeAsync(
-      user,
-      device,
-      DeviceResourcePolicies.LogsRead);
-
-    if (!authResult.Succeeded)
-    {
-      _logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        user.Identity?.Name, deviceId);
-      return new(FileSystemFailure.Forbidden, null, null);
-    }
-
-    if (!device.IsOnline)
-    {
-      _logger.LogWarning("Device {DeviceId} is not online.", deviceId);
-      return new(FileSystemFailure.DeviceOffline, null, null);
+      return new(guarded.Failure, guarded.Reason, null);
     }
 
     try
@@ -359,8 +275,9 @@ public class DeviceFileSystemService(
     InternalDtos.GetPathSegmentsRequestDto request,
     CancellationToken cancellationToken)
   {
-    // This operation is the one place the guards sit inside the try block, so a failure while loading
-    // the device is reported here instead of escaping. It is left as found.
+    // This operation stays off Guard. Lifting its guards out of the try would move device-load and
+    // authorization failures out of this catch's view, and its guards log differently from the shared
+    // ones: another message for a missing device, none at all for a rejected authorization.
     try
     {
       var device = await _appDb.Devices
@@ -415,32 +332,11 @@ public class DeviceFileSystemService(
     InternalDtos.GetRootDrivesRequestDto request,
     CancellationToken cancellationToken)
   {
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+    var guarded = await Guard(user, request.DeviceId, DeviceResourcePolicies.FileSystemRead, cancellationToken);
 
-    if (device is null)
+    if (guarded is not { Succeeded: true, Value: { } device })
     {
-      _logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
-      return new(FileSystemFailure.DeviceNotFound, null, null);
-    }
-
-    var authResult = await _authorizationService.AuthorizeAsync(
-      user,
-      device,
-      DeviceResourcePolicies.FileSystemRead);
-
-    if (!authResult.Succeeded)
-    {
-      _logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        user.Identity?.Name, request.DeviceId);
-      return new(FileSystemFailure.Forbidden, null, null);
-    }
-
-    if (!device.IsOnline)
-    {
-      _logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
-      return new(FileSystemFailure.DeviceOffline, null, null);
+      return new(guarded.Failure, guarded.Reason, null);
     }
 
     try
@@ -469,32 +365,11 @@ public class DeviceFileSystemService(
     InternalDtos.GetSubdirectoriesRequestDto request,
     CancellationToken cancellationToken)
   {
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+    var guarded = await Guard(user, request.DeviceId, DeviceResourcePolicies.FileSystemRead, cancellationToken);
 
-    if (device is null)
+    if (guarded is not { Succeeded: true, Value: { } device })
     {
-      _logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
-      return new(FileSystemFailure.DeviceNotFound, null, null);
-    }
-
-    var authResult = await _authorizationService.AuthorizeAsync(
-      user,
-      device,
-      DeviceResourcePolicies.FileSystemRead);
-
-    if (!authResult.Succeeded)
-    {
-      _logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        user.Identity?.Name, request.DeviceId);
-      return new(FileSystemFailure.Forbidden, null, null);
-    }
-
-    if (!device.IsOnline)
-    {
-      _logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
-      return new(FileSystemFailure.DeviceOffline, null, null);
+      return new(guarded.Failure, guarded.Reason, null);
     }
 
     try
@@ -534,32 +409,11 @@ public class DeviceFileSystemService(
     InternalDtos.ValidateFilePathRequestDto request,
     CancellationToken cancellationToken)
   {
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var guarded = await Guard(user, deviceId, DeviceResourcePolicies.FileSystemRead, cancellationToken);
 
-    if (device is null)
+    if (guarded is not { Succeeded: true, Value: { } device })
     {
-      _logger.LogWarning("Device {DeviceId} not found.", deviceId);
-      return new(FileSystemFailure.DeviceNotFound, null, null);
-    }
-
-    var authResult = await _authorizationService.AuthorizeAsync(
-      user,
-      device,
-      DeviceResourcePolicies.FileSystemRead);
-
-    if (!authResult.Succeeded)
-    {
-      _logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
-        user.Identity?.Name, deviceId);
-      return new(FileSystemFailure.Forbidden, null, null);
-    }
-
-    if (!device.IsOnline)
-    {
-      _logger.LogWarning("Device {DeviceId} is not online.", deviceId);
-      return new(FileSystemFailure.DeviceOffline, null, null);
+      return new(guarded.Failure, guarded.Reason, null);
     }
 
     var validateRequest = new ValidateFilePathHubDto(request.DirectoryPath, request.FileName);
@@ -582,6 +436,45 @@ public class DeviceFileSystemService(
         request.FileName, request.DirectoryPath, deviceId);
       return new(FileSystemFailure.Unexpected, ex.Message, null);
     }
+  }
+
+  /// <summary>
+  /// Loads the device, applies the operation's device resource policy to the caller, and requires the
+  /// agent to be connected. On success the value is the device to dispatch to; on failure the outcome
+  /// carries the same condition the operation used to check inline, which is what the caller reports.
+  /// </summary>
+  private async Task<FileSystemOutcome<Device>> Guard(
+    ClaimsPrincipal user,
+    Guid deviceId,
+    string policyName,
+    CancellationToken cancellationToken)
+  {
+    var device = await _appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+
+    if (device is null)
+    {
+      _logger.LogWarning("Device {DeviceId} not found.", deviceId);
+      return new(FileSystemFailure.DeviceNotFound, null, null);
+    }
+
+    var authResult = await _authorizationService.AuthorizeAsync(user, device, policyName);
+
+    if (!authResult.Succeeded)
+    {
+      _logger.LogCritical("Authorization failed for user {UserName} on device {DeviceId}.",
+        user.Identity?.Name, deviceId);
+      return new(FileSystemFailure.Forbidden, null, null);
+    }
+
+    if (!device.IsOnline)
+    {
+      _logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+      return new(FileSystemFailure.DeviceOffline, null, null);
+    }
+
+    return new(FileSystemFailure.None, null, device);
   }
 
   /// <summary>
