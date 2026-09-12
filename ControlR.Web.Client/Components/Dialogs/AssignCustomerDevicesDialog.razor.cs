@@ -42,11 +42,13 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
   protected override async Task OnInitializedAsync()
   {
     var state = await AuthState.GetAuthenticationStateAsync();
-    if (state.User.TryGetTenantId(out var tenantId))
+    if (!state.User.TryGetTenantId(out var tenantId))
     {
-      _tenantId = tenantId;
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
     }
 
+    _tenantId = tenantId;
     await LoadDevices();
   }
 
