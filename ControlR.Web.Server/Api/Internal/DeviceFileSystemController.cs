@@ -33,7 +33,7 @@ public class DeviceFileSystemController : ControllerBase
     var outcome = await deviceFileSystem.CreateDirectory(User, deviceId, request, cancellationToken);
 
     // This endpoint has answered 204 as soon as the request reached the agent, whether or not the
-    // agent accepted it. The rejection the service reports is left unused here deliberately; making
+    // agent accepted it. The rejection the service reports is left unused here deliberately. Making
     // it mean something is a behavior change that does not belong in an extraction.
     return outcome.Failure switch
     {
@@ -60,7 +60,7 @@ public class DeviceFileSystemController : ControllerBase
 
     var outcome = await deviceFileSystem.DeletePath(User, deviceId, request, cancellationToken);
 
-    // As with directory creation, the agent's verdict is discarded: what this endpoint reports is the
+    // As with directory creation, the agent's verdict is discarded. What this endpoint reports is the
     // deletion it requested. The payload is an anonymous type, so its property order is the response
     // body's key order.
     return outcome.Failure switch

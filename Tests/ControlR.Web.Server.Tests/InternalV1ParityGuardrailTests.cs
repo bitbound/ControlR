@@ -62,7 +62,7 @@ public partial class InternalV1ParityGuardrailTests
     ["GET /api/agent-update/get-bundle-metadata/{}"] = "Legacy agent update-bundle negotiation alias.",
 
     // Device file system - payloads the JSON API client cannot express. Only the four binary
-    // siblings remain; the eight JSON operations in the same controller now have V1 twins.
+    // siblings remain. The eight JSON operations in the same controller now have V1 twins.
     ["GET /api/device-file-system/download/{}"] = "Returns a raw octet-stream file; the API client has no result model for a binary body.",
     ["POST /api/device-file-system/download-archive/{}"] = "Returns a raw octet-stream archive; the API client has no result model for a binary body.",
     ["GET /api/device-file-system/logs/{}/contents"] = "Returns a raw text/plain log stream; the API client has no streaming result model.",

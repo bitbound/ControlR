@@ -332,7 +332,7 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.Created, createAssignmentResponse.StatusCode);
 
-    // Query the group's effective permission — should be allowed.
+    // Query the group's effective permission. It should be allowed.
     var queryResponse = await client.GetAsync(
       EffectivePermissionUrl(PermissionPrincipalKind.UserGroup, group.Id, PermissionNames.DeviceRead, tenantId),
       TestContext.Current.CancellationToken);

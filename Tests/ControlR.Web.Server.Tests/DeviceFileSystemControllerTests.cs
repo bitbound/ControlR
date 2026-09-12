@@ -63,7 +63,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   /// scope has no <c>HttpContext</c>, so <c>UseUserClaims</c> leaves the tenant query filter inactive
   /// and the foreign device is actually loaded, whereupon the resource policy denies it. In production
   /// the filter removes the row first, so the same request answers a bare 404 and never reaches the
-  /// policy. Preserve both orderings: an extraction that keeps only the filtered path would turn this
+  /// policy. Preserve both orderings. An extraction that keeps only the filtered path would turn this
   /// 403 into a 404, and one that keeps only the unfiltered path would leak device existence.
   /// </remarks>
   [Fact]

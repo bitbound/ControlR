@@ -11,16 +11,16 @@ namespace ControlR.Web.Server.Api.V1;
 /// payloads the deprecated internal endpoints return with the incidental differences removed.
 /// <para>
 /// Every action takes a required <c>tenantId</c> and resolves it exactly once through
-/// <see cref="ServerPrincipalExtensions.TryResolveTenantId"/>. A server principal may name any tenant;
-/// a tenant-bound caller may name only its own, and an attempt to name another is a 403. The resolved
+/// <see cref="ServerPrincipalExtensions.TryResolveTenantId"/>. A server principal may name any tenant.
+/// A tenant-bound caller may name only its own, and an attempt to name another is a 403. The resolved
 /// id then travels into the device load as an explicit tenant predicate, so the boundary holds even in
 /// a context whose claims-driven query filter is inactive. There is no second check against the
 /// resolved id, because a successful resolve already guarantees it.
 /// </para>
 /// <para>
 /// Failures map uniformly, which is deliberate. The deprecated internal endpoints answer the same
-/// conditions differently from one another (one of them calls a missing device a 400, two of them
-/// discard the agent's refusal); this surface does not inherit that drift. A missing device is a 404
+/// conditions differently from one another. One of them calls a missing device a 400 and two of them
+/// discard the agent's refusal. This surface does not inherit that drift. A missing device is a 404
 /// for all eight, an agent's refusal is a 502 carrying the agent's own reason, and a cancellation
 /// waiting on the agent is a 408.
 /// </para>
@@ -457,7 +457,7 @@ public class DeviceFileSystemController(
   /// with. The agent reported that it cannot satisfy the request in the device's current state, which
   /// is a conflict with that state rather than a fault in this server or a malformed request. 502 is
   /// reserved for the case where no usable answer arrived, which the service reports as a rejection
-  /// carrying no reason: an unsuccessful hub result cannot have a blank reason, because its
+  /// carrying no reason. An unsuccessful hub result cannot have a blank reason, because its
   /// constructor requires one, so a reasonless rejection means no result was produced rather than that
   /// the device declined. Telling a missing path apart from an existing one needs an error code on the
   /// agent's result, which the agent does not send yet (https://github.com/bitbound/ControlR-dev/issues/247),

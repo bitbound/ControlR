@@ -31,7 +31,7 @@ namespace ControlR.Web.Server.Tests.V1;
 /// as an explicit predicate, and the uniform status mapping that the deprecated internal endpoints do
 /// not have, namely that a missing device is always a 404, an agent's refusal is always a 502
 /// carrying the agent's reason, and a canceled wait is always a 408. The four binary siblings are out
-/// of scope; they stay internal until the API client can carry a streamed result.
+/// of scope. They stay internal until the API client can carry a streamed result.
 /// <para>
 /// Test names are prefixed with the action method name, which is also the grouping, since member
 /// ordering keeps them alphabetical.
@@ -524,7 +524,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
 
   /// <summary>
   /// The empty-tenantId 400 is answered by the V1 filter before the action body runs, so only the
-  /// pipeline shows it. One action is exercised through HTTP;
+  /// pipeline shows it. One action is exercised through HTTP.
   /// <see cref="AllActions_TakeARequiredTenantIdParameter"/> is what makes the other seven covered by
   /// the same convention rather than by seven more copies of this test.
   /// </summary>

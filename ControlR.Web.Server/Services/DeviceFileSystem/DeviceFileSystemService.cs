@@ -39,7 +39,7 @@ public interface IDeviceFileSystemService
     Guid? expectedTenantId = null);
 
   /// <summary>
-  /// Asks the agent to delete a path. Only the path is forwarded; whether the caller described it as
+  /// Asks the agent to delete a path. Only the path is forwarded. Whether the caller described it as
   /// a directory is dropped at this boundary. As with directory creation, the agent's answer is
   /// reported and left for the caller to use or ignore.
   /// </summary>
@@ -200,7 +200,7 @@ public class DeviceFileSystemService(
       _logger.LogInformation("File deletion requested for {FilePath} on device {DeviceId}",
         request.FilePath, deviceId);
 
-      // See CreateDirectory: the missing answer of an unreachable agent is a rejection, and the
+      // See CreateDirectory. The missing answer of an unreachable agent is a rejection, and the
       // deleting endpoint is free to ignore it.
       if (result is null || !result.IsSuccess)
       {
@@ -495,7 +495,7 @@ public class DeviceFileSystemService(
 
   /// <summary>
   /// Loads the device, applies the operation's device resource policy to the caller, and requires the
-  /// agent to be connected. On success the value is the device to dispatch to; on failure the outcome
+  /// agent to be connected. On success the value is the device to dispatch to. On failure the outcome
   /// carries the same condition the operation used to check inline, which is what the caller reports.
   /// <paramref name="policyName"/> is always a <see cref="DeviceResourcePolicies"/> member, so that
   /// every authorization decision this class makes stays greppable from its policy name.
