@@ -37,7 +37,9 @@ jobs:
       # fails the next step instead of comparing the committed files against themselves.
       - name: Regenerate OpenAPI documents
         run: |
-          Remove-Item -Path "ControlR.Web.Server/ControlR.Web.Server_*.json"
+          # SilentlyContinue so a repository missing these documents reaches the clearer
+          # "the build did not produce" failure below instead of dying here on a raw Remove-Item error.
+          Remove-Item -Path "ControlR.Web.Server/ControlR.Web.Server_*.json" -ErrorAction SilentlyContinue
           dotnet build ControlR.Web.Server/ControlR.Web.Server.csproj -c Debug --verbosity quiet
           if ($LASTEXITCODE -ne 0) {
             throw "Failed to regenerate the OpenAPI documents."
