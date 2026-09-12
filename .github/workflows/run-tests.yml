@@ -14,6 +14,63 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
+  verify-openapi-docs-current:
+    name: OpenAPI Document Freshness
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          clean: true
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      # Microsoft.Extensions.ApiDescription.Server is referenced for Debug only, and the test jobs
+      # below build Release. Without an explicit Debug build here the documents are never
+      # regenerated and the comparison below would pass against the stale committed copies.
+      # The committed copies are deleted first so that a build which stops generating documents
+      # fails the next step instead of comparing the committed files against themselves.
+      - name: Regenerate OpenAPI documents
+        run: |
+          Remove-Item -Path "ControlR.Web.Server/ControlR.Web.Server_*.json"
+          dotnet build ControlR.Web.Server/ControlR.Web.Server.csproj -c Debug --verbosity quiet
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to regenerate the OpenAPI documents."
+          }
+
+      - name: Fail if the committed documents are stale
+        run: |
+          $documents = @(
+            "ControlR.Web.Server/ControlR.Web.Server_internal.json",
+            "ControlR.Web.Server/ControlR.Web.Server_v1.json"
+          )
+
+          foreach ($document in $documents) {
+            if (-not (Test-Path $document)) {
+              throw "The build did not produce $document, so the committed documents cannot be verified."
+            }
+          }
+
+          # git diff ignores untracked files, so a document that was never committed would pass while nothing checks it.
+          $untracked = @(git ls-files --others --exclude-standard -- "ControlR.Web.Server/ControlR.Web.Server_*.json")
+          if ($untracked.Count -gt 0) {
+            Write-Host "::error::The following generated OpenAPI documents are not committed: $($untracked -join ', ')"
+            exit 1
+          }
+
+          git --no-pager diff --exit-code -- $documents
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error::The committed OpenAPI documents are out of date with current routing and annotations."
+            Write-Host "Regenerate and commit them with:"
+            Write-Host "  dotnet build ControlR.Web.Server/ControlR.Web.Server.csproj -c Debug"
+            exit 1
+          }
+
   run-linux-tests:
     name: Linux Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
