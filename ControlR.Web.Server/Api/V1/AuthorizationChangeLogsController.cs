@@ -15,7 +15,7 @@ namespace ControlR.Web.Server.Api.V1;
 /// internal endpoint did) rather than as a method-level policy.
 /// Server-scoped entries (OwningTenantId is null) belong to no tenant and are therefore not
 /// reachable through the tenant-addressed list. They are served by the separate, parameterless
-/// GET /server route, which is restricted to server principals without tenant context.
+/// GET /server route, which requires server.authorization-logs.read at Server scope.
 /// </summary>
 [Route(HttpConstants.V1.AuthorizationChangeLogsEndpoint)]
 [ApiController]
@@ -102,10 +102,11 @@ public class AuthorizationChangeLogsController(
 
   /// <summary>
   /// Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,
-  /// server administrator grants, and other changes that belong to no tenant. The route takes
-  /// no tenantId - the rows it serves have no tenant - and admits only server principals, so the
-  /// server-scoped view is exclusively the domain of server service accounts holding
-  /// server.authorization-logs.read.
+  /// server administrator grants, and other changes that belong to no tenant. The route takes no
+  /// tenantId, because the rows it serves have no tenant. It requires
+  /// server.authorization-logs.read, the Server-scope grant the catalog describes as covering all
+  /// tenants including server-scoped entries, so both server service accounts and Server
+  /// Administrator users reach it.
   /// </summary>
   [HttpGet("server")]
   [ProducesResponseType<AuthorizationChangeLogsResponseDto>(StatusCodes.Status200OK)]
@@ -116,19 +117,16 @@ public class AuthorizationChangeLogsController(
     [FromQuery] AuthorizationChangeLogSearchQueryDto searchQuery,
     CancellationToken cancellationToken)
   {
-    // Server principals only. This endpoint answers only for callers that act across tenants,
-    // never for principals bound to one.
-    if (!User.IsServerPrincipal())
-    {
-      return Forbid();
-    }
-
     var principal = User.ToPrincipalDescriptor();
     if (principal is null)
     {
       return BadRequest("User principal not found.");
     }
 
+    // The gate is the permission, not the principal kind. ServerScope grants this to server
+    // service accounts and to Server Administrator users alike, and a tenant-bound holder of it
+    // must still read the server-scoped rows it is documented to cover. A principal without the
+    // permission is refused here, before any query runs.
     var requestServer = new PermissionEvaluationRequest(
       PermissionNames.ServerAuthorizationLogsRead,
       new ResourceDescriptor(PermissionScopeKind.Server));

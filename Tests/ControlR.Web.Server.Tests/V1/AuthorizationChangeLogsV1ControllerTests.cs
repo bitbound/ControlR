@@ -24,17 +24,69 @@ public class AuthorizationChangeLogsV1ControllerTests(ITestOutputHelper testOutp
   private readonly ITestOutputHelper _testOutput = testOutput;
 
   [Fact]
-  public async Task GetServerScoped_WhenCallerHasTenantClaim_ReturnsForbid()
+  public async Task GetServerScoped_AsServerAdmin_ReturnsOnlyServerScopedEntries()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
-    var (_, _, serverAdmin, _) = await SetupTenantsWithEntries(testServer);
+    var (tenantA, _, serverAdmin, _) = await SetupTenantsWithEntries(testServer);
+
+    var serverEntryId = Guid.NewGuid();
+    var tenantEntryId = Guid.NewGuid();
+
+    using (var setupScope = testServer.Services.CreateScope())
+    {
+      await using var db = setupScope.ServiceProvider.GetRequiredService<ControlR.Web.Server.Data.AppDb>();
+
+      db.AuthorizationChangeLogs.AddRange(
+        new AuthorizationChangeLog
+        {
+          ActionType = AuthorizationChangeLogActions.ServiceAccountCreated,
+          ActorPrincipalId = null,
+          ActorPrincipalType = AuthorizationChangeLogActorTypes.System,
+          CreatedAt = DateTimeOffset.UtcNow,
+          Id = serverEntryId,
+          OwningTenantId = null,
+          TargetId = Guid.NewGuid(),
+          TargetType = AuthorizationChangeLogTargetTypes.ServiceAccount
+        },
+        new AuthorizationChangeLog
+        {
+          ActionType = AuthorizationChangeLogActions.PermissionAssignmentCreated,
+          ActorPrincipalId = Guid.NewGuid(),
+          ActorPrincipalType = AuthorizationChangeLogActorTypes.User,
+          CreatedAt = DateTimeOffset.UtcNow,
+          Id = tenantEntryId,
+          OwningTenantId = tenantA.Id,
+          TargetId = Guid.NewGuid(),
+          TargetType = AuthorizationChangeLogTargetTypes.PermissionAssignment
+        });
+
+      await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
 
     using var scope = testServer.Services.CreateScope();
 
-    // The user holds server.authorization-logs.read through the Server Administrator grant added
-    // in Setup, but every user principal carries a tenant claim, so the route refuses the caller
-    // before it evaluates the permission.
+    // The Server Administrator holds server.authorization-logs.read at Server scope, whose catalog
+    // description covers server-scoped entries. Carrying a tenant claim must not hide them.
     var controller = await scope.CreateControllerWithUser<AuthorizationChangeLogsController>(serverAdmin);
+
+    var result = await controller.GetServerScoped(
+      new AuthorizationChangeLogSearchQueryDto(), TestContext.Current.CancellationToken);
+
+    var response = Assert.IsType<AuthorizationChangeLogsResponseDto>(
+      Assert.IsType<OkObjectResult>(result.Result).Value);
+    Assert.Contains(response.Items, x => x.Id == serverEntryId);
+    Assert.DoesNotContain(response.Items, x => x.Id == tenantEntryId);
+    Assert.All(response.Items, x => Assert.Null(x.OwningTenantId));
+  }
+
+  [Fact]
+  public async Task GetServerScoped_AsTenantAdminWithoutGrant_ReturnsForbid()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
+    var (_, _, _, tenantAdminA) = await SetupTenantsWithEntries(testServer);
+
+    using var scope = testServer.Services.CreateScope();
+    var controller = await scope.CreateControllerWithUser<AuthorizationChangeLogsController>(tenantAdminA);
 
     var result = await controller.GetServerScoped(
       new AuthorizationChangeLogSearchQueryDto(), TestContext.Current.CancellationToken);
