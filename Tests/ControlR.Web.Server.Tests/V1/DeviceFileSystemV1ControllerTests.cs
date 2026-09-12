@@ -70,7 +70,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task CreateDirectory_WhenAgentRefuses_ReturnsBadGatewayWithTheAgentsReason()
+  public async Task CreateDirectory_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -85,7 +85,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
       TestContext.Current.CancellationToken);
 
-    var problem = AssertBadGateway(result);
+    var problem = AssertDeviceRefusal(result);
     Assert.Equal("the parent path is read-only", problem.Detail);
   }
 
@@ -183,7 +183,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task DeletePath_WhenAgentRefuses_ReturnsBadGatewayWithTheAgentsReason()
+  public async Task DeletePath_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -198,7 +198,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeleteDevicePathRequestDto("/parent/file.txt"),
       TestContext.Current.CancellationToken);
 
-    var problem = AssertBadGateway(result);
+    var problem = AssertDeviceRefusal(result);
     Assert.Equal("the file is in use", problem.Detail);
   }
 
@@ -296,7 +296,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetDirectoryContents_WhenAgentRefusesTheStream_ReturnsBadGatewayWithTheAgentsReason()
+  public async Task GetDirectoryContents_WhenAgentRefusesTheStream_ReturnsConflictWithTheAgentsReason()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -310,7 +310,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeviceDirectoryContentsRequestDto(harness.Device.Id, "/parent"),
       TestContext.Current.CancellationToken);
 
-    var problem = AssertBadGateway(result);
+    var problem = AssertDeviceRefusal(result);
     Assert.Equal("the directory could not be enumerated", problem.Detail);
   }
 
@@ -425,7 +425,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetLogFiles_WhenAgentRefuses_ReturnsBadGatewayWithTheAgentsReason()
+  public async Task GetLogFiles_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -439,7 +439,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       harness.Tenant.Id,
       TestContext.Current.CancellationToken);
 
-    var problem = AssertBadGateway(result);
+    var problem = AssertDeviceRefusal(result);
     Assert.Equal("agent log scan failed", problem.Detail);
   }
 
@@ -602,10 +602,10 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DevicePathSegmentsRequestDto(harness.Device.Id, "/parent/child"),
       TestContext.Current.CancellationToken);
 
-    // The agent that never answered has no reason to report, and the deprecated endpoint called this
-    // a 500.
-    var problem = AssertBadGateway(result);
-    Assert.Null(problem.Detail);
+    // Nothing answered, so there is no reason to report and this is the one case that stays a 502.
+    // The deprecated endpoint called it a 500.
+    var problem = AssertNoAnswerFromDevice(result);
+    Assert.Equal("The device did not return a result.", problem.Detail);
   }
 
   /// <summary>
@@ -720,7 +720,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetRootDrives_WhenAgentRefuses_ReturnsBadGatewayWithTheAgentsReason()
+  public async Task GetRootDrives_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -734,7 +734,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeviceRootDrivesRequestDto(harness.Device.Id),
       TestContext.Current.CancellationToken);
 
-    var problem = AssertBadGateway(result);
+    var problem = AssertDeviceRefusal(result);
     Assert.Equal("no roots enumerated", problem.Detail);
   }
 
@@ -812,7 +812,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetSubdirectories_WhenAgentRefusesTheStream_ReturnsBadGatewayWithTheAgentsReason()
+  public async Task GetSubdirectories_WhenAgentRefusesTheStream_ReturnsConflictWithTheAgentsReason()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -826,7 +826,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeviceSubdirectoriesRequestDto(harness.Device.Id, "/parent"),
       TestContext.Current.CancellationToken);
 
-    var problem = AssertBadGateway(result);
+    var problem = AssertDeviceRefusal(result);
     Assert.Equal("agent could not enumerate subdirectories", problem.Detail);
   }
 
@@ -1048,21 +1048,39 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       .ReturnsAsync(HubResult.Ok(new InternalDtos.GetLogFilesResponseDto(groups)));
   }
 
-  private static ProblemDetails AssertBadGateway(IActionResult result)
-  {
-    var objectResult = Assert.IsType<ObjectResult>(result);
-    Assert.Equal(StatusCodes.Status502BadGateway, objectResult.StatusCode);
-    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
-    Assert.Equal(StatusCodes.Status502BadGateway, problem.Status);
-    Assert.Equal("The remote device rejected the operation.", problem.Title);
-    return problem;
-  }
-
   private static void AssertBadRequest(Harness harness, IActionResult result)
   {
     var badRequest = Assert.IsType<ObjectResult>(result);
     Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
     harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  /// <summary>
+  /// The device answered and said it could not do the thing. That is a conflict with the device's
+  /// state, not a fault in this server, so it is a 409 carrying the agent's own text.
+  /// </summary>
+  private static ProblemDetails AssertDeviceRefusal(IActionResult result)
+  {
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal(StatusCodes.Status409Conflict, problem.Status);
+    Assert.Equal("The remote device could not complete the operation.", problem.Title);
+    return problem;
+  }
+
+  /// <summary>
+  /// The device produced no result at all, which is the only case this surface reports as a bad
+  /// gateway. Nothing was refused, because nothing answered.
+  /// </summary>
+  private static ProblemDetails AssertNoAnswerFromDevice(IActionResult result)
+  {
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(StatusCodes.Status502BadGateway, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal(StatusCodes.Status502BadGateway, problem.Status);
+    Assert.Equal("No response from the remote device.", problem.Title);
+    return problem;
   }
 
   private static async Task<HttpClient> CreateAuthenticatedClient(TestWebServer testServer, Guid tenantId)
@@ -1188,7 +1206,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
 
       // The caller context is reused rather than rebuilt, because it already carries the principal the
       // permission presets were assigned to.
-      var controller = new DeviceFileSystemController(deviceFileSystem)
+      var controller = new DeviceFileSystemController(
+        deviceFileSystem,
+        services.GetRequiredService<ILogger<DeviceFileSystemController>>())
       {
         ControllerContext = callerContext,
       };

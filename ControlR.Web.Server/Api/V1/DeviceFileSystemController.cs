@@ -35,11 +35,15 @@ namespace ControlR.Web.Server.Api.V1;
 [ApiController]
 [Authorize]
 [ApiVersion(ApiVersions.V1)]
-public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSystem) : ControllerBase
+public class DeviceFileSystemController(
+  IDeviceFileSystemService deviceFileSystem,
+  ILogger<DeviceFileSystemController> logger) : ControllerBase
 {
   private const string DeviceOfflineMessage = "Device is not currently online.";
 
   private readonly IDeviceFileSystemService _deviceFileSystem = deviceFileSystem;
+
+  private readonly ILogger<DeviceFileSystemController> _logger = logger;
 
   /// <summary>
   /// Creates a directory under <paramref name="deviceId"/>'s <c>ParentPath</c>. Answers 204 once the
@@ -53,6 +57,7 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
   public async Task<IActionResult> CreateDirectory(
     [FromRoute] Guid deviceId,
@@ -96,6 +101,7 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
   public async Task<IActionResult> DeletePath(
     [FromRoute] Guid deviceId,
@@ -141,6 +147,7 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
   public async Task<IActionResult> GetDirectoryContents(
     [FromQuery] Guid tenantId,
@@ -178,6 +185,7 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
   public async Task<IActionResult> GetLogFiles(
     [FromRoute] Guid deviceId,
@@ -215,6 +223,7 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
   public async Task<IActionResult> GetPathSegments(
     [FromQuery] Guid tenantId,
@@ -251,6 +260,7 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
   public async Task<IActionResult> GetRootDrives(
     [FromQuery] Guid tenantId,
@@ -287,6 +297,7 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
   public async Task<IActionResult> GetSubdirectories(
     [FromQuery] Guid tenantId,
@@ -324,6 +335,7 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
   public async Task<IActionResult> ValidateFilePath(
     [FromRoute] Guid deviceId,
@@ -356,11 +368,14 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
     return Ok(ToV1Dto(validation));
   }
 
+  // The collections below are agent-supplied and are null when an older agent answers without them.
+  // These mappers run after the service's try/catch, so an unguarded dereference becomes an unmapped
+  // 500 with no diagnostic where the deprecated endpoint simply serialized the null.
   private static DeviceDirectoryContentsResponseDto ToV1Dto(
     InternalDtos.GetDirectoryContentsResponseDto source)
   {
     return new DeviceDirectoryContentsResponseDto(
-      [.. source.Entries.Select(ToV1Dto)],
+      [.. (source.Entries ?? []).Select(ToV1Dto)],
       source.DirectoryExists);
   }
 
@@ -395,12 +410,12 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
 
   private static DeviceLogFileGroupDto ToV1Dto(InternalDtos.LogFileGroupDto source)
   {
-    return new DeviceLogFileGroupDto(source.GroupName, [.. source.LogFiles.Select(ToV1Dto)]);
+    return new DeviceLogFileGroupDto(source.GroupName, [.. (source.LogFiles ?? []).Select(ToV1Dto)]);
   }
 
   private static DeviceLogFileListResponseDto ToV1Dto(InternalDtos.GetLogFilesResponseDto source)
   {
-    return new DeviceLogFileListResponseDto([.. source.LogFileGroups.Select(ToV1Dto)]);
+    return new DeviceLogFileListResponseDto([.. (source.LogFileGroups ?? []).Select(ToV1Dto)]);
   }
 
   private static DevicePathSegmentsResponseDto ToV1Dto(InternalDtos.PathSegmentsResponseDto source)
@@ -408,20 +423,20 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
     return new DevicePathSegmentsResponseDto(
       source.ErrorMessage,
       source.PathExists,
-      [.. source.PathSegments],
+      [.. source.PathSegments ?? []],
       source.PathSeparator,
       source.Success);
   }
 
   private static DeviceRootDrivesResponseDto ToV1Dto(InternalDtos.GetRootDrivesResponseDto source)
   {
-    return new DeviceRootDrivesResponseDto([.. source.Drives.Select(ToV1Dto)]);
+    return new DeviceRootDrivesResponseDto([.. (source.Drives ?? []).Select(ToV1Dto)]);
   }
 
   private static DeviceSubdirectoriesResponseDto ToV1Dto(
     InternalDtos.GetSubdirectoriesResponseDto source)
   {
-    return new DeviceSubdirectoriesResponseDto([.. source.Subdirectories.Select(ToV1Dto)]);
+    return new DeviceSubdirectoriesResponseDto([.. (source.Subdirectories ?? []).Select(ToV1Dto)]);
   }
 
   private ObjectResult InvalidRequest(string detail)
@@ -436,27 +451,59 @@ public class DeviceFileSystemController(IDeviceFileSystemService deviceFileSyste
   /// The one place the eight operations translate an outcome's condition into a status. A device that
   /// does not exist is a 404 whether the request reached the agent or not, and a device that is not
   /// connected is a 400, because the caller asked for something the server cannot do without an agent.
-  /// <see cref="FileSystemFailure.HubRejected"/> is a 502 rather than the 400 or 500 the deprecated
-  /// endpoints answer with: the server did what it was told, and the downstream refusal is what failed.
   /// </summary>
-  private IActionResult MapFailure<TFailureValue>(
-    FileSystemOutcome<TFailureValue> outcome,
+  /// <remarks>
+  /// A device that answered and refused is a 409, not the 400 or 500 the deprecated endpoints answer
+  /// with. The agent reported that it cannot satisfy the request in the device's current state, which
+  /// is a conflict with that state rather than a fault in this server or a malformed request. 502 is
+  /// reserved for the case where no usable answer arrived, which the service reports as a rejection
+  /// carrying no reason: an unsuccessful hub result cannot have a blank reason, because its
+  /// constructor requires one, so a reasonless rejection means no result was produced rather than that
+  /// the device declined. Telling a missing path apart from an existing one needs an error code on the
+  /// agent's result, which the agent does not send yet (https://github.com/bitbound/ControlR-dev/issues/247),
+  /// so both keep answering 409 with the agent's own text in detail.
+  /// </remarks>
+  private IActionResult MapFailure<TValue>(
+    FileSystemOutcome<TValue> outcome,
     string unexpectedFailureDetail)
   {
+    if (outcome.Failure is FileSystemFailure.None)
+    {
+      // Reported success but carried no payload, which no operation produces today. Reaching here is a
+      // bug in this server rather than a device fault, so the title says unexpected response and does
+      // not claim the device could not be contacted.
+      _logger.LogError(
+        "A device file system operation reported success without a payload ({Outcome}).",
+        outcome);
+
+      return Problem(
+        detail: unexpectedFailureDetail,
+        statusCode: StatusCodes.Status500InternalServerError,
+        title: "The remote device returned an unexpected response.");
+    }
+
     return outcome.Failure switch
     {
       FileSystemFailure.DeviceNotFound => NotFound(),
       FileSystemFailure.Forbidden => Forbid(),
       FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.HubRejected when outcome.Reason is { Length: > 0 } reason => Problem(
+        detail: reason,
+        statusCode: StatusCodes.Status409Conflict,
+        title: "The remote device could not complete the operation."),
       FileSystemFailure.HubRejected => Problem(
-        detail: outcome.Reason,
+        detail: "The device did not return a result.",
         statusCode: StatusCodes.Status502BadGateway,
-        title: "The remote device rejected the operation."),
+        title: "No response from the remote device."),
       FileSystemFailure.Cancelled => StatusCode(StatusCodes.Status408RequestTimeout),
-      _ => Problem(
+      FileSystemFailure.Unexpected => Problem(
         detail: unexpectedFailureDetail,
         statusCode: StatusCodes.Status500InternalServerError,
         title: "Error contacting the remote device."),
+      _ => throw new ArgumentOutOfRangeException(
+        nameof(outcome),
+        outcome.Failure,
+        "Unrecognized device file system failure condition."),
     };
   }
 }
