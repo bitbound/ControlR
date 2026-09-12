@@ -300,7 +300,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     var getOk = Assert.IsType<OkObjectResult>(getResult.Result);
-    var tokens = Assert.IsAssignableFrom<IReadOnlyList<PersonalAccessTokenResponseDto>>(getOk.Value);
+    var tokens = Assert.IsType<PersonalAccessTokensResponseDto>(getOk.Value).Items;
     var createdToken = Assert.Single(tokens);
     Assert.Equal(createDto.PersonalAccessToken.Id, createdToken.Id);
 
@@ -335,7 +335,7 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     var finalGetOk = Assert.IsType<OkObjectResult>(finalGetResult.Result);
-    var finalTokens = Assert.IsAssignableFrom<IReadOnlyList<PersonalAccessTokenResponseDto>>(finalGetOk.Value);
+    var finalTokens = Assert.IsType<PersonalAccessTokensResponseDto>(finalGetOk.Value).Items;
     Assert.Empty(finalTokens);
   }
 }

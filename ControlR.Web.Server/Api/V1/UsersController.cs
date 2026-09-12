@@ -386,11 +386,11 @@ public class UsersController : ControllerBase
 
   [HttpGet("{userId:guid}/personal-access-tokens")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersRead)]
-  [ProducesResponseType<PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<PersonalAccessTokensResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  public async Task<ActionResult<IReadOnlyList<PersonalAccessTokenResponseDto>>> GetUserPersonalAccessTokens(
+  public async Task<ActionResult<PersonalAccessTokensResponseDto>> GetUserPersonalAccessTokens(
     [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
     [FromServices] AppDb appDb,
     [FromRoute] Guid userId,
@@ -411,7 +411,10 @@ public class UsersController : ControllerBase
     }
 
     var tokens = await personalAccessTokenManager.GetForUser(userId);
-    return Ok(tokens.Select(ToV1ResponseDto).ToList());
+    return Ok(new PersonalAccessTokensResponseDto
+    {
+      Items = [.. tokens.Select(ToV1ResponseDto)]
+    });
   }
 
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]

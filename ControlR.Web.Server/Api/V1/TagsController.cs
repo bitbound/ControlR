@@ -100,24 +100,15 @@ public class TagsController : ControllerBase
       return Forbid();
     }
 
-    var tag = await appDb.Tags
-      .AsNoTracking()
-      .Include(x => x.Devices)
-      .FirstOrDefaultAsync(x => x.Id == tagId && x.TenantId == resolvedTenantId, cancellationToken);
+    var response = await BuildResponseAsync(
+      appDb, scopeResolver, tagId, resolvedTenantId, cancellationToken);
 
-    if (tag is null)
+    if (response is null)
     {
       return NotFound();
     }
 
-    if (tag.Devices is { Count: > 0 })
-    {
-      var readableQuery = await appDb.Devices.ApplyDeviceAccessScope(User, scopeResolver, cancellationToken);
-      var readableSet = (await readableQuery.Select(x => x.Id).ToListAsync(cancellationToken)).ToHashSet();
-      tag.Devices = tag.Devices.Where(d => readableSet.Contains(d.Id)).ToList();
-    }
-
-    return Ok(tag.ToV1ResponseDto());
+    return Ok(response);
   }
 
   [HttpGet]
@@ -182,6 +173,7 @@ public class TagsController : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<TagResponseDto>> Update(
     [FromServices] AppDb appDb,
+    [FromServices] IDeviceAccessScopeResolver scopeResolver,
     [FromRoute] Guid tagId,
     [FromQuery] Guid tenantId,
     [FromBody] UpdateTagRequestDto request,
@@ -203,6 +195,44 @@ public class TagsController : ControllerBase
     tag.Name = request.Name;
     await appDb.SaveChangesAsync(cancellationToken);
 
-    return Ok(tag.ToV1ResponseDto());
+    // Build the response from a detached query. Applying the read-scope filter to the tracked
+    // instance would replace its Devices collection, and EF would then delete the tag's device
+    // links on the next save.
+    var response = await BuildResponseAsync(
+      appDb, scopeResolver, tagId, resolvedTenantId, cancellationToken);
+
+    if (response is null)
+    {
+      return NotFound();
+    }
+
+    return Ok(response);
+  }
+
+  private async Task<TagResponseDto?> BuildResponseAsync(
+    AppDb appDb,
+    IDeviceAccessScopeResolver scopeResolver,
+    Guid tagId,
+    Guid tenantId,
+    CancellationToken cancellationToken)
+  {
+    var tag = await appDb.Tags
+      .AsNoTracking()
+      .Include(x => x.Devices)
+      .FirstOrDefaultAsync(x => x.Id == tagId && x.TenantId == tenantId, cancellationToken);
+
+    if (tag is null)
+    {
+      return null;
+    }
+
+    if (tag.Devices is { Count: > 0 })
+    {
+      var readableQuery = await appDb.Devices.ApplyDeviceAccessScope(User, scopeResolver, cancellationToken);
+      var readableSet = (await readableQuery.Select(x => x.Id).ToListAsync(cancellationToken)).ToHashSet();
+      tag.Devices = tag.Devices.Where(d => readableSet.Contains(d.Id)).ToList();
+    }
+
+    return tag.ToV1ResponseDto();
   }
 }

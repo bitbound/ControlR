@@ -225,6 +225,7 @@ public class TagsV1ControllerTests(ITestOutputHelper testOutput)
 
     var result = await controller.Update(
       scope.ServiceProvider.GetRequiredService<AppDb>(),
+      scope.ServiceProvider.GetRequiredService<IDeviceAccessScopeResolver>(),
       tag.Id,
       tenant.Id,
       new UpdateTagRequestDto("new-name"),
@@ -233,6 +234,80 @@ public class TagsV1ControllerTests(ITestOutputHelper testOutput)
     var ok = Assert.IsType<OkObjectResult>(result.Result);
     var dto = Assert.IsType<TagResponseDto>(ok.Value);
     Assert.Equal("new-name", dto.Name);
+  }
+
+  [Fact]
+  public async Task Update_ReturnsReadableDeviceIdsAndKeepsExistingLinks()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    // The user gets device.read for exactly one device. The rename response must expose that one
+    // and hide the other, matching GET.
+    var (controller, tenant, user) = await scope.CreateControllerWithTestData<TagsController>(
+      userEmail: "tags-update-links@test.local");
+
+    var deviceOne = await services.CreateTestDevice(tenant.Id);
+    var deviceTwo = await services.CreateTestDevice(tenant.Id);
+
+    using (var grantScope = services.CreateScope())
+    {
+      await using var grantDb = grantScope.ServiceProvider.GetRequiredService<AppDb>();
+      grantDb.PermissionAssignments.Add(PermissionAssignment.CreateGrant(
+        PermissionPrincipalKind.User,
+        user.Id,
+        PermissionNames.DeviceRead,
+        PermissionScopeKind.Device,
+        scopeId: deviceOne.Id,
+        owningTenantId: tenant.Id,
+        createdBy: null));
+      await grantDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    Guid tagId;
+
+    await using (var appDb = services.GetRequiredService<AppDb>())
+    {
+      var tag = new Tag { Name = "linked", TenantId = tenant.Id, Type = TagType.Permission };
+      appDb.Tags.Add(tag);
+      await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+      var devices = await appDb.Devices
+        .Where(x => x.Id == deviceOne.Id || x.Id == deviceTwo.Id)
+        .ToListAsync(TestContext.Current.CancellationToken);
+      tag.Devices = [.. devices];
+      await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+      tagId = tag.Id;
+    }
+
+    var result = await controller.Update(
+      services.GetRequiredService<AppDb>(),
+      services.GetRequiredService<IDeviceAccessScopeResolver>(),
+      tagId,
+      tenant.Id,
+      new UpdateTagRequestDto("renamed"),
+      TestContext.Current.CancellationToken);
+
+    var ok = Assert.IsType<OkObjectResult>(result.Result);
+    var dto = Assert.IsType<TagResponseDto>(ok.Value);
+    Assert.Equal("renamed", dto.Name);
+    Assert.Contains(deviceOne.Id, dto.DeviceIds);
+    Assert.DoesNotContain(deviceTwo.Id, dto.DeviceIds);
+
+    // The rename must not modify the linkage. Replacing the Devices collection on the tracked
+    // entity would make EF delete these rows on the next save.
+    using (var verifyScope = services.CreateScope())
+    {
+      await using var verifyDb = verifyScope.ServiceProvider.GetRequiredService<AppDb>();
+      var linkedIds = await verifyDb.Tags
+        .Where(x => x.Id == tagId)
+        .SelectMany(x => x.Devices!.Select(d => d.Id))
+        .ToListAsync(TestContext.Current.CancellationToken);
+      Assert.Equal(2, linkedIds.Count);
+      Assert.Contains(deviceOne.Id, linkedIds);
+      Assert.Contains(deviceTwo.Id, linkedIds);
+    }
   }
 
   private static async Task<Tag> CreateTagAsync(TestApp testApp, Guid tenantId, string name)

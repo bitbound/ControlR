@@ -70,10 +70,10 @@ internal partial class V1Api
         cancellationToken));
   }
 
-  async Task<ApiResult<PersonalAccessTokenResponseDto[]>> IUsersApi.GetUserPersonalAccessTokens(Guid userId, Guid tenantId, CancellationToken cancellationToken)
+  async Task<ApiResult<PersonalAccessTokensResponseDto>> IUsersApi.GetUserPersonalAccessTokens(Guid userId, Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<PersonalAccessTokenResponseDto[]>(
+      await _client.HttpClient.GetFromJsonAsync<PersonalAccessTokensResponseDto>(
         $"{HttpConstants.V1.UsersEndpoint}/{userId}/personal-access-tokens?tenantId={tenantId}",
         cancellationToken));
   }

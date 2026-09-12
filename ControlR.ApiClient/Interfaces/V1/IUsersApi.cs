@@ -26,7 +26,7 @@ public interface IUsersApi
   Task<ApiResult<UsersResponseDto>> GetAllUsers(Guid tenantId, CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.UsersEndpoint}/{{userId}}/personal-access-tokens?tenantId={{tenantId}}", "GET")]
-  Task<ApiResult<PersonalAccessTokenResponseDto[]>> GetUserPersonalAccessTokens(Guid userId, Guid tenantId, CancellationToken cancellationToken = default);
+  Task<ApiResult<PersonalAccessTokensResponseDto>> GetUserPersonalAccessTokens(Guid userId, Guid tenantId, CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.UsersEndpoint}/{{userId}}/personal-access-tokens/{{tokenId}}?tenantId={{tenantId}}", "PUT")]
   Task<ApiResult<PersonalAccessTokenResponseDto>> UpdateUserPersonalAccessToken(Guid userId, Guid tokenId, Guid tenantId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken = default);
