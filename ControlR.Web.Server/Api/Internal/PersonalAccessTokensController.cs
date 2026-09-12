@@ -10,6 +10,7 @@ namespace ControlR.Web.Server.Api.Internal;
 public class PersonalAccessTokensController : ControllerBase
 {
 
+  [ApiDeprecated("/api/v1/personal-access-tokens?tenantId=", Note = "The replacement requires tenantId as a query parameter, returns 201, and answers delete with 204.")]
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
   public async Task<ActionResult<InternalDtos.CreatePersonalAccessTokenResponseDto>> CreatePersonalAccessToken(
@@ -37,6 +38,7 @@ public class PersonalAccessTokensController : ControllerBase
     return Ok(result.Value);
   }
 
+  [ApiDeprecated("/api/v1/personal-access-tokens/{id}?tenantId=", Note = "The replacement requires tenantId as a query parameter and answers with 204.")]
   [HttpDelete("{id}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
   public async Task<ActionResult> DeletePersonalAccessToken(
@@ -59,6 +61,7 @@ public class PersonalAccessTokensController : ControllerBase
     return Ok();
   }
 
+  [ApiDeprecated("/api/v1/personal-access-tokens?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns an Items envelope.")]
   [HttpGet]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfRead)]
   public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenResponseDto>>> GetPersonalAccessTokens(
@@ -75,6 +78,7 @@ public class PersonalAccessTokensController : ControllerBase
     return Ok(personalAccessTokens);
   }
 
+  [ApiDeprecated("/api/v1/personal-access-tokens/{id}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   [HttpPut("{id}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
   public async Task<ActionResult<InternalDtos.PersonalAccessTokenResponseDto>> UpdatePersonalAccessToken(

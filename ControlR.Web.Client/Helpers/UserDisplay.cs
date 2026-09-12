@@ -1,3 +1,5 @@
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
+
 namespace ControlR.Web.Client.Helpers;
 
 public static class UserDisplay

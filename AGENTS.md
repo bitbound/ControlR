@@ -82,7 +82,7 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 
 | Root | URL prefix | Stability | Consumer |
 |---|---|---|---|
-| `Api/Internal` | `/api/internal/*` | Unversioned, volatile | Internal. BFF (Blazor UI) |
+| `Api/Internal` | `/api/*` | Unversioned, volatile | Internal. BFF (Blazor UI) |
 | `Api/V1` | `/api/v1/*` | Stable contract | Endpoint-specific authorization; may accept users, PATs, server service accounts, or tenant service accounts |
 | `Api/Agent` | `/api/agent/*`, | Unversioned, volatile | Internal. Public APIs for agent. |
 
@@ -93,6 +93,13 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
   - ✅ `Api/V1/DevicesController.cs` — namespace `Api.V1`
   - ❌ `V1DevicesController.cs` — version noise in the class name
 - Only add controllers to a new version when stakeholders request them. Don't pre-build.
+
+### V1-first rule
+
+- New endpoints go to `Api/V1` by default. Standard CRUD shape means ID-addressed resources, required `tenantId` (query param, or path segment for tenant service accounts) on collection/create operations, and plain envelopes.
+- The test for V1 is **"might an API consumer want this, and would it work naturally in the API client?"** When both answers are yes, it belongs in V1 whatever its handler looks like. Operating on a live device over SignalR, and public or diagnostic probes, are all valid V1 targets. Handler shape alone never disqualifies an endpoint.
+- An `Api/Internal` endpoint exists only when that test fails for a stated reason: no API consumer wants it (HTML page flows, browser-only ceremonies) or the API client cannot express it (raw binary or multipart payloads, cookie-session authentication). It must name that constraint in `InternalV1ParityGuardrailTests.IrregularShapeAllowList`.
+- The guardrail test fails when an Internal operation is neither deprecated, V1-twinned (same verb + path template under `/api/v1`), nor allow-listed. Twin packages prune their entries as twins land.
 
 ## Cross-Platform
 

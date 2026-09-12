@@ -27,6 +27,7 @@ public class InvitesController : ControllerBase
   }
 
   [HttpPost]
+  [ApiDeprecated("/api/v1/invites?tenantId={tenantId}", Note = "Use POST /api/v1/invites with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
   public async Task<ActionResult<InternalDtos.TenantInviteResponseDto>> Create(
     [FromBody] InternalDtos.TenantInviteRequestDto dto,
@@ -48,6 +49,7 @@ public class InvitesController : ControllerBase
   }
 
   [HttpDelete("{inviteId:guid}")]
+  [ApiDeprecated("/api/v1/invites/{inviteId}?tenantId={tenantId}", Note = "Use DELETE /api/v1/invites/{inviteId} with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
   public async Task<IActionResult> Delete(
     [FromRoute] Guid inviteId,
@@ -64,6 +66,7 @@ public class InvitesController : ControllerBase
   }
 
   [HttpGet]
+  [ApiDeprecated("/api/v1/invites?tenantId={tenantId}", Note = "Use GET /api/v1/invites with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireUsersRead)]
   public async Task<ActionResult<InternalDtos.TenantInviteResponseDto[]>> GetAll(
     [FromServices] ITenantInvitesProvider tenantInvitesProvider,

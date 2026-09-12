@@ -6,6 +6,7 @@ using ControlR.Web.Server.Authz.Policies;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -24,14 +25,14 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task Create_DeviceReadAtTenantScope_ReturnsOk()
+  public async Task Create_DeviceReadAtTenantScope_ReturnsCreated()
   {
     var (testServer, client, tenantId, userId) = await CreateAuthenticatedAdmin();
     using var _ = testServer;
 
     var response = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         PermissionNames.DeviceRead,
@@ -41,7 +42,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
         null),
       TestContext.Current.CancellationToken);
 
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
   }
 
   [Fact]
@@ -51,8 +52,8 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
     using var _ = testServer;
 
     var response = await client.PostAsJsonAsync(
-      HttpConstants.Internal.PermissionAssignmentsEndpoint,
-      new InternalDtos.CreatePermissionAssignmentRequestDto(
+      PaUrl(tenantId),
+      new CreatePermissionAssignmentRequestDto(
         PermissionPrincipalKind.User,
         userId,
         PermissionNames.ServerTenantsWrite,
@@ -74,10 +75,10 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
     var otherAdmin = await testServer.Services.CreateTestUser(
       tenantId, $"admin-{Guid.NewGuid():N}@t.local", PermissionPresets.TenantAdministrator);
 
-    var otherAssignment = await GetAssignment(client, otherAdmin.Id, PermissionNames.TenantPermissionsWrite);
+    var otherAssignment = await GetAssignment(client, tenantId, otherAdmin.Id, PermissionNames.TenantPermissionsWrite);
 
     var response = await client.DeleteAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/{otherAssignment.Id}",
+      PaUrl(tenantId, $"/{otherAssignment.Id}"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -102,25 +103,25 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task Delete_OwnLastProtectedPermission_ReturnsBadRequest()
   {
-    var (testServer, client, _, userId) = await CreateAuthenticatedAdmin();
+    var (testServer, client, tenantId, userId) = await CreateAuthenticatedAdmin();
     using var _ = testServer;
 
-    var assignment = await GetAssignment(client, userId, PermissionNames.TenantPermissionsWrite);
+    var assignment = await GetAssignment(client, tenantId, userId, PermissionNames.TenantPermissionsWrite);
 
     var response = await client.DeleteAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/{assignment.Id}",
+      PaUrl(tenantId, $"/{assignment.Id}"),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-    var stillHeld = await GetAssignment(client, userId, PermissionNames.TenantPermissionsWrite);
+    var stillHeld = await GetAssignment(client, tenantId, userId, PermissionNames.TenantPermissionsWrite);
     Assert.NotNull(stillHeld);
   }
 
   [Fact]
   public async Task Delete_OwnUser_ReturnsBadRequest()
   {
-    var (testServer, client, _, userId) = await CreateAuthenticatedAdmin();
+    var (testServer, client, tenantId, userId) = await CreateAuthenticatedAdmin();
     using var _ = testServer;
 
     var response = await client.DeleteAsync(
@@ -156,14 +157,14 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task Disable_OwnLastProtectedPermission_ReturnsBadRequest()
   {
-    var (testServer, client, _, userId) = await CreateAuthenticatedAdmin();
+    var (testServer, client, tenantId, userId) = await CreateAuthenticatedAdmin();
     using var _ = testServer;
 
-    var assignment = await GetAssignment(client, userId, PermissionNames.TenantPermissionsWrite);
+    var assignment = await GetAssignment(client, tenantId, userId, PermissionNames.TenantPermissionsWrite);
 
     var response = await client.PutAsJsonAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/{assignment.Id}",
-      new InternalDtos.UpdatePermissionAssignmentRequestDto(
+      PaUrl(tenantId, $"/{assignment.Id}"),
+      new UpdatePermissionAssignmentRequestDto(
         assignment.PermissionName,
         assignment.Effect,
         assignment.ScopeKind,
@@ -181,11 +182,11 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
     var (testServer, client, tenantId, userId) = await CreateAuthenticatedAdmin();
     using var _ = testServer;
 
-    var assignment = await GetAssignment(client, userId, PermissionNames.TenantPermissionsWrite);
+    var assignment = await GetAssignment(client, tenantId, userId, PermissionNames.TenantPermissionsWrite);
 
     var response = await client.PutAsJsonAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/{assignment.Id}",
-      new InternalDtos.UpdatePermissionAssignmentRequestDto(
+      PaUrl(tenantId, $"/{assignment.Id}"),
+      new UpdatePermissionAssignmentRequestDto(
         PermissionNames.TenantRead,
         PermissionEffect.Allow,
         PermissionScopeKind.Tenant,
@@ -343,12 +344,12 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
     using var _ = testServer;
 
     var response = await client.PostAsJsonAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}/replace",
-      new InternalDtos.ReplacePermissionAssignmentsRequestDto(
+      PaUrl(tenantId, "/replace"),
+      new ReplacePermissionAssignmentsRequestDto(
         PermissionPrincipalKind.User,
         userId,
         [
-          new InternalDtos.CreatePermissionAssignmentRequestDto(
+          new CreatePermissionAssignmentRequestDto(
             PermissionPrincipalKind.User, userId, PermissionNames.TenantRead,
             PermissionEffect.Allow, PermissionScopeKind.Tenant, tenantId, null)
         ]),
@@ -356,6 +357,9 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
+
+  private static string PaUrl(Guid tenantId, string suffix = "") =>
+    $"{HttpConstants.V1.PermissionAssignmentsEndpoint}{suffix}?tenantId={tenantId}";
 
   private async Task<(TestWebServer server, HttpClient client, Guid tenantId, Guid userId)> CreateAuthenticatedAdmin()
   {
@@ -382,20 +386,21 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
     return (testServer, httpClient, tenant.Id, user.Id);
   }
 
-  private async Task<InternalDtos.PermissionAssignmentDto> GetAssignment(
+  private async Task<PermissionAssignmentDto> GetAssignment(
     HttpClient client,
+    Guid tenantId,
     Guid principalId,
     string permissionName)
   {
     var response = await client.GetAsync(
-      $"{HttpConstants.Internal.PermissionAssignmentsEndpoint}?principalKind=User&principalId={principalId}",
+      $"{PaUrl(tenantId)}&principalKind=User&principalId={principalId}",
       TestContext.Current.CancellationToken);
     response.EnsureSuccessStatusCode();
 
-    var assignments = await response.Content.ReadFromJsonAsync<InternalDtos.PermissionAssignmentDto[]>(
+    var assignments = await response.Content.ReadFromJsonAsync<PermissionAssignmentsResponseDto>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(assignments);
 
-    return Assert.Single(assignments, a => a.PermissionName == permissionName);
+    return Assert.Single(assignments.Items, a => a.PermissionName == permissionName);
   }
 }

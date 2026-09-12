@@ -378,701 +378,6 @@
         ]
       }
     },
-    "/api/authorization-change-logs": {
-      "get": {
-        "tags": [
-          "AuthorizationChangeLogs"
-        ],
-        "parameters": [
-          {
-            "name": "ActionType",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "ActorType",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "From",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "name": "Page",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "PageSize",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "SearchText",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "TargetType",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "TenantId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "To",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthorizationChangeLogSearchResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthorizationChangeLogSearchResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthorizationChangeLogSearchResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/customers/{customerId}/devices": {
-      "post": {
-        "tags": [
-          "Customers"
-        ],
-        "parameters": [
-          {
-            "name": "customerId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignCustomerDevicesRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignCustomerDevicesRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignCustomerDevicesRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/customers": {
-      "post": {
-        "tags": [
-          "Customers"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCustomerRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCustomerRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCustomerRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "Customers"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CustomerDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CustomerDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CustomerDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/customers/{customerId}": {
-      "delete": {
-        "tags": [
-          "Customers"
-        ],
-        "parameters": [
-          {
-            "name": "customerId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "Customers"
-        ],
-        "parameters": [
-          {
-            "name": "customerId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "Customers"
-        ],
-        "parameters": [
-          {
-            "name": "customerId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCustomerRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCustomerRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCustomerRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/deployment-options": {
-      "get": {
-        "tags": [
-          "DeploymentOptions"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeploymentOptionsDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeploymentOptionsDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeploymentOptionsDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/deployment-options/tag-capability": {
-      "post": {
-        "tags": [
-          "DeploymentOptions"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeploymentTagCapabilityRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeploymentTagCapabilityRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeploymentTagCapabilityRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeploymentTagCapabilityResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeploymentTagCapabilityResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeploymentTagCapabilityResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
     "/api/desktop-preview/{deviceId}/{targetProcessId}": {
       "get": {
         "tags": [
@@ -1922,506 +1227,12 @@
         ]
       }
     },
-    "/api/device-groups/{deviceGroupId}/members": {
-      "post": {
-        "tags": [
-          "DeviceGroups"
-        ],
-        "parameters": [
-          {
-            "name": "deviceGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddDeviceGroupMembersRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddDeviceGroupMembersRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddDeviceGroupMembersRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "DeviceGroups"
-        ],
-        "parameters": [
-          {
-            "name": "deviceGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveDeviceGroupMembersRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveDeviceGroupMembersRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveDeviceGroupMembersRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/device-groups": {
-      "post": {
-        "tags": [
-          "DeviceGroups"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDeviceGroupRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDeviceGroupRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateDeviceGroupRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "DeviceGroups"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DeviceGroupDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DeviceGroupDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/DeviceGroupDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/device-groups/{deviceGroupId}": {
-      "delete": {
-        "tags": [
-          "DeviceGroups"
-        ],
-        "parameters": [
-          {
-            "name": "deviceGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "DeviceGroups"
-        ],
-        "parameters": [
-          {
-            "name": "deviceGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "DeviceGroups"
-        ],
-        "parameters": [
-          {
-            "name": "deviceGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateDeviceGroupRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateDeviceGroupRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateDeviceGroupRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeviceGroupDetailDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
     "/api/devices/{deviceId}": {
       "delete": {
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/{deviceId}` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
@@ -2459,6 +1270,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2466,12 +1278,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/{deviceId}"
       },
       "get": {
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/{deviceId}` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
@@ -2526,6 +1340,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2533,7 +1348,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/{deviceId}"
       }
     },
     "/api/devices/delete-many": {
@@ -2541,6 +1357,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/delete-many` instead. The replacement evaluates tenant access per candidate device instead of pre-filtering by the caller's tenant claim, so server-scoped principals are supported.",
         "parameters": [
           {
             "name": "api-version",
@@ -2606,6 +1423,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2613,7 +1431,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/delete-many"
       }
     },
     "/api/devices": {
@@ -2621,6 +1440,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -2675,6 +1495,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2682,7 +1503,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices"
       },
       "post": {
         "tags": [
@@ -2760,6 +1582,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/summary` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -2814,6 +1637,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2821,7 +1645,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/summary"
       }
     },
     "/api/devices/search": {
@@ -2829,6 +1654,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/search` instead. The replacement evaluates device access via the caller's access scope without requiring a tenant claim, so server-scoped principals are supported.",
         "parameters": [
           {
             "name": "api-version",
@@ -2894,6 +1720,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2901,7 +1728,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/search"
       }
     },
     "/api/devices/{deviceId}/alias": {
@@ -2909,6 +1737,7 @@
         "tags": [
           "Devices"
         ],
+        "description": "Deprecated. Use `/api/v1/devices/{deviceId}/alias` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
@@ -2983,6 +1812,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -2990,7 +1820,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/devices/{deviceId}/alias"
       }
     },
     "/api/device-tags": {
@@ -2998,6 +1829,7 @@
         "tags": [
           "DeviceTags"
         ],
+        "description": "Deprecated. Use `/api/v1/device-tags?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "api-version",
@@ -3046,6 +1878,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3053,7 +1886,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/device-tags?tenantId="
       }
     },
     "/api/device-tags/{deviceId}/{tagId}": {
@@ -3061,6 +1895,7 @@
         "tags": [
           "DeviceTags"
         ],
+        "description": "Deprecated. Use `/api/v1/device-tags/{deviceId}/{tagId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "deviceId",
@@ -3124,6 +1959,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3131,87 +1967,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
-      }
-    },
-    "/api/effective-permissions/query": {
-      "post": {
-        "tags": [
-          "EffectivePermissions"
         ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EffectivePermissionQueryRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EffectivePermissionQueryRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/EffectivePermissionQueryRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/EffectivePermissionQueryResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EffectivePermissionQueryResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EffectivePermissionQueryResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
+        "x-replacement-route": "/api/v1/device-tags/{deviceId}/{tagId}?tenantId="
       }
     },
     "/api/effective-user-preferences": {
@@ -3219,6 +1976,7 @@
         "tags": [
           "EffectiveUserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/effective-user-preferences?tenantId={tenantId}` instead. Use GET /api/v1/effective-user-preferences with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -3264,6 +2022,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3271,7 +2030,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/effective-user-preferences?tenantId={tenantId}"
       }
     },
     "/api/installer-keys": {
@@ -3279,6 +2039,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys` instead. The replacement requires TenantId in the request body.",
         "parameters": [
           {
             "name": "api-version",
@@ -3344,6 +2105,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3351,12 +2113,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys"
       },
       "get": {
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "api-version",
@@ -3411,6 +2175,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3418,7 +2183,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys?tenantId="
       }
     },
     "/api/installer-keys/{id}": {
@@ -3426,6 +2192,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "id",
@@ -3463,6 +2230,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3470,7 +2238,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys/{keyId}?tenantId="
       }
     },
     "/api/installer-keys/usages/{keyId}": {
@@ -3478,6 +2247,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}/usages?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "keyId",
@@ -3541,6 +2311,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3548,7 +2319,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys/{keyId}/usages?tenantId="
       }
     },
     "/api/installer-keys/rename": {
@@ -3556,6 +2328,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}?tenantId=` instead. The replacement takes the key id in the route, tenantId as a query parameter, a body with only friendlyName, and returns 204.",
         "parameters": [
           {
             "name": "api-version",
@@ -3604,6 +2377,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3611,7 +2385,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/installer-keys/{keyId}?tenantId="
       }
     },
     "/api/invites/accept": {
@@ -3699,6 +2474,7 @@
         "tags": [
           "Invites"
         ],
+        "description": "Deprecated. Use `/api/v1/invites?tenantId={tenantId}` instead. Use POST /api/v1/invites with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -3764,6 +2540,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3771,12 +2548,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/invites?tenantId={tenantId}"
       },
       "get": {
         "tags": [
           "Invites"
         ],
+        "description": "Deprecated. Use `/api/v1/invites?tenantId={tenantId}` instead. Use GET /api/v1/invites with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -3831,6 +2610,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3838,7 +2618,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/invites?tenantId={tenantId}"
       }
     },
     "/api/invites/{inviteId}": {
@@ -3846,6 +2627,7 @@
         "tags": [
           "Invites"
         ],
+        "description": "Deprecated. Use `/api/v1/invites/{inviteId}?tenantId={tenantId}` instead. Use DELETE /api/v1/invites/{inviteId} with an explicit tenantId.",
         "parameters": [
           {
             "name": "inviteId",
@@ -3883,6 +2665,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -3890,7 +2673,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/invites/{inviteId}?tenantId={tenantId}"
       }
     },
     "/api/logon-tokens": {
@@ -3898,6 +2682,7 @@
         "tags": [
           "LogonTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/logon-tokens/user` instead. The replacement requires TenantId in the request body; see also /api/v1/logon-tokens/external for server-scoped callers.",
         "parameters": [
           {
             "name": "api-version",
@@ -3996,6 +2781,7 @@
             "description": "Internal Server Error"
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4003,738 +2789,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
-      }
-    },
-    "/api/permission-assignments/presets/apply": {
-      "post": {
-        "tags": [
-          "PermissionAssignments"
         ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApplyPermissionPresetsRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApplyPermissionPresetsRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApplyPermissionPresetsRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "pattern": "^-?(?:0|[1-9]\\d*)$",
-                  "type": "integer",
-                  "format": "int32"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "pattern": "^-?(?:0|[1-9]\\d*)$",
-                  "type": "integer",
-                  "format": "int32"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "pattern": "^-?(?:0|[1-9]\\d*)$",
-                  "type": "integer",
-                  "format": "int32"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/permission-assignments": {
-      "post": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePermissionAssignmentRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePermissionAssignmentRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePermissionAssignmentRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/PermissionAssignmentDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PermissionAssignmentDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PermissionAssignmentDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "principalKind",
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/PermissionPrincipalKind"
-            }
-          },
-          {
-            "name": "principalId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionAssignmentDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionAssignmentDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionAssignmentDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/permission-assignments/create-many": {
-      "post": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateManyPermissionAssignmentsRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateManyPermissionAssignmentsRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateManyPermissionAssignmentsRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/permission-assignments/{assignmentId}": {
-      "delete": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "assignmentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "assignmentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePermissionAssignmentRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePermissionAssignmentRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePermissionAssignmentRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/PermissionAssignmentDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PermissionAssignmentDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PermissionAssignmentDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/permission-assignments/delete-many": {
-      "post": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteManyPermissionAssignmentsRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteManyPermissionAssignmentsRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteManyPermissionAssignmentsRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteManyPermissionAssignmentsResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteManyPermissionAssignmentsResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteManyPermissionAssignmentsResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/permission-assignments/catalog": {
-      "get": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionCatalogEntryDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionCatalogEntryDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionCatalogEntryDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/permission-assignments/presets": {
-      "get": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionPresetDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionPresetDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PermissionPresetDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/permission-assignments/replace": {
-      "post": {
-        "tags": [
-          "PermissionAssignments"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReplacePermissionAssignmentsRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReplacePermissionAssignmentsRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReplacePermissionAssignmentsRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
+        "x-replacement-route": "/api/v1/logon-tokens/user"
       }
     },
     "/api/personal-access-tokens": {
@@ -4742,6 +2798,7 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter, returns 201, and answers delete with 204.",
         "parameters": [
           {
             "name": "api-version",
@@ -4807,6 +2864,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4814,12 +2872,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/personal-access-tokens?tenantId="
       },
       "get": {
         "tags": [
           "PersonalAccessTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "api-version",
@@ -4874,6 +2934,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4881,7 +2942,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/personal-access-tokens?tenantId="
       }
     },
     "/api/personal-access-tokens/{id}": {
@@ -4889,6 +2951,7 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/personal-access-tokens/{id}?tenantId=` instead. The replacement requires tenantId as a query parameter and answers with 204.",
         "parameters": [
           {
             "name": "id",
@@ -4926,6 +2989,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -4933,12 +2997,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/personal-access-tokens/{id}?tenantId="
       },
       "put": {
         "tags": [
           "PersonalAccessTokens"
         ],
+        "description": "Deprecated. Use `/api/v1/personal-access-tokens/{id}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "id",
@@ -5013,6 +3079,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5020,7 +3087,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/personal-access-tokens/{id}?tenantId="
       }
     },
     "/api/public-server-settings": {
@@ -5028,6 +3096,7 @@
         "tags": [
           "PublicServerSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/public-server-settings` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5072,7 +3141,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "x-replacement-route": "/api/v1/public-server-settings"
       }
     },
     "/api/server-alert": {
@@ -5080,6 +3151,7 @@
         "tags": [
           "ServerAlert"
         ],
+        "description": "Deprecated. Use `/api/v1/server-alert` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5125,6 +3197,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5132,12 +3205,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/server-alert"
       },
       "post": {
         "tags": [
           "ServerAlert"
         ],
+        "description": "Deprecated. Use `/api/v1/server-alert` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5203,6 +3278,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5210,7 +3286,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/server-alert"
       }
     },
     "/api/server-logs/get-aspire-url": {
@@ -5218,6 +3295,7 @@
         "tags": [
           "ServerLogs"
         ],
+        "description": "Deprecated. Use `/api/v1/server-logs/get-aspire-url` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5263,6 +3341,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5270,571 +3349,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
-      }
-    },
-    "/api/server-service-accounts/{serviceAccountId}/credentials": {
-      "post": {
-        "tags": [
-          "ServerServiceAccounts"
         ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateServerServiceAccountCredentialRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateServerServiceAccountCredentialRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateServerServiceAccountCredentialRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateServerServiceAccountCredentialResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateServerServiceAccountCredentialResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateServerServiceAccountCredentialResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/server-service-accounts": {
-      "post": {
-        "tags": [
-          "ServerServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateServerServiceAccountRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateServerServiceAccountRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateServerServiceAccountRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "ServerServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ServerServiceAccountDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ServerServiceAccountDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ServerServiceAccountDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/server-service-accounts/{serviceAccountId}": {
-      "delete": {
-        "tags": [
-          "ServerServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "ServerServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "ServerServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateServerServiceAccountRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateServerServiceAccountRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateServerServiceAccountRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerServiceAccountDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/server-service-accounts/{serviceAccountId}/credentials/{credentialId}/purge": {
-      "delete": {
-        "tags": [
-          "ServerServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "credentialId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/server-service-accounts/{serviceAccountId}/credentials/{credentialId}": {
-      "delete": {
-        "tags": [
-          "ServerServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "credentialId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
+        "x-replacement-route": "/api/v1/server-logs/get-aspire-url"
       }
     },
     "/api/server-stats": {
@@ -5842,6 +3358,7 @@
         "tags": [
           "ServerStats"
         ],
+        "description": "Deprecated. Use `/api/v1/server-stats` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -5887,6 +3404,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5894,7 +3412,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/server-stats"
       }
     },
     "/api/tags": {
@@ -5902,6 +3421,7 @@
         "tags": [
           "Tags"
         ],
+        "description": "Deprecated. Use `/api/v1/tags?tenantId=` instead. The replacement requires tenantId as a query parameter, returns 201, and takes the tenant from the required parameter instead of the caller claim.",
         "parameters": [
           {
             "name": "api-version",
@@ -5967,6 +3487,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -5974,12 +3495,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tags?tenantId="
       },
       "get": {
         "tags": [
           "Tags"
         ],
+        "description": "Deprecated. Use `/api/v1/tags?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "includeLinkedIds",
@@ -6042,6 +3565,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -6049,12 +3573,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tags?tenantId="
       },
       "put": {
         "tags": [
           "Tags"
         ],
+        "description": "Deprecated. Use `/api/v1/tags/{tagId}?tenantId=` instead. The replacement takes the tag id in the route, tenantId as a query parameter, and a body with only name.",
         "parameters": [
           {
             "name": "api-version",
@@ -6120,6 +3646,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -6127,7 +3654,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tags/{tagId}?tenantId="
       }
     },
     "/api/tags/{tagId}": {
@@ -6135,6 +3663,7 @@
         "tags": [
           "Tags"
         ],
+        "description": "Deprecated. Use `/api/v1/tags/{tagId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "tagId",
@@ -6172,6 +3701,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -6179,640 +3709,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
-      }
-    },
-    "/api/tenants": {
-      "get": {
-        "tags": [
-          "Tenants"
         ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSummaryDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSummaryDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantSummaryDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/tenant-service-accounts/{serviceAccountId}/credentials": {
-      "post": {
-        "tags": [
-          "TenantServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantServiceAccountCredentialRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantServiceAccountCredentialRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantServiceAccountCredentialRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateTenantServiceAccountCredentialResponseDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateTenantServiceAccountCredentialResponseDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateTenantServiceAccountCredentialResponseDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/tenant-service-accounts": {
-      "post": {
-        "tags": [
-          "TenantServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantServiceAccountRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantServiceAccountRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantServiceAccountRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "TenantServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantServiceAccountDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantServiceAccountDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantServiceAccountDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/tenant-service-accounts/{serviceAccountId}": {
-      "delete": {
-        "tags": [
-          "TenantServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "TenantServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "TenantServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTenantServiceAccountRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTenantServiceAccountRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTenantServiceAccountRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantServiceAccountDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/tenant-service-accounts/{serviceAccountId}/credentials/{credentialId}/purge": {
-      "delete": {
-        "tags": [
-          "TenantServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "credentialId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/tenant-service-accounts/{serviceAccountId}/credentials/{credentialId}": {
-      "delete": {
-        "tags": [
-          "TenantServiceAccounts"
-        ],
-        "parameters": [
-          {
-            "name": "serviceAccountId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "credentialId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
+        "x-replacement-route": "/api/v1/tags/{tagId}?tenantId="
       }
     },
     "/api/tenant-settings/{name}": {
@@ -6820,6 +3718,7 @@
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings/{name}?tenantId={tenantId}` instead. Use DELETE /api/v1/tenant-settings/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
@@ -6856,6 +3755,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -6863,12 +3763,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings/{name}?tenantId={tenantId}"
       },
       "get": {
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings/{name}?tenantId={tenantId}` instead. Use GET /api/v1/tenant-settings/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
@@ -6922,6 +3824,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -6929,7 +3832,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings/{name}?tenantId={tenantId}"
       }
     },
     "/api/tenant-settings": {
@@ -6937,6 +3841,7 @@
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use GET /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -6982,6 +3887,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -6989,12 +3895,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings?tenantId={tenantId}"
       },
       "post": {
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use POST /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -7060,6 +3968,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -7067,12 +3976,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings?tenantId={tenantId}"
       },
       "put": {
         "tags": [
           "TenantSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use PUT /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -7138,6 +4049,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -7145,7 +4057,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/tenant-settings?tenantId={tenantId}"
       }
     },
     "/api/test-email": {
@@ -7153,6 +4066,7 @@
         "tags": [
           "TestEmail"
         ],
+        "description": "Deprecated. Use `/api/v1/test-email` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -7181,6 +4095,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -7188,502 +4103,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
-      }
-    },
-    "/api/user-groups/{userGroupId}/members": {
-      "post": {
-        "tags": [
-          "UserGroups"
         ],
-        "parameters": [
-          {
-            "name": "userGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddUserGroupMembersRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddUserGroupMembersRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddUserGroupMembersRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "UserGroups"
-        ],
-        "parameters": [
-          {
-            "name": "userGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveUserGroupMembersRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveUserGroupMembersRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveUserGroupMembersRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/user-groups": {
-      "post": {
-        "tags": [
-          "UserGroups"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUserGroupRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUserGroupRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUserGroupRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "UserGroups"
-        ],
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserGroupDto"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserGroupDto"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserGroupDto"
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      }
-    },
-    "/api/user-groups/{userGroupId}": {
-      "delete": {
-        "tags": [
-          "UserGroups"
-        ],
-        "parameters": [
-          {
-            "name": "userGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "UserGroups"
-        ],
-        "parameters": [
-          {
-            "name": "userGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "UserGroups"
-        ],
-        "parameters": [
-          {
-            "name": "userGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "description": "The requested API version",
-            "schema": {
-              "enum": [
-                "1.0"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateUserGroupRequestDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateUserGroupRequestDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateUserGroupRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserGroupDetailDto"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
-          }
-        ]
+        "x-replacement-route": "/api/v1/test-email"
       }
     },
     "/api/user-preferences": {
@@ -7691,6 +4112,7 @@
         "tags": [
           "UserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use GET /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -7736,6 +4158,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -7743,12 +4166,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-preferences?tenantId={tenantId}"
       },
       "post": {
         "tags": [
           "UserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use POST /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -7814,6 +4239,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -7821,12 +4247,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-preferences?tenantId={tenantId}"
       },
       "put": {
         "tags": [
           "UserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use PUT /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -7892,6 +4320,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -7899,7 +4328,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-preferences?tenantId={tenantId}"
       }
     },
     "/api/user-preferences/{name}": {
@@ -7907,6 +4337,7 @@
         "tags": [
           "UserPreferences"
         ],
+        "description": "Deprecated. Use `/api/v1/user-preferences/{name}?tenantId={tenantId}` instead. Use GET /api/v1/user-preferences/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
@@ -7960,6 +4391,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -7967,7 +4399,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-preferences/{name}?tenantId={tenantId}"
       }
     },
     "/api/users/{userId}/reset-password": {
@@ -7975,6 +4408,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/reset-password?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
             "name": "userId",
@@ -8029,6 +4463,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8036,7 +4471,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/reset-password?tenantId="
       }
     },
     "/api/users": {
@@ -8044,6 +4480,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
             "name": "api-version",
@@ -8109,6 +4546,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8116,12 +4554,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users?tenantId="
       },
       "get": {
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "api-version",
@@ -8176,6 +4616,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8183,7 +4624,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users?tenantId="
       }
     },
     "/api/users/{userId}/personal-access-tokens": {
@@ -8191,6 +4633,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter and returns 201.",
         "parameters": [
           {
             "name": "userId",
@@ -8265,6 +4708,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8272,12 +4716,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/personal-access-tokens?tenantId="
       },
       "get": {
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
@@ -8341,6 +4787,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8348,7 +4795,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/personal-access-tokens?tenantId="
       }
     },
     "/api/users/{userId}": {
@@ -8356,6 +4804,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
             "name": "userId",
@@ -8393,6 +4842,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8400,7 +4850,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}?tenantId="
       }
     },
     "/api/users/{userId}/personal-access-tokens/{tokenId}": {
@@ -8408,6 +4859,7 @@
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
@@ -8454,6 +4906,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8461,12 +4914,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId="
       },
       "put": {
         "tags": [
           "Users"
         ],
+        "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
@@ -8550,6 +5005,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8557,7 +5013,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId="
       }
     },
     "/api/user-server-settings/file-upload-max-size": {
@@ -8565,6 +5022,7 @@
         "tags": [
           "UserServerSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/user-server-settings/file-upload-max-size` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -8610,6 +5068,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8617,7 +5076,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-server-settings/file-upload-max-size"
       }
     },
     "/api/user-server-settings/decommission-status": {
@@ -8625,6 +5085,7 @@
         "tags": [
           "UserServerSettings"
         ],
+        "description": "Deprecated. Use `/api/v1/user-server-settings/decommission-status` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -8670,6 +5131,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8677,7 +5139,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-server-settings/decommission-status"
       }
     },
     "/api/user-storage/{key}": {
@@ -8685,6 +5148,7 @@
         "tags": [
           "UserStorage"
         ],
+        "description": "Deprecated. Use `/api/v1/user-storage/{key}?tenantId={tenantId}` instead. Use DELETE /api/v1/user-storage/{key} with an explicit tenantId.",
         "parameters": [
           {
             "name": "key",
@@ -8741,6 +5205,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8748,12 +5213,14 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-storage/{key}?tenantId={tenantId}"
       },
       "get": {
         "tags": [
           "UserStorage"
         ],
+        "description": "Deprecated. Use `/api/v1/user-storage/{key}?tenantId={tenantId}` instead. Use GET /api/v1/user-storage/{key} with an explicit tenantId.",
         "parameters": [
           {
             "name": "key",
@@ -8810,6 +5277,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8817,7 +5285,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-storage/{key}?tenantId={tenantId}"
       }
     },
     "/api/user-storage": {
@@ -8825,6 +5294,7 @@
         "tags": [
           "UserStorage"
         ],
+        "description": "Deprecated. Use `/api/v1/user-storage?tenantId={tenantId}` instead. Use POST /api/v1/user-storage with an explicit tenantId.",
         "parameters": [
           {
             "name": "api-version",
@@ -8910,6 +5380,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -8917,7 +5388,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/user-storage?tenantId={tenantId}"
       }
     },
     "/api/version/agent": {
@@ -8925,6 +5397,7 @@
         "tags": [
           "Version"
         ],
+        "description": "Deprecated. Use `/api/v1/version/agent` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -8972,7 +5445,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "x-replacement-route": "/api/v1/version/agent"
       }
     },
     "/api/version/release-notes": {
@@ -8980,6 +5455,7 @@
         "tags": [
           "Version"
         ],
+        "description": "Deprecated. Use `/api/v1/version/release-notes` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -9024,7 +5500,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "x-replacement-route": "/api/v1/version/release-notes"
       }
     },
     "/api/version/server": {
@@ -9032,6 +5510,7 @@
         "tags": [
           "Version"
         ],
+        "description": "Deprecated. Use `/api/v1/version/server` instead.",
         "parameters": [
           {
             "name": "api-version",
@@ -9079,7 +5558,9 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true,
+        "x-replacement-route": "/api/v1/version/server"
       }
     },
     "/api/agent/updates/get-bundle-metadata/{runtime}": {
@@ -10034,37 +6515,6 @@
           }
         }
       },
-      "AddDeviceGroupMembersRequestDto": {
-        "required": [
-          "deviceIds"
-        ],
-        "type": "object",
-        "properties": {
-          "deviceIds": {
-            "maxItems": 1000,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        }
-      },
-      "AddUserGroupMembersRequestDto": {
-        "required": [
-          "userIds"
-        ],
-        "type": "object",
-        "properties": {
-          "userIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        }
-      },
       "AdminResetPasswordResponseDto": {
         "required": [
           "temporaryPassword"
@@ -10165,155 +6615,8 @@
           }
         }
       },
-      "ApplyPermissionPresetsRequestDto": {
-        "required": [
-          "principalKind",
-          "principalId",
-          "presetNames",
-          "replaceExisting"
-        ],
-        "type": "object",
-        "properties": {
-          "principalKind": {
-            "$ref": "#/components/schemas/PermissionPrincipalKind"
-          },
-          "principalId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "presetNames": {
-            "minItems": 1,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "replaceExisting": {
-            "type": "boolean"
-          }
-        }
-      },
       "Architecture": {
         "type": "integer"
-      },
-      "AssignCustomerDevicesRequestDto": {
-        "required": [
-          "deviceIds",
-          "removeDeviceIds"
-        ],
-        "type": "object",
-        "properties": {
-          "deviceIds": {
-            "maxItems": 1000,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "removeDeviceIds": {
-            "maxItems": 1000,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        }
-      },
-      "AuthorizationChangeLogDto": {
-        "required": [
-          "id",
-          "actionType",
-          "actorPrincipalType",
-          "actorPrincipalId",
-          "targetType",
-          "targetId",
-          "owningTenantId",
-          "ipAddress",
-          "createdAt",
-          "beforeJson",
-          "afterJson"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "actionType": {
-            "type": "string"
-          },
-          "actorPrincipalType": {
-            "type": "string"
-          },
-          "actorPrincipalId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "targetType": {
-            "type": "string"
-          },
-          "targetId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "owningTenantId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "ipAddress": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "beforeJson": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "afterJson": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "AuthorizationChangeLogSearchResponseDto": {
-        "required": [
-          "items",
-          "totalItems"
-        ],
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AuthorizationChangeLogDto"
-            }
-          },
-          "totalItems": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          }
-        }
       },
       "BundleMetadataDto": {
         "required": [
@@ -10367,59 +6670,6 @@
           },
           "newPassword": {
             "type": "string"
-          }
-        }
-      },
-      "CreateCustomerRequestDto": {
-        "required": [
-          "name",
-          "description",
-          "notes"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "notes": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "CreateDeviceGroupRequestDto": {
-        "required": [
-          "name",
-          "description"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -10569,73 +6819,6 @@
           }
         }
       },
-      "CreateManyPermissionAssignmentsRequestDto": {
-        "required": [
-          "assignments"
-        ],
-        "type": "object",
-        "properties": {
-          "assignments": {
-            "maxItems": 1000,
-            "minItems": 1,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CreatePermissionAssignmentRequestDto"
-            }
-          }
-        }
-      },
-      "CreatePermissionAssignmentRequestDto": {
-        "required": [
-          "principalKind",
-          "principalId",
-          "permissionName",
-          "effect",
-          "scopeKind",
-          "scopeId",
-          "notes"
-        ],
-        "type": "object",
-        "properties": {
-          "principalKind": {
-            "$ref": "#/components/schemas/PermissionPrincipalKind"
-          },
-          "principalId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "permissionName": {
-            "maxLength": 150,
-            "minLength": 1,
-            "type": "string"
-          },
-          "effect": {
-            "$ref": "#/components/schemas/PermissionEffect"
-          },
-          "scopeKind": {
-            "$ref": "#/components/schemas/PermissionScopeKind"
-          },
-          "scopeId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "notes": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isEnabled": {
-            "type": "boolean",
-            "default": true
-          }
-        }
-      },
       "CreatePersonalAccessTokenRequestDto": {
         "required": [
           "name"
@@ -10673,146 +6856,6 @@
           },
           "plainTextToken": {
             "type": "string"
-          }
-        }
-      },
-      "CreateServerServiceAccountCredentialRequestDto": {
-        "required": [
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "expiresAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "CreateServerServiceAccountCredentialResponseDto": {
-        "required": [
-          "credential",
-          "plainTextSecretKey"
-        ],
-        "type": "object",
-        "properties": {
-          "credential": {
-            "$ref": "#/components/schemas/ServerServiceAccountCredentialDto"
-          },
-          "plainTextSecretKey": {
-            "type": "string"
-          }
-        }
-      },
-      "CreateServerServiceAccountRequestDto": {
-        "required": [
-          "name",
-          "description",
-          "accessMode"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "accessMode": {
-            "$ref": "#/components/schemas/ServiceAccountAccessMode"
-          }
-        }
-      },
-      "CreateTenantServiceAccountCredentialRequestDto": {
-        "required": [
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "expiresAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "CreateTenantServiceAccountCredentialResponseDto": {
-        "required": [
-          "credential",
-          "plainTextSecretKey"
-        ],
-        "type": "object",
-        "properties": {
-          "credential": {
-            "$ref": "#/components/schemas/TenantServiceAccountCredentialDto"
-          },
-          "plainTextSecretKey": {
-            "type": "string"
-          }
-        }
-      },
-      "CreateTenantServiceAccountRequestDto": {
-        "required": [
-          "name",
-          "description"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "CreateUserGroupRequestDto": {
-        "required": [
-          "name",
-          "description"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -10949,47 +6992,6 @@
           }
         }
       },
-      "CustomerDto": {
-        "required": [
-          "id",
-          "name",
-          "description",
-          "notes",
-          "createdAt",
-          "deviceCount"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "notes": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "deviceCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
       "DecommissionServerResponseDto": {
         "required": [
           "isEnabled"
@@ -11040,97 +7042,6 @@
           }
         }
       },
-      "DeleteManyPermissionAssignmentsRequestDto": {
-        "required": [
-          "assignmentIds"
-        ],
-        "type": "object",
-        "properties": {
-          "assignmentIds": {
-            "maxItems": 1000,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        }
-      },
-      "DeleteManyPermissionAssignmentsResponseDto": {
-        "required": [
-          "successIds",
-          "failureIds"
-        ],
-        "type": "object",
-        "properties": {
-          "successIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "failureIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        }
-      },
-      "DeploymentOptionsDto": {
-        "required": [
-          "appendInstanceId",
-          "instanceId"
-        ],
-        "type": "object",
-        "properties": {
-          "appendInstanceId": {
-            "type": "boolean"
-          },
-          "instanceId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "DeploymentTagCapabilityRequestDto": {
-        "required": [
-          "deviceId",
-          "customerId"
-        ],
-        "type": "object",
-        "properties": {
-          "deviceId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "customerId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          }
-        }
-      },
-      "DeploymentTagCapabilityResponseDto": {
-        "required": [
-          "allowed"
-        ],
-        "type": "object",
-        "properties": {
-          "allowed": {
-            "type": "boolean"
-          }
-        }
-      },
       "DeviceColumnFilter": {
         "type": "object",
         "properties": {
@@ -11170,105 +7081,6 @@
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": "integer",
             "format": "int32"
-          }
-        }
-      },
-      "DeviceGroupDetailDto": {
-        "required": [
-          "id",
-          "name",
-          "description",
-          "createdAt",
-          "members"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "members": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DeviceGroupMemberDto"
-            }
-          }
-        }
-      },
-      "DeviceGroupDto": {
-        "required": [
-          "id",
-          "name",
-          "description",
-          "createdAt",
-          "memberCount"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "memberCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
-      "DeviceGroupMemberDto": {
-        "required": [
-          "deviceId",
-          "deviceName",
-          "alias",
-          "customerName"
-        ],
-        "type": "object",
-        "properties": {
-          "deviceId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "deviceName": {
-            "type": "string"
-          },
-          "alias": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "customerName": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -11777,58 +7589,6 @@
           "Ram"
         ]
       },
-      "EffectivePermissionQueryRequestDto": {
-        "required": [
-          "principalKind",
-          "principalId",
-          "permissionName",
-          "scopeKind",
-          "scopeId"
-        ],
-        "type": "object",
-        "properties": {
-          "principalKind": {
-            "$ref": "#/components/schemas/PermissionPrincipalKind"
-          },
-          "principalId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "permissionName": {
-            "maxLength": 150,
-            "minLength": 1,
-            "type": "string"
-          },
-          "scopeKind": {
-            "$ref": "#/components/schemas/PermissionScopeKind"
-          },
-          "scopeId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          }
-        }
-      },
-      "EffectivePermissionQueryResponseDto": {
-        "required": [
-          "isAllowed",
-          "denyReason"
-        ],
-        "type": "object",
-        "properties": {
-          "isAllowed": {
-            "type": "boolean"
-          },
-          "denyReason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "EffectiveUserPreferencesDto": {
         "required": [
           "notifyUserOnSessionStart",
@@ -12197,117 +7957,6 @@
       "MessageSeverity": {
         "type": "integer"
       },
-      "PermissionAssignmentDto": {
-        "required": [
-          "id",
-          "principalKind",
-          "principalId",
-          "permissionName",
-          "effect",
-          "scopeKind",
-          "scopeId",
-          "notes",
-          "isEnabled",
-          "createdAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "principalKind": {
-            "$ref": "#/components/schemas/PermissionPrincipalKind"
-          },
-          "principalId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "permissionName": {
-            "type": "string"
-          },
-          "effect": {
-            "$ref": "#/components/schemas/PermissionEffect"
-          },
-          "scopeKind": {
-            "$ref": "#/components/schemas/PermissionScopeKind"
-          },
-          "scopeId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "notes": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isEnabled": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "PermissionCatalogEntryDto": {
-        "required": [
-          "name",
-          "displayName",
-          "description",
-          "allowedScopeKinds",
-          "selfRemovable"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "allowedScopeKinds": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PermissionScopeKind"
-            }
-          },
-          "selfRemovable": {
-            "type": "boolean"
-          }
-        }
-      },
-      "PermissionEffect": {
-        "type": "integer"
-      },
-      "PermissionPresetDto": {
-        "required": [
-          "name",
-          "permissions"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "permissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "PermissionPrincipalKind": {
-        "type": "integer"
-      },
       "PermissionScopeKind": {
         "type": "integer"
       },
@@ -12434,37 +8083,6 @@
           }
         }
       },
-      "RemoveDeviceGroupMembersRequestDto": {
-        "required": [
-          "deviceIds"
-        ],
-        "type": "object",
-        "properties": {
-          "deviceIds": {
-            "maxItems": 1000,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        }
-      },
-      "RemoveUserGroupMembersRequestDto": {
-        "required": [
-          "userIds"
-        ],
-        "type": "object",
-        "properties": {
-          "userIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        }
-      },
       "RenameInstallerKeyRequestDto": {
         "required": [
           "id",
@@ -12478,31 +8096,6 @@
           },
           "friendlyName": {
             "type": "string"
-          }
-        }
-      },
-      "ReplacePermissionAssignmentsRequestDto": {
-        "required": [
-          "principalKind",
-          "principalId",
-          "assignments"
-        ],
-        "type": "object",
-        "properties": {
-          "principalKind": {
-            "$ref": "#/components/schemas/PermissionPrincipalKind"
-          },
-          "principalId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "assignments": {
-            "maxItems": 1000,
-            "minItems": 1,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CreatePermissionAssignmentRequestDto"
-            }
           }
         }
       },
@@ -12631,94 +8224,6 @@
           }
         }
       },
-      "ServerServiceAccountCredentialDto": {
-        "required": [
-          "id",
-          "name",
-          "createdAt",
-          "expiresAt",
-          "revokedAt",
-          "lastUsedAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "expiresAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "revokedAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "lastUsedAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "ServerServiceAccountDto": {
-        "required": [
-          "id",
-          "name",
-          "description",
-          "isEnabled",
-          "accessMode",
-          "createdAt",
-          "credentials"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isEnabled": {
-            "type": "boolean"
-          },
-          "accessMode": {
-            "$ref": "#/components/schemas/ServiceAccountAccessMode"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "credentials": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ServerServiceAccountCredentialDto"
-            }
-          }
-        }
-      },
       "ServerStatsDto": {
         "required": [
           "totalTenants",
@@ -12755,12 +8260,6 @@
             "format": "int32"
           }
         }
-      },
-      "ServiceAccountAccessMode": {
-        "enum": [
-          "Restricted",
-          "Unrestricted"
-        ]
       },
       "SystemPlatform": {
         "type": "integer"
@@ -12863,90 +8362,6 @@
           }
         }
       },
-      "TenantServiceAccountCredentialDto": {
-        "required": [
-          "id",
-          "name",
-          "createdAt",
-          "expiresAt",
-          "revokedAt",
-          "lastUsedAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "expiresAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "revokedAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "lastUsedAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "TenantServiceAccountDto": {
-        "required": [
-          "id",
-          "name",
-          "description",
-          "isEnabled",
-          "createdAt",
-          "credentials"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isEnabled": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "credentials": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TenantServiceAccountCredentialDto"
-            }
-          }
-        }
-      },
       "TenantSettingRequestDto": {
         "required": [
           "name",
@@ -13016,25 +8431,6 @@
           }
         }
       },
-      "TenantSummaryDto": {
-        "required": [
-          "id",
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "ThemeMode": {
         "type": "integer"
       },
@@ -13098,37 +8494,6 @@
           }
         }
       },
-      "UpdateCustomerRequestDto": {
-        "required": [
-          "name",
-          "description",
-          "notes"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "notes": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "UpdateDeviceAliasRequestDto": {
         "required": [
           "deviceId",
@@ -13148,70 +8513,6 @@
           }
         }
       },
-      "UpdateDeviceGroupRequestDto": {
-        "required": [
-          "name",
-          "description"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "UpdatePermissionAssignmentRequestDto": {
-        "required": [
-          "permissionName",
-          "effect",
-          "scopeKind",
-          "scopeId",
-          "notes",
-          "isEnabled"
-        ],
-        "type": "object",
-        "properties": {
-          "permissionName": {
-            "maxLength": 150,
-            "minLength": 1,
-            "type": "string"
-          },
-          "effect": {
-            "$ref": "#/components/schemas/PermissionEffect"
-          },
-          "scopeKind": {
-            "$ref": "#/components/schemas/PermissionScopeKind"
-          },
-          "scopeId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "notes": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isEnabled": {
-            "type": "boolean"
-          }
-        }
-      },
       "UpdatePersonalAccessTokenRequestDto": {
         "required": [
           "name"
@@ -13222,180 +8523,6 @@
             "maxLength": 256,
             "minLength": 1,
             "type": "string"
-          }
-        }
-      },
-      "UpdateServerServiceAccountRequestDto": {
-        "required": [
-          "name",
-          "description",
-          "isEnabled"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isEnabled": {
-            "type": "boolean"
-          }
-        }
-      },
-      "UpdateTenantServiceAccountRequestDto": {
-        "required": [
-          "name",
-          "description",
-          "isEnabled"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "isEnabled": {
-            "type": "boolean"
-          }
-        }
-      },
-      "UpdateUserGroupRequestDto": {
-        "required": [
-          "name",
-          "description"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "maxLength": 100,
-            "minLength": 1,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "UserGroupDetailDto": {
-        "required": [
-          "id",
-          "name",
-          "description",
-          "createdAt",
-          "members"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "members": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UserGroupMemberDto"
-            }
-          }
-        }
-      },
-      "UserGroupDto": {
-        "required": [
-          "id",
-          "name",
-          "description",
-          "createdAt",
-          "memberCount"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "memberCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
-      "UserGroupMemberDto": {
-        "required": [
-          "userId",
-          "userName",
-          "displayName",
-          "lastLogin"
-        ],
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "userName": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "lastLogin": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
           }
         }
       },
@@ -13671,31 +8798,16 @@
       "name": "Auth"
     },
     {
-      "name": "AuthorizationChangeLogs"
-    },
-    {
-      "name": "Customers"
-    },
-    {
-      "name": "DeploymentOptions"
-    },
-    {
       "name": "DesktopPreview"
     },
     {
       "name": "DeviceFileSystem"
     },
     {
-      "name": "DeviceGroups"
-    },
-    {
       "name": "Devices"
     },
     {
       "name": "DeviceTags"
-    },
-    {
-      "name": "EffectivePermissions"
     },
     {
       "name": "EffectiveUserPreferences"
@@ -13710,9 +8822,6 @@
       "name": "LogonTokens"
     },
     {
-      "name": "PermissionAssignments"
-    },
-    {
       "name": "PersonalAccessTokens"
     },
     {
@@ -13725,28 +8834,16 @@
       "name": "ServerLogs"
     },
     {
-      "name": "ServerServiceAccounts"
-    },
-    {
       "name": "ServerStats"
     },
     {
       "name": "Tags"
     },
     {
-      "name": "Tenants"
-    },
-    {
-      "name": "TenantServiceAccounts"
-    },
-    {
       "name": "TenantSettings"
     },
     {
       "name": "TestEmail"
-    },
-    {
-      "name": "UserGroups"
     },
     {
       "name": "UserPreferences"

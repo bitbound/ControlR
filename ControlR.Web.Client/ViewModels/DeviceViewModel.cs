@@ -1,8 +1,8 @@
 ﻿namespace ControlR.Web.Client.ViewModels;
 
-public class DeviceViewModel(DeviceResponseDto deviceDto) : IEquatable<DeviceViewModel>
+public class DeviceViewModel(InternalDtos.DeviceResponseDto deviceDto) : IEquatable<DeviceViewModel>
 {
-  public DeviceResponseDto Dto => deviceDto;
+  public InternalDtos.DeviceResponseDto Dto => deviceDto;
   public Guid Id => deviceDto.Id;
 
   public bool Equals(DeviceViewModel? other)

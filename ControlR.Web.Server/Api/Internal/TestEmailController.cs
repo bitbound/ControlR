@@ -10,6 +10,7 @@ public class TestEmailController() : ControllerBase
 {
 
   [HttpPost]
+  [ApiDeprecated("/api/v1/test-email")]
   public async Task<IActionResult> SendTestEmail(
     AppDb appDb,
     IControlrEmailSender emailSender,

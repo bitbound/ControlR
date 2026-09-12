@@ -1,22 +1,30 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class InstallerKeys
 {
-  private IEnumerable<AgentInstallerKeyDto> _keys = [];
+  private IEnumerable<InstallerKeyDto> _keys = [];
   private bool _loading = true;
   private string _searchString = "";
+  private Guid _tenantId;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
+
   [Inject]
   public required IDialogService DialogService { get; init; }
+
   [Inject]
   public required ILogger<InstallerKeys> Logger { get; init; }
+
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-
-  private Func<AgentInstallerKeyDto, bool> QuickFilter => key =>
+  private Func<InstallerKeyDto, bool> QuickFilter => key =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -37,6 +45,15 @@ public partial class InstallerKeys
     try
     {
       await base.OnInitializedAsync();
+      var state = await AuthState.GetAuthenticationStateAsync();
+      if (!state.User.TryGetTenantId(out var tenantId))
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        _loading = false;
+        return;
+      }
+
+      _tenantId = tenantId;
       await LoadKeys();
     }
     catch (Exception ex)
@@ -48,7 +65,7 @@ public partial class InstallerKeys
     }
   }
 
-  private async Task DeleteKey(AgentInstallerKeyDto key)
+  private async Task DeleteKey(InstallerKeyDto key)
   {
     try
     {
@@ -62,7 +79,7 @@ public partial class InstallerKeys
       {
         return;
       }
-      var apiResult = await ControlrApi.Internal.InstallerKeys.DeleteInstallerKey(key.Id);
+      var apiResult = await ControlrApi.V1.InstallerKeys.DeleteInstallerKey(key.Id, _tenantId);
       if (apiResult.IsSuccess)
       {
         Snackbar.Add("Key deleted.", Severity.Success);
@@ -79,6 +96,7 @@ public partial class InstallerKeys
       Snackbar.Add("An error occurred while deleting the key.", Severity.Error);
     }
   }
+
   private async Task<bool> LoadKeys()
   {
     try
@@ -86,10 +104,10 @@ public partial class InstallerKeys
       _loading = true;
       await InvokeAsync(StateHasChanged);
 
-      var result = await ControlrApi.Internal.InstallerKeys.GetAllInstallerKeys();
+      var result = await ControlrApi.V1.InstallerKeys.GetAllInstallerKeys(_tenantId);
       if (result.IsSuccess)
       {
-        _keys = result.Value;
+        _keys = result.Value.Items;
         return true;
       }
       else
@@ -109,6 +127,7 @@ public partial class InstallerKeys
       await InvokeAsync(StateHasChanged);
     }
   }
+
   private async Task RefreshKeysClicked()
   {
     try
@@ -129,7 +148,8 @@ public partial class InstallerKeys
       Snackbar.Add("Failed to refresh installer keys.", Severity.Error);
     }
   }
-  private async Task RenameKey(AgentInstallerKeyDto key)
+
+  private async Task RenameKey(InstallerKeyDto key)
   {
     try
     {
@@ -144,8 +164,8 @@ public partial class InstallerKeys
         return;
       }
 
-      var dto = new RenameInstallerKeyRequestDto(key.Id, newName);
-      var result = await ControlrApi.Internal.InstallerKeys.RenameInstallerKey(dto);
+      var result = await ControlrApi.V1.InstallerKeys.RenameInstallerKey(
+          key.Id, _tenantId, new RenameInstallerKeyRequestDto(newName));
 
       if (result.IsSuccess)
       {
@@ -163,11 +183,12 @@ public partial class InstallerKeys
       Snackbar.Add("An error occurred while renaming the key.", Severity.Error);
     }
   }
-  private async Task ShowUsages(AgentInstallerKeyDto key)
+
+  private async Task ShowUsages(InstallerKeyDto key)
   {
     try
     {
-      var result = await ControlrApi.Internal.InstallerKeys.GetInstallerKeyUsages(key.Id);
+      var result = await ControlrApi.V1.InstallerKeys.GetInstallerKeyUsages(key.Id, _tenantId);
       if (!result.IsSuccess)
       {
         Snackbar.Add($"Failed to load key usages: {result.Reason}", Severity.Error);
@@ -176,7 +197,7 @@ public partial class InstallerKeys
 
       var parameters = new DialogParameters
         {
-            { "Usages", result.Value }
+            { "Usages", result.Value.Items }
         };
 
       var options = new DialogOptions

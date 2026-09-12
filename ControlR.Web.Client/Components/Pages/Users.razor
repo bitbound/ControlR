@@ -1,5 +1,6 @@
 @attribute [Route(ClientRoutes.Users)]
 @attribute [Authorize(Policy = PolicyNames.RequireUsersRead)]
+@using UsersDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users
 
 <PageTitle>Users</PageTitle>
 
@@ -9,7 +10,7 @@
 
 <GridToolbar @bind-SearchValue="_searchString" OnRefresh="Refresh" />
 
-<MudDataGrid T="UserResponseDto"
+<MudDataGrid T="UsersDtos.UserResponseDto"
              Items="_users"
              SortDefinitions="_sortDefinitions"
              Hover="true"
@@ -49,6 +50,6 @@
     </TemplateColumn>
   </Columns>
   <PagerContent>
-    <MudDataGridPager T="UserResponseDto" />
+    <MudDataGridPager T="UsersDtos.UserResponseDto" />
   </PagerContent>
 </MudDataGrid>

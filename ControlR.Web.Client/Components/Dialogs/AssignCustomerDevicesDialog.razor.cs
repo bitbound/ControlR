@@ -1,5 +1,6 @@
 using ControlR.Libraries.Api.Contracts.FilterSort;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
@@ -11,10 +12,14 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
   private readonly HashSet<Guid> _selectedIds = [];
 
   private int _currentPage = 1;
-  private List<DeviceResponseDto> _devices = [];
+  private List<InternalDtos.DeviceResponseDto> _devices = [];
   private bool _loading;
   private string _searchText = string.Empty;
+  private Guid _tenantId;
   private int _totalPages = 1;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -36,6 +41,14 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _tenantId = tenantId;
     await LoadDevices();
   }
 
@@ -43,9 +56,10 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
   {
     try
     {
-      var result = await ControlrApi.Internal.Customers.AssignDevices(
+      var result = await ControlrApi.V1.Customers.AssignCustomerDevices(
         CustomerId,
-        new InternalDtos.AssignCustomerDevicesRequestDto([.. _selectedIds], [.. _removedIds]));
+        _tenantId,
+        new AssignCustomerDevicesRequestDto([.. _selectedIds], [.. _removedIds]));
 
       if (!result.IsSuccess)
       {
@@ -75,7 +89,7 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
 
   private void Cancel() => MudDialog.Cancel();
 
-  private bool IsChecked(DeviceResponseDto device)
+  private bool IsChecked(InternalDtos.DeviceResponseDto device)
   {
     if (_removedIds.Contains(device.Id))
     {
@@ -93,13 +107,13 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
 
     try
     {
-      var request = new DeviceSearchRequestDto
+      var request = new InternalDtos.DeviceSearchRequestDto
       {
         SearchText = _searchText,
         HideOfflineDevices = false,
         Page = _currentPage - 1,
         PageSize = PageSize,
-        SortDefinitions = [new DeviceColumnSort { PropertyName = nameof(DeviceResponseDto.Name), Descending = false, SortOrder = 0 }]
+        SortDefinitions = [new DeviceColumnSort { PropertyName = nameof(InternalDtos.DeviceResponseDto.Name), Descending = false, SortOrder = 0 }]
       };
 
       var response = await ControlrApi.Internal.Devices.SearchDevices(request);
@@ -136,7 +150,7 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
     await LoadDevices();
   }
 
-  private void ToggleSelection(DeviceResponseDto device, bool isSelected)
+  private void ToggleSelection(InternalDtos.DeviceResponseDto device, bool isSelected)
   {
     if (!device.CustomerId.HasValue || device.CustomerId.Value != CustomerId)
     {

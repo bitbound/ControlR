@@ -1,17 +1,17 @@
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
 public partial class PermissionAssignmentDialog : ComponentBase
 {
-  private IReadOnlyList<InternalDtos.PermissionCatalogEntryDto> _catalog = [];
+  private IReadOnlyList<PermissionCatalogEntryDto> _catalog = [];
   private PermissionEffect _effect = PermissionEffect.Allow;
   private bool _isEnabled = true;
   private string _notes = string.Empty;
   private string _permissionName = string.Empty;
   private Guid? _scopeId;
   private PermissionScopeKind _scopeKind = PermissionScopeKind.Tenant;
-  private InternalDtos.PermissionCatalogEntryDto? _selectedPermission;
+  private PermissionCatalogEntryDto? _selectedPermission;
 
   public static DialogOptions DefaultOptions => new()
   {
@@ -34,7 +34,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
   public required IControlrApi ControlrApi { get; init; }
 
   [Parameter]
-  public InternalDtos.PermissionAssignmentDto? ExistingAssignment { get; set; }
+  public PermissionAssignmentDto? ExistingAssignment { get; set; }
 
   [Inject]
   public required ILogger<PermissionAssignmentDialog> Logger { get; init; }
@@ -53,6 +53,9 @@ public partial class PermissionAssignmentDialog : ComponentBase
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
+
+  [Parameter]
+  public required Guid TenantId { get; set; }
 
   private bool IsEdit => ExistingAssignment is not null;
 
@@ -103,7 +106,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
     }
   }
 
-  private static bool HasNonServerScope(InternalDtos.PermissionCatalogEntryDto entry) =>
+  private static bool HasNonServerScope(PermissionCatalogEntryDto entry) =>
     entry.AllowedScopeKinds.Any(static kind => kind != PermissionScopeKind.Server);
 
   private static string ScopeKindLabel(PermissionScopeKind scopeKind) => scopeKind switch
@@ -122,7 +125,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
   /// <see cref="PermissionNames.ServerPermissionsWrite"/>, or when the permission is
   /// resource-scoped and the target is not a server-kind service account.
   /// </summary>
-  private IReadOnlyList<PermissionScopeKind> AvailableScopeKinds(InternalDtos.PermissionCatalogEntryDto? entry) =>
+  private IReadOnlyList<PermissionScopeKind> AvailableScopeKinds(PermissionCatalogEntryDto? entry) =>
     entry is null
       ? []
       : PermissionScopeSelection.AvailableScopeKinds(entry.AllowedScopeKinds, _effect, PrincipalAllowsServerScope, CanManageServerScope);
@@ -131,7 +134,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
   /// Returns the broadest scope offered by <see cref="AvailableScopeKinds"/> for the selected
   /// permission, so the default selection never lands on a scope that is hidden.
   /// </summary>
-  private PermissionScopeKind BroadestAvailableScope(InternalDtos.PermissionCatalogEntryDto? entry) =>
+  private PermissionScopeKind BroadestAvailableScope(PermissionCatalogEntryDto? entry) =>
     entry is null
       ? PermissionScopeKind.Tenant
       : PermissionScopeSelection.BroadestSelectable(entry.AllowedScopeKinds, _effect, PrincipalAllowsServerScope, CanManageServerScope);
@@ -149,7 +152,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
     }
   }
 
-  private void HandlePermissionChanged(InternalDtos.PermissionCatalogEntryDto? value)
+  private void HandlePermissionChanged(PermissionCatalogEntryDto? value)
   {
     _selectedPermission = value;
     _permissionName = value?.Name ?? string.Empty;
@@ -157,7 +160,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
     _scopeId = null;
   }
 
-  private async Task<IEnumerable<InternalDtos.PermissionCatalogEntryDto>> SearchPermissions(
+  private async Task<IEnumerable<PermissionCatalogEntryDto>> SearchPermissions(
     string query,
     CancellationToken cancellationToken)
   {
@@ -193,7 +196,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
     {
       try
       {
-        var updateRequest = new InternalDtos.UpdatePermissionAssignmentRequestDto(
+        var updateRequest = new UpdatePermissionAssignmentRequestDto(
           _permissionName,
           _effect,
           _scopeKind,
@@ -201,7 +204,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
           string.IsNullOrWhiteSpace(_notes) ? null : _notes,
           _isEnabled);
 
-        var result = await ControlrApi.Internal.PermissionAssignments.Update(existing.Id, updateRequest);
+        var result = await ControlrApi.V1.PermissionAssignments.Update(existing.Id, TenantId, updateRequest);
         if (!result.IsSuccess)
         {
           Snackbar.Add(result.Reason, Severity.Error);
@@ -221,7 +224,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
 
     try
     {
-      var createRequest = new InternalDtos.CreatePermissionAssignmentRequestDto(
+      var createRequest = new CreatePermissionAssignmentRequestDto(
         PrincipalKind,
         PrincipalId,
         _permissionName,
@@ -231,7 +234,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
         string.IsNullOrWhiteSpace(_notes) ? null : _notes,
         _isEnabled);
 
-      var createResult = await ControlrApi.Internal.PermissionAssignments.Create(createRequest);
+      var createResult = await ControlrApi.V1.PermissionAssignments.Create(TenantId, createRequest);
       if (!createResult.IsSuccess)
       {
         Snackbar.Add(createResult.Reason, Severity.Error);

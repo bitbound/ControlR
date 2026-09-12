@@ -11,6 +11,7 @@ public class ServerStatsController(IServerStatsProvider serverStatsProvider) : C
   private readonly IServerStatsProvider _serverStatsProvider = serverStatsProvider;
 
   [HttpGet]
+  [ApiDeprecated("/api/v1/server-stats")]
   public async Task<ActionResult<InternalDtos.ServerStatsDto>> GetServerStats()
   {
     var result = await _serverStatsProvider.GetServerStats();

@@ -7,5 +7,5 @@ namespace ControlR.Web.Client.Services;
 /// </summary>
 public interface IPublicServerSettingsProvider
 {
-  Task<PublicServerSettings> GetPublicServerSettings();
+  Task<InternalDtos.PublicServerSettings> GetPublicServerSettings();
 }

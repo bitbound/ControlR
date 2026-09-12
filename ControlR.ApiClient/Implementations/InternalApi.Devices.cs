@@ -4,7 +4,7 @@ using ControlR.ApiClient.Internal;
 using System.Net.Http.Json;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.ApiClient;
@@ -22,12 +22,12 @@ internal partial class InternalApi
     });
   }
 
-  async Task<ApiResult<InternalDtos.DeleteManyDevicesResponseDto>> IDevicesApi.DeleteManyDevices(
-    InternalDtos.DeleteDevicesRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<DeleteManyDevicesResponseDto>> IDevicesApi.DeleteManyDevices(
+    DeleteDevicesRequestDto request, CancellationToken cancellationToken)
   {
     if (request.DeviceIds.Count > DtoLimits.DeviceIdsMaxCount)
     {
-      return ApiResult.Fail<InternalDtos.DeleteManyDevicesResponseDto>(
+      return ApiResult.Fail<DeleteManyDevicesResponseDto>(
         $"Too many device IDs: {request.DeviceIds.Count}. Maximum allowed is {DtoLimits.DeviceIdsMaxCount}.");
     }
 
@@ -37,15 +37,15 @@ internal partial class InternalApi
         $"{HttpConstants.Internal.DevicesEndpoint}/delete-many", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content
-        .ReadFromJsonAsync<InternalDtos.DeleteManyDevicesResponseDto>(cancellationToken);
+        .ReadFromJsonAsync<DeleteManyDevicesResponseDto>(cancellationToken);
     });
   }
 
-  async IAsyncEnumerable<InternalDtos.DeviceResponseDto> IDevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
+  async IAsyncEnumerable<DeviceResponseDto> IDevicesApi.GetAllDevices([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     using var tracked = _client.BeginTrackedRequest();
 
-    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<InternalDtos.DeviceResponseDto>(
+    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<DeviceResponseDto>(
       HttpConstants.Internal.DevicesEndpoint,
       cancellationToken: cancellationToken);
 
@@ -76,17 +76,17 @@ internal partial class InternalApi
     }
   }
 
-  async Task<ApiResult<InternalDtos.DeviceResponseDto>> IDevicesApi.GetDevice(Guid deviceId, CancellationToken cancellationToken)
+  async Task<ApiResult<DeviceResponseDto>> IDevicesApi.GetDevice(Guid deviceId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<InternalDtos.DeviceResponseDto>($"{HttpConstants.Internal.DevicesEndpoint}/{deviceId}", cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<DeviceResponseDto>($"{HttpConstants.Internal.DevicesEndpoint}/{deviceId}", cancellationToken));
   }
 
-  async IAsyncEnumerable<InternalDtos.DeviceSummaryDto> IDevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
+  async IAsyncEnumerable<DeviceSummaryDto> IDevicesApi.GetDeviceSummaries([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     using var tracked = _client.BeginTrackedRequest();
 
-    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<InternalDtos.DeviceSummaryDto>(
+    var stream = _client.HttpClient.GetFromJsonAsAsyncEnumerable<DeviceSummaryDto>(
       $"{HttpConstants.Internal.DevicesEndpoint}/summary",
       cancellationToken: cancellationToken);
 
@@ -117,24 +117,24 @@ internal partial class InternalApi
     }
   }
 
-  async Task<ApiResult<InternalDtos.DeviceSearchResponseDto>> IDevicesApi.SearchDevices(InternalDtos.DeviceSearchRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<DeviceSearchResponseDto>> IDevicesApi.SearchDevices(DeviceSearchRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
       using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.DevicesEndpoint}/search", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<InternalDtos.DeviceSearchResponseDto>(cancellationToken);
+      return await response.Content.ReadFromJsonAsync<DeviceSearchResponseDto>(cancellationToken);
     });
   }
 
-  async Task<ApiResult<InternalDtos.DeviceResponseDto>> IDevicesApi.UpdateDeviceAlias(InternalDtos.UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<DeviceResponseDto>> IDevicesApi.UpdateDeviceAlias(UpdateDeviceAliasRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
       using var content = JsonContent.Create(request);
       using var response = await _client.HttpClient.PatchAsync($"{HttpConstants.Internal.DevicesEndpoint}/{request.DeviceId}/alias", content, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<InternalDtos.DeviceResponseDto>(cancellationToken);
+      return await response.Content.ReadFromJsonAsync<DeviceResponseDto>(cancellationToken);
     });
   }
 }

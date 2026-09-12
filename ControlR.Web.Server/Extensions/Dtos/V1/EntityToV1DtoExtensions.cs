@@ -48,8 +48,24 @@ public static class EntityToV1DtoExtensions
       device.DnsHostName)
     {
       Alias = device.Alias,
-      TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray()
+      TagIds = device.Tags?.Select(x => x.Id).ToImmutableArray(),
+      CustomerId = device.CustomerId,
+      CustomerName = device.Customer?.Name
     };
+  }
+
+  public static V1Dtos.Tags.TagResponseDto ToV1ResponseDto(this Tag tag)
+  {
+    var deviceIds = tag
+      .Devices?
+      .Select(x => x.Id)
+      .ToList() ?? [];
+
+    return new V1Dtos.Tags.TagResponseDto(
+      tag.Id,
+      tag.Name,
+      tag.Type,
+      deviceIds);
   }
 
   public static V1Dtos.DeviceSummaryDto ToV1SummaryDto(this Device device)

@@ -1,14 +1,14 @@
 using Microsoft.AspNetCore.Components.Authorization;
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class Users : ComponentBase
 {
-  private readonly Dictionary<string, SortDefinition<InternalDtos.UserResponseDto>> _sortDefinitions = new()
+  private readonly Dictionary<string, SortDefinition<UserResponseDto>> _sortDefinitions = new()
   {
-    ["UserName"] = new SortDefinition<InternalDtos.UserResponseDto>(
-      SortBy: nameof(InternalDtos.UserResponseDto.UserName),
+    ["UserName"] = new SortDefinition<UserResponseDto>(
+      SortBy: nameof(UserResponseDto.UserName),
       Descending: false,
       Index: 0,
       SortFunc: x => x.UserName)
@@ -17,7 +17,8 @@ public partial class Users : ComponentBase
   private Guid? _currentUserId;
   private bool _loading;
   private string _searchString = string.Empty;
-  private IEnumerable<InternalDtos.UserResponseDto> _users = [];
+  private Guid? _tenantId;
+  private IEnumerable<UserResponseDto> _users = [];
 
   [Inject]
   public required AuthenticationStateProvider AuthState { get; init; }
@@ -34,7 +35,7 @@ public partial class Users : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private Func<InternalDtos.UserResponseDto, bool> QuickFilter => user =>
+  private Func<UserResponseDto, bool> QuickFilter => user =>
   {
     if (string.IsNullOrWhiteSpace(_searchString))
     {
@@ -54,6 +55,11 @@ public partial class Users : ComponentBase
       _currentUserId = currentUserId;
     }
 
+    if (state.User.TryGetTenantId(out var tenantId))
+    {
+      _tenantId = tenantId;
+    }
+
     await Refresh();
   }
 
@@ -63,7 +69,7 @@ public partial class Users : ComponentBase
     Snackbar.Add("Copied to clipboard", Severity.Success);
   }
 
-  private async Task DeleteUser(InternalDtos.UserResponseDto user)
+  private async Task DeleteUser(UserResponseDto user)
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Delete User",
@@ -75,7 +81,13 @@ public partial class Users : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.Users.DeleteUser(user.Id);
+    if (_tenantId is not { } tenantId)
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    var result = await ControlrApi.V1.Users.DeleteUser(user.Id, tenantId);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
@@ -86,7 +98,7 @@ public partial class Users : ComponentBase
     await Refresh();
   }
 
-  private async Task EditPermissions(InternalDtos.UserResponseDto user)
+  private async Task EditPermissions(UserResponseDto user)
   {
     var parameters = new DialogParameters<PermissionAssignmentPanelDialog>
     {
@@ -107,10 +119,16 @@ public partial class Users : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.Users.GetAllUsers();
+      if (_tenantId is not { } tenantId)
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        return;
+      }
+
+      var result = await ControlrApi.V1.Users.GetAllUsers(tenantId);
       if (result.IsSuccess)
       {
-        _users = result.Value;
+        _users = result.Value.Items;
       }
       else
       {

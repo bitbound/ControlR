@@ -1,11 +1,16 @@
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class DeviceGroupDetail : ComponentBase
 {
-  private InternalDtos.DeviceGroupDetailDto? _group;
+  private DeviceGroupDetailDto? _group;
   private bool _loading;
+  private Guid _tenantId;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -27,6 +32,14 @@ public partial class DeviceGroupDetail : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _tenantId = tenantId;
     await LoadGroup();
   }
 
@@ -40,6 +53,7 @@ public partial class DeviceGroupDetail : ComponentBase
     var parameters = new DialogParameters<AddDeviceGroupMembersDialog>
     {
       { x => x.GroupId, _group.Id },
+      { x => x.TenantId, _tenantId },
       { x => x.ExcludeDeviceIds, [.. _group.Members.Select(m => m.DeviceId)] }
     };
 
@@ -91,9 +105,10 @@ public partial class DeviceGroupDetail : ComponentBase
       return;
     }
 
-    var updateResult = await ControlrApi.Internal.DeviceGroups.Update(
+    var updateResult = await ControlrApi.V1.DeviceGroups.UpdateDeviceGroup(
       _group.Id,
-      new InternalDtos.UpdateDeviceGroupRequestDto(editResult.Name, editResult.Description));
+      _tenantId,
+      new UpdateDeviceGroupRequestDto(editResult.Name, editResult.Description));
 
     if (!updateResult.IsSuccess)
     {
@@ -112,7 +127,7 @@ public partial class DeviceGroupDetail : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.DeviceGroups.Get(Id);
+      var result = await ControlrApi.V1.DeviceGroups.GetDeviceGroup(Id, _tenantId);
       if (result.IsSuccess)
       {
         _group = result.Value;
@@ -135,7 +150,7 @@ public partial class DeviceGroupDetail : ComponentBase
     Snackbar.Add("Device group refreshed", Severity.Success);
   }
 
-  private async Task RemoveMember(InternalDtos.DeviceGroupMemberDto member)
+  private async Task RemoveMember(DeviceGroupMemberDto member)
   {
     if (_group is null)
     {
@@ -152,8 +167,8 @@ public partial class DeviceGroupDetail : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.DeviceGroups.RemoveMembers(
-      _group.Id, new InternalDtos.RemoveDeviceGroupMembersRequestDto([member.DeviceId]));
+    var result = await ControlrApi.V1.DeviceGroups.RemoveDeviceGroupMembers(
+      _group.Id, _tenantId, new RemoveDeviceGroupMembersRequestDto([member.DeviceId]));
 
     if (!result.IsSuccess)
     {

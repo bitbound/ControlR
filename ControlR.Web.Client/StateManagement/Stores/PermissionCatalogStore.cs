@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
+
 namespace ControlR.Web.Client.StateManagement.Stores;
 
 public interface IPermissionCatalogStore : IStoreBase<PermissionCatalogEntryDto>
@@ -6,6 +9,7 @@ public interface IPermissionCatalogStore : IStoreBase<PermissionCatalogEntryDto>
 
 public class PermissionCatalogStore(
   IControlrApi controlrApi,
+  AuthenticationStateProvider authState,
   ISnackbar snackbar,
   ILogger<PermissionCatalogStore> logger) : StoreBase<PermissionCatalogEntryDto>(controlrApi, snackbar, logger), IPermissionCatalogStore
 {
@@ -21,14 +25,21 @@ public class PermissionCatalogStore(
 
   protected override async Task RefreshImpl()
   {
-    var result = await ControlrApi.Internal.PermissionAssignments.GetCatalog();
+    var state = await authState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    var result = await ControlrApi.V1.PermissionAssignments.GetCatalog(tenantId);
     if (!result.IsSuccess)
     {
       Snackbar.Add(result.Reason, Severity.Error);
       return;
     }
 
-    SetItems(result.Value);
+    SetItems(result.Value.Items);
   }
 
   private static Guid StableId(string name)

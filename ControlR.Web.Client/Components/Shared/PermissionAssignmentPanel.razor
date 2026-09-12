@@ -1,6 +1,6 @@
 @using ControlR.Libraries.Api.Contracts.Enums
 @using ControlR.Web.Client.Components.Shared
-@using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal
+@using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments
 
 <MudPaper Class="pa-3 mb-3" Elevation="2">
   <MudGrid Spacing="2">
@@ -87,7 +87,7 @@
   </GridToolbar>
 </div>
 
-<MudDataGrid T="InternalDtos.PermissionAssignmentDto" Items="_assignments" Hover="true" Dense="true" Loading="_loading"
+<MudDataGrid T="PADtos.PermissionAssignmentDto" Items="_assignments" Hover="true" Dense="true" Loading="_loading"
                  MultiSelection="true" SelectOnRowClick="false" @bind-SelectedItems="_selectedAssignments" QuickFilter="QuickFilter">
   <NoRecordsContent>
     <MudText Typo="Typo.body1" Align="Align.Center" Class="py-4">

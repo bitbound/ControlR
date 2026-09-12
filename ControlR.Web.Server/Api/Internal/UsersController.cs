@@ -11,6 +11,7 @@ namespace ControlR.Web.Server.Api.Internal;
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class UsersController : ControllerBase
 {
+  [ApiDeprecated("/api/v1/users/{userId}/reset-password?tenantId=", Note = "The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.")]
   [HttpPost("{userId:guid}/reset-password")]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
   public async Task<ActionResult<InternalDtos.AdminResetPasswordResponseDto>> AdminResetPassword(
@@ -36,6 +37,7 @@ public class UsersController : ControllerBase
     return Ok(result.Value);
   }
 
+  [ApiDeprecated("/api/v1/users?tenantId=", Note = "The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.")]
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
   public async Task<ActionResult<InternalDtos.UserResponseDto>> Create(
@@ -158,6 +160,7 @@ public class UsersController : ControllerBase
     return CreatedAtAction(nameof(GetAll), new { id = user.Id }, response);
   }
 
+  [ApiDeprecated("/api/v1/users/{userId}/personal-access-tokens?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns 201.")]
   [HttpPost("{userId:guid}/personal-access-tokens")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersWrite)]
   public async Task<ActionResult<InternalDtos.CreatePersonalAccessTokenResponseDto>> CreateUserPersonalAccessToken(
@@ -193,6 +196,7 @@ public class UsersController : ControllerBase
     return Ok(result.Value);
   }
 
+  [ApiDeprecated("/api/v1/users/{userId}?tenantId=", Note = "The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.")]
   [HttpDelete("{userId:guid}")]
   [Authorize(Policy = PolicyNames.RequireTenantUsersDelete)]
   public async Task<IActionResult> Delete(
@@ -228,6 +232,7 @@ public class UsersController : ControllerBase
     return NoContent();
   }
 
+  [ApiDeprecated("/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   [HttpDelete("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersWrite)]
   public async Task<IActionResult> DeleteUserPersonalAccessToken(
@@ -258,6 +263,7 @@ public class UsersController : ControllerBase
     return NoContent();
   }
 
+  [ApiDeprecated("/api/v1/users?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns an Items envelope.")]
   [HttpGet]
   [Authorize(Policy = PolicyNames.RequireUsersRead)]
   public async Task<ActionResult<List<InternalDtos.UserResponseDto>>> GetAll(
@@ -304,6 +310,7 @@ public class UsersController : ControllerBase
       .ToList();
   }
 
+  [ApiDeprecated("/api/v1/users/{userId}/personal-access-tokens?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   [HttpGet("{userId:guid}/personal-access-tokens")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersRead)]
   public async Task<ActionResult<IEnumerable<InternalDtos.PersonalAccessTokenResponseDto>>> GetUserPersonalAccessTokens(
@@ -328,6 +335,7 @@ public class UsersController : ControllerBase
     return Ok(tokens);
   }
 
+  [ApiDeprecated("/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   [HttpPut("{userId:guid}/personal-access-tokens/{tokenId:guid}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokensOthersWrite)]
   public async Task<ActionResult<InternalDtos.PersonalAccessTokenResponseDto>> UpdateUserPersonalAccessToken(

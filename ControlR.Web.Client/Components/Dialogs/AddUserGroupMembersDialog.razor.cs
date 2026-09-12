@@ -1,13 +1,19 @@
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Users;
 
 namespace ControlR.Web.Client.Components.Dialogs;
 
 public partial class AddUserGroupMembersDialog : ComponentBase
 {
-  private List<InternalDtos.UserResponseDto> _allUsers = [];
+  private List<UserResponseDto> _allUsers = [];
   private bool _loading;
   private string _searchText = string.Empty;
   private HashSet<Guid> _selectedIds = [];
+  private Guid _tenantId;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -24,7 +30,7 @@ public partial class AddUserGroupMembersDialog : ComponentBase
   [Inject]
   public required ISnackbar Snackbar { get; init; }
 
-  private List<InternalDtos.UserResponseDto> FilteredUsers
+  private List<UserResponseDto> FilteredUsers
   {
     get
     {
@@ -49,10 +55,19 @@ public partial class AddUserGroupMembersDialog : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.Users.GetAllUsers();
+      var state = await AuthState.GetAuthenticationStateAsync();
+      if (!state.User.TryGetTenantId(out var tenantId))
+      {
+        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+        return;
+      }
+
+      _tenantId = tenantId;
+
+      var result = await ControlrApi.V1.Users.GetAllUsers(tenantId);
       if (result.IsSuccess)
       {
-        _allUsers = [.. result.Value];
+        _allUsers = [.. result.Value.Items];
       }
       else
       {
@@ -68,8 +83,8 @@ public partial class AddUserGroupMembersDialog : ComponentBase
 
   private async Task Add()
   {
-    var result = await ControlrApi.Internal.UserGroups.AddMembers(
-      GroupId, new InternalDtos.AddUserGroupMembersRequestDto([.. _selectedIds]));
+    var result = await ControlrApi.V1.UserGroups.AddUserGroupMembers(
+      GroupId, _tenantId, new AddUserGroupMembersRequestDto([.. _selectedIds]));
 
     if (!result.IsSuccess)
     {

@@ -1,7 +1,10 @@
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using ControlR.Web.Client.DataValidation;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceTags;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 
 namespace ControlR.Web.Client.Components.Tags;
 
@@ -11,6 +14,9 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   private string? _newTagName;
   private TagViewModel? _selectedTag;
   private string _tagSearchPattern = string.Empty;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IControlrApi ControlrApi { get; init; }
@@ -64,8 +70,14 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
+    if (await GetTenantId() is not { } tenantId)
+    {
+      Snackbar.Add("No tenant found for the current user", Severity.Error);
+      return;
+    }
+
     var createRequest = new TagCreateRequestDto(_newTagName, TagType.Permission);
-    var createResult = await ControlrApi.Internal.Tags.CreateTag(createRequest);
+    var createResult = await ControlrApi.V1.Tags.CreateTag(tenantId, createRequest);
     if (!createResult.IsSuccess)
     {
       Snackbar.Add(createResult.Reason, Severity.Error);
@@ -95,7 +107,13 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    var deleteResult = await ControlrApi.Internal.Tags.DeleteTag(_selectedTag.Id);
+    if (await GetTenantId() is not { } tenantId)
+    {
+      Snackbar.Add("No tenant found for the current user", Severity.Error);
+      return;
+    }
+
+    var deleteResult = await ControlrApi.V1.Tags.DeleteTag(_selectedTag.Id, tenantId);
     if (!deleteResult.IsSuccess)
     {
       Snackbar.Add(deleteResult.Reason, Severity.Error);
@@ -107,7 +125,13 @@ public partial class TagsTabContent : ComponentBase, IDisposable
     Snackbar.Add("Tag deleted", Severity.Success);
   }
 
-  private async Task HandleDeviceToggled((DeviceResponseDto device, bool isToggled) args)
+  private async Task<Guid?> GetTenantId()
+  {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
+  }
+
+  private async Task HandleDeviceToggled((InternalDtos.DeviceResponseDto device, bool isToggled) args)
   {
     if (_selectedTag is null)
     {
@@ -156,8 +180,14 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    var renameRequest = new TagRenameRequestDto(_selectedTag.Id, response);
-    var renameResult = await ControlrApi.Internal.Tags.RenameTag(renameRequest);
+    if (await GetTenantId() is not { } tenantId)
+    {
+      Snackbar.Add("No tenant found for the current user", Severity.Error);
+      return;
+    }
+
+    var renameResult = await ControlrApi.V1.Tags.UpdateTag(
+      _selectedTag.Id, tenantId, new UpdateTagRequestDto(response));
     if (!renameResult.IsSuccess)
     {
       Snackbar.Add(renameResult.Reason, Severity.Error);
@@ -173,10 +203,16 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   {
     try
     {
+      if (await GetTenantId() is not { } tenantId)
+      {
+        Snackbar.Add("No tenant found for the current user", Severity.Error);
+        return;
+      }
+
       if (isToggled)
       {
         var addRequest = new DeviceTagAddRequestDto(deviceId, tag.Id);
-        var addResult = await ControlrApi.Internal.DeviceTags.AddDeviceTag(addRequest);
+        var addResult = await ControlrApi.V1.DeviceTags.AddDeviceTag(tenantId, addRequest);
         if (!addResult.IsSuccess)
         {
           Snackbar.Add(addResult.Reason, Severity.Error);
@@ -186,7 +222,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       }
       else
       {
-        var removeResult = await ControlrApi.Internal.DeviceTags.RemoveDeviceTag(deviceId, tag.Id);
+        var removeResult = await ControlrApi.V1.DeviceTags.RemoveDeviceTag(deviceId, tag.Id, tenantId);
         if (!removeResult.IsSuccess)
         {
           Snackbar.Add(removeResult.Reason, Severity.Error);

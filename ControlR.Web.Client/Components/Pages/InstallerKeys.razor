@@ -1,3 +1,4 @@
+@using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys
 @attribute [Route(ClientRoutes.InstallerKeys)]
 @attribute [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
 
@@ -9,7 +10,7 @@
 
 <PrimaryTitle>Installer Keys</PrimaryTitle>
 
-<MudDataGrid T="AgentInstallerKeyDto"
+<MudDataGrid T="IKDtos.InstallerKeyDto"
              Items="@_keys"
              Hover="true"
              Breakpoint="Breakpoint.Sm"
@@ -60,6 +61,6 @@
         </TemplateColumn>
     </Columns>
     <PagerContent>
-        <MudDataGridPager T="AgentInstallerKeyDto" />
+        <MudDataGridPager T="IKDtos.InstallerKeyDto" />
     </PagerContent>
 </MudDataGrid>

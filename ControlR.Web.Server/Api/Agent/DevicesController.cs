@@ -4,7 +4,6 @@ using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.Authorization.Capabilities;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
-using CreateDeviceRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.CreateDeviceRequestDto;
 
 namespace ControlR.Web.Server.Api.Agent;
 
@@ -17,7 +16,7 @@ public class DevicesController : ControllerBase
 {
   [HttpPost]
   public async Task<ActionResult<InternalDtos.DeviceResponseDto>> CreateDevice(
-    [FromBody] CreateDeviceRequestDto requestDto,
+    [FromBody] InternalDtos.CreateDeviceRequestDto requestDto,
     [FromServices] AppDb appDb,
     [FromServices] UserManager<AppUser> userManager,
     [FromServices] IAgentInstallerKeyManager keyManager,

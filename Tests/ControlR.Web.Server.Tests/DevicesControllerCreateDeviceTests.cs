@@ -11,7 +11,6 @@ using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using CreateDeviceRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.CreateDeviceRequestDto;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -45,7 +44,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     {
       using var client = testServer.TestServer.CreateClient();
       var deviceDto = CreateDeviceDto(tenant.Id);
-      var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+      var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
       return await client.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
     });
 
@@ -85,7 +84,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Cross-Tenant Key");
 
     var deviceDto = CreateDeviceDto(tenantB.Id, deviceId: deviceInA.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(
       HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
@@ -140,7 +139,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     }
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(
       HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
@@ -177,7 +176,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Server SA Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(
       HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
@@ -212,7 +211,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Test Key");
 
     var updatedDeviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
-    var requestDto = new CreateDeviceRequestDto(updatedDeviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(updatedDeviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -255,7 +254,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Test Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id, platform: platform);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -296,7 +295,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     }
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -333,7 +332,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Service Account Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -362,7 +361,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Service Account Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -408,7 +407,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Service Account Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -442,7 +441,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Unauthorized Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: existingDevice.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -475,14 +474,14 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     {
       var deviceDto = CreateDeviceDto(tenant.Id);
       deviceIds.Add(deviceDto.Id);
-      var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+      var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
       var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     var deviceDto6 = CreateDeviceDto(tenant.Id);
-    var requestDto6 = new CreateDeviceRequestDto(deviceDto6, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto6 = new InternalDtos.CreateDeviceRequestDto(deviceDto6, installerKey.Id, installerKey.KeySecret, TagIds: null);
     var response6 = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto6, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response6.StatusCode);
@@ -509,7 +508,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Test Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -547,7 +546,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Test Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, deviceId: Guid.Empty);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -575,12 +574,12 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Single Use Key");
 
     var deviceDto1 = CreateDeviceDto(tenant.Id);
-    var requestDto1 = new CreateDeviceRequestDto(deviceDto1, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto1 = new InternalDtos.CreateDeviceRequestDto(deviceDto1, installerKey.Id, installerKey.KeySecret, TagIds: null);
     var response1 = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto1, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
 
     var deviceDto2 = CreateDeviceDto(tenant.Id);
-    var requestDto2 = new CreateDeviceRequestDto(deviceDto2, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto2 = new InternalDtos.CreateDeviceRequestDto(deviceDto2, installerKey.Id, installerKey.KeySecret, TagIds: null);
     var response2 = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto2, TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response2.StatusCode);
@@ -609,7 +608,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     testServer.TimeProvider.Advance(TimeSpan.FromHours(2));
 
     var deviceDto = CreateDeviceDto(tenant.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -637,7 +636,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Test Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, "wrong-secret", TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, "wrong-secret", TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -654,7 +653,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     var tenant = await services.CreateTestTenant();
 
     var deviceDto = CreateDeviceDto(tenant.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, Guid.NewGuid(), "some-secret", TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, Guid.NewGuid(), "some-secret", TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -685,7 +684,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Test Persistent Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -723,7 +722,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Single Use Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -769,7 +768,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
 
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
     var tags = new[] { tag1.Id, tag2.Id };
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: tags);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: tags);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -810,7 +809,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Time Based Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -841,7 +840,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Test Usage Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id, platform: platform);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
     var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
 
@@ -881,7 +880,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     for (var i = 0; i < 10; i++)
     {
       var deviceDto = CreateDeviceDto(tenant.Id);
-      var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
+      var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: null);
 
       var response = await httpClient.PostAsJsonAsync(HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -942,7 +941,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
     }
 
     var deviceDto = CreateDeviceDto(tenant.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: [tagId]);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: [tagId]);
 
     var response = await httpClient.PostAsJsonAsync(
       HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
@@ -985,7 +984,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "Server SA Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: [tagId]);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: [tagId]);
 
     var response = await httpClient.PostAsJsonAsync(
       HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
@@ -1025,7 +1024,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "No-Tags Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: [tagId]);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: [tagId]);
 
     var response = await httpClient.PostAsJsonAsync(
       HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);
@@ -1072,7 +1071,7 @@ public class DevicesControllerCreateDeviceTests(ITestOutputHelper testOutput)
       friendlyName: "With-Tags Key");
 
     var deviceDto = CreateDeviceDto(tenant.Id);
-    var requestDto = new CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: [tagId]);
+    var requestDto = new InternalDtos.CreateDeviceRequestDto(deviceDto, installerKey.Id, installerKey.KeySecret, TagIds: [tagId]);
 
     var response = await httpClient.PostAsJsonAsync(
       HttpConstants.Agent.DevicesEndpoint, requestDto, TestContext.Current.CancellationToken);

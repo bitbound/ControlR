@@ -72,7 +72,7 @@ public partial class FileSystem : JsInteropableComponent
     return $"{path1.TrimEnd(pathSeparator.ToCharArray())}{pathSeparator}{path2.TrimStart(pathSeparator.ToCharArray())}";
   }
 
-  private static TreeItemData<string> ConvertToTreeItemData(FileSystemEntryDto dto)
+  private static TreeItemData<string> ConvertToTreeItemData(InternalDtos.FileSystemEntryDto dto)
   {
     return new TreeItemData<string>
     {
@@ -83,7 +83,7 @@ public partial class FileSystem : JsInteropableComponent
     };
   }
 
-  private static FileSystemEntryViewModel ConvertToViewModel(FileSystemEntryDto dto)
+  private static FileSystemEntryViewModel ConvertToViewModel(InternalDtos.FileSystemEntryDto dto)
   {
     return new FileSystemEntryViewModel
     {
@@ -109,7 +109,7 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       // Get path segments from the agent to validate and parse the path correctly
-      var pathSegmentsRequest = new GetPathSegmentsRequestDto(DeviceId, targetPath);
+      var pathSegmentsRequest = new InternalDtos.GetPathSegmentsRequestDto(DeviceId, targetPath);
       var pathSegmentsResult = await ControlrApi.Internal.DeviceFileSystem.GetPathSegments(pathSegmentsRequest);
 
       if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)
@@ -192,7 +192,7 @@ public partial class FileSystem : JsInteropableComponent
   {
     try
     {
-      var request = new FileDeleteRequestDto(DeviceId, item.FullPath, item.IsDirectory);
+      var request = new InternalDtos.FileDeleteRequestDto(DeviceId, item.FullPath, item.IsDirectory);
       var result = await ControlrApi.Internal.DeviceFileSystem.DeleteFile(request);
 
       if (!result.IsSuccess)
@@ -297,7 +297,7 @@ public partial class FileSystem : JsInteropableComponent
       IsLoadingContents = true;
       await InvokeAsync(StateHasChanged);
 
-      var request = new GetDirectoryContentsRequestDto(DeviceId, directoryPath);
+      var request = new InternalDtos.GetDirectoryContentsRequestDto(DeviceId, directoryPath);
       var result = await ControlrApi.Internal.DeviceFileSystem.GetDirectoryContents(request);
       if (result is { IsSuccess: true, Value: not null })
       {
@@ -344,7 +344,7 @@ public partial class FileSystem : JsInteropableComponent
       IsLoading = true;
       StateHasChanged();
 
-      var request = new GetRootDrivesRequestDto(DeviceId);
+      var request = new InternalDtos.GetRootDrivesRequestDto(DeviceId);
       var result = await ControlrApi.Internal.DeviceFileSystem.GetRootDrives(request);
       if (result is { IsSuccess: true, Value: not null })
       {
@@ -387,7 +387,7 @@ public partial class FileSystem : JsInteropableComponent
         return [];
       }
 
-      var request = new GetSubdirectoriesRequestDto(DeviceId, parentValue);
+      var request = new InternalDtos.GetSubdirectoriesRequestDto(DeviceId, parentValue);
       var result = await ControlrApi.Internal.DeviceFileSystem.GetSubdirectories(request);
       if (result is { IsSuccess: true, Value: not null })
       {
@@ -612,7 +612,7 @@ public partial class FileSystem : JsInteropableComponent
       StateHasChanged();
 
       // Create the directory using the new API structure
-      var request = new CreateDirectoryRequestDto(DeviceId, SelectedPath, folderName);
+      var request = new InternalDtos.CreateDirectoryRequestDto(DeviceId, SelectedPath, folderName);
       var result = await ControlrApi.Internal.DeviceFileSystem.CreateDirectory(request);
       if (result.IsSuccess)
       {
@@ -680,7 +680,7 @@ public partial class FileSystem : JsInteropableComponent
     try
     {
       // Use the agent to get path segments, which will properly handle the parent path
-      var pathSegmentsRequest = new GetPathSegmentsRequestDto(DeviceId, SelectedPath);
+      var pathSegmentsRequest = new InternalDtos.GetPathSegmentsRequestDto(DeviceId, SelectedPath);
       var pathSegmentsResult = await ControlrApi.Internal.DeviceFileSystem.GetPathSegments(pathSegmentsRequest);
 
       if (!pathSegmentsResult.IsSuccess || pathSegmentsResult.Value is null)

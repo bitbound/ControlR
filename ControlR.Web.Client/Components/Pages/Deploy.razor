@@ -1,3 +1,6 @@
+@using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers
+@using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys
+@using TagsDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags
 @attribute [Route(ClientRoutes.Deploy)]
 @attribute [Authorize(Policy = PolicyNames.RequireAgentInstall)]
 
@@ -76,7 +79,7 @@
             Key secrets are not persisted to the database in a reversible way.
             You must provide the key secret in order to re-use it.
           </MudText>
-          <MudSelect T="AgentInstallerKeyDto" Label="Select Key" @bind-Value="_selectedExistingKey"
+          <MudSelect T="IKDtos.InstallerKeyDto" Label="Select Key" @bind-Value="_selectedExistingKey"
             ToStringFunc="@(GetInstallerKeyDisplay)">
             @foreach (var key in _existingKeys)
             {
@@ -197,7 +200,7 @@ else
         <MudText Typo="Typo.body1" GutterBottom>
           Optionally assign the device to a customer upon installation.
         </MudText>
-        <MudSelect T="CustomerDto" Value="_selectedCustomer" ValueChanged="@OnCustomerChanged" Label="Customer" Clearable
+        <MudSelect T="CustDtos.CustomerDto" Value="_selectedCustomer" ValueChanged="@OnCustomerChanged" Label="Customer" Clearable
           ToStringFunc="@(c => c?.Name ?? "")">
           @foreach (var customer in _customers)
           {
@@ -234,7 +237,7 @@ else
           </MudAlert>
         }
 
-        <MudSelect T="TagResponseDto" @bind-SelectedValues="_selectedTags" Disabled="!_addTags" Immediate MultiSelection
+        <MudSelect T="TagsDtos.TagResponseDto" @bind-SelectedValues="_selectedTags" Disabled="!_addTags" Immediate MultiSelection
           FullWidth="false" Text="@(SelectedTagsText)" Label="Tags">
           @foreach (var tag in _tags)
           {

@@ -6,14 +6,14 @@ internal class PublicServerSettingsProviderClient(
 {
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly ILogger<PublicServerSettingsProviderClient> _logger = logger;
-  private Task<PublicServerSettings>? _cachedTask;
+  private Task<InternalDtos.PublicServerSettings>? _cachedTask;
 
-  public Task<PublicServerSettings> GetPublicServerSettings()
+  public Task<InternalDtos.PublicServerSettings> GetPublicServerSettings()
   {
     return _cachedTask ??= FetchAsync();
   }
 
-  private async Task<PublicServerSettings> FetchAsync()
+  private async Task<InternalDtos.PublicServerSettings> FetchAsync()
   {
     try
     {
@@ -30,7 +30,7 @@ internal class PublicServerSettingsProviderClient(
       _logger.LogError(ex, "Error while getting public server settings.");
     }
 
-    return new PublicServerSettings(
+    return new InternalDtos.PublicServerSettings(
       IsPublicRegistrationEnabled: false,
       DisableDesktopPreview: false);
   }
