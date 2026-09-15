@@ -22,8 +22,7 @@ public class UserStore(
 
   protected override async Task RefreshImpl()
   {
-    var state = await _authState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (await _authState.GetTenantId() is not { } tenantId)
     {
       return;
     }

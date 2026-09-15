@@ -31,10 +31,8 @@ public partial class EffectivePermissions : ComponentBase
   {
     try
     {
-      var state = await AuthState.GetAuthenticationStateAsync();
-      if (!state.User.TryGetTenantId(out var tenantId))
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
-        Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
         return;
       }
 

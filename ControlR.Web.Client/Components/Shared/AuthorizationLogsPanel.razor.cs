@@ -37,10 +37,8 @@ public partial class AuthorizationLogsPanel
 
   protected override async Task OnInitializedAsync()
   {
-    var state = await AuthState.GetAuthenticationStateAsync();
-    if (!state.User.TryGetTenantId(out var callerTenantId))
+    if (await AuthState.GetTenantId(Snackbar) is not { } callerTenantId)
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
       return;
     }
 

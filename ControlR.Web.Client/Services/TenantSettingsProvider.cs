@@ -55,7 +55,7 @@ internal class TenantSettingsProvider(
       return _settings;
     }
 
-    if (await GetTenantId() is not { } tenantId)
+    if (await _authState.GetTenantId() is not { } tenantId)
     {
       return CreateDefaultSettings();
     }
@@ -113,19 +113,12 @@ internal class TenantSettingsProvider(
       defaults.NotifyUserOnSessionStart);
   }
 
-  private async Task<Guid?> GetTenantId()
-  {
-    var state = await _authState.GetAuthenticationStateAsync();
-    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
-  }
-
   private async Task<bool> SetSetting<T>(string settingName, T newValue)
   {
     try
     {
-      if (await GetTenantId() is not { } tenantId)
+      if (await _authState.GetTenantId(_snackbar) is not { } tenantId)
       {
-        _snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
         return false;
       }
 

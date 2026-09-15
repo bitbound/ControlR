@@ -74,9 +74,8 @@ public partial class PermissionAssignmentPanel : ComponentBase
       _currentUserId = currentUserId;
     }
 
-    if (!state.User.TryGetTenantId(out var tenantId))
+    if (!state.User.TryGetTenantId(Snackbar, out var tenantId))
     {
-      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
       return;
     }
 

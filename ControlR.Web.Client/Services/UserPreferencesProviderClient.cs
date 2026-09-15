@@ -32,7 +32,7 @@ internal class UserPreferencesProviderClient(
         return _preferences;
       }
 
-      if (await GetTenantId() is not { } tenantId)
+      if (await _authState.GetTenantId() is not { } tenantId)
       {
         return CreateDefaultPreferences();
       }
@@ -59,7 +59,7 @@ internal class UserPreferencesProviderClient(
   {
     try
     {
-      if (await GetTenantId() is not { } tenantId)
+      if (await _authState.GetTenantId() is not { } tenantId)
       {
         _logger.LogWarning("Cannot set preference {PreferenceName} - no tenant claim on the signed-in user.", preferenceName);
         return;
@@ -122,11 +122,5 @@ internal class UserPreferencesProviderClient(
       defaults.ThemeMode,
       defaults.UserDisplayName,
       defaults.ViewMode);
-  }
-
-  private async Task<Guid?> GetTenantId()
-  {
-    var state = await _authState.GetAuthenticationStateAsync();
-    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
   }
 }

@@ -3,7 +3,7 @@
 - ⚠️ You will need to log out and back in if you have "Remember Me" enabled. ⚠️
   - A pre-existing auth cookie will lack the new permission claims.
 - Some of the routes and DTOs used in the `/api/v1/*` endpoints have been changed.
-  - There will be no more breaking changes to the `/api/v1/*` endpoints after this release.
+  - There should be no more breaking changes to the `/api/v1/*` endpoints after this release.
 - Although roles were migrated to permission presets, user tags that mapped users to devices were removed.
   - If you were using user tags to control access to devices, you will need to migrate to the new permissions system.
 
@@ -37,7 +37,6 @@
 
 ## Fixes
 
-- Device search and device string column filters now treat `%` and `_` in the text you type as literal characters instead of SQL `LIKE` wildcards (PostgreSQL). Previously a device search of `%` matched every device, and `host_1` also matched `hostX1`.
 - The `ControlR.ApiClient` background token-refresh no longer ends the session on transient failures.
 - The `ControlR.ApiClient` interactive session no longer keeps reporting itself as signed in after the server rejects its refresh token during an ordinary API call.
 - Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`.
@@ -45,9 +44,7 @@
 
 ## Removals
 
-- The unused `server.alerts.read` permission is removed, and upgrading deletes any grant rows that
-  still name it. Every signed-in user now sees the server alert banner, so there was nothing left for
-  the permission to gate.
+None.
 
 ## Internal
 
