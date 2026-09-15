@@ -13,6 +13,7 @@ namespace ControlR.Web.Server.Api.V1;
 public class TenantsController(ITenantProvisioningService tenantProvisioningService) : ControllerBase
 {
   [HttpPost]
+  [EndpointSummary("Creates a new tenant.")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsWrite)]
   [ProducesResponseType<CreateTenantResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -31,6 +32,7 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
   }
 
   [HttpDelete("{tenantId:guid}")]
+  [EndpointSummary("Deletes a tenant by its identifier.")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsDelete)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -49,6 +51,7 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
   }
 
   [HttpGet("{tenantId:guid}")]
+  [EndpointSummary("Gets a single tenant by its identifier.")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsRead)]
   [ProducesResponseType<GetTenantResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -66,6 +69,7 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
   }
 
   [HttpGet]
+  [EndpointSummary("Gets all tenants.")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsRead)]
   [ProducesResponseType<TenantsResponseDto>(StatusCodes.Status200OK)]
   public async Task<ActionResult<TenantsResponseDto>> GetAll(
@@ -85,6 +89,7 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
   }
 
   [HttpPut("{tenantId:guid}")]
+  [EndpointSummary("Updates an existing tenant's name.")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsWrite)]
   [ProducesResponseType<GetTenantResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]

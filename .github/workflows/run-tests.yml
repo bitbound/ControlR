@@ -37,6 +37,11 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      # The committed documents are removed before the build, so a build that stops generating them fails the
+      # freshness step below instead of comparing the committed files against themselves.
+      - name: Remove committed OpenAPI documents
+        run: Remove-Item -Path "ControlR.Web.Server/ControlR.Web.Server_*.json" -ErrorAction SilentlyContinue
+
       - name: Build Test Projects
         run: |
           $excludedProjects = @(
@@ -56,10 +61,40 @@ jobs:
 
           foreach ($project in $testProjects) {
             Write-Host "Building $($project.FullName)..."
-            dotnet build $project.FullName -c Release
+            # Release builds do not regenerate the OpenAPI documents unless asked, so the server project build
+            # that these test projects pull in is also what refreshes the committed documents.
+            dotnet build $project.FullName -c Release -p:OpenApiGenerateDocumentsOnBuild=true
             if ($LASTEXITCODE -ne 0) {
               throw "Build failed for $($project.FullName)."
             }
+          }
+
+      - name: Fail if the committed documents are stale
+        run: |
+          $documents = @(
+            "ControlR.Web.Server/ControlR.Web.Server_internal.json",
+            "ControlR.Web.Server/ControlR.Web.Server_v1.json"
+          )
+
+          foreach ($document in $documents) {
+            if (-not (Test-Path $document)) {
+              throw "The build did not produce $document, so the committed documents cannot be verified."
+            }
+          }
+
+          # git diff ignores untracked files, so a document that was never committed would pass while nothing checks it.
+          $untracked = @(git ls-files --others --exclude-standard -- "ControlR.Web.Server/ControlR.Web.Server_*.json")
+          if ($untracked.Count -gt 0) {
+            Write-Host "::error::The following generated OpenAPI documents are not committed: $($untracked -join ', ')"
+            exit 1
+          }
+
+          git --no-pager diff --exit-code -- $documents
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error::The committed OpenAPI documents are out of date with current routing and annotations."
+            Write-Host "Regenerate and commit them with:"
+            Write-Host "  dotnet build ControlR.Web.Server/ControlR.Web.Server.csproj -c Debug"
+            exit 1
           }
 
       - name: Run Tests

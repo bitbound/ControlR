@@ -182,15 +182,13 @@ public class AuthorizationChangeLogsController(
       {
         // Partial ID query: match against the canonical text form of the UUID,
         // case-insensitively (ILIKE). Escape LIKE wildcards so user input such as '%' or '_'
-        // is matched literally instead of acting as a wildcard. ILIKE is PostgreSQL syntax.
-        // PostgreSQL is this application's only relational provider.
-        var escaped = trimmed
-          .Replace("\\", "\\\\")
-          .Replace("%", "\\%")
-          .Replace("_", "\\_");
+        // is matched literally instead of acting as a wildcard. The escape character must be
+        // passed to ILIKE as well, or PostgreSQL treats the backslashes as inert.
+        // ILIKE is PostgreSQL syntax. PostgreSQL is this application's only relational provider.
+        var escaped = trimmed.EscapeLikePattern();
         query = query.Where(x =>
-          (x.ActorPrincipalId != null && EF.Functions.ILike(x.ActorPrincipalId.Value.ToString(), $"%{escaped}%")) ||
-          (x.TargetId != null && EF.Functions.ILike(x.TargetId.Value.ToString(), $"%{escaped}%")));
+          (x.ActorPrincipalId != null && EF.Functions.ILike(x.ActorPrincipalId.Value.ToString(), $"%{escaped}%", PostgresQueryHelper.LikeEscapeCharacter)) ||
+          (x.TargetId != null && EF.Functions.ILike(x.TargetId.Value.ToString(), $"%{escaped}%", PostgresQueryHelper.LikeEscapeCharacter)));
       }
       else
       {
