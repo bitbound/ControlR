@@ -189,7 +189,7 @@ internal class TerminalSession(
     }
 
     // Start the PowerShell execution asynchronously and return OK immediately
-    ExecutePowerShellCommandAsync(input, cancellationToken).Forget();
+    ExecutePowerShellCommand(input, cancellationToken).Forget();
 
     return Result.Ok().AsTaskResult();
   }
@@ -265,7 +265,7 @@ internal class TerminalSession(
       IsDisposed = true;
     }
   }
-  private async Task ExecutePowerShellCommandAsync(string input, CancellationToken cancellationToken)
+  private async Task ExecutePowerShellCommand(string input, CancellationToken cancellationToken)
   {
     await _writeLock.WaitAsync(cancellationToken);
 
