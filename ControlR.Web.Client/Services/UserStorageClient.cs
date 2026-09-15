@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ControlR.Web.Client.Services;
 
@@ -10,8 +11,10 @@ public interface IUserStorageClient
 
 internal class UserStorageClient(
   IControlrApi controlrApi,
+  AuthenticationStateProvider authState,
   ILogger<UserStorageClient> logger) : IUserStorageClient
 {
+  private readonly AuthenticationStateProvider _authState = authState;
   private readonly IControlrApi _controlrApi = controlrApi;
   private readonly ILogger<UserStorageClient> _logger = logger;
 
@@ -24,7 +27,13 @@ internal class UserStorageClient(
       return cachedValue;
     }
 
-    var result = await _controlrApi.Internal.UserStorage.GetUserStorageItem(key, cancellationToken);
+    if (await GetTenantId() is not { } tenantId)
+    {
+      _logger.LogWarning("Cannot get storage key '{Key}' - no tenant claim on the signed-in user.", key);
+      return null;
+    }
+
+    var result = await _controlrApi.V1.UserStorage.GetUserStorageItem(key, tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       _logger.LogWarning("Failed to get storage key '{Key}'. Reason: {Reason}", key, result.Reason);
@@ -42,7 +51,13 @@ internal class UserStorageClient(
 
   public async Task SetItem(string key, string value, CancellationToken cancellationToken)
   {
-    var response = await _controlrApi.Internal.UserStorage.SetUserStorageItem(new(key, value), cancellationToken);
+    if (await GetTenantId() is not { } tenantId)
+    {
+      _logger.LogWarning("Cannot set storage key '{Key}' - no tenant claim on the signed-in user.", key);
+      return;
+    }
+
+    var response = await _controlrApi.V1.UserStorage.SetUserStorageItem(tenantId, new(key, value), cancellationToken);
     if (!response.IsSuccess)
     {
       _logger.LogError("Failed to set storage key '{Key}'. Reason: {Reason}", key, response.Reason);
@@ -54,5 +69,11 @@ internal class UserStorageClient(
     {
       _storage[key] = responseValue;
     }
+  }
+
+  private async Task<Guid?> GetTenantId()
+  {
+    var state = await _authState.GetAuthenticationStateAsync();
+    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
   }
 }

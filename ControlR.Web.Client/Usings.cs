@@ -9,7 +9,7 @@ global using ControlR.Libraries.Shared.Diagnostics;
 global using ControlR.Libraries.Shared.Primitives;
 global using ControlR.Libraries.Shared.Extensions;
 global using ControlR.Libraries.Shared.Services.Http;
-global using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+global using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 global using ControlR.ApiClient.Interfaces.Internal;
 global using ControlR.Libraries.Signalr.Client;
 global using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;

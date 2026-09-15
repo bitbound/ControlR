@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Client.Helpers;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
 namespace ControlR.Web.Client.Tests;
 

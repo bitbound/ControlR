@@ -13,6 +13,7 @@ using ControlR.Web.Client.Services;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.Authorization;
+using ControlR.Web.Server.Services.DeviceFileSystem;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Services.Locks;
 using System.Globalization;
@@ -243,6 +244,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
+    builder.Services.AddScoped<IDeviceFileSystemService, DeviceFileSystemService>();
     builder.Services.AddScoped<IEffectiveUserPreferencesResolver, EffectiveUserPreferencesResolver>();
     builder.Services.AddScoped<IUserPreferencesManager, UserPreferencesManager>();
     builder.Services.AddScoped<ITenantSettingsManager, TenantSettingsManager>();

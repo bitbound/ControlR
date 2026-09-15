@@ -1222,16 +1222,16 @@ public class ViewerHub(
       return;
     }
 
+    // The server alert is a banner every signed-in user is meant to see, so the alerts group
+    // takes no permission. Only telemetry stays gated.
+    await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAlerts());
+
     var serverResource = new ResourceDescriptor(PermissionScopeKind.Server);
     var decisions = await _permissionEvaluator.EvaluateMany(
       principal,
-      [PermissionNames.ServerAlertsRead, PermissionNames.ServerTelemetryRead],
+      [PermissionNames.ServerTelemetryRead],
       serverResource,
       Context.ConnectionAborted);
-    if (decisions[PermissionNames.ServerAlertsRead].Allowed)
-    {
-      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAlerts());
-    }
 
     if (decisions[PermissionNames.ServerTelemetryRead].Allowed)
     {

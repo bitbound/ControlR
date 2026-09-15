@@ -78,7 +78,6 @@ public static class PermissionCatalog
     var deviceGroup = ImmutableArray.Create(PermissionScopeKind.DeviceGroup, PermissionScopeKind.Tenant);
     var userGroup = ImmutableArray.Create(PermissionScopeKind.UserGroup, PermissionScopeKind.Tenant);
 
-    Add(PermissionNames.ServerAlertsRead, "Read Server Alerts", "View server alerts and notifications.", server);
     Add(PermissionNames.ServerAuthorizationLogsRead, "Read Server Authorization Logs", "View authorization change logs across all tenants, including server-scoped entries.", server);
     Add(PermissionNames.ServerPermissionsRead, "Read Server Permission Assignments", "View server-scoped permission assignments.", server);
     Add(PermissionNames.ServerPermissionsWrite, "Manage Server Permission Assignments", "Create, update, and delete server-scoped permission assignments.", server, selfRemovable: false);

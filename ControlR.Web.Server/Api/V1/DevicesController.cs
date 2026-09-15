@@ -9,7 +9,7 @@ using ControlR.Web.Server.Services.Authorization.Capabilities;
 using ControlR.Web.Server.Services.DeviceManagement;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceResponseDto;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 
 namespace ControlR.Web.Server.Api.V1;
 
@@ -132,6 +132,7 @@ public class DevicesController(IDeviceAccessScopeResolver deviceAccessScopeResol
   {
     var query = await appDb.Devices
       .Include(x => x.Tags)
+      .Include(x => x.Customer)
       .AsSplitQuery()
       .ApplyDeviceAccessScope(User, _deviceAccessScopeResolver, cancellationToken);
 
@@ -219,7 +220,9 @@ public class DevicesController(IDeviceAccessScopeResolver deviceAccessScopeResol
     [FromRoute] Guid deviceId,
     CancellationToken cancellationToken)
   {
-    var device = await appDb.Devices.FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+    var device = await appDb.Devices
+      .Include(x => x.Customer)
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
     if (device is null)
     {
       return NotFound();
@@ -266,6 +269,8 @@ public class DevicesController(IDeviceAccessScopeResolver deviceAccessScopeResol
     var authorizedQuery = await appDb.Devices.AsQueryable()
       .ApplyDeviceAccessScope(User, _deviceAccessScopeResolver, cancellationToken);
 
+    var anyDevices = await authorizedQuery.AnyAsync(cancellationToken);
+
     var filteredQuery = authorizedQuery
       .FilterBySearchText(requestDto.SearchText, isRelationalDatabase)
       .FilterByOnlineOffline(requestDto.HideOfflineDevices)
@@ -279,6 +284,7 @@ public class DevicesController(IDeviceAccessScopeResolver deviceAccessScopeResol
       requestDto.DeviceGroupFilterMatchMode,
       requestDto.ShowOnlyUntaggedDevices,
       requestDto.ShowOnlyUngroupedDevices);
+    var filterCounts = await GetFilterCounts(scopedQuery, cancellationToken);
     var totalCount = await scopedQuery.CountAsync(cancellationToken);
 
     // Clamp the page so the skip multiplication cannot overflow int (which would
@@ -289,6 +295,7 @@ public class DevicesController(IDeviceAccessScopeResolver deviceAccessScopeResol
     var devices = await scopedQuery
       .ApplySorting(requestDto.SortDefinitions)
       .Include(x => x.Tags)
+      .Include(x => x.Customer)
       .AsSplitQuery()
       .Skip(clampedPage * clampedPageSize)
       .Take(clampedPageSize)
@@ -303,6 +310,8 @@ public class DevicesController(IDeviceAccessScopeResolver deviceAccessScopeResol
 
     var response = new V1Dtos.DeviceSearchResponseDto
     {
+      AnyDevicesForUser = anyDevices,
+      FilterCounts = filterCounts,
       Items = pagedDtos,
       TotalItems = totalCount
     };
@@ -356,5 +365,24 @@ public class DevicesController(IDeviceAccessScopeResolver deviceAccessScopeResol
 
     var isOutdated = await agentVersionProvider.IsAgentOutdated(device.AgentVersion, cancellationToken);
     return device.ToV1ResponseDto(isOutdated);
+  }
+
+  private static async Task<V1Dtos.DeviceSearchFilterCountsDto> GetFilterCounts(
+    IQueryable<Device> query,
+    CancellationToken cancellationToken)
+  {
+    return await query
+      .Select(x => new { IsTagged = x.Tags!.Any(), x.IsOnline })
+      .GroupBy(_ => 1)
+      .OrderBy(g => g.Key)
+      .Select(group => new V1Dtos.DeviceSearchFilterCountsDto
+      {
+        TaggedDevices = group.Count(x => x.IsTagged),
+        UntaggedDevices = group.Count(x => !x.IsTagged),
+        OnlineDevices = group.Count(x => x.IsOnline),
+        OfflineDevices = group.Count(x => !x.IsOnline)
+      })
+      .FirstOrDefaultAsync(cancellationToken)
+      ?? new V1Dtos.DeviceSearchFilterCountsDto();
   }
 }

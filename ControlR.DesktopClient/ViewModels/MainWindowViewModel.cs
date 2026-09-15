@@ -35,11 +35,11 @@ public partial class MainWindowViewModel(
   protected override async Task OnInitializeAsync()
   {
     await base.OnInitializeAsync();
-    await InitializeNavigationItemsAsync();
+    await InitializeNavigationItems();
     await _navigationProvider.NavigateTo<IConnectionsViewModel>();
   }
 
-  private async Task InitializeNavigationItemsAsync()
+  private async Task InitializeNavigationItems()
   {
     if (NavigationItems.Count > 0)
     {

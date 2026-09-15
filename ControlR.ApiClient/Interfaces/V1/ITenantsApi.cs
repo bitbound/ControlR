@@ -8,10 +8,16 @@ public interface ITenantsApi
 {
   [ApiRoute($"{HttpConstants.V1.TenantsEndpoint}", "POST")]
   Task<ApiResult<CreateTenantResponseDto>> CreateTenant(CreateTenantRequestDto request, CancellationToken cancellationToken = default);
+
   [ApiRoute($"{HttpConstants.V1.TenantsEndpoint}/{{tenantId}}", "DELETE")]
   Task<ApiResult> DeleteTenant(Guid tenantId, CancellationToken cancellationToken = default);
+
+  [ApiRoute($"{HttpConstants.V1.TenantsEndpoint}", "GET")]
+  Task<ApiResult<TenantsResponseDto>> GetAllTenants(CancellationToken cancellationToken = default);
+
   [ApiRoute($"{HttpConstants.V1.TenantsEndpoint}/{{tenantId}}", "GET")]
   Task<ApiResult<GetTenantResponseDto>> GetTenant(Guid tenantId, CancellationToken cancellationToken = default);
+
   [ApiRoute($"{HttpConstants.V1.TenantsEndpoint}/{{tenantId}}", "PUT")]
   Task<ApiResult<GetTenantResponseDto>> UpdateTenant(Guid tenantId, UpdateTenantRequestDto request, CancellationToken cancellationToken = default);
 }

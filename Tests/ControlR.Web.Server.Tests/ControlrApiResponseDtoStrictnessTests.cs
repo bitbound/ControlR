@@ -8,7 +8,6 @@ using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using DeviceResponseDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.DeviceResponseDto;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -83,7 +82,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
     };
 
     var invalidArrayNode = JsonSerializer.SerializeToNode(validDtos)?.AsArray() ?? throw new InvalidOperationException("Failed to create JSON array node.");
-    invalidArrayNode[1]![nameof(DeviceResponseDto.Name)] = null;
+    invalidArrayNode[1]![nameof(InternalDtos.DeviceResponseDto.Name)] = null;
 
     var api = CreateClient(
       invalidArrayNode.ToJsonString(),
@@ -91,7 +90,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       disableStreamingResponseDtoStrictness: true);
 
     using var testCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-    var streamedDevices = new List<DeviceResponseDto>();
+    var streamedDevices = new List<InternalDtos.DeviceResponseDto>();
     await foreach (var device in api.Devices.GetAllDevices(testCts.Token))
     {
       streamedDevices.Add(device);
@@ -111,7 +110,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
     };
 
     var invalidArrayNode = JsonSerializer.SerializeToNode(validDtos)?.AsArray() ?? throw new InvalidOperationException("Failed to create JSON array node.");
-    invalidArrayNode[1]![nameof(DeviceResponseDto.Name)] = null;
+    invalidArrayNode[1]![nameof(InternalDtos.DeviceResponseDto.Name)] = null;
 
     var api = CreateClient(
       invalidArrayNode.ToJsonString(),
@@ -126,7 +125,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       }
     });
 
-    Assert.Contains(nameof(DeviceResponseDto.Name), exception.Message, StringComparison.Ordinal);
+    Assert.Contains(nameof(InternalDtos.DeviceResponseDto.Name), exception.Message, StringComparison.Ordinal);
   }
 
   [Fact]
@@ -134,7 +133,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
   {
     var validDto = CreateDeviceResponseDto(2);
     var invalidJson = JsonSerializer.SerializeToNode(validDto)?.AsObject() ?? throw new InvalidOperationException("Failed to create JSON node.");
-    invalidJson[nameof(DeviceResponseDto.Name)] = null;
+    invalidJson[nameof(InternalDtos.DeviceResponseDto.Name)] = null;
 
     var api = CreateClient(
       invalidJson.ToJsonString(),
@@ -154,7 +153,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
   {
     var validDto = CreateDeviceResponseDto(1);
     var invalidJson = JsonSerializer.SerializeToNode(validDto)?.AsObject() ?? throw new InvalidOperationException("Failed to create JSON node.");
-    invalidJson[nameof(DeviceResponseDto.Name)] = null;
+    invalidJson[nameof(InternalDtos.DeviceResponseDto.Name)] = null;
 
     var api = CreateClient(
       invalidJson.ToJsonString(),
@@ -166,7 +165,7 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
 
     Assert.False(result.IsSuccess);
     Assert.NotNull(result.Reason);
-    Assert.Contains(nameof(DeviceResponseDto.Name), result.Reason, StringComparison.Ordinal);
+    Assert.Contains(nameof(InternalDtos.DeviceResponseDto.Name), result.Reason, StringComparison.Ordinal);
   }
 
   private static IControlrInternalApi CreateClient(
@@ -199,9 +198,9 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
     return controlrApi.InternalApi;
   }
 
-  private static DeviceResponseDto CreateDeviceResponseDto(int index)
+  private static InternalDtos.DeviceResponseDto CreateDeviceResponseDto(int index)
   {
-    return new DeviceResponseDto(
+    return new InternalDtos.DeviceResponseDto(
       Name: $"Device {index}",
       AgentVersion: "1.0.0",
       CpuUtilization: 10,

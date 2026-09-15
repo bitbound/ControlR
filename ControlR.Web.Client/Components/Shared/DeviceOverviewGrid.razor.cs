@@ -15,7 +15,7 @@ public partial class DeviceOverviewGrid
   public required IControlrApi ControlrApi { get; init; }
   [Parameter]
   [EditorRequired]
-  public required DeviceResponseDto Device { get; init; }
+  public required InternalDtos.DeviceResponseDto Device { get; init; }
   [Inject]
   public required IDeviceStore DeviceStore { get; init; }
   [Inject]
@@ -123,7 +123,7 @@ public partial class DeviceOverviewGrid
 
     try
     {
-      var request = new UpdateDeviceAliasRequestDto(Device.Id, _aliasValue);
+      var request = new InternalDtos.UpdateDeviceAliasRequestDto(Device.Id, _aliasValue);
       var result = await ControlrApi.Internal.Devices.UpdateDeviceAlias(request);
 
       if (result.IsSuccess)

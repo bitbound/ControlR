@@ -77,23 +77,6 @@ public record ReplacePermissionAssignmentsRequestDto(
   [property: MaxLength(DtoLimits.PermissionAssignmentIdsMaxCount)]
   IReadOnlyList<CreatePermissionAssignmentRequestDto> Assignments);
 
-public record EffectivePermissionQueryRequestDto(
-  PermissionPrincipalKind PrincipalKind,
-
-  Guid PrincipalId,
-
-  [property: Required]
-  [property: StringLength(150, MinimumLength = 1)]
-  string PermissionName,
-
-  PermissionScopeKind ScopeKind,
-
-  Guid? ScopeId);
-
-public record EffectivePermissionQueryResponseDto(
-  bool IsAllowed,
-  string? DenyReason);
-
 public record PermissionPresetDto(string Name, IReadOnlyList<string> Permissions);
 
 public record ApplyPermissionPresetsRequestDto(

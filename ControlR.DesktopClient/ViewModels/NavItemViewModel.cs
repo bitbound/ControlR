@@ -47,7 +47,7 @@ public partial class NavItemViewModel<TDestination>(
   }
 
   [RelayCommand]
-  private async Task NavigateAsync()
+  private async Task Navigate()
   {
     await navigationProvider.NavigateTo<TDestination>();
   }

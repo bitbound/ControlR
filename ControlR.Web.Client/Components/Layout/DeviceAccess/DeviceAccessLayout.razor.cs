@@ -132,7 +132,7 @@ public partial class DeviceAccessLayout
       DeviceAccessPermissionsState.Value.Clear();
 
       // Registrations are removed in BaseLayout when disposing.
-      Messenger.Value.Register<DtoReceivedMessage<DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage);
+      Messenger.Value.Register<DtoReceivedMessage<InternalDtos.DeviceResponseDto>>(this, HandleDeviceDtoReceivedMessage);
       Messenger.Value.Register<HubConnectionStateChangedMessage>(this, HandleHubConnectionStateChanged);
       Messenger.Value.Register<DtoReceivedMessage<ChatResponseHubDto>>(this, HandleChatResponseReceived);
 
@@ -276,7 +276,7 @@ public partial class DeviceAccessLayout
     }
   }
 
-  private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<DeviceResponseDto> message)
+  private async Task HandleDeviceDtoReceivedMessage(object subscriber, DtoReceivedMessage<InternalDtos.DeviceResponseDto> message)
   {
     if (DeviceAccessState.Maybe?.IsDeviceLoaded != true)
     {

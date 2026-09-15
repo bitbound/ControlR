@@ -1,11 +1,16 @@
-using InternalDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
+using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
 
 namespace ControlR.Web.Client.Components.Pages;
 
 public partial class UserGroupDetail : ComponentBase
 {
-  private InternalDtos.UserGroupDetailDto? _group;
+  private UserGroupDetailDto? _group;
   private bool _loading;
+  private Guid _tenantId;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Inject]
   public required IClipboardManager ClipboardManager { get; init; }
@@ -27,6 +32,14 @@ public partial class UserGroupDetail : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      Snackbar.Add("No tenant is associated with the signed-in user.", Severity.Error);
+      return;
+    }
+
+    _tenantId = tenantId;
     await LoadGroup();
   }
 
@@ -91,9 +104,10 @@ public partial class UserGroupDetail : ComponentBase
       return;
     }
 
-    var updateResult = await ControlrApi.Internal.UserGroups.Update(
+    var updateResult = await ControlrApi.V1.UserGroups.UpdateUserGroup(
       _group.Id,
-      new InternalDtos.UpdateUserGroupRequestDto(editResult.Name, editResult.Description));
+      _tenantId,
+      new UpdateUserGroupRequestDto(editResult.Name, editResult.Description));
 
     if (!updateResult.IsSuccess)
     {
@@ -112,7 +126,7 @@ public partial class UserGroupDetail : ComponentBase
 
     try
     {
-      var result = await ControlrApi.Internal.UserGroups.Get(Id);
+      var result = await ControlrApi.V1.UserGroups.GetUserGroup(Id, _tenantId);
       if (result.IsSuccess)
       {
         _group = result.Value;
@@ -135,7 +149,7 @@ public partial class UserGroupDetail : ComponentBase
     Snackbar.Add("User group refreshed", Severity.Success);
   }
 
-  private async Task RemoveMember(InternalDtos.UserGroupMemberDto member)
+  private async Task RemoveMember(UserGroupMemberDto member)
   {
     if (_group is null)
     {
@@ -152,8 +166,8 @@ public partial class UserGroupDetail : ComponentBase
       return;
     }
 
-    var result = await ControlrApi.Internal.UserGroups.RemoveMembers(
-      _group.Id, new InternalDtos.RemoveUserGroupMembersRequestDto([member.UserId]));
+    var result = await ControlrApi.V1.UserGroups.RemoveUserGroupMembers(
+      _group.Id, _tenantId, new RemoveUserGroupMembersRequestDto([member.UserId]));
 
     if (!result.IsSuccess)
     {

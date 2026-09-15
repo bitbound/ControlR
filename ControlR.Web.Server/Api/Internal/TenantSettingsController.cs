@@ -14,6 +14,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   private readonly ITenantSettingsManager _tenantSettingsManager = tenantSettingsManager;
 
   [HttpDelete("{name}")]
+  [ApiDeprecated("/api/v1/tenant-settings/{name}?tenantId={tenantId}", Note = "Use DELETE /api/v1/tenant-settings/{name} with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsWrite)]
   public async Task<ActionResult> DeleteSetting(string name)
   {
@@ -44,6 +45,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpGet]
+  [ApiDeprecated("/api/v1/tenant-settings?tenantId={tenantId}", Note = "Use GET /api/v1/tenant-settings with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsRead)]
   public async Task<ActionResult<InternalDtos.TenantSettingsDto>> GetAll(CancellationToken cancellationToken)
   {
@@ -57,6 +59,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpGet("{name}")]
+  [ApiDeprecated("/api/v1/tenant-settings/{name}?tenantId={tenantId}", Note = "Use GET /api/v1/tenant-settings/{name} with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsRead)]
   public async Task<ActionResult<InternalDtos.TenantSettingResponseDto?>> GetSetting(string name)
   {
@@ -87,6 +90,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPost]
+  [ApiDeprecated("/api/v1/tenant-settings?tenantId={tenantId}", Note = "Use POST /api/v1/tenant-settings with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsWrite)]
   public async Task<ActionResult<InternalDtos.TenantSettingResponseDto>> SetSetting([FromBody] InternalDtos.TenantSettingRequestDto setting)
   {
@@ -100,6 +104,7 @@ public class TenantSettingsController(AppDb appDb, ITenantSettingsManager tenant
   }
 
   [HttpPut]
+  [ApiDeprecated("/api/v1/tenant-settings?tenantId={tenantId}", Note = "Use PUT /api/v1/tenant-settings with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsWrite)]
   public async Task<ActionResult<InternalDtos.TenantSettingsDto>> SetSettings(
     [FromBody] InternalDtos.TenantSettingsDto settings,

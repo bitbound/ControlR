@@ -48,4 +48,6 @@ None.
 
 ## Internal
 
-None.
+- `ControlR.ApiClient` now marks the internal installer-key and user logon-token methods
+  `[Obsolete]`, each pointing at its `/api/v1` replacement and the difference the caller has to
+  handle. The UI already uses V1 for both, so nothing in the product calls these anymore.

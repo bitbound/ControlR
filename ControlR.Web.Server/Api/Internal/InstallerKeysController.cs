@@ -2,7 +2,6 @@ using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CreateInstallerKeyRequestDto = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.CreateInstallerKeyRequestDto;
 
 namespace ControlR.Web.Server.Api.Internal;
 
@@ -21,8 +20,9 @@ public class InstallerKeysController(
 
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [ApiDeprecated("/api/v1/installer-keys", Note = "The replacement requires TenantId in the request body.")]
   public async Task<ActionResult<InternalDtos.CreateInstallerKeyResponseDto>> Create(
-      [FromBody] CreateInstallerKeyRequestDto request)
+      [FromBody] InternalDtos.CreateInstallerKeyRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
         !User.TryGetUserId(out var creatorId))
@@ -44,6 +44,7 @@ public class InstallerKeysController(
 
   [HttpDelete("{id:guid}")]
   [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [ApiDeprecated("/api/v1/installer-keys/{keyId}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   public async Task<IActionResult> Delete([FromRoute] Guid id)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
@@ -59,6 +60,7 @@ public class InstallerKeysController(
 
   [HttpGet]
   [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
+  [ApiDeprecated("/api/v1/installer-keys?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns an Items envelope.")]
   public async Task<ActionResult<IEnumerable<InternalDtos.AgentInstallerKeyDto>>> GetAll()
   {
     if (!User.TryGetTenantId(out var tenantId) ||
@@ -74,6 +76,7 @@ public class InstallerKeysController(
 
   [HttpGet("usages/{keyId:guid}")]
   [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
+  [ApiDeprecated("/api/v1/installer-keys/{keyId}/usages?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns an Items envelope.")]
   public async Task<ActionResult<IReadOnlyList<InternalDtos.AgentInstallerKeyUsageDto>>> GetUsages([FromRoute] Guid keyId)
   {
     if (!User.TryGetTenantId(out var tenantId) ||
@@ -89,6 +92,7 @@ public class InstallerKeysController(
 
   [HttpPut("rename")]
   [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [ApiDeprecated("/api/v1/installer-keys/{keyId}?tenantId=", Note = "The replacement takes the key id in the route, tenantId as a query parameter, a body with only friendlyName, and returns 204.")]
   public async Task<IActionResult> Rename(
       [FromBody] InternalDtos.RenameInstallerKeyRequestDto request)
   {

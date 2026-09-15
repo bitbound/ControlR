@@ -1,3 +1,7 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
+
 namespace ControlR.Web.Client.Components.Shared;
 
 public sealed record PrincipalOption(Guid Id, string DisplayName, PermissionPrincipalKind Kind);
@@ -8,6 +12,9 @@ public partial class PrincipalAutocomplete
 
   [Parameter]
   public ServiceAccountKind AccountKind { get; set; } = ServiceAccountKind.Tenant;
+
+  [Inject]
+  public required AuthenticationStateProvider AuthState { get; init; }
 
   [Parameter]
   public string? Class { get; set; }
@@ -67,6 +74,12 @@ public partial class PrincipalAutocomplete
   private static bool Matches(string? value, string query) =>
     string.IsNullOrWhiteSpace(query) || (value?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false);
 
+  private async Task<Guid?> GetTenantId()
+  {
+    var state = await AuthState.GetAuthenticationStateAsync();
+    return state.User.TryGetTenantId(out var tenantId) ? tenantId : null;
+  }
+
   private async Task HandleValueChanged(PrincipalOption? value)
   {
     _selected = value;
@@ -76,13 +89,18 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolvePersonalAccessToken(Guid id)
   {
-    var result = await ControlrApi.Internal.PersonalAccessTokens.GetPersonalAccessTokens();
+    if (await GetTenantId() is not { } tenantId)
+    {
+      return null;
+    }
+
+    var result = await ControlrApi.V1.PersonalAccessTokens.GetPersonalAccessTokens(tenantId);
     if (!result.IsSuccess)
     {
       return null;
     }
 
-    var match = result.Value.FirstOrDefault(x => x.Id == id);
+    var match = result.Value.Items.FirstOrDefault(x => x.Id == id);
     return match is null ? null : new PrincipalOption(match.Id, FormatPatDisplayName(match), PermissionPrincipalKind.PersonalAccessToken);
   }
 
@@ -102,13 +120,13 @@ public partial class PrincipalAutocomplete
   {
     if (AccountKind == ServiceAccountKind.Server)
     {
-      var serverResult = await ControlrApi.Internal.ServerServiceAccounts.GetAll();
+      var serverResult = await ControlrApi.V1.ServerServiceAccounts.GetAll();
       if (!serverResult.IsSuccess)
       {
         return null;
       }
 
-      var serverMatch = serverResult.Value.FirstOrDefault(x => x.Id == id);
+      var serverMatch = serverResult.Value.Items.FirstOrDefault(x => x.Id == id);
       return serverMatch is null
         ? null
         : new PrincipalOption(
@@ -118,13 +136,18 @@ public partial class PrincipalAutocomplete
           PermissionPrincipalKind.ServiceAccount);
     }
 
-    var tenantResult = await ControlrApi.Internal.TenantServiceAccounts.GetAll();
+    if (await GetTenantId() is not { } tenantId)
+    {
+      return null;
+    }
+
+    var tenantResult = await ControlrApi.V1.TenantServiceAccounts.GetAll(tenantId);
     if (!tenantResult.IsSuccess)
     {
       return null;
     }
 
-    var tenantMatch = tenantResult.Value.FirstOrDefault(x => x.Id == id);
+    var tenantMatch = tenantResult.Value.Items.FirstOrDefault(x => x.Id == id);
     return tenantMatch is null
       ? null
       : new PrincipalOption(
@@ -136,13 +159,19 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolveUser(Guid id)
   {
-    var result = await ControlrApi.Internal.Users.GetAllUsers();
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return null;
+    }
+
+    var result = await ControlrApi.V1.Users.GetAllUsers(tenantId);
     if (!result.IsSuccess)
     {
       return null;
     }
 
-    var match = result.Value.FirstOrDefault(x => x.Id == id);
+    var match = result.Value.Items.FirstOrDefault(x => x.Id == id);
     if (match is null)
     {
       return null;
@@ -153,13 +182,19 @@ public partial class PrincipalAutocomplete
 
   private async Task<PrincipalOption?> ResolveUserGroup(Guid id)
   {
-    var result = await ControlrApi.Internal.UserGroups.GetAll();
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return null;
+    }
+
+    var result = await ControlrApi.V1.UserGroups.GetAllUserGroups(tenantId);
     if (!result.IsSuccess)
     {
       return null;
     }
 
-    var match = result.Value.FirstOrDefault(x => x.Id == id);
+    var match = result.Value.Items.FirstOrDefault(x => x.Id == id);
     return match is null ? null : new PrincipalOption(match.Id, FormatUserGroupDisplayName(match), PermissionPrincipalKind.UserGroup);
   }
 
@@ -177,13 +212,18 @@ public partial class PrincipalAutocomplete
 
   private async Task<IEnumerable<PrincipalOption>> SearchPersonalAccessTokens(string query, CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.PersonalAccessTokens.GetPersonalAccessTokens(cancellationToken);
+    if (await GetTenantId() is not { } tenantId)
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.PersonalAccessTokens.GetPersonalAccessTokens(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return result.Value
+    return result.Value.Items
       .Where(x => Matches(x.Name, query))
       .Select(x => new PrincipalOption(x.Id, FormatPatDisplayName(x), PermissionPrincipalKind.PersonalAccessToken));
   }
@@ -192,13 +232,13 @@ public partial class PrincipalAutocomplete
   {
     if (AccountKind == ServiceAccountKind.Server)
     {
-      var serverResult = await ControlrApi.Internal.ServerServiceAccounts.GetAll(cancellationToken);
+      var serverResult = await ControlrApi.V1.ServerServiceAccounts.GetAll(cancellationToken);
       if (!serverResult.IsSuccess)
       {
         return [];
       }
 
-      return serverResult.Value
+      return serverResult.Value.Items
         .Where(x => Matches(x.Name, query))
         .Select(x => new PrincipalOption(
           x.Id,
@@ -206,13 +246,18 @@ public partial class PrincipalAutocomplete
           PermissionPrincipalKind.ServiceAccount));
     }
 
-    var tenantResult = await ControlrApi.Internal.TenantServiceAccounts.GetAll(cancellationToken);
+    if (await GetTenantId() is not { } tenantId)
+    {
+      return [];
+    }
+
+    var tenantResult = await ControlrApi.V1.TenantServiceAccounts.GetAll(tenantId, cancellationToken);
     if (!tenantResult.IsSuccess)
     {
       return [];
     }
 
-    return tenantResult.Value
+    return tenantResult.Value.Items
       .Where(x => Matches(x.Name, query))
       .Select(x => new PrincipalOption(
         x.Id,
@@ -222,26 +267,38 @@ public partial class PrincipalAutocomplete
 
   private async Task<IEnumerable<PrincipalOption>> SearchUserGroups(string query, CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.UserGroups.GetAll(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.UserGroups.GetAllUserGroups(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-    return result.Value
+    return result.Value.Items
       .Where(x => Matches(x.Name, query))
       .Select(x => new PrincipalOption(x.Id, FormatUserGroupDisplayName(x), PermissionPrincipalKind.UserGroup));
   }
 
   private async Task<IEnumerable<PrincipalOption>> SearchUsers(string query, CancellationToken cancellationToken)
   {
-    var result = await ControlrApi.Internal.Users.GetAllUsers(cancellationToken);
+    var state = await AuthState.GetAuthenticationStateAsync();
+    if (!state.User.TryGetTenantId(out var tenantId))
+    {
+      return [];
+    }
+
+    var result = await ControlrApi.V1.Users.GetAllUsers(tenantId, cancellationToken);
     if (!result.IsSuccess)
     {
       return [];
     }
 
-return result.Value
+return result.Value.Items
        .Where(x => Matches(x.UserName, query) ||
                    Matches(x.Email, query) ||
                    Matches(x.DisplayName, query))

@@ -7,10 +7,10 @@ public partial class DevicePickerDialog : ComponentBase
   private const int PageSize = 10;
 
   private int _currentPage = 1;
-  private List<DeviceResponseDto> _devices = [];
+  private List<InternalDtos.DeviceResponseDto> _devices = [];
   private bool _loading;
   private string _searchText = string.Empty;
-  private DeviceResponseDto? _selectedDevice;
+  private InternalDtos.DeviceResponseDto? _selectedDevice;
   private int _totalPages = 1;
 
   [Inject]
@@ -29,7 +29,7 @@ public partial class DevicePickerDialog : ComponentBase
 
   private void Cancel() => MudDialog.Cancel();
 
-  private void HandleSelectedChanged(DeviceResponseDto? device)
+  private void HandleSelectedChanged(InternalDtos.DeviceResponseDto? device)
   {
     _selectedDevice = device;
   }
@@ -41,13 +41,13 @@ public partial class DevicePickerDialog : ComponentBase
 
     try
     {
-      var request = new DeviceSearchRequestDto
+      var request = new InternalDtos.DeviceSearchRequestDto
       {
         SearchText = _searchText,
         HideOfflineDevices = false,
         Page = _currentPage - 1,
         PageSize = PageSize,
-        SortDefinitions = [new DeviceColumnSort { PropertyName = nameof(DeviceResponseDto.Name), Descending = false, SortOrder = 0 }]
+        SortDefinitions = [new DeviceColumnSort { PropertyName = nameof(InternalDtos.DeviceResponseDto.Name), Descending = false, SortOrder = 0 }]
       };
 
       var response = await ControlrApi.Internal.Devices.SearchDevices(request);

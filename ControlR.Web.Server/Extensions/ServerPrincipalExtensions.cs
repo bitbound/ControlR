@@ -13,7 +13,10 @@ public static class ServerPrincipalExtensions
 
   /// <summary>
   /// True for server principals, or when the caller's tenant matches
-  /// <paramref name="resourceTenantId"/>. Defense-in-depth for ID-based V1 endpoints.
+  /// <paramref name="resourceTenantId"/>. Use it when the resource tenant is derived from the
+  /// resource itself (e.g. <c>device.TenantId</c>), which is where it adds real defense. Do not
+  /// call it with a tenant id that <see cref="TryResolveTenantId"/> just resolved for the same
+  /// caller. Success there already guarantees this check passes, so the re-check is redundant.
   /// </summary>
   public static bool CanAccessTenant(this ClaimsPrincipal user, Guid resourceTenantId)
   {
