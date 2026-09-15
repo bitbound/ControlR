@@ -44,7 +44,9 @@
 
 ## Removals
 
-None.
+- The unused `server.alerts.read` permission is removed, and upgrading deletes any grant rows that
+  still name it. Every signed-in user now sees the server alert banner, so there was nothing left for
+  the permission to gate.
 
 ## Internal
 
