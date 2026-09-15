@@ -1,8 +1,8 @@
-using ControlR.Web.Server.Extensions.Database;
+using ControlR.Web.Server.Data.Helpers;
 
 namespace ControlR.Web.Server.Tests;
 
-public class LikePatternExtensionsTests
+public class PostgresQueryHelperTests
 {
   [Fact]
   public void EscapeCharacterIsASingleBackslash()
@@ -11,8 +11,8 @@ public class LikePatternExtensionsTests
     // EscapeLikePattern below emits backslash escapes. An empty or multi-character constant makes
     // every escaped query fail at runtime with SQLSTATE 22019, taking down device search, device
     // column filters, and authorization change-log search.
-    Assert.Equal(@"\", LikePatternExtensions.LikeEscapeCharacter);
-    Assert.Equal(1, LikePatternExtensions.LikeEscapeCharacter.Length);
+    Assert.Equal(@"\", PostgresQueryHelper.LikeEscapeCharacter);
+    Assert.Equal(1, PostgresQueryHelper.LikeEscapeCharacter.Length);
   }
 
   [Fact]
@@ -67,6 +67,6 @@ public class LikePatternExtensionsTests
   [Fact]
   public void EscapeLikePattern_ThrowsOnNull()
   {
-    Assert.Throws<ArgumentNullException>(() => LikePatternExtensions.EscapeLikePattern(null!));
+    Assert.Throws<ArgumentNullException>(() => PostgresQueryHelper.EscapeLikePattern(null!));
   }
 }

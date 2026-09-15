@@ -1,6 +1,6 @@
-namespace ControlR.Web.Server.Extensions.Database;
+namespace ControlR.Web.Server.Data.Helpers;
 
-public static class LikePatternExtensions
+public static class PostgresQueryHelper
 {
   /// <summary>
   /// The escape character <see cref="EscapeLikePattern"/> emits escapes for. Must be passed as the

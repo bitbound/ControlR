@@ -1,7 +1,6 @@
 using Asp.Versioning;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.AuthorizationChangeLogs;
 using ControlR.Web.Server.Authz.Permissions;
-using ControlR.Web.Server.Extensions.Database;
 using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -188,8 +187,8 @@ public class AuthorizationChangeLogsController(
         // ILIKE is PostgreSQL syntax. PostgreSQL is this application's only relational provider.
         var escaped = trimmed.EscapeLikePattern();
         query = query.Where(x =>
-          (x.ActorPrincipalId != null && EF.Functions.ILike(x.ActorPrincipalId.Value.ToString(), $"%{escaped}%", LikePatternExtensions.LikeEscapeCharacter)) ||
-          (x.TargetId != null && EF.Functions.ILike(x.TargetId.Value.ToString(), $"%{escaped}%", LikePatternExtensions.LikeEscapeCharacter)));
+          (x.ActorPrincipalId != null && EF.Functions.ILike(x.ActorPrincipalId.Value.ToString(), $"%{escaped}%", PostgresQueryHelper.LikeEscapeCharacter)) ||
+          (x.TargetId != null && EF.Functions.ILike(x.TargetId.Value.ToString(), $"%{escaped}%", PostgresQueryHelper.LikeEscapeCharacter)));
       }
       else
       {
