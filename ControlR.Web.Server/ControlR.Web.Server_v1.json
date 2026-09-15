@@ -11562,6 +11562,7 @@
         "tags": [
           "Tenants"
         ],
+        "summary": "Creates a new tenant.",
         "parameters": [
           {
             "name": "api-version",
@@ -11656,6 +11657,7 @@
         "tags": [
           "Tenants"
         ],
+        "summary": "Gets all tenants.",
         "parameters": [
           {
             "name": "api-version",
@@ -11719,6 +11721,7 @@
         "tags": [
           "Tenants"
         ],
+        "summary": "Deletes a tenant by its identifier.",
         "parameters": [
           {
             "name": "tenantId",
@@ -11805,6 +11808,7 @@
         "tags": [
           "Tenants"
         ],
+        "summary": "Gets a single tenant by its identifier.",
         "parameters": [
           {
             "name": "tenantId",
@@ -11915,6 +11919,7 @@
         "tags": [
           "Tenants"
         ],
+        "summary": "Updates an existing tenant's name.",
         "parameters": [
           {
             "name": "tenantId",
