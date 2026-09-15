@@ -48,6 +48,7 @@ public class TenantsController(ITenantProvisioningService tenantProvisioningServ
   }
 
   [HttpGet("{id:guid}")]
+  [EndpointSummary("Gets a single tenant by its identifier.")]
   [Authorize(Policy = PolicyNames.RequireServerTenantsRead)]
   [ProducesResponseType<GetTenantResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
