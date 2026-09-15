@@ -83,7 +83,7 @@ public partial class Users : ComponentBase
 
     if (_tenantId is not { } tenantId)
     {
-      Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
+      Snackbar.Add(ClaimsPrincipalExtensions.NoTenantMessage, Severity.Error);
       return;
     }
 
@@ -121,7 +121,7 @@ public partial class Users : ComponentBase
     {
       if (_tenantId is not { } tenantId)
       {
-        Snackbar.Add(TenantResolutionExtensions.NoTenantMessage, Severity.Error);
+        Snackbar.Add(ClaimsPrincipalExtensions.NoTenantMessage, Severity.Error);
         return;
       }
 
