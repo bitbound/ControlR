@@ -14,8 +14,8 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
-  verify-openapi-docs-current:
-    name: OpenAPI Document Freshness
+  run-linux-tests:
+    name: Linux Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     defaults:
       run:
@@ -25,24 +25,48 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           clean: true
 
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      # Microsoft.Extensions.ApiDescription.Server is referenced for Debug only, and the test jobs
-      # below build Release. Without an explicit Debug build here the documents are never
-      # regenerated and the comparison below would pass against the stale committed copies.
-      # The committed copies are deleted first so that a build which stops generating documents
-      # fails the next step instead of comparing the committed files against themselves.
-      - name: Regenerate OpenAPI documents
+      - name: Install macOS workload
+        run: dotnet workload install macos
+
+      - name: Restore
+        run: dotnet restore
+
+      # The committed documents are removed before the build, so a build that stops generating them fails the
+      # freshness step below instead of comparing the committed files against themselves.
+      - name: Remove committed OpenAPI documents
+        run: Remove-Item -Path "ControlR.Web.Server/ControlR.Web.Server_*.json" -ErrorAction SilentlyContinue
+
+      - name: Build Test Projects
         run: |
-          # SilentlyContinue so a repository missing these documents reaches the clearer
-          # "the build did not produce" failure below instead of dying here on a raw Remove-Item error.
-          Remove-Item -Path "ControlR.Web.Server/ControlR.Web.Server_*.json" -ErrorAction SilentlyContinue
-          dotnet build ControlR.Web.Server/ControlR.Web.Server.csproj -c Debug --verbosity quiet
-          if ($LASTEXITCODE -ne 0) {
-            throw "Failed to regenerate the OpenAPI documents."
+          $excludedProjects = @(
+            "ControlR.DesktopClient.Tests.csproj",
+            "ControlR.DesktopClient.Mac.Tests.csproj",
+            "ControlR.DesktopClient.Windows.Tests.csproj",
+            "ControlR.Web.Server.UITests.csproj"
+          )
+
+          $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
+            Where-Object { $_.Name -like "*.Tests.csproj" -and $_.Name -notin $excludedProjects } |
+            Sort-Object FullName
+
+          if ($testProjects.Count -eq 0) {
+            throw "No platform-agnostic test projects were found under Tests/."
+          }
+
+          foreach ($project in $testProjects) {
+            Write-Host "Building $($project.FullName)..."
+            # Release builds do not regenerate the OpenAPI documents unless asked, so the server project build
+            # that these test projects pull in is also what refreshes the committed documents.
+            dotnet build $project.FullName -c Release -p:OpenApiGenerateDocumentsOnBuild=true
+            if ($LASTEXITCODE -ne 0) {
+              throw "Build failed for $($project.FullName)."
+            }
           }
 
       - name: Fail if the committed documents are stale
@@ -71,54 +95,6 @@ jobs:
             Write-Host "Regenerate and commit them with:"
             Write-Host "  dotnet build ControlR.Web.Server/ControlR.Web.Server.csproj -c Debug"
             exit 1
-          }
-
-  run-linux-tests:
-    name: Linux Tests
-    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
-    defaults:
-      run:
-        shell: pwsh
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          clean: true
-
-      - name: Setup .NET
-        uses: ./.github/actions/setup-dotnet
-
-      - name: Install macOS workload
-        run: dotnet workload install macos
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build Test Projects
-        run: |
-          $excludedProjects = @(
-            "ControlR.DesktopClient.Tests.csproj",
-            "ControlR.DesktopClient.Mac.Tests.csproj",
-            "ControlR.DesktopClient.Windows.Tests.csproj",
-            "ControlR.Web.Server.UITests.csproj"
-          )
-
-          $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
-            Where-Object { $_.Name -like "*.Tests.csproj" -and $_.Name -notin $excludedProjects } |
-            Sort-Object FullName
-
-          if ($testProjects.Count -eq 0) {
-            throw "No platform-agnostic test projects were found under Tests/."
-          }
-
-          foreach ($project in $testProjects) {
-            Write-Host "Building $($project.FullName)..."
-            dotnet build $project.FullName -c Release
-            if ($LASTEXITCODE -ne 0) {
-              throw "Build failed for $($project.FullName)."
-            }
           }
 
       - name: Run Tests
