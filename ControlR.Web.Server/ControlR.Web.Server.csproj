@@ -6,6 +6,13 @@
 	</PropertyGroup>
 	<PropertyGroup>
 		<OpenApiDocumentsDirectory>.</OpenApiDocumentsDirectory>
+		<!--
+			Generation is opt-in outside Debug so that ordinary Release builds and publishes never write into the
+			source tree. The freshness check passes -p:OpenApiGenerateDocumentsOnBuild=true on its Release build so
+			one build both compiles and regenerates the committed documents.
+		-->
+		<OpenApiGenerateDocumentsOnBuild Condition="'$(OpenApiGenerateDocumentsOnBuild)' == '' AND '$(Configuration)' == 'Debug'">true</OpenApiGenerateDocumentsOnBuild>
+		<OpenApiGenerateDocumentsOnBuild Condition="'$(OpenApiGenerateDocumentsOnBuild)' == ''">false</OpenApiGenerateDocumentsOnBuild>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(SelfContained)' == 'true'">
 		<OpenApiGenerateDocumentsOnBuild>false</OpenApiGenerateDocumentsOnBuild>
@@ -52,12 +59,10 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-	</ItemGroup>
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.Extensions.ApiDescription.Server">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
 	</ItemGroup>
 	<ItemGroup>
 		<Folder Include="Data\Migrations\" />
