@@ -9878,6 +9878,7 @@
         "tags": [
           "Tenants"
         ],
+        "summary": "Gets a single tenant by its identifier.",
         "parameters": [
           {
             "name": "tenantId",
