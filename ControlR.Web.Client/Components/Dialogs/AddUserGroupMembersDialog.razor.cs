@@ -55,7 +55,7 @@ public partial class AddUserGroupMembersDialog : ComponentBase
 
     try
     {
-      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         return;
       }

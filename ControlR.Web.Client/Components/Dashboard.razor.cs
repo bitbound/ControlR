@@ -122,7 +122,7 @@ public partial class Dashboard : IAsyncDisposable
       _showOnlyUntagged = preferences.ShowOnlyUntaggedDevices;
       _showOnlyUngrouped = preferences.ShowOnlyUngroupedDevices;
 
-      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         return;
       }

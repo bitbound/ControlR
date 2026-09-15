@@ -70,7 +70,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+    if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
     {
       return;
     }
@@ -106,7 +106,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+    if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
     {
       return;
     }
@@ -172,7 +172,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
       return;
     }
 
-    if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+    if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
     {
       return;
     }
@@ -194,7 +194,7 @@ public partial class TagsTabContent : ComponentBase, IDisposable
   {
     try
     {
-      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         return;
       }

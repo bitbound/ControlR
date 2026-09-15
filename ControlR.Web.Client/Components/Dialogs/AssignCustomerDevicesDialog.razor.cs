@@ -41,7 +41,7 @@ public partial class AssignCustomerDevicesDialog : ComponentBase
 
   protected override async Task OnInitializedAsync()
   {
-    if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+    if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
     {
       return;
     }

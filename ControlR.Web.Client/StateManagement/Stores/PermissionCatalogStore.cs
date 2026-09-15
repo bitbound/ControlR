@@ -25,7 +25,7 @@ public class PermissionCatalogStore(
 
   protected override async Task RefreshImpl()
   {
-    if (await authState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+    if (await authState.GetTenantId(Snackbar) is not { } tenantId)
     {
       return;
     }

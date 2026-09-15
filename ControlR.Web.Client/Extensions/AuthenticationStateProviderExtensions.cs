@@ -8,7 +8,7 @@ public static class AuthenticationStateProviderExtensions
   /// Reads the tenant from the current authentication state without reporting a failure, for callers
   /// that already have their own fallback.
   /// </summary>
-  public static async Task<Guid?> GetTenantIdAsync(
+  public static async Task<Guid?> GetTenantId(
     this AuthenticationStateProvider authState)
   {
     var state = await authState.GetAuthenticationStateAsync();
@@ -19,7 +19,7 @@ public static class AuthenticationStateProviderExtensions
   /// Reads the tenant from the current authentication state, notifying
   /// <paramref name="snackbar"/> when there is none.
   /// </summary>
-  public static async Task<Guid?> GetTenantIdAsync(
+  public static async Task<Guid?> GetTenantId(
     this AuthenticationStateProvider authState,
     ISnackbar snackbar)
   {

@@ -23,7 +23,7 @@ public class InviteStore(
 
   protected override async Task RefreshImpl()
   {
-    if (await _authState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+    if (await _authState.GetTenantId(Snackbar) is not { } tenantId)
     {
       return;
     }

@@ -41,7 +41,7 @@ public partial class PersonalAccessTokens
     _isLoading = true;
     try
     {
-      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         return;
       }
@@ -107,7 +107,7 @@ public partial class PersonalAccessTokens
     {
       try
       {
-        if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+        if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
         {
           return;
         }
@@ -135,7 +135,7 @@ public partial class PersonalAccessTokens
     _isLoading = true;
     try
     {
-      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         return;
       }
@@ -216,7 +216,7 @@ public partial class PersonalAccessTokens
 
     try
     {
-      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         return;
       }

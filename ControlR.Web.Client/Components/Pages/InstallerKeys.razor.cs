@@ -45,7 +45,7 @@ public partial class InstallerKeys
     try
     {
       await base.OnInitializedAsync();
-      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         _loading = false;
         return;

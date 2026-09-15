@@ -49,7 +49,7 @@ public partial class DevicesTabContent : ComponentBase, IDisposable
   {
     try
     {
-      if (await AuthState.GetTenantIdAsync(Snackbar) is not { } tenantId)
+      if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         return;
       }

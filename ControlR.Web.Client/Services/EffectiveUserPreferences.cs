@@ -28,7 +28,7 @@ internal sealed class EffectiveUserPreferences(
     {
       if (_preferences is null)
       {
-        if (await _authState.GetTenantIdAsync() is not { } tenantId)
+        if (await _authState.GetTenantId() is not { } tenantId)
         {
           return new EffectivePreference<bool>(EffectivePreferenceDefinitions.NotifyUserOnSessionStart.DefaultValue, false);
         }

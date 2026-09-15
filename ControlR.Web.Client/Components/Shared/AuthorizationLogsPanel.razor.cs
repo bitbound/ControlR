@@ -37,7 +37,7 @@ public partial class AuthorizationLogsPanel
 
   protected override async Task OnInitializedAsync()
   {
-    if (await AuthState.GetTenantIdAsync(Snackbar) is not { } callerTenantId)
+    if (await AuthState.GetTenantId(Snackbar) is not { } callerTenantId)
     {
       return;
     }

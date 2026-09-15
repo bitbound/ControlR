@@ -27,7 +27,7 @@ internal class UserStorageClient(
       return cachedValue;
     }
 
-    if (await _authState.GetTenantIdAsync() is not { } tenantId)
+    if (await _authState.GetTenantId() is not { } tenantId)
     {
       _logger.LogWarning("Cannot get storage key '{Key}' - no tenant claim on the signed-in user.", key);
       return null;
@@ -51,7 +51,7 @@ internal class UserStorageClient(
 
   public async Task SetItem(string key, string value, CancellationToken cancellationToken)
   {
-    if (await _authState.GetTenantIdAsync() is not { } tenantId)
+    if (await _authState.GetTenantId() is not { } tenantId)
     {
       _logger.LogWarning("Cannot set storage key '{Key}' - no tenant claim on the signed-in user.", key);
       return;

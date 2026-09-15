@@ -26,7 +26,7 @@ public class TagStore(
 
   protected override async Task RefreshImpl()
   {
-    if (await _authState.GetTenantIdAsync() is not { } tenantId)
+    if (await _authState.GetTenantId() is not { } tenantId)
     {
       return;
     }

@@ -55,7 +55,7 @@ internal class TenantSettingsProvider(
       return _settings;
     }
 
-    if (await _authState.GetTenantIdAsync() is not { } tenantId)
+    if (await _authState.GetTenantId() is not { } tenantId)
     {
       return CreateDefaultSettings();
     }
@@ -117,7 +117,7 @@ internal class TenantSettingsProvider(
   {
     try
     {
-      if (await _authState.GetTenantIdAsync(_snackbar) is not { } tenantId)
+      if (await _authState.GetTenantId(_snackbar) is not { } tenantId)
       {
         return false;
       }
