@@ -133,14 +133,15 @@ public static class DeviceQueryExtensions
 
     if (isRelationalDatabase)
     {
+      var pattern = $"%{searchText.EscapeLikePattern()}%";
       return query.Where(d =>
-          EF.Functions.ILike(d.Name ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.Alias ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.DnsHostName ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(d.OsDescription ?? "", $"%{searchText}%") ||
+          EF.Functions.ILike(d.Name ?? "", pattern, PostgresQueryHelper.LikeEscapeCharacter) ||
+          EF.Functions.ILike(d.Alias ?? "", pattern, PostgresQueryHelper.LikeEscapeCharacter) ||
+          EF.Functions.ILike(d.DnsHostName ?? "", pattern, PostgresQueryHelper.LikeEscapeCharacter) ||
+          EF.Functions.ILike(d.OsDescription ?? "", pattern, PostgresQueryHelper.LikeEscapeCharacter) ||
           // Maybe add this back when surfaced in the UI.
-          //EF.Functions.ILike(d.ConnectionId ?? "", $"%{searchText}%") ||
-          EF.Functions.ILike(string.Join("", d.CurrentUsers) ?? "", $"%{searchText}%"));
+          //EF.Functions.ILike(d.ConnectionId ?? "", pattern, PostgresQueryHelper.LikeEscapeCharacter) ||
+          EF.Functions.ILike(string.Join("", d.CurrentUsers) ?? "", pattern, PostgresQueryHelper.LikeEscapeCharacter));
     }
 
     return query.Where(d =>
@@ -353,24 +354,34 @@ public static class DeviceQueryExtensions
 
     if (isRelationalDatabase)
     {
+      var escapedFilterValue = filterValue.EscapeLikePattern();
+
+      // Contains/NotContains, StartsWith, EndsWith, Equal/NotEqual all reduce to one ILIKE
+      // comparison. The operator only decides where the wildcards go and whether the result is
+      // negated.
+      var pattern = filterOperator switch
+      {
+        FilterOperator.String.Contains or FilterOperator.String.NotContains => $"%{escapedFilterValue}%",
+        FilterOperator.String.EndsWith => $"%{escapedFilterValue}",
+        FilterOperator.String.StartsWith => $"{escapedFilterValue}%",
+        FilterOperator.String.Equal or FilterOperator.String.NotEqual => escapedFilterValue,
+        _ => null
+      };
+
+      if (pattern is not null)
+      {
+        var negated = filterOperator is FilterOperator.String.NotContains or FilterOperator.String.NotEqual;
+        return query.Where(BuildStringExpression(propertySelector, p => negated
+          ? !EF.Functions.ILike(p!, pattern, PostgresQueryHelper.LikeEscapeCharacter)
+          : EF.Functions.ILike(p!, pattern, PostgresQueryHelper.LikeEscapeCharacter)));
+      }
+
       switch (filterOperator)
       {
-        case FilterOperator.String.Contains:
-          return query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"%{filterValue}%")));
         case FilterOperator.String.Empty:
           return query.Where(BuildStringExpression(propertySelector, p => string.IsNullOrWhiteSpace(p)));
-        case FilterOperator.String.EndsWith:
-          return query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"%{filterValue}")));
-        case FilterOperator.String.Equal:
-          return query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, filterValue)));
-        case FilterOperator.String.NotContains:
-          return query.Where(BuildStringExpression(propertySelector, p => !EF.Functions.ILike(p!, $"%{filterValue}%")));
         case FilterOperator.String.NotEmpty:
           return query.Where(BuildStringExpression(propertySelector, p => !string.IsNullOrWhiteSpace(p)));
-        case FilterOperator.String.NotEqual:
-          return query.Where(BuildStringExpression(propertySelector, p => !EF.Functions.ILike(p!, filterValue)));
-        case FilterOperator.String.StartsWith:
-          return query.Where(BuildStringExpression(propertySelector, p => EF.Functions.ILike(p!, $"{filterValue}%")));
         default:
           logger.LogError("Unsupported string filter operator for relational database: {FilterOperator}", filterOperator);
           return query;

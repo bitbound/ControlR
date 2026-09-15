@@ -34,3 +34,4 @@ global using ControlR.Web.Client.Extensions;
 global using ControlR.Web.Server.OpenApi;
 global using ControlR.Web.Server.Extensions.Database;
 global using ControlR.Web.Server.Diagnostics;
+global using ControlR.Web.Server.Data.Helpers;
