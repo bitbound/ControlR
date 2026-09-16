@@ -7,7 +7,6 @@
 [![Discord](https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA)](https://discord.gg/JWJmMPc72H)
 
 Website: https://controlr.app  
-Demo Server: https://demo.controlr.app  (West US)  
 Docker: https://hub.docker.com/r/bitbound/controlr  
 DeepWiki: https://deepwiki.com/bitbound/ControlR  
 Discussions: https://github.com/bitbound/ControlR/discussions  
