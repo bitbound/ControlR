@@ -21,8 +21,8 @@ namespace ControlR.Web.Server.Api.V1;
 /// Failures map uniformly, which is deliberate. The deprecated internal endpoints answer the same
 /// conditions differently from one another. One of them calls a missing device a 400 and two of them
 /// discard the agent's refusal. This surface does not inherit that drift. A missing device is a 404
-/// for all eight, an agent's refusal is a 502 carrying the agent's own reason, and a cancellation
-/// waiting on the agent is a 408.
+/// for all eight, a device that answered with a refusal is a 409 carrying the agent's own text, a
+/// device that never answered is a 502, and a cancellation waiting on the agent is a 408.
 /// </para>
 /// <para>
 /// Authorization is not a per-action policy here because no policy can be one. The permissions these

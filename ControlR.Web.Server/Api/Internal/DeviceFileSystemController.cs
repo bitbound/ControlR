@@ -18,7 +18,7 @@ public class DeviceFileSystemController : ControllerBase
   private const string DeviceOfflineMessage = "Device is not currently online.";
 
   [HttpPost("create-directory/{deviceId:guid}")]
-  [ApiDeprecated("/api/v1/device-file-system/create-directory/{deviceId}?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/create-directory/{deviceId} with a required tenantId. The V1 body carries no DeviceId, because the route already names the device. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and the agent's own refusal with 502, instead of answering 204 whatever the agent said.")]
+  [ApiDeprecated("/api/v1/device-file-system/create-directory/{deviceId}?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/create-directory/{deviceId} with a required tenantId. The V1 body carries no DeviceId, because the route already names the device. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and 409 carrying the agent's own text when the device answers with a refusal, instead of answering 204 whatever the agent said.")]
   public async Task<IActionResult> CreateDirectory(
     [FromRoute] Guid deviceId,
     [FromBody] InternalDtos.CreateDirectoryRequestDto request,
@@ -46,7 +46,7 @@ public class DeviceFileSystemController : ControllerBase
   }
 
   [HttpDelete("delete-path/{deviceId:guid}")]
-  [ApiDeprecated("/api/v1/device-file-system/delete-path/{deviceId}?tenantId={tenantId}", Note = "Use DELETE /api/v1/device-file-system/delete-path/{deviceId} with a required tenantId. The V1 response is the named DevicePathDeletionResponseDto instead of an ad hoc body whose key order depended on an anonymous type, and its request carries no DeviceId or IsDirectory. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and the agent's own refusal with 502.")]
+  [ApiDeprecated("/api/v1/device-file-system/delete-path/{deviceId}?tenantId={tenantId}", Note = "Use DELETE /api/v1/device-file-system/delete-path/{deviceId} with a required tenantId. The V1 response is the named DevicePathDeletionResponseDto instead of an ad hoc body whose key order depended on an anonymous type, and its request carries no DeviceId or IsDirectory. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and 409 carrying the agent's own text when the device answers with a refusal.")]
   public async Task<IActionResult> DeletePath(
     [FromRoute] Guid deviceId,
     [FromBody] InternalDtos.FileDeleteRequestDto request,
@@ -216,7 +216,7 @@ public class DeviceFileSystemController : ControllerBase
   }
 
   [HttpPost("contents")]
-  [ApiDeprecated("/api/v1/device-file-system/contents?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/contents with a required tenantId. The response is the same listing under the V1 type names. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and the agent's own refusal with 502 instead of a 400 carrying the reason as a bare string.")]
+  [ApiDeprecated("/api/v1/device-file-system/contents?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/contents with a required tenantId. The response is the same listing under the V1 type names. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and 409 carrying the agent's own text when the device answers with a refusal, instead of a 400 carrying the reason as a bare string.")]
   public async Task<IActionResult> GetDirectoryContents(
     [FromBody] InternalDtos.GetDirectoryContentsRequestDto request,
     [FromServices] IDeviceFileSystemService deviceFileSystem,
@@ -331,7 +331,7 @@ public class DeviceFileSystemController : ControllerBase
   }
 
   [HttpGet("logs/{deviceId:guid}")]
-  [ApiDeprecated("/api/v1/device-file-system/logs/{deviceId}?tenantId={tenantId}", Note = "Use GET /api/v1/device-file-system/logs/{deviceId} with a required tenantId. The response is the same grouping under the V1 type names. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and the agent's own refusal with 502 instead of a 500.")]
+  [ApiDeprecated("/api/v1/device-file-system/logs/{deviceId}?tenantId={tenantId}", Note = "Use GET /api/v1/device-file-system/logs/{deviceId} with a required tenantId. The response is the same grouping under the V1 type names. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and 409 carrying the agent's own text when the device answers with a refusal, instead of a 500.")]
   public async Task<IActionResult> GetLogFiles(
     [FromRoute] Guid deviceId,
     [FromServices] IDeviceFileSystemService deviceFileSystem,
@@ -357,7 +357,7 @@ public class DeviceFileSystemController : ControllerBase
   }
 
   [HttpPost("path-segments")]
-  [ApiDeprecated("/api/v1/device-file-system/path-segments?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/path-segments with a required tenantId. The response is the same answer under the V1 type names. V1 answers an unknown device with 404 rather than this endpoint's 400, an offline device with 400, a canceled wait with 408, and an agent that never answered or answered with a refusal with 502 carrying the reason instead of a 500.")]
+  [ApiDeprecated("/api/v1/device-file-system/path-segments?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/path-segments with a required tenantId. The response is the same answer under the V1 type names. V1 answers an unknown device with 404 rather than this endpoint's 400, an offline device with 400, a canceled wait with 408, and 409 carrying the agent's own text when the device answers with a refusal, or 502 when no answer arrived, instead of a 500.")]
   public async Task<IActionResult> GetPathSegments(
     [FromBody] InternalDtos.GetPathSegmentsRequestDto request,
     [FromServices] IDeviceFileSystemService deviceFileSystem,
@@ -380,7 +380,7 @@ public class DeviceFileSystemController : ControllerBase
   }
 
   [HttpPost("root-drives")]
-  [ApiDeprecated("/api/v1/device-file-system/root-drives?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/root-drives with a required tenantId. The response is the same listing under the V1 type names. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and the agent's own refusal with 502 instead of a 400 carrying the reason as a bare string.")]
+  [ApiDeprecated("/api/v1/device-file-system/root-drives?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/root-drives with a required tenantId. The response is the same listing under the V1 type names. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and 409 carrying the agent's own text when the device answers with a refusal, instead of a 400 carrying the reason as a bare string.")]
   public async Task<IActionResult> GetRootDrives(
     [FromBody] InternalDtos.GetRootDrivesRequestDto request,
     [FromServices] IDeviceFileSystemService deviceFileSystem,
@@ -400,7 +400,7 @@ public class DeviceFileSystemController : ControllerBase
   }
 
   [HttpPost("subdirectories")]
-  [ApiDeprecated("/api/v1/device-file-system/subdirectories?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/subdirectories with a required tenantId. The response is the same listing under the V1 type names, and still carries no directory-exists signal. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and the agent's own refusal with 502 instead of a 400 carrying the reason as a bare string.")]
+  [ApiDeprecated("/api/v1/device-file-system/subdirectories?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/subdirectories with a required tenantId. The response is the same listing under the V1 type names, and still carries no directory-exists signal. V1 answers an unknown device with 404, an offline device with 400, a canceled wait with 408, and 409 carrying the agent's own text when the device answers with a refusal, instead of a 400 carrying the reason as a bare string.")]
   public async Task<IActionResult> GetSubdirectories(
     [FromBody] InternalDtos.GetSubdirectoriesRequestDto request,
     [FromServices] IDeviceFileSystemService deviceFileSystem,

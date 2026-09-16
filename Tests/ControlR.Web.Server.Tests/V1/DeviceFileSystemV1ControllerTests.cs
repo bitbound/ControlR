@@ -29,8 +29,9 @@ namespace ControlR.Web.Server.Tests.V1;
 /// The device file system operations on the versioned controller. These assert the V1 contract: a
 /// required tenantId resolved exactly once per action, the resolved tenant applied to the device load
 /// as an explicit predicate, and the uniform status mapping that the deprecated internal endpoints do
-/// not have, namely that a missing device is always a 404, an agent's refusal is always a 502
-/// carrying the agent's reason, and a canceled wait is always a 408. The four binary siblings are out
+/// not have, namely that a missing device is always a 404, a device that answered with a refusal is
+/// always a 409 carrying the agent's own text, a device that never answered is always a 502, and a
+/// canceled wait is always a 408. The four binary siblings are out
 /// of scope. They stay internal until the API client can carry a streamed result.
 /// <para>
 /// Test names are prefixed with the action method name, which is also the grouping, since member
@@ -87,6 +88,31 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
 
     var problem = AssertDeviceRefusal(result);
     Assert.Equal("the parent path is read-only", problem.Detail);
+  }
+
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemWrite</c> policy. Pointing the action at a sibling
+  /// policy would leave the permission it needs present and this pin green.
+  /// </summary>
+  [Fact]
+  public async Task CreateDirectory_WhenCallerLacksFileSystemWrite_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-create-no-perm@test.local",
+      PermissionNames.DeviceFileSystemWrite);
+
+    var result = await harness.Controller.CreateDirectory(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -202,6 +228,30 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     Assert.Equal("the file is in use", problem.Detail);
   }
 
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemDelete</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task DeletePath_WhenCallerLacksFileSystemDelete_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-delete-no-perm@test.local",
+      PermissionNames.DeviceFileSystemDelete);
+
+    var result = await harness.Controller.DeletePath(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DeleteDevicePathRequestDto("/parent/file.txt"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
   [Fact]
   public async Task DeletePath_WhenDeviceDoesNotExist_ReturnsNotFound()
   {
@@ -312,6 +362,29 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
 
     var problem = AssertDeviceRefusal(result);
     Assert.Equal("the directory could not be enumerated", problem.Detail);
+  }
+
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemRead</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task GetDirectoryContents_WhenCallerLacksFileSystemRead_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-contents-no-perm@test.local",
+      PermissionNames.DeviceFileSystemRead);
+
+    var result = await harness.Controller.GetDirectoryContents(
+      harness.Tenant.Id,
+      new DeviceDirectoryContentsRequestDto(harness.Device.Id, "/parent"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -441,6 +514,29 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
 
     var problem = AssertDeviceRefusal(result);
     Assert.Equal("agent log scan failed", problem.Detail);
+  }
+
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>LogsRead</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task GetLogFiles_WhenCallerLacksLogsRead_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-logs-no-perm@test.local",
+      PermissionNames.DeviceLogsRead);
+
+    var result = await harness.Controller.GetLogFiles(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -609,6 +705,29 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemRead</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task GetPathSegments_WhenCallerLacksFileSystemRead_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-segments-no-perm@test.local",
+      PermissionNames.DeviceFileSystemRead);
+
+    var result = await harness.Controller.GetPathSegments(
+      harness.Tenant.Id,
+      new DevicePathSegmentsRequestDto(harness.Device.Id, "/parent/child"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  /// <summary>
   /// The one operation whose deprecated endpoint called a missing device a 400. The versioned surface
   /// refuses to inherit that.
   /// </summary>
@@ -738,6 +857,29 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     Assert.Equal("no roots enumerated", problem.Detail);
   }
 
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemRead</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task GetRootDrives_WhenCallerLacksFileSystemRead_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-drives-no-perm@test.local",
+      PermissionNames.DeviceFileSystemRead);
+
+    var result = await harness.Controller.GetRootDrives(
+      harness.Tenant.Id,
+      new DeviceRootDrivesRequestDto(harness.Device.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
   [Fact]
   public async Task GetRootDrives_WhenDeviceDoesNotExist_ReturnsNotFound()
   {
@@ -830,6 +972,29 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     Assert.Equal("agent could not enumerate subdirectories", problem.Detail);
   }
 
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemRead</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task GetSubdirectories_WhenCallerLacksFileSystemRead_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-subdirs-no-perm@test.local",
+      PermissionNames.DeviceFileSystemRead);
+
+    var result = await harness.Controller.GetSubdirectories(
+      harness.Tenant.Id,
+      new DeviceSubdirectoriesRequestDto(harness.Device.Id, "/parent"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
   [Fact]
   public async Task GetSubdirectories_WhenDeviceDoesNotExist_ReturnsNotFound()
   {
@@ -905,6 +1070,30 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result);
+  }
+
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemRead</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task ValidateFilePath_WhenCallerLacksFileSystemRead_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-validate-no-perm@test.local",
+      PermissionNames.DeviceFileSystemRead);
+
+    var result = await harness.Controller.ValidateFilePath(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new ValidateDeviceFilePathRequestDto("/parent", "file.txt"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -1129,11 +1318,14 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     Mock<IAgentHubClient> agentClient,
     Mock<IHubContext<AgentHub, IAgentHubClient>> agentHub,
     IHubStreamStore hubStreamStore,
-    Tenant tenant)
+    Tenant tenant,
+    Guid callerId)
   {
     public Mock<IAgentHubClient> AgentClient { get; } = agentClient;
 
     public Mock<IHubContext<AgentHub, IAgentHubClient>> AgentHub { get; } = agentHub;
+
+    public Guid CallerId { get; } = callerId;
 
     public List<string> ConnectionIds { get; } = connectionIds;
 
@@ -1154,13 +1346,36 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     {
       var services = scope.ServiceProvider;
       string[] effectivePresets = presets.Length > 0 ? presets : [PermissionPresets.DeviceSuperUser];
-      var (principalController, tenant, _) = await scope.CreateControllerWithTestData<DeviceFileSystemController>(
+      var (principalController, tenant, user) = await scope.CreateControllerWithTestData<DeviceFileSystemController>(
         userEmail: userEmail,
         presets: effectivePresets);
       var device = await services.CreateTestDevice(tenant.Id);
-      var harness = Build(scope, principalController.ControllerContext, tenant, device);
+      var harness = Build(scope, principalController.ControllerContext, tenant, device, user.Id);
 
       await harness.SetDeviceOnline(isOnline: true);
+      return harness;
+    }
+
+    /// <summary>
+    /// Builds a harness whose caller holds the device superuser preset with one permission revoked, so
+    /// that a denial can only come from the policy the action actually applies. Revoking one permission
+    /// at a time is what tells a swapped policy apart from a correct one: were an action pointed at a
+    /// sibling's policy, the permission it needs would still be present and the pin would stay green.
+    /// </summary>
+    public static async Task<Harness> CreateWithDeviceAccessLackingAsync(
+      IServiceScope scope,
+      string userEmail,
+      string permissionName)
+    {
+      var harness = await CreateAsync(scope, userEmail, PermissionPresets.DeviceSuperUser);
+
+      await using var db = harness.Services.GetRequiredService<AppDb>();
+      var assignment = await db.PermissionAssignments.SingleAsync(
+        x => x.PrincipalId == harness.CallerId && x.PermissionName == permissionName,
+        TestContext.Current.CancellationToken);
+      db.PermissionAssignments.Remove(assignment);
+      await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
       return harness;
     }
 
@@ -1190,7 +1405,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       IServiceScope scope,
       ControllerContext callerContext,
       Tenant tenant,
-      Device device)
+      Device device,
+      Guid callerId)
     {
       var services = scope.ServiceProvider;
       var connectionIds = new List<string>();
@@ -1221,7 +1437,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
         agentClient,
         agentHub,
         hubStreamStore,
-        tenant);
+        tenant,
+        callerId);
     }
 
     private static Mock<IHubContext<AgentHub, IAgentHubClient>> CreateAgentHubContext(
