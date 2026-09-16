@@ -55,15 +55,16 @@ public class V1DtoBoundaryTests
     };
 
     var uninspected = serviceTypesThatMustBeScanned
-      .Where(type => !scanned.ContainsKey(type))
+      .Where(type => !scanned.TryGetValue(type, out var memberCount) || memberCount == 0)
       .Select(type => type.FullName!)
       .OrderBy(name => name, StringComparer.Ordinal)
       .ToList();
 
     Assert.True(
       uninspected.Count == 0,
-      "These service-layer types fell outside the V1 DTO scan, so the exempt prefixes are too " +
-      $"broad or the member surface no longer matches declared code: {string.Join(", ", uninspected)}");
+      "These service-layer types fell outside the V1 DTO scan or exposed no inspectable members, " +
+      "so the exempt prefixes are too broad or the member surface no longer matches declared " +
+      $"code: {string.Join(", ", uninspected)}");
   }
 
   [Fact]
@@ -208,7 +209,9 @@ public class V1DtoBoundaryTests
 
   private static IEnumerable<Type> SurfaceTypes(MemberInfo member)
   {
-    // Constructors are deliberately out of scope, per the plan's enumeration of the surface.
+    // Constructors are out of scope per the plan's enumeration, and they never even reach here:
+    // .ctor carries IsSpecialName and is already dropped by HasSpecialName. Widening to cover
+    // constructor parameters would require exempting constructors in that filter as well.
     return member switch
     {
       MethodInfo method => [method.ReturnType, .. method.GetParameters().Select(param => param.ParameterType)],
