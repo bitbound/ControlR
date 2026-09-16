@@ -81,13 +81,22 @@ public static class ServerPrincipalExtensions
 
   /// <summary>
   /// Trusts <paramref name="requestTenantId"/> for server principals; otherwise requires the
-  /// caller's tenant claim to match it (the request body is never the source of truth).
+  /// caller's tenant claim to match it (the request body is never the source of truth). An empty id
+  /// resolves for nobody. The V1 empty-id 400 is answered by an action filter before the body runs,
+  /// so this guard is not the caller's first defense, but a server principal would otherwise carry
+  /// <see cref="Guid.Empty"/> into the device load as a tenant predicate.
   /// </summary>
   public static bool TryResolveTenantId(
     this ClaimsPrincipal user,
     Guid requestTenantId,
     out Guid tenantId)
   {
+    if (requestTenantId == Guid.Empty)
+    {
+      tenantId = Guid.Empty;
+      return false;
+    }
+
     if (user.IsServerPrincipal())
     {
       tenantId = requestTenantId;

@@ -67,7 +67,8 @@ public class DesktopPreviewController : ControllerBase
       User.Identity?.Name);
 
     // An offline device has an empty ConnectionId; SignalR's Clients.Client("") is a no-op
-    // that returns default (null), so guard before dereferencing.
+    // that returns default (null), so guard before dereferencing. A device that is not connected
+    // cannot serve the request, which is a conflict with its state rather than a server fault.
     if (string.IsNullOrEmpty(device.ConnectionId))
     {
       logger.LogWarning(
@@ -75,7 +76,7 @@ public class DesktopPreviewController : ControllerBase
         deviceId);
       return Problem(
         detail: "Device is not connected.",
-        statusCode: StatusCodes.Status503ServiceUnavailable,
+        statusCode: StatusCodes.Status409Conflict,
         title: "Desktop preview request failed");
     }
 

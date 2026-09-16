@@ -21,8 +21,9 @@ namespace ControlR.Web.Server.Api.V1;
 /// Failures map uniformly, which is deliberate. The deprecated internal endpoints answer the same
 /// conditions differently from one another. One of them calls a missing device a 400 and two of them
 /// discard the agent's refusal. This surface does not inherit that drift. A missing device is a 404
-/// for all eight, a device that answered with a refusal is a 409 carrying the agent's own text, a
-/// device that never answered is a 502, and a cancellation waiting on the agent is a 408.
+/// for all eight, an offline device is a 409, a device that answered with a refusal is a 409 carrying
+/// the agent's own text, a device that never answered is a 502, and a cancellation waiting on the
+/// agent is a 408.
 /// </para>
 /// <para>
 /// Authorization is not a per-action policy here because no policy can be one. The permissions these
@@ -55,7 +56,6 @@ public class DeviceFileSystemController(
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
@@ -99,7 +99,6 @@ public class DeviceFileSystemController(
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
@@ -183,7 +182,6 @@ public class DeviceFileSystemController(
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
@@ -221,7 +219,6 @@ public class DeviceFileSystemController(
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
@@ -258,7 +255,6 @@ public class DeviceFileSystemController(
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
@@ -333,7 +329,6 @@ public class DeviceFileSystemController(
   [ProducesResponseType(StatusCodes.Status401Unauthorized)]
   [ProducesResponseType(StatusCodes.Status403Forbidden)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
-  [ProducesResponseType(StatusCodes.Status408RequestTimeout)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
@@ -450,7 +445,7 @@ public class DeviceFileSystemController(
   /// <summary>
   /// The one place the eight operations translate an outcome's condition into a status. A device that
   /// does not exist is a 404 whether the request reached the agent or not, and a device that is not
-  /// connected is a 400, because the caller asked for something the server cannot do without an agent.
+  /// connected is a 409, because the caller asked for something the server cannot do without an agent.
   /// </summary>
   /// <remarks>
   /// A device that answered and refused is a 409, not the 400 or 500 the deprecated endpoints answer
@@ -486,7 +481,10 @@ public class DeviceFileSystemController(
     {
       FileSystemFailure.DeviceNotFound => NotFound(),
       FileSystemFailure.Forbidden => Forbid(),
-      FileSystemFailure.DeviceOffline => BadRequest(DeviceOfflineMessage),
+      FileSystemFailure.DeviceOffline => Problem(
+        detail: DeviceOfflineMessage,
+        statusCode: StatusCodes.Status409Conflict,
+        title: "The device is not currently online."),
       FileSystemFailure.HubRejected when outcome.Reason is { Length: > 0 } reason => Problem(
         detail: reason,
         statusCode: StatusCodes.Status409Conflict,

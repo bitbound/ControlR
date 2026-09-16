@@ -9,7 +9,6 @@ using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.DeviceFileSystem;
-using ControlR.Web.Server.Services.PermissionAssignments;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
+using System.Net.Http.Json;
 using System.Reflection;
 
 namespace ControlR.Web.Server.Tests.V1;
@@ -36,6 +36,14 @@ namespace ControlR.Web.Server.Tests.V1;
 /// <para>
 /// Test names are prefixed with the action method name, which is also the grouping, since member
 /// ordering keeps them alphabetical.
+/// </para>
+/// <para>
+/// The harness <c>AppDb</c> has no <c>HttpContext</c>, so <c>UseUserClaims</c> leaves the
+/// claims-driven tenant filter inactive in every test here, caller and server principal alike. The
+/// explicit predicate on the device load is therefore what keeps a foreign device out, not the global
+/// filter, and these tests are what pin it. Production is the opposite ordering: a tenant-bound
+/// caller's filter removes the row first, while a server principal receives an unfiltered context
+/// where the predicate is the only boundary.
 /// </para>
 /// </summary>
 public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
@@ -67,6 +75,53 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
         x => x.Name == "tenantId" && x.ParameterType == typeof(Guid));
 
       Assert.False(tenantId.HasDefaultValue);
+    }
+  }
+
+  /// <summary>
+  /// <see cref="RequireTenantIdActionConvention"/> attaches the empty-id 400 by matching the parameter
+  /// by name and type, so a rename would silently drop the 400 on any action that no longer matches,
+  /// while <see cref="AllActions_TakeARequiredTenantIdParameter"/> would stay green. Driving every
+  /// action through the real pipeline is what pins that the filter actually attached. The response body
+  /// is asserted because a bare 400 could also come from model binding.
+  /// </summary>
+  [Fact]
+  public async Task AllActions_WhenTenantIdIsEmpty_ReturnBadRequestBeforeTheActionBody()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
+    var tenant = await testServer.Services.CreateTestTenant();
+    using var httpClient = await CreateAuthenticatedClient(testServer, tenant.Id);
+    var deviceId = Guid.NewGuid();
+    var emptyTenant = Guid.Empty;
+
+    var requests = new (HttpMethod Method, string Path, object? Body)[]
+    {
+      (HttpMethod.Post, $"create-directory/{deviceId}?tenantId={emptyTenant}", new CreateDeviceDirectoryRequestDto("/parent", "new-dir")),
+      (HttpMethod.Delete, $"delete-path/{deviceId}?tenantId={emptyTenant}", new DeleteDevicePathRequestDto("/parent/file.txt")),
+      (HttpMethod.Post, $"contents?tenantId={emptyTenant}", new DeviceDirectoryContentsRequestDto(deviceId, "/parent")),
+      (HttpMethod.Get, $"logs/{deviceId}?tenantId={emptyTenant}", null),
+      (HttpMethod.Post, $"path-segments?tenantId={emptyTenant}", new DevicePathSegmentsRequestDto(deviceId, "/parent/child")),
+      (HttpMethod.Post, $"root-drives?tenantId={emptyTenant}", new DeviceRootDrivesRequestDto(deviceId)),
+      (HttpMethod.Post, $"subdirectories?tenantId={emptyTenant}", new DeviceSubdirectoriesRequestDto(deviceId, "/parent")),
+      (HttpMethod.Post, $"validate-path/{deviceId}?tenantId={emptyTenant}", new ValidateDeviceFilePathRequestDto("/parent", "file.txt")),
+    };
+
+    foreach (var (method, path, body) in requests)
+    {
+      using var request = new HttpRequestMessage(
+        method,
+        $"{HttpConstants.V1.DeviceFileSystemEndpoint}/{path}");
+      if (body is not null)
+      {
+        request.Content = JsonContent.Create(body);
+      }
+
+      using var response = await httpClient.SendAsync(request, TestContext.Current.CancellationToken);
+      Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+      var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(
+        TestContext.Current.CancellationToken);
+      Assert.Equal("Invalid tenant id.", problem?.Title);
     }
   }
 
@@ -133,7 +188,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task CreateDirectory_WhenDeviceIsOffline_ReturnsBadRequest()
+  public async Task CreateDirectory_WhenDeviceIsOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -146,8 +201,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(DeviceOfflineMessage, badRequest.Value);
+    AssertDeviceOfflineConflict(result);
   }
 
   [Fact]
@@ -164,6 +218,28 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     AssertBadRequest(harness, result);
+  }
+
+  [Fact]
+  public async Task CreateDirectory_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-create-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-create-cross-tenant-sa");
+    harness.AgentClient
+      .Setup(x => x.CreateDirectory(It.IsAny<CreateDirectoryHubDto>()))
+      .ReturnsAsync(HubResult.Ok());
+
+    var result = await harness.Controller.CreateDirectory(
+      harness.Device.Id,
+      otherTenant.Id,
+      new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<NotFoundResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -270,7 +346,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task DeletePath_WhenDeviceIsOffline_ReturnsBadRequest()
+  public async Task DeletePath_WhenDeviceIsOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -283,8 +359,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeleteDevicePathRequestDto("/parent/file.txt"),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(DeviceOfflineMessage, badRequest.Value);
+    AssertDeviceOfflineConflict(result);
   }
 
   [Fact]
@@ -301,6 +376,28 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     AssertBadRequest(harness, result);
+  }
+
+  [Fact]
+  public async Task DeletePath_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-delete-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-delete-cross-tenant-sa");
+    harness.AgentClient
+      .Setup(x => x.DeleteFile(It.IsAny<FileDeleteHubDto>()))
+      .ReturnsAsync(HubResult.Ok());
+
+    var result = await harness.Controller.DeletePath(
+      harness.Device.Id,
+      otherTenant.Id,
+      new DeleteDevicePathRequestDto("/parent/file.txt"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<NotFoundResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -404,7 +501,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetDirectoryContents_WhenDeviceIsOffline_ReturnsBadRequest()
+  public async Task GetDirectoryContents_WhenDeviceIsOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -416,8 +513,28 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeviceDirectoryContentsRequestDto(harness.Device.Id, "/parent"),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(DeviceOfflineMessage, badRequest.Value);
+    AssertDeviceOfflineConflict(result);
+  }
+
+  [Fact]
+  public async Task GetDirectoryContents_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-contents-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-contents-cross-tenant-sa");
+    harness.AgentClient
+      .Setup(x => x.StreamDirectoryContents(It.IsAny<DirectoryContentsStreamRequestHubDto>()))
+      .ReturnsAsync(HubResult.Ok());
+
+    var result = await harness.Controller.GetDirectoryContents(
+      otherTenant.Id,
+      new DeviceDirectoryContentsRequestDto(harness.Device.Id, "/parent"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<NotFoundResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -556,7 +673,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetLogFiles_WhenDeviceIsOffline_ReturnsBadRequest()
+  public async Task GetLogFiles_WhenDeviceIsOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -568,8 +685,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       harness.Tenant.Id,
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(DeviceOfflineMessage, badRequest.Value);
+    AssertDeviceOfflineConflict(result);
   }
 
   [Fact]
@@ -619,23 +735,27 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// The empty-tenantId 400 is answered by the V1 filter before the action body runs, so only the
-  /// pipeline shows it. One action is exercised through HTTP.
-  /// <see cref="AllActions_TakeARequiredTenantIdParameter"/> is what makes the other seven covered by
-  /// the same convention rather than by seven more copies of this test.
+  /// The realistic production shape for a tenant-bound caller: it names its own valid tenant, so the
+  /// resolve succeeds and no foreign-tenant check fires, but the device id belongs to another tenant.
+  /// Only the explicit predicate on the device load can keep it out, which is the boundary this pins.
   /// </summary>
   [Fact]
-  public async Task GetLogFiles_WhenTenantIdIsEmpty_ReturnsBadRequest()
+  public async Task GetLogFiles_WhenTenantBoundCallerNamesItsOwnTenantForAForeignDevice_ReturnsNotFound()
   {
-    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
-    var tenant = await testServer.Services.CreateTestTenant();
-    using var httpClient = await CreateAuthenticatedClient(testServer, tenant.Id);
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logs-own-tenant-foreign-device@test.local");
+    var foreignTenant = await harness.Services.CreateTestTenant("V1 DFS Foreign Device Tenant");
+    var foreignDevice = await harness.Services.CreateTestDevice(foreignTenant.Id);
+    ArmLogFiles(harness, []);
 
-    var response = await httpClient.GetAsync(
-      $"{HttpConstants.V1.DeviceFileSystemEndpoint}/logs/{Guid.NewGuid()}?tenantId={Guid.Empty}",
+    var result = await harness.Controller.GetLogFiles(
+      foreignDevice.Id,
+      harness.Tenant.Id,
       TestContext.Current.CancellationToken);
 
-    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    Assert.IsType<NotFoundResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -680,6 +800,32 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     Assert.Equal("Server", group.GroupName);
     Assert.Equal(["server.log", "startup.log"], group.LogFiles.Select(x => x.FileName));
     Assert.Equal(4_567L, group.LogFiles[0].Size);
+  }
+
+  /// <summary>
+  /// The agent reported success but the successful result carried no payload, which no operation
+  /// produces today. Reaching here is a bug in this server rather than a device fault, so it is the
+  /// declared 500 rather than the 502 reserved for a device that never answered.
+  /// </summary>
+  [Fact]
+  public async Task GetLogFiles_WhenTheSuccessCarriesNoPayload_ReturnsInternalServerError()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logs-no-payload@test.local");
+    harness.AgentClient
+      .Setup(x => x.GetLogFiles())
+      .ReturnsAsync(HubResult.Ok<InternalDtos.GetLogFilesResponseDto>(null!));
+
+    var result = await harness.Controller.GetLogFiles(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal("The remote device returned an unexpected response.", problem.Title);
   }
 
   [Fact]
@@ -748,7 +894,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetPathSegments_WhenDeviceIsOffline_ReturnsBadRequest()
+  public async Task GetPathSegments_WhenDeviceIsOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -760,8 +906,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DevicePathSegmentsRequestDto(harness.Device.Id, "/parent/child"),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(DeviceOfflineMessage, badRequest.Value);
+    AssertDeviceOfflineConflict(result);
   }
 
   [Fact]
@@ -781,8 +926,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
         Success = true,
       });
 
-    // Path segments does not share the guard the other seven use, so its tenant predicate is a
-    // separate line of defense that has to be exercised on its own.
+    // Path segments keeps its guards inline rather than in the shared Guard helper, but the tenant
+    // predicate it applies is the same LoadDevice every other action uses. Only the surrounding guard
+    // differs, which is why this pin is written against the shared predicate rather than a parallel one.
     var result = await harness.Controller.GetPathSegments(
       otherTenant.Id,
       new DevicePathSegmentsRequestDto(harness.Device.Id, "/parent/child"),
@@ -897,7 +1043,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetRootDrives_WhenDeviceIsOffline_ReturnsBadRequest()
+  public async Task GetRootDrives_WhenDeviceIsOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -909,8 +1055,28 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeviceRootDrivesRequestDto(harness.Device.Id),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(DeviceOfflineMessage, badRequest.Value);
+    AssertDeviceOfflineConflict(result);
+  }
+
+  [Fact]
+  public async Task GetRootDrives_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-drives-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-drives-cross-tenant-sa");
+    harness.AgentClient
+      .Setup(x => x.GetRootDrives(It.IsAny<InternalDtos.GetRootDrivesRequestDto>()))
+      .ReturnsAsync(HubResult.Ok(new InternalDtos.GetRootDrivesResponseDto([])));
+
+    var result = await harness.Controller.GetRootDrives(
+      otherTenant.Id,
+      new DeviceRootDrivesRequestDto(harness.Device.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<NotFoundResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -951,6 +1117,31 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var response = Assert.IsType<DeviceRootDrivesResponseDto>(ok.Value);
     Assert.Equal(["C:", "D:"], response.Drives.Select(x => x.Name));
     Assert.True(response.Drives[0].CanRead);
+  }
+
+  /// <summary>
+  /// A fault in this server rather than in the device, which is the one condition that reaches the
+  /// declared 500. The device never answered anything to reject, so no rejection should be reported.
+  /// </summary>
+  [Fact]
+  public async Task GetRootDrives_WhenTheHubCallThrows_ReturnsInternalServerError()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-drives-throws@test.local");
+    harness.AgentClient
+      .Setup(x => x.GetRootDrives(It.IsAny<InternalDtos.GetRootDrivesRequestDto>()))
+      .ThrowsAsync(new InvalidOperationException("hub boom"));
+
+    var result = await harness.Controller.GetRootDrives(
+      harness.Tenant.Id,
+      new DeviceRootDrivesRequestDto(harness.Device.Id),
+      TestContext.Current.CancellationToken);
+
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal("Error contacting the remote device.", problem.Title);
   }
 
   [Fact]
@@ -1012,7 +1203,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetSubdirectories_WhenDeviceIsOffline_ReturnsBadRequest()
+  public async Task GetSubdirectories_WhenDeviceIsOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -1024,8 +1215,28 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeviceSubdirectoriesRequestDto(harness.Device.Id, "/parent"),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(DeviceOfflineMessage, badRequest.Value);
+    AssertDeviceOfflineConflict(result);
+  }
+
+  [Fact]
+  public async Task GetSubdirectories_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-subdirs-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-subdirs-cross-tenant-sa");
+    harness.AgentClient
+      .Setup(x => x.StreamSubdirectories(It.IsAny<SubdirectoriesStreamRequestHubDto>()))
+      .ReturnsAsync(HubResult.Ok());
+
+    var result = await harness.Controller.GetSubdirectories(
+      otherTenant.Id,
+      new DeviceSubdirectoriesRequestDto(harness.Device.Id, "/parent"),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<NotFoundResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
   }
 
   [Fact]
@@ -1073,6 +1284,32 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
+  /// The agent's reply is the answer itself rather than a hub result wrapping it, so an agent that
+  /// never answered produces nothing. That is reported as a reasonless rejection and answered 502,
+  /// the same as a missing answer on every sibling, rather than dereferencing the missing reply.
+  /// </summary>
+  [Fact]
+  public async Task ValidateFilePath_WhenAgentNeverAnswers_ReturnsBadGateway()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-validate-noanswer@test.local");
+    InternalDtos.ValidateFilePathResponseDto? noResponse = null;
+    harness.AgentClient
+      .Setup(x => x.ValidateFilePath(It.IsAny<ValidateFilePathHubDto>()))
+      .ReturnsAsync(noResponse!);
+
+    var result = await harness.Controller.ValidateFilePath(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new ValidateDeviceFilePathRequestDto("/parent", "file.txt"),
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertNoAnswerFromDevice(result);
+    Assert.Equal("The device did not return a result.", problem.Detail);
+  }
+
+  /// <summary>
   /// The caller holds every device file-system permission except the one this action applies, so a
   /// refusal can only come from the <c>FileSystemRead</c> policy.
   /// </summary>
@@ -1114,7 +1351,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ValidateFilePath_WhenDeviceIsOffline_ReturnsBadRequest()
+  public async Task ValidateFilePath_WhenDeviceIsOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -1127,8 +1364,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new ValidateDeviceFilePathRequestDto("/parent", "file.txt"),
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(DeviceOfflineMessage, badRequest.Value);
+    AssertDeviceOfflineConflict(result);
   }
 
   [Fact]
@@ -1242,6 +1478,21 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var badRequest = Assert.IsType<ObjectResult>(result);
     Assert.Equal(StatusCodes.Status400BadRequest, badRequest.StatusCode);
     harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  /// <summary>
+  /// The device is not connected, so the server cannot carry out the request it was asked for. That is
+  /// a conflict with the device's state rather than a malformed request, so every action answers a 409
+  /// carrying the offline message.
+  /// </summary>
+  private static ProblemDetails AssertDeviceOfflineConflict(IActionResult result)
+  {
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal(StatusCodes.Status409Conflict, problem.Status);
+    Assert.Equal(DeviceOfflineMessage, problem.Detail);
+    return problem;
   }
 
   /// <summary>

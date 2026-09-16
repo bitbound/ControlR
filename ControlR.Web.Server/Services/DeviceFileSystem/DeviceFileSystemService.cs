@@ -479,6 +479,15 @@ public class DeviceFileSystemService(
         .Client(device.ConnectionId)
         .ValidateFilePath(validateRequest);
 
+      // The agent's reply is the answer itself rather than a hub result wrapping it, so it has no
+      // rejection to report. An agent that never answered produces nothing, which is reported as a
+      // reasonless rejection and answered 502, the same as a missing answer on every sibling.
+      if (result is null)
+      {
+        _logger.LogWarning("No response received from agent for path validation on device {DeviceId}", deviceId);
+        return new(FileSystemFailure.HubRejected, null, null);
+      }
+
       _logger.LogInformation(
         "File path validation completed for {FileName} in {DirectoryPath} on device {DeviceId}: {IsValid}",
         request.FileName, request.DirectoryPath, deviceId, result.IsValid);
