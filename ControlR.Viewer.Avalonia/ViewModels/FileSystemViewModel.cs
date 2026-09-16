@@ -813,7 +813,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
         return;
       }
 
-      foreach (var entry in result.Value.Entries.Select(ConvertToEntryItem))
+      foreach (var entry in result.Value.Items.Select(ConvertToEntryItem))
       {
         entry.PropertyChanged += HandleDirectoryEntryPropertyChanged;
         _directoryContentsSource.Add(entry);

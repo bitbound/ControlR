@@ -463,7 +463,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var ok = Assert.IsType<OkObjectResult>(result);
     var response = Assert.IsType<InternalDtos.GetDirectoryContentsResponseDto>(ok.Value);
     Assert.False(response.DirectoryExists);
-    Assert.Empty(response.Entries);
+    Assert.Empty(response.Items);
   }
 
   [Fact]
@@ -594,7 +594,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var response = Assert.IsType<InternalDtos.GetDirectoryContentsResponseDto>(ok.Value);
     Assert.Equal([harness.Device.Id], deviceIds);
     Assert.True(response.DirectoryExists);
-    Assert.Equal(["a.txt", "b.txt", "c.txt"], response.Entries.Select(x => x.Name));
+    Assert.Equal(["a.txt", "b.txt", "c.txt"], response.Items.Select(x => x.Name));
   }
 
   [Fact]

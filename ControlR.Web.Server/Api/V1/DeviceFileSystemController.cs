@@ -346,7 +346,7 @@ public class DeviceFileSystemController(
     InternalDtos.GetDirectoryContentsResponseDto source)
   {
     return new DeviceDirectoryContentsResponseDto(
-      [.. (source.Entries ?? []).Select(ToV1Dto)],
+      [.. (source.Items ?? []).Select(ToV1Dto)],
       source.DirectoryExists);
   }
 

@@ -18731,12 +18731,12 @@
       },
       "DeviceDirectoryContentsResponseDto": {
         "required": [
-          "entries",
+          "items",
           "directoryExists"
         ],
         "type": "object",
         "properties": {
-          "entries": {
+          "items": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/DeviceFileSystemEntryDto"

@@ -5,5 +5,5 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceFileSystem;
 /// an empty directory from a missing one.
 /// </summary>
 public sealed record DeviceDirectoryContentsResponseDto(
-  IReadOnlyList<DeviceFileSystemEntryDto> Entries,
+  IReadOnlyList<DeviceFileSystemEntryDto> Items,
   bool DirectoryExists);
