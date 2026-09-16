@@ -1,12 +1,21 @@
 using System.Collections.Frozen;
 using System.Globalization;
-using System.Reflection;
 using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Libraries.Api.Contracts.Settings;
 
 public static class TenantSettingDefinitions
 {
+
+  /// <summary>
+  /// Every setting, in <see cref="InternalDtos.TenantSettingsDto"/> constructor order.
+  /// </summary>
+  public static IReadOnlyList<ISettingDefinition> All =>
+  [
+    AppendInstanceId,
+    InstanceId,
+    NotifyUserOnSessionStart
+  ];
   public static SettingDefinition<bool?> AppendInstanceId { get; } =
     new(
       TenantSettingNames.AppendInstanceId,
@@ -31,16 +40,27 @@ public static class TenantSettingDefinitions
         : ParseResult<bool?>.Failure(null),
       invalidValueMessageFactory: settingName => $"{settingName} must be a valid boolean value.");
 
+  private static FrozenDictionary<string, ISettingDefinition> DefinitionsByName { get; } =
+    All.ToFrozenDictionary(x => x.Name, StringComparer.Ordinal);
+
   public static TenantSettingsDto CreateDto(
     IReadOnlyDictionary<string, string> values,
     Action<string, string>? onInvalidValue = null)
   {
-    return SettingsDtoMapper.CreateDto<TenantSettingsDto>(Cache.DefinitionsByPropertyName, values, onInvalidValue);
+    TValue Read<TValue>(SettingDefinition<TValue> definition)
+    {
+      return definition.ReadValue(values, value => onInvalidValue?.Invoke(definition.Name, value));
+    }
+
+    return new TenantSettingsDto(
+      Read(AppendInstanceId),
+      Read(InstanceId),
+      Read(NotifyUserOnSessionStart));
   }
 
   public static string? FormatValue(string name, object? value)
   {
-    if (Cache.DefinitionsBySettingName.TryGetValue(name, out var definition))
+    if (DefinitionsByName.TryGetValue(name, out var definition))
     {
       return definition.FormatObjectValue(value);
     }
@@ -55,28 +75,22 @@ public static class TenantSettingDefinitions
 
   public static IReadOnlyList<(string Name, string? Value)> GetValues(TenantSettingsDto settings)
   {
-    return SettingsDtoMapper.GetValues(Cache.DefinitionsByPropertyName, settings);
+    return
+    [
+      (AppendInstanceId.Name, AppendInstanceId.FormatValue(settings.AppendInstanceId)),
+      (InstanceId.Name, InstanceId.FormatValue(settings.InstanceId)),
+      (NotifyUserOnSessionStart.Name, NotifyUserOnSessionStart.FormatValue(settings.NotifyUserOnSessionStart))
+    ];
   }
 
   public static SettingValueNormalizationResult Normalize(string name, string value)
   {
-    if (Cache.DefinitionsBySettingName.TryGetValue(name, out var definition))
+    if (DefinitionsByName.TryGetValue(name, out var definition))
     {
       return definition.Normalize(value);
     }
 
     return SettingValueNormalizationResult.Success(value.Trim());
-  }
-
-  private static FrozenDictionary<string, ISettingDefinition> GetDefinitionsByPropertyName()
-  {
-    return typeof(TenantSettingDefinitions)
-      .GetProperties(BindingFlags.Public | BindingFlags.Static)
-      .Where(x => typeof(ISettingDefinition).IsAssignableFrom(x.PropertyType))
-      .ToFrozenDictionary(
-        x => x.Name, 
-        x => (ISettingDefinition)(x.GetValue(null) 
-          ?? throw new InvalidOperationException($"Definition {x.Name} is null.")), StringComparer.Ordinal);
   }
 
   private static string? ValidateInstanceId(string? value)
@@ -113,13 +127,5 @@ public static class TenantSettingDefinitions
     }
 
     return $"Instance ID contains one or more invalid characters: {string.Join(", ", invalidCharacters)}";
-  }
-
-  private static class Cache
-  {
-    internal static readonly FrozenDictionary<string, ISettingDefinition> DefinitionsByPropertyName = GetDefinitionsByPropertyName();
-    internal static readonly FrozenDictionary<string, ISettingDefinition> DefinitionsBySettingName = DefinitionsByPropertyName
-      .Values
-      .ToFrozenDictionary(x => x.Name, StringComparer.Ordinal);
   }
 }
