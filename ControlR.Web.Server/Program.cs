@@ -64,6 +64,10 @@ else
   app.UseHsts();
 }
 
+app.UseWhen(
+  ctx => ctx.Request.Path.StartsWithSegments("/api"),
+  apiApp => apiApp.UseStatusCodePages());
+
 app.MapStaticAssets();
 app.UseStaticFiles();
 
