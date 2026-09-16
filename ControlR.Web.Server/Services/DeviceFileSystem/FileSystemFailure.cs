@@ -2,7 +2,7 @@ namespace ControlR.Web.Server.Services.DeviceFileSystem;
 
 /// <summary>
 /// Why a device file system operation stopped before it produced a payload. The set describes the
-/// guard or agent condition that ended the operation and carries no HTTP meaning: the endpoints
+/// guard or agent condition that ended the operation and carries no HTTP meaning. The endpoints
 /// that reach the same failure do not answer it the same way, so each caller picks its own status.
 /// </summary>
 public enum FileSystemFailure

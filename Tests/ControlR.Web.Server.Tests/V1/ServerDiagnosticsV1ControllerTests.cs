@@ -16,7 +16,7 @@ namespace ControlR.Web.Server.Tests.V1;
 
 /// <summary>
 /// The public, diagnostic, and client-capability surfaces that moved to V1. Each was excluded
-/// from V1 on handler shape alone, which is not a reason: a pre-auth probe and a live-device
+/// from V1 on handler shape alone, which is not a reason. A pre-auth probe and a live-device
 /// session are both valid V1 targets when their payloads are JSON.
 /// </summary>
 public class ServerDiagnosticsV1ControllerTests(ITestOutputHelper testOutput)

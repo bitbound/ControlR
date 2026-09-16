@@ -63,7 +63,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   /// scope has no <c>HttpContext</c>, so <c>UseUserClaims</c> leaves the tenant query filter inactive
   /// and the foreign device is actually loaded, whereupon the resource policy denies it. In production
   /// the filter removes the row first, so the same request answers a bare 404 and never reaches the
-  /// policy. Preserve both orderings: an extraction that keeps only the filtered path would turn this
+  /// policy. Preserve both orderings. An extraction that keeps only the filtered path would turn this
   /// 403 into a 404, and one that keeps only the unfiltered path would leak device existence.
   /// </remarks>
   [Fact]
@@ -102,7 +102,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task CreateDirectory_WhenDeviceOffline_ReturnsBadRequest()
+  public async Task CreateDirectory_WhenDeviceOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -115,8 +115,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
       harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(OfflineMessage, badRequest.Value);
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, conflict.StatusCode);
+    Assert.Equal(OfflineMessage, conflict.Value);
   }
 
   [Fact]
@@ -268,7 +269,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task DeletePath_WhenDeviceOffline_ReturnsBadRequest()
+  public async Task DeletePath_WhenDeviceOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -281,8 +282,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
       harness.DeviceFileSystem,
       TestContext.Current.CancellationToken);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(OfflineMessage, badRequest.Value);
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, conflict.StatusCode);
+    Assert.Equal(OfflineMessage, conflict.Value);
   }
 
   [Fact]
@@ -435,7 +437,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetDirectoryContents_WhenDeviceOffline_ReturnsBadRequest()
+  public async Task GetDirectoryContents_WhenDeviceOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -444,8 +446,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
     var result = await GetDirectoryContentsAsync(harness, harness.Device.Id, "/parent");
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(OfflineMessage, badRequest.Value);
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, conflict.StatusCode);
+    Assert.Equal(OfflineMessage, conflict.Value);
   }
 
   [Fact]
@@ -630,7 +633,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetLogFiles_WhenDeviceOffline_ReturnsBadRequest()
+  public async Task GetLogFiles_WhenDeviceOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -639,8 +642,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
     var result = await GetLogFilesAsync(harness, harness.Device.Id);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(OfflineMessage, badRequest.Value);
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, conflict.StatusCode);
+    Assert.Equal(OfflineMessage, conflict.Value);
   }
 
   [Fact]
@@ -733,7 +737,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetPathSegments_WhenDeviceOffline_ReturnsBadRequest()
+  public async Task GetPathSegments_WhenDeviceOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -742,8 +746,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
     var result = await GetPathSegmentsAsync(harness, harness.Device.Id, "/parent");
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(OfflineMessage, badRequest.Value);
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, conflict.StatusCode);
+    Assert.Equal(OfflineMessage, conflict.Value);
   }
 
   [Fact]
@@ -856,7 +861,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetRootDrives_WhenDeviceOffline_ReturnsBadRequest()
+  public async Task GetRootDrives_WhenDeviceOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -865,8 +870,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
     var result = await GetRootDrivesAsync(harness, harness.Device.Id);
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(OfflineMessage, badRequest.Value);
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, conflict.StatusCode);
+    Assert.Equal(OfflineMessage, conflict.Value);
   }
 
   [Fact]
@@ -968,7 +974,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetSubdirectories_WhenDeviceOffline_ReturnsBadRequest()
+  public async Task GetSubdirectories_WhenDeviceOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -977,8 +983,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
     var result = await GetSubdirectoriesAsync(harness, harness.Device.Id, "/parent");
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(OfflineMessage, badRequest.Value);
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, conflict.StatusCode);
+    Assert.Equal(OfflineMessage, conflict.Value);
   }
 
   [Fact]
@@ -1154,7 +1161,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task ValidateFilePath_WhenDeviceOffline_ReturnsBadRequest()
+  public async Task ValidateFilePath_WhenDeviceOffline_ReturnsConflict()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -1165,8 +1172,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
       harness,
       new InternalDtos.ValidateFilePathRequestDto(harness.Device.Id, "/parent", "file.txt"));
 
-    var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-    Assert.Equal(OfflineMessage, badRequest.Value);
+    var conflict = Assert.IsType<ConflictObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, conflict.StatusCode);
+    Assert.Equal(OfflineMessage, conflict.Value);
   }
 
   [Fact]
@@ -1192,10 +1200,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <remarks>
-  /// The action has no null check on the hub response, so a null answer raises a
-  /// <c>NullReferenceException</c> that its catch-all turns into this 500. The 500 is the contract
-  /// being pinned, not the mechanism. Adding a real <c>result is null</c> branch here would be a
-  /// behavior change, so it needs its own decision rather than arriving as a cleanup.
+  /// The service reports a reasonless rejection when the agent never answered, which this endpoint's
+  /// switch folds into its 500 arm, so the shipped 500 is preserved. The 500 is the contract being
+  /// pinned. The versioned surface answers the same condition with a 502 instead.
   /// </remarks>
   [Fact]
   public async Task ValidateFilePath_WhenHubCallReturnsNull_Returns500WithStringBody()

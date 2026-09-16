@@ -61,8 +61,8 @@ public partial class InternalV1ParityGuardrailTests
     ["GET /api/agent/updates/get-bundle-metadata/{}"] = "Agent update-bundle negotiation.",
     ["GET /api/agent-update/get-bundle-metadata/{}"] = "Legacy agent update-bundle negotiation alias.",
 
-    // Device file system - payloads the JSON API client cannot express. The JSON operations in
-    // the same controller are pending V1 twins below.
+    // Device file system - payloads the JSON API client cannot express. Only the four binary
+    // siblings remain. The eight JSON operations in the same controller now have V1 twins.
     ["GET /api/device-file-system/download/{}"] = "Returns a raw octet-stream file; the API client has no result model for a binary body.",
     ["POST /api/device-file-system/download-archive/{}"] = "Returns a raw octet-stream archive; the API client has no result model for a binary body.",
     ["GET /api/device-file-system/logs/{}/contents"] = "Returns a raw text/plain log stream; the API client has no streaming result model.",
@@ -75,18 +75,6 @@ public partial class InternalV1ParityGuardrailTests
     // Invite acceptance - an anonymous browser ceremony. The emailed token is the credential,
     // and the invitee is a person in a browser, so no API-consumer flow exists to serve.
     ["POST /api/invites/accept"] = "Anonymous browser ceremony; the emailed invite token is the credential, so there is no API-consumer flow to serve.",
-
-    // Pending V1 twins. These operations pass the V1 test, because their payloads are JSON, but
-    // the hub round-trip lives in the controller. The twin waits for that logic to move into a
-    // service rather than be duplicated. Prune each entry when its twin lands.
-    ["DELETE /api/device-file-system/delete-path/{}"] = "Pending V1 twin; extract the delete-path hub round-trip into a service first.",
-    ["GET /api/device-file-system/logs/{}"] = "Pending V1 twin; extract the log-listing hub round-trip into a service first.",
-    ["POST /api/device-file-system/contents"] = "Pending V1 twin; extract the directory-contents hub round-trip into a service first.",
-    ["POST /api/device-file-system/create-directory/{}"] = "Pending V1 twin; extract the create-directory hub round-trip into a service first.",
-    ["POST /api/device-file-system/path-segments"] = "Pending V1 twin; extract the path-segments hub round-trip into a service first.",
-    ["POST /api/device-file-system/root-drives"] = "Pending V1 twin; extract the root-drives hub round-trip into a service first.",
-    ["POST /api/device-file-system/subdirectories"] = "Pending V1 twin; extract the subdirectories hub round-trip into a service first.",
-    ["POST /api/device-file-system/validate-path/{}"] = "Pending V1 twin; extract the validate-path hub round-trip into a service first.",
   };
 
   [Fact]
