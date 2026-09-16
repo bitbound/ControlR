@@ -3,8 +3,7 @@ using ControlR.Web.Server.Services.LogonTokens;
 namespace ControlR.Web.Server.Extensions.Dtos.V1;
 
 /// <summary>
-/// Builds <see cref="LogonTokenCreationRequest"/> from the V1 request DTOs. Keeps the
-/// wire-to-service mapping out of the controllers and in one place.
+/// Maps the V1 logon token request DTOs to <see cref="LogonTokenCreationRequest"/>.
 /// </summary>
 internal static class LogonTokenCreationRequestExtensions
 {

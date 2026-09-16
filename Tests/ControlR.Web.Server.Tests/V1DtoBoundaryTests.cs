@@ -7,30 +7,19 @@ using ControlR.Web.Server.Services.Settings;
 namespace ControlR.Web.Server.Tests;
 
 /// <summary>
-/// Meta-test: V1 DTOs are the stable public contract, so they may only be named by the V1
-/// controllers and by the converters that map business models onto them. A service, manager, hub,
-/// or background worker that puts a V1 DTO on its signature couples the stable contract to the
-/// internal layer, and a contract change then ripples into code that has no business knowing about
-/// it. The compiler cannot see this rule (a V1 DTO is just a public type in a referenced
-/// assembly), so it is enforced here.
-/// Scanned surface: every non-exempt type in the server assembly, and its declared members'
-/// return types, parameter types, property types, and field types — recursed through generic
-/// arguments and array element types, because the usual shape is
-/// <c>Task&lt;SomeV1Dto&gt;</c> rather than a bare <c>SomeV1Dto</c>.
-/// Known gaps: a V1 DTO used only inside a method body (a local or an object initializer) is
-/// invisible to reflection, and so is one reached through <c>dynamic</c>. Constructor parameters
-/// are out of scope, per the plan's enumeration. The signature surface is where the coupling
-/// actually hurts, so that is what is covered.
+/// Guards the V1 DTO boundary: only the V1 controllers and the V1 converter extensions may name a
+/// V1 DTO. A V1 DTO on any other server signature couples the stable contract to the internal layer.
+/// Scans declared member signatures (recursing generic arguments and array elements), not method
+/// bodies, so a V1 DTO used only as a local is invisible here.
 /// </summary>
 public class V1DtoBoundaryTests
 {
   private const string V1DtoNamespacePrefix = "ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1";
 
   /// <summary>
-  /// The only locations in the server assembly allowed to name a V1 DTO: the V1 controllers and the
-  /// V1 converter extensions. Adding a prefix here is a deliberate decision to widen the boundary,
-  /// not an incidental edit — <see cref="ExemptPrefixes_DoNotSwallowTheServiceLayer"/> fails if a
-  /// prefix grows broad enough to exempt the very types this rule exists to police.
+  /// Namespaces allowed to name a V1 DTO. Widening this is a deliberate decision to widen the
+  /// boundary; <see cref="ExemptPrefixes_DoNotSwallowTheServiceLayer"/> fails if it swallows the
+  /// service layer.
   /// </summary>
   private static readonly string[] _exemptNamespacePrefixes =
   [
@@ -43,8 +32,7 @@ public class V1DtoBoundaryTests
   [Fact]
   public void ExemptPrefixes_DoNotSwallowTheServiceLayer()
   {
-    // A guardrail that exempts its own subject passes vacuously. The service-layer types this rule
-    // was written for must remain inside the scan, and the scan must find real members on them.
+    // A guardrail that exempts its own subject passes vacuously.
     var scanned = CollectScannedSurface();
 
     var serviceTypesThatMustBeScanned = new[]
@@ -74,15 +62,12 @@ public class V1DtoBoundaryTests
 
     Assert.True(
       violations.Count == 0,
-      "V1 DTOs are the stable public contract and must stay behind the V1 boundary. Move the V1 " +
-      "mapping into ControlR.Web.Server.Api.V1 or ControlR.Web.Server.Extensions.Dtos.V1, and have " +
-      "the interior use InternalDtos or a business model. Offenders:\n" +
-      string.Join("\n", violations));
+      "V1 DTOs must stay behind the V1 boundary. Offenders:\n" + string.Join("\n", violations));
   }
 
   /// <summary>
-  /// Maps each scanned type to the number of members inspected on it. Kept as a dictionary so the
-  /// vacuity guard can assert per-type coverage instead of trusting an aggregate count.
+  /// Maps each scanned type to the number of members inspected, so the vacuity guard can assert
+  /// per-type coverage.
   /// </summary>
   private static Dictionary<Type, int> CollectScannedSurface()
   {
@@ -165,8 +150,8 @@ public class V1DtoBoundaryTests
 
   private static List<MemberInfo> InspectableMembers(Type type)
   {
-    // NonPublic is included because the private converter on UserPreferencesManager is one of the
-    // exact defects this rule names. BindingFlags cannot select internal without private.
+    // NonPublic is included because a private converter is one of the defects this rule names.
+    // BindingFlags cannot select internal without private.
     return type
       .GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
       // Accessors and compiler synthetics would restate their property or method.
@@ -191,8 +176,7 @@ public class V1DtoBoundaryTests
   }
 
   /// <summary>
-  /// Exact-or-child matching, so <c>ControlR.Web.Server.Api.V1x</c> cannot be swept in by the
-  /// <c>ControlR.Web.Server.Api.V1</c> prefix.
+  /// Exact-or-child matching, so <c>...Api.V1x</c> is not swept in by the <c>...Api.V1</c> prefix.
   /// </summary>
   private static bool NamespaceMatches(string? candidate, string prefix)
   {
@@ -209,9 +193,7 @@ public class V1DtoBoundaryTests
 
   private static IEnumerable<Type> SurfaceTypes(MemberInfo member)
   {
-    // Constructors are out of scope per the plan's enumeration, and they never even reach here:
-    // .ctor carries IsSpecialName and is already dropped by HasSpecialName. Widening to cover
-    // constructor parameters would require exempting constructors in that filter as well.
+    // Constructors never reach here: .ctor carries IsSpecialName and is dropped by HasSpecialName.
     return member switch
     {
       MethodInfo method => [method.ReturnType, .. method.GetParameters().Select(param => param.ParameterType)],

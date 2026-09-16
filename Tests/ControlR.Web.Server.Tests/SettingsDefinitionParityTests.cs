@@ -4,10 +4,9 @@ using ControlR.Libraries.Api.Contracts.Settings;
 namespace ControlR.Web.Server.Tests;
 
 /// <summary>
-/// Keeps the three artifacts that describe a setting family in lockstep: the name constants,
-/// the <c>SettingDefinition</c> members, and the typed DTO. Adding, removing, or renaming a
-/// key by hand touches all three, so each is asserted against the others here. Without this,
-/// a name constant with no definition is silently accepted and persisted.
+/// Keeps the artifacts that describe a setting family in lockstep: the name constants, the
+/// <c>SettingDefinition</c> members, and the typed DTO. Without this, a name constant with no
+/// definition is silently accepted and persisted.
 /// </summary>
 public class SettingsDefinitionParityTests
 {

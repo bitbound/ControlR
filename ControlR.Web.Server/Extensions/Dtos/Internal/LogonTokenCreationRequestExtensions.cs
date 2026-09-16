@@ -3,7 +3,7 @@ using ControlR.Web.Server.Services.LogonTokens;
 namespace ControlR.Web.Server.Extensions.Dtos.Internal;
 
 /// <summary>
-/// Builds the service-layer <see cref="LogonTokenCreationRequest"/> from the internal request DTO.
+/// Maps the internal logon token request DTO to <see cref="LogonTokenCreationRequest"/>.
 /// </summary>
 internal static class LogonTokenCreationRequestExtensions
 {
