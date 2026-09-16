@@ -44,7 +44,7 @@ jobs:
           client-id: ${{ secrets.BBB_CLIENT_ID }}
           private-key: ${{ secrets.BBB_PRIVATE_KEY }}
 
-      - uses: anomalyco/opencode/github@2c14fc5586fe0b88e5c04732d2e846769cc35671
+      - uses: anomalyco/opencode/github@77fc88c8ade8e5a620ebbe1197f3a572d29ae91a
         timeout-minutes: 30
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
