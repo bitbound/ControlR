@@ -309,7 +309,7 @@ public partial class FileSystem : JsInteropableComponent
         }
         else
         {
-          DirectoryContents = result.Value.Entries
+          DirectoryContents = result.Value.Items
             .Select(ConvertToViewModel)
             .OrderBy(x => !x.IsDirectory) // Directories first
             .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)

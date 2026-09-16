@@ -586,9 +586,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var ok = Assert.IsType<OkObjectResult>(result);
     var response = Assert.IsType<DeviceDirectoryContentsResponseDto>(ok.Value);
     Assert.True(response.DirectoryExists);
-    Assert.Equal(["a.txt", "b.txt", "sub"], response.Entries.Select(x => x.Name));
-    Assert.Equal("/parent/sub", response.Entries[2].FullPath);
-    Assert.True(response.Entries[2].HasSubfolders);
+    Assert.Equal(["a.txt", "b.txt", "sub"], response.Items.Select(x => x.Name));
+    Assert.Equal("/parent/sub", response.Items[2].FullPath);
+    Assert.True(response.Items[2].HasSubfolders);
   }
 
   [Fact]
