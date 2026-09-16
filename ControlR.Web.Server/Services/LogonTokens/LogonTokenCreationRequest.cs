@@ -12,21 +12,4 @@ public sealed record LogonTokenCreationRequest(
   IReadOnlyList<int>? AllowedDesktopSessionIds)
 {
   public const int MaxAllowedDesktopSessionIds = DtoLimits.AllowedDesktopSessionIdsMaxCount;
-
-  public static LogonTokenCreationRequest From(
-    InternalDtos.LogonTokenRequestDto request,
-    Guid tenantId,
-    Guid userId)
-  {
-    return new LogonTokenCreationRequest(
-      DeviceId: request.DeviceId,
-      TenantId: tenantId,
-      UserId: userId,
-      UserCorrelationId: null,
-      UserDisplayName: null,
-      SessionCorrelationId: null,
-      ExpirationMinutes: request.ExpirationMinutes,
-      Scopes: request.Scopes is { Count: > 0 } ? [.. request.Scopes] : null,
-      AllowedDesktopSessionIds: null);
-  }
 }
