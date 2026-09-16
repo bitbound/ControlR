@@ -13,34 +13,6 @@ public sealed record LogonTokenCreationRequest(
 {
   public const int MaxAllowedDesktopSessionIds = DtoLimits.AllowedDesktopSessionIdsMaxCount;
 
-  public static LogonTokenCreationRequest From(V1Dtos.CreateLogonTokenForExternalRequestDto request)
-  {
-    return new LogonTokenCreationRequest(
-      DeviceId: request.DeviceId,
-      TenantId: request.TenantId,
-      UserId: null,
-      UserCorrelationId: request.UserCorrelationId,
-      UserDisplayName: request.UserDisplayName,
-      SessionCorrelationId: request.SessionCorrelationId,
-      ExpirationMinutes: request.ExpirationMinutes,
-      Scopes: ToDeviceScopes(request.Permissions, request.DeviceId),
-      AllowedDesktopSessionIds: NormalizeDesktopSessionIds(request.AllowedDesktopSessionIds));
-  }
-
-  public static LogonTokenCreationRequest From(V1Dtos.CreateLogonTokenForUserRequestDto request)
-  {
-    return new LogonTokenCreationRequest(
-      DeviceId: request.DeviceId,
-      TenantId: request.TenantId,
-      UserId: request.UserId,
-      UserCorrelationId: null,
-      UserDisplayName: null,
-      SessionCorrelationId: request.SessionCorrelationId,
-      ExpirationMinutes: request.ExpirationMinutes,
-      Scopes: ToDeviceScopes(request.Permissions, request.DeviceId),
-      AllowedDesktopSessionIds: NormalizeDesktopSessionIds(request.AllowedDesktopSessionIds));
-  }
-
   public static LogonTokenCreationRequest From(
     InternalDtos.LogonTokenRequestDto request,
     Guid tenantId,
@@ -56,28 +28,5 @@ public sealed record LogonTokenCreationRequest(
       ExpirationMinutes: request.ExpirationMinutes,
       Scopes: request.Scopes is { Count: > 0 } ? [.. request.Scopes] : null,
       AllowedDesktopSessionIds: null);
-  }
-
-  private static IReadOnlyList<InternalDtos.CredentialScopeDto>? ToDeviceScopes(
-    IReadOnlyList<string>? permissionNames,
-    Guid deviceId)
-  {
-    if (permissionNames is not { Count: > 0 })
-    {
-      return null;
-    }
-
-    return [.. permissionNames.Select(p =>
-      new InternalDtos.CredentialScopeDto(p, PermissionScopeKind.Device, deviceId))];
-  }
-
-  private static IReadOnlyList<int>? NormalizeDesktopSessionIds(IReadOnlyList<int>? sessionIds)
-  {
-    if (sessionIds is null)
-    {
-      return null;
-    }
-
-    return [.. sessionIds.Distinct()];
   }
 }

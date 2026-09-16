@@ -48,7 +48,18 @@ public class LogonTokensController : ControllerBase
     }
 
     var result = await logonTokenScopeService.CreateTokenWithScopes(
-      LogonTokenCreationRequest.From(request), creator, HttpContext.RequestAborted);
+      new LogonTokenCreationRequest(
+        DeviceId: request.DeviceId,
+        TenantId: request.TenantId,
+        UserId: null,
+        UserCorrelationId: request.UserCorrelationId,
+        UserDisplayName: request.UserDisplayName,
+        SessionCorrelationId: request.SessionCorrelationId,
+        ExpirationMinutes: request.ExpirationMinutes,
+        Scopes: ToDeviceScopes(request.Permissions, request.DeviceId),
+        AllowedDesktopSessionIds: NormalizeDesktopSessionIds(request.AllowedDesktopSessionIds)),
+      creator,
+      HttpContext.RequestAborted);
 
     if (!result.IsSuccess)
     {
@@ -96,7 +107,18 @@ public class LogonTokensController : ControllerBase
     }
 
     var result = await logonTokenScopeService.CreateTokenWithScopes(
-      LogonTokenCreationRequest.From(request), creator, HttpContext.RequestAborted);
+      new LogonTokenCreationRequest(
+        DeviceId: request.DeviceId,
+        TenantId: request.TenantId,
+        UserId: request.UserId,
+        UserCorrelationId: null,
+        UserDisplayName: null,
+        SessionCorrelationId: request.SessionCorrelationId,
+        ExpirationMinutes: request.ExpirationMinutes,
+        Scopes: ToDeviceScopes(request.Permissions, request.DeviceId),
+        AllowedDesktopSessionIds: NormalizeDesktopSessionIds(request.AllowedDesktopSessionIds)),
+      creator,
+      HttpContext.RequestAborted);
 
     if (!result.IsSuccess)
     {
@@ -104,6 +126,29 @@ public class LogonTokensController : ControllerBase
     }
 
     return Ok(BuildResponse(result.Value));
+  }
+
+  private static IReadOnlyList<int>? NormalizeDesktopSessionIds(IReadOnlyList<int>? sessionIds)
+  {
+    if (sessionIds is null)
+    {
+      return null;
+    }
+
+    return [.. sessionIds.Distinct()];
+  }
+
+  private static IReadOnlyList<InternalDtos.CredentialScopeDto>? ToDeviceScopes(
+    IReadOnlyList<string>? permissionNames,
+    Guid deviceId)
+  {
+    if (permissionNames is not { Count: > 0 })
+    {
+      return null;
+    }
+
+    return [.. permissionNames.Select(p =>
+      new InternalDtos.CredentialScopeDto(p, PermissionScopeKind.Device, deviceId))];
   }
 
   private V1Dtos.LogonTokenResponseDto BuildResponse(LogonTokenResult logonToken)
