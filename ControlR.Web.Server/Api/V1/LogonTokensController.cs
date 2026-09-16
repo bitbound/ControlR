@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using ControlR.Web.Server.Authz.Permissions;
+using ControlR.Web.Server.Extensions.Dtos.V1;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,7 +49,9 @@ public class LogonTokensController : ControllerBase
     }
 
     var result = await logonTokenScopeService.CreateTokenWithScopes(
-      LogonTokenCreationRequest.From(request), creator, HttpContext.RequestAborted);
+      request.ToCreationRequest(),
+      creator,
+      HttpContext.RequestAborted);
 
     if (!result.IsSuccess)
     {
@@ -96,7 +99,9 @@ public class LogonTokensController : ControllerBase
     }
 
     var result = await logonTokenScopeService.CreateTokenWithScopes(
-      LogonTokenCreationRequest.From(request), creator, HttpContext.RequestAborted);
+      request.ToCreationRequest(),
+      creator,
+      HttpContext.RequestAborted);
 
     if (!result.IsSuccess)
     {

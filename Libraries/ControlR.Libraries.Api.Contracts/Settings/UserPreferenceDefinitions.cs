@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using System.Globalization;
-using System.Reflection;
 using ControlR.Libraries.Api.Contracts.Constants;
 
 namespace ControlR.Libraries.Api.Contracts.Settings;
@@ -24,6 +23,32 @@ public static class UserPreferenceDefinitions
   public const bool DefaultShowOnlyUngroupedDevices = false;
   public const bool DefaultShowOnlyUntaggedDevices = false;
 
+  /// <summary>
+  /// Every preference, in <see cref="InternalDtos.UserPreferencesDto"/> constructor order.
+  /// </summary>
+  public static IReadOnlyList<ISettingDefinition> All =>
+  [
+    AutoQualityLowerThresholdMbps,
+    AutoQualityMaximum,
+    AutoQualityMinimum,
+    AutoQualityUpperThresholdMbps,
+    CaptureCursor,
+    EncodingFormat,
+    EnableDirectX,
+    HideOfflineDevices,
+    ShowOnlyUntaggedDevices,
+    ShowOnlyUngroupedDevices,
+    IsAutoQualityEnabled,
+    IsMaxBandwidthEnabled,
+    KeyboardInputMode,
+    ManualQuality,
+    MaxBandwidthMbps,
+    NotifyUserOnSessionStart,
+    OpenDeviceInNewTab,
+    ThemeMode,
+    UserDisplayName,
+    ViewMode
+  ];
   public static SettingDefinition<double> AutoQualityLowerThresholdMbps { get; } =
     SettingDefinition.CreateDouble(UserPreferenceNames.AutoQualityLowerThresholdMbps, DefaultAutoQualityLowerThresholdMbps, 0.1d);
   public static SettingDefinition<int> AutoQualityMaximum { get; } =
@@ -70,16 +95,44 @@ public static class UserPreferenceDefinitions
   public static SettingDefinition<ViewMode> ViewMode { get; } =
     SettingDefinition.CreateEnum(UserPreferenceNames.ViewMode, Enums.ViewMode.Fit);
 
+  private static FrozenDictionary<string, ISettingDefinition> DefinitionsByName { get; } =
+    All.ToFrozenDictionary(x => x.Name, StringComparer.Ordinal);
+
   public static UserPreferencesDto CreateDto(
     IReadOnlyDictionary<string, string> values,
     Action<string, string>? onInvalidValue = null)
   {
-    return SettingsDtoMapper.CreateDto<UserPreferencesDto>(Cache.DefinitionsByPropertyName, values, onInvalidValue);
+    TValue Read<TValue>(SettingDefinition<TValue> definition)
+    {
+      return definition.ReadValue(values, value => onInvalidValue?.Invoke(definition.Name, value));
+    }
+
+    return new UserPreferencesDto(
+      Read(AutoQualityLowerThresholdMbps),
+      Read(AutoQualityMaximum),
+      Read(AutoQualityMinimum),
+      Read(AutoQualityUpperThresholdMbps),
+      Read(CaptureCursor),
+      Read(EncodingFormat),
+      Read(EnableDirectX),
+      Read(HideOfflineDevices),
+      Read(ShowOnlyUntaggedDevices),
+      Read(ShowOnlyUngroupedDevices),
+      Read(IsAutoQualityEnabled),
+      Read(IsMaxBandwidthEnabled),
+      Read(KeyboardInputMode),
+      Read(ManualQuality),
+      Read(MaxBandwidthMbps),
+      Read(NotifyUserOnSessionStart),
+      Read(OpenDeviceInNewTab),
+      Read(ThemeMode),
+      Read(UserDisplayName),
+      Read(ViewMode));
   }
 
   public static string? FormatValue(string name, object? value)
   {
-    if (Cache.DefinitionsBySettingName.TryGetValue(name, out var definition))
+    if (DefinitionsByName.TryGetValue(name, out var definition))
     {
       return definition.FormatObjectValue(value);
     }
@@ -94,28 +147,39 @@ public static class UserPreferenceDefinitions
 
   public static IReadOnlyList<(string Name, string? Value)> GetValues(UserPreferencesDto preferences)
   {
-    return SettingsDtoMapper.GetValues(Cache.DefinitionsByPropertyName, preferences);
+    return
+    [
+      (AutoQualityLowerThresholdMbps.Name, AutoQualityLowerThresholdMbps.FormatValue(preferences.AutoQualityLowerThresholdMbps)),
+      (AutoQualityMaximum.Name, AutoQualityMaximum.FormatValue(preferences.AutoQualityMaximum)),
+      (AutoQualityMinimum.Name, AutoQualityMinimum.FormatValue(preferences.AutoQualityMinimum)),
+      (AutoQualityUpperThresholdMbps.Name, AutoQualityUpperThresholdMbps.FormatValue(preferences.AutoQualityUpperThresholdMbps)),
+      (CaptureCursor.Name, CaptureCursor.FormatValue(preferences.CaptureCursor)),
+      (EncodingFormat.Name, EncodingFormat.FormatValue(preferences.EncodingFormat)),
+      (EnableDirectX.Name, EnableDirectX.FormatValue(preferences.EnableDirectX)),
+      (HideOfflineDevices.Name, HideOfflineDevices.FormatValue(preferences.HideOfflineDevices)),
+      (ShowOnlyUntaggedDevices.Name, ShowOnlyUntaggedDevices.FormatValue(preferences.ShowOnlyUntaggedDevices)),
+      (ShowOnlyUngroupedDevices.Name, ShowOnlyUngroupedDevices.FormatValue(preferences.ShowOnlyUngroupedDevices)),
+      (IsAutoQualityEnabled.Name, IsAutoQualityEnabled.FormatValue(preferences.IsAutoQualityEnabled)),
+      (IsMaxBandwidthEnabled.Name, IsMaxBandwidthEnabled.FormatValue(preferences.IsMaxBandwidthEnabled)),
+      (KeyboardInputMode.Name, KeyboardInputMode.FormatValue(preferences.KeyboardInputMode)),
+      (ManualQuality.Name, ManualQuality.FormatValue(preferences.ManualQuality)),
+      (MaxBandwidthMbps.Name, MaxBandwidthMbps.FormatValue(preferences.MaxBandwidthMbps)),
+      (NotifyUserOnSessionStart.Name, NotifyUserOnSessionStart.FormatValue(preferences.NotifyUserOnSessionStart)),
+      (OpenDeviceInNewTab.Name, OpenDeviceInNewTab.FormatValue(preferences.OpenDeviceInNewTab)),
+      (ThemeMode.Name, ThemeMode.FormatValue(preferences.ThemeMode)),
+      (UserDisplayName.Name, UserDisplayName.FormatValue(preferences.UserDisplayName)),
+      (ViewMode.Name, ViewMode.FormatValue(preferences.ViewMode))
+    ];
   }
 
   public static SettingValueNormalizationResult Normalize(string name, string value)
   {
-    if (Cache.DefinitionsBySettingName.TryGetValue(name, out var definition))
+    if (DefinitionsByName.TryGetValue(name, out var definition))
     {
       return definition.Normalize(value);
     }
 
     return SettingValueNormalizationResult.Success(value.Trim());
-  }
-
-  private static FrozenDictionary<string, ISettingDefinition> GetDefinitionsByPropertyName()
-  {
-    return typeof(UserPreferenceDefinitions)
-      .GetProperties(BindingFlags.Public | BindingFlags.Static)
-      .Where(x => typeof(ISettingDefinition).IsAssignableFrom(x.PropertyType))
-      .ToFrozenDictionary(
-        x => x.Name, 
-        x => (ISettingDefinition)(x.GetValue(null) 
-          ?? throw new InvalidOperationException($"Definition {x.Name} is null.")), StringComparer.Ordinal);
   }
 
   private static string? ValidateUserDisplayName(string value)
@@ -136,13 +200,5 @@ public static class UserPreferenceDefinitions
     }
 
     return $"User display name can only contain letters, numbers, underscores, hyphens, and spaces. Invalid characters: {string.Join(", ", illegalCharacters)}";
-  }
-
-  private static class Cache
-  {
-    internal static readonly FrozenDictionary<string, ISettingDefinition> DefinitionsByPropertyName = GetDefinitionsByPropertyName();
-    internal static readonly FrozenDictionary<string, ISettingDefinition> DefinitionsBySettingName = DefinitionsByPropertyName
-      .Values
-      .ToFrozenDictionary(x => x.Name, StringComparer.Ordinal);
   }
 }

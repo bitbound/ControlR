@@ -2,6 +2,9 @@ using System.Globalization;
 
 namespace ControlR.Libraries.Api.Contracts.Settings;
 
+/// <summary>
+/// Non-generic view of a setting, so definitions with different value types share one lookup.
+/// </summary>
 public interface ISettingDefinition
 {
   string Name { get; }
@@ -9,8 +12,6 @@ public interface ISettingDefinition
   string? FormatObjectValue(object? value);
 
   SettingValueNormalizationResult Normalize(string value);
-
-  object? ReadObjectValue(IReadOnlyDictionary<string, string> values, Action<string>? onInvalidValue = null);
 }
 
 public sealed class SettingDefinition<T>(
@@ -65,11 +66,6 @@ public sealed class SettingDefinition<T>(
     }
 
     return SettingValueNormalizationResult.Success(FormatValue(result.Value));
-  }
-
-  public object? ReadObjectValue(IReadOnlyDictionary<string, string> values, Action<string>? onInvalidValue = null)
-  {
-    return ReadValue(values, onInvalidValue);
   }
 
   public T ReadValue(IReadOnlyDictionary<string, string> values, Action<string>? onInvalidValue = null)
