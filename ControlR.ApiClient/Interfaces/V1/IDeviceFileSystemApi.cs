@@ -7,9 +7,8 @@ namespace ControlR.ApiClient.Interfaces.V1;
 /// <summary>
 /// The device file system operations the versioned API publishes. Every method names the tenant it
 /// operates for, because the versioned surface addresses a tenant explicitly rather than inferring it
-/// from the caller's session. The binary siblings of these operations (file and archive download,
-/// upload, log-file contents) stay on the internal surface until the client can carry a streamed
-/// result.
+/// from the caller's session. The binary siblings (file and archive download, upload, log-file
+/// contents) stay internal until the client can carry a streamed result.
 /// </summary>
 public interface IDeviceFileSystemApi
 {

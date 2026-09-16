@@ -27,12 +27,10 @@ namespace ControlR.Web.Server.Tests.V1;
 
 /// <summary>
 /// The device file system operations on the versioned controller. These assert the V1 contract: a
-/// required tenantId resolved exactly once per action, the resolved tenant applied to the device load
-/// as an explicit predicate, and the uniform status mapping that the deprecated internal endpoints do
-/// not have, namely that a missing device is always a 404, a device that answered with a refusal is
-/// always a 409 carrying the agent's own text, a device that never answered is always a 502, and a
-/// canceled wait is always a 408. The four binary siblings are out
-/// of scope. They stay internal until the API client can carry a streamed result.
+/// required tenantId resolved once per action, the resolved tenant applied to the device load as an
+/// explicit predicate, and the uniform status mapping the deprecated internal endpoints lack (missing
+/// device 404, agent refusal 409 carrying the agent's text, no answer 502, canceled wait 408). The
+/// four binary siblings stay internal until the API client can carry a streamed result.
 /// <para>
 /// Test names are prefixed with the action method name, which is also the grouping, since member
 /// ordering keeps them alphabetical.
@@ -40,10 +38,9 @@ namespace ControlR.Web.Server.Tests.V1;
 /// <para>
 /// The harness <c>AppDb</c> has no <c>HttpContext</c>, so <c>UseUserClaims</c> leaves the
 /// claims-driven tenant filter inactive in every test here, caller and server principal alike. The
-/// explicit predicate on the device load is therefore what keeps a foreign device out, not the global
-/// filter, and these tests are what pin it. Production is the opposite ordering: a tenant-bound
-/// caller's filter removes the row first, while a server principal receives an unfiltered context
-/// where the predicate is the only boundary.
+/// explicit predicate on the device load is therefore what keeps a foreign device out, and these tests
+/// pin it. Production is the opposite ordering: a tenant-bound caller's filter removes the row first,
+/// while a server principal receives an unfiltered context where the predicate is the only boundary.
 /// </para>
 /// </summary>
 public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
@@ -54,9 +51,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   private readonly ITestOutputHelper _testOutput = testOutput;
 
   /// <summary>
-  /// The required-tenantId contract belongs to every V1 action that takes one, because
-  /// <see cref="RequireTenantIdActionConvention"/> adds both the empty-id 400 and its declaration.
-  /// This pins that all eight actions take the parameter, which is what puts them under it.
+  /// <see cref="RequireTenantIdActionConvention"/> adds the empty-id 400 to every V1 action that takes a
+  /// tenantId. This pins that all eight take the parameter.
   /// </summary>
   [Fact]
   public void AllActions_TakeARequiredTenantIdParameter()
@@ -79,11 +75,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// <see cref="RequireTenantIdActionConvention"/> attaches the empty-id 400 by matching the parameter
-  /// by name and type, so a rename would silently drop the 400 on any action that no longer matches,
-  /// while <see cref="AllActions_TakeARequiredTenantIdParameter"/> would stay green. Driving every
-  /// action through the real pipeline is what pins that the filter actually attached. The response body
-  /// is asserted because a bare 400 could also come from model binding.
+  /// The convention matches the parameter by name and type, so a rename would silently drop the 400.
+  /// Driving every action through the real pipeline pins that the filter attached.
   /// </summary>
   [Fact]
   public async Task AllActions_WhenTenantIdIsEmpty_ReturnBadRequestBeforeTheActionBody()
@@ -735,9 +728,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// The realistic production shape for a tenant-bound caller: it names its own valid tenant, so the
-  /// resolve succeeds and no foreign-tenant check fires, but the device id belongs to another tenant.
-  /// Only the explicit predicate on the device load can keep it out, which is the boundary this pins.
+  /// A tenant-bound caller names its own valid tenant but a device id from another tenant.
   /// </summary>
   [Fact]
   public async Task GetLogFiles_WhenTenantBoundCallerNamesItsOwnTenantForAForeignDevice_ReturnsNotFound()
@@ -803,9 +794,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// The agent reported success but the successful result carried no payload, which no operation
-  /// produces today. Reaching here is a bug in this server rather than a device fault, so it is the
-  /// declared 500 rather than the 502 reserved for a device that never answered.
+  /// The agent reported success but carried no payload, which no operation produces today.
   /// </summary>
   [Fact]
   public async Task GetLogFiles_WhenTheSuccessCarriesNoPayload_ReturnsInternalServerError()
@@ -1120,8 +1109,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// A fault in this server rather than in the device, which is the one condition that reaches the
-  /// declared 500. The device never answered anything to reject, so no rejection should be reported.
+  /// A server fault rather than a device fault, the one condition that reaches the declared 500.
   /// </summary>
   [Fact]
   public async Task GetRootDrives_WhenTheHubCallThrows_ReturnsInternalServerError()
@@ -1284,9 +1272,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// The agent's reply is the answer itself rather than a hub result wrapping it, so an agent that
-  /// never answered produces nothing. That is reported as a reasonless rejection and answered 502,
-  /// the same as a missing answer on every sibling, rather than dereferencing the missing reply.
+  /// The agent's reply is the answer itself rather than a hub result, so an agent that never answered
+  /// produces nothing.
   /// </summary>
   [Fact]
   public async Task ValidateFilePath_WhenAgentNeverAnswers_ReturnsBadGateway()
@@ -1481,9 +1468,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// The device is not connected, so the server cannot carry out the request it was asked for. That is
-  /// a conflict with the device's state rather than a malformed request, so every action answers a 409
-  /// carrying the offline message.
+  /// The device is not connected, so the server cannot carry out the request.
   /// </summary>
   private static ProblemDetails AssertDeviceOfflineConflict(IActionResult result)
   {
@@ -1496,8 +1481,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// The device answered and said it could not do the thing. That is a conflict with the device's
-  /// state, not a fault in this server, so it is a 409 carrying the agent's own text.
+  /// The device answered and refused.
   /// </summary>
   private static ProblemDetails AssertDeviceRefusal(IActionResult result)
   {
@@ -1510,8 +1494,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <summary>
-  /// The device produced no result at all, which is the only case this surface reports as a bad
-  /// gateway. Nothing was refused, because nothing answered.
+  /// The device produced no result at all, the only case this surface reports as a bad gateway.
   /// </summary>
   private static ProblemDetails AssertNoAnswerFromDevice(IActionResult result)
   {
@@ -1556,10 +1539,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       HasSubfolders: isDirectory);
 
   /// <summary>
-  /// Resolved services plus a <see cref="DeviceFileSystemController"/> wired to an authenticated
-  /// caller and one online device in that caller's tenant. The controller is built over a locally
-  /// constructed <see cref="DeviceFileSystemService"/> because the hub context each test arms is this
-  /// harness's mock, not the one the container hands out.
+  /// A controller wired to an authenticated caller and one online device in that caller's tenant.
   /// </summary>
   private sealed class Harness(
     DeviceFileSystemController controller,
@@ -1608,10 +1588,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     }
 
     /// <summary>
-    /// Builds a harness whose caller holds the device superuser preset with one permission revoked, so
-    /// that a denial can only come from the policy the action actually applies. Revoking one permission
-    /// at a time is what tells a swapped policy apart from a correct one: were an action pointed at a
-    /// sibling's policy, the permission it needs would still be present and the pin would stay green.
+    /// A harness whose caller holds the device superuser preset with one permission revoked, so a denial
+    /// can only come from the policy the action applies.
     /// </summary>
     public static async Task<Harness> CreateWithDeviceAccessLackingAsync(
       IServiceScope scope,
@@ -1643,8 +1621,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     }
 
     /// <summary>
-    /// Swaps the caller for a server service account, which is trusted with the tenant it names and
-    /// whose database context carries no claims-driven filter.
+    /// Swaps the caller for a server service account.
     /// </summary>
     public async Task UseServerPrincipal(string accountName)
     {

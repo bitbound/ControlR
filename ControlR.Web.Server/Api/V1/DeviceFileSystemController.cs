@@ -6,31 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// The device file system operations that a client can express in JSON, on the stable contract. Each
-/// action asks a connected agent over the hub and answers with the V1 shapes, which are the same
-/// payloads the deprecated internal endpoints return with the incidental differences removed.
-/// <para>
-/// Every action takes a required <c>tenantId</c> and resolves it exactly once through
-/// <see cref="ServerPrincipalExtensions.TryResolveTenantId"/>. A server principal may name any tenant.
-/// A tenant-bound caller may name only its own, and an attempt to name another is a 403. The resolved
-/// id then travels into the device load as an explicit tenant predicate, so the boundary holds even in
-/// a context whose claims-driven query filter is inactive. There is no second check against the
-/// resolved id, because a successful resolve already guarantees it.
-/// </para>
-/// <para>
-/// Failures map uniformly, which is deliberate. The deprecated internal endpoints answer the same
-/// conditions differently from one another. One of them calls a missing device a 400 and two of them
-/// discard the agent's refusal. This surface does not inherit that drift. A missing device is a 404
-/// for all eight, an offline device is a 409, a device that answered with a refusal is a 409 carrying
-/// the agent's own text, a device that never answered is a 502, and a cancellation waiting on the
-/// agent is a 408.
-/// </para>
-/// <para>
-/// Authorization is not a per-action policy here because no policy can be one. The permissions these
-/// operations require are device-scoped and therefore resource-based: they are evaluated against the
-/// loaded device, which is what the shared service does before it dispatches. The class-level
-/// <c>[Authorize]</c> establishes the principal, exactly as on the deprecated internal controller.
-/// </para>
+/// Device file system operations for the versioned API. Each action asks a connected agent over the
+/// hub and returns the V1 shapes.
 /// </summary>
 [Route(HttpConstants.V1.DeviceFileSystemEndpoint)]
 [ApiController]
@@ -363,9 +340,8 @@ public class DeviceFileSystemController(
     return Ok(ToV1Dto(validation));
   }
 
-  // The collections below are agent-supplied and are null when an older agent answers without them.
-  // These mappers run after the service's try/catch, so an unguarded dereference becomes an unmapped
-  // 500 with no diagnostic where the deprecated endpoint simply serialized the null.
+  // The collections below are agent-supplied and null when an older agent omits them. These mappers run
+  // after the service's try/catch, so an unguarded dereference surfaces as an unmapped 500.
   private static DeviceDirectoryContentsResponseDto ToV1Dto(
     InternalDtos.GetDirectoryContentsResponseDto source)
   {
@@ -443,21 +419,8 @@ public class DeviceFileSystemController(
   }
 
   /// <summary>
-  /// The one place the eight operations translate an outcome's condition into a status. A device that
-  /// does not exist is a 404 whether the request reached the agent or not, and a device that is not
-  /// connected is a 409, because the caller asked for something the server cannot do without an agent.
+  /// The one place the eight operations translate an outcome's condition into a status.
   /// </summary>
-  /// <remarks>
-  /// A device that answered and refused is a 409, not the 400 or 500 the deprecated endpoints answer
-  /// with. The agent reported that it cannot satisfy the request in the device's current state, which
-  /// is a conflict with that state rather than a fault in this server or a malformed request. 502 is
-  /// reserved for the case where no usable answer arrived, which the service reports as a rejection
-  /// carrying no reason. An unsuccessful hub result cannot have a blank reason, because its
-  /// constructor requires one, so a reasonless rejection means no result was produced rather than that
-  /// the device declined. Telling a missing path apart from an existing one needs an error code on the
-  /// agent's result, which the agent does not send yet (https://github.com/bitbound/ControlR-dev/issues/247),
-  /// so both keep answering 409 with the agent's own text in detail.
-  /// </remarks>
   private IActionResult MapFailure<TValue>(
     FileSystemOutcome<TValue> outcome,
     string unexpectedFailureDetail)

@@ -4,11 +4,9 @@ using System.Text.RegularExpressions;
 namespace ControlR.Web.Server.Tests;
 
 /// <summary>
-/// Ratchet for the V1-first rule. Every operation published in the internal OpenAPI document
-/// must be deprecated, have a V1 twin (same verb and path template under /api/v1), or appear in
-/// <see cref="_irregularShapeAllowList"/> naming the reason it stays internal. New endpoints
-/// belong in V1. Adding an Internal operation requires either a V1 twin or an explicit
-/// allow-list entry, so the non-standard surface cannot grow silently.
+/// Ratchet for the V1-first rule. Every operation in the internal OpenAPI document must be deprecated,
+/// have a V1 twin (same verb and path template under /api/v1), or appear in
+/// <see cref="_irregularShapeAllowList"/>. New endpoints belong in V1.
 /// </summary>
 public partial class InternalV1ParityGuardrailTests
 {
@@ -16,13 +14,8 @@ public partial class InternalV1ParityGuardrailTests
 
   /// <summary>
   /// Internal operations without a V1 twin, keyed by "VERB /path/template" (route parameters
-  /// normalized to "{}"). Every value states the outcome of the V1 test, which asks whether an
-  /// API consumer might want the operation and whether it would work naturally in the API
-  /// client. A value names either the reason the test fails or the package that will twin the
-  /// operation (pending). Entries become stale - and fail the second test - once their operation
-  /// is deprecated or gains a V1 twin, which keeps this list honest.
-  /// Handler shape is never a reason. Operating on a live device over SignalR and running a
-  /// public or diagnostic probe both belong in V1 when the payload is expressible in the client.
+  /// normalized to "{}"). Each value states why the operation stays internal. An entry becomes stale,
+  /// and fails the second test, once its operation is deprecated or gains a V1 twin.
   /// </summary>
   private static readonly Dictionary<string, string> _irregularShapeAllowList = new(StringComparer.Ordinal)
   {

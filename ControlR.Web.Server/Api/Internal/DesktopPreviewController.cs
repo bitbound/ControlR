@@ -66,9 +66,9 @@ public class DesktopPreviewController : ControllerBase
       targetProcessId,
       User.Identity?.Name);
 
-    // An offline device has an empty ConnectionId; SignalR's Clients.Client("") is a no-op
-    // that returns default (null), so guard before dereferencing. A device that is not connected
-    // cannot serve the request, which is a conflict with its state rather than a server fault.
+    // An offline device has an empty ConnectionId; SignalR's Clients.Client("") is a no-op that
+    // returns default (null), so guard before dereferencing. A device that is not connected cannot
+    // serve the request, which is a conflict with its state rather than a server fault.
     if (string.IsNullOrEmpty(device.ConnectionId))
     {
       logger.LogWarning(

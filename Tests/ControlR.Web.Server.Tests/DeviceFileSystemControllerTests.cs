@@ -19,16 +19,13 @@ namespace ControlR.Web.Server.Tests;
 
 /// <summary>
 /// Characterization tests for <see cref="DeviceFileSystemController"/>. These pin the behavior that
-/// exists today, including inconsistencies between sibling actions, so that a later service
-/// extraction can be verified against the current contract. The four binary siblings (download,
-/// download-archive, logs/{deviceId}/contents, upload) stream to <c>Response.Body</c> or take
-/// multipart bodies and are intentionally out of scope.
+/// exists today, including inconsistencies between sibling actions, so a later service extraction can
+/// be verified against the current contract. The four binary siblings (download, download-archive,
+/// logs/{deviceId}/contents, upload) stream to <c>Response.Body</c> or take multipart bodies and are
+/// intentionally out of scope.
 /// <para>
 /// Test names are prefixed with the action method name, which is also the grouping, since member
-/// ordering keeps them alphabetical: CreateDirectory (POST create-directory/{deviceId}),
-/// DeletePath (DELETE delete-path/{deviceId}), GetDirectoryContents (POST contents), GetLogFiles
-/// (GET logs/{deviceId}), GetPathSegments (POST path-segments), GetRootDrives (POST root-drives),
-/// GetSubdirectories (POST subdirectories), ValidateFilePath (POST validate-path/{deviceId}).
+/// ordering keeps them alphabetical. (The V1 tests in <c>Tests.V1</c> use the same convention.)
 /// </para>
 /// </summary>
 public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
@@ -58,13 +55,9 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   /// <remarks>
-  /// This asserts 403, which is what the harness produces but not what production produces, and the
-  /// difference is load-bearing for anyone extracting this code. The <c>AppDb</c> resolved from a test
-  /// scope has no <c>HttpContext</c>, so <c>UseUserClaims</c> leaves the tenant query filter inactive
-  /// and the foreign device is actually loaded, whereupon the resource policy denies it. In production
-  /// the filter removes the row first, so the same request answers a bare 404 and never reaches the
-  /// policy. Preserve both orderings. An extraction that keeps only the filtered path would turn this
-  /// 403 into a 404, and one that keeps only the unfiltered path would leak device existence.
+  /// This asserts 403, which the harness produces but production does not. The test-scope <c>AppDb</c>
+  /// has no <c>HttpContext</c>, so the tenant filter is inactive and the foreign device is loaded,
+  /// whereupon the resource policy denies it. Production filters the row first and answers a bare 404.
   /// </remarks>
   [Fact]
   public async Task CreateDirectory_WhenDeviceBelongsToAnotherTenant_Forbids()

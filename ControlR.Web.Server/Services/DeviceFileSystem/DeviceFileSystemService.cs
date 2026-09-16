@@ -6,30 +6,25 @@ using Microsoft.AspNetCore.SignalR;
 namespace ControlR.Web.Server.Services.DeviceFileSystem;
 
 /// <summary>
-/// Runs the device file system operations that are carried out by asking a connected agent over the
-/// hub. Every operation applies the same guards in the same order, namely load the device,
-/// authorize the caller against it, require the agent to be online, then dispatch. What stopped an
-/// operation is reported as a <see cref="FileSystemOutcome{TValue}" /> rather than as a response.
+/// Runs the device file system operations that ask a connected agent over the hub. Every operation
+/// applies the same guards in the same order: load the device, authorize the caller against it,
+/// require the agent to be online, then dispatch. What stopped an operation is reported as a
+/// <see cref="FileSystemOutcome{TValue}" /> rather than as a response.
 /// </summary>
 /// <remarks>
-/// The guard log levels and the log messages are deliberately left as they were found, and the
-/// service never answers for the caller's status code. Endpoints that share a guard do not share a
-/// response for it, and two of the write operations discard the agent's answer. Both belong to the
-/// caller, which is why the service reports the agent's rejection for every operation even where
-/// its caller ignores it today.
+/// The service never chooses a status code; that belongs to the caller.
 /// <para>
-/// Every operation takes an optional <c>expectedTenantId</c>. A caller that has already resolved the
-/// tenant it is acting for (the versioned API does) passes it, and the device load then carries an
-/// explicit tenant predicate in addition to the device id. A caller that passes nothing relies on the
-/// context's claims-driven query filter, which is how the internal endpoints have always worked.
+/// Every operation takes an optional <c>expectedTenantId</c>. A caller that already resolved its tenant
+/// (the versioned API does) passes it, and the device load carries an explicit tenant predicate. A
+/// caller that passes nothing relies on the context's claims-driven query filter.
 /// </para>
 /// </remarks>
 public interface IDeviceFileSystemService
 {
   /// <summary>
-  /// Asks the agent to create a directory under <see cref="CreateDirectoryHubDto.ParentPath" />.
-  /// The agent's answer is reported as <see cref="FileSystemFailure.HubRejected" />, which the
-  /// creating endpoint has historically ignored.
+  /// Asks the agent to create a directory under <see cref="CreateDirectoryHubDto.ParentPath" />. The
+  /// agent's answer is reported as <see cref="FileSystemFailure.HubRejected" />, which the creating
+  /// endpoint historically ignores.
   /// </summary>
   Task<FileSystemOutcome<object?>> CreateDirectory(
     ClaimsPrincipal user,
@@ -39,9 +34,8 @@ public interface IDeviceFileSystemService
     Guid? expectedTenantId = null);
 
   /// <summary>
-  /// Asks the agent to delete a path. Only the path is forwarded. Whether the caller described it as
-  /// a directory is dropped at this boundary. As with directory creation, the agent's answer is
-  /// reported and left for the caller to use or ignore.
+  /// Asks the agent to delete a path. Only the path is forwarded; the caller's directory flag is
+  /// dropped at this boundary. The agent's answer is reported, as with directory creation.
   /// </summary>
   Task<FileSystemOutcome<object?>> DeletePath(
     ClaimsPrincipal user,
@@ -51,8 +45,8 @@ public interface IDeviceFileSystemService
     Guid? expectedTenantId = null);
 
   /// <summary>
-  /// Asks the agent to stream a directory's entries and flattens what arrives before the stream
-  /// closes. The agent's directory-exists signal travels in the stream's metadata.
+  /// Asks the agent to stream a directory's entries and flattens what arrives before the stream closes.
+  /// The agent's directory-exists signal travels in the stream's metadata.
   /// </summary>
   Task<FileSystemOutcome<InternalDtos.GetDirectoryContentsResponseDto>> GetDirectoryContents(
     ClaimsPrincipal user,
@@ -479,9 +473,9 @@ public class DeviceFileSystemService(
         .Client(device.ConnectionId)
         .ValidateFilePath(validateRequest);
 
-      // The agent's reply is the answer itself rather than a hub result wrapping it, so it has no
-      // rejection to report. An agent that never answered produces nothing, which is reported as a
-      // reasonless rejection and answered 502, the same as a missing answer on every sibling.
+      // The agent's reply is the answer itself rather than a hub result wrapping it. An agent that
+      // never answered produces nothing, reported as a reasonless rejection so the caller answers
+      // 502, matching every sibling's missing-answer case.
       if (result is null)
       {
         _logger.LogWarning("No response received from agent for path validation on device {DeviceId}", deviceId);
@@ -503,11 +497,7 @@ public class DeviceFileSystemService(
   }
 
   /// <summary>
-  /// Loads the device, applies the operation's device resource policy to the caller, and requires the
-  /// agent to be connected. On success the value is the device to dispatch to. On failure the outcome
-  /// carries the same condition the operation used to check inline, which is what the caller reports.
-  /// <paramref name="policyName"/> is always a <see cref="DeviceResourcePolicies"/> member, so that
-  /// every authorization decision this class makes stays greppable from its policy name.
+  /// Loads the device, applies the operation's device resource policy, and requires the agent online.
   /// </summary>
   private async Task<FileSystemOutcome<Device>> Guard(
     ClaimsPrincipal user,
@@ -543,11 +533,7 @@ public class DeviceFileSystemService(
   }
 
   /// <summary>
-  /// Loads the target device by id. When <paramref name="expectedTenantId"/> is supplied it joins the
-  /// query as an explicit tenant predicate, so a caller that resolved the tenant before dispatching
-  /// cannot be handed another tenant's device even in a context whose global query filter is inactive.
-  /// A caller that passes nothing keeps relying on the claims-driven filter, as the internal endpoints
-  /// always have.
+  /// Loads the target device by id, with an explicit tenant predicate when one is supplied.
   /// </summary>
   private async Task<Device?> LoadDevice(
     Guid deviceId,
@@ -567,9 +553,7 @@ public class DeviceFileSystemService(
   }
 
   /// <summary>
-  /// Opens a stream session, asks the agent to fill it, and collects what arrives before the agent
-  /// closes it. Used by both streaming read operations, which differ only in what they do with the
-  /// directory-exists signal afterwards.
+  /// Opens a stream session, asks the agent to fill it, and collects what arrives before it closes.
   /// </summary>
   private async Task<FileSystemOutcome<StreamedEntries>> StreamEntries(
     Device device,
@@ -601,8 +585,7 @@ public class DeviceFileSystemService(
 
   /// <summary>
   /// What a streamed read operation collected: the entries in arrival order, and the directory-exists
-  /// signal the agent left in the stream session's metadata. The operation that never looked at that
-  /// signal keeps ignoring it.
+  /// signal the agent left in the stream session's metadata.
   /// </summary>
   private sealed record StreamedEntries(List<InternalDtos.FileSystemEntryDto> Items, bool DirectoryExists);
 }
