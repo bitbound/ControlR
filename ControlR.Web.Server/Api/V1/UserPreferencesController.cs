@@ -10,7 +10,8 @@ namespace ControlR.Web.Server.Api.V1;
 /// the caller, so no operation addresses another principal. TenantId stays required on every
 /// operation to keep the V1 convention uniform (server principals resolve the tenant check
 /// but then fail the caller-has-no-user-id lookup, so the surface is user-only in practice).
-/// Manager failures surface as ProblemDetails. A get of an unset name answers 204.
+/// Manager failures surface as ProblemDetails. A get of an unset name answers 204, and the POST
+/// that leaves a preference behind answers 201. The internal twin answers 200 for that POST.
 /// </summary>
 [Route(HttpConstants.V1.UserPreferencesEndpoint)]
 [ApiController]
@@ -84,7 +85,7 @@ public class UserPreferencesController : ControllerBase
   }
 
   [HttpPost]
-  [ProducesResponseType<UserPreferenceResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UserPreferenceResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -94,7 +95,7 @@ public class UserPreferencesController : ControllerBase
     [FromBody] UserPreferenceRequestDto preference,
     CancellationToken cancellationToken)
   {
-    if (!User.TryResolveTenantId(tenantId, out _))
+    if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
     {
       return Forbid();
     }
@@ -114,7 +115,19 @@ public class UserPreferencesController : ControllerBase
       return result.ToHttpResult().ToActionResult();
     }
 
-    return Ok(ToV1Dto(result.Value));
+    var response = ToV1Dto(result.Value);
+
+    // A blank value means the manager removed the preference, so there is no resource to point a
+    // Location at. The manager signals that by leaving the id off the response.
+    if (response.Id is null)
+    {
+      return Ok(response);
+    }
+
+    return CreatedAtAction(
+      nameof(GetPreference),
+      new { name = response.Name, tenantId = resolvedTenantId },
+      response);
   }
 
   [HttpPut]

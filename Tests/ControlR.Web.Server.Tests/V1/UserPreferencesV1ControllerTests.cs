@@ -149,14 +149,60 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
       new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, themeModeValue),
       CancellationToken.None);
 
-    var ok = Assert.IsType<OkObjectResult>(setResult.Result);
-    var response = Assert.IsType<UserPreferenceResponseDto>(ok.Value);
+    var created = Assert.IsType<CreatedAtActionResult>(setResult.Result);
+    var response = Assert.IsType<UserPreferenceResponseDto>(created.Value);
     Assert.Equal(UserPreferenceNames.ThemeMode, response.Name);
 
     var getResult = await controller.GetAll(manager, tenant.Id, CancellationToken.None);
     var allOk = Assert.IsType<OkObjectResult>(getResult.Result);
     var preferences = Assert.IsType<UserPreferencesDto>(allOk.Value);
     Assert.Equal(ThemeMode.Dark, preferences.ThemeMode);
+  }
+
+  [Fact]
+  public async Task SetPreference_WhenPreferenceAlreadyExists_Answers201()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UserPreferencesController>(
+      userEmail: "up-createdagain@test.local",
+      presets: PermissionPresets.TenantAdministrator);
+
+    var manager = services.GetRequiredService<IUserPreferencesManager>();
+    var request = new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, "dark");
+
+    await controller.SetPreference(manager, tenant.Id, request, CancellationToken.None);
+
+    var result = await controller.SetPreference(manager, tenant.Id, request, CancellationToken.None);
+
+    var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+    Assert.Equal(StatusCodes.Status201Created, created.StatusCode);
+  }
+
+  [Fact]
+  public async Task SetPreference_WhenPreferenceIsNew_Answers201AndPointsAtThePreference()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UserPreferencesController>(
+      userEmail: "up-created@test.local",
+      presets: PermissionPresets.TenantAdministrator);
+
+    var result = await controller.SetPreference(
+      services.GetRequiredService<IUserPreferencesManager>(),
+      tenant.Id,
+      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, "dark"),
+      CancellationToken.None);
+
+    var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+    Assert.Equal(StatusCodes.Status201Created, created.StatusCode);
+    Assert.Equal(nameof(UserPreferencesController.GetPreference), created.ActionName);
+
+    var dto = Assert.IsType<UserPreferenceResponseDto>(created.Value);
+    Assert.NotNull(dto.Id);
+    Assert.Equal(UserPreferenceNames.ThemeMode, dto.Name);
   }
 
   [Fact]
@@ -177,5 +223,40 @@ public class UserPreferencesV1ControllerTests(ITestOutputHelper testOutput)
 
     var problem = Assert.IsType<ObjectResult>(result.Result);
     Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
+  }
+
+  [Fact]
+  public async Task SetPreference_WhenValueIsBlank_Answers200AndRemovesThePreference()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UserPreferencesController>(
+      userEmail: "up-blank@test.local",
+      presets: PermissionPresets.TenantAdministrator);
+
+    var manager = services.GetRequiredService<IUserPreferencesManager>();
+    await controller.SetPreference(
+      manager,
+      tenant.Id,
+      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, "dark"),
+      CancellationToken.None);
+
+    var result = await controller.SetPreference(
+      manager,
+      tenant.Id,
+      new UserPreferenceRequestDto(UserPreferenceNames.ThemeMode, " "),
+      CancellationToken.None);
+
+    var ok = Assert.IsType<OkObjectResult>(result.Result);
+    var dto = Assert.IsType<UserPreferenceResponseDto>(ok.Value);
+    Assert.Null(dto.Id);
+
+    var getResult = await controller.GetPreference(
+      services.GetRequiredService<AppDb>(),
+      UserPreferenceNames.ThemeMode,
+      tenant.Id);
+
+    Assert.IsType<NoContentResult>(getResult.Result);
   }
 }
