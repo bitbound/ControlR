@@ -1,4 +1,4 @@
-@using UGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups
 @attribute [Route(ClientRoutes.UserGroups)]
 @attribute [Authorize(Policy = PolicyNames.RequireUserGroupsRead)]
 
@@ -19,7 +19,7 @@
   </Actions>
 </GridToolbar>
 
-<MudDataGrid T="UGDtos.UserGroupDto" Items="_groups" Hover="true" Loading="_loading" QuickFilter="QuickFilter"
+<MudDataGrid T="UserGroupDto" Items="_groups" Hover="true" Loading="_loading" QuickFilter="QuickFilter"
              Breakpoint="Breakpoint.Sm">
   <Columns>
     <PropertyColumn Property="x => x.Name" Title="Name" />
@@ -50,6 +50,6 @@
     </TemplateColumn>
   </Columns>
   <PagerContent>
-    <MudDataGridPager T="UGDtos.UserGroupDto" />
+    <MudDataGridPager T="UserGroupDto" />
   </PagerContent>
 </MudDataGrid>

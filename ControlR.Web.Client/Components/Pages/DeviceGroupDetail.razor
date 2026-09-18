@@ -1,4 +1,4 @@
-@using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups
 @attribute [Route(ClientRoutes.DeviceGroupDetail)]
 @attribute [Authorize(Policy = PolicyNames.RequireDeviceGroupsRead)]
 
@@ -50,7 +50,7 @@ else
     </div>
   </MudPaper>
 
-  <MudDataGrid T="DGDtos.DeviceGroupMemberDto" Items="_group.Members" Hover="true" Breakpoint="Breakpoint.Sm">
+  <MudDataGrid T="DeviceGroupMemberDto" Items="_group.Members" Hover="true" Breakpoint="Breakpoint.Sm">
     <ToolBarContent>
       <MudText Typo="Typo.subtitle1">Members (@_group.Members.Count)</MudText>
       <MudSpacer />
@@ -87,7 +87,7 @@ else
       </TemplateColumn>
     </Columns>
     <PagerContent>
-      <MudDataGridPager T="DGDtos.DeviceGroupMemberDto" />
+      <MudDataGridPager T="DeviceGroupMemberDto" />
     </PagerContent>
   </MudDataGrid>
 }

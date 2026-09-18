@@ -1,4 +1,4 @@
-@using IKDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys
 @using ControlR.Libraries.Api.Contracts.Dtos.ServerApi
 @using MudBlazor
 
@@ -7,7 +7,7 @@
         <MudText Typo="Typo.h6">Installer Key Usages</MudText>
     </TitleContent>
     <DialogContent>
-        <MudDataGrid T="IKDtos.InstallerKeyUsageDto"
+        <MudDataGrid T="InstallerKeyUsageDto"
                      Items="@Usages"
                      Hover="true"
                      Breakpoint="Breakpoint.Sm">
@@ -21,7 +21,7 @@
                 </PropertyColumn>
             </Columns>
             <PagerContent>
-                <MudDataGridPager T="IKDtos.InstallerKeyUsageDto" />
+                <MudDataGridPager T="InstallerKeyUsageDto" />
             </PagerContent>
         </MudDataGrid>
     </DialogContent>
@@ -35,7 +35,7 @@
     public required IMudDialogInstance MudDialog { get; set; }
 
     [Parameter]
-    public IEnumerable<IKDtos.InstallerKeyUsageDto> Usages { get; set; } = [];
+    public IEnumerable<InstallerKeyUsageDto> Usages { get; set; } = [];
 
     private void Close()
     {

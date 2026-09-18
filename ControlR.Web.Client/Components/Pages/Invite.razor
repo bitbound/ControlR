@@ -1,5 +1,5 @@
 @using ControlR.Web.Client.StateManagement.Stores
-@using InviteDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Invites
 @attribute [Route(ClientRoutes.Invite)]
 @attribute [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
 @inject ILogger<Invite> Logger
@@ -22,11 +22,11 @@
     Add new users to your tenant, and manage pending invitations.
   </MudText>
 
-  <MudDataGrid T="InviteDtos.InviteResponseDto"
+  <MudDataGrid T="InviteResponseDto"
                RowsPerPage="@(25)"
                Items="InviteStore.Items"
                SortMode="SortMode.Multiple"
-               QuickFilter="JsonValueFilter.GetQuickFilter<InviteDtos.InviteResponseDto>(_searchText, Logger)"
+               QuickFilter="JsonValueFilter.GetQuickFilter<InviteResponseDto>(_searchText, Logger)"
                Loading="_loading"
                SortDefinitions="_sortDefinitions"
                ShowColumnOptions="true"
@@ -75,7 +75,7 @@
     </ToolBarContent>
 
     <Columns>
-      <PropertyColumn T="InviteDtos.InviteResponseDto"
+      <PropertyColumn T="InviteResponseDto"
                       TProperty="string"
                       Sortable="true"
                       Filterable="true"
@@ -83,7 +83,7 @@
                       Property="@(x => x.InviteeEmail)">
       </PropertyColumn>
 
-      <TemplateColumn T="InviteDtos.InviteResponseDto"
+      <TemplateColumn T="InviteResponseDto"
                       Sortable="true"
                       Filterable="true"
                       Title="Created At">
@@ -92,7 +92,7 @@
         </CellTemplate>
       </TemplateColumn>
 
-      <TemplateColumn T="InviteDtos.InviteResponseDto"
+      <TemplateColumn T="InviteResponseDto"
                       Sortable="true"
                       Filterable="true"
                       Title="Invite URL">
@@ -109,7 +109,7 @@
                         Value="context.Item.InviteUrl" />
         </CellTemplate>
       </TemplateColumn>
-      <TemplateColumn T="InviteDtos.InviteResponseDto"
+      <TemplateColumn T="InviteResponseDto"
                       Sortable="false"
                       Filterable="false"
                       ShowColumnOptions="false"
@@ -134,12 +134,12 @@
   private string _searchText = string.Empty;
 
 
-  private ObservableCollection<InviteDtos.InviteResponseDto> Invitations { get; } = [];
+  private ObservableCollection<InviteResponseDto> Invitations { get; } = [];
 
-  private readonly Dictionary<string, SortDefinition<InviteDtos.InviteResponseDto>> _sortDefinitions = new()
+  private readonly Dictionary<string, SortDefinition<InviteResponseDto>> _sortDefinitions = new()
     {
-      ["CreatedAt"] = new SortDefinition<InviteDtos.InviteResponseDto>(
-                        SortBy: nameof(InviteDtos.InviteResponseDto.CreatedAt),
+      ["CreatedAt"] = new SortDefinition<InviteResponseDto>(
+                        SortBy: nameof(InviteResponseDto.CreatedAt),
                       Descending: false,
                       Index: 0,
                       SortFunc: x => x.CreatedAt)
@@ -169,7 +169,7 @@
     }
   }
 
-  private async Task DeleteInvite(InviteDtos.InviteResponseDto dto)
+  private async Task DeleteInvite(InviteResponseDto dto)
   {
     var result = await DialogService.ShowMessageBoxAsync(
       "Confirm Delete",
@@ -228,7 +228,7 @@
       return;
     }
 
-    var request = new InviteDtos.CreateInviteRequestDto(_inputModel.Email);
+    var request = new CreateInviteRequestDto(_inputModel.Email);
     var createResult = await ControlrApi.V1.Invites.CreateInvite(tenantId, request);
     if (!createResult.IsSuccess)
     {

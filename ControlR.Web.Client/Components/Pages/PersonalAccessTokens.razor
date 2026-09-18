@@ -1,6 +1,6 @@
 ﻿@attribute [Route(ClientRoutes.PersonalAccessTokens)]
 @attribute [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfRead)]
-@using PATDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PersonalAccessTokens
 
 <div>
   <PageTitle>Personal Access Tokens</PageTitle>
@@ -41,7 +41,7 @@
     </MudCardContent>
   </MudCard>
 
-  <MudDataGrid T="PATDtos.PersonalAccessTokenResponseDto" Items="@_personalAccessTokens" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
+  <MudDataGrid T="PersonalAccessTokenResponseDto" Items="@_personalAccessTokens" Loading="_isLoading" ShowColumnOptions="true" Filterable="true"
     SortMode="SortMode.Single">
     <ToolBarContent>
       <MudSpacer />

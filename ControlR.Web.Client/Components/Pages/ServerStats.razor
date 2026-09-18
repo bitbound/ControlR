@@ -1,4 +1,6 @@
-﻿@attribute [Route(ClientRoutes.ServerStats)]
+﻿@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal
+
+@attribute [Route(ClientRoutes.ServerStats)]
 @attribute [Authorize(Policy = PolicyNames.RequireServerTelemetryRead)]
 
 @inject IMessenger Messenger;
