@@ -84,64 +84,57 @@ jobs:
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
-      - name: Download docker-compose file
-        uses: ./.github/actions/download-artifact
+      - name: Verify Server Payload
+        uses: ./.github/actions/verify-server-payload
         with:
-          name: DockerCompose
-          path: ./docker-compose-download
-          github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
-          run-id: ${{ steps.get-run-id.outputs.run_id }}
+          path: ./server-publish
 
-      - name: Get Version from Version.txt
-        id: get-version
+      # The Server artifact holds one subdirectory per runtime the build produced, so the
+      # archive itself is the record of what to publish. Nothing here re-reads the build's
+      # inputs.
+      - name: Prepare Docker Context
+        id: payload
         shell: bash
         run: |
-          VERSION=$(cat ./server-publish/wwwroot/downloads/Version.txt)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
+          set -euo pipefail
 
-      - name: Verify Downloaded Files
-        shell: bash
-        run: |
-          TEST_PATHS=(
-            "./server-publish/wwwroot/downloads/Version.txt"
-            "./server-publish/wwwroot/downloads/win-x86/ControlR.Agent.Installer.exe"
-            "./server-publish/wwwroot/downloads/win-x64/ControlR.Agent.Installer.exe"
-            "./server-publish/wwwroot/downloads/win-x86/ControlR.Agent.bundle.zip"
-            "./server-publish/wwwroot/downloads/win-x64/ControlR.Agent.bundle.zip"
-            "./server-publish/wwwroot/downloads/linux-x64/ControlR.Agent.Installer"
-            "./server-publish/wwwroot/downloads/linux-x64/ControlR.Agent.bundle.zip"
-            "./server-publish/wwwroot/downloads/osx-arm64/ControlR.Agent.Installer"
-            "./server-publish/wwwroot/downloads/osx-arm64/ControlR.Agent.bundle.zip"
-            "./server-publish/wwwroot/downloads/osx-x64/ControlR.Agent.Installer"
-            "./server-publish/wwwroot/downloads/osx-x64/ControlR.Agent.bundle.zip"
-            "./server-publish/novnc/vnc.html"
-          )
+          mkdir -p ./payload
+          PLATFORMS=
+          VERSION=
+          for PAIR in amd64:linux-x64 arm64:linux-arm64; do
+            ARCH="${PAIR%%:*}"
+            RID="${PAIR##*:}"
+            [ -d "./server-publish/$RID" ] || continue
 
-          for TEST_PATH in "${TEST_PATHS[@]}"; do
-            if [ ! -f "$TEST_PATH" ] && [ ! -d "$TEST_PATH" ]; then
-              echo "Error: $TEST_PATH not found."
-              exit 1
-            fi
+            cp -R "./server-publish/$RID" "./payload/$ARCH"
+            PLATFORMS="${PLATFORMS:+$PLATFORMS,}linux/$ARCH"
+            [ -n "$VERSION" ] || VERSION=$(tr -d '\r\n' < "./server-publish/$RID/wwwroot/downloads/Version.txt")
+            echo "linux/$ARCH <- $RID"
           done
-          echo "All required files verified successfully"
 
-      - name: Create Custom Dockerfile
+          [ -n "$PLATFORMS" ] || { echo "::error::No Linux payload in the Server artifact."; exit 1; }
+          [ -n "$VERSION" ] || { echo "::error::Version.txt is empty."; exit 1; }
+
+          { echo "version=$VERSION"; echo "platforms=$PLATFORMS"; } >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+          echo "Platforms: $PLATFORMS"
+
+      - name: Create Dockerfile
         shell: bash
         run: |
-          cat > ./server-publish/Dockerfile << 'EOF'
+          cat > ./payload/Dockerfile << 'EOF'
           FROM mcr.microsoft.com/dotnet/aspnet:10.0
           RUN apt update
           RUN apt -y install curl
-          
+
           USER $APP_UID
           WORKDIR /app
           EXPOSE 8080
           EXPOSE 8081
 
-          COPY . /app
+          # Each runtime is unpacked under its Docker architecture name.
+          ARG TARGETARCH
+          COPY ${TARGETARCH}/ /app
 
           ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
 
@@ -152,28 +145,32 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # Harmless when the runner's own architecture is the only target.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PAT }}
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Image
         uses: docker/build-push-action@v7
         with:
-          context: ./server-publish
-          file: ./server-publish/Dockerfile
+          context: ./payload
+          file: ./payload/Dockerfile
           push: true
+          platforms: ${{ steps.payload.outputs.platforms }}
           tags: |
             bitbound/controlr:${{ inputs.docker_tag }}
-            bitbound/controlr:${{ steps.get-version.outputs.VERSION }}
-          build-args: |
-            CURRENT_VERSION=${{ steps.get-version.outputs.VERSION }}
+            bitbound/controlr:${{ steps.payload.outputs.version }}
 
       - name: Image Published
         run: |
           echo "## Publish Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.payload.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** ${{ steps.payload.outputs.platforms }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
           echo "- bitbound/controlr:${{ inputs.docker_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- bitbound/controlr:${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- bitbound/controlr:${{ steps.payload.outputs.version }}" >> $GITHUB_STEP_SUMMARY

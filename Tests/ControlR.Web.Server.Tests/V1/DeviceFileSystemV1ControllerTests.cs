@@ -431,7 +431,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var ok = Assert.IsType<OkObjectResult>(result);
     var response = Assert.IsType<DevicePathDeletionResponseDto>(ok.Value);
     Assert.Equal("/parent/file.txt", response.FilePath);
-    Assert.Equal("File deletion completed", response.Message);
+    Assert.Equal("Path deletion completed", response.Message);
     harness.AgentClient.Verify(
       x => x.DeleteFile(It.Is<FileDeleteHubDto>(dto => dto.TargetPath == "/parent/file.txt")),
       Times.Once());

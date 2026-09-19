@@ -1,4 +1,4 @@
-namespace ControlR.Web.Client.Components.Dialogs;
+namespace ControlR.Web.Client.Helpers;
 
 /// <summary>
 /// Pure scope-selection rules for <see cref="PermissionAssignmentDialog"/>, mirroring the

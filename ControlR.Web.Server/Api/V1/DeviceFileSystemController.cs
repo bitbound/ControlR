@@ -93,7 +93,7 @@ public class DeviceFileSystemController(
 
     if (string.IsNullOrWhiteSpace(request.FilePath))
     {
-      return InvalidRequest("File path is required.");
+      return InvalidRequest("A path is required.");
     }
 
     // There is no directory flag on either contract. The agent stats the path and deletes a directory
@@ -101,16 +101,16 @@ public class DeviceFileSystemController(
     var outcome = await _deviceFileSystem.DeletePath(
       User,
       deviceId,
-      new InternalDtos.FileDeleteRequestDto(deviceId, request.FilePath),
+      new InternalDtos.DeletePathRequestDto(deviceId, request.FilePath),
       cancellationToken,
       resolvedTenantId);
 
     if (!outcome.Succeeded)
     {
-      return MapFailure(outcome, "An error occurred during file deletion.");
+      return MapFailure(outcome, "An error occurred during path deletion.");
     }
 
-    return Ok(new DevicePathDeletionResponseDto("File deletion completed", request.FilePath));
+    return Ok(new DevicePathDeletionResponseDto("Path deletion completed", request.FilePath));
   }
 
   /// <summary>

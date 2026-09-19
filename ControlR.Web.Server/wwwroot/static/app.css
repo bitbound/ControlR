@@ -61,3 +61,21 @@
 .loading-progress-text::after {
     content: var(--blazor-load-percentage-text);
 }
+
+/*
+ * The permission-catalog picker renders group headers as disabled autocomplete rows, so they read
+ * as Material section subheaders instead of dimmed selectable items. The popover is portalled to
+ * MudBlazor's popover provider, outside any component's scope, so these rules live in global CSS and
+ * hang off the autocomplete's PopoverClass.
+ */
+.permission-catalog-popover .mud-list-item-disabled {
+  min-height: auto;
+  padding-top: 0.5rem;
+  padding-bottom: 0;
+  opacity: 1;
+}
+
+.permission-catalog-popover .permission-catalog-group-label {
+  letter-spacing: 0.08em;
+  color: var(--mud-palette-action-disabled);
+}

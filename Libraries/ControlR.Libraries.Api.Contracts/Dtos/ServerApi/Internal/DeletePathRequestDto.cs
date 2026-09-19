@@ -1,5 +1,5 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 
-public record FileDeleteRequestDto(
+public record DeletePathRequestDto(
   Guid DeviceId,
   string FilePath);

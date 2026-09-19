@@ -20,7 +20,10 @@ public class PermissionCatalogStore(
 
   protected override IEnumerable<PermissionCatalogEntryDto> OrderItems(IEnumerable<PermissionCatalogEntryDto> items)
   {
-    return items.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase);
+    // Ordered by Name, not DisplayName: every catalog name carries its family as a prefix
+    // ("device.", "device-group.", "tenant."), so name order is also family order. See
+    // PermissionGrouping for the display families.
+    return items.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase);
   }
 
   protected override async Task RefreshImpl()

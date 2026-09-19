@@ -547,17 +547,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FileDeleteRequestDto"
+                "$ref": "#/components/schemas/DeletePathRequestDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/FileDeleteRequestDto"
+                "$ref": "#/components/schemas/DeletePathRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/FileDeleteRequestDto"
+                "$ref": "#/components/schemas/DeletePathRequestDto"
               }
             }
           },
@@ -7066,6 +7066,22 @@
           }
         }
       },
+      "DeletePathRequestDto": {
+        "required": [
+          "deviceId",
+          "filePath"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filePath": {
+            "type": "string"
+          }
+        }
+      },
       "DeviceColumnFilter": {
         "type": "object",
         "properties": {
@@ -7625,22 +7641,6 @@
           },
           "isNotifyUserOnSessionStartTenantEnforced": {
             "type": "boolean"
-          }
-        }
-      },
-      "FileDeleteRequestDto": {
-        "required": [
-          "deviceId",
-          "filePath"
-        ],
-        "type": "object",
-        "properties": {
-          "deviceId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "filePath": {
-            "type": "string"
           }
         }
       },

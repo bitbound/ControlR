@@ -201,6 +201,12 @@ public class PermissionAssignmentsV1ControllerTests(ITestOutputHelper testOutput
       Assert.IsType<OkObjectResult>(result.Result!).Value);
     Assert.NotEmpty(response.Items);
     Assert.Contains(response.Items, x => x.Name == PermissionNames.DeviceRead);
+
+    // The picker renders a header per category label, so every served entry needs one.
+    Assert.All(response.Items, x => Assert.False(string.IsNullOrWhiteSpace(x.CategoryLabel)));
+    Assert.Equal(
+      "Devices",
+      response.Items.Single(x => x.Name == PermissionNames.DeviceRead).CategoryLabel);
   }
 
   [Fact]

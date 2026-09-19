@@ -1,25 +1,30 @@
 @using ControlR.Libraries.Api.Contracts.Enums
 @using ControlR.Web.Client.Components.Shared
-@using PADtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments
 
 <MudDialog>
   <DialogContent>
     <MudGrid Spacing="2">
       <MudItem xs="12">
-        <MudAutocomplete T="PADtos.PermissionCatalogEntryDto"
-                         Value="_selectedPermission"
-                         ValueChanged="HandlePermissionChanged"
-                         SearchFunc="SearchPermissions"
+        <MudAutocomplete T="PermissionPickerRow"
+                         Value="SelectedPickerRow"
+                         ValueChanged="HandlePermissionRowChanged"
+                         SearchFunc="SearchPermissionRows"
                          Label="Permission"
                          Clearable="true"
                          MaxItems="null"
                          Required="true"
                          Dense="true"
-                         MaxHeight="400"
+                         MaxHeight="420"
                          ResetValueOnEmptyText="true"
                          CoerceText="true"
                          CoerceValue="false"
-                         ToStringFunc="@(p => p is null ? string.Empty : $"{p.DisplayName} ({p.Name})")" />
+                         ItemDisabledFunc="@(row => row.IsHeader)"
+                         PopoverClass="permission-catalog-popover"
+                         ToStringFunc="@(row => row?.Display ?? string.Empty)">
+          <ItemDisabledTemplate Context="row">
+            <MudText Typo="Typo.overline" Class="permission-catalog-group-label">@row.Display</MudText>
+          </ItemDisabledTemplate>
+        </MudAutocomplete>
       </MudItem>
       <MudItem xs="6">
         <MudSelect T="PermissionEffect" Value="_effect" ValueChanged="HandleEffectChanged" Label="Effect">

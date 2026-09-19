@@ -1,0 +1,90 @@
+name: Verify Server Payload
+description: Verifies that a downloaded Server artifact still contains the files the web server embeds
+
+# build.yml verifies its own publish output before uploading, but that cannot detect a
+# truncated or incomplete artifact download. An incomplete payload fails silently
+# downstream: "COPY ${TARGETARCH}/ /app" succeeds for any directory, and the release ZIPs
+# are built from whatever is present. Both would publish a broken artifact without error.
+
+inputs:
+  path:
+    description: 'Path to the downloaded payload root (the directory holding one subdirectory per runtime)'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Verify Server Payload
+      shell: bash
+      env:
+        PAYLOAD: ${{ inputs.path }}
+      run: |
+        set -euo pipefail
+
+        if [ ! -d "$PAYLOAD" ]; then
+          echo "::error::$PAYLOAD does not exist. Re-run the Build workflow."
+          exit 1
+        fi
+
+        # Static assets the server serves directly.
+        STATIC_PATHS=(
+          "wwwroot/downloads/Version.txt"
+          "wwwroot/downloads/release-notes.md"
+          "wwwroot/lib/monaco-editor/min/vs/editor/editor.main.js"
+          "novnc/vnc.html"
+        )
+
+        # Platform directories holding the agent installers users download. The installer
+        # file name carries the brand key, so match on the suffix instead of naming it.
+        PLATFORMS=(win-x86 win-x64 linux-x64 osx-arm64 osx-x64)
+
+        shopt -s nullglob
+        RUNTIME_DIRS=("$PAYLOAD"/*/)
+        shopt -u nullglob
+
+        if [ ${#RUNTIME_DIRS[@]} -eq 0 ]; then
+          echo "::error::$PAYLOAD contains no runtime directories."
+          exit 1
+        fi
+
+        FAILED=0
+        for RUNTIME_DIR in "${RUNTIME_DIRS[@]}"; do
+          RUNTIME="${RUNTIME_DIR%/}"
+          RUNTIME="${RUNTIME##*/}"
+          RUNTIME_FAILED=0
+
+          for STATIC_PATH in "${STATIC_PATHS[@]}"; do
+            if [ ! -f "$RUNTIME_DIR$STATIC_PATH" ]; then
+              echo "::error::$RUNTIME is missing $STATIC_PATH."
+              RUNTIME_FAILED=1
+            fi
+          done
+
+          for PLATFORM in "${PLATFORMS[@]}"; do
+            shopt -s nullglob
+            INSTALLERS=("$RUNTIME_DIR"wwwroot/downloads/"$PLATFORM"/*.Agent.Installer*)
+            BUNDLES=("$RUNTIME_DIR"wwwroot/downloads/"$PLATFORM"/*.Agent.bundle.zip)
+            shopt -u nullglob
+
+            if [ ${#INSTALLERS[@]} -eq 0 ]; then
+              echo "::error::$RUNTIME is missing the $PLATFORM agent installer."
+              RUNTIME_FAILED=1
+            fi
+            if [ ${#BUNDLES[@]} -eq 0 ]; then
+              echo "::error::$RUNTIME is missing the $PLATFORM agent bundle."
+              RUNTIME_FAILED=1
+            fi
+          done
+
+          if [ "$RUNTIME_FAILED" -eq 0 ]; then
+            echo "Verified $RUNTIME"
+          else
+            FAILED=1
+          fi
+        done
+
+        if [ "$FAILED" -ne 0 ]; then
+          exit 1
+        fi
+
+        echo "Server payload verified: ${#RUNTIME_DIRS[@]} runtime(s) in $PAYLOAD"

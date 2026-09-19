@@ -35,8 +35,9 @@ on:
         type: choice
         options:
           - linux-x64
-          - win-x64
           - linux-arm64
+          - linux-multiarch
+          - win-x64
 
       notarize_mac_bundle:
         description: "Notarize macOS bundle"
@@ -315,12 +316,6 @@ jobs:
       - name: Install macOS workload
         if: inputs.use_self_hosted_runners == false
         run: dotnet workload install macos
-
-      - name: Setup Xcode
-        if: inputs.use_self_hosted_runners == false
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '26.6'
 
       - name: Setup Code Signing Keychain
         env:
@@ -975,73 +970,67 @@ jobs:
           "@ | Set-Content -Path "ControlR.Web.Server/wwwroot/downloads/release-notes.md" -Encoding UTF8
           }
 
+      - name: Resolve Target Runtimes
+        id: runtimes
+        shell: pwsh
+        run: |
+          $runtime = '${{ inputs.server_runtime }}'
+
+          $ResolvedRuntimes = switch ($runtime) {
+            'linux-x64'       { @('linux-x64') }
+            'linux-arm64'     { @('linux-arm64') }
+            'linux-multiarch' { @('linux-x64', 'linux-arm64') }
+            'win-x64'         { @('win-x64') }
+            default { throw "Unsupported server_runtime '$runtime'." }
+          }
+
+          $json = ConvertTo-Json -InputObject @($ResolvedRuntimes) -Compress
+          "rids=$json" >> $env:GITHUB_OUTPUT
+          Write-Host "Resolved server_runtime '$runtime' to $json"
+
       - name: Build Web Server
         shell: pwsh
         run: |
-          New-Item -Path "ControlR.Web.Server/bin/publish" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Web.Server/ -p:ExcludeApp_Data=true --runtime ${{ inputs.server_runtime }} --configuration Release -p:Version=$env:VERSION -p:FileVersion=$env:VERSION --output ControlR.Web.Server/bin/publish --self-contained true
-
-      - name: Create Dockerfile
-        shell: pwsh
-        run: |
-          @"
-          FROM mcr.microsoft.com/dotnet/aspnet:10.0
-          RUN apt update
-          RUN apt -y install curl
-
-          USER `$APP_UID
-          WORKDIR /app
-          EXPOSE 8080
-          EXPOSE 8081
-
-          COPY . /app
-
-          ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
-
-          HEALTHCHECK \
-            CMD curl -f http://localhost:8080/health || exit 1
-          "@ | Set-Content -Path "ControlR.Web.Server/bin/publish/Dockerfile" -Encoding UTF8
+          $runtimes = ConvertFrom-Json '${{ steps.runtimes.outputs.rids }}'
+          foreach ($runtime in $runtimes) {
+            $OutputDir = "ControlR.Web.Server/bin/publish/$runtime"
+            New-Item -Path $OutputDir -ItemType Directory -Force | Out-Null
+            Write-Host "Publishing ControlR.Web.Server for $runtime..."
+            dotnet publish ControlR.Web.Server/ -p:ExcludeApp_Data=true --runtime $runtime --configuration Release -p:Version=$env:VERSION -p:FileVersion=$env:VERSION --output $OutputDir --self-contained true
+            if ($LASTEXITCODE -ne 0) {
+              throw "dotnet publish failed for $runtime with exit code $LASTEXITCODE."
+            }
+          }
 
       - name: Verify Download Artifacts
         shell: pwsh
         run: |
-          $TestPaths = @(
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/Version.txt",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/release-notes.md",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.Installer.exe",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.Installer.exe",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/$env:BRAND_KEY.Agent.Installer",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/linux-x64/$env:BRAND_KEY.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/$env:BRAND_KEY.Agent.Installer",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-arm64/$env:BRAND_KEY.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/$env:BRAND_KEY.Agent.Installer",
-            "ControlR.Web.Server/bin/publish/wwwroot/downloads/osx-x64/$env:BRAND_KEY.Agent.bundle.zip",
-            "ControlR.Web.Server/bin/publish/wwwroot/lib/monaco-editor/min/vs/editor/editor.main.js",
-            "ControlR.Web.Server/bin/publish/novnc/vnc.html",
-            "ControlR.Web.Server/bin/publish/Dockerfile"
+          $runtimes = ConvertFrom-Json '${{ steps.runtimes.outputs.rids }}'
+          $RequiredPaths = @(
+            "wwwroot/downloads/Version.txt",
+            "wwwroot/downloads/release-notes.md",
+            "wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.Installer.exe",
+            "wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.Installer.exe",
+            "wwwroot/downloads/win-x86/$env:BRAND_KEY.Agent.bundle.zip",
+            "wwwroot/downloads/win-x64/$env:BRAND_KEY.Agent.bundle.zip",
+            "wwwroot/downloads/linux-x64/$env:BRAND_KEY.Agent.Installer",
+            "wwwroot/downloads/linux-x64/$env:BRAND_KEY.Agent.bundle.zip",
+            "wwwroot/downloads/osx-arm64/$env:BRAND_KEY.Agent.Installer",
+            "wwwroot/downloads/osx-arm64/$env:BRAND_KEY.Agent.bundle.zip",
+            "wwwroot/downloads/osx-x64/$env:BRAND_KEY.Agent.Installer",
+            "wwwroot/downloads/osx-x64/$env:BRAND_KEY.Agent.bundle.zip",
+            "wwwroot/lib/monaco-editor/min/vs/editor/editor.main.js",
+            "novnc/vnc.html"
           )
-          foreach ($TestPath in $TestPaths) {
-            if (!(Test-Path $TestPath)) {
-              Write-Error "$TestPath not found."
-              exit 1
+          foreach ($runtime in $runtimes) {
+            foreach ($RequiredPath in $RequiredPaths) {
+              $TestPath = "ControlR.Web.Server/bin/publish/$runtime/$RequiredPath"
+              if (!(Test-Path $TestPath)) {
+                Write-Error "$TestPath not found."
+                exit 1
+              }
             }
           }
-
-      - name: Create Server Runtime Metadata
-        shell: pwsh
-        run: |
-          Set-Content -Path "$env:RUNNER_TEMP/ServerRuntime.txt" -Value "${{ inputs.server_runtime }}" -Force -Encoding UTF8
-
-      - name: Upload Server Metadata
-        uses: ./.github/actions/upload-artifact
-        with:
-          name: Server-Metadata
-          path: ${{ runner.temp }}/ServerRuntime.txt
-          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
-          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Upload Server
         uses: ./.github/actions/upload-artifact
@@ -1070,6 +1059,7 @@ jobs:
           echo "**Version:** v${{ env.VERSION }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Git Ref:** ${{ github.ref }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Server Runtime:** ${{ inputs.server_runtime }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "**Resolved Server Runtimes:** ${{ steps.runtimes.outputs.rids }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Use Self-Hosted Runners:** ${{ inputs.use_self_hosted_runners }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Use Local Storage for Artifacts:** ${{ inputs.use_local_storage }}" >> $env:GITHUB_STEP_SUMMARY
           echo "**Customization Config URL:** ${{ inputs.customization_config_url }}" >> $env:GITHUB_STEP_SUMMARY
