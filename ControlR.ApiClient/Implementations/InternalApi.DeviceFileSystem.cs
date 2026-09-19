@@ -18,7 +18,7 @@ internal partial class InternalApi
     });
   }
 
-  async Task<ApiResult> IDeviceFileSystemApi.DeleteFile(FileDeleteRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult> IDeviceFileSystemApi.DeletePath(DeletePathRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {

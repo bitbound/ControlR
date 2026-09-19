@@ -16096,6 +16096,7 @@
         "required": [
           "name",
           "displayName",
+          "categoryLabel",
           "description",
           "allowedScopeKinds",
           "selfRemovable"
@@ -16106,6 +16107,9 @@
             "type": "string"
           },
           "displayName": {
+            "type": "string"
+          },
+          "categoryLabel": {
             "type": "string"
           },
           "description": {

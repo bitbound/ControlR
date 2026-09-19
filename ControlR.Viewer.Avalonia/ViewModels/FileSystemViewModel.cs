@@ -212,7 +212,7 @@ public partial class FileSystemViewModel : ViewModelBase<FileSystemView>, IFileS
     {
       foreach (var item in SelectedItems)
       {
-        var result = await _controlrApi.Internal.DeviceFileSystem.DeleteFile(new FileDeleteRequestDto(_deviceState.CurrentDevice.Id, item.FullPath, item.IsDirectory));
+        var result = await _controlrApi.Internal.DeviceFileSystem.DeletePath(new DeletePathRequestDto(_deviceState.CurrentDevice.Id, item.FullPath));
         if (!result.IsSuccess)
         {
           throw new InvalidOperationException(result.Reason);

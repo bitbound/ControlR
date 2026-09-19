@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using ControlR.Libraries.TestingUtilities;
+using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Startup;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -22,7 +23,8 @@ internal static class TestAppBuilder
     [CallerMemberName] string testDatabaseName = "",
     bool useInMemoryDatabase = true,
     bool applyMigrations = true,
-    Action<ILoggingBuilder>? configureLogging = null)
+    Action<ILoggingBuilder>? configureLogging = null,
+    bool recordHubStreamSessions = false)
   {
     var timeProvider = new FakeTimeProvider(DateTimeOffset.Now);
     var uniqueDatabaseName = $"{testDatabaseName}-{Guid.NewGuid()}";
@@ -64,6 +66,11 @@ internal static class TestAppBuilder
     _ = await builder.AddControlrServer(false);
 
     _ = builder.Services.ReplaceImplementation<NavigationManager, FakeNavigationManager>(ServiceLifetime.Scoped);
+
+    if (recordHubStreamSessions)
+    {
+      _ = builder.Services.ReplaceImplementation<IHubStreamStore, RecordingHubStreamStore>(ServiceLifetime.Singleton);
+    }
 
     _ = builder.Services.ReplaceSingleton<TimeProvider, FakeTimeProvider>(timeProvider);
     _ = builder.Logging.ClearProviders();

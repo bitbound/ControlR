@@ -20,6 +20,14 @@ on:
         description: "Full ACR image reference. When provided, overrides the derived reference."
         required: false
         type: string
+      server_runtime:
+        description: "Server runtime the image content was built for"
+        required: false
+        type: choice
+        default: "linux-x64"
+        options:
+          - linux-x64
+          - linux-arm64
       use_local_storage:
         description: "Use local artifact storage"
         required: false
@@ -56,6 +64,11 @@ on:
         description: "Full ACR image reference. When provided, overrides the derived reference."
         required: false
         type: string
+      server_runtime:
+        description: "Server runtime the image content was built for"
+        required: false
+        type: string
+        default: "linux-x64"
       use_local_storage:
         description: "Use local artifact storage"
         required: false
@@ -90,6 +103,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Resolve image platform
+        id: platform
+        shell: bash
+        run: |
+          case "${{ inputs.server_runtime }}" in
+            linux-x64)   echo "platform=linux/amd64" >> "$GITHUB_OUTPUT" ;;
+            linux-arm64) echo "platform=linux/arm64" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::Unsupported server runtime '${{ inputs.server_runtime }}'. Expected linux-x64 or linux-arm64."
+              exit 1
+              ;;
+          esac
+
+      - name: Set up QEMU
+        if: steps.platform.outputs.platform == 'linux/arm64'
+        uses: docker/setup-qemu-action@v3
 
       - name: Validate local storage configuration
         uses: ./.github/actions/validate-local-storage
@@ -138,8 +168,10 @@ jobs:
       - name: Get Version from Version.txt
         id: get-version
         shell: bash
+        env:
+          SERVER_RID: ${{ inputs.server_runtime }}
         run: |
-          VERSION=$(cat ./server-publish/wwwroot/downloads/Version.txt)
+          VERSION=$(cat "./server-publish/${SERVER_RID}/wwwroot/downloads/Version.txt")
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
@@ -181,17 +213,20 @@ jobs:
         shell: bash
         env:
           BRAND_KEY: ${{ steps.brand.outputs.brand_key }}
+          SERVER_RID: ${{ inputs.server_runtime }}
         run: |
+          set -euo pipefail
+
           TEST_PATHS=(
-            "./server-publish/wwwroot/downloads/Version.txt"
-            "./server-publish/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.Installer"
-            "./server-publish/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.bundle.zip"
-            "./server-publish/novnc/vnc.html"
+            "./server-publish/${SERVER_RID}/wwwroot/downloads/Version.txt"
+            "./server-publish/${SERVER_RID}/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.Installer"
+            "./server-publish/${SERVER_RID}/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.bundle.zip"
+            "./server-publish/${SERVER_RID}/novnc/vnc.html"
           )
 
           for TEST_PATH in "${TEST_PATHS[@]}"; do
             if [ ! -f "$TEST_PATH" ] && [ ! -d "$TEST_PATH" ]; then
-              echo "Error: $TEST_PATH not found."
+              echo "::error::$TEST_PATH not found."
               exit 1
             fi
           done
@@ -199,8 +234,10 @@ jobs:
 
       - name: Create Custom Dockerfile
         shell: bash
+        env:
+          SERVER_RID: ${{ inputs.server_runtime }}
         run: |
-          cat > ./server-publish/Dockerfile << 'EOF'
+          cat > "./server-publish/${SERVER_RID}/Dockerfile" << 'EOF'
           FROM mcr.microsoft.com/dotnet/aspnet:10.0
           RUN apt-get update \
               && apt-get install -y --no-install-recommends curl \
@@ -245,9 +282,10 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v7
         with:
-          context: ./server-publish
-          file: ./server-publish/Dockerfile
+          context: ./server-publish/${{ inputs.server_runtime }}
+          file: ./server-publish/${{ inputs.server_runtime }}/Dockerfile
           push: true
+          platforms: ${{ steps.platform.outputs.platform }}
           tags: ${{ steps.image-ref.outputs.ref }}
           provenance: true
           sbom: true

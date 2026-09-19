@@ -98,78 +98,67 @@ jobs:
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
-      - name: Get Version from Version.txt
-        id: get-version
+      - name: Verify Server Payload
+        uses: ./.github/actions/verify-server-payload
+        with:
+          path: ./server-publish
+
+      # The Server artifact holds one subdirectory per runtime the build produced, so the
+      # archive itself is the record of what to publish.
+      - name: Prepare Release Artifacts
+        id: payloads
         shell: bash
         run: |
-          VERSION=$(tr -d '\r' < ./server-publish/wwwroot/downloads/Version.txt | xargs)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          VERSION=
+          PRIMARY_RID=
+          SUMMARY=
+          for PAIR in linux-x64:linux-amd64 linux-arm64:linux-arm64 win-x64:win-x64; do
+            RID="${PAIR%%:*}"
+            LABEL="${PAIR##*:}"
+            [ -d "./server-publish/$RID" ] || continue
+
+            rm -f "server-$LABEL.zip"
+            ( cd "./server-publish/$RID" && zip -qr "../../server-$LABEL.zip" . )
+            [ -n "$PRIMARY_RID" ] || PRIMARY_RID="$RID"
+            [ -n "$VERSION" ] || VERSION=$(tr -d '\r\n' < "./server-publish/$RID/wwwroot/downloads/Version.txt")
+            SUMMARY="${SUMMARY}${SUMMARY:+$'\n'}- \`$RID\` -> \`server-$LABEL.zip\`"
+            echo "server-$LABEL.zip <- $RID"
+          done
+
+          [ -n "$PRIMARY_RID" ] || { echo "::error::No server payload in the Server artifact."; exit 1; }
+          [ -n "$VERSION" ] || { echo "::error::Version.txt is empty."; exit 1; }
+
+          cp "./server-publish/$PRIMARY_RID/ControlR.Web.Server_internal.json" .
+          cp "./server-publish/$PRIMARY_RID/ControlR.Web.Server_v1.json" .
+          cp docker-compose-download/docker-compose.yml .
+
+          { echo "version=$VERSION"; echo "primary_rid=$PRIMARY_RID"; } >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 
-      - name: Download Server Metadata
-        uses: ./.github/actions/download-artifact
-        with:
-          name: Server-Metadata
-          path: ./server-metadata
-          github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
-          run-id: ${{ steps.get-run-id.outputs.run_id }}
-
-      - name: Resolve Server Runtime
-        id: server-runtime
-        shell: bash
-        run: |
-          RUNTIME_FILE=./server-metadata/ServerRuntime.txt
-          if [ ! -f "$RUNTIME_FILE" ]; then
-            echo "::error::$RUNTIME_FILE not found in the Server-Metadata artifact. Re-run the Build workflow."
-            exit 1
-          fi
-          RID=$(tr -d '\r\n' < "$RUNTIME_FILE" | xargs)
-          if [ -z "$RID" ]; then
-            echo "::error::$RUNTIME_FILE is empty."
-            exit 1
-          fi
-          case "$RID" in
-            linux-x64)   LABEL="linux-amd64" ;;
-            linux-arm64) LABEL="linux-arm64" ;;
-            win-x64)     LABEL="win-x64" ;;
-            *)
-              echo "::error::Unsupported server runtime '$RID'. Expected linux-x64, linux-arm64, or win-x64."
-              exit 1
-              ;;
-          esac
-          echo "rid=$RID" >> "$GITHUB_OUTPUT"
-          echo "asset_name=server-$LABEL.zip" >> "$GITHUB_OUTPUT"
-          echo "Resolved server runtime '$RID' to asset 'server-$LABEL.zip'"
-
-      - name: Copy OpenAPI Specs
-        shell: bash
-        run: |
-          cp ./server-publish/ControlR.Web.Server_internal.json ./ControlR.Web.Server_internal.json
-          cp ./server-publish/ControlR.Web.Server_v1.json ./ControlR.Web.Server_v1.json
-
-      - name: Prepare Release Artifacts
-        shell: bash
-        run: |
-          # Create server zip
-          cd server-publish
-          zip -r ../${{ steps.server-runtime.outputs.asset_name }} .
-          cd ..
-
-          cp docker-compose-download/docker-compose.yml .
+          {
+            echo "## Release Summary"
+            echo "**Version:** v$VERSION"
+            echo "**Server Runtimes:**"
+            printf '%s\n' "$SUMMARY"
+            echo "**Status:** Draft"
+            echo "**Pre-release:** ${{ inputs.prerelease }}"
+            echo ""
+            echo "⚠️ Release is in DRAFT mode - review and publish when ready"
+          } >> $GITHUB_STEP_SUMMARY
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: v${{ steps.get-version.outputs.VERSION }} Release
-          tag_name: v${{ steps.get-version.outputs.VERSION }}
+          name: v${{ steps.payloads.outputs.version }} Release
+          tag_name: v${{ steps.payloads.outputs.version }}
           draft: true
           prerelease: ${{ inputs.prerelease }}
           generate_release_notes: false
-          body_path: ./server-publish/wwwroot/downloads/release-notes.md 
+          body_path: ./server-publish/${{ steps.payloads.outputs.primary_rid }}/wwwroot/downloads/release-notes.md
           files: |
-            ${{ steps.server-runtime.outputs.asset_name }}
+            server-*.zip
             ControlR.Web.Server_internal.json
             ControlR.Web.Server_v1.json
             docker-compose.yml
@@ -179,9 +168,11 @@ jobs:
       - name: Archive Release Notes
         if: ${{ !inputs.prerelease }}
         shell: bash
+        env:
+          PRIMARY_RID: ${{ steps.payloads.outputs.primary_rid }}
         run: |
-          VERSION="${{ steps.get-version.outputs.VERSION }}"
-          cp ./server-publish/wwwroot/downloads/release-notes.md ".release-notes/v${VERSION}.md"
+          VERSION="${{ steps.payloads.outputs.version }}"
+          cp "./server-publish/${PRIMARY_RID}/wwwroot/downloads/release-notes.md" ".release-notes/v${VERSION}.md"
           cat > .release-notes/current.md << 'TEMPLATE'
           ## Breaking Changes
 
@@ -212,15 +203,3 @@ jobs:
             git commit -m "chore: archive release notes for v${VERSION}"
             git push "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
           fi
-
-      - name: Release Created
-        shell: bash
-        run: |
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** v${{ steps.get-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Server Runtime:** ${{ steps.server-runtime.outputs.rid }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Server Asset:** ${{ steps.server-runtime.outputs.asset_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** Draft" >> $GITHUB_STEP_SUMMARY
-          echo "**Pre-release:** ${{ inputs.prerelease }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "⚠️ Release is in DRAFT mode - review and publish when ready" >> $GITHUB_STEP_SUMMARY

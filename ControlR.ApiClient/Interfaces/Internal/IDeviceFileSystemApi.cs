@@ -9,7 +9,7 @@ public interface IDeviceFileSystemApi
   [ApiRoute($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/create-directory/{{deviceId}}", "POST")]
   Task<ApiResult> CreateDirectory(CreateDirectoryRequestDto request, CancellationToken cancellationToken = default);
   [ApiRoute($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/delete-path/{{deviceId}}", "DELETE")]
-  Task<ApiResult> DeleteFile(FileDeleteRequestDto request, CancellationToken cancellationToken = default);
+  Task<ApiResult> DeletePath(DeletePathRequestDto request, CancellationToken cancellationToken = default);
   [ApiRoute($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/download-archive/{{deviceId}}", "POST")]
   Task<ApiResult<ResponseStream>> DownloadArchive(Guid deviceId, DownloadArchiveRequestDto request, CancellationToken cancellationToken = default);
   [ApiRoute($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/download/{{deviceId}}", "GET")]

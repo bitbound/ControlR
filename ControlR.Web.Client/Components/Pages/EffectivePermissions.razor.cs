@@ -41,7 +41,10 @@ public partial class EffectivePermissions : ComponentBase
       var result = await ControlrApi.V1.PermissionAssignments.GetCatalog(_tenantId);
       if (result.IsSuccess)
       {
-        _catalog = [.. result.Value.Items];
+        // This page fetches the catalog directly instead of going through PermissionCatalogStore,
+        // so it states the order it wants rather than inheriting it: by Name, which is also
+        // family order because every catalog name is prefixed with its family.
+        _catalog = [.. result.Value.Items.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)];
       }
       else
       {

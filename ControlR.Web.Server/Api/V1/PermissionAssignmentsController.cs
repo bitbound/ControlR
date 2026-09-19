@@ -291,8 +291,8 @@ public class PermissionAssignmentsController(
 
     var entries = PermissionCatalog.All.Values
       .Select(x => new PermissionCatalogEntryDto(
-        x.Name, x.DisplayName, x.Description, x.AllowedScopeKinds, x.SelfRemovable))
-      .OrderBy(x => x.DisplayName)
+        x.Name, x.DisplayName, x.CategoryLabel, x.Description, x.AllowedScopeKinds, x.SelfRemovable))
+      .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
       .ToList();
 
     return Ok(new PermissionCatalogResponseDto

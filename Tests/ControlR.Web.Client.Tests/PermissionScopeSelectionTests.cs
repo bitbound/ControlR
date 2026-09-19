@@ -1,5 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Enums;
-using ControlR.Web.Client.Components.Dialogs;
+using ControlR.Web.Client.Helpers;
 
 namespace ControlR.Web.Client.Tests;
 

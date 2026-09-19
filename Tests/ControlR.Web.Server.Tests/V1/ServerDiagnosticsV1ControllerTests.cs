@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Tests.Helpers;

@@ -34,13 +34,13 @@ public interface IDeviceFileSystemService
     Guid? expectedTenantId = null);
 
   /// <summary>
-  /// Asks the agent to delete a path. Only the path is forwarded; the caller's directory flag is
-  /// dropped at this boundary. The agent's answer is reported, as with directory creation.
+  /// Asks the agent to delete a path. Only the path is forwarded. The agent stats it and deletes a
+  /// directory tree or a file accordingly. The agent's answer is reported, as with directory creation.
   /// </summary>
   Task<FileSystemOutcome> DeletePath(
     ClaimsPrincipal user,
     Guid deviceId,
-    InternalDtos.FileDeleteRequestDto request,
+    InternalDtos.DeletePathRequestDto request,
     CancellationToken cancellationToken,
     Guid? expectedTenantId = null);
 
@@ -171,7 +171,7 @@ public class DeviceFileSystemService(
   public async Task<FileSystemOutcome> DeletePath(
     ClaimsPrincipal user,
     Guid deviceId,
-    InternalDtos.FileDeleteRequestDto request,
+    InternalDtos.DeletePathRequestDto request,
     CancellationToken cancellationToken,
     Guid? expectedTenantId = null)
   {
@@ -195,12 +195,12 @@ public class DeviceFileSystemService(
         .Client(device.ConnectionId)
         .DeleteFile(deleteRequest);
 
-      _logger.LogInformation("File deletion requested for {FilePath} on device {DeviceId}",
+      _logger.LogInformation("Path deletion requested for {FilePath} on device {DeviceId}",
         request.FilePath, deviceId);
 
       if (result is null)
       {
-        _logger.LogWarning("No response received from agent for file deletion on device {DeviceId}", deviceId);
+        _logger.LogWarning("No response received from agent for path deletion on device {DeviceId}", deviceId);
         return new(FileSystemFailure.NoResponse, null);
       }
 
@@ -213,7 +213,7 @@ public class DeviceFileSystemService(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error deleting file {FilePath} on device {DeviceId}",
+      _logger.LogError(ex, "Error deleting path {FilePath} on device {DeviceId}",
         request.FilePath, deviceId);
       return new(FileSystemFailure.Unexpected, ex.Message);
     }
@@ -582,7 +582,7 @@ public class DeviceFileSystemService(
     CancellationToken cancellationToken)
   {
     var streamId = Guid.NewGuid();
-    using var signaler = _hubStreamStore.GetOrCreate<InternalDtos.FileSystemEntryDto[]>(streamId);
+    using var signaler = _hubStreamStore.GetOrCreate<InternalDtos.FileSystemEntryDto[]>(streamId, HubStreamExpiration.Listing);
 
     var result = await startStream(streamId);
 

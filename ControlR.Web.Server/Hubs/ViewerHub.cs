@@ -1087,7 +1087,7 @@ public class ViewerHub(
       }
 
       var streamId = Guid.NewGuid();
-      using var signaler = _hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+      using var signaler = _hubStreamStore.GetOrCreate<byte[]>(streamId, HubStreamExpiration.FileTransfer);
 
       var uploadRequest = new FileUploadHubDto(
         streamId,

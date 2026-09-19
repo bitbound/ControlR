@@ -47,16 +47,16 @@ public class DeviceFileSystemController : ControllerBase
   }
 
   [HttpDelete("delete-path/{deviceId:guid}")]
-  [ApiDeprecated("/api/v1/device-file-system/delete-path/{deviceId}?tenantId={tenantId}", Note = "Use DELETE /api/v1/device-file-system/delete-path/{deviceId} with a required tenantId. The V1 response is the named DevicePathDeletionResponseDto instead of an ad hoc body whose key order depended on an anonymous type, and its request carries no DeviceId or IsDirectory. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.")]
+  [ApiDeprecated("/api/v1/device-file-system/delete-path/{deviceId}?tenantId={tenantId}", Note = "Use DELETE /api/v1/device-file-system/delete-path/{deviceId} with a required tenantId. The V1 body carries no DeviceId, because the route already names the device. The V1 response is the named DevicePathDeletionResponseDto instead of an ad hoc body whose key order depended on an anonymous type. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.")]
   public async Task<IActionResult> DeletePath(
     [FromRoute] Guid deviceId,
-    [FromBody] InternalDtos.FileDeleteRequestDto request,
+    [FromBody] InternalDtos.DeletePathRequestDto request,
     [FromServices] IDeviceFileSystemService deviceFileSystem,
     CancellationToken cancellationToken)
   {
     if (string.IsNullOrWhiteSpace(request.FilePath))
     {
-      return BadRequest("File path is required.");
+      return BadRequest("A path is required.");
     }
 
     var outcome = await deviceFileSystem.DeletePath(User, deviceId, request, cancellationToken);
@@ -69,8 +69,8 @@ public class DeviceFileSystemController : ControllerBase
       FileSystemFailure.DeviceOffline => Conflict(DeviceOfflineMessage),
       FileSystemFailure.RemoteFailure => RemoteFailureProblem(outcome.Reason),
       FileSystemFailure.NoResponse => NoResponseProblem(),
-      FileSystemFailure.Cancelled or FileSystemFailure.Unexpected => StatusCode(500, "An error occurred during file deletion."),
-      _ => Ok(new { Message = "File deletion completed", request.FilePath }),
+      FileSystemFailure.Cancelled or FileSystemFailure.Unexpected => StatusCode(500, "An error occurred during path deletion."),
+      _ => Ok(new { Message = "Path deletion completed", request.FilePath }),
     };
   }
 
@@ -162,7 +162,7 @@ public class DeviceFileSystemController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, HubStreamExpiration.FileTransfer);
 
     var downloadRequest = new FileDownloadHubDto(streamId, filePath);
 
@@ -284,7 +284,7 @@ public class DeviceFileSystemController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, HubStreamExpiration.FileTransfer);
 
     var streamRequest = new StreamFileContentsRequestHubDto(streamId, filePath);
 
@@ -500,7 +500,7 @@ public class DeviceFileSystemController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, HubStreamExpiration.FileTransfer);
     var uploadRequest = new FileUploadHubDto(streamId, targetSaveDirectory, file.FileName, file.Length, overwrite);
 
     try
@@ -624,7 +624,7 @@ public class DeviceFileSystemController : ControllerBase
     }
 
     var streamId = Guid.NewGuid();
-    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, TimeSpan.FromMinutes(30));
+    using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, HubStreamExpiration.FileTransfer);
     var downloadRequest = new FileArchiveDownloadHubDto(streamId, archiveFileName, request.TargetPaths.ToArray());
 
     try

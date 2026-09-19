@@ -4,6 +4,7 @@ namespace ControlR.Web.Server.Authz.Permissions;
 
 public sealed record PermissionMetadata(
   string Name,
+  string CategoryLabel,
   string DisplayName,
   string Description,
   ImmutableArray<PermissionScopeKind> AllowedScopeKinds,

@@ -16,7 +16,6 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectivePermissions;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserGroups;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.PermissionAssignments;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServiceAccounts;
 
 namespace ControlR.Web.Server.Tests;
 

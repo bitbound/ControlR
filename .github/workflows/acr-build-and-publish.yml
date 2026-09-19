@@ -28,6 +28,14 @@ on:
         description: "Sponsor build slot number"
         required: true
         type: number
+      server_runtime:
+        description: "Server target runtime (linux-x64 or linux-arm64)"
+        required: false
+        type: choice
+        default: "linux-x64"
+        options:
+          - linux-x64
+          - linux-arm64
       environment:
         description: "Target environment (dev or prod)"
         required: false
@@ -50,6 +58,7 @@ jobs:
       customization_config_url: ${{ inputs.customization_config_url }}
       version: ${{ inputs.version }}
       ref: ${{ inputs.source_ref }}
+      server_runtime: ${{ inputs.server_runtime }}
       skip_version_increment: true
       use_self_hosted_runners: true
       use_local_storage: true
@@ -91,6 +100,7 @@ jobs:
       sponsor_login: ${{ inputs.sponsor_login }}
       slot_number: ${{ inputs.slot_number }}
       image_reference: ${{ inputs.image_reference }}
+      server_runtime: ${{ inputs.server_runtime }}
       environment: ${{ inputs.environment }}
       use_local_storage: true
       use_self_hosted_runners: true
