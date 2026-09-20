@@ -332,7 +332,7 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Error while downloading file from viewer: {FileName} to {Directory}",
         dto.FileName, dto.TargetDirectoryPath);
-      return HubResult.Fail("An error occurred while downloading file from viewer.");
+      return HubResult.Fail("An error occurred while downloading file from viewer.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -356,7 +356,7 @@ internal class AgentHubClient(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting log files");
-      return HubResult.Fail<GetLogFilesResponseDto>("An error occurred while getting log files.");
+      return HubResult.Fail<GetLogFilesResponseDto>("An error occurred while getting log files.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -413,7 +413,7 @@ internal class AgentHubClient(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting root drives");
-      return HubResult.Fail<GetRootDrivesResponseDto>("An error occurred while getting root drives.");
+      return HubResult.Fail<GetRootDrivesResponseDto>("An error occurred while getting root drives.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -704,7 +704,7 @@ internal class AgentHubClient(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error streaming directory contents for {DirectoryPath}", dto.DirectoryPath);
-      return HubResult.Fail("An error occurred while streaming directory contents.");
+      return HubResult.Fail("An error occurred while streaming directory contents.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -759,7 +759,7 @@ internal class AgentHubClient(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error streaming subdirectories for {DirectoryPath}", dto.DirectoryPath);
-      return HubResult.Fail("An error occurred while streaming subdirectories.");
+      return HubResult.Fail("An error occurred while streaming subdirectories.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -859,7 +859,7 @@ internal class AgentHubClient(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending archive download: {ArchiveFileName}", dto.ArchiveFileName);
-      return HubResult.Fail<FileDownloadResponseHubDto>("An error occurred while sending archive download.");
+      return HubResult.Fail<FileDownloadResponseHubDto>("An error occurred while sending archive download.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -890,7 +890,7 @@ internal class AgentHubClient(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending file download: {FilePath}", dto.FilePath);
-      return HubResult.Fail<FileDownloadResponseHubDto>("An error occurred while sending file download.");
+      return HubResult.Fail<FileDownloadResponseHubDto>("An error occurred while sending file download.", OperationFailureCode.DeviceFailure);
     }
   }
 

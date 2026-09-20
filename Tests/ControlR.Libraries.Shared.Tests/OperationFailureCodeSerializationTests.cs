@@ -33,6 +33,21 @@ public class OperationFailureCodeSerializationTests
   }
 
   [Fact]
+  public void HubResult_CurrentPayload_DeserializesIntoALegacyServer()
+  {
+    var current = HubResult.Fail("a refusal with a code", OperationFailureCode.NotFound);
+    var bytes = MessagePackSerializer.Serialize(current, cancellationToken: TestContext.Current.CancellationToken);
+
+    var legacyRead = MessagePackSerializer.Deserialize<LegacyHubResultPayload>(
+      bytes,
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.False(legacyRead.IsSuccess);
+    Assert.Equal("a refusal with a code", legacyRead.Reason);
+    Assert.Null(legacyRead.ErrorCode);
+  }
+
+  [Fact]
   public void HubResult_FromAnAgentWithoutTheField_ReadsBackAsUnknown()
   {
     var legacy = new LegacyHubResultPayload(
