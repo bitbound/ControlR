@@ -174,14 +174,63 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
         TenantSettingNames.NotifyUserOnSessionStart,
         TenantSettingDefinitions.FormatValue(TenantSettingNames.NotifyUserOnSessionStart, true) ?? "true"));
 
-    var ok = Assert.IsType<OkObjectResult>(result.Result);
-    var dto = Assert.IsType<TenantSettingResponseDto>(ok.Value);
+    var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+    var dto = Assert.IsType<TenantSettingResponseDto>(created.Value);
     Assert.Equal(TenantSettingNames.NotifyUserOnSessionStart, dto.Name);
 
     var getResult = await controller.GetAll(manager, tenant.Id, CancellationToken.None);
     var settingsOk = Assert.IsType<OkObjectResult>(getResult.Result);
     var settings = Assert.IsType<TenantSettingsDto>(settingsOk.Value);
     Assert.True(settings.NotifyUserOnSessionStart);
+  }
+
+  [Fact]
+  public async Task SetSetting_WhenSettingAlreadyExists_Answers201()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<TenantSettingsController>(
+      userEmail: "ts-createdagain@test.local",
+      presets: PermissionPresets.TenantAdministrator);
+
+    var manager = services.GetRequiredService<ITenantSettingsManager>();
+    var request = new TenantSettingRequestDto(
+      TenantSettingNames.NotifyUserOnSessionStart,
+      TenantSettingDefinitions.FormatValue(TenantSettingNames.NotifyUserOnSessionStart, true) ?? "true");
+
+    await controller.SetSetting(manager, tenant.Id, request);
+
+    var result = await controller.SetSetting(manager, tenant.Id, request);
+
+    var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+    Assert.Equal(StatusCodes.Status201Created, created.StatusCode);
+  }
+
+  [Fact]
+  public async Task SetSetting_WhenSettingIsNew_Answers201AndPointsAtTheSetting()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<TenantSettingsController>(
+      userEmail: "ts-created@test.local",
+      presets: PermissionPresets.TenantAdministrator);
+
+    var result = await controller.SetSetting(
+      services.GetRequiredService<ITenantSettingsManager>(),
+      tenant.Id,
+      new TenantSettingRequestDto(
+        TenantSettingNames.NotifyUserOnSessionStart,
+        TenantSettingDefinitions.FormatValue(TenantSettingNames.NotifyUserOnSessionStart, true) ?? "true"));
+
+    var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+    Assert.Equal(StatusCodes.Status201Created, created.StatusCode);
+    Assert.Equal(nameof(TenantSettingsController.GetSetting), created.ActionName);
+
+    var dto = Assert.IsType<TenantSettingResponseDto>(created.Value);
+    Assert.NotNull(dto.Id);
+    Assert.Equal(TenantSettingNames.NotifyUserOnSessionStart, dto.Name);
   }
 
   [Fact]
@@ -201,5 +250,38 @@ public class TenantSettingsV1ControllerTests(ITestOutputHelper testOutput)
 
     var problem = Assert.IsType<ObjectResult>(result.Result);
     Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
+  }
+
+  [Fact]
+  public async Task SetSetting_WhenValueIsBlank_Answers200AndRemovesTheSetting()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<TenantSettingsController>(
+      userEmail: "ts-blank@test.local",
+      presets: PermissionPresets.TenantAdministrator);
+
+    var manager = services.GetRequiredService<ITenantSettingsManager>();
+    await controller.SetSetting(
+      manager,
+      tenant.Id,
+      new TenantSettingRequestDto(
+        TenantSettingNames.NotifyUserOnSessionStart,
+        TenantSettingDefinitions.FormatValue(TenantSettingNames.NotifyUserOnSessionStart, true) ?? "true"));
+
+    var result = await controller.SetSetting(
+      manager,
+      tenant.Id,
+      new TenantSettingRequestDto(TenantSettingNames.NotifyUserOnSessionStart, " "));
+
+    var ok = Assert.IsType<OkObjectResult>(result.Result);
+    var dto = Assert.IsType<TenantSettingResponseDto>(ok.Value);
+    Assert.Null(dto.Id);
+
+    var getResult = await controller.GetAll(manager, tenant.Id, CancellationToken.None);
+    var settingsOk = Assert.IsType<OkObjectResult>(getResult.Result);
+    var settings = Assert.IsType<TenantSettingsDto>(settingsOk.Value);
+    Assert.Null(settings.NotifyUserOnSessionStart);
   }
 }

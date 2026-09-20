@@ -6,9 +6,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Tenant settings resource. Same operations as the internal surface with the V1 conventions:
-/// required tenantId (so service accounts can address a tenant explicitly), ProblemDetails on
-/// validation failures, and 204 for delete and for a get of an unset name.
+/// Settings owned by a tenant, addressed by tenantId on every operation.
 /// </summary>
 [Route(HttpConstants.V1.TenantSettingsEndpoint)]
 [ApiController]
@@ -113,6 +111,7 @@ public class TenantSettingsController : ControllerBase
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsWrite)]
   [ProducesResponseType<TenantSettingResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<TenantSettingResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
@@ -135,7 +134,19 @@ public class TenantSettingsController : ControllerBase
       return result.ToHttpResult().ToActionResult();
     }
 
-    return Ok(ToV1Dto(result.Value));
+    var response = ToV1Dto(result.Value);
+
+    // A blank value means the manager removed the setting, so there is no resource to point a
+    // Location at. The manager signals that by leaving the id off the response.
+    if (response.Id is null)
+    {
+      return Ok(response);
+    }
+
+    return CreatedAtAction(
+      nameof(GetSetting),
+      new { settingName = response.Name, tenantId = resolvedTenantId },
+      response);
   }
 
   [HttpPut]
