@@ -7,6 +7,7 @@ using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;
+using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.DeviceFileSystem;
 using ControlR.Web.Server.Tests.Helpers;
@@ -18,6 +19,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 using Moq;
 using System.Net;
 using System.Net.Http.Json;
@@ -29,8 +32,7 @@ namespace ControlR.Web.Server.Tests.V1;
 /// The device file system operations on the versioned controller. These assert the V1 contract: a
 /// required tenantId resolved once per action, the resolved tenant applied to the device load as an
 /// explicit predicate, and the uniform status mapping the deprecated internal endpoints lack (missing
-/// device 404, agent refusal 409 carrying the agent's text, no answer 502, canceled wait 408). The
-/// four binary siblings stay internal until the API client can carry a streamed result.
+/// device 404, agent refusal 409 carrying the agent's text, no answer 502, canceled wait 408).
 /// <para>
 /// Test names are prefixed with the action method name, which is also the grouping, since member
 /// ordering keeps them alphabetical.
@@ -52,7 +54,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
 
   /// <summary>
   /// <see cref="RequireTenantIdActionConvention"/> adds the empty-id 400 to every V1 action that takes a
-  /// tenantId. This pins that all eight take the parameter.
+  /// tenantId. This pins that all twelve take the parameter.
   /// </summary>
   [Fact]
   public void AllActions_TakeARequiredTenantIdParameter()
@@ -62,7 +64,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       .Where(x => x.IsDefined(typeof(HttpMethodAttribute), inherit: false))
       .ToArray();
 
-    Assert.Equal(8, actions.Length);
+    Assert.Equal(12, actions.Length);
 
     foreach (var action in actions)
     {
@@ -91,11 +93,15 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     {
       (HttpMethod.Post, $"create-directory/{deviceId}?tenantId={emptyTenant}", new CreateDeviceDirectoryRequestDto("/parent", "new-dir")),
       (HttpMethod.Delete, $"delete-path/{deviceId}?tenantId={emptyTenant}", new DeleteDevicePathRequestDto("/parent/file.txt")),
+      (HttpMethod.Post, $"download-archive/{deviceId}?tenantId={emptyTenant}", new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"])),
+      (HttpMethod.Get, $"download/{deviceId}?tenantId={emptyTenant}&filePath=/parent/file.txt", null),
       (HttpMethod.Post, $"contents?tenantId={emptyTenant}", new DeviceDirectoryContentsRequestDto(deviceId, "/parent")),
+      (HttpMethod.Get, $"logs/{deviceId}/contents?tenantId={emptyTenant}&filePath=/parent/app.log", null),
       (HttpMethod.Get, $"logs/{deviceId}?tenantId={emptyTenant}", null),
       (HttpMethod.Post, $"path-segments?tenantId={emptyTenant}", new DevicePathSegmentsRequestDto(deviceId, "/parent/child")),
       (HttpMethod.Post, $"root-drives?tenantId={emptyTenant}", new DeviceRootDrivesRequestDto(deviceId)),
       (HttpMethod.Post, $"subdirectories?tenantId={emptyTenant}", new DeviceSubdirectoriesRequestDto(deviceId, "/parent")),
+      (HttpMethod.Post, $"upload/{deviceId}?tenantId={emptyTenant}", null),
       (HttpMethod.Post, $"validate-path/{deviceId}?tenantId={emptyTenant}", new ValidateDeviceFilePathRequestDto("/parent", "file.txt")),
     };
 
@@ -438,6 +444,407 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task DownloadArchive_WhenAgentNeverAnswers_ReturnsBadGateway()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-noanswer@test.local");
+    HubResult<FileDownloadResponseHubDto>? noResponse = null;
+    harness.AgentClient
+      .Setup(x => x.UploadArchiveToViewer(It.IsAny<FileArchiveDownloadHubDto>()))
+      .ReturnsAsync(noResponse!);
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertNoAnswerFromDevice(result);
+    Assert.Equal("The device did not return a result.", problem.Detail);
+  }
+
+  [Fact]
+  public async Task DownloadArchive_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-refused@test.local");
+    harness.AgentClient
+      .Setup(x => x.UploadArchiveToViewer(It.IsAny<FileArchiveDownloadHubDto>()))
+      .ReturnsAsync(HubResult.Fail<FileDownloadResponseHubDto>("nothing to archive"));
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertDeviceRefusal(result);
+    Assert.Equal("nothing to archive", problem.Detail);
+  }
+
+  [Fact]
+  public async Task DownloadArchive_WhenArchiveFileNameIsMissing_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-noname@test.local");
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DownloadDeviceArchiveRequestDto(" ", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    AssertBadRequest(harness, result);
+  }
+
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemTransferDownload</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task DownloadArchive_WhenCallerLacksTransferDownload_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-archive-no-perm@test.local",
+      PermissionNames.DeviceFileSystemTransferDownload);
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task DownloadArchive_WhenDeviceDoesNotExist_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-notfound@test.local");
+
+    var result = await harness.Controller.DownloadArchive(
+      Guid.NewGuid(),
+      harness.Tenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    AssertNotFound(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task DownloadArchive_WhenNoTargetPathsAreGiven_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-nopaths@test.local");
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", []),
+      TestContext.Current.CancellationToken);
+
+    AssertBadRequest(harness, result);
+  }
+
+  [Fact]
+  public async Task DownloadArchive_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-archive-cross-tenant-sa");
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      otherTenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    AssertNotFound(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task DownloadArchive_WhenTheAgentReportsASizeAboveTheLimit_ReturnsRequestEntityTooLarge()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      _testOutput,
+      new Dictionary<string, string?> { ["AppOptions:MaxFileTransferSize"] = "2" });
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-toolarge@test.local");
+    harness.AgentClient
+      .Setup(x => x.UploadArchiveToViewer(It.IsAny<FileArchiveDownloadHubDto>()))
+      .ReturnsAsync(HubResult.Ok(new FileDownloadResponseHubDto(3, "packed.zip")));
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    AssertTransferTooLarge(result);
+  }
+
+  [Fact]
+  public async Task DownloadArchive_WhenTheCallerNamesAnotherTenant_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-foreign@test.local");
+    var foreignTenant = await harness.Services.CreateTestTenant("V1 DFS Archive Foreign");
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      foreignTenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task DownloadArchive_WhenTheRequestIsUsable_StreamsTheArchiveWithTheAgentsDisplayName()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput, recordHubStreamSessions: true);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-archive-success@test.local");
+    var body = harness.CaptureResponseBody();
+    harness.AgentClient
+      .Setup(x => x.UploadArchiveToViewer(It.IsAny<FileArchiveDownloadHubDto>()))
+      .ReturnsAsync((FileArchiveDownloadHubDto dto) =>
+      {
+        var signaler = harness.HubStreamStore.GetOrCreate<byte[]>(dto.StreamId, HubStreamExpiration.FileTransfer);
+        signaler.Writer.TryWrite([1, 2, 3]);
+        signaler.SetWriteCompleted();
+        return HubResult.Ok(new FileDownloadResponseHubDto(3, "packed.zip"));
+      });
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DownloadDeviceArchiveRequestDto("download.zip", ["/parent/file.txt"]),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<EmptyResult>(result);
+    Assert.Equal<byte[]>([1, 2, 3], body.ToArray());
+    Assert.Equal("application/octet-stream", harness.Controller.Response.ContentType);
+    // The length the agent stated is a snapshot taken before it read the file, so it is not a promise
+    // the response can keep. Declaring it lets Kestrel abort the transfer over a single appended byte.
+    Assert.Null(harness.Controller.Response.ContentLength);
+    AssertAttachmentNamed(harness, "packed.zip");
+    AssertTransferLifetime(harness);
+    Assert.Equal([OnlineConnectionId], harness.ConnectionIds);
+    harness.AgentClient.Verify(
+      x => x.UploadArchiveToViewer(It.Is<FileArchiveDownloadHubDto>(
+        dto => dto.ArchiveFileName == "download.zip"
+          && dto.TargetPaths.Length == 1
+          && dto.TargetPaths[0] == "/parent/file.txt")),
+      Times.Once());
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenAgentNeverAnswers_ReturnsBadGateway()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-download-noanswer@test.local");
+    HubResult<FileDownloadResponseHubDto>? noResponse = null;
+    harness.AgentClient
+      .Setup(x => x.UploadFileToViewer(It.IsAny<FileDownloadHubDto>()))
+      .ReturnsAsync(noResponse!);
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/parent/file.txt",
+      TestContext.Current.CancellationToken);
+
+    AssertNoAnswerFromDevice(result);
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-download-refused@test.local");
+    harness.AgentClient
+      .Setup(x => x.UploadFileToViewer(It.IsAny<FileDownloadHubDto>()))
+      .ReturnsAsync(HubResult.Fail<FileDownloadResponseHubDto>("the file is locked"));
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/parent/file.txt",
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertDeviceRefusal(result);
+    Assert.Equal("the file is locked", problem.Detail);
+  }
+
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemTransferDownload</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task DownloadFile_WhenCallerLacksTransferDownload_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-download-no-perm@test.local",
+      PermissionNames.DeviceFileSystemTransferDownload);
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/parent/file.txt",
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenDeviceDoesNotExist_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-download-notfound@test.local");
+
+    var result = await harness.Controller.DownloadFile(
+      Guid.NewGuid(),
+      harness.Tenant.Id,
+      "/parent/file.txt",
+      TestContext.Current.CancellationToken);
+
+    AssertNotFound(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenFilePathIsMissing_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-download-nopath@test.local");
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      " ",
+      TestContext.Current.CancellationToken);
+
+    AssertBadRequest(harness, result);
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-download-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-download-cross-tenant-sa");
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      otherTenant.Id,
+      "/parent/file.txt",
+      TestContext.Current.CancellationToken);
+
+    AssertNotFound(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenTheAgentReportsASizeAboveTheLimit_ReturnsRequestEntityTooLarge()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      _testOutput,
+      new Dictionary<string, string?> { ["AppOptions:MaxFileTransferSize"] = "2" });
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-download-toolarge@test.local");
+    harness.AgentClient
+      .Setup(x => x.UploadFileToViewer(It.IsAny<FileDownloadHubDto>()))
+      .ReturnsAsync(HubResult.Ok(new FileDownloadResponseHubDto(3, "file.txt")));
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/parent/file.txt",
+      TestContext.Current.CancellationToken);
+
+    AssertTransferTooLarge(result);
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenTheCallerNamesAnotherTenant_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-download-foreign@test.local");
+    var foreignTenant = await harness.Services.CreateTestTenant("V1 DFS Download Foreign");
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      foreignTenant.Id,
+      "/parent/file.txt",
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenTheRequestIsUsable_StreamsTheFileWithTheAgentsDisplayName()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput, recordHubStreamSessions: true);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-download-success@test.local");
+    var body = harness.CaptureResponseBody();
+    harness.AgentClient
+      .Setup(x => x.UploadFileToViewer(It.IsAny<FileDownloadHubDto>()))
+      .ReturnsAsync((FileDownloadHubDto dto) =>
+      {
+        var signaler = harness.HubStreamStore.GetOrCreate<byte[]>(dto.StreamId, HubStreamExpiration.FileTransfer);
+        signaler.Writer.TryWrite([4, 5, 6]);
+        signaler.SetWriteCompleted();
+        return HubResult.Ok(new FileDownloadResponseHubDto(3, "report.pdf"));
+      });
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/parent/report.pdf",
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<EmptyResult>(result);
+    Assert.Equal<byte[]>([4, 5, 6], body.ToArray());
+    Assert.Equal("application/octet-stream", harness.Controller.Response.ContentType);
+    Assert.Null(harness.Controller.Response.ContentLength);
+    AssertAttachmentNamed(harness, "report.pdf");
+    AssertTransferLifetime(harness);
+    Assert.Equal([OnlineConnectionId], harness.ConnectionIds);
+    harness.AgentClient.Verify(
+      x => x.UploadFileToViewer(It.Is<FileDownloadHubDto>(dto => dto.FilePath == "/parent/report.pdf")),
+      Times.Once());
+  }
+
+  [Fact]
   public async Task GetDirectoryContents_WhenAgentRefusesTheStream_ReturnsConflictWithTheAgentsReason()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -610,6 +1017,176 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result);
+  }
+
+  [Fact]
+  public async Task GetLogFileContents_WhenAgentNeverAnswers_ReturnsBadGateway()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logcontents-noanswer@test.local");
+    HubResult? noResponse = null;
+    harness.AgentClient
+      .Setup(x => x.StreamFileContents(It.IsAny<StreamFileContentsRequestHubDto>()))
+      .ReturnsAsync(noResponse!);
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/var/log/controlr/app.log",
+      TestContext.Current.CancellationToken);
+
+    AssertNoAnswerFromDevice(result);
+  }
+
+  [Fact]
+  public async Task GetLogFileContents_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logcontents-refused@test.local");
+    harness.AgentClient
+      .Setup(x => x.StreamFileContents(It.IsAny<StreamFileContentsRequestHubDto>()))
+      .ReturnsAsync(HubResult.Fail("the log file is gone"));
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/var/log/controlr/app.log",
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertDeviceRefusal(result);
+    Assert.Equal("the log file is gone", problem.Detail);
+  }
+
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>LogsRead</c> policy.
+  /// </summary>
+  [Fact]
+  public async Task GetLogFileContents_WhenCallerLacksLogsRead_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-logcontents-no-perm@test.local",
+      PermissionNames.DeviceLogsRead);
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/var/log/controlr/app.log",
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task GetLogFileContents_WhenDeviceDoesNotExist_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logcontents-notfound@test.local");
+
+    var result = await harness.Controller.GetLogFileContents(
+      Guid.NewGuid(),
+      harness.Tenant.Id,
+      "/var/log/controlr/app.log",
+      TestContext.Current.CancellationToken);
+
+    AssertNotFound(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task GetLogFileContents_WhenFilePathIsMissing_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logcontents-nopath@test.local");
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      " ",
+      TestContext.Current.CancellationToken);
+
+    AssertBadRequest(harness, result);
+  }
+
+  [Fact]
+  public async Task GetLogFileContents_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logcontents-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-logcontents-cross-tenant-sa");
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      otherTenant.Id,
+      "/var/log/controlr/app.log",
+      TestContext.Current.CancellationToken);
+
+    AssertNotFound(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task GetLogFileContents_WhenTheCallerNamesAnotherTenant_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logcontents-foreign@test.local");
+    var foreignTenant = await harness.Services.CreateTestTenant("V1 DFS Log Contents Foreign");
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      foreignTenant.Id,
+      "/var/log/controlr/app.log",
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+  }
+
+  [Fact]
+  public async Task GetLogFileContents_WhenTheRequestIsUsable_StreamsInlineTextWithNoStatedLength()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput, recordHubStreamSessions: true);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-logcontents-success@test.local");
+    var body = harness.CaptureResponseBody();
+    harness.AgentClient
+      .Setup(x => x.StreamFileContents(It.IsAny<StreamFileContentsRequestHubDto>()))
+      .ReturnsAsync((StreamFileContentsRequestHubDto dto) =>
+      {
+        var signaler = harness.HubStreamStore.GetOrCreate<byte[]>(dto.StreamId, HubStreamExpiration.FileTransfer);
+        signaler.Writer.TryWrite("first line"u8.ToArray());
+        signaler.Writer.TryWrite("second line"u8.ToArray());
+        signaler.SetWriteCompleted();
+        return HubResult.Ok();
+      });
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      "/var/log/controlr/app.log",
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<EmptyResult>(result);
+    Assert.Equal("first linesecond line", System.Text.Encoding.UTF8.GetString(body.ToArray()));
+    Assert.Equal("text/plain", harness.Controller.Response.ContentType);
+    // The agent streams text with no length, so the response states none.
+    Assert.Null(harness.Controller.Response.ContentLength);
+    AssertDisposition(harness, "inline", "app.log");
+    AssertTransferLifetime(harness);
+    harness.AgentClient.Verify(
+      x => x.StreamFileContents(It.Is<StreamFileContentsRequestHubDto>(
+        dto => dto.FilePath == "/var/log/controlr/app.log")),
+      Times.Once());
   }
 
   [Fact]
@@ -1277,6 +1854,300 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     Assert.IsType<ForbidResult>(result);
   }
 
+  [Fact]
+  public async Task UploadFile_WhenAgentNeverAnswers_ReturnsBadGateway()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-noanswer@test.local");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], "/incoming", overwrite: false);
+    HubResult? noResponse = null;
+    harness.AgentClient
+      .Setup(x => x.DownloadFileFromViewer(It.IsAny<FileUploadHubDto>()))
+      .ReturnsAsync(noResponse!);
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    AssertNoAnswerFromDevice(result);
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-refused@test.local");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], "/incoming", overwrite: false);
+    harness.AgentClient
+      .Setup(x => x.DownloadFileFromViewer(It.IsAny<FileUploadHubDto>()))
+      .ReturnsAsync(HubResult.Fail("the directory is not writable"));
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertDeviceRefusal(result);
+    Assert.Equal("the directory is not writable", problem.Detail);
+  }
+
+  /// <summary>
+  /// The caller holds every device file-system permission except the one this action applies, so a
+  /// refusal can only come from the <c>FileSystemTransferUpload</c> policy. The body is unreadable on
+  /// purpose: reading it is what spools an upload to server disk, and only the guard may come first.
+  /// </summary>
+  [Fact]
+  public async Task UploadFile_WhenCallerLacksTransferUpload_ForbidsWithoutReadingTheBody()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateWithDeviceAccessLackingAsync(
+      scope,
+      "v1-dfs-upload-no-perm@test.local",
+      PermissionNames.DeviceFileSystemTransferUpload);
+    var request = harness.Controller.HttpContext.Request;
+    request.ContentType = "multipart/form-data; boundary=----controlr-test-boundary";
+    request.ContentLength = 64;
+    request.Body = new UnreadableBody();
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenContentIsNotAMultipartForm_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-notform@test.local");
+    harness.Controller.HttpContext.Request.ContentType = "application/json";
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    AssertBadRequest(harness, result);
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenDeviceDoesNotExist_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-notfound@test.local");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], "/incoming", overwrite: false);
+
+    var result = await harness.Controller.UploadFile(
+      Guid.NewGuid(),
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    AssertNotFound(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenNoFilePartIsPresent_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-nofile@test.local");
+    SetUploadForm(harness, fileName: null, [9, 8, 7], "/incoming", overwrite: false);
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    AssertBadRequest(harness, result);
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenServerPrincipalNamesAnotherTenantsDevice_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-cross-tenant@test.local");
+    var otherTenant = await harness.Services.CreateTestTenant("V1 DFS Other Tenant");
+    await harness.UseServerPrincipal("v1-dfs-upload-cross-tenant-sa");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], "/incoming", overwrite: false);
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      otherTenant.Id,
+      TestContext.Current.CancellationToken);
+
+    AssertNotFound(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenTargetSaveDirectoryIsMissing_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-nodir@test.local");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], targetSaveDirectory: " ", overwrite: false);
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    AssertBadRequest(harness, result);
+  }
+
+  /// <summary>
+  /// The channel between the request body and the agent holds ten 80 KB chunks, so a larger body stops
+  /// being read the moment the channel fills. An agent that refused without pulling anything has to be
+  /// answered before the copy is awaited, or nothing is left to drain it and the wait never ends.
+  /// </summary>
+  [Fact]
+  public async Task UploadFile_WhenTheAgentRefusesAfterTheChannelFills_ReturnsConflictWithoutWaiting()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-refused-full@test.local");
+    SetUploadForm(harness, "big.bin", new byte[1024 * 1024], "/incoming", overwrite: false);
+    harness.AgentClient
+      .Setup(x => x.DownloadFileFromViewer(It.IsAny<FileUploadHubDto>()))
+      .ReturnsAsync(HubResult.Fail("file already exists"));
+
+    // Bounded so that a regression answers through the cancellation branch instead of wedging the run.
+    using var waitLimit = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
+      waitLimit.Token,
+      TestContext.Current.CancellationToken);
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      requestCts.Token);
+
+    var problem = AssertDeviceRefusal(result);
+    Assert.Equal("file already exists", problem.Detail);
+  }
+
+  /// <summary>
+  /// A chunked upload declares no length, so the declared-length fast-fail never fires. The limit is
+  /// the uploaded part's own size, which the handler has to answer 413 for whatever the client
+  /// declared, and it has to answer before the agent is asked to accept anything.
+  /// </summary>
+  [Fact]
+  public async Task UploadFile_WhenTheBodyExceedsTheLimitWithoutAContentLength_ReturnsRequestEntityTooLarge()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      _testOutput,
+      new Dictionary<string, string?> { ["AppOptions:MaxFileTransferSize"] = "2" });
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-chunked-toolarge@test.local");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], "/incoming", overwrite: false);
+
+    // Chunked transfer encoding: the body is present, its length is not.
+    harness.Controller.HttpContext.Request.ContentLength = null;
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    AssertTransferTooLarge(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenTheCallerNamesAnotherTenant_Forbids()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-foreign@test.local");
+    var foreignTenant = await harness.Services.CreateTestTenant("V1 DFS Upload Foreign");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], "/incoming", overwrite: false);
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      foreignTenant.Id,
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<ForbidResult>(result);
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenTheContentLengthIsAboveTheLimit_ReturnsRequestEntityTooLarge()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      _testOutput,
+      new Dictionary<string, string?> { ["AppOptions:MaxFileTransferSize"] = "2" });
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-toolarge@test.local");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], "/incoming", overwrite: false);
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    AssertTransferTooLarge(result);
+    harness.AgentHub.VerifyGet(x => x.Clients, Times.Never());
+  }
+
+  [Fact]
+  public async Task UploadFile_WhenTheRequestIsUsable_PipesTheBytesAndAnswersTheNamedEnvelope()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput, recordHubStreamSessions: true);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-upload-success@test.local");
+    SetUploadForm(harness, "installer.msi", [9, 8, 7], "/incoming", overwrite: true);
+    var received = new List<byte>();
+    harness.AgentClient
+      .Setup(x => x.DownloadFileFromViewer(It.IsAny<FileUploadHubDto>()))
+      .Returns(async (FileUploadHubDto dto) =>
+      {
+        var signaler = harness.HubStreamStore.GetOrCreate<byte[]>(
+          dto.StreamId,
+          HubStreamExpiration.FileTransfer);
+
+        // Draining to the end is what the agent does. The writer completes the channel once the
+        // request body is exhausted, so this returns only after the whole file arrived.
+        await foreach (var chunk in signaler.Reader.ReadAllAsync(TestContext.Current.CancellationToken))
+        {
+          received.AddRange(chunk);
+        }
+
+        return HubResult.Ok();
+      });
+
+    var result = await harness.Controller.UploadFile(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal<byte[]>([9, 8, 7], received.ToArray());
+    AssertTransferLifetime(harness);
+
+    var ok = Assert.IsType<OkObjectResult>(result);
+    var response = Assert.IsType<DeviceFileUploadResponseDto>(ok.Value);
+    Assert.Equal("File uploaded successfully", response.Message);
+    Assert.Equal("installer.msi", response.FileName);
+    Assert.Equal([OnlineConnectionId], harness.ConnectionIds);
+    harness.AgentClient.Verify(
+      x => x.DownloadFileFromViewer(It.Is<FileUploadHubDto>(
+        dto => dto.FileName == "installer.msi"
+          && dto.TargetDirectoryPath == "/incoming"
+          && dto.FileSize == 3
+          && dto.Overwrite)),
+      Times.Once());
+  }
+
   /// <summary>
   /// The agent's reply is the answer itself rather than a hub result, so an agent that never answered
   /// produces nothing.
@@ -1466,6 +2337,15 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       .ReturnsAsync(HubResult.Ok(new InternalDtos.GetLogFilesResponseDto(groups)));
   }
 
+  /// <summary>
+  /// The response tells the client to save the transfer under the name the agent reported, which the
+  /// header carries twice: plain and percent-encoded.
+  /// </summary>
+  private static void AssertAttachmentNamed(Harness harness, string fileName)
+  {
+    AssertDisposition(harness, "attachment", fileName);
+  }
+
   private static void AssertBadRequest(Harness harness, IActionResult result)
   {
     var badRequest = Assert.IsType<ObjectResult>(result);
@@ -1499,6 +2379,15 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     return problem;
   }
 
+  private static void AssertDisposition(Harness harness, string dispositionType, string fileName)
+  {
+    var contentDisposition = ContentDispositionHeaderValue.Parse(
+      harness.Controller.Response.Headers.ContentDisposition.ToString());
+
+    Assert.Equal(dispositionType, contentDisposition.DispositionType.Value);
+    Assert.Equal(fileName, contentDisposition.FileName.Value);
+  }
+
   /// <summary>
   /// The device produced no result at all, the only case this surface reports as a bad gateway.
   /// </summary>
@@ -1523,6 +2412,25 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
     Assert.Equal(StatusCodes.Status404NotFound, problem.Status);
     Assert.Equal("Not found.", problem.Title);
+    return problem;
+  }
+
+  private static void AssertTransferLifetime(Harness harness)
+  {
+    var recorder = Assert.IsType<RecordingHubStreamStore>(harness.HubStreamStore);
+    Assert.Equal([HubStreamExpiration.FileTransfer], recorder.CreatedSessions.Select(x => x.Expiration));
+  }
+
+  /// <summary>
+  /// The transfer is larger than the server allows, which it answers before any bytes move.
+  /// </summary>
+  private static ProblemDetails AssertTransferTooLarge(IActionResult result)
+  {
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(StatusCodes.Status413RequestEntityTooLarge, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal(StatusCodes.Status413RequestEntityTooLarge, problem.Status);
+    Assert.Equal("Request entity too large.", problem.Title);
     return problem;
   }
 
@@ -1557,6 +2465,38 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       CanRead: true,
       CanWrite: true,
       HasSubfolders: isDirectory);
+
+  /// <summary>
+  /// Gives the controller the multipart request the pipeline would hand it, so the action's own form
+  /// reading runs rather than being bypassed.
+  /// </summary>
+  private static void SetUploadForm(
+    Harness harness,
+    string? fileName,
+    byte[] fileContents,
+    string targetSaveDirectory,
+    bool overwrite)
+  {
+    using var multipart = new MultipartFormDataContent("----controlr-test-boundary");
+
+    if (fileName is not null)
+    {
+      multipart.Add(new ByteArrayContent(fileContents), "file", fileName);
+    }
+
+    multipart.Add(new StringContent(targetSaveDirectory), "targetSaveDirectory");
+    multipart.Add(new StringContent(overwrite.ToString()), "overwrite");
+
+    var body = multipart
+      .ReadAsByteArrayAsync(TestContext.Current.CancellationToken)
+      .GetAwaiter()
+      .GetResult();
+
+    var request = harness.Controller.HttpContext.Request;
+    request.ContentType = multipart.Headers.ContentType?.ToString();
+    request.ContentLength = body.Length;
+    request.Body = new MemoryStream(body);
+  }
 
   /// <summary>
   /// A controller wired to an authenticated caller and one online device in that caller's tenant.
@@ -1628,6 +2568,17 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       return harness;
     }
 
+    /// <summary>
+    /// Gives the response a body the test can read, because a bare DefaultHttpContext discards what a
+    /// streaming action writes.
+    /// </summary>
+    public MemoryStream CaptureResponseBody()
+    {
+      var body = new MemoryStream();
+      Controller.HttpContext.Response.Body = body;
+      return body;
+    }
+
     public async Task SetDeviceOnline(bool isOnline)
     {
       await using var db = Services.GetRequiredService<AppDb>();
@@ -1672,6 +2623,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       // permission presets were assigned to.
       var controller = new DeviceFileSystemController(
         deviceFileSystem,
+        services.GetRequiredService<IOptionsMonitor<AppOptions>>(),
         services.GetRequiredService<ILogger<DeviceFileSystemController>>())
       {
         ControllerContext = callerContext,
@@ -1706,5 +2658,42 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       agentHub.Setup(x => x.Clients).Returns(hubClients.Object);
       return agentHub;
     }
+  }
+
+  /// <summary>
+  /// A request body that fails the moment anything reads it, so a test can tell an action that
+  /// authorized first from one that spooled the upload before asking.
+  /// </summary>
+  private sealed class UnreadableBody : Stream
+  {
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => throw BodyRead();
+    public override long Position
+    {
+      get => throw BodyRead();
+      set => throw BodyRead();
+    }
+
+    public override void Flush()
+    {
+    }
+
+    public override int Read(byte[] buffer, int offset, int count) => throw BodyRead();
+
+    public override int Read(Span<byte> buffer) => throw BodyRead();
+
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => throw BodyRead();
+
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => throw BodyRead();
+
+    public override long Seek(long offset, SeekOrigin origin) => throw BodyRead();
+
+    public override void SetLength(long value) => throw BodyRead();
+
+    public override void Write(byte[] buffer, int offset, int count) => throw BodyRead();
+
+    private static IOException BodyRead() => new("The request body was read.");
   }
 }

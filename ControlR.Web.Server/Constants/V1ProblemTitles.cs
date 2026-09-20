@@ -32,6 +32,7 @@ internal static class V1ProblemTitles
   /// </summary>
   internal const string ProblemType = "about:blank";
 
+  internal const string RequestEntityTooLarge = "Request entity too large.";
   internal const string RequestTimedOut = "Request timed out.";
   internal const string ServiceUnavailable = "Service unavailable.";
   internal const string TooManyRequests = "Too many requests.";
@@ -46,6 +47,7 @@ internal static class V1ProblemTitles
     [StatusCodes.Status404NotFound] = NotFound,
     [StatusCodes.Status408RequestTimeout] = RequestTimedOut,
     [StatusCodes.Status409Conflict] = Conflict,
+    [StatusCodes.Status413RequestEntityTooLarge] = RequestEntityTooLarge,
     [StatusCodes.Status429TooManyRequests] = TooManyRequests,
     [StatusCodes.Status500InternalServerError] = InternalServerError,
     [StatusCodes.Status501NotImplemented] = NotImplemented,

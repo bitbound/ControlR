@@ -33,10 +33,6 @@
     Settings
   </MudNavLink>
 
-  <MudNavLink Href="@(ClientRoutes.About)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
-    About
-  </MudNavLink>
-
   @if (_canSeeTenantAdmin)
   {
     <div class="ms-2 mt-5">
@@ -150,6 +146,10 @@
   }
 
   <MudDivider Class="mt-2 mb-2" />
+
+  <MudNavLink Href="@(ClientRoutes.About)" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionMark">
+    About
+  </MudNavLink>
 
   <AuthorizeView>
     <Authorized>

@@ -1,46 +1,58 @@
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
 namespace ControlR.Web.Server.OpenApi;
 
-public class FileUploadTransformer : IOpenApiDocumentTransformer
+/// <summary>
+/// Gives the upload operations the multipart request body their actions cannot describe, because the
+/// actions read the form themselves rather than binding it as a parameter. An action opts in with
+/// <see cref="MultipartRequestBodyAttribute" /> instead of being named here, so the list cannot drift
+/// out of date.
+/// </summary>
+public class FileUploadTransformer : IOpenApiOperationTransformer
 {
-  public Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
+  public Task TransformAsync(
+    OpenApiOperation operation,
+    OpenApiOperationTransformerContext context,
+    CancellationToken cancellationToken)
   {
-    var pathName = $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/upload/{{deviceId}}";
-    if (!document.Paths.TryGetValue(pathName, out var uploadPath))
+    if (context.Description.ActionDescriptor is not ControllerActionDescriptor actionDescriptor)
     {
       return Task.CompletedTask;
     }
 
-    if (uploadPath.Operations is not { } operations)
+    var hasAttribute = actionDescriptor.MethodInfo
+      .GetCustomAttributes(inherit: true)
+      .OfType<MultipartRequestBodyAttribute>()
+      .Any();
+
+    if (!hasAttribute)
     {
       return Task.CompletedTask;
     }
 
-    foreach (var operation in operations.Values)
+    operation.RequestBody = new OpenApiRequestBody
     {
-      operation.RequestBody = new OpenApiRequestBody
+      Content = new Dictionary<string, OpenApiMediaType>
       {
-        Content = new Dictionary<string, OpenApiMediaType>
+        ["multipart/form-data"] = new OpenApiMediaType
         {
-          ["multipart/form-data"] = new OpenApiMediaType
+          Schema = new OpenApiSchema
           {
-            Schema = new OpenApiSchema
+            Type = JsonSchemaType.Object,
+            Properties = new Dictionary<string, IOpenApiSchema>
             {
-              Type = JsonSchemaType.Object,
-              Properties = new Dictionary<string, IOpenApiSchema>
-              {
-                ["file"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "binary" },
-                ["targetSaveDirectory"] = new OpenApiSchema { Type = JsonSchemaType.String },
-                ["overwrite"] = new OpenApiSchema { Type = JsonSchemaType.Boolean }
-              },
-              Required = new HashSet<string> { "file", "targetSaveDirectory" }
-            }
+              ["file"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "binary" },
+              ["targetSaveDirectory"] = new OpenApiSchema { Type = JsonSchemaType.String },
+              ["overwrite"] = new OpenApiSchema { Type = JsonSchemaType.Boolean }
+            },
+            Required = new HashSet<string> { "file", "targetSaveDirectory" }
           }
         }
-      };
-    }
+      }
+    };
+
     return Task.CompletedTask;
   }
 }

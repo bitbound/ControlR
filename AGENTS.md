@@ -97,8 +97,8 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 ### V1-first rule
 
 - New endpoints go to `Api/V1` by default. Standard CRUD shape means ID-addressed resources, required `tenantId` (query param, or path segment for tenant service accounts) on collection/create operations, and plain envelopes.
-- The test for V1 is **"might an API consumer want this, and would it work naturally in the API client?"** When both answers are yes, it belongs in V1 whatever its handler looks like. Operating on a live device over SignalR, and public or diagnostic probes, are all valid V1 targets. Handler shape alone never disqualifies an endpoint.
-- An `Api/Internal` endpoint exists only when that test fails for a stated reason: no API consumer wants it (HTML page flows, browser-only ceremonies) or the API client cannot express it (raw binary or multipart payloads, cookie-session authentication). It must name that constraint in `InternalV1ParityGuardrailTests.IrregularShapeAllowList`.
+- The test for V1 is **"might an API consumer want this, and would it work naturally in the API client?"** Both answers default to yes, and a consumer that does not exist yet is not a reason to hold an endpoint back. Operating on a live device over SignalR, and public or diagnostic probes, are all valid V1 targets. Handler shape alone never disqualifies an endpoint.
+- An `Api/Internal` endpoint exists only when that test fails for a stated reason: the Blazor UI needs a shape or behavior that no general API consumer would want (one composite payload instead of several resource calls), or the endpoint is a browser-only ceremony (HTML page flows, cookie-session authentication, an emailed one-time token held by a person in a browser). Payload capability is not a reason. The client carries binary, multipart, and streamed results. It must name that constraint in `InternalV1ParityGuardrailTests.IrregularShapeAllowList`.
 - The guardrail test fails when an Internal operation is neither deprecated, V1-twinned (same verb + path template under `/api/v1`), nor allow-listed. Twin packages prune their entries as twins land.
 
 ## Cross-Platform

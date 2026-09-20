@@ -168,7 +168,14 @@ public static class Extensions
   private static IHostApplicationBuilder AddOpenTelemetryExporters(
     this IHostApplicationBuilder builder)
   {
-    var otlpEndpoint = builder.Configuration["OTLP_ENDPOINT_URL"];
+    // The orchestrator-provided endpoint wins. The Aspire AppHost sets OTEL_EXPORTER_OTLP_ENDPOINT
+    // to its managed dashboard, while OTLP_ENDPOINT_URL is the checked-in default for compose runs.
+    var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+
+    if (string.IsNullOrWhiteSpace(otlpEndpoint))
+    {
+      otlpEndpoint = builder.Configuration["OTLP_ENDPOINT_URL"];
+    }
     var azureMonitorConnectionString = builder.Configuration["AzureMonitor:ConnectionString"];
 
     if (Uri.TryCreate(otlpEndpoint, UriKind.Absolute, out var otlpUri))

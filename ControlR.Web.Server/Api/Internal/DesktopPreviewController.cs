@@ -13,6 +13,7 @@ namespace ControlR.Web.Server.Api.Internal;
 public class DesktopPreviewController : ControllerBase
 {
   [HttpGet("{deviceId:guid}/{targetProcessId:int}")]
+  [ApiDeprecated("/api/v1/desktop-preview/{deviceId}/{targetProcessId}?tenantId={tenantId}", Note = "Use GET /api/v1/desktop-preview/{deviceId}/{targetProcessId} with a required tenantId. The response is the same image, and V1 answers every failure with a ProblemDetails body.")]
   public async Task<IActionResult> GetDesktopPreview(
     [FromRoute] Guid deviceId,
     [FromRoute] int targetProcessId,

@@ -76,6 +76,7 @@ public class DeviceFileSystemController : ControllerBase
 
   [HttpPost("download-archive/{deviceId:guid}")]
   [DisableRequestTimeout]
+  [ApiDeprecated("/api/v1/device-file-system/download-archive/{deviceId}?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/download-archive/{deviceId} with a required tenantId. The response is the same octet-stream, and V1 answers every failure with a ProblemDetails body.")]
   public async Task<IActionResult> DownloadArchive(
     [FromRoute] Guid deviceId,
     [FromBody] InternalDtos.DownloadArchiveRequestDto request,
@@ -117,6 +118,7 @@ public class DeviceFileSystemController : ControllerBase
 
   [HttpGet("download/{deviceId:guid}")]
   [DisableRequestTimeout]
+  [ApiDeprecated("/api/v1/device-file-system/download/{deviceId}?tenantId={tenantId}", Note = "Use GET /api/v1/device-file-system/download/{deviceId} with a required tenantId. The response is the same octet-stream, and V1 answers every failure with a ProblemDetails body.")]
   public async Task<IActionResult> DownloadFile(
     [FromRoute] Guid deviceId,
     [FromQuery] string filePath,
@@ -190,7 +192,10 @@ public class DeviceFileSystemController : ControllerBase
       var contentDisposition = new ContentDispositionHeaderValue("attachment");
       contentDisposition.SetHttpFileName(requestResult.Value.FileDisplayName);
       Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
-      Response.Headers.ContentLength = fileSize;
+
+      // No Content-Length: the agent's snapshot is taken before it reads the file, so a file that
+      // changes during the transfer makes that header false, and Kestrel answers one byte past a
+      // declared length by faulting the response.
 
       await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
       {
@@ -240,6 +245,7 @@ public class DeviceFileSystemController : ControllerBase
 
   [HttpGet("logs/{deviceId:guid}/contents")]
   [DisableRequestTimeout]
+  [ApiDeprecated("/api/v1/device-file-system/logs/{deviceId}/contents?tenantId={tenantId}", Note = "Use GET /api/v1/device-file-system/logs/{deviceId}/contents with a required tenantId. The response is the same text stream, and V1 answers every failure with a ProblemDetails body.")]
   public async Task<IActionResult> GetLogFileContents(
     [FromRoute] Guid deviceId,
     [FromQuery] string filePath,
@@ -425,12 +431,14 @@ public class DeviceFileSystemController : ControllerBase
   }
 
   // Note: [FromForm] parameters are intentionally omitted, so large files aren't
-  // buffered into memory by model binding before auth and size checks are run. 
-  // The form  fields are added to OpenAPI metadata in FileUploadTransformer, and 
+  // buffered into memory by model binding before auth and size checks are run.
+  // [MultipartRequestBody] tells the OpenAPI document the form fields, and
   // file size limits are checked below.
   [HttpPost("upload/{deviceId:guid}")]
   [DisableRequestSizeLimit]
   [DisableRequestTimeout]
+  [MultipartRequestBody]
+  [ApiDeprecated("/api/v1/device-file-system/upload/{deviceId}?tenantId={tenantId}", Note = "Use POST /api/v1/device-file-system/upload/{deviceId} with a required tenantId. The V1 response is the named DeviceFileUploadResponseDto instead of an ad hoc body, and V1 answers every failure with a ProblemDetails body.")]
   public async Task<IActionResult> UploadFile(
     [FromRoute] Guid deviceId,
     [FromServices] AppDb appDb,
@@ -652,7 +660,10 @@ public class DeviceFileSystemController : ControllerBase
       var contentDisposition = new ContentDispositionHeaderValue("attachment");
       contentDisposition.SetHttpFileName(requestResult.Value.FileDisplayName);
       Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
-      Response.Headers.ContentLength = fileSize;
+
+      // No Content-Length: the agent's snapshot is taken before it reads the file, so a file that
+      // changes during the transfer makes that header false, and Kestrel answers one byte past a
+      // declared length by faulting the response.
 
       await foreach (var chunk in signaler.Reader.ReadAllAsync(cancellationToken))
       {

@@ -54,17 +54,6 @@ public partial class InternalV1ParityGuardrailTests
     ["GET /api/agent/updates/get-bundle-metadata/{}"] = "Agent update-bundle negotiation.",
     ["GET /api/agent-update/get-bundle-metadata/{}"] = "Legacy agent update-bundle negotiation alias.",
 
-    // Device file system - payloads the JSON API client cannot express. Only the four binary
-    // siblings remain. The eight JSON operations in the same controller now have V1 twins.
-    ["GET /api/device-file-system/download/{}"] = "Returns a raw octet-stream file; the API client has no result model for a binary body.",
-    ["POST /api/device-file-system/download-archive/{}"] = "Returns a raw octet-stream archive; the API client has no result model for a binary body.",
-    ["GET /api/device-file-system/logs/{}/contents"] = "Returns a raw text/plain log stream; the API client has no streaming result model.",
-    ["POST /api/device-file-system/upload/{}"] = "Accepts a multipart/form-data upload; the API client sends JSON bodies.",
-
-    // Remote-desktop preview - a raw image stream from a live agent session, which the JSON
-    // result model cannot carry.
-    ["GET /api/desktop-preview/{}/{}"] = "Returns a raw image/jpeg stream from a live agent session; the API client has no streaming result model.",
-
     // Invite acceptance - an anonymous browser ceremony. The emailed token is the credential,
     // and the invitee is a person in a browser, so no API-consumer flow exists to serve.
     ["POST /api/invites/accept"] = "Anonymous browser ceremony; the emailed invite token is the credential, so there is no API-consumer flow to serve.",

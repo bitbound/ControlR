@@ -4,6 +4,7 @@ using ControlR.Web.Server.Api.Internal;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;
+using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Services.DeviceFileSystem;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace ControlR.Web.Server.Tests;
@@ -436,6 +438,82 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var objectResult = Assert.IsType<ObjectResult>(result);
     Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
     Assert.Equal("An error occurred during path deletion.", objectResult.Value);
+  }
+
+  /// <summary>
+  /// The size the agent gives is a snapshot taken before it reads the file, so a file that grows or
+  /// shrinks during the transfer makes a declared Content-Length false, and Kestrel answers one byte
+  /// past a declared length by faulting the response. Internal never sets it.
+  /// </summary>
+  [Fact]
+  public async Task DownloadArchive_WhenTheRequestIsUsable_StreamsTheArchiveWithoutContentLength()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput, recordHubStreamSessions: true);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "dfs-download-archive-success@test.local");
+    var body = harness.CaptureResponseBody();
+    harness.AgentClient
+      .Setup(x => x.UploadArchiveToViewer(It.IsAny<FileArchiveDownloadHubDto>()))
+      .ReturnsAsync((FileArchiveDownloadHubDto dto) =>
+      {
+        var signaler = harness.HubStreamStore.GetOrCreate<byte[]>(dto.StreamId, HubStreamExpiration.FileTransfer);
+        signaler.Writer.TryWrite([1, 2, 3]);
+        signaler.SetWriteCompleted();
+        return HubResult.Ok(new FileDownloadResponseHubDto(3, "packed.zip"));
+      });
+
+    var result = await harness.Controller.DownloadArchive(
+      harness.Device.Id,
+      new InternalDtos.DownloadArchiveRequestDto("packed.zip", ["/parent/file.txt"]),
+      harness.Services.GetRequiredService<AppDb>(),
+      harness.AgentHub.Object,
+      harness.Services.GetRequiredService<IHubStreamStore>(),
+      harness.Services.GetRequiredService<IAuthorizationService>(),
+      harness.Services.GetRequiredService<IOptionsMonitor<AppOptions>>(),
+      harness.Services.GetRequiredService<ILogger<DeviceFileSystemController>>(),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<EmptyResult>(result);
+    Assert.Equal<byte[]>([1, 2, 3], body.ToArray());
+    Assert.Equal("application/octet-stream", harness.Controller.Response.ContentType);
+    Assert.Null(harness.Controller.Response.ContentLength);
+  }
+
+  [Fact]
+  public async Task DownloadFile_WhenTheRequestIsUsable_StreamsTheFileWithoutContentLength()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput, recordHubStreamSessions: true);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "dfs-download-success@test.local");
+    var body = harness.CaptureResponseBody();
+    harness.AgentClient
+      .Setup(x => x.UploadFileToViewer(It.IsAny<FileDownloadHubDto>()))
+      .ReturnsAsync((FileDownloadHubDto dto) =>
+      {
+        var signaler = harness.HubStreamStore.GetOrCreate<byte[]>(dto.StreamId, HubStreamExpiration.FileTransfer);
+        signaler.Writer.TryWrite([4, 5, 6]);
+        signaler.SetWriteCompleted();
+        return HubResult.Ok(new FileDownloadResponseHubDto(3, "report.pdf"));
+      });
+
+    var result = await harness.Controller.DownloadFile(
+      harness.Device.Id,
+      "/parent/report.pdf",
+      harness.Services.GetRequiredService<AppDb>(),
+      harness.AgentHub.Object,
+      harness.Services.GetRequiredService<IHubStreamStore>(),
+      harness.Services.GetRequiredService<IAuthorizationService>(),
+      harness.Services.GetRequiredService<IOptionsMonitor<AppOptions>>(),
+      harness.Services.GetRequiredService<ILogger<DeviceFileSystemController>>(),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<EmptyResult>(result);
+    Assert.Equal<byte[]>([4, 5, 6], body.ToArray());
+    Assert.Equal("application/octet-stream", harness.Controller.Response.ContentType);
+    Assert.Null(harness.Controller.Response.ContentLength);
+    harness.AgentClient.Verify(
+      x => x.UploadFileToViewer(It.Is<FileDownloadHubDto>(dto => dto.FilePath == "/parent/report.pdf")),
+      Times.Once());
   }
 
   [Fact]
@@ -1406,15 +1484,10 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     IHubStreamStore hubStreamStore)
   {
     public Mock<IAgentHubClient> AgentClient { get; } = agentClient;
-
     public Mock<IHubContext<AgentHub, IAgentHubClient>> AgentHub { get; } = agentHub;
-
     public IAuthorizationService Authz { get; } = authz;
-
     public DeviceFileSystemController Controller { get; } = controller;
-
     public AppDb Db { get; } = db;
-
     public Device Device { get; } = device;
 
     /// <summary>
@@ -1423,9 +1496,7 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     /// than something the container hands out.
     /// </summary>
     public IDeviceFileSystemService DeviceFileSystem => CreateDeviceFileSystem(AgentHub.Object);
-
     public IHubStreamStore HubStreamStore { get; } = hubStreamStore;
-
     public IServiceProvider Services { get; } = services;
 
     public static Mock<IHubContext<AgentHub, IAgentHubClient>> CreateAgentHubContext(
@@ -1472,6 +1543,17 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
 
       await harness.SetDeviceOnline(isOnline: true);
       return harness;
+    }
+
+    /// <summary>
+    /// Gives the response a body the test can read, because a bare DefaultHttpContext discards what a
+    /// streaming action writes.
+    /// </summary>
+    public MemoryStream CaptureResponseBody()
+    {
+      var body = new MemoryStream();
+      Controller.HttpContext.Response.Body = body;
+      return body;
     }
 
     public IDeviceFileSystemService CreateDeviceFileSystem(

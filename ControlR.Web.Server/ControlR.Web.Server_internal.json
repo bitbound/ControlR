@@ -383,6 +383,7 @@
         "tags": [
           "DesktopPreview"
         ],
+        "description": "Deprecated. Use `/api/v1/desktop-preview/{deviceId}/{targetProcessId}?tenantId={tenantId}` instead. Use GET /api/v1/desktop-preview/{deviceId}/{targetProcessId} with a required tenantId. The response is the same image, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
@@ -430,6 +431,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -437,7 +439,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/desktop-preview/{deviceId}/{targetProcessId}?tenantId={tenantId}"
       }
     },
     "/api/device-file-system/create-directory/{deviceId}": {
@@ -595,6 +598,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "description": "Deprecated. Use `/api/v1/device-file-system/download-archive/{deviceId}?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/download-archive/{deviceId} with a required tenantId. The response is the same octet-stream, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
@@ -652,6 +656,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -659,7 +664,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/device-file-system/download-archive/{deviceId}?tenantId={tenantId}"
       }
     },
     "/api/device-file-system/download/{deviceId}": {
@@ -667,6 +673,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "description": "Deprecated. Use `/api/v1/device-file-system/download/{deviceId}?tenantId={tenantId}` instead. Use GET /api/v1/device-file-system/download/{deviceId} with a required tenantId. The response is the same octet-stream, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
@@ -711,6 +718,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -718,7 +726,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/device-file-system/download/{deviceId}?tenantId={tenantId}"
       }
     },
     "/api/device-file-system/contents": {
@@ -792,6 +801,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "description": "Deprecated. Use `/api/v1/device-file-system/logs/{deviceId}/contents?tenantId={tenantId}` instead. Use GET /api/v1/device-file-system/logs/{deviceId}/contents with a required tenantId. The response is the same text stream, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
@@ -836,6 +846,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -843,7 +854,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/device-file-system/logs/{deviceId}/contents?tenantId={tenantId}"
       }
     },
     "/api/device-file-system/logs/{deviceId}": {
@@ -1104,6 +1116,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "description": "Deprecated. Use `/api/v1/device-file-system/upload/{deviceId}?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/upload/{deviceId} with a required tenantId. The V1 response is the named DeviceFileUploadResponseDto instead of an ad hoc body, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1166,6 +1179,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "Cookie": [ ]
@@ -1173,7 +1187,8 @@
           {
             "PersonalAccessToken": [ ]
           }
-        ]
+        ],
+        "x-replacement-route": "/api/v1/device-file-system/upload/{deviceId}?tenantId={tenantId}"
       }
     },
     "/api/device-file-system/validate-path/{deviceId}": {
