@@ -24,29 +24,24 @@ public static class ResultExtensions
     return ApiResult.Fail<T>(result.Reason, failureStatusCode);
   }
 
-  public static HubResult ToHubResult(this Result result, Guid? errorCode = null)
+  public static HubResult ToHubResult(this Result result)
   {
     if (result.IsSuccess)
     {
       return HubResult.Ok();
     }
 
-    return HubResult.Fail(result.Reason, errorCode);
+    return HubResult.Fail(result.Reason);
   }
 
-  public static HubResult<T> ToHubResult<T>(this Result<T> result, Guid? errorCode = null)
+  public static HubResult<T> ToHubResult<T>(this Result<T> result)
   {
     if (result.IsSuccess)
     {
       return HubResult.Ok(result.Value);
     }
 
-    if (result.Exception is not null)
-    {
-      return HubResult.Fail<T>(result.Reason, errorCode);
-    }
-
-    return HubResult.Fail<T>(result.Reason, errorCode);
+    return HubResult.Fail<T>(result.Reason);
   }
 
   public static Result ToResult(this ApiResult apiResult)

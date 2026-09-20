@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using ControlR.Agent.Shared.Constants;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.FileSystem;
 
@@ -39,18 +40,18 @@ internal class FileManager(
     {
       if (string.IsNullOrWhiteSpace(parentPath))
       {
-        return Task.FromResult(FileReferenceResult.Fail("Parent path cannot be empty"));
+        return Task.FromResult(FileReferenceResult.Fail("Parent path cannot be empty", OperationFailureCode.InvalidInput));
       }
 
       if (string.IsNullOrWhiteSpace(directoryName))
       {
-        return Task.FromResult(FileReferenceResult.Fail("Directory name cannot be empty"));
+        return Task.FromResult(FileReferenceResult.Fail("Directory name cannot be empty", OperationFailureCode.InvalidInput));
       }
 
       // Validate parent directory exists
       if (!_fileSystem.DirectoryExists(parentPath))
       {
-        return Task.FromResult(FileReferenceResult.Fail("Parent directory does not exist"));
+        return Task.FromResult(FileReferenceResult.Fail("Parent directory does not exist", OperationFailureCode.NotFound));
       }
 
       // Combine paths using the platform-appropriate path separator
@@ -61,7 +62,7 @@ internal class FileManager(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error creating directory: {DirectoryName} in {ParentPath}", directoryName, parentPath);
-      return Task.FromResult(FileReferenceResult.Fail(ex.Message));
+      return Task.FromResult(FileReferenceResult.Fail(ex.Message, OperationFailureCode.DeviceFailure));
     }
   }
 
@@ -71,17 +72,17 @@ internal class FileManager(
     {
       if (string.IsNullOrWhiteSpace(directoryPath))
       {
-        return Task.FromResult(FileReferenceResult.Fail("Directory path cannot be empty"));
+        return Task.FromResult(FileReferenceResult.Fail("Directory path cannot be empty", OperationFailureCode.InvalidInput));
       }
 
       if (_fileSystem.DirectoryExists(directoryPath))
       {
-        return Task.FromResult(FileReferenceResult.Fail("Directory already exists"));
+        return Task.FromResult(FileReferenceResult.Fail("Directory already exists", OperationFailureCode.AlreadyExists));
       }
 
       if (_fileSystem.FileExists(directoryPath))
       {
-        return Task.FromResult(FileReferenceResult.Fail("A file with the same name already exists"));
+        return Task.FromResult(FileReferenceResult.Fail("A file with the same name already exists", OperationFailureCode.AlreadyExists));
       }
 
       _fileSystem.CreateDirectory(directoryPath);
@@ -93,7 +94,7 @@ internal class FileManager(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error creating directory: {DirectoryPath}", directoryPath);
-      return Task.FromResult(FileReferenceResult.Fail(ex.Message));
+      return Task.FromResult(FileReferenceResult.Fail(ex.Message, OperationFailureCode.DeviceFailure));
     }
   }
 
@@ -108,13 +109,13 @@ internal class FileManager(
 
       if (normalizedPaths.Length == 0)
       {
-        return FileReferenceResult.Fail("At least one target path is required");
+        return FileReferenceResult.Fail("At least one target path is required", OperationFailureCode.InvalidInput);
       }
 
       var normalizedArchiveFileName = ArchiveFileNameHelper.NormalizeArchiveFileName(archiveFileName);
       if (string.IsNullOrWhiteSpace(normalizedArchiveFileName))
       {
-        return FileReferenceResult.Fail("Archive file name is invalid");
+        return FileReferenceResult.Fail("Archive file name is invalid", OperationFailureCode.InvalidInput);
       }
 
       var tempZipPath = Path.Combine(Path.GetTempPath(), $"controlr-download-{Guid.NewGuid()}.zip");
@@ -154,7 +155,7 @@ internal class FileManager(
         }
         
         _logger.LogWarning("Target path does not exist: {TargetPath}", targetPath);
-        return FileReferenceResult.Fail($"Target path does not exist: {targetPath}");
+        return FileReferenceResult.Fail($"Target path does not exist: {targetPath}", OperationFailureCode.NotFound);
       }
 
       _logger.LogInformation(
@@ -167,7 +168,7 @@ internal class FileManager(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error creating download archive {ArchiveFileName}", archiveFileName);
-      return FileReferenceResult.Fail(ex.Message);
+      return FileReferenceResult.Fail(ex.Message, OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -187,7 +188,7 @@ internal class FileManager(
       }
       else
       {
-        return Task.FromResult(FileReferenceResult.Fail("Target path does not exist"));
+        return Task.FromResult(FileReferenceResult.Fail("Target path does not exist", OperationFailureCode.NotFound));
       }
 
       return FileReferenceResult
@@ -197,7 +198,7 @@ internal class FileManager(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error deleting file system entry: {FilePath}", targetPath);
-      return Task.FromResult(FileReferenceResult.Fail(ex.Message));
+      return Task.FromResult(FileReferenceResult.Fail(ex.Message, OperationFailureCode.DeviceFailure));
     }
   }
 
@@ -482,13 +483,13 @@ internal class FileManager(
       }
       else
       {
-        return FileReferenceResult.Fail("Target path does not exist");
+        return FileReferenceResult.Fail("Target path does not exist", OperationFailureCode.NotFound);
       }
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error resolving target file path: {FilePath}", filePath);
-      return FileReferenceResult.Fail(ex.Message);
+      return FileReferenceResult.Fail(ex.Message, OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -498,7 +499,7 @@ internal class FileManager(
     {
       if (!_fileSystem.DirectoryExists(targetDirectoryPath))
       {
-        return FileReferenceResult.Fail("Target directory does not exist");
+        return FileReferenceResult.Fail("Target directory does not exist", OperationFailureCode.NotFound);
       }
 
       var targetFilePath = Path.Combine(targetDirectoryPath, fileName);
@@ -506,7 +507,7 @@ internal class FileManager(
       // Check if file already exists
       if (_fileSystem.FileExists(targetFilePath) && !overwrite)
       {
-        return FileReferenceResult.Fail("File already exists");
+        return FileReferenceResult.Fail("File already exists", OperationFailureCode.AlreadyExists);
       }
 
       await using var targetStream = _fileSystem.CreateFile(targetFilePath);
@@ -518,7 +519,7 @@ internal class FileManager(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error saving uploaded file: {FileName} to {Directory}", fileName, targetDirectoryPath);
-      return FileReferenceResult.Fail(ex.Message);
+      return FileReferenceResult.Fail(ex.Message, OperationFailureCode.DeviceFailure);
     }
   }
 

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Agent.Common.Services.FileManager;
 
@@ -7,18 +8,24 @@ public class FileReferenceResult
 
   private FileReferenceResult(
     bool isSuccess,
+    OperationFailureCode code = OperationFailureCode.Unknown,
     string? errorMessage = null,
     string? fileSystemPath = null,
     string? fileDisplayName = null,
     bool isTempFile = false)
   {
     IsSuccess = isSuccess;
+    Code = code;
     ErrorMessage = errorMessage;
     FileSystemPath = fileSystemPath;
     FileDisplayName = fileDisplayName;
     IsTempFile = isTempFile;
   }
 
+  /// <summary>
+  /// Machine-readable reason for a failure. <see cref="OperationFailureCode.Unknown" /> on a success.
+  /// </summary>
+  public OperationFailureCode Code { get; init; }
   public string? ErrorMessage { get; init; }
   public string? FileDisplayName { get; init; }
   public string? FileSystemPath { get; init; }
@@ -29,10 +36,11 @@ public class FileReferenceResult
   public bool IsSuccess { get; init; }
   public bool IsTempFile { get; }
 
-  public static FileReferenceResult Fail(string errorMessage)
+  public static FileReferenceResult Fail(string errorMessage, OperationFailureCode code)
   {
     return new FileReferenceResult(
       isSuccess: false,
+      code: code,
       errorMessage: errorMessage);
   }
 

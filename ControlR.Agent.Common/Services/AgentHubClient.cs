@@ -5,6 +5,7 @@ using ControlR.Agent.Common.Models.Messages;
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Common.Services.Terminal;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Helpers;
@@ -129,13 +130,13 @@ internal class AgentHubClient(
 
       _logger.LogWarning("Failed to create directory: {DirectoryName} in {ParentPath}, Error: {Error}",
         dto.DirectoryName, dto.ParentPath, result.ErrorMessage);
-      return HubResult.Fail(result.ErrorMessage ?? "Failed to create directory");
+      return HubResult.Fail(result.ErrorMessage ?? "Failed to create directory", result.Code);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating directory: {DirectoryName} in {ParentPath}", dto.DirectoryName,
         dto.ParentPath);
-      return HubResult.Fail("An error occurred while creating directory.");
+      return HubResult.Fail("An error occurred while creating directory.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -270,12 +271,12 @@ internal class AgentHubClient(
 
       _logger.LogWarning("Failed to delete file system entry: {FilePath}, Error: {Error}",
         dto.TargetPath, result.ErrorMessage);
-      return HubResult.Fail(result.ErrorMessage ?? "Failed to delete file system entry");
+      return HubResult.Fail(result.ErrorMessage ?? "Failed to delete file system entry", result.Code);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while deleting file system entry: {FilePath}", dto.TargetPath);
-      return HubResult.Fail("An error occurred while deleting file system entry.");
+      return HubResult.Fail("An error occurred while deleting file system entry.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -292,7 +293,7 @@ internal class AgentHubClient(
       if (_fileSystem.FileExists(targetPath) && !dto.Overwrite)
       {
         _logger.LogWarning("File already exists and overwrite is not allowed: {FilePath}", targetPath);
-        return HubResult.Fail("File already exists.");
+        return HubResult.Fail("File already exists.", OperationFailureCode.AlreadyExists);
       }
 
       await using var fs = _fileSystem.OpenFileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
@@ -313,13 +314,13 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Permission denied when downloading file from viewer: {FileName} to {Directory}",
         dto.FileName, dto.TargetDirectoryPath);
-      return HubResult.Fail("Permission denied. Unable to write to the target directory.");
+      return HubResult.Fail("Permission denied. Unable to write to the target directory.", OperationFailureCode.PermissionDenied);
     }
     catch (IOException ex) when (ex.Message.EndsWith("used by another process."))
     {
       _logger.LogError(ex, "Unable to overwrite file downloaded from viewer: {FileName} to {Directory}",
         dto.FileName, dto.TargetDirectoryPath);
-      return HubResult.Fail("File is in use. Unable to overwrite.");
+      return HubResult.Fail("File is in use. Unable to overwrite.", OperationFailureCode.DeviceFailure);
     }
     catch (HubException ex) when (ex.Message.Contains("canceled by client"))
     {
@@ -719,7 +720,7 @@ internal class AgentHubClient(
       if (!_fileSystem.FileExists(dto.FilePath))
       {
         _logger.LogWarning("File not found: {FilePath}", dto.FilePath);
-        return HubResult.Fail("File not found.");
+        return HubResult.Fail("File not found.", OperationFailureCode.NotFound);
       }
 
       Task
@@ -732,7 +733,7 @@ internal class AgentHubClient(
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while streaming file: {FilePath}", dto.FilePath);
-      return HubResult.Fail("An error occurred while streaming file.");
+      return HubResult.Fail("An error occurred while streaming file.", OperationFailureCode.DeviceFailure);
     }
   }
 
@@ -843,7 +844,7 @@ internal class AgentHubClient(
         _logger.LogWarning("Failed to prepare archive for download: {ArchiveFileName}, Error: {Error}",
           dto.ArchiveFileName,
           resolveResult.ErrorMessage);
-        return HubResult.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ?? "Failed to prepare archive for download");
+        return HubResult.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ?? "Failed to prepare archive for download", resolveResult.Code);
       }
 
       var fileInfo = _fileSystem.GetFileInfo(resolveResult.FileSystemPath);
@@ -874,7 +875,7 @@ internal class AgentHubClient(
       {
         _logger.LogWarning("Failed to prepare file for download: {FilePath}, Error: {Error}", dto.FilePath,
           resolveResult.ErrorMessage);
-        return HubResult.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ?? "Failed to prepare file for download");
+        return HubResult.Fail<FileDownloadResponseHubDto>(resolveResult.ErrorMessage ?? "Failed to prepare file for download", resolveResult.Code);
       }
 
       var fileInfo = _fileSystem.GetFileInfo(resolveResult.FileSystemPath);

@@ -1,5 +1,7 @@
 namespace ControlR.Web.Server.Services.DeviceFileSystem;
 
+using ControlR.Libraries.Api.Contracts.Enums;
+
 /// <summary>
 /// The outcome of a value-less device file system operation, such as creating a directory or
 /// deleting a path. Only why the operation stopped is reported, because there is no payload.
@@ -16,6 +18,13 @@ namespace ControlR.Web.Server.Services.DeviceFileSystem;
 /// </param>
 public record FileSystemOutcome(FileSystemFailure Failure, string? Reason)
 {
+  /// <summary>
+  /// Machine-readable reason for an agent
+  /// <see cref="FileSystemFailure.RemoteFailure" />. <see cref="OperationFailureCode.Unknown" />
+  /// otherwise, or from an agent that predates the field.
+  /// </summary>
+  public OperationFailureCode Code { get; init; } = OperationFailureCode.Unknown;
+
   public bool Succeeded => Failure is FileSystemFailure.None;
 }
 

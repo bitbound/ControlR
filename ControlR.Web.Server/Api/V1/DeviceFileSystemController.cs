@@ -736,7 +736,8 @@ public class DeviceFileSystemController(
       FileSystemFailure.RemoteFailure => Problem(
         detail: outcome.Reason,
         statusCode: StatusCodes.Status409Conflict,
-        title: V1ProblemTitles.Conflict),
+        title: V1ProblemTitles.Conflict,
+        extensions: new Dictionary<string, object?> { ["failureCode"] = outcome.Code }),
       FileSystemFailure.NoResponse => Problem(
         detail: "The device did not return a result.",
         statusCode: StatusCodes.Status502BadGateway,
