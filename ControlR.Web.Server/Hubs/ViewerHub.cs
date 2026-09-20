@@ -380,8 +380,6 @@ public class ViewerHub(
       user.IsOnline = true;
       user.LastLogin = _timeProvider.GetUtcNow();
       await _appDb.SaveChangesAsync();
-
-      await JoinServerTopics();
     }
     catch (Exception ex)
     {
@@ -1207,36 +1205,6 @@ public class ViewerHub(
 
     Guard.IsNotNull(user);
     return user;
-  }
-
-  private async Task JoinServerTopics()
-  {
-    if (Context.User is null)
-    {
-      return;
-    }
-
-    var principal = Context.User?.ToPrincipalDescriptor();
-    if (principal is null)
-    {
-      return;
-    }
-
-    // The server alert is a banner every signed-in user is meant to see, so the alerts group
-    // takes no permission. Only telemetry stays gated.
-    await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerAlerts());
-
-    var serverResource = new ResourceDescriptor(PermissionScopeKind.Server);
-    var decisions = await _permissionEvaluator.EvaluateMany(
-      principal,
-      [PermissionNames.ServerTelemetryRead],
-      serverResource,
-      Context.ConnectionAborted);
-
-    if (decisions[PermissionNames.ServerTelemetryRead].Allowed)
-    {
-      await Groups.AddToGroupAsync(Context.ConnectionId, HubGroupNames.ServerTelemetry());
-    }
   }
 
   private async Task<HubResult<Device>> TryAuthorizeAgainstDevice(

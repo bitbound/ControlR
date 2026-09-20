@@ -1478,8 +1478,8 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
   public async Task PatScopes_WithDeviceRow_DeniesServerTelemetryRead_EvenWhenOwnerHasIt()
   {
     // The owning user holds ServerTelemetryRead at server scope, but the PAT has an explicit
-    // device-scoped row. ViewerHub.JoinServerTopics relies on Evaluate (not the name-level
-    // projection) so the scoped credential cannot subscribe to server topics.
+    // device-scoped row. Evaluate (not the name-level projection) must refuse it, so the scoped
+    // credential cannot read server telemetry.
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var tenant = await testApp.App.Services.CreateTestTenant();
     var user = await testApp.App.Services.CreateTestUser(tenant.Id);
