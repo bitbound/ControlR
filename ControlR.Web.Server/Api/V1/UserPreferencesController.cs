@@ -6,12 +6,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Self-service user preferences for the calling user. The preferences are always owned by
-/// the caller, so no operation addresses another principal. TenantId stays required on every
-/// operation to keep the V1 convention uniform (server principals resolve the tenant check
-/// but then fail the caller-has-no-user-id lookup, so the surface is user-only in practice).
-/// Manager failures surface as ProblemDetails. A get of an unset name answers 204, and the POST
-/// that leaves a preference behind answers 201. The internal twin answers 200 for that POST.
+/// Preferences owned by the authenticated caller. No operation addresses another principal.
 /// </summary>
 [Route(HttpConstants.V1.UserPreferencesEndpoint)]
 [ApiController]
@@ -85,6 +80,7 @@ public class UserPreferencesController : ControllerBase
   }
 
   [HttpPost]
+  [ProducesResponseType<UserPreferenceResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType<UserPreferenceResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]

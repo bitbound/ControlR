@@ -13,12 +13,8 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceFileSystem;
 namespace ControlR.Web.Server.Tests.V1;
 
 /// <summary>
-/// Reads the V1 error contract off the wire. The published document says every failure answers
-/// application/problem+json with a title from the shared table, and V1ProblemDetailsContractTests
-/// checks that the document says so. This covers what a document cannot: the media type and title a
-/// caller actually receives. The media type is not declared by the result object
-/// (ControllerBase.Problem() leaves ObjectResult.ContentTypes empty) so only the wire can show that
-/// the response is labeled application/problem+json.
+/// The V1 error contract as a caller receives it, which is the only place a response's media type
+/// is observable.
 /// </summary>
 public class V1ProblemDetailsWireFormatTests(ITestOutputHelper testOutput)
 {

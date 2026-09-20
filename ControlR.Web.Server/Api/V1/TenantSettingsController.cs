@@ -6,10 +6,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.TenantSettings;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Tenant settings resource. Same operations as the internal surface with the V1 conventions:
-/// required tenantId (so service accounts can address a tenant explicitly), ProblemDetails on
-/// validation failures, 204 for delete and for a get of an unset name, and 201 on the POST that
-/// leaves a setting behind. The internal twin answers 200 for that POST.
+/// Settings owned by a tenant, addressed by tenantId on every operation.
 /// </summary>
 [Route(HttpConstants.V1.TenantSettingsEndpoint)]
 [ApiController]
@@ -113,6 +110,7 @@ public class TenantSettingsController : ControllerBase
 
   [HttpPost]
   [Authorize(Policy = PolicyNames.RequireTenantSettingsWrite)]
+  [ProducesResponseType<TenantSettingResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType<TenantSettingResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]

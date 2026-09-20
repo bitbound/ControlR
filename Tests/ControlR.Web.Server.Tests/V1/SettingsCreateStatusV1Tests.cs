@@ -13,9 +13,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserPreferences;
 namespace ControlR.Web.Server.Tests.V1;
 
 /// <summary>
-/// The settings upserts over HTTP. The controller tests read the action result off the action, which
-/// cannot show whether the created link actually resolves. These do, so a settings POST that answers
-/// 201 with a Location nobody can follow is caught here rather than by a caller.
+/// The settings upserts over HTTP, including whether the returned Location resolves.
 /// </summary>
 public class SettingsCreateStatusV1Tests(ITestOutputHelper testOutput)
 {
