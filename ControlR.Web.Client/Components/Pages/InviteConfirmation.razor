@@ -1,4 +1,6 @@
-﻿@attribute [Route(ClientRoutes.InviteConfirmation)]
+﻿@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal
+
+@attribute [Route(ClientRoutes.InviteConfirmation)]
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager NavMan
 @inject IControlrInternalApi ControlrApi

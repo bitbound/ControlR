@@ -1,4 +1,4 @@
-@using DGDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceGroups
 @attribute [Route(ClientRoutes.DeviceGroups)]
 @attribute [Authorize(Policy = PolicyNames.RequireDeviceGroupsRead)]
 
@@ -19,7 +19,7 @@
   </Actions>
 </GridToolbar>
 
-<MudDataGrid T="DGDtos.DeviceGroupDto"
+<MudDataGrid T="DeviceGroupDto"
              Items="_groups"
              Hover="true"
              Loading="_loading"
@@ -50,6 +50,6 @@
     </TemplateColumn>
   </Columns>
   <PagerContent>
-    <MudDataGridPager T="DGDtos.DeviceGroupDto" />
+    <MudDataGridPager T="DeviceGroupDto" />
   </PagerContent>
 </MudDataGrid>

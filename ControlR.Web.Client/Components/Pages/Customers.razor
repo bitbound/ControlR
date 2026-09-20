@@ -1,4 +1,4 @@
-@using CustDtos = ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Customers
 @attribute [Route(ClientRoutes.Customers)]
 @attribute [Authorize(Policy = PolicyNames.RequireCustomersRead)]
 
@@ -22,7 +22,7 @@
   </Actions>
 </GridToolbar>
 
-<MudDataGrid T="CustDtos.CustomerDto"
+<MudDataGrid T="CustomerDto"
              Items="_customers"
              Hover="true"
              Loading="_loading"
@@ -58,6 +58,6 @@
     }
   </Columns>
   <PagerContent>
-    <MudDataGridPager T="CustDtos.CustomerDto" />
+    <MudDataGridPager T="CustomerDto" />
   </PagerContent>
 </MudDataGrid>
