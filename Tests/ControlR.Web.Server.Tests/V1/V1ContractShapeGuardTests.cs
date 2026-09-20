@@ -8,8 +8,10 @@ namespace ControlR.Web.Server.Tests.V1;
 /// Fails when the committed V1 OpenAPI document breaks shape against the last customer-shipped release.
 /// Additive changes pass. Removed paths/operations/status codes, removed or renamed response fields, and
 /// changed scalar field types fail.
-/// Known scope limits: does not check enum-member removal, request-side required additions, or parameter
-/// requiredness. Those are intentional, narrower than a full breaking-change gate.
+/// Known scope limits: response reachability follows only direct and array <c>$ref</c>, not
+/// allOf/oneOf/anyOf composition (the generator emits none today); type changes compare the declared
+/// scalar type but not <c>format</c>; it ignores enum-member removal, request-side required additions,
+/// and parameter requiredness. These are intentional, narrower than a full breaking-change gate.
 /// </summary>
 public class V1ContractShapeGuardTests
 {
@@ -218,9 +220,15 @@ public class V1ContractShapeGuardTests
         }
 
         var baselineResponses = TryGetObject(baselineOperation.Value, ["responses"]);
-        var currentResponses = TryGetObject(currentOperation, ["responses"]);
-        if (baselineResponses is null || currentResponses is null)
+        if (baselineResponses is null)
         {
+          continue;
+        }
+
+        var currentResponses = TryGetObject(currentOperation, ["responses"]);
+        if (currentResponses is null)
+        {
+          breaking.Add($"responses removed: {baselineOperation.Name.ToUpperInvariant()} {baselinePath.Name}");
           continue;
         }
 
@@ -385,8 +393,10 @@ public class V1ContractShapeGuardTests
     };
 
     process.Start();
+    // Drain stderr concurrently so a full stderr pipe cannot deadlock while stdout is still being read.
+    var errorTask = process.StandardError.ReadToEndAsync();
     var output = process.StandardOutput.ReadToEnd();
-    var error = process.StandardError.ReadToEnd();
+    var error = errorTask.GetAwaiter().GetResult();
 
     if (!process.WaitForExit(TimeSpan.FromSeconds(15)))
     {
