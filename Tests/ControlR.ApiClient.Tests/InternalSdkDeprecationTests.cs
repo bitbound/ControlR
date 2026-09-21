@@ -28,6 +28,9 @@ public sealed partial class InternalSdkDeprecationTests
     "IPersonalAccessTokensApi.DeletePersonalAccessToken",
     "IPersonalAccessTokensApi.GetPersonalAccessTokens",
     "IPersonalAccessTokensApi.UpdatePersonalAccessToken",
+    "IServerAlertApi.GetServerAlert",
+    "IServerAlertApi.UpdateServerAlert",
+    "IServerLogsApi.GetAspireUrl",
     "ITagsApi.CreateTag",
     "ITagsApi.DeleteTag",
     "ITagsApi.GetAllTags",
@@ -37,6 +40,7 @@ public sealed partial class InternalSdkDeprecationTests
     "ITenantSettingsApi.GetTenantSettings",
     "ITenantSettingsApi.SetTenantSetting",
     "ITenantSettingsApi.SetTenantSettings",
+    "ITestEmailApi.SendTestEmail",
     "IUserPreferencesApi.GetUserPreference",
     "IUserPreferencesApi.SetUserPreference",
     "IUserPreferencesApi.SetUserPreferences",
@@ -54,6 +58,7 @@ public sealed partial class InternalSdkDeprecationTests
     "IUsersApi.UpdateUserPersonalAccessToken",
     "IVersionApi.GetCurrentAgentVersion",
     "IVersionApi.GetCurrentServerVersion",
+    "IVersionApi.GetReleaseNotes",
   ];
 
   [Fact]
