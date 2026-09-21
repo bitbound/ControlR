@@ -13,15 +13,33 @@ namespace ControlR.Libraries.Shared.Tests;
 public class OperationFailureCodeSerializationTests
 {
   [Theory]
+  [InlineData("\"unknown\"", OperationFailureCode.Unknown)]
   [InlineData("\"not-found\"", OperationFailureCode.NotFound)]
   [InlineData("\"already-exists\"", OperationFailureCode.AlreadyExists)]
-  [InlineData("\"a-code-from-the-future\"", OperationFailureCode.Unknown)]
-  public void Enum_DeserializesFromWireNameOrFallsBackToUnknown(string json, OperationFailureCode expected)
+  [InlineData("\"permission-denied\"", OperationFailureCode.PermissionDenied)]
+  [InlineData("\"invalid-input\"", OperationFailureCode.InvalidInput)]
+  [InlineData("\"device-failure\"", OperationFailureCode.DeviceFailure)]
+  public void Enum_DeserializesFromItsKebabWireName(string json, OperationFailureCode expected)
   {
     Assert.Equal(expected, JsonSerializer.Deserialize<OperationFailureCode>(json));
   }
 
+  [Fact]
+  public void Enum_BoxedAsObject_StillSerializesAsItsKebabWireName()
+  {
+    var extensions = new Dictionary<string, object?> { ["failureCode"] = OperationFailureCode.NotFound };
+
+    Assert.Contains("\"failureCode\":\"not-found\"", JsonSerializer.Serialize(extensions));
+  }
+
+  [Fact]
+  public void Enum_ForAnUnrecognizedWireName_Throws()
+  {
+    Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<OperationFailureCode>("\"a-code-from-the-future\""));
+  }
+
   [Theory]
+  [InlineData(OperationFailureCode.Unknown, "unknown")]
   [InlineData(OperationFailureCode.NotFound, "not-found")]
   [InlineData(OperationFailureCode.AlreadyExists, "already-exists")]
   [InlineData(OperationFailureCode.PermissionDenied, "permission-denied")]
@@ -30,12 +48,6 @@ public class OperationFailureCodeSerializationTests
   public void Enum_SerializesAsItsKebabWireName(OperationFailureCode code, string wireName)
   {
     Assert.Equal($"\"{wireName}\"", JsonSerializer.Serialize(code));
-  }
-
-  [Fact]
-  public void Enum_WhenValueIsUndefined_SerializesAsUnknownSoWriteMirrorsTheReadFallback()
-  {
-    Assert.Equal("\"unknown\"", JsonSerializer.Serialize((OperationFailureCode)15));
   }
 
   [Fact]
