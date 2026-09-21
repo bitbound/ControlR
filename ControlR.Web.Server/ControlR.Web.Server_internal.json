@@ -2553,17 +2553,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  "$ref": "#/components/schemas/InviteResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  "$ref": "#/components/schemas/InviteResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TenantInviteResponseDto"
+                  "$ref": "#/components/schemas/InviteResponseDto"
                 }
               }
             }
@@ -2616,7 +2616,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                    "$ref": "#/components/schemas/InviteResponseDto"
                   }
                 }
               },
@@ -2624,7 +2624,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                    "$ref": "#/components/schemas/InviteResponseDto"
                   }
                 }
               },
@@ -2632,7 +2632,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TenantInviteResponseDto"
+                    "$ref": "#/components/schemas/InviteResponseDto"
                   }
                 }
               }
@@ -7883,6 +7883,31 @@
           }
         }
       },
+      "InviteResponseDto": {
+        "required": [
+          "id",
+          "createdAt",
+          "inviteeEmail",
+          "inviteUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "inviteeEmail": {
+            "type": "string"
+          },
+          "inviteUrl": {
+            "type": "string"
+          }
+        }
+      },
       "KeyboardInputMode": {
         "type": "integer"
       },
@@ -8368,31 +8393,6 @@
         "type": "object",
         "properties": {
           "inviteeEmail": {
-            "type": "string"
-          }
-        }
-      },
-      "TenantInviteResponseDto": {
-        "required": [
-          "id",
-          "createdAt",
-          "inviteeEmail",
-          "inviteUrl"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "inviteeEmail": {
-            "type": "string"
-          },
-          "inviteUrl": {
             "type": "string"
           }
         }

@@ -29,7 +29,7 @@ public class InvitesController : ControllerBase
   [HttpPost]
   [ApiDeprecated("/api/v1/invites?tenantId={tenantId}", Note = "Use POST /api/v1/invites with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireTenantUsersWrite)]
-  public async Task<ActionResult<InternalDtos.TenantInviteResponseDto>> Create(
+  public async Task<ActionResult<InternalDtos.InviteResponseDto>> Create(
     [FromBody] InternalDtos.TenantInviteRequestDto dto,
     [FromServices] ITenantInvitesProvider tenantInvitesProvider)
   {
@@ -68,7 +68,7 @@ public class InvitesController : ControllerBase
   [HttpGet]
   [ApiDeprecated("/api/v1/invites?tenantId={tenantId}", Note = "Use GET /api/v1/invites with an explicit tenantId.")]
   [Authorize(Policy = PolicyNames.RequireUsersRead)]
-  public async Task<ActionResult<InternalDtos.TenantInviteResponseDto[]>> GetAll(
+  public async Task<ActionResult<InternalDtos.InviteResponseDto[]>> GetAll(
     [FromServices] ITenantInvitesProvider tenantInvitesProvider,
     [FromServices] IPermissionEvaluator permissionEvaluator,
     [FromServices] IResourceDescriptorFactory resourceFactory)

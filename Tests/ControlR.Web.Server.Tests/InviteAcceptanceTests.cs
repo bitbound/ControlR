@@ -62,7 +62,7 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
         tenantInvitesProvider);
 
       var okResult = Assert.IsType<OkObjectResult>(result.Result);
-      var inviteResponse = Assert.IsType<InternalDtos.TenantInviteResponseDto>(okResult.Value);
+      var inviteResponse = Assert.IsType<InternalDtos.InviteResponseDto>(okResult.Value);
       activationCode = inviteResponse.InviteUrl.Segments[^1];
     }
 

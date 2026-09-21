@@ -11,7 +11,7 @@ public interface ITenantInvitesProvider
   Task<HttpResult<InternalDtos.AcceptInvitationResponseDto>> AcceptInvite(
     InternalDtos.AcceptInvitationRequestDto dto);
 
-  Task<HttpResult<InternalDtos.TenantInviteResponseDto>> CreateInvite(
+  Task<HttpResult<InternalDtos.InviteResponseDto>> CreateInvite(
     string inviteeEmail,
     Guid tenantId,
     Uri origin,
@@ -21,7 +21,7 @@ public interface ITenantInvitesProvider
     Guid inviteId,
     Guid tenantId);
 
-  Task<InternalDtos.TenantInviteResponseDto[]> GetAllInvites(
+  Task<InternalDtos.InviteResponseDto[]> GetAllInvites(
     Guid tenantId,
     Uri origin,
     bool includeActivationCode);
@@ -157,7 +157,7 @@ public class TenantInvitesProvider(
     return HttpResult.Ok(response);
   }
 
-  public async Task<HttpResult<InternalDtos.TenantInviteResponseDto>> CreateInvite(
+  public async Task<HttpResult<InternalDtos.InviteResponseDto>> CreateInvite(
     string inviteeEmail,
     Guid tenantId,
     Uri origin,
@@ -169,14 +169,14 @@ public class TenantInvitesProvider(
 
     if (await appDb.TenantInvites.AnyAsync(x => x.InviteeEmail == normalizedEmail, cancellationToken: cancellationToken))
     {
-      return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "Invitee already has a pending invite.");
+      return HttpResult.Fail<InternalDtos.InviteResponseDto>(HttpResultErrorCode.Conflict, "Invitee already has a pending invite.");
     }
 
 #pragma warning disable CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons. 
     // Reason: StringComparison is not available in EF Core LINQ-to-Entities queries.
     if (await appDb.Users.AnyAsync(x => x.Email!.ToLower() == normalizedEmail, cancellationToken: cancellationToken))
     {
-      return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists in the database.");
+      return HttpResult.Fail<InternalDtos.InviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists in the database.");
     }
 #pragma warning restore CA1862 // Use the 'StringComparison' method overloads to perform case-insensitive string comparisons
 
@@ -193,10 +193,10 @@ public class TenantInvitesProvider(
 
       if (firstError is { Code: nameof(IdentityErrorDescriber.DuplicateUserName) })
       {
-        return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists.");
+        return HttpResult.Fail<InternalDtos.InviteResponseDto>(HttpResultErrorCode.Conflict, "User already exists.");
       }
 
-      return HttpResult.Fail<InternalDtos.TenantInviteResponseDto>(HttpResultErrorCode.InternalServerError, "Failed to create user.");
+      return HttpResult.Fail<InternalDtos.InviteResponseDto>(HttpResultErrorCode.InternalServerError, "Failed to create user.");
     }
 
     var invite = new TenantInvite()
@@ -209,7 +209,7 @@ public class TenantInvitesProvider(
     await appDb.SaveChangesAsync(cancellationToken);
 
     var inviteUrl = new Uri(origin, $"{ClientRoutes.InviteConfirmationBase}/{invite.ActivationCode}");
-    var retDto = new InternalDtos.TenantInviteResponseDto(invite.Id, invite.CreatedAt, normalizedEmail, inviteUrl);
+    var retDto = new InternalDtos.InviteResponseDto(invite.Id, invite.CreatedAt, normalizedEmail, inviteUrl);
     return HttpResult.Ok(retDto);
   }
 
@@ -240,7 +240,7 @@ public class TenantInvitesProvider(
     return HttpResult.Ok();
   }
 
-  public async Task<InternalDtos.TenantInviteResponseDto[]> GetAllInvites(
+  public async Task<InternalDtos.InviteResponseDto[]> GetAllInvites(
     Guid tenantId,
     Uri origin,
     bool includeActivationCode)
@@ -249,7 +249,7 @@ public class TenantInvitesProvider(
 
     return await appDb.TenantInvites
       .Where(x => x.TenantId == tenantId)
-      .Select(x => new InternalDtos.TenantInviteResponseDto(
+      .Select(x => new InternalDtos.InviteResponseDto(
         x.Id,
         x.CreatedAt,
         x.InviteeEmail,
