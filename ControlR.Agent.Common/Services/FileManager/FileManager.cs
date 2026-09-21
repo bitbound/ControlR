@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using ControlR.Agent.Shared.Constants;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.FileSystem;
 

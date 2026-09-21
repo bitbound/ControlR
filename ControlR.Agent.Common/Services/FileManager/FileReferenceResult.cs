@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.Agent.Common.Services.FileManager;
 
@@ -24,6 +23,7 @@ public class FileReferenceResult
 
   /// <summary>
   /// Machine-readable reason for a failure. <see cref="OperationFailureCode.Unknown" /> on a success.
+  /// Same enum as HubResult.FailureCode on purpose; the agent sets it here and passes it to the hub result.
   /// </summary>
   public OperationFailureCode Code { get; init; }
   public string? ErrorMessage { get; init; }
