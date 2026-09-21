@@ -713,8 +713,14 @@ internal class AgentHubClient(
     {
       _logger.LogDebug(
         "Streaming file contents: {FilePath}, Stream ID: {StreamId}",
-        dto.FilePath, 
+        dto.FilePath,
         dto.StreamId);
+
+      if (!_fileManager.IsPathWithinLogRoots(dto.FilePath))
+      {
+        _logger.LogWarning("Refused to stream file contents outside the log directories: {FilePath}", dto.FilePath);
+        return HubResult.Fail("File is not within an allowed log directory.", OperationFailureCode.PermissionDenied);
+      }
 
       if (!_fileSystem.FileExists(dto.FilePath))
       {

@@ -19,6 +19,7 @@ public interface IFileManager
   Task<PathSegmentsResponseDto> GetPathSegments(string targetPath);
   Task<FileSystemEntryDto[]> GetRootDrives();
   Task<FileSystemEntryDto[]> GetSubdirectories(string directoryPath);
+  bool IsPathWithinLogRoots(string filePath);
   Task<FileReferenceResult> ResolveTargetFilePath(string targetPath);
   Task<FileReferenceResult> SaveUploadedFile(string targetDirectoryPath, string fileName, Stream fileStream, bool overwrite = false);
   Task<ValidateFilePathResponseDto> ValidateFilePath(string directoryPath, string fileName);
@@ -451,6 +452,34 @@ internal class FileManager(
     }
   }
 
+  public bool IsPathWithinLogRoots(string filePath)
+  {
+    if (string.IsNullOrWhiteSpace(filePath))
+    {
+      return false;
+    }
+
+    string fullPath;
+    try
+    {
+      fullPath = Path.GetFullPath(filePath);
+    }
+    catch
+    {
+      return false;
+    }
+
+    foreach (var root in GetLogRootDirectories())
+    {
+      if (IsWithinDirectory(fullPath, root))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   public async Task<FileReferenceResult> ResolveTargetFilePath(string filePath)
   {
     try
@@ -591,6 +620,42 @@ internal class FileManager(
     return candidate;
   }
 
+  private static bool IsWithinDirectory(string fullPath, string root)
+  {
+    var normalizedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    if (string.IsNullOrEmpty(normalizedRoot))
+    {
+      return false;
+    }
+
+    var comparison = OperatingSystem.IsWindows()
+      ? StringComparison.OrdinalIgnoreCase
+      : StringComparison.Ordinal;
+
+    if (string.Equals(fullPath, normalizedRoot, comparison))
+    {
+      return true;
+    }
+
+    return fullPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison);
+  }
+
+  private static void TryAddLogRoot(ICollection<string> roots, Func<string> getRoot)
+  {
+    try
+    {
+      var value = getRoot();
+      if (!string.IsNullOrWhiteSpace(value))
+      {
+        roots.Add(Path.GetFullPath(value));
+      }
+    }
+    catch
+    {
+      // Provider log getters are platform-guarded and throw off-platform; that root simply does not apply.
+    }
+  }
+
   private async Task AddDirectoryToZip(ZipArchive archive, string directoryPath, string entryPrefix)
   {
     try
@@ -712,6 +777,39 @@ internal class FileManager(
     }
 
     return logFiles.OrderByDescending(x => x.LastModified).ToList();
+  }
+
+  // The same roots GetLogFiles enumerates. The log-contents stream is constrained to these so a
+  // principal with log-read on one device cannot point the agent at an arbitrary file it can open.
+  private IEnumerable<string> GetLogRootDirectories()
+  {
+    var roots = new List<string>();
+
+    TryAddLogRoot(roots, () => _fileSystemPathProvider.GetAgentLogsDirectoryPath());
+    TryAddLogRoot(roots, () => _fileSystemPathProvider.GetInstallerLogsDirectoryPath());
+
+    if (OperatingSystem.IsWindows())
+    {
+      TryAddLogRoot(roots, () => _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory());
+      return roots;
+    }
+
+    TryAddLogRoot(roots, () => _fileSystemPathProvider.GetUnixDesktopClientLogsDirectoryForRoot());
+    var homeRoot = OperatingSystem.IsMacOS() ? "/Users" : "/home";
+    foreach (var homeDir in _fileSystem.GetDirectories(homeRoot) ?? [])
+    {
+      try
+      {
+        var username = _fileSystem.GetDirectoryInfo(homeDir).Name;
+        TryAddLogRoot(roots, () => _fileSystemPathProvider.GetUnixDesktopClientLogsDirectory(username));
+      }
+      catch (Exception ex)
+      {
+        _logger.LogDebug(ex, "Skipping per-user log root for {HomeDir}", homeDir);
+      }
+    }
+
+    return roots;
   }
 
   private List<LogFileGroupDto> GetUnixDesktopClientLogs()
