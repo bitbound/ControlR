@@ -16675,7 +16675,10 @@
         }
       },
       "FilterMatchMode": {
-        "type": "integer"
+        "enum": [
+          "Any",
+          "All"
+        ]
       },
       "GetAspireUrlResponseDto": {
         "required": [
@@ -16712,7 +16715,11 @@
         }
       },
       "ImageFormat": {
-        "type": "integer"
+        "enum": [
+          "Jpeg",
+          "Png",
+          "WebP"
+        ]
       },
       "InstallerKeyDto": {
         "required": [
@@ -16786,7 +16793,12 @@
         }
       },
       "InstallerKeyType": {
-        "type": "integer"
+        "enum": [
+          "Unknown",
+          "UsageBased",
+          "TimeBased",
+          "Persistent"
+        ]
       },
       "InstallerKeyUsageDto": {
         "required": [
@@ -16865,7 +16877,11 @@
         }
       },
       "KeyboardInputMode": {
-        "type": "integer"
+        "enum": [
+          "Auto",
+          "Physical",
+          "Virtual"
+        ]
       },
       "LogonTokenResponseDto": {
         "required": [
@@ -16888,7 +16904,12 @@
         }
       },
       "MessageSeverity": {
-        "type": "integer"
+        "enum": [
+          "Information",
+          "Warning",
+          "Error",
+          "Success"
+        ]
       },
       "PermissionAssignmentDto": {
         "required": [
@@ -17483,7 +17504,10 @@
         }
       },
       "TagType": {
-        "type": "integer"
+        "enum": [
+          "Unknown",
+          "Permission"
+        ]
       },
       "TenantServiceAccountDto": {
         "required": [
@@ -17632,7 +17656,11 @@
         }
       },
       "ThemeMode": {
-        "type": "integer"
+        "enum": [
+          "Auto",
+          "Light",
+          "Dark"
+        ]
       },
       "UpdateCustomerRequestDto": {
         "required": [
@@ -18193,7 +18221,11 @@
         }
       },
       "ViewMode": {
-        "type": "integer"
+        "enum": [
+          "Fit",
+          "Stretch",
+          "Scale"
+        ]
       }
     },
     "securitySchemes": {

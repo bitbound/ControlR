@@ -12,6 +12,14 @@ namespace ControlR.Libraries.Shared.Tests;
 /// </summary>
 public class OperationFailureCodeSerializationTests
 {
+  [Fact]
+  public void Enum_BoxedAsObject_StillSerializesAsItsKebabWireName()
+  {
+    var extensions = new Dictionary<string, object?> { ["failureCode"] = OperationFailureCode.NotFound };
+
+    Assert.Contains("\"failureCode\":\"not-found\"", JsonSerializer.Serialize(extensions));
+  }
+
   [Theory]
   [InlineData("\"unknown\"", OperationFailureCode.Unknown)]
   [InlineData("\"not-found\"", OperationFailureCode.NotFound)]
@@ -22,14 +30,6 @@ public class OperationFailureCodeSerializationTests
   public void Enum_DeserializesFromItsKebabWireName(string json, OperationFailureCode expected)
   {
     Assert.Equal(expected, JsonSerializer.Deserialize<OperationFailureCode>(json));
-  }
-
-  [Fact]
-  public void Enum_BoxedAsObject_StillSerializesAsItsKebabWireName()
-  {
-    var extensions = new Dictionary<string, object?> { ["failureCode"] = OperationFailureCode.NotFound };
-
-    Assert.Contains("\"failureCode\":\"not-found\"", JsonSerializer.Serialize(extensions));
   }
 
   [Fact]
