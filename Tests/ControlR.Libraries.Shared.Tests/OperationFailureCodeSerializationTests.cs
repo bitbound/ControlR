@@ -33,6 +33,12 @@ public class OperationFailureCodeSerializationTests
   }
 
   [Fact]
+  public void Enum_WhenValueIsUndefined_SerializesAsUnknownSoWriteMirrorsTheReadFallback()
+  {
+    Assert.Equal("\"unknown\"", JsonSerializer.Serialize((OperationFailureCode)15));
+  }
+
+  [Fact]
   public void HubResult_CurrentPayload_DeserializesIntoALegacyServer()
   {
     var current = HubResult.Fail("a refusal with a code", OperationFailureCode.NotFound);

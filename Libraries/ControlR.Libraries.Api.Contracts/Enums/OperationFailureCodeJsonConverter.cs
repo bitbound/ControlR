@@ -13,8 +13,14 @@ namespace ControlR.Libraries.Api.Contracts.Enums;
 /// </summary>
 public sealed class OperationFailureCodeJsonConverter : JsonConverter<OperationFailureCode>
 {
-  private static readonly Dictionary<string, OperationFailureCode> _fromWire = BuildFromWire();
-  private static readonly Dictionary<OperationFailureCode, string> _toWire = BuildToWire();
+  private static readonly Dictionary<string, OperationFailureCode> _fromWire;
+  private static readonly Dictionary<OperationFailureCode, string> _toWire;
+
+  static OperationFailureCodeJsonConverter()
+  {
+    _toWire = BuildToWire();
+    _fromWire = BuildFromWire(_toWire);
+  }
 
   public override OperationFailureCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
   {
@@ -33,14 +39,14 @@ public sealed class OperationFailureCodeJsonConverter : JsonConverter<OperationF
 
   public override void Write(Utf8JsonWriter writer, OperationFailureCode value, JsonSerializerOptions options)
   {
-    writer.WriteStringValue(_toWire.TryGetValue(value, out var wire) ? wire : ToKebab(value.ToString()));
+    writer.WriteStringValue(_toWire.TryGetValue(value, out var wire) ? wire : _toWire[OperationFailureCode.Unknown]);
   }
 
-  private static Dictionary<string, OperationFailureCode> BuildFromWire()
+  private static Dictionary<string, OperationFailureCode> BuildFromWire(Dictionary<OperationFailureCode, string> toWire)
   {
     var map = new Dictionary<string, OperationFailureCode>(StringComparer.OrdinalIgnoreCase);
 
-    foreach (var (member, wire) in BuildToWire())
+    foreach (var (member, wire) in toWire)
     {
       map[wire] = member;
     }
