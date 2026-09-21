@@ -1,5 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceFileSystem;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Authn;
@@ -283,6 +284,26 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       x => x.CreateDirectory(It.Is<CreateDirectoryHubDto>(
         dto => dto.ParentPath == "/parent" && dto.DirectoryName == "new-dir")),
       Times.Once());
+  }
+
+  [Fact]
+  public async Task DeletePath_WhenAgentRefusesWithAFailureCode_SurfacesItInTheProblem()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-delete-refused-code@test.local");
+    harness.AgentClient
+      .Setup(x => x.DeleteFile(It.IsAny<FileDeleteHubDto>()))
+      .ReturnsAsync(HubResult.Fail("Target path does not exist", OperationFailureCode.NotFound));
+
+    var result = await harness.Controller.DeletePath(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new DeleteDevicePathRequestDto("/parent/file.txt"),
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertDeviceRefusal(result);
+    Assert.Equal(OperationFailureCode.NotFound, problem.Extensions["failureCode"]);
   }
 
   [Fact]

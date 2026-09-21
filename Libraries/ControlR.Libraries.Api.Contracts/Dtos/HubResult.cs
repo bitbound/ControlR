@@ -12,7 +12,10 @@ public class HubResult
 {
   [JsonConstructor]
   [SerializationConstructor]
-  public HubResult(bool isSuccess, string? reason = null, Guid? errorCode = null)
+  public HubResult(
+    bool isSuccess,
+    string? reason = null,
+    OperationFailureCode failureCode = OperationFailureCode.Unknown)
   {
     if (!isSuccess && string.IsNullOrWhiteSpace(reason))
     {
@@ -21,24 +24,28 @@ public class HubResult
 
     IsSuccess = isSuccess;
     Reason = reason;
-    ErrorCode = errorCode;
+    FailureCode = failureCode;
   }
 
-  public Guid? ErrorCode { get; init; }
-  
+  /// <summary>
+  /// Machine-readable reason for a failure. <see cref="OperationFailureCode.Unknown" /> for a success
+  /// or for a refusal from an agent that predates this field.
+  /// </summary>
+  public OperationFailureCode FailureCode { get; init; }
+
   [MemberNotNullWhen(false, nameof(Reason))]
   public virtual bool IsSuccess { get; init; }
-  
+
   public string? Reason { get; init; }
 
-  public static HubResult Fail(string reason, Guid? errorCode = null)
+  public static HubResult Fail(string reason, OperationFailureCode failureCode = OperationFailureCode.Unknown)
   {
-    return new HubResult(false, reason, errorCode);
+    return new HubResult(false, reason, failureCode);
   }
 
-  public static HubResult<T> Fail<T>(string reason, Guid? errorCode = null)
+  public static HubResult<T> Fail<T>(string reason, OperationFailureCode failureCode = OperationFailureCode.Unknown)
   {
-    return new HubResult<T>(value: default, isSuccess: false, reason, errorCode);
+    return new HubResult<T>(value: default, isSuccess: false, reason, failureCode);
   }
 
   public static HubResult Ok()
@@ -61,8 +68,12 @@ public class HubResult<T> : HubResult
 {
   [JsonConstructor]
   [SerializationConstructor]
-  public HubResult(T? value, bool isSuccess, string? reason = null, Guid? errorCode = null)
-    : base(isSuccess, reason, errorCode)
+  public HubResult(
+    T? value,
+    bool isSuccess,
+    string? reason = null,
+    OperationFailureCode failureCode = OperationFailureCode.Unknown)
+    : base(isSuccess, reason, failureCode)
   {
     if (!isSuccess && string.IsNullOrWhiteSpace(reason))
     {
@@ -72,10 +83,10 @@ public class HubResult<T> : HubResult
     Value = value;
     IsSuccess = isSuccess;
     Reason = reason;
-    ErrorCode = errorCode;
+    FailureCode = failureCode;
   }
 
-  
+
   [MemberNotNullWhen(true, nameof(Value))]
   public override bool IsSuccess { get; init; }
 

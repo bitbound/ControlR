@@ -232,7 +232,7 @@ public class DeviceFileSystemService(
 
       if (!result.IsSuccess)
       {
-        return new(FileSystemFailure.RemoteFailure, result.Reason);
+        return new(FileSystemFailure.RemoteFailure, result.Reason) { Code = result.FailureCode };
       }
 
       return new(FileSystemFailure.None, null);
@@ -283,7 +283,7 @@ public class DeviceFileSystemService(
 
       if (!result.IsSuccess)
       {
-        return new(FileSystemFailure.RemoteFailure, result.Reason);
+        return new(FileSystemFailure.RemoteFailure, result.Reason) { Code = result.FailureCode };
       }
 
       return new(FileSystemFailure.None, null);
@@ -381,7 +381,7 @@ public class DeviceFileSystemService(
       {
         _logger.LogError("Get log files request failed for device {DeviceId}: {Reason}",
           deviceId, result.Reason);
-        return new(FileSystemFailure.RemoteFailure, result.Reason, null);
+        return new(FileSystemFailure.RemoteFailure, result.Reason, null) { Code = result.FailureCode };
       }
 
       return new(FileSystemFailure.None, null, result.Value);
@@ -485,7 +485,7 @@ public class DeviceFileSystemService(
 
       _logger.LogWarning("Failed to get root drives for device {DeviceId}: {Reason}",
         request.DeviceId, result.Reason);
-      return new(FileSystemFailure.RemoteFailure, result.Reason, null);
+      return new(FileSystemFailure.RemoteFailure, result.Reason, null) { Code = result.FailureCode };
     }
     catch (Exception ex)
     {
@@ -587,7 +587,7 @@ public class DeviceFileSystemService(
       {
         _logger.LogWarning("Archive download request failed for device {DeviceId}: {Reason}",
           deviceId, result.Reason);
-        return new(FileSystemFailure.RemoteFailure, result.Reason, null);
+        return new(FileSystemFailure.RemoteFailure, result.Reason, null) { Code = result.FailureCode };
       }
 
       _logger.LogInformation("Archive download started for device {DeviceId} with {ItemCount} item(s)",
@@ -664,7 +664,7 @@ public class DeviceFileSystemService(
       {
         _logger.LogWarning("File download request failed for {FilePath} on device {DeviceId}: {Reason}",
           filePath, deviceId, result.Reason);
-        return new(FileSystemFailure.RemoteFailure, result.Reason, null);
+        return new(FileSystemFailure.RemoteFailure, result.Reason, null) { Code = result.FailureCode };
       }
 
       _logger.LogInformation("File download started for {FilePath} from device {DeviceId}",
@@ -741,7 +741,7 @@ public class DeviceFileSystemService(
       {
         _logger.LogWarning("Log file contents stream request failed for {FilePath} on device {DeviceId}: {Reason}",
           filePath, deviceId, result.Reason);
-        return new(FileSystemFailure.RemoteFailure, result.Reason, null);
+        return new(FileSystemFailure.RemoteFailure, result.Reason, null) { Code = result.FailureCode };
       }
 
       // The agent streams text with no length, so the response states none.
@@ -825,7 +825,7 @@ public class DeviceFileSystemService(
         _logger.LogWarning("File upload request failed for {FileName} to device {DeviceId}: {Reason}",
           fileName, deviceId, result.Reason);
         await AbandonUpload(writeToStreamTask, signaler);
-        return new(FileSystemFailure.RemoteFailure, result.Reason);
+        return new(FileSystemFailure.RemoteFailure, result.Reason) { Code = result.FailureCode };
       }
 
       // Only an agent that accepted is draining the channel. Waiting for the copy before that answer
@@ -1002,7 +1002,7 @@ public class DeviceFileSystemService(
     {
       _logger.LogWarning("Failed to initiate {OperationName} stream for device {DeviceId} path {DirectoryPath}: {Reason}",
         operationName, device.Id, directoryPath, result.Reason);
-      return new(FileSystemFailure.RemoteFailure, result.Reason, null);
+      return new(FileSystemFailure.RemoteFailure, result.Reason, null) { Code = result.FailureCode };
     }
 
     var items = new List<InternalDtos.FileSystemEntryDto>();
