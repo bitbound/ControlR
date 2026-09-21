@@ -44,9 +44,8 @@ public partial class ControlrApi(
   internal IOptions<ControlrApiClientOptions> Options => _options;
 
   /// <summary>
-  /// Counts this client's calls so that evicting the target releases its HTTP stack once they
-  /// finish. The factory assigns it while building the target. A client nobody evicts keeps the
-  /// instance it was given, where acquiring a lease costs a counter pair.
+  /// Counts this client's calls so that evicting the target releases its HTTP stack once they finish.
+  /// The factory assigns it while building the target.
   /// </summary>
   internal InFlightTracker Requests { get; set; } = new();
   internal V1Api V1 => _v1 ??= new(this);
@@ -56,22 +55,17 @@ public partial class ControlrApi(
   IControlrV1Api IControlrApi.V1 => V1;
 
   /// <summary>
-  /// <para>
-  /// Announces a call that <see cref="ExecuteApiCall(Func{Task}, bool)"/> does not wrap, which is how
-  /// a streamed response stays counted for as long as its body is still being read. Dispose the
-  /// returned lease when the caller is done with the response.
-  /// </para>
-  /// <para>
-  /// The JSON read from a streaming endpoint is buffered by <see cref="HttpClient"/> before it reaches
-  /// the caller, so the lease is cleared when that read finishes rather than when the response starts.
-  /// A caller that hands items out slowly holds the target for the duration of the whole stream.
-  /// </para>
-  /// <para>
+  /// Announces a call that <see cref="ExecuteApiCall(Func{Task}, bool)"/> does not wrap, so a streamed response stays counted while its body is read.
+  /// </summary>
+  /// <remarks>
+  /// Dispose the returned lease when the caller is done with the response. The JSON read from a streaming
+  /// endpoint is buffered by <see cref="HttpClient"/> before it reaches the caller, so the lease is cleared
+  /// when that read finishes rather than when the response starts. A caller that hands items out slowly
+  /// holds the target for the duration of the whole stream.
   /// Throws when the target was removed or is being removed. A streaming endpoint returns
   /// <see cref="IAsyncEnumerable{T}"/>, so it has no failed result to report and yielding nothing
   /// would read as an empty device list.
-  /// </para>
-  /// </summary>
+  /// </remarks>
   internal InFlightTracker.Lease BeginTrackedRequest() => Requests.AcquireOrThrow(nameof(ControlrApi));
 
   internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)

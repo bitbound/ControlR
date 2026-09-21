@@ -3,17 +3,15 @@
 namespace ControlR.ApiClient;
 
 /// <summary>
-/// <para>
-///   Provides static, process-wide access to a single <see cref="IControlrApi"/> client without any
-///   dependency-injection setup.
-/// </para>
-/// <para>
-///   Internally this is a thin wrapper over <see cref="ControlrApiClientFactory"/> using the target
-///   name <c>"default"</c>. Prefer the factory (or <c>AddControlrApiClient</c>) when hosting an app
-///   with a service provider. Call <see cref="Initialize"/> once per process. Call
-///   <see cref="Dispose"/> to tear the client down and allow re-initialization.
-/// </para>
+/// Provides static, process-wide access to a single <see cref="IControlrApi"/> client without any
+/// dependency-injection setup. Call <see cref="Initialize"/> once per process and <see cref="Dispose"/>
+/// to tear it down and allow re-initialization.
 /// </summary>
+/// <remarks>
+/// Internally a thin wrapper over <see cref="ControlrApiClientFactory"/> using the target name
+/// <c>"default"</c>. Prefer the factory (or <c>AddControlrApiClient</c>) when hosting an app with a
+/// service provider.
+/// </remarks>
 public static class ControlrApiClientBuilder
 {
   private const string DefaultTargetName = "default";

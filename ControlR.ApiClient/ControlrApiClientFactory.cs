@@ -8,21 +8,16 @@ using Microsoft.Extensions.Options;
 namespace ControlR.ApiClient;
 
 /// <summary>
-/// <para>
-///   Creates and tracks <see cref="IControlrApi"/> clients that target different ControlR servers,
-///   each with its own credentials.
-/// </para>
-/// <para>
-///   Intended for backend integrations that integrate with multiple, runtime-discovered ControlR
-///   servers. Register via <c>AddControlrApiClientFactory</c> and reconcile the tracked targets
-///   against the server registry using <see cref="GetOrCreateClient"/>, <see cref="GetOrCreateAuthSession"/>,
-///   and <see cref="TryRemoveClient"/>.
-/// </para>
-/// <para>
-///   This type is server-only. Do not use from Blazor WebAssembly. Use <c>AddControlrApiClient</c>
-///   there instead, which routes through the platform's browser HTTP handler.
-/// </para>
+/// Creates and tracks <see cref="IControlrApi"/> clients that target different ControlR servers,
+/// each with its own credentials.
 /// </summary>
+/// <remarks>
+/// Intended for backend integrations that talk to multiple, runtime-discovered ControlR servers. Register
+/// via <c>AddControlrApiClientFactory</c> and reconcile the tracked targets against the server registry
+/// using <see cref="GetOrCreateClient"/>, <see cref="GetOrCreateAuthSession"/>, and <see cref="TryRemoveClient"/>.
+/// This type is server-only. Do not use from Blazor WebAssembly, where <c>AddControlrApiClient</c> routes
+/// through the platform's browser HTTP handler.
+/// </remarks>
 public interface IControlrApiClientFactory : IDisposable
 {
 
@@ -355,7 +350,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
   /// <summary>
   /// Evicts entries that have been idle longer than <see cref="ControlrApiClientFactoryOptions.MaxIdleClientLifetime"/>.
-  /// Entries holding a live interactive session are never selected. See <see cref="HasLiveSession"/>.
+  /// Entries holding a live interactive session are never selected.
   /// </summary>
   internal void SweepIdleClients()
   {
@@ -516,10 +511,10 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     _factoryOptions.HttpMessageHandlerFactory?.Invoke() ?? CreateDefaultHandler();
 
   /// <summary>
-  /// When <see cref="ControlrApiClientFactoryOptions.MaxTrackedClients"/> is set, unlinks
-  /// least-recently-used entries until the tracked count fits under the cap. Must be called while
-  /// holding <see cref="_createLock"/>. Never evicts <paramref name="excludedName"/>.
-  /// The caller disposes the returned entries outside the lock.
+  /// Unlinks least-recently-used entries until the tracked count fits under
+  /// <see cref="ControlrApiClientFactoryOptions.MaxTrackedClients"/>, never evicting
+  /// <paramref name="excludedName"/>. Must be called while holding <see cref="_createLock"/>; the caller
+  /// disposes the returned entries outside the lock.
   /// </summary>
   private List<ClientEntry> EvictToTrackLimit(string excludedName)
   {
@@ -550,12 +545,14 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
   }
 
   /// <summary>
-  /// Stamps an entry as just used. The two writes are not atomic, and the cache-hit path in
-  /// <see cref="GetOrCreateClient"/> calls this without holding <see cref="_createLock"/>, so
-  /// <see cref="EvictToTrackLimit"/> can observe a new tick count paired with an older ordinal. That
-  /// only perturbs which of two near-equal entries the cap picks, which an LRU heuristic tolerates,
-  /// and taking the lock on the hot path to prevent it would cost more than the imprecision.
+  /// Stamps an entry as just used. The two writes are not atomic, so <see cref="EvictToTrackLimit"/> can
+  /// observe a new tick count paired with an older ordinal.
   /// </summary>
+  /// <remarks>
+  /// The cache-hit path in <see cref="GetOrCreateClient"/> calls this without holding <see cref="_createLock"/>.
+  /// The race only perturbs which of two near-equal entries the cap picks, which an LRU heuristic tolerates,
+  /// and taking the lock on the hot path would cost more than the imprecision.
+  /// </remarks>
   private void Touch(ClientEntry entry)
   {
     Volatile.Write(ref entry.LastUsedTicks, _timeProvider.GetUtcNow().UtcTicks);
@@ -587,9 +584,11 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
     /// <summary>
     /// Disposes the target's HTTP stacks, interactive session (if created), and bearer-refresh lock.
-    /// Safe to call multiple times and concurrently. Only the first call does work. When the target
-    /// still has requests in flight, the HTTP stacks are released by the last of them instead.
+    /// Safe to call multiple times and concurrently; only the first call does work.
     /// </summary>
+    /// <remarks>
+    /// When the target still has requests in flight, the HTTP stacks are released by the last of them instead.
+    /// </remarks>
     public void DisposeOnce()
     {
       if (Interlocked.Exchange(ref _disposeState, 1) == 1)
