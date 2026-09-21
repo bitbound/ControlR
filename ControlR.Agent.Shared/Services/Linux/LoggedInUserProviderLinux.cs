@@ -78,6 +78,16 @@ internal class LoggedInUserProviderLinux(
             continue;
           }
 
+          // Only a session that is actually active at the seat can host the desktop client.
+          // This mirrors DesktopEnvironmentDetectorAgent; without it a graphical session that
+          // is not active (greeter, switched VT, inactive seat) starts a client for a user
+          // who is not at the console.
+          if (!sessionInfo.TryGetValue("Active", out var activeValue) ||
+              !string.Equals(activeValue, "yes", StringComparison.OrdinalIgnoreCase))
+          {
+            continue;
+          }
+
           // Get UID from regular user sessions (UID >= 1000)
           if (sessionInfo.TryGetValue("User", out userValue) &&
               int.TryParse(userValue, out var uid) &&
