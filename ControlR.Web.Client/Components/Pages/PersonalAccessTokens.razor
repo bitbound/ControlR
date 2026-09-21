@@ -31,7 +31,10 @@
             <MudSelectItem Value="PersonalAccessTokenPermissionMode.InheritOwner">Inherit Owner (full access)</MudSelectItem>
           </MudSelect>
         </MudItem>
-        <MudItem xs="12" sm="4" Class="d-flex align-end">
+        <MudItem xs="12" sm="4">
+          <ExpirationPicker @bind-Value="_newTokenExpiresAt" />
+        </MudItem>
+        <MudItem xs="12" sm="12" Class="d-flex align-end">
           <MudButton Color="Color.Primary" Variant="Variant.Outlined" OnClick="CreatePersonalAccessToken"
             Disabled="@(!CanCreatePersonalAccessToken)">
             Create PAT
@@ -52,6 +55,22 @@
     </ToolBarContent>
     <Columns>
       <PropertyColumn Property="x => x.Name" Title="Name" />
+      <TemplateColumn Title="Status" Sortable="false">
+        <CellTemplate>
+          @if (context.Item.RevokedAt is not null)
+          {
+            <MudChip T="string" Size="Size.Small" Color="Color.Error">Revoked</MudChip>
+          }
+          else if (context.Item.ExpiresAt is not null && context.Item.ExpiresAt <= TimeProvider.GetUtcNow())
+          {
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning">Expired</MudChip>
+          }
+          else
+          {
+            <MudChip T="string" Size="Size.Small" Color="Color.Success">Active</MudChip>
+          }
+        </CellTemplate>
+      </TemplateColumn>
       <TemplateColumn Title="Mode" Sortable="true" SortBy="@(x => x.PermissionMode)">
         <CellTemplate>
           <MudChip T="string" Size="Size.Small"
@@ -78,11 +97,20 @@
           @context.Item.PermissionCount
         </CellTemplate>
       </TemplateColumn>
+      <TemplateColumn Title="Expires" Sortable="true" SortBy="@(x => x.ExpiresAt)" Filterable="false">
+        <CellTemplate>
+          @(context.Item.ExpiresAt?.ToLocalTime().ToString("g") ?? "Never")
+        </CellTemplate>
+      </TemplateColumn>
       <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
         <CellTemplate>
           <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Info" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopRight">
             <MudMenuItem Icon="@Icons.Material.Filled.Edit" IconColor="Color.Info" OnClick="() => RenamePersonalAccessToken(context.Item)">Rename</MudMenuItem>
             <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings" IconColor="Color.Info" OnClick="() => ManagePermissions(context.Item)">Edit Permissions</MudMenuItem>
+            @if (context.Item.RevokedAt is null)
+            {
+              <MudMenuItem Icon="@Icons.Material.Filled.Block" IconColor="Color.Warning" OnClick="() => RevokePersonalAccessToken(context.Item)">Revoke</MudMenuItem>
+            }
             <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="() => DeletePersonalAccessToken(context.Item)">Delete</MudMenuItem>
           </MudMenu>
         </CellTemplate>

@@ -62,7 +62,8 @@ public class PersonalAccessTokensController : ControllerBase
             scope.PermissionName,
             scope.ScopeKind,
             scope.ScopeId))
-          .ToList()),
+          .ToList(),
+        request.ExpiresAt),
       user.Id,
       actor);
 
@@ -154,6 +155,44 @@ public class PersonalAccessTokensController : ControllerBase
     });
   }
 
+  [HttpPost("{id:guid}/revoke")]
+  [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
+  [ProducesResponseType<PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
+  public async Task<ActionResult<PersonalAccessTokenResponseDto>> Revoke(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] UserManager<AppUser> userManager,
+    [FromRoute] Guid id,
+    [FromQuery] Guid tenantId)
+  {
+    if (!User.TryResolveTenantId(tenantId, out _))
+    {
+      return Forbid();
+    }
+
+    var user = await userManager.GetUserAsync(User);
+    if (user is null)
+    {
+      return Problem(
+        detail: "User not found.",
+        statusCode: StatusCodes.Status400BadRequest,
+        title: V1ProblemTitles.InvalidRequest);
+    }
+
+    var result = await personalAccessTokenManager.Revoke(id, user.Id);
+    if (!result.IsSuccess)
+    {
+      return Problem(
+        detail: result.Reason,
+        statusCode: StatusCodes.Status400BadRequest,
+        title: V1ProblemTitles.InvalidRequest);
+    }
+
+    return Ok(ToV1ResponseDto(result.Value));
+  }
+
   [HttpPut("{id:guid}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
   [ProducesResponseType<PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
@@ -206,6 +245,8 @@ public class PersonalAccessTokensController : ControllerBase
       token.CreatedAt,
       token.LastUsed,
       token.PermissionCount,
-      token.PermissionMode);
+      token.PermissionMode,
+      token.ExpiresAt,
+      token.RevokedAt);
   }
 }
