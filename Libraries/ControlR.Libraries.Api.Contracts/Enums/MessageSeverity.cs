@@ -1,15 +1,12 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace ControlR.Libraries.Api.Contracts.Enums;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MessageSeverity
 {
-  [EnumMember]
   Information,
-  [EnumMember]
   Warning,
-  [EnumMember]
   Error,
-  [EnumMember]
   Success,
 }

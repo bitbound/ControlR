@@ -10,7 +10,7 @@ let _themesDefined = false;
  * @param {string} content - Initial content
  * @param {string} language - Language identifier (csharp, powershell, log)
  * @param {boolean} isEditable - Whether the editor should be editable
- * @param {number} themeMode - 0 = Auto, 1 = Light, 2 = Dark
+ * @param {string} themeMode - 'Auto', 'Light', or 'Dark'
  */
 export function initMonacoEditor(container, content, language, isEditable, themeMode) {
   if (!container) {
@@ -38,8 +38,8 @@ export function initMonacoEditor(container, content, language, isEditable, theme
     defineControlRThemes();
 
     _currentTheme =
-      themeMode === 1 ? LIGHT_THEME_NAME :
-      themeMode === 2 ? DARK_THEME_NAME :
+      themeMode === 'Light' ? LIGHT_THEME_NAME :
+      themeMode === 'Dark' ? DARK_THEME_NAME :
       detectThemeMode();
 
     monaco.editor.setTheme(_currentTheme);
@@ -99,18 +99,16 @@ export function updateMonacoContent(container, newContent) {
 }
 
 /**
- * Updates the Monaco editor theme based on a dark-mode flag computed by C#.
- * C# handles Auto → system preference, Light → false, Dark → true, so JS
- * just needs the resolved boolean value.
- * @param {number} themeMode - 0 = Auto, 1 = Light, 2 = Dark
+ * Applies a theme to the Monaco editor.
+ * @param {string} themeMode - 'Auto', 'Light', or 'Dark'
  */
 export function updateMonacoTheme(themeMode) {
   if (typeof monaco === 'undefined') return;
 
   defineControlRThemes();
   _currentTheme =
-      themeMode === 1 ? LIGHT_THEME_NAME :
-      themeMode === 2 ? DARK_THEME_NAME :
+      themeMode === 'Light' ? LIGHT_THEME_NAME :
+      themeMode === 'Dark' ? DARK_THEME_NAME :
       detectThemeMode();
   monaco.editor.setTheme(_currentTheme);
 }

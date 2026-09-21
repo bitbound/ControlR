@@ -1,16 +1,12 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace ControlR.Libraries.Api.Contracts.Enums;
 
-[DataContract]
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum InstallerKeyType
 {
-  [EnumMember]
   Unknown = 0,
-  [EnumMember]
   UsageBased = 1,
-  [EnumMember]
   TimeBased = 2,
-  [EnumMember]
   Persistent = 3
 }

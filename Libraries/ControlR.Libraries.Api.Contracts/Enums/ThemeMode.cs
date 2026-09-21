@@ -1,13 +1,11 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace ControlR.Libraries.Api.Contracts.Enums;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ThemeMode
 {
-  [EnumMember]
   Auto = 0,
-  [EnumMember]
   Light = 1,
-  [EnumMember]
   Dark = 2
 }

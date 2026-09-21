@@ -1,4 +1,4 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace ControlR.Libraries.Api.Contracts.Enums;
 
@@ -10,13 +10,10 @@ namespace ControlR.Libraries.Api.Contracts.Enums;
 /// and keys created by a <see cref="ServerServiceAccount"/> are authorized by the key itself
 /// (server principals are trusted server-wide).
 /// </summary>
-[DataContract]
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum InstallerKeyCreatorKind
 {
-  [EnumMember]
   User = 0,
-  [EnumMember]
   ServerServiceAccount = 1,
-  [EnumMember]
   TenantServiceAccount = 2
 }

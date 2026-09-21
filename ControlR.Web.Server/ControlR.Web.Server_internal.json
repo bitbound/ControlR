@@ -7673,7 +7673,10 @@
         }
       },
       "FilterMatchMode": {
-        "type": "integer"
+        "enum": [
+          "Any",
+          "All"
+        ]
       },
       "ForgotPasswordRequest": {
         "required": [
@@ -7811,7 +7814,11 @@
         }
       },
       "ImageFormat": {
-        "type": "integer"
+        "enum": [
+          "Jpeg",
+          "Png",
+          "WebP"
+        ]
       },
       "InfoRequest": {
         "type": "object",
@@ -7852,7 +7859,12 @@
         }
       },
       "InstallerKeyType": {
-        "type": "integer"
+        "enum": [
+          "Unknown",
+          "UsageBased",
+          "TimeBased",
+          "Persistent"
+        ]
       },
       "InteractiveLoginResponseDto": {
         "required": [
@@ -7909,7 +7921,11 @@
         }
       },
       "KeyboardInputMode": {
-        "type": "integer"
+        "enum": [
+          "Auto",
+          "Physical",
+          "Virtual"
+        ]
       },
       "LoginRequest": {
         "required": [
@@ -8015,7 +8031,12 @@
         }
       },
       "MessageSeverity": {
-        "type": "integer"
+        "enum": [
+          "Information",
+          "Warning",
+          "Error",
+          "Success"
+        ]
       },
       "PermissionScopeKind": {
         "type": "integer"
@@ -8384,7 +8405,10 @@
         }
       },
       "TagType": {
-        "type": "integer"
+        "enum": [
+          "Unknown",
+          "Permission"
+        ]
       },
       "TenantInviteRequestDto": {
         "required": [
@@ -8467,7 +8491,11 @@
         }
       },
       "ThemeMode": {
-        "type": "integer"
+        "enum": [
+          "Auto",
+          "Light",
+          "Dark"
+        ]
       },
       "TwoFactorRequest": {
         "type": "object",
@@ -8804,7 +8832,11 @@
         }
       },
       "ViewMode": {
-        "type": "integer"
+        "enum": [
+          "Fit",
+          "Stretch",
+          "Scale"
+        ]
       }
     },
     "securitySchemes": {

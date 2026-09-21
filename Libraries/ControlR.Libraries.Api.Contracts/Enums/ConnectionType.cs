@@ -1,15 +1,12 @@
-using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace ControlR.Libraries.Api.Contracts.Enums;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ConnectionType
 {
-  [EnumMember]
   Unknown,
-  [EnumMember]
   Viewer,
-  [EnumMember]
   Agent,
-  [EnumMember]
   Desktop
 }
