@@ -112,7 +112,7 @@ public class InvitesController : ControllerBase
     });
   }
 
-  private static InviteResponseDto ToV1Dto(InternalDtos.TenantInviteResponseDto invite)
+  private static InviteResponseDto ToV1Dto(InternalDtos.InviteResponseDto invite)
   {
     return new InviteResponseDto(
       invite.Id,

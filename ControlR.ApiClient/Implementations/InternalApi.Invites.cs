@@ -21,7 +21,7 @@ internal partial class InternalApi
     });
   }
 
-  async Task<ApiResult<TenantInviteResponseDto>> IInvitesApi.CreateTenantInvite(TenantInviteRequestDto request, CancellationToken cancellationToken)
+  async Task<ApiResult<InviteResponseDto>> IInvitesApi.CreateTenantInvite(TenantInviteRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
@@ -35,7 +35,7 @@ internal partial class InternalApi
           HttpStatusCode.Conflict);
       }
       await response.EnsureSuccessStatusCodeWithDetails();
-      return await response.Content.ReadFromJsonAsync<TenantInviteResponseDto>(cancellationToken);
+      return await response.Content.ReadFromJsonAsync<InviteResponseDto>(cancellationToken);
     });
   }
 
@@ -48,9 +48,9 @@ internal partial class InternalApi
     });
   }
 
-  async Task<ApiResult<TenantInviteResponseDto[]>> IInvitesApi.GetPendingTenantInvites(CancellationToken cancellationToken)
+  async Task<ApiResult<InviteResponseDto[]>> IInvitesApi.GetPendingTenantInvites(CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<TenantInviteResponseDto[]>(HttpConstants.Internal.InvitesEndpoint, cancellationToken));
+      await _client.HttpClient.GetFromJsonAsync<InviteResponseDto[]>(HttpConstants.Internal.InvitesEndpoint, cancellationToken));
   }
 }
