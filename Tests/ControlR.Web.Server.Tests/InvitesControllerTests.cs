@@ -44,7 +44,7 @@ public class InvitesControllerTests(ITestOutputHelper testOutput)
       HttpConstants.Internal.InvitesEndpoint, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, readerResponse.StatusCode);
 
-    var readerInvites = await readerResponse.Content.ReadFromJsonAsync<InternalDtos.TenantInviteResponseDto[]>(
+    var readerInvites = await readerResponse.Content.ReadFromJsonAsync<InternalDtos.InviteResponseDto[]>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(readerInvites);
     Assert.NotEmpty(readerInvites);
@@ -58,7 +58,7 @@ public class InvitesControllerTests(ITestOutputHelper testOutput)
       HttpConstants.Internal.InvitesEndpoint, TestContext.Current.CancellationToken);
     Assert.Equal(HttpStatusCode.OK, writerResponse.StatusCode);
 
-    var writerInvites = await writerResponse.Content.ReadFromJsonAsync<InternalDtos.TenantInviteResponseDto[]>(
+    var writerInvites = await writerResponse.Content.ReadFromJsonAsync<InternalDtos.InviteResponseDto[]>(
       TestContext.Current.CancellationToken);
     Assert.NotNull(writerInvites);
     Assert.Contains(writerInvites, x => x.InviteUrl.ToString().Contains(activationCode));

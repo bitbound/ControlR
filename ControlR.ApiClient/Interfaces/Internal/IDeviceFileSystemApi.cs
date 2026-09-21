@@ -29,5 +29,6 @@ public interface IDeviceFileSystemApi
   [ApiRoute($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/upload/{{deviceId}}", "POST")]
   Task<ApiResult> UploadFile(Guid deviceId, Stream fileStream, string fileName, string targetSaveDirectory, bool overwrite = false, CancellationToken cancellationToken = default);
   [ApiRoute($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/validate-path/{{deviceId}}", "POST")]
+  [Obsolete("Use ControlrApi.V1.DeviceFileSystem.ValidateDeviceFilePath (POST /api/v1/device-file-system/validate-path/{deviceId}?tenantId=), which requires tenantId and a body without the device id. This internal route is unversioned and slated for removal.")]
   Task<ApiResult<ValidateFilePathResponseDto>> ValidateFilePath(ValidateFilePathRequestDto request, CancellationToken cancellationToken = default);
 }
