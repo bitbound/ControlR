@@ -7,31 +7,83 @@ using Moq;
 namespace ControlR.Agent.Shared.Tests;
 
 /// <summary>
-/// Pins that a graphical session only yields a launchable UID when it is active at the seat,
-/// matching DesktopEnvironmentDetectorAgent (#157).
+/// Pins that the provider returns each logged-in user with the facts callers need, without
+/// deciding launch-vs-stop policy itself (#157).
 /// </summary>
 public class LoggedInUserProviderLinuxTests
 {
   [Fact]
-  public async Task GetLoggedInUserUids_WhenGraphicalSessionIsInactive_ExcludesUid()
+  public async Task GetLoggedInUsers_ExcludesClosingSessions()
   {
     var provider = CreateProvider(
-      ("2", Session("2", "1000", "wayland", "active", "no")));
+      ("2", Session("2", "1000", "wayland", "closing", "yes")));
 
-    var uids = await provider.GetLoggedInUserUids();
+    var users = await provider.GetLoggedInUsers();
 
-    Assert.DoesNotContain("1000", uids);
+    Assert.Empty(users);
   }
 
   [Fact]
-  public async Task GetLoggedInUserUids_WhenSessionIsActiveAndGraphical_IncludesUid()
+  public async Task GetLoggedInUsers_ExcludesSystemUsers()
+  {
+    var provider = CreateProvider(
+      ("2", Session("2", "999", "wayland", "active", "yes")));
+
+    var users = await provider.GetLoggedInUsers();
+
+    Assert.Empty(users);
+  }
+
+  [Fact]
+  public async Task GetLoggedInUsers_ExcludesTextSessions()
+  {
+    var provider = CreateProvider(
+      ("2", Session("2", "1000", "tty", "active", "yes")));
+
+    var users = await provider.GetLoggedInUsers();
+
+    Assert.Empty(users);
+  }
+
+  [Fact]
+  public async Task GetLoggedInUsers_WhenGraphicalSessionIsActive_ReturnsUserAsActive()
   {
     var provider = CreateProvider(
       ("2", Session("2", "1000", "wayland", "active", "yes")));
 
-    var uids = await provider.GetLoggedInUserUids();
+    var users = await provider.GetLoggedInUsers();
 
-    Assert.Contains("1000", uids);
+    var user = Assert.Single(users);
+    Assert.Equal("1000", user.Uid);
+    Assert.True(user.IsActive);
+  }
+
+  [Fact]
+  public async Task GetLoggedInUsers_WhenGraphicalSessionIsInactive_StillReturnsUserAsInactive()
+  {
+    var provider = CreateProvider(
+      ("2", Session("2", "1000", "wayland", "active", "no")));
+
+    var users = await provider.GetLoggedInUsers();
+
+    var user = Assert.Single(users);
+    Assert.Equal("1000", user.Uid);
+    Assert.False(user.IsActive);
+    Assert.True(user.IsGraphical);
+  }
+
+  [Fact]
+  public async Task GetLoggedInUsers_WhenUserHasActiveAndInactiveSessions_ReturnsUserOnceAsActive()
+  {
+    var provider = CreateProvider(
+      ("2", Session("2", "1000", "wayland", "active", "no")),
+      ("3", Session("3", "1000", "x11", "active", "yes")));
+
+    var users = await provider.GetLoggedInUsers();
+
+    var user = Assert.Single(users);
+    Assert.Equal("1000", user.Uid);
+    Assert.True(user.IsActive);
   }
 
   private static ILoggedInUserProvider CreateProvider(params (string SessionId, string Info)[] sessions)
