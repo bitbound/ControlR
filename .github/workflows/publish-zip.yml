@@ -1,0 +1,274 @@
+name: Publish Slot Server ZIP
+run-name: ZIP Publish (${{ inputs.sponsor_login }}-slot${{ inputs.slot_number }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Build workflow run ID whose Server artifact to publish"
+        required: true
+        type: string
+      sponsor_login:
+        description: "Sponsor GitHub login (for summary only; the blob key is authoritative)"
+        required: true
+        type: string
+      slot_number:
+        description: "Sponsor build slot number"
+        required: true
+        type: string
+      artifact_blob_key:
+        description: "Blob key within the slot-builds container, computed by the Subscriber Portal"
+        required: true
+        type: string
+      server_runtime:
+        description: "Server runtime the ZIP content was built for"
+        required: false
+        type: choice
+        default: "linux-x64"
+        options:
+          - linux-x64
+          - linux-arm64
+          - win-x64
+      use_local_storage:
+        description: "Use local artifact storage"
+        required: false
+        type: boolean
+        default: true
+      use_self_hosted_runners:
+        description: "Use self-hosted runners"
+        required: false
+        type: boolean
+        default: true
+      environment:
+        description: "Target environment (dev or prod)"
+        required: false
+        type: choice
+        default: "dev"
+        options:
+          - dev
+          - prod
+  workflow_call:
+    inputs:
+      run_id:
+        description: "Build workflow run ID whose Server artifact to publish"
+        required: true
+        type: string
+      sponsor_login:
+        description: "Sponsor GitHub login (for summary only; the blob key is authoritative)"
+        required: true
+        type: string
+      slot_number:
+        description: "Sponsor build slot number"
+        required: true
+        type: string
+      artifact_blob_key:
+        description: "Blob key within the slot-builds container, computed by the Subscriber Portal"
+        required: true
+        type: string
+      server_runtime:
+        description: "Server runtime the ZIP content was built for"
+        required: false
+        type: string
+        default: "linux-x64"
+      use_local_storage:
+        description: "Use local artifact storage"
+        required: false
+        type: boolean
+        default: true
+      use_self_hosted_runners:
+        description: "Use self-hosted runners"
+        required: false
+        type: boolean
+        default: true
+      environment:
+        description: "Target environment (dev or prod)"
+        required: false
+        type: string
+        default: "dev"
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
+jobs:
+  publish-zip:
+    name: Publish ZIP
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    environment: ${{ inputs.environment == 'prod' && 'acr-publish-prod' || 'acr-publish-dev' }}
+
+    env:
+      SLOT_ZIP_STORAGE_ACCOUNT: ${{ vars.SLOT_ZIP_STORAGE_ACCOUNT }}
+      SLOT_ZIP_CONTAINER: slot-builds
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Validate blob key
+        shell: bash
+        env:
+          BLOB_KEY: ${{ inputs.artifact_blob_key }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$BLOB_KEY" | grep -Eq '^[a-z0-9._-]+(/[a-z0-9._-]+)*\.zip$'; then
+            echo "::error::artifact_blob_key must be a relative path of [a-z0-9._-] segments separated by '/', ending in .zip."
+            exit 1
+          fi
+          if printf '%s' "$BLOB_KEY" | grep -Eq '(^|/)\.\.(/|$)'; then
+            echo "::error::artifact_blob_key must not contain '..' segments."
+            exit 1
+          fi
+          echo "Blob key: $BLOB_KEY"
+
+      - name: Validate local storage configuration
+        uses: ./.github/actions/validate-local-storage
+        with:
+          use_local_storage: ${{ inputs.use_local_storage }}
+          artifact_host: ${{ vars.ARTIFACT_HOST }}
+          artifact_base_path: ${{ vars.ARTIFACT_BASE_PATH }}
+
+      - name: Download Server Artifact
+        uses: ./.github/actions/download-artifact
+        with:
+          name: Server
+          path: ./server-publish
+          github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          run-id: ${{ inputs.run_id }}
+
+      - name: Get Version from Version.txt
+        id: get-version
+        shell: bash
+        env:
+          SERVER_RID: ${{ inputs.server_runtime }}
+        run: |
+          set -euo pipefail
+          VERSION_FILE="./server-publish/${SERVER_RID}/wwwroot/downloads/Version.txt"
+          if [ ! -f "$VERSION_FILE" ]; then
+            echo "::error::Version file '$VERSION_FILE' not found."
+            exit 1
+          fi
+          VERSION=$(cat "$VERSION_FILE")
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      # Download the customization config (uploaded by build.yml download-customization
+      # job) so the brand name is available for the file verification step.
+      # Only present when a customization config URL was supplied; default brand "ControlR"
+      # is used otherwise.
+      - name: Download Customization Config
+        id: download-customization
+        continue-on-error: true
+        uses: ./.github/actions/download-artifact
+        with:
+          name: CustomizationConfig
+          path: ./customization
+          github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          run-id: ${{ inputs.run_id }}
+
+      - name: Resolve Brand Key
+        id: brand
+        shell: bash
+        run: |
+          BRAND_NAME="ControlR"
+          if [ -f "./customization/customization.json" ]; then
+            BRAND_NAME=$(jq -r '.brandName // "ControlR"' ./customization/customization.json)
+          fi
+          if [ -z "$BRAND_NAME" ] || [ "$BRAND_NAME" = "null" ]; then
+            BRAND_NAME="ControlR"
+          fi
+          # Mirrors Invoke-Customize.ps1 sanitization: keep only alphanumerics, others -> '_'
+          BRAND_KEY=$(printf '%s' "$BRAND_NAME" | sed 's/[^A-Za-z0-9]/_/g')
+          echo "brand_name=$BRAND_NAME" >> "$GITHUB_OUTPUT"
+          echo "brand_key=$BRAND_KEY" >> "$GITHUB_OUTPUT"
+          echo "Brand name: $BRAND_NAME"
+          echo "Brand key: $BRAND_KEY"
+
+      - name: Verify Downloaded Files
+        shell: bash
+        env:
+          BRAND_KEY: ${{ steps.brand.outputs.brand_key }}
+          SERVER_RID: ${{ inputs.server_runtime }}
+        run: |
+          set -euo pipefail
+
+          TEST_PATHS=(
+            "./server-publish/${SERVER_RID}/wwwroot/downloads/Version.txt"
+            "./server-publish/${SERVER_RID}/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.Installer"
+            "./server-publish/${SERVER_RID}/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.bundle.zip"
+            "./server-publish/${SERVER_RID}/novnc/vnc.html"
+          )
+
+          for TEST_PATH in "${TEST_PATHS[@]}"; do
+            if [ ! -f "$TEST_PATH" ] && [ ! -d "$TEST_PATH" ]; then
+              echo "::error::$TEST_PATH not found."
+              exit 1
+            fi
+          done
+          echo "All required files verified successfully"
+
+      - name: Create ZIP
+        id: make-zip
+        shell: bash
+        env:
+          SERVER_RID: ${{ inputs.server_runtime }}
+          VERSION: ${{ steps.get-version.outputs.VERSION }}
+        run: |
+          set -euo pipefail
+          ZIP_NAME="controlr-server-${SERVER_RID}-${VERSION}.zip"
+          cd "./server-publish/${SERVER_RID}"
+          zip -qr "../$ZIP_NAME" .
+          SIZE_BYTES=$(stat -c%s "../$ZIP_NAME")
+          echo "zip_path=./server-publish/$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "Created $ZIP_NAME ($SIZE_BYTES bytes)"
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_ACR_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Upload ZIP to Storage
+        shell: bash
+        env:
+          BLOB_KEY: ${{ inputs.artifact_blob_key }}
+          ZIP_PATH: ${{ steps.make-zip.outputs.zip_path }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SLOT_ZIP_STORAGE_ACCOUNT" ]; then
+            echo "::error::SLOT_ZIP_STORAGE_ACCOUNT environment variable is not configured for this environment."
+            exit 1
+          fi
+          az storage blob upload \
+            --account-name "$SLOT_ZIP_STORAGE_ACCOUNT" \
+            --container-name "$SLOT_ZIP_CONTAINER" \
+            --name "$BLOB_KEY" \
+            --file "$ZIP_PATH" \
+            --auth-mode login \
+            --content-type application/zip \
+            --overwrite \
+            --output none
+          echo "Uploaded to https://$SLOT_ZIP_STORAGE_ACCOUNT.blob.core.windows.net/$SLOT_ZIP_CONTAINER/$BLOB_KEY"
+
+      - name: Publish Summary
+        shell: bash
+        env:
+          SPONSOR: ${{ inputs.sponsor_login }}
+          SLOT: ${{ inputs.slot_number }}
+          VERSION: ${{ steps.get-version.outputs.VERSION }}
+          SERVER_RID: ${{ inputs.server_runtime }}
+          BLOB_KEY: ${{ inputs.artifact_blob_key }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          echo "## Slot Server ZIP Publish Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Sponsor:** $SPONSOR" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Slot:** $SLOT" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Version:** $VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Server RID:** $SERVER_RID" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Blob:** $SLOT_ZIP_STORAGE_ACCOUNT/$SLOT_ZIP_CONTAINER/$BLOB_KEY" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Build Run:** $RUN_ID" >> "$GITHUB_STEP_SUMMARY"
