@@ -94,6 +94,13 @@ if ($ConfigPath -or $ConfigUrl) {
     if ($config.images.companyLogoPngUri) { $customizeParams.CompanyLogoPng = $config.images.companyLogoPngUri }
   }
 
+  # PSObject property check so payloads produced before customCss existed do not
+  # trip Set-StrictMode.
+  $customCssProp = $config.PSObject.Properties['customCss']
+  if ($customCssProp -and $customCssProp.Value) {
+    $customizeParams.CustomCss = [string]$customCssProp.Value
+  }
+
   Write-Host "Applying customization for brand: $brandName"
   Write-Host "  BrandKey: $brandKey"
   Write-Host "  UnixBrandKey: $unixBrandKey"

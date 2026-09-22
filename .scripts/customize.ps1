@@ -57,6 +57,9 @@ param(
   [Parameter(HelpMessage = "Path or URL to company logo PNG (for email templates, etc.)")]
   [string] $CompanyLogoPng = "",
 
+  [Parameter(HelpMessage = "Raw CSS text that fully replaces wwwroot/static/custom.css in the built server")]
+  [string] $CustomCss = "",
+
   [Parameter(HelpMessage = "Build version (defaults to latest tag)")]
   [string] $Version = "",
 
@@ -518,6 +521,27 @@ else {
     Copy-Item -LiteralPath $masterLogo -Destination $destLogo -Force
     Write-Host "  -> wwwroot/images/company-logo.png"
   }
+}
+
+#endregion
+
+#region Process Custom CSS
+
+Write-Host "Processing custom CSS" -ForegroundColor Yellow
+
+$customCssFile = Join-Path $repoRoot "ControlR.Web.Server/wwwroot/static/custom.css"
+if ($CustomCss) {
+  if (Test-Path -LiteralPath $customCssFile) {
+    $cssOriginal = Get-Content -LiteralPath $customCssFile -Raw -Encoding UTF8
+    Write-WhatIfDiff -OldContent $cssOriginal -NewContent $CustomCss -FilePath $customCssFile
+    Write-FileContent -Path $customCssFile -Content $CustomCss
+  }
+  else {
+    Write-Host "  custom.css not found at $customCssFile; skipping." -ForegroundColor Yellow
+  }
+}
+else {
+  Write-Host "  No custom CSS provided (placeholder kept)." -ForegroundColor Gray
 }
 
 #endregion
