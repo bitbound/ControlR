@@ -135,6 +135,7 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
   - Example: `using var stream = new FileStream(path, FileMode.Open);`
   - Example: `await using var connection = new DatabaseConnection();`
 - No TODOs, placeholder code, or "in production you should..." comments. Every implementation must be complete.
+- XML doc `<summary>` blocks are one or two sentences stating what the type or member is. Do not include lengthy details here.
 - Don't add "Async" suffix on async methods unless distinguishing from a sync overload.
   - Example: `public async Task Connect()` if there's no `public void Connect()`.
   - Example: If `public void Connect()` exists, then `public async Task ConnectAsync()`.
