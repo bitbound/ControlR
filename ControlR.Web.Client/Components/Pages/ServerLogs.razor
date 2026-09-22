@@ -1,7 +1,7 @@
 ﻿@using Microsoft.Extensions.Options
 @attribute [Route(ClientRoutes.ServerLogs)]
 @attribute [Authorize(Policy = PolicyNames.RequireServerTelemetryRead)]
-@inject IControlrInternalApi ControlrApi
+@inject IControlrApi ControlrApi
 @inject ILogger<ServerLogs> Logger
 
 <PageTitle>Server Logs</PageTitle>
@@ -47,7 +47,7 @@ else
     try
     {
       await base.OnInitializedAsync();
-      var result = await ControlrApi.ServerLogs.GetAspireUrl();
+      var result = await ControlrApi.V1.ServerLogs.GetAspireUrl();
       if (!result.IsSuccess)
       {
         _alertMessage = "Failed to retrieve Aspire Dashboard URL.";

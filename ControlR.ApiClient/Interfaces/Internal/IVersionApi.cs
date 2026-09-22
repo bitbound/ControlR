@@ -12,5 +12,6 @@ public interface IVersionApi
   [Obsolete("Use ControlrApi.V1.Version.GetCurrentServerVersion (GET /api/v1/version/server), which returns the same value. This internal route is unversioned and slated for removal.")]
   Task<ApiResult<Version>> GetCurrentServerVersion(CancellationToken cancellationToken = default);
   [ApiRoute($"{HttpConstants.Internal.VersionEndpoint}/release-notes", "GET")]
+  [Obsolete("Use ControlrApi.V1.Version.GetReleaseNotes (GET /api/v1/version/release-notes), which returns the same value. This internal route is unversioned and slated for removal.")]
   Task<ApiResult<string>> GetReleaseNotes(CancellationToken cancellationToken = default);
 }
