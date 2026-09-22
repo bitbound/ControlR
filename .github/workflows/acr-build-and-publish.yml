@@ -64,8 +64,37 @@ permissions:
   id-token: write
 
 jobs:
+  # Fails fast on input combinations that would waste an expensive build (e.g. a manual
+  # win-x64 + docker dispatch, which publish-acr can only reject after the build ends).
+  # The portal blocks the same combinations server-side.
+  validate-inputs:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate delivery format and runtime
+        env:
+          DELIVERY_FORMAT: ${{ inputs.delivery_format }}
+          SERVER_RUNTIME: ${{ inputs.server_runtime }}
+          ARTIFACT_BLOB_KEY: ${{ inputs.artifact_blob_key }}
+          IMAGE_REFERENCE: ${{ inputs.image_reference }}
+        run: |
+          if [ "$DELIVERY_FORMAT" = "docker" ] && [ "$SERVER_RUNTIME" = "win-x64" ]; then
+            echo "::error::server_runtime win-x64 requires delivery_format zip; container delivery only supports Linux runtimes."
+            exit 1
+          fi
+          if [ "$DELIVERY_FORMAT" = "zip" ] && [ -z "$ARTIFACT_BLOB_KEY" ]; then
+            echo "::error::artifact_blob_key is required for zip delivery."
+            exit 1
+          fi
+          if [ "$DELIVERY_FORMAT" = "docker" ] && [ -z "$IMAGE_REFERENCE" ]; then
+            echo "::error::image_reference is required for docker delivery."
+            exit 1
+          fi
+          echo "Inputs OK (format=$DELIVERY_FORMAT, runtime=$SERVER_RUNTIME)"
+
   build:
     name: Build
+    needs: validate-inputs
     uses: ./.github/workflows/build.yml
     with:
       customization_config_url: ${{ inputs.customization_config_url }}
@@ -124,7 +153,7 @@ jobs:
   publish-zip:
     name: Publish Server ZIP
     needs: build
-    if: ${{ always() && inputs.delivery_format == 'zip' }}
+    if: ${{ always() && !cancelled() && inputs.delivery_format == 'zip' }}
     concurrency:
       group: zip-publish-${{ inputs.sponsor_login }}-slot${{ inputs.slot_number }}
       cancel-in-progress: false

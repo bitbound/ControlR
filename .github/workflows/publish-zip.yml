@@ -109,14 +109,28 @@ jobs:
         shell: bash
         env:
           BLOB_KEY: ${{ inputs.artifact_blob_key }}
+          SPONSOR_LOGIN: ${{ inputs.sponsor_login }}
+          SLOT: ${{ inputs.slot_number }}
         run: |
           set -euo pipefail
-          if ! printf '%s' "$BLOB_KEY" | grep -Eq '^[a-z0-9._-]+(/[a-z0-9._-]+)*\.zip$'; then
+          # Whole-value regex ([[ =~ ]] anchors the entire value; a per-line grep would
+          # let a key with an embedded newline through when any line matched).
+          if ! [[ "$BLOB_KEY" =~ ^[a-z0-9._-]+(/[a-z0-9._-]+)*\.zip$ ]]; then
             echo "::error::artifact_blob_key must be a relative path of [a-z0-9._-] segments separated by '/', ending in .zip."
             exit 1
           fi
-          if printf '%s' "$BLOB_KEY" | grep -Eq '(^|/)\.\.(/|$)'; then
+          if [[ "$BLOB_KEY" =~ (^|/)\.\.(/|$) ]]; then
             echo "::error::artifact_blob_key must not contain '..' segments."
+            exit 1
+          fi
+          # Defense in depth: the key must live under the slot it claims. Mirrors the
+          # portal's ContainerRegistryNames.NormalizeSponsorLogin (greedy run collapse).
+          NORMALIZED=$(printf '%s' "$SPONSOR_LOGIN" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//')
+          if [ -z "$NORMALIZED" ]; then
+            NORMALIZED="sponsor"
+          fi
+          if [[ "$BLOB_KEY" != "$NORMALIZED/slot$SLOT/"* ]]; then
+            echo "::error::artifact_blob_key '$BLOB_KEY' does not start with '$NORMALIZED/slot$SLOT/' for sponsor '$SPONSOR_LOGIN' slot $SLOT."
             exit 1
           fi
           echo "Blob key: $BLOB_KEY"
@@ -138,6 +152,11 @@ jobs:
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ inputs.run_id }}
 
+      - name: Verify Server Payload
+        uses: ./.github/actions/verify-server-payload
+        with:
+          path: ./server-publish
+
       - name: Get Version from Version.txt
         id: get-version
         shell: bash
@@ -150,66 +169,15 @@ jobs:
             echo "::error::Version file '$VERSION_FILE' not found."
             exit 1
           fi
-          VERSION=$(cat "$VERSION_FILE")
+          # build.yml writes Version.txt with PowerShell Set-Content, so strip CR (and a
+          # stray trailing newline) before it reaches the ZIP name and summaries.
+          VERSION=$(tr -d '\r\n' < "$VERSION_FILE")
+          if [ -z "$VERSION" ]; then
+            echo "::error::Version.txt is empty."
+            exit 1
+          fi
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
-
-      # Download the customization config (uploaded by build.yml download-customization
-      # job) so the brand name is available for the file verification step.
-      # Only present when a customization config URL was supplied; default brand "ControlR"
-      # is used otherwise.
-      - name: Download Customization Config
-        id: download-customization
-        continue-on-error: true
-        uses: ./.github/actions/download-artifact
-        with:
-          name: CustomizationConfig
-          path: ./customization
-          github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
-          run-id: ${{ inputs.run_id }}
-
-      - name: Resolve Brand Key
-        id: brand
-        shell: bash
-        run: |
-          BRAND_NAME="ControlR"
-          if [ -f "./customization/customization.json" ]; then
-            BRAND_NAME=$(jq -r '.brandName // "ControlR"' ./customization/customization.json)
-          fi
-          if [ -z "$BRAND_NAME" ] || [ "$BRAND_NAME" = "null" ]; then
-            BRAND_NAME="ControlR"
-          fi
-          # Mirrors Invoke-Customize.ps1 sanitization: keep only alphanumerics, others -> '_'
-          BRAND_KEY=$(printf '%s' "$BRAND_NAME" | sed 's/[^A-Za-z0-9]/_/g')
-          echo "brand_name=$BRAND_NAME" >> "$GITHUB_OUTPUT"
-          echo "brand_key=$BRAND_KEY" >> "$GITHUB_OUTPUT"
-          echo "Brand name: $BRAND_NAME"
-          echo "Brand key: $BRAND_KEY"
-
-      - name: Verify Downloaded Files
-        shell: bash
-        env:
-          BRAND_KEY: ${{ steps.brand.outputs.brand_key }}
-          SERVER_RID: ${{ inputs.server_runtime }}
-        run: |
-          set -euo pipefail
-
-          TEST_PATHS=(
-            "./server-publish/${SERVER_RID}/wwwroot/downloads/Version.txt"
-            "./server-publish/${SERVER_RID}/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.Installer"
-            "./server-publish/${SERVER_RID}/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.bundle.zip"
-            "./server-publish/${SERVER_RID}/novnc/vnc.html"
-          )
-
-          for TEST_PATH in "${TEST_PATHS[@]}"; do
-            if [ ! -f "$TEST_PATH" ] && [ ! -d "$TEST_PATH" ]; then
-              echo "::error::$TEST_PATH not found."
-              exit 1
-            fi
-          done
-          echo "All required files verified successfully"
 
       - name: Create ZIP
         id: make-zip
