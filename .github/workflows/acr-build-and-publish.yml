@@ -1,5 +1,5 @@
 name: ACR Build and Publish
-run-name: Portal Build (${{ inputs.environment }} | ${{ inputs.sponsor_login }}-slot${{ inputs.slot_number }})
+run-name: Portal Build (${{ inputs.environment }} | ${{ inputs.sponsor_login }}-slot${{ inputs.slot_number }} | ${{ inputs.delivery_format }})
 
 on:
   workflow_dispatch:
@@ -17,8 +17,12 @@ on:
         required: true
         type: string
       image_reference:
-        description: "Full ACR image reference (e.g., myregistry.azurecr.io/sponsor/controlr:sponsor-slot1)"
-        required: true
+        description: "Full ACR image reference (e.g., myregistry.azurecr.io/sponsor/controlr:sponsor-slot1). Required for docker delivery, ignored for zip."
+        required: false
+        type: string
+      artifact_blob_key:
+        description: "Blob key for the server ZIP within the slot-builds container. Required for zip delivery, ignored for docker."
+        required: false
         type: string
       sponsor_login:
         description: "Sponsor GitHub login"
@@ -29,13 +33,22 @@ on:
         required: true
         type: number
       server_runtime:
-        description: "Server target runtime (linux-x64 or linux-arm64)"
+        description: "Server target runtime"
         required: false
         type: choice
         default: "linux-x64"
         options:
           - linux-x64
           - linux-arm64
+          - win-x64
+      delivery_format:
+        description: "How the built server is delivered (container image or ZIP artifact)"
+        required: false
+        type: choice
+        default: "docker"
+        options:
+          - docker
+          - zip
       environment:
         description: "Target environment (dev or prod)"
         required: false
@@ -51,8 +64,37 @@ permissions:
   id-token: write
 
 jobs:
+  # Fails fast on input combinations that would waste an expensive build (e.g. a manual
+  # win-x64 + docker dispatch, which publish-acr can only reject after the build ends).
+  # The portal blocks the same combinations server-side.
+  validate-inputs:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate delivery format and runtime
+        env:
+          DELIVERY_FORMAT: ${{ inputs.delivery_format }}
+          SERVER_RUNTIME: ${{ inputs.server_runtime }}
+          ARTIFACT_BLOB_KEY: ${{ inputs.artifact_blob_key }}
+          IMAGE_REFERENCE: ${{ inputs.image_reference }}
+        run: |
+          if [ "$DELIVERY_FORMAT" = "docker" ] && [ "$SERVER_RUNTIME" = "win-x64" ]; then
+            echo "::error::server_runtime win-x64 requires delivery_format zip; container delivery only supports Linux runtimes."
+            exit 1
+          fi
+          if [ "$DELIVERY_FORMAT" = "zip" ] && [ -z "$ARTIFACT_BLOB_KEY" ]; then
+            echo "::error::artifact_blob_key is required for zip delivery."
+            exit 1
+          fi
+          if [ "$DELIVERY_FORMAT" = "docker" ] && [ -z "$IMAGE_REFERENCE" ]; then
+            echo "::error::image_reference is required for docker delivery."
+            exit 1
+          fi
+          echo "Inputs OK (format=$DELIVERY_FORMAT, runtime=$SERVER_RUNTIME)"
+
   build:
     name: Build
+    needs: validate-inputs
     uses: ./.github/workflows/build.yml
     with:
       customization_config_url: ${{ inputs.customization_config_url }}
@@ -85,12 +127,14 @@ jobs:
           echo "Sponsor Login: ${{ inputs.sponsor_login }}"
           echo "Slot Number: ${{ inputs.slot_number }}"
           echo "Image Reference: ${{ inputs.image_reference }}"
+          echo "Artifact Blob Key: ${{ inputs.artifact_blob_key }}"
+          echo "Delivery Format: ${{ inputs.delivery_format }}"
           echo "Environment: ${{ inputs.environment }}"
 
   publish-acr:
     name: Publish to ACR
     needs: build
-    if: ${{ always() }}
+    if: ${{ always() && needs.build.result != 'skipped' && inputs.delivery_format == 'docker' }}
     concurrency:
       group: acr-publish-${{ inputs.sponsor_login }}-slot${{ inputs.slot_number }}
       cancel-in-progress: false
@@ -100,6 +144,25 @@ jobs:
       sponsor_login: ${{ inputs.sponsor_login }}
       slot_number: ${{ inputs.slot_number }}
       image_reference: ${{ inputs.image_reference }}
+      server_runtime: ${{ inputs.server_runtime }}
+      environment: ${{ inputs.environment }}
+      use_local_storage: true
+      use_self_hosted_runners: true
+    secrets: inherit
+
+  publish-zip:
+    name: Publish Server ZIP
+    needs: build
+    if: ${{ always() && !cancelled() && needs.build.result != 'skipped' && inputs.delivery_format == 'zip' }}
+    concurrency:
+      group: zip-publish-${{ inputs.sponsor_login }}-slot${{ inputs.slot_number }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-zip.yml
+    with:
+      run_id: ${{ github.run_id }}
+      sponsor_login: ${{ inputs.sponsor_login }}
+      slot_number: ${{ inputs.slot_number }}
+      artifact_blob_key: ${{ inputs.artifact_blob_key }}
       server_runtime: ${{ inputs.server_runtime }}
       environment: ${{ inputs.environment }}
       use_local_storage: true
