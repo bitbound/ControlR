@@ -37,7 +37,7 @@ internal class InputSimulatorWindows(
     var mode = inputMode;
     var isModifierKey = key is "Shift" or "Control" or "Alt" or "Meta";
 
-    if (ShouldUseTextEvent(key, inputMode, modifiers))
+    if (ShouldUseTextEvent(key, code, inputMode, modifiers))
     {
       return InvokeOnInputThread(() => _win32Interop.InvokeTextEvent(key, isPressed));
     }
@@ -126,6 +126,18 @@ internal class InputSimulatorWindows(
     return InvokeOnInputThread(() => _win32Interop.TypeText(text));
   }
 
+  internal static bool ShouldUseTextEvent(string key, string code, KeyboardInputMode inputMode, KeyEventModifiersDto modifiers)
+  {
+    // Physical mode preserves key position, but a soft keyboard supplies no code, so there is no
+    // position to preserve.
+    var hasPhysicalCode = inputMode is KeyboardInputMode.Physical && !string.IsNullOrWhiteSpace(code);
+
+    return !hasPhysicalCode &&
+           key.Length == 1 &&
+           !char.IsControl(key[0]) &&
+           !HasShortcutModifier(modifiers);
+  }
+
   private static (int x, int y) GetAbsolutePhysicalCoords(PointerCoordinates coordinates)
   {
     var bounds = coordinates.Display.LayoutBounds;
@@ -145,14 +157,6 @@ internal class InputSimulatorWindows(
   private static bool HasShortcutModifier(KeyEventModifiersDto modifiers)
   {
     return modifiers.Control || modifiers.Alt || modifiers.Meta;
-  }
-
-  private static bool ShouldUseTextEvent(string key, KeyboardInputMode inputMode, KeyEventModifiersDto modifiers)
-  {
-    return inputMode is not KeyboardInputMode.Physical &&
-           key.Length == 1 &&
-           !char.IsControl(key[0]) &&
-           !HasShortcutModifier(modifiers);
   }
 
   private Task<T> InvokeOnInputThread<T>(Func<T> action)
