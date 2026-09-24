@@ -47,8 +47,10 @@ public interface IUserCreator
     IPublicServerSettingsProvider serverSettings,
     ILogger<UserCreator> logger) : IUserCreator
   {
+    public const string ConfirmationEmailUnavailableErrorCode = "ConfirmationEmailUnavailable";
     public const string PresetsNotFoundErrorCode = "PresetsNotFound";
     public const string RegistrationDisabledErrorCode = "RegistrationDisabled";
+
     private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
     private readonly IPermissionAssignmentSeeder _assignmentSeeder = assignmentSeeder;
     private readonly IPublicRegistrationBootstrapGate _bootstrapGate = bootstrapGate;
@@ -308,18 +310,27 @@ public interface IUserCreator
 
         if (callbackUrl is null)
         {
-          // Confirming the address here instead would hand out exactly what the link exists to verify,
-          // so the account is left unconfirmed until an origin is configured.
+          // Confirming the address here instead would hand out exactly what the link exists to verify.
+          // Reporting success would leave the caller with an account nobody can activate, so the
+          // failure is returned instead. The user row is left alone: the tenant and permission
+          // assignments seeded above it would orphan if it were deleted here.
           _logger.LogError(
-            "Not sending a confirmation email for {Email}. This server has no trustworthy origin to " +
+            "Cannot send a confirmation email for {Email}. This server has no trustworthy origin to " +
             "build the link from, so set AppOptions:PublicBaseUrl.",
             emailAddress);
+
+          return new CreateUserResult(
+            false,
+            IdentityResult.Failed(new IdentityError
+            {
+              Code = ConfirmationEmailUnavailableErrorCode,
+              Description = "This server cannot send confirmation emails. Contact an administrator."
+            }),
+            user);
         }
-        else
-        {
-          await _emailSender.SendConfirmationLinkAsync(
-            user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
-        }
+
+        await _emailSender.SendConfirmationLinkAsync(
+          user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
       }
       else
       {

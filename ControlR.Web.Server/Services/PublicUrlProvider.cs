@@ -18,12 +18,17 @@ namespace ControlR.Web.Server.Services;
 /// <para>
 /// The configured <see cref="AppOptions.PublicBaseUrl"/> always wins. Without it, the origin of the
 /// current request is used only when <c>AllowedHosts</c> pins the hostnames this server answers to,
-/// because then the host is one the operator chose rather than the caller. Otherwise callers get
-/// <see langword="null"/> and must deliver the email without a link.
+/// because then the host is one the operator chose rather than the caller. Otherwise nothing is
+/// produced, and actions that depend on such a link cannot complete.
 /// </para>
 /// </remarks>
 public interface IPublicUrlProvider
 {
+  /// <summary>
+  /// Whether this server has an origin it can safely put in front of a user. When false, any action
+  /// that depends on emailing such a link cannot complete and should say so rather than half-succeed.
+  /// </summary>
+  bool HasTrustworthyOrigin { get; }
 
   /// <summary>
   /// Builds an absolute URL for a path relative to the application root.
@@ -71,6 +76,8 @@ public sealed class PublicUrlProvider(
   private int _configuredBaseUrlRejectedReported;
 
   private int _originNotTrustedReported;
+
+  public bool HasTrustworthyOrigin => TryGetBaseUrl() is not null;
 
   public string? TryGetAbsoluteUrl(string relativePath)
   {

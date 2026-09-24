@@ -77,8 +77,8 @@ services:
       # confirmation, email change) are built from this value.  Leave it unset and those links fall back
       # to the host of the arriving request, which is a host the caller picks.  A forged host then
       # produces a genuine email from this server carrying a valid token that points at an origin the
-      # attacker owns.  Set this on every deployment that sends email.  Until it is set, account emails
-      # go out without a link and the server says so once at startup.
+      # attacker owns.  Set this on every deployment that sends email.  Until it is set, password reset
+      # and email confirmation are refused, and the server says so at startup and on those pages.
       ControlR_AppOptions__PublicBaseUrl: ""
 
       # The hostnames this server answers to.  Semicolon-separated, without port numbers.  Pinning this

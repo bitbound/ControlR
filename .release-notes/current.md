@@ -45,7 +45,7 @@
 - Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`.
 - Interactive sign-in in `ControlR.ApiClient` now clears a personal access token or service account key if one was already configured on the session.
 - The dashboard's file operations no longer report success when the agent reports a failure.
-- Emailed account links no longer take their address from the incoming request, which let a forged `X-Forwarded-Host` header aim a genuine password-reset token at an attacker's site. Set `AppOptions:PublicBaseUrl` to this server's public URL to keep them clickable. Ref: https://github.com/bitbound/ControlR/issues/175
+- Emailed account links no longer take their address from the incoming request, which let a forged `X-Forwarded-Host` header aim a genuine password-reset token at an attacker's site. Set `AppOptions:PublicBaseUrl` to the server's public URL, or password reset and email confirmation are refused until you do. Ref: https://github.com/bitbound/ControlR/issues/175
 
 ## Removals
 

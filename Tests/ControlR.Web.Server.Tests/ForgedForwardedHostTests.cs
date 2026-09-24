@@ -39,19 +39,25 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
     var sender = new CapturingEmailSender();
 
     // AllowedHosts stays the shipped "*", and no public base URL is configured, so the host of an
-    // arriving request is whatever the caller says it is. Nothing safe can be emailed.
+    // arriving request is whatever the caller says it is. Nothing safe can be emailed, and a bare reset
+    // code would be inert anyway: Account/ResetPassword takes the code only from the query string and
+    // redirects to Account/InvalidPasswordReset without one. So the page refuses the action outright.
     using var testServer = await TestWebServerBuilder.CreateTestServer(
       testOutput, settings: NewSettings(), configureServices: services => services.UseSender(sender));
 
-    await PostForgotPasswordAsync(testServer, "failclosed@t.local");
+    var tenant = await testServer.Services.CreateTestTenant();
+    await testServer.Services.CreateTestUser(tenant.Id, "failclosed@t.local");
 
-    AssertNoForgedHost(sender.Body);
+    var page = await (await testServer.GetHttpClient()).GetStringAsync("/Account/ForgotPassword", TestContext.Current.CancellationToken);
+
+    Assert.Contains(
+      "Password reset emails cannot be sent from this server",
+      page,
+      StringComparison.Ordinal);
+    Assert.DoesNotContain("name=\"Input.Email\"", page, StringComparison.Ordinal);
     Assert.True(
-      sender.Body.Length > 0,
-      "Expected the reset code to still be emailed so the flow stays usable.");
-    Assert.False(
-      sender.Body.Contains("/Account/ResetPassword", StringComparison.OrdinalIgnoreCase),
-      $"Expected no reset link at all, got: {sender.Body}");
+      string.IsNullOrEmpty(sender.Body),
+      $"Expected no email at all, got: {sender.Body}");
   }
 
   [Fact]
@@ -96,9 +102,13 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task PostSubmitRedirect_DoesNotPointAtForgedForwardedHost()
   {
+    // Needs a trustworthy origin, or the form is not rendered at all and there is no submit to follow.
+    var settings = NewSettings();
+    settings["AppOptions:PublicBaseUrl"] = ConfiguredOrigin;
+
     using var testServer = await TestWebServerBuilder.CreateTestServer(
       testOutput,
-      settings: NewSettings(),
+      settings: settings,
       configureServices: services => services.UseSender(new CapturingEmailSender()));
 
     var response = await PostForgotPasswordAsync(testServer, "redirect@t.local");
@@ -152,7 +162,7 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
       HandleCookies = true,
     });
 
-    var page = await client.GetStringAsync("/Account/ForgotPassword");
+    var page = await client.GetStringAsync("/Account/ForgotPassword", TestContext.Current.CancellationToken);
 
     var form = new List<KeyValuePair<string, string>>([new("Input.Email", email)]);
     foreach (Match match in HiddenInputRegex().Matches(page))

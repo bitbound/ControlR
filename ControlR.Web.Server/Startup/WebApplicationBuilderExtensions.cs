@@ -99,8 +99,9 @@ public static class WebApplicationBuilderExtensions
     {
       Console.WriteLine(
         "Links this server emails out have no configured origin to point at, and AllowedHosts lets any " +
-        "host through, so those emails will go out without a link. Set AppOptions:PublicBaseUrl to this " +
-        "server's public URL, or pin AllowedHosts to its hostnames.");
+        "host through. Password reset and email confirmation will be refused until " +
+        "AppOptions:PublicBaseUrl is set to this server's public URL, or AllowedHosts is pinned to its " +
+        "hostnames.");
     }
 
     // Configure logging.
