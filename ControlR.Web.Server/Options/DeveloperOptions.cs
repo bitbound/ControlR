@@ -1,35 +1,30 @@
 namespace ControlR.Web.Server.Options;
 
 /// <summary>
-/// Configuration for development and load-testing conveniences that must never be enabled on a server
-/// reachable by users.
+/// Switches for development and load testing only. Never enable any of them on a production server.
 /// </summary>
 /// <remarks>
-/// These settings trade away guarantees the rest of the product is built on, so they live apart from
-/// <see cref="AppOptions"/> where an operator can mistake one for a convenience toggle. Every one of
-/// them is reported at startup when it is on.
+/// Separate from <see cref="AppOptions"/> so nobody mistakes one of these for a support toggle.
 /// </remarks>
 public class DeveloperOptions
 {
   /// <summary>
-  /// The configuration section key for DeveloperOptions in appsettings.json.
+  /// Section name in appsettings.json.
   /// </summary>
   public const string SectionKey = "DeveloperOptions";
 
   /// <summary>
-  /// Lets agents register themselves without an installer key.
-  /// </summary>
-  /// <remarks>
   /// <para>
   /// For development and load testing only. Never enable on a production server.
   /// </para>
   /// <para>
-  /// The agent hub authenticates a device by the public key stored against its id. Adopting a key for a
-  /// device the server has never seen is only safe while the caller already holds an installer key, so
-  /// this setting moves that check onto the trust of the caller instead. Turning it on changes the
-  /// security posture of the whole hub surface, and it is the precondition for every finding filed
-  /// against anonymous hub writes.
+  /// Lets an unknown agent enroll itself without an installer key.
   /// </para>
+  /// </summary>
+  /// <remarks>
+  /// A device is normally registered before it can use the hub, and the hub then trusts only the public
+  /// key stored for it. With this on, a device the server has never seen can send its own key and be
+  /// believed. The server warns at startup when this is enabled.
   /// </remarks>
   public bool AllowAgentsToSelfBootstrap { get; init; }
 }
