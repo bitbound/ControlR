@@ -4,7 +4,7 @@
 @inject IEmailSender<AppUser> EmailSender
 @inject IOptionsMonitor<AppOptions> AppOptions
 @inject IdentityRedirectManager RedirectManager
-@inject NavigationManager NavigationManager
+@inject IPublicUrlProvider PublicUrlProvider
 
 <PageTitle>Manage email</PageTitle>
 
@@ -94,9 +94,15 @@
     var userId = await UserManager.GetUserIdAsync(_user);
     var code = await UserManager.GenerateChangeEmailTokenAsync(_user, Input.NewEmail);
     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-    NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
-    new Dictionary<string, object?> { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
+    var callbackUrl = PublicUrlProvider.TryGetAbsoluteUrl(
+      "Account/ConfirmEmailChange",
+      new Dictionary<string, string?> { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
+
+    if (callbackUrl is null)
+    {
+      _message = "Confirmation email could not be sent. Please contact your administrator.";
+      return;
+    }
 
     await EmailSender.SendConfirmationLinkAsync(_user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
 
@@ -119,9 +125,15 @@
     var userId = await UserManager.GetUserIdAsync(_user);
     var code = await UserManager.GenerateEmailConfirmationTokenAsync(_user);
     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-    NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-    new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+    var callbackUrl = PublicUrlProvider.TryGetAbsoluteUrl(
+      "Account/ConfirmEmail",
+      new Dictionary<string, string?> { ["userId"] = userId, ["code"] = code });
+
+    if (callbackUrl is null)
+    {
+      _message = "Verification email could not be sent. Please contact your administrator.";
+      return;
+    }
 
     await EmailSender.SendConfirmationLinkAsync(_user, _email, HtmlEncoder.Default.Encode(callbackUrl));
 

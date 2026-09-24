@@ -72,8 +72,26 @@ services:
       # that auto-disables after the first user is created.
       ControlR_AppOptions__EnablePublicRegistration: false
 
-      # Allows devices to self-register without requiring an installer key.
-      ControlR_AppOptions__AllowAgentsToSelfBootstrap: false
+      # The absolute URL this server is reachable at by its users, e.g.
+      # "https://controlr.example.com".  The links this server emails out (password reset, email
+      # confirmation, email change) are built from this value.  Leave it unset and those links fall back
+      # to the host of the arriving request, which is a host the caller picks.  A forged host then
+      # produces a genuine email from this server carrying a valid token that points at an origin the
+      # attacker owns.  Set this on every deployment that sends email.  Until it is set, account emails
+      # go out without a link and the server says so once at startup.
+      ControlR_AppOptions__PublicBaseUrl: ""
+
+      # The hostnames this server answers to.  Semicolon-separated, without port numbers.  Pinning this
+      # is what makes the host of an arriving request safe to build a link from, and it rejects a forged
+      # one with a 400 before it reaches the application.  "*" accepts any host.
+      ControlR_AllowedHosts: "*"
+
+      # DEVELOPMENT AND LOAD TESTING ONLY.  Never enable this on a server that users can reach.
+      # Lets agents register themselves without an installer key.  The agent hub authenticates a device
+      # by the public key already stored for it, and this setting is what allows a key to be adopted for
+      # a device the server has never seen.  Turning it on changes the security posture of the whole hub
+      # surface, and the server prints a warning at startup while it stays on.
+      ControlR_DeveloperOptions__AllowAgentsToSelfBootstrap: false
 
       # Controls the one-time first-user self-registration behavior.
       # By default, public registration is available only while the server has zero users;

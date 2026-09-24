@@ -2,7 +2,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using ControlR.Web.Client.Services;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace ControlR.Web.Server.Services.Users;
@@ -35,21 +34,12 @@ public interface IUserCreator
     Guid tenantId,
     IEnumerable<string>? presetNames = null,
     CancellationToken cancellationToken = default);
-
-  // Overload for API context where NavigationManager is unavailable.
-  Task<CreateUserResult> CreateUser(
-    string emailAddress,
-    string password,
-    string? returnUrl,
-    string confirmationBaseUrl,
-    bool isPublicRegistration = false,
-    CancellationToken cancellationToken = default);
 }
 
   public class UserCreator(
     IPermissionAssignmentSeeder assignmentSeeder,
     UserManager<AppUser> userManager,
-    NavigationManager navigationManager,
+    IPublicUrlProvider publicUrlProvider,
     IUserStore<AppUser> userStore,
     IEmailSender<AppUser> emailSender,
     IOptionsMonitor<AppOptions> appOptions,
@@ -64,7 +54,7 @@ public interface IUserCreator
     private readonly IPublicRegistrationBootstrapGate _bootstrapGate = bootstrapGate;
     private readonly IEmailSender<AppUser> _emailSender = emailSender;
     private readonly ILogger<UserCreator> _logger = logger;
-    private readonly NavigationManager _navigationManager = navigationManager;
+    private readonly IPublicUrlProvider _publicUrlProvider = publicUrlProvider;
     private readonly IPublicServerSettingsProvider _serverSettings = serverSettings;
     private readonly UserManager<AppUser> _userManager = userManager;
     private readonly IUserStore<AppUser> _userStore = userStore;
@@ -157,30 +147,12 @@ public interface IUserCreator
     return new CreateUserResult(true, result.IdentityResult, user);
   }
 
-  public async Task<CreateUserResult> CreateUser(
-    string emailAddress,
-    string password,
-    string? returnUrl,
-    string confirmationBaseUrl,
-    bool isPublicRegistration = false,
-    CancellationToken cancellationToken = default)
-  {
-    return await CreateUserImpl(
-      emailAddress,
-      returnUrl: returnUrl,
-      password: password,
-      confirmationBaseUrl: confirmationBaseUrl,
-      isPublicRegistration: isPublicRegistration,
-      cancellationToken: cancellationToken);
-  }
-
   private async Task<CreateUserResult> CreateUserImpl(
     string emailAddress,
     string? password = null,
     ExternalLoginInfo? externalLoginInfo = null,
     string? returnUrl = null,
     Guid? tenantId = null,
-    string? confirmationBaseUrl = null,
     bool isPublicRegistration = false,
     CancellationToken cancellationToken = default)
   {
@@ -205,12 +177,12 @@ public interface IUserCreator
 
       return await CreateUserInternal(
         emailAddress, password, externalLoginInfo, returnUrl,
-        tenantId, confirmationBaseUrl, cancellationToken);
+        tenantId, cancellationToken);
     }
 
     return await CreateUserInternal(
       emailAddress, password, externalLoginInfo, returnUrl,
-      tenantId, confirmationBaseUrl, cancellationToken);
+      tenantId, cancellationToken);
   }
 
   private async Task<CreateUserResult> CreateUserInternal(
@@ -219,7 +191,6 @@ public interface IUserCreator
     ExternalLoginInfo? externalLoginInfo = null,
     string? returnUrl = null,
     Guid? tenantId = null,
-    string? confirmationBaseUrl = null,
     CancellationToken cancellationToken = default)
   {
     try
@@ -326,22 +297,29 @@ public interface IUserCreator
       {
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
-        var queryParams = new Dictionary<string, string?>
+        var callbackUrl = _publicUrlProvider.TryGetAbsoluteUrl(
+          "Account/ConfirmEmail",
+          new Dictionary<string, string?>
+          {
+            ["userId"] = userId,
+            ["code"] = code,
+            ["returnUrl"] = returnUrl
+          });
+
+        if (callbackUrl is null)
         {
-          ["userId"] = userId,
-          ["code"] = code,
-          ["returnUrl"] = returnUrl
-        };
-
-        var callbackUrl = confirmationBaseUrl is not null
-          ? QueryHelpers.AddQueryString(
-            $"{confirmationBaseUrl.TrimEnd('/')}/Account/ConfirmEmail",
-            queryParams)
-          : _navigationManager.GetUriWithQueryParameters(
-            _navigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = returnUrl });
-
-        await _emailSender.SendConfirmationLinkAsync(user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
+          // Confirming the address here instead would hand out exactly what the link exists to verify,
+          // so the account is left unconfirmed until an origin is configured.
+          _logger.LogError(
+            "Not sending a confirmation email for {Email}. This server has no trustworthy origin to " +
+            "build the link from, so set AppOptions:PublicBaseUrl.",
+            emailAddress);
+        }
+        else
+        {
+          await _emailSender.SendConfirmationLinkAsync(
+            user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
+        }
       }
       else
       {

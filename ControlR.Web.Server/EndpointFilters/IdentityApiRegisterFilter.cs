@@ -22,14 +22,10 @@ public class IdentityApiRegisterFilter : IEndpointFilter
       return Results.Problem("Invalid registration request.", statusCode: StatusCodes.Status400BadRequest);
     }
 
-    var confirmationBaseUrl =
-      $"{invocationContext.HttpContext.Request.Scheme}://{invocationContext.HttpContext.Request.Host}";
-
     var result = await userCreator.CreateUser(
       registerRequest.Email,
       registerRequest.Password,
       returnUrl: null,
-      confirmationBaseUrl,
       isPublicRegistration: true,
       cancellationToken: invocationContext.HttpContext.RequestAborted);
 

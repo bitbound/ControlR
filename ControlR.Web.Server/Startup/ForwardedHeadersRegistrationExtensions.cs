@@ -6,6 +6,29 @@ namespace ControlR.Web.Server.Startup;
 
 public static class ForwardedHeadersRegistrationExtensions
 {
+  /// <summary>
+  /// The forwarded headers ControlR consumes. A forwarded host and a forwarded path prefix are
+  /// deliberately excluded.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  /// Emailed links are built on this server's authority but inherited their origin from the request, so
+  /// an adopted <c>X-Forwarded-Host</c> let a caller aim a genuine password-reset email carrying a valid
+  /// token at an origin they control. Cloudflare passes a client-supplied <c>X-Forwarded-Host</c> through
+  /// to the origin rather than overwriting it, and <c>ForwardedHeaders.All</c> adopted the value
+  /// verbatim.
+  /// </para>
+  /// <para>
+  /// The raw <c>Host</c> header carries everything ControlR needs. Proxies that rewrite it (Cloudflare,
+  /// Caddy, nginx with <c>proxy_set_header Host $host</c>) already deliver the public hostname. A
+  /// deployment behind a balancer that only ever sets <c>X-Forwarded-Host</c> and leaves <c>Host</c> at
+  /// the upstream address must pin <c>AllowedHosts</c> and set <c>AppOptions:PublicBaseUrl</c>, which is
+  /// what emailed links use in preference to the request.
+  /// </para>
+  /// </remarks>
+  private const ForwardedHeaders TrustedForwardedHeaders =
+    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
   public static async Task AddControlrForwardedHeaders(
     this IHostApplicationBuilder hostBuilder,
     AppOptions appOptions)
@@ -14,11 +37,10 @@ public static class ForwardedHeadersRegistrationExtensions
     {
       hostBuilder.Services.Configure<ForwardedHeadersOptions>(options =>
       {
-        options.ForwardedHeaders = ForwardedHeaders.All;
+        options.ForwardedHeaders = TrustedForwardedHeaders;
         options.ForwardLimit = null;
         options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
-        options.KnownIPNetworks.Clear();
       });
       return;
     }
@@ -56,7 +78,7 @@ public static class ForwardedHeadersRegistrationExtensions
 
     hostBuilder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
-      options.ForwardedHeaders = ForwardedHeaders.All;
+      options.ForwardedHeaders = TrustedForwardedHeaders;
       options.ForwardLimit = null;
 
       // Default Docker host. We want to allow forwarded headers from this address.

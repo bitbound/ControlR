@@ -40,9 +40,9 @@ public interface IPasswordManager
   /// Initiates a forgot-password flow for an end user who cannot sign in and needs to reset their password via email.
   /// This is the start of the self-service flow reached from the login screen, not the administrator reset flow.
   /// </summary> <param name="request">The email address payload.</param>
-  /// <param name="resetPasswordUrl">The URL to include in the password reset email that the user can click to reach the password reset page. The reset code will be appended as a query parameter.</param>
+  /// <param name="resetPasswordUrl">The URL the user can click to reach the password reset page. The reset code is appended as a query parameter. Pass <see langword="null"/> to email the reset code on its own, which is what happens when this server has no trustworthy origin to build a link from.</param>
   /// <returns>A result indicating whether the forgot-password email was sent. Always returns success to avoid leaking user existence information, but may fail if email sending is enabled and an error occurs during sending.</returns>
-  Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request, string resetPasswordUrl);
+  Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request, string? resetPasswordUrl);
 }
 
 public class PasswordManager(
@@ -137,7 +137,7 @@ public class PasswordManager(
     return Result.Ok();
   }
 
-  public async Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request, string resetPasswordUrl)
+  public async Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request, string? resetPasswordUrl)
   {
     if (_appOptions.CurrentValue.DisableEmailSending)
     {
@@ -151,6 +151,15 @@ public class PasswordManager(
     }
 
     var code = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+    // Without a trustworthy origin there is no safe link to send. The code resets the password on its
+    // own, so the flow stays usable rather than going out pointed at a host the caller chose.
+    if (resetPasswordUrl is null)
+    {
+      await _emailSender.SendPasswordResetCodeAsync(user, request.Email, code);
+      return Result.Ok();
+    }
+
     var encodedCode = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
     var callbackUrl = QueryHelpers.AddQueryString(resetPasswordUrl, "code", encodedCode);
 

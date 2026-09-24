@@ -7,6 +7,8 @@
   - There should be no more breaking changes to the `/api/v1/*` endpoints after this release.
 - Although roles were migrated to permission presets, user tags that mapped users to devices were removed.
   - If you were using user tags to control access to devices, you will need to migrate to the new permissions system.
+- `AllowAgentsToSelfBootstrap` moved out of `AppOptions` into a new `DeveloperOptions` section, so the environment variable is now `ControlR_DeveloperOptions__AllowAgentsToSelfBootstrap`.
+  - The setting is for development and load testing only and defaults to `false`. Anyone who never set it is unaffected.
 
 ## Enhancements
 
@@ -43,6 +45,7 @@
 - Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`.
 - Interactive sign-in in `ControlR.ApiClient` now clears a personal access token or service account key if one was already configured on the session.
 - The dashboard's file operations no longer report success when the agent reports a failure.
+- Emailed account links no longer take their address from the incoming request, which let a forged `X-Forwarded-Host` header aim a genuine password-reset token at an attacker's site. Set `AppOptions:PublicBaseUrl` to this server's public URL to keep them clickable. Ref: https://github.com/bitbound/ControlR/issues/175
 
 ## Removals
 

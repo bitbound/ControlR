@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace ControlR.Libraries.WebSocketRelay.Common.Sessions;
 
@@ -156,7 +158,12 @@ internal class SessionSignaler : IAsyncDisposable
 
   public bool ValidateToken(string accessToken)
   {
-    return accessToken == _accessToken;
+    // Compared in fixed time. The responder half of a relay session is unauthenticated, so for that
+    // half this token is the only thing between a caller and the peer on the other end.
+    return !string.IsNullOrEmpty(accessToken) &&
+      CryptographicOperations.FixedTimeEquals(
+        Encoding.UTF8.GetBytes(accessToken),
+        Encoding.UTF8.GetBytes(_accessToken));
   }
 
   public async Task WaitForPartner(CancellationToken cancellationToken)

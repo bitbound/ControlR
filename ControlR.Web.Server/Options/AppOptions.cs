@@ -37,12 +37,6 @@ public class AppOptions
   public int AgentInstallerKeyHistoryDays { get; init; } = 90;
 
   /// <summary>
-  /// Allows devices to self-register without requiring an installer key.
-  /// When enabled, agents can bootstrap themselves without manual intervention.
-  /// </summary>
-  public bool AllowAgentsToSelfBootstrap { get; init; }
-
-  /// <summary>
   /// The name that appears in TOTP authenticator apps when users set up two-factor authentication.
   /// </summary>
   public string? AuthenticatorIssuerName { get; init; }
@@ -237,6 +231,23 @@ public class AppOptions
   /// This provides a more seamless authentication experience for passkey users.
   /// </summary>
   public bool PersistPasskeyLogin { get; init; }
+
+  /// <summary>
+  /// The absolute URL this server is reachable at by its users, e.g. "https://controlr.example.com".
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  /// Links that this server emails out (password reset, email confirmation, email change) are built from
+  /// this value. Without it, they fall back to the host of the arriving request, which the caller picks
+  /// unless <c>AllowedHosts</c> pins it. A host the caller picks produces a genuine email from this
+  /// server carrying a valid token that points at an origin the attacker owns.
+  /// </para>
+  /// <para>
+  /// Set this on every deployment that sends email. Include the scheme and, if non-standard, the port. A
+  /// trailing slash is optional, and a path segment is allowed for servers hosted under a subpath.
+  /// </para>
+  /// </remarks>
+  public string? PublicBaseUrl { get; init; }
 
   /// <summary>
   /// Whether users must confirm their email address before being allowed to log in.

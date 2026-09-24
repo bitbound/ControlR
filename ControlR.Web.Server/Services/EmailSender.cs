@@ -23,12 +23,14 @@ public class EmailSender(
   IWebHostEnvironment webHostEnvironment,
   IHttpContextAccessor httpContextAccessor,
   IOptionsMonitor<AppOptions> appOptions,
+  IPublicUrlProvider publicUrlProvider,
   ILogger<EmailSender> logger) : IControlrEmailSender, IEmailSender
 {
 
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
   private readonly ILogger<EmailSender> _logger = logger;
+  private readonly IPublicUrlProvider _publicUrlProvider = publicUrlProvider;
   private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
 
 
@@ -211,7 +213,15 @@ public class EmailSender(
       return false;
     }
 
-    var imageUrl = new Uri(request.ToOrigin(), "/images/company-logo.png");
+    // The logo rides inside an email this server delivered, so it must not point at a host that the
+    // caller of whatever request happened to be in flight chose.
+    if (_publicUrlProvider.TryGetBaseUrl() is not { } baseUrl)
+    {
+      logoHtml = null;
+      return false;
+    }
+
+    var imageUrl = new Uri($"{baseUrl}/images/company-logo.png");
 
     logoHtml = $"""
       <img 

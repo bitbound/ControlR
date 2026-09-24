@@ -73,12 +73,35 @@ public static class WebApplicationBuilderExtensions
     builder.Services.Configure<ServerLifecycleOptions>(
       builder.Configuration.GetSection(ServerLifecycleOptions.SectionKey));
 
+    builder.Services.Configure<DeveloperOptions>(
+      builder.Configuration.GetSection(DeveloperOptions.SectionKey));
+
     builder.Services.Configure<BootstrapOptions>(
       builder.Configuration.GetSection(BootstrapOptions.SectionKey));
 
     var appOptions = builder.Configuration
       .GetSection(AppOptions.SectionKey)
       .Get<AppOptions>() ?? new AppOptions();
+
+    if (builder.Configuration
+          .GetSection(DeveloperOptions.SectionKey)
+          .Get<DeveloperOptions>()?.AllowAgentsToSelfBootstrap == true)
+    {
+      Console.WriteLine(
+        "DeveloperOptions:AllowAgentsToSelfBootstrap is enabled. Agents can register without an installer " +
+        "key, which drops the requirement that a device prove it holds the key already stored for it. " +
+        "This setting is for development and load testing only and must not be enabled on a server that " +
+        "users can reach.");
+    }
+
+    if (string.IsNullOrWhiteSpace(appOptions.PublicBaseUrl) &&
+        builder.Configuration["AllowedHosts"] is null or "" or "*")
+    {
+      Console.WriteLine(
+        "Links this server emails out have no configured origin to point at, and AllowedHosts lets any " +
+        "host through, so those emails will go out without a link. Set AppOptions:PublicBaseUrl to this " +
+        "server's public URL, or pin AllowedHosts to its hostnames.");
+    }
 
     // Configure logging.
     builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
@@ -210,6 +233,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddMemoryCache();
     builder.Services.AddLazyInjection();
     builder.Services.AddHttpContextAccessor();
+    builder.Services.AddSingleton<IPublicUrlProvider, PublicUrlProvider>();
     builder.Services.AddSingleton(TimeProvider.System);
     builder.Services.AddSingleton<IFileProvider>(new PhysicalFileProvider(builder.Environment.ContentRootPath));
     builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();

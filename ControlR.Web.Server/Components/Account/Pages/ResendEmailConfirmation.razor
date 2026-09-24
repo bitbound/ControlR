@@ -3,8 +3,8 @@
 @inject UserManager<AppUser> UserManager
 @inject IEmailSender<AppUser> EmailSender
 @inject IOptionsMonitor<AppOptions> AppOptions
-@inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IPublicUrlProvider PublicUrlProvider
 
 <PageTitle>Resend email confirmation</PageTitle>
 
@@ -68,9 +68,16 @@ else
     var userId = await UserManager.GetUserIdAsync(user);
     var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-    NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-    new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+    var callbackUrl = PublicUrlProvider.TryGetAbsoluteUrl(
+      "Account/ConfirmEmail",
+      new Dictionary<string, string?> { ["userId"] = userId, ["code"] = code });
+
+    if (callbackUrl is null)
+    {
+      _message = "Verification email could not be sent. Please contact your administrator.";
+      return;
+    }
+
     await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
     _message = "Verification email sent. Please check your email.";
