@@ -15,9 +15,9 @@ namespace ControlR.Web.Server.Services;
 /// </para>
 /// <para>
 /// The configured <see cref="AppOptions.PublicBaseUrl"/> always wins. Without it, the origin of the
-/// current request is used only when <c>AllowedHosts</c> pins the hostnames this server answers to,
-/// because then the host is one the operator chose rather than the caller. Otherwise nothing is
-/// produced, and actions that depend on such a link cannot complete.
+/// current request is used only when the operator named that exact hostname in <c>AllowedHosts</c>,
+/// because then the host is one the operator wrote down rather than one the caller supplied. Otherwise
+/// nothing is produced, and actions that depend on such a link cannot complete.
 /// </para>
 /// </remarks>
 public interface IPublicUrlProvider
@@ -48,8 +48,8 @@ public interface IPublicUrlProvider
   /// </summary>
   /// <returns>
   /// The configured <see cref="AppOptions.PublicBaseUrl"/>, or the current request's origin when
-  /// <c>AllowedHosts</c> pins it. <see langword="null"/> when no trustworthy origin exists, or when a
-  /// configured one is malformed.
+  /// <c>AllowedHosts</c> names that hostname outright. <see langword="null"/> when no trustworthy origin
+  /// exists, or when a configured one is malformed.
   /// </returns>
   string? TryGetBaseUrl();
 }
@@ -97,23 +97,57 @@ public sealed class PublicUrlProvider(
       return TryNormalizeConfiguredBaseUrl(configuredBaseUrl);
     }
 
-    if (!RequestHostIsPinned())
+    if (_httpContextAccessor.HttpContext?.Request is not { } request)
     {
-      EnsureReportedOriginNotTrusted();
       return null;
     }
 
-    if (_httpContextAccessor.HttpContext?.Request is not { } request)
+    if (!RequestHostIsNamedLiterally(request.Host))
     {
+      EnsureReportedOriginNotTrusted();
       return null;
     }
 
     return $"{request.Scheme}://{request.Host}";
   }
 
+  /// <summary>
+  /// Whether <paramref name="allowedHosts"/> names at least one hostname literally, in the
+  /// semicolon-separated form that host filtering is set up from configuration.
+  /// </summary>
+  /// <remarks>
+  /// A wildcard is not a name. <c>*</c> accepts any host and <c>*.t.local</c> leaves its leftmost labels
+  /// to whoever sends the request, so neither identifies this server.
+  /// </remarks>
+  internal static bool NamesAnyLiteralHost(string? allowedHosts)
+  {
+    if (string.IsNullOrWhiteSpace(allowedHosts))
+    {
+      return false;
+    }
+
+    var entries = allowedHosts.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    return entries.Any(entry => !entry.Contains('*', StringComparison.Ordinal));
+  }
+
   private static string Combine(string baseUrl, string relativePath)
   {
     return $"{baseUrl}/{relativePath.TrimStart('/')}";
+  }
+
+  /// <summary>
+  /// The host part of <paramref name="host"/> in URI form, without its port. <see langword="null"/> when
+  /// there is no host at all.
+  /// </summary>
+  private static string? ToUriComponentHost(HostString host)
+  {
+    if (host.Host is not { Length: > 0 } value)
+    {
+      return null;
+    }
+
+    return new HostString(value).ToUriComponent();
   }
 
   private void EnsureReportedBaseUrlRejected(string configuredBaseUrl)
@@ -133,16 +167,21 @@ public sealed class PublicUrlProvider(
     {
       _logger.LogWarning(
         "No trustworthy origin is available for the links this server emails out. Set " +
-        "AppOptions:PublicBaseUrl to this server's public URL, or pin AllowedHosts to its hostnames. " +
+        "AppOptions:PublicBaseUrl to this server's public URL, or name its hostname in AllowedHosts. " +
         "Links are being omitted until one of those is done.");
     }
   }
 
   /// <summary>
-  /// Whether <c>AllowedHosts</c> restricts this server to operator-chosen hostnames, which is what makes
-  /// the host of an arriving request safe to echo back into a link.
+  /// Whether the host of an arriving request is one the operator named outright in <c>AllowedHosts</c>,
+  /// which is what makes it safe to echo back into a link.
   /// </summary>
-  private bool RequestHostIsPinned()
+  /// <remarks>
+  /// This is deliberately stricter than host filtering itself. Filtering is satisfied by a subdomain
+  /// wildcard such as <c>*.t.local</c>, and by the top-level forms that switch it off, both of which leave
+  /// the arriving host partly chosen by whoever sent the request.
+  /// </remarks>
+  private bool RequestHostIsNamedLiterally(HostString requestHost)
   {
     var allowedHosts = _hostFilteringOptions.CurrentValue.AllowedHosts;
     if (allowedHosts is not { Count: > 0 })
@@ -150,18 +189,21 @@ public sealed class PublicUrlProvider(
       return false;
     }
 
+    var request = ToUriComponentHost(requestHost);
+    if (request is null)
+    {
+      return false;
+    }
+
     foreach (var entry in allowedHosts)
     {
-      // Mirrors the wildcards that switch host filtering off, so this check cannot drift from what the
-      // framework actually enforces.
-      var host = new HostString(entry).ToUriComponent();
-      if (host is "*" or "[::]" or "0.0.0.0")
+      if (string.Equals(request, ToUriComponentHost(new HostString(entry)), StringComparison.OrdinalIgnoreCase))
       {
-        return false;
+        return true;
       }
     }
 
-    return true;
+    return false;
   }
 
   private string? TryNormalizeConfiguredBaseUrl(string configuredBaseUrl)

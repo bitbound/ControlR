@@ -239,8 +239,10 @@ public class AppOptions
   /// <para>
   /// Links that this server emails out (password reset, email confirmation, email change) are built from
   /// this value. Without it, they fall back to the host of the arriving request, which the caller picks
-  /// unless <c>AllowedHosts</c> pins it. A host the caller picks produces a genuine email from this
-  /// server carrying a valid token that points at an origin the attacker owns.
+  /// unless <c>AllowedHosts</c> names that hostname outright. A wildcard entry such as
+  /// <c>*.t.local</c> leaves part of the hostname to the caller and does not count. A host the caller
+  /// picks produces a genuine email from this server carrying a valid token that points at an origin the
+  /// attacker owns.
   /// </para>
   /// <para>
   /// Set this on every deployment that sends email. Include the scheme and, if non-standard, the port. A

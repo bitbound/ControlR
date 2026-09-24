@@ -95,12 +95,12 @@ public static class WebApplicationBuilderExtensions
     }
 
     if (string.IsNullOrWhiteSpace(appOptions.PublicBaseUrl) &&
-        builder.Configuration["AllowedHosts"] is null or "" or "*")
+        !PublicUrlProvider.NamesAnyLiteralHost(builder.Configuration["AllowedHosts"]))
     {
       Console.WriteLine(
         "Links this server emails out have no configured origin to point at, and AllowedHosts lets any " +
         "host through. Password reset and email confirmation will be refused until " +
-        "AppOptions:PublicBaseUrl is set to this server's public URL, or AllowedHosts is pinned to its " +
+        "AppOptions:PublicBaseUrl is set to this server's public URL, or AllowedHosts names one of its " +
         "hostnames.");
     }
 
