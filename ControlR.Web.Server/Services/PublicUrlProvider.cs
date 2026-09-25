@@ -49,7 +49,7 @@ public interface IPublicUrlProvider
   /// <returns>
   /// The configured <see cref="AppOptions.PublicBaseUrl"/>, or the current request's origin when
   /// <c>AllowedHosts</c> names that hostname outright. <see langword="null"/> when no trustworthy origin
-  /// exists, or when a configured one is malformed.
+  /// exists, or when a configured value is malformed or is not an origin.
   /// </returns>
   string? TryGetBaseUrl();
 }
@@ -155,7 +155,7 @@ public sealed class PublicUrlProvider(
     if (Interlocked.Exchange(ref _configuredBaseUrlRejectedReported, 1) == 0)
     {
       _logger.LogError(
-        "AppOptions:PublicBaseUrl '{PublicBaseUrl}' is not an absolute http(s) URL. Outbound links are " +
+        "AppOptions:PublicBaseUrl '{PublicBaseUrl}' is not an absolute http(s) origin. Outbound links are " +
         "being omitted until it is corrected.",
         configuredBaseUrl);
     }
@@ -210,11 +210,14 @@ public sealed class PublicUrlProvider(
   {
     var trimmed = configuredBaseUrl.TrimEnd('/');
 
-    // Only a plain http(s) origin is usable as a link base. Anything else is a misconfiguration, and
-    // guessing would silently rewrite where every account email points.
+    // This app is served from the site root, so a configured path would produce broken links.
     if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ||
         (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
-        string.IsNullOrEmpty(uri.Host))
+        string.IsNullOrEmpty(uri.Host) ||
+        uri.AbsolutePath != "/" ||
+        !string.IsNullOrEmpty(uri.Query) ||
+        !string.IsNullOrEmpty(uri.Fragment) ||
+        !string.IsNullOrEmpty(uri.UserInfo))
     {
       EnsureReportedBaseUrlRejected(configuredBaseUrl);
       return null;

@@ -233,21 +233,12 @@ public class AppOptions
   public bool PersistPasskeyLogin { get; init; }
 
   /// <summary>
-  /// The absolute URL this server is reachable at by its users, e.g. "https://controlr.example.com".
+  /// The public URL of this server, e.g. "https://controlr.example.com".
   /// </summary>
   /// <remarks>
-  /// <para>
-  /// Links that this server emails out (password reset, email confirmation, email change) are built from
-  /// this value. Without it, they fall back to the host of the arriving request, which the caller picks
-  /// unless <c>AllowedHosts</c> names that hostname outright. A wildcard entry such as
-  /// <c>*.t.local</c> leaves part of the hostname to the caller and does not count. A host the caller
-  /// picks produces a genuine email from this server carrying a valid token that points at an origin the
-  /// attacker owns.
-  /// </para>
-  /// <para>
-  /// Set this on every deployment that sends email. Include the scheme and, if non-standard, the port. A
-  /// trailing slash is optional, and a path segment is allowed for servers hosted under a subpath.
-  /// </para>
+  /// Used to build links that leave this server. Include the scheme and, if non-standard, the port.
+  /// A trailing slash is optional. Do not include a path, query, or fragment. Without this value, the
+  /// host of the arriving request is used only when <c>AllowedHosts</c> names it outright.
   /// </remarks>
   public string? PublicBaseUrl { get; init; }
 

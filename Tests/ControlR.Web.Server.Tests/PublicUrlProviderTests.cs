@@ -6,15 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 namespace ControlR.Web.Server.Tests;
 
 /// <summary>
-/// Pins the contract of <see cref="IPublicUrlProvider"/> for the cases that are settled by configuration
-/// and by the host of a request, rather than by the pipeline that produced it.
+/// Pins the contract of <see cref="IPublicUrlProvider"/> for configuration and explicit request-host cases.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The request-host cases live here rather than in <c>ForgedForwardedHostTests</c> because they need a
-/// host that host filtering lets through, which the shared <c>TestServer</c> client cannot arrange. The
-/// attacker's own host header is never at issue: filtering rejects it. What is at issue is the leftover
-/// freedom inside a <c>AllowedHosts</c> setting, and that is decided inside the provider.
+/// These tests set the request host directly and do not run host-filtering or forwarded-headers middleware.
+/// End-to-end forwarded-header behavior is covered by <c>ForgedForwardedHostTests</c>.
 /// </para>
 /// <para>
 /// Ref: https://github.com/bitbound/ControlR/issues/175
@@ -68,7 +65,6 @@ public class PublicUrlProviderTests(ITestOutputHelper testOutput)
   [InlineData("https://controlr.test/", "https://controlr.test")]
   [InlineData("https://controlr.test///", "https://controlr.test")]
   [InlineData("http://controlr.test:8443", "http://controlr.test:8443")]
-  [InlineData("https://controlr.test/controlr", "https://controlr.test/controlr")]
   public async Task TryGetBaseUrl_ReturnsConfiguredOrigin(string configured, string expected)
   {
     await using var testApp = await CreateApp(configured);
@@ -83,15 +79,22 @@ public class PublicUrlProviderTests(ITestOutputHelper testOutput)
   [InlineData("ftp://controlr.test")]
   [InlineData("javascript:alert(1)")]
   [InlineData("not a url")]
-  public async Task TryGetBaseUrl_ReturnsNull_WhenConfiguredBaseUrlIsNotAnHttpOrigin(string configured)
+  [InlineData("https://controlr.test/controlr")]
+  [InlineData("https://controlr.test/controlr/")]
+  [InlineData("https://controlr.test?query=1")]
+  [InlineData("https://controlr.test#fragment")]
+  [InlineData("https://user@controlr.test")]
+  public async Task TryGetBaseUrl_ReturnsNull_WhenConfiguredBaseUrlIsNotAnOrigin(string configured)
   {
-    // A base URL that is not a plain http(s) origin is a misconfiguration. Falling back to the request
-    // would silently undo the point of the setting, so nothing is produced instead.
-    await using var testApp = await CreateApp(configured);
+    // An invalid configured value must not fall back to an otherwise trusted request host.
+    await using var testApp = await CreateApp(configured, allowedHosts: "app.t.local");
     var provider = testApp.Services.GetRequiredService<IPublicUrlProvider>();
+
+    PinRequestHost(testApp.Services, "app.t.local");
 
     Assert.Null(provider.TryGetBaseUrl());
     Assert.Null(provider.TryGetAbsoluteUrl("Account/ResetPassword"));
+    Assert.False(provider.HasTrustworthyOrigin);
   }
 
   [Theory]

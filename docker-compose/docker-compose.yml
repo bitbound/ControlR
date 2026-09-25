@@ -73,10 +73,9 @@ services:
       # that auto-disables after the first user is created.
       ControlR_AppOptions__EnablePublicRegistration: false
 
-      # The HTTPS URL users use to reach this server, e.g. "https://controlr.example.com".
-      # Password reset and email confirmation links use this value. Set it on every deployment
-      # that sends email. Without it, links use the request host, which callers can forge, and
-      # password reset and email confirmation are disabled.
+      # The public URL of this server, e.g. "https://controlr.example.com".  Used to build links
+      # that leave this server.  Include the scheme and, if non-standard, the port.  No path,
+      # query, or fragment.
       ControlR_AppOptions__PublicBaseUrl: *publicBaseUrl
 
       # The hostnames this server answers to.  Semicolon-separated, without port numbers.  It rejects a

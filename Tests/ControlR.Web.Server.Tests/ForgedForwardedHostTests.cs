@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.RegularExpressions;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
