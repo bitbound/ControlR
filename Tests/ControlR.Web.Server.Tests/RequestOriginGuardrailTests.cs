@@ -18,12 +18,12 @@ public class RequestOriginGuardrailTests
   /// reads the request, and <c>EmailSender</c> checks the host only to decide whether to inline a
   /// logo, never to build a link.
   /// </summary>
-  private static readonly string[] AllowList =
+  private static readonly string[] _allowList =
   [
     @"Services\PublicUrlProvider.cs",
     @"Services\EmailSender.cs",
   ];
-  private static readonly string[] BannedPatterns =
+  private static readonly string[] _bannedPatterns =
   [
     "Request.ToOrigin(",
     "Request.Scheme",
@@ -42,13 +42,13 @@ public class RequestOriginGuardrailTests
     {
       var relative = Path.GetRelativePath(serverRoot, file);
 
-      if (IsExcluded(relative) || AllowList.Any(allowed => relative.EndsWith(allowed, StringComparison.OrdinalIgnoreCase)))
+      if (IsExcluded(relative) || _allowList.Any(allowed => relative.EndsWith(allowed, StringComparison.OrdinalIgnoreCase)))
       {
         continue;
       }
 
       var text = File.ReadAllText(file);
-      if (BannedPatterns.Any(pattern => text.Contains(pattern, StringComparison.Ordinal)))
+      if (_bannedPatterns.Any(pattern => text.Contains(pattern, StringComparison.Ordinal)))
       {
         offenders.Add(relative);
       }
@@ -58,7 +58,7 @@ public class RequestOriginGuardrailTests
       offenders.Count == 0,
       "These files derive a URL origin from the request instead of IPublicUrlProvider. Build outbound " +
       "URLs with IPublicUrlProvider.TryGetAbsoluteUrl, which uses the configured AppOptions:PublicBaseUrl. " +
-      $"If a file legitimately needs the request origin, add it to {nameof(RequestOriginGuardrailTests)}.{nameof(AllowList)} " +
+      $"If a file legitimately needs the request origin, add it to {nameof(RequestOriginGuardrailTests)}.{nameof(_allowList)} " +
       $"with a reason: {string.Join(" | ", offenders)}");
   }
 
