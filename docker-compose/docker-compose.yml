@@ -77,7 +77,7 @@ services:
       # Password reset and email confirmation links use this value. Set it on every deployment
       # that sends email. Without it, links use the request host, which callers can forge, and
       # password reset and email confirmation are disabled.
-      ControlR_AppOptions__PublicBaseUrl: *aspirePublicUrl
+      ControlR_AppOptions__PublicBaseUrl: *publicBaseUrl
 
       # The hostnames this server answers to.  Semicolon-separated, without port numbers.  It rejects a
       # forged host with a 400 before the request reaches the application, and naming this server's
