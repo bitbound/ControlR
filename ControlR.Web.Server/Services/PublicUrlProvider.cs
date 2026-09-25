@@ -108,6 +108,13 @@ public sealed class PublicUrlProvider(
       return null;
     }
 
+    if (!string.Equals(request.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(request.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+    {
+      EnsureReportedOriginNotTrusted();
+      return null;
+    }
+
     return $"{request.Scheme}://{request.Host}";
   }
 
