@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.HostFiltering;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace ControlR.Web.Server.Services;
@@ -14,10 +13,9 @@ namespace ControlR.Web.Server.Services;
 /// produces a genuine email carrying a valid token that points at the attacker's origin.
 /// </para>
 /// <para>
-/// The configured <see cref="AppOptions.PublicBaseUrl"/> always wins. Without it, the origin of the
-/// current request is used only when the operator named that exact hostname in <c>AllowedHosts</c>,
-/// because then the host is one the operator wrote down rather than one the caller supplied. Otherwise
-/// nothing is produced, and actions that depend on such a link cannot complete.
+/// The origin comes only from the configured <see cref="AppOptions.PublicBaseUrl"/>, never from the
+/// request. Without a valid configured value nothing is produced, and actions that depend on such a
+/// link cannot complete.
 /// </para>
 /// </remarks>
 public interface IPublicUrlProvider
@@ -47,9 +45,8 @@ public interface IPublicUrlProvider
   /// The absolute base URL to build outbound links from, without a trailing slash.
   /// </summary>
   /// <returns>
-  /// The configured <see cref="AppOptions.PublicBaseUrl"/>, or the current request's origin when
-  /// <c>AllowedHosts</c> names that hostname outright. <see langword="null"/> when no trustworthy origin
-  /// exists, or when a configured value is malformed or is not an origin.
+  /// The configured <see cref="AppOptions.PublicBaseUrl"/>. <see langword="null"/> when it is not set,
+  /// is malformed, or is not an origin.
   /// </returns>
   string? TryGetBaseUrl();
 }
@@ -60,20 +57,14 @@ public interface IPublicUrlProvider
 /// </summary>
 public sealed class PublicUrlProvider(
   IOptionsMonitor<AppOptions> appOptions,
-  IOptionsMonitor<HostFilteringOptions> hostFilteringOptions,
-  IHttpContextAccessor httpContextAccessor,
   ILogger<PublicUrlProvider> logger) : IPublicUrlProvider
 {
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
-  private readonly IOptionsMonitor<HostFilteringOptions> _hostFilteringOptions = hostFilteringOptions;
-  private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
   private readonly ILogger<PublicUrlProvider> _logger = logger;
 
-  // Each guards a standing misconfiguration rather than a per-email event, so its message is reported
-  // once instead of on every link this server declines to build.
+  // Guards a standing misconfiguration rather than a per-email event, so its message is reported once
+  // instead of on every link this server declines to build.
   private int _configuredBaseUrlRejectedReported;
-
-  private int _originNotTrustedReported;
 
   public bool HasTrustworthyOrigin => TryGetBaseUrl() is not null;
 
@@ -92,69 +83,17 @@ public sealed class PublicUrlProvider(
   public string? TryGetBaseUrl()
   {
     var configuredBaseUrl = _appOptions.CurrentValue.PublicBaseUrl;
-    if (!string.IsNullOrWhiteSpace(configuredBaseUrl))
-    {
-      return TryNormalizeConfiguredBaseUrl(configuredBaseUrl);
-    }
-
-    if (_httpContextAccessor.HttpContext?.Request is not { } request)
+    if (string.IsNullOrWhiteSpace(configuredBaseUrl))
     {
       return null;
     }
 
-    if (!RequestHostIsNamedLiterally(request.Host))
-    {
-      EnsureReportedOriginNotTrusted();
-      return null;
-    }
-
-    if (!string.Equals(request.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(request.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-    {
-      EnsureReportedOriginNotTrusted();
-      return null;
-    }
-
-    return $"{request.Scheme}://{request.Host}";
-  }
-
-  /// <summary>
-  /// Whether <paramref name="allowedHosts"/> names at least one hostname literally, in the
-  /// semicolon-separated form that host filtering is set up from configuration.
-  /// </summary>
-  /// <remarks>
-  /// A wildcard is not a name. <c>*</c> accepts any host and <c>*.t.local</c> leaves its leftmost labels
-  /// to whoever sends the request, so neither identifies this server.
-  /// </remarks>
-  internal static bool NamesAnyLiteralHost(string? allowedHosts)
-  {
-    if (string.IsNullOrWhiteSpace(allowedHosts))
-    {
-      return false;
-    }
-
-    var entries = allowedHosts.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-    return entries.Any(entry => !entry.Contains('*', StringComparison.Ordinal));
+    return TryNormalizeConfiguredBaseUrl(configuredBaseUrl);
   }
 
   private static string Combine(string baseUrl, string relativePath)
   {
     return $"{baseUrl}/{relativePath.TrimStart('/')}";
-  }
-
-  /// <summary>
-  /// The host part of <paramref name="host"/> in URI form, without its port. <see langword="null"/> when
-  /// there is no host at all.
-  /// </summary>
-  private static string? ToUriComponentHost(HostString host)
-  {
-    if (host.Host is not { Length: > 0 } value)
-    {
-      return null;
-    }
-
-    return new HostString(value).ToUriComponent();
   }
 
   private void EnsureReportedBaseUrlRejected(string configuredBaseUrl)
@@ -168,54 +107,9 @@ public sealed class PublicUrlProvider(
     }
   }
 
-  private void EnsureReportedOriginNotTrusted()
-  {
-    if (Interlocked.Exchange(ref _originNotTrustedReported, 1) == 0)
-    {
-      _logger.LogWarning(
-        "No trustworthy origin is available for the links this server emails out. Set " +
-        "AppOptions:PublicBaseUrl to this server's public URL, or name its hostname in AllowedHosts. " +
-        "Links are being omitted until one of those is done.");
-    }
-  }
-
-  /// <summary>
-  /// Whether the host of an arriving request is one the operator named outright in <c>AllowedHosts</c>,
-  /// which is what makes it safe to echo back into a link.
-  /// </summary>
-  /// <remarks>
-  /// This is deliberately stricter than host filtering itself. Filtering is satisfied by a subdomain
-  /// wildcard such as <c>*.t.local</c>, and by the top-level forms that switch it off, both of which leave
-  /// the arriving host partly chosen by whoever sent the request.
-  /// </remarks>
-  private bool RequestHostIsNamedLiterally(HostString requestHost)
-  {
-    var allowedHosts = _hostFilteringOptions.CurrentValue.AllowedHosts;
-    if (allowedHosts is not { Count: > 0 })
-    {
-      return false;
-    }
-
-    var request = ToUriComponentHost(requestHost);
-    if (request is null)
-    {
-      return false;
-    }
-
-    foreach (var entry in allowedHosts)
-    {
-      if (string.Equals(request, ToUriComponentHost(new HostString(entry)), StringComparison.OrdinalIgnoreCase))
-      {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   private string? TryNormalizeConfiguredBaseUrl(string configuredBaseUrl)
   {
-    var trimmed = configuredBaseUrl.TrimEnd('/');
+    var trimmed = configuredBaseUrl.Trim().TrimEnd('/');
 
     // This app is served from the site root, so a configured path would produce broken links.
     if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) ||

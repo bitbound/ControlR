@@ -36,6 +36,13 @@ public class IdentityApiRegisterFilter : IEndpointFilter
         return Results.NotFound();
       }
 
+      if (result.IdentityResult.Errors.Any(e => e.Code == UserCreator.ConfirmationEmailUnavailableErrorCode))
+      {
+        return Results.Problem(
+          "This server cannot send confirmation emails. Contact an administrator.",
+          statusCode: StatusCodes.Status503ServiceUnavailable);
+      }
+
       return Results.ValidationProblem(
         result.IdentityResult.Errors
           .GroupBy(e => string.IsNullOrWhiteSpace(e.Code) ? nameof(IdentityError) : e.Code)

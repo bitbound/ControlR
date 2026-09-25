@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using ControlR.Web.Client;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Extensions.Dtos.V1;
 using ControlR.Web.Server.Services.LogonTokens;
@@ -13,14 +14,20 @@ namespace ControlR.Web.Server.Api.V1;
 [ApiVersion(ApiVersions.V1)]
 public class LogonTokensController : ControllerBase
 {
+  private const string NoTrustworthyOriginDetail =
+    "This server has no public URL configured, so it cannot build the device access URL. " +
+    "Set AppOptions:PublicBaseUrl to this server's public URL.";
+
   [HttpPost("external")]
   [ProducesResponseType<V1Dtos.LogonTokenResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
   public async Task<ActionResult<V1Dtos.LogonTokenResponseDto>> CreateForExternal(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogonTokenScopeService logonTokenScopeService,
+    [FromServices] IPublicUrlProvider publicUrlProvider,
     [FromBody] V1Dtos.CreateLogonTokenForExternalRequestDto request)
   {
     var device = await appDb.Devices.FindAsync(request.DeviceId);
@@ -58,6 +65,16 @@ public class LogonTokensController : ControllerBase
         title: V1ProblemTitles.InvalidRequest);
     }
 
+    // The access URL is opened by someone else's browser, so it comes only from the configured
+    // public origin. Refuse before minting the token rather than returning one that cannot be used.
+    if (!publicUrlProvider.HasTrustworthyOrigin)
+    {
+      return Problem(
+        detail: NoTrustworthyOriginDetail,
+        statusCode: StatusCodes.Status503ServiceUnavailable,
+        title: V1ProblemTitles.ServiceUnavailable);
+    }
+
     var result = await logonTokenScopeService.CreateTokenWithScopes(
       request.ToCreationRequest(),
       creator,
@@ -68,17 +85,19 @@ public class LogonTokensController : ControllerBase
       return result.ToHttpResult().ToActionResult();
     }
 
-    return Ok(BuildResponse(result.Value));
+    return Ok(BuildResponse(result.Value, publicUrlProvider));
   }
 
   [HttpPost("user")]
   [ProducesResponseType<V1Dtos.LogonTokenResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError, "application/problem+json")]
   public async Task<ActionResult<V1Dtos.LogonTokenResponseDto>> CreateForUser(
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogonTokenScopeService logonTokenScopeService,
+    [FromServices] IPublicUrlProvider publicUrlProvider,
     [FromBody] V1Dtos.CreateLogonTokenForUserRequestDto request)
   {
     var device = await appDb.Devices.FindAsync(request.DeviceId);
@@ -116,6 +135,14 @@ public class LogonTokensController : ControllerBase
         title: V1ProblemTitles.InvalidRequest);
     }
 
+    if (!publicUrlProvider.HasTrustworthyOrigin)
+    {
+      return Problem(
+        detail: NoTrustworthyOriginDetail,
+        statusCode: StatusCodes.Status503ServiceUnavailable,
+        title: V1ProblemTitles.ServiceUnavailable);
+    }
+
     var result = await logonTokenScopeService.CreateTokenWithScopes(
       request.ToCreationRequest(),
       creator,
@@ -126,17 +153,24 @@ public class LogonTokensController : ControllerBase
       return result.ToHttpResult().ToActionResult();
     }
 
-    return Ok(BuildResponse(result.Value));
+    return Ok(BuildResponse(result.Value, publicUrlProvider));
   }
 
-  private V1Dtos.LogonTokenResponseDto BuildResponse(LogonTokenResult logonToken)
+  private static V1Dtos.LogonTokenResponseDto BuildResponse(
+    LogonTokenResult logonToken,
+    IPublicUrlProvider publicUrlProvider)
   {
-    var deviceAccessUrl = new Uri(
-      Request.ToOrigin(),
-      $"/device-access?deviceId={logonToken.DeviceId}&logonToken={logonToken.Token}");
+    // HasTrustworthyOrigin was checked before the token was minted, so a null here is a bug.
+    var url = publicUrlProvider.TryGetAbsoluteUrl(
+      ClientRoutes.DeviceAccess,
+      new Dictionary<string, string?>
+      {
+        ["deviceId"] = $"{logonToken.DeviceId}",
+        ["logonToken"] = logonToken.Token
+      }) ?? throw new InvalidOperationException(NoTrustworthyOriginDetail);
 
     return new V1Dtos.LogonTokenResponseDto(
-      DeviceAccessUrl: deviceAccessUrl,
+      DeviceAccessUrl: new Uri(url),
       ExpiresAt: logonToken.ExpiresAt,
       Token: logonToken.Token);
   }

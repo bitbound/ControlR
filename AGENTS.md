@@ -145,6 +145,15 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 - Constructor parameter order: put concrete classes/implementations before interfaces.
 
+## Outbound URLs (Public Origin)
+
+Any absolute URL this server hands to someone (emailed links, `DeviceAccessUrl`, `InviteUrl`) is built through `IPublicUrlProvider`, which reads only `AppOptions:PublicBaseUrl`. Never derive an origin from the request. `Request.Scheme`/`Request.Host` are caller-controlled, so a forged `Host` or `X-Forwarded-Host` aims a genuine token-bearing link at an attacker's host.
+
+- Build with `IPublicUrlProvider.TryGetAbsoluteUrl(path[, query])`. It returns `null` when no valid `PublicBaseUrl` is set.
+- Fail upstream, not in the DTO. When an operation's whole purpose is to produce such a URL, check `HasTrustworthyOrigin` first and refuse (503 for APIs, a returned error for services) before creating any state. Do not make the URL field nullable and push the problem onto every consumer.
+- The `Request.ToOrigin()` extension is deleted on purpose. `RequestOriginGuardrailTests` fails the build if request-origin URL building reappears outside `PublicUrlProvider` and the allow-listed `EmailSender` logo check.
+- Relative URLs and same-caller redirects are fine from the request. This rule is about absolute URLs that leave the server.
+
 ## Web UI
 
 - Component-scoped JS/CSS: `MyComponent.razor.js` and `MyComponent.razor.css` alongside `MyComponent.razor`.

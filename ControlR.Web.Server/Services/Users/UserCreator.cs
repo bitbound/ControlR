@@ -214,13 +214,12 @@ public interface IUserCreator
       var needsConfirmationEmail =
         isNewTenant && !isServerAdmin && !_appOptions.CurrentValue.DisableEmailSending;
 
-      if (needsConfirmationEmail && !_publicUrlProvider.HasTrustworthyOrigin)
-      {
-        _logger.LogError(
-          "Cannot send a confirmation email for {Email}. This server has no trustworthy origin to " +
-          "build the link from, so set AppOptions:PublicBaseUrl.",
-          emailAddress);
+      var confirmationUrl = needsConfirmationEmail
+        ? _publicUrlProvider.TryGetAbsoluteUrl("Account/ConfirmEmail")
+        : null;
 
+      if (needsConfirmationEmail && confirmationUrl is null)
+      {
         return new CreateUserResult(
           false,
           IdentityResult.Failed(new IdentityError
@@ -322,18 +321,14 @@ public interface IUserCreator
       {
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
-        var callbackUrl = _publicUrlProvider.TryGetAbsoluteUrl(
-          "Account/ConfirmEmail",
+        var callbackUrl = QueryHelpers.AddQueryString(
+          confirmationUrl ?? throw new InvalidOperationException("Confirmation URL was not resolved."),
           new Dictionary<string, string?>
           {
             ["userId"] = userId,
             ["code"] = code,
             ["returnUrl"] = returnUrl
           });
-
-        // HasTrustworthyOrigin was verified before the account was created, so a null here means
-        // the origin became untrustworthy mid-request.
-        ArgumentNullException.ThrowIfNull(callbackUrl);
 
         await _emailSender.SendConfirmationLinkAsync(
           user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));

@@ -1,6 +1,9 @@
 ## Breaking Changes
 
-- ⚠️ You will need to log out and back in if you have "Remember Me" enabled. ⚠️
+- ⚠️ `AppOptions:PublicBaseUrl` is now required. ⚠️
+  - Password reset, email confirmation, device access links, and tenant invites now build their URL from this setting instead of from the incoming request, and are refused until it is set.
+  - Set `ControlR_AppOptions__PublicBaseUrl` to the server's public URL.
+- You will need to log out and back in if you have "Remember Me" enabled.
   - A pre-existing auth cookie will lack the new permission claims.
 - Failures from `/api/v1/*` endpoints now answer with an RFC 9457 `application/problem+json` body.
 - Some of the routes and DTOs used in the `/api/v1/*` endpoints have been changed.
@@ -45,7 +48,8 @@
 - Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`.
 - Interactive sign-in in `ControlR.ApiClient` now clears a personal access token or service account key if one was already configured on the session.
 - The dashboard's file operations no longer report success when the agent reports a failure.
-- Emailed account links no longer take their address from the incoming request, which let a forged `X-Forwarded-Host` header aim a genuine password-reset token at an attacker's site. Set `AppOptions:PublicBaseUrl` to the server's public URL, or password reset and email confirmation are refused until you do. Ref: https://github.com/bitbound/ControlR/issues/175
+- Emailed account links no longer take their address from the incoming request, which let a forged `X-Forwarded-Host` header aim a genuine password-reset token at an attacker's site. Ref: https://github.com/bitbound/ControlR/issues/175
+  - The same rule now covers every absolute URL the server hands out, including device access links and tenant invites.
 
 ## Removals
 

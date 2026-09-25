@@ -1,3 +1,4 @@
+using ControlR.Web.Client;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Extensions.Dtos.Internal;
 using ControlR.Web.Server.Services.LogonTokens;
@@ -21,6 +22,7 @@ public class LogonTokensController : ControllerBase
     [FromServices] AppDb appDb,
     [FromServices] IAuthorizationService authorizationService,
     [FromServices] ILogonTokenScopeService logonTokenScopeService,
+    [FromServices] IPublicUrlProvider publicUrlProvider,
     [FromBody] InternalDtos.LogonTokenRequestDto request)
   {
     if (!User.TryGetTenantId(out var tenantId))
@@ -51,6 +53,16 @@ public class LogonTokensController : ControllerBase
       return BadRequest("User principal not found.");
     }
 
+    // The access URL is opened by someone else's browser, so it comes only from the configured
+    // public origin. Refuse before minting the token rather than returning one that cannot be used.
+    if (!publicUrlProvider.HasTrustworthyOrigin)
+    {
+      return StatusCode(
+        StatusCodes.Status503ServiceUnavailable,
+        "This server has no public URL configured, so it cannot build the device access URL. " +
+        "Set AppOptions:PublicBaseUrl to this server's public URL.");
+    }
+
     var result = await logonTokenScopeService.CreateTokenWithScopes(
       request.ToCreationRequest(tenantId, userId), creator, HttpContext.RequestAborted);
 
@@ -59,12 +71,17 @@ public class LogonTokensController : ControllerBase
       return result.ToHttpResult().ToActionResult();
     }
 
-    var deviceAccessUrl = new Uri(
-      Request.ToOrigin(),
-      $"/device-access?deviceId={request.DeviceId}&logonToken={result.Value.Token}");
+    // HasTrustworthyOrigin was checked before the token was minted, so a null here is a bug.
+    var url = publicUrlProvider.TryGetAbsoluteUrl(
+      ClientRoutes.DeviceAccess,
+      new Dictionary<string, string?>
+      {
+        ["deviceId"] = $"{request.DeviceId}",
+        ["logonToken"] = result.Value.Token
+      }) ?? throw new InvalidOperationException("No trustworthy origin for the device access URL.");
 
     var response = new InternalDtos.LogonTokenResponseDto(
-      DeviceAccessUrl: deviceAccessUrl,
+      DeviceAccessUrl: new Uri(url),
       ExpiresAt: result.Value.ExpiresAt,
       Token: result.Value.Token);
 

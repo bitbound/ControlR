@@ -221,7 +221,11 @@ public class EmailSender(
       return false;
     }
 
-    var imageUrl = new Uri($"{baseUrl}/images/company-logo.png");
+    if (!Uri.TryCreate($"{baseUrl}/images/company-logo.png", UriKind.Absolute, out var imageUrl))
+    {
+      logoHtml = null;
+      return false;
+    }
 
     logoHtml = $"""
       <img 

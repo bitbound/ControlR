@@ -39,16 +39,17 @@ public interface IPasswordManager
   /// <summary>
   /// Initiates a forgot-password flow for an end user who cannot sign in and needs to reset their password via email.
   /// This is the start of the self-service flow reached from the login screen, not the administrator reset flow.
-  /// </summary> <param name="request">The email address payload.</param>
-  /// <param name="resetPasswordUrl">The URL the user can click to reach the password reset page. The reset code is appended as a query parameter. Callers must supply an origin they trust; see <see cref="IPublicUrlProvider"/>.</param>
-  /// <returns>A result indicating whether the forgot-password email was sent. Always returns success to avoid leaking user existence information, but may fail if email sending is enabled and an error occurs during sending.</returns>
-  Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request, string resetPasswordUrl);
+  /// </summary>
+  /// <param name="request">The email address payload.</param>
+  /// <returns>The result indicating whether the forgot-password email was sent. Always returns success to avoid leaking user existence information, but may fail if email sending is enabled and an error occurs during sending.</returns>
+  Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request);
 }
 
 public class PasswordManager(
   AppDb appDb,
   UserManager<AppUser> userManager,
   IEmailSender<AppUser> emailSender,
+  IPublicUrlProvider publicUrlProvider,
   IOptions<IdentityOptions> identityOptions,
   IOptionsMonitor<AppOptions> appOptions) : IPasswordManager
 {
@@ -56,6 +57,7 @@ public class PasswordManager(
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly IEmailSender<AppUser> _emailSender = emailSender;
   private readonly IOptions<IdentityOptions> _identityOptions = identityOptions;
+  private readonly IPublicUrlProvider _publicUrlProvider = publicUrlProvider;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   public async Task<Result<InternalDtos.AdminResetPasswordResponseDto>> AdminResetPassword(Guid tenantId, Guid targetUserId)
@@ -137,7 +139,7 @@ public class PasswordManager(
     return Result.Ok();
   }
 
-  public async Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request, string resetPasswordUrl)
+  public async Task<Result> ForgotPassword(InternalDtos.ForgotPasswordRequestDto request)
   {
     if (_appOptions.CurrentValue.DisableEmailSending)
     {
@@ -148,6 +150,15 @@ public class PasswordManager(
     if (user is null || !await _userManager.IsEmailConfirmedAsync(user))
     {
       return Result.Ok();
+    }
+
+    // The link is opened by the user's browser, so its origin comes only from the configured
+    // PublicBaseUrl. Without one there is no safe link to send, and the page already refuses
+    // before reaching here.
+    var resetPasswordUrl = _publicUrlProvider.TryGetAbsoluteUrl("Account/ResetPassword");
+    if (resetPasswordUrl is null)
+    {
+      return Result.Fail("This server has no trustworthy origin for password reset links.");
     }
 
     var code = await _userManager.GeneratePasswordResetTokenAsync(user);

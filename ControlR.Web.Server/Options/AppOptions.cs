@@ -237,8 +237,8 @@ public class AppOptions
   /// </summary>
   /// <remarks>
   /// Used to build links that leave this server. Include the scheme and, if non-standard, the port.
-  /// A trailing slash is optional. Do not include a path, query, or fragment. Without this value, the
-  /// host of the arriving request is used only when <c>AllowedHosts</c> names it outright.
+  /// A trailing slash is optional. Do not include a path, query, or fragment. This is the only origin
+  /// used for emailed links. Without it, those links cannot be built.
   /// </remarks>
   public string? PublicBaseUrl { get; init; }
 

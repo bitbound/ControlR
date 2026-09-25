@@ -79,10 +79,9 @@ services:
       ControlR_AppOptions__PublicBaseUrl: *publicBaseUrl
 
       # The hostnames this server answers to.  Semicolon-separated, without port numbers.  It rejects a
-      # forged host with a 400 before the request reaches the application, and naming this server's
-      # hostname outright is what lets an emailed link be built from the request instead of from
-      # ControlR_AppOptions__PublicBaseUrl.  "*" accepts any host, so links stay unbuildable while it is
-      # set.  A wildcard like "*.t.local" answers to any leftmost label, which is not your origin either.
+      # forged host with a 400 before the request reaches the application.  Emailed links are built only
+      # from ControlR_AppOptions__PublicBaseUrl, never from the arriving host, so "*" here does not
+      # weaken them.
       ControlR_AllowedHosts: "*"
 
       # DEVELOPMENT AND LOAD TESTING ONLY.  Never enable this on a server that users can reach.

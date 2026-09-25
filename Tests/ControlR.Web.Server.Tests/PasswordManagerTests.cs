@@ -22,8 +22,7 @@ public class PasswordManagerTests(ITestOutputHelper testOutput)
     var passwordManager = services.GetRequiredService<IPasswordManager>();
 
     var result = await passwordManager.ForgotPassword(
-      new InternalDtos.ForgotPasswordRequestDto("missing@example.com"),
-      "https://controlr.test/Account/ResetPassword");
+      new InternalDtos.ForgotPasswordRequestDto("missing@example.com"));
 
     Assert.True(result.IsSuccess);
   }

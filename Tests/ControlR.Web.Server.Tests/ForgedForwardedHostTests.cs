@@ -33,6 +33,31 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
   private const string ForgedHost = "evil.example.com";
 
   [Fact]
+  public async Task EmailedResetHasNoLink_WhenAllowedHostsIsPinnedButNoPublicBaseUrlIsSet()
+  {
+    var sender = new CapturingEmailSender();
+    var settings = NewSettings();
+    settings["AllowedHosts"] = "localhost";
+
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      testOutput, settings: settings, configureServices: services => services.UseSender(sender));
+
+    var tenant = await testServer.Services.CreateTestTenant();
+    await testServer.Services.CreateTestUser(tenant.Id, "pinned@t.local");
+
+    var page = await (await testServer.GetHttpClient()).GetStringAsync("/Account/ForgotPassword", TestContext.Current.CancellationToken);
+
+    // A pinned AllowedHosts entry no longer supplies an origin for emailed links. Only PublicBaseUrl does.
+    Assert.Contains(
+      "Password reset emails cannot be sent from this server",
+      page,
+      StringComparison.Ordinal);
+    Assert.True(
+      string.IsNullOrEmpty(sender.Body),
+      $"Expected no email at all, got: {sender.Body}");
+  }
+
+  [Fact]
   public async Task EmailedResetHasNoLink_WhenNoTrustworthyOriginExists()
   {
     var sender = new CapturingEmailSender();
@@ -78,27 +103,6 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task EmailedResetLink_UsesRealHost_WhenForwardedHostIsForgedAndAllowedHostsIsPinned()
-  {
-    var sender = new CapturingEmailSender();
-    var settings = NewSettings();
-    settings["AllowedHosts"] = "localhost";
-
-    using var testServer = await TestWebServerBuilder.CreateTestServer(
-      testOutput, settings: settings, configureServices: services => services.UseSender(sender));
-
-    var response = await PostForgotPasswordAsync(testServer, "pinned@t.local");
-
-    AssertNoForgedHost(sender.Body);
-    AssertNoForgedHost(response.Headers.Location?.ToString());
-
-    // The host that actually arrived is still usable, so a pinned deployment keeps clickable emails.
-    Assert.True(
-      sender.ResetLink.Contains("localhost", StringComparison.OrdinalIgnoreCase),
-      $"Expected the real host in the emailed link, got: {sender.ResetLink}");
-  }
-
-  [Fact]
   public async Task PostSubmitRedirect_DoesNotPointAtForgedForwardedHost()
   {
     // Needs a trustworthy origin, or the form is not rendered at all and there is no submit to follow.
@@ -139,6 +143,8 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
     // Emails have to actually reach the sender for a captured link to exist.
     ["AppOptions:DisableEmailSending"] = "false",
     ["AppOptions:EnableNetworkTrust"] = "true",
+    // Cleared so the no-origin tests really have no origin. Tests that need one set it explicitly.
+    ["AppOptions:PublicBaseUrl"] = "",
   };
 
   /// <summary>

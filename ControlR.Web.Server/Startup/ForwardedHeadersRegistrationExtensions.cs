@@ -11,8 +11,7 @@ public static class ForwardedHeadersRegistrationExtensions
   /// </summary>
   /// <remarks>
   /// Trusting <c>X-Forwarded-Host</c> can redirect password-reset links to an attacker-controlled origin.
-  /// If a proxy does not rewrite <c>Host</c>, pin <c>AllowedHosts</c> and configure
-  /// <c>AppOptions:PublicBaseUrl</c> for emailed links.
+  /// Emailed links are built only from <c>AppOptions:PublicBaseUrl</c>, never from the request host.
   /// </remarks>
   private const ForwardedHeaders TrustedForwardedHeaders =
     ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;

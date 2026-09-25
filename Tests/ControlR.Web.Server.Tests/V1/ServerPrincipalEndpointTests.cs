@@ -39,7 +39,12 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task CreateLogonToken_WithExplicitUserAndTenant_ReturnsOk()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      _testOutput,
+      extraConfiguration: new Dictionary<string, string?>
+      {
+        ["AppOptions:PublicBaseUrl"] = "https://controlr.test",
+      });
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
 
@@ -48,19 +53,19 @@ public class ServerPrincipalEndpointTests(ITestOutputHelper testOutput)
     var device = await services.CreateTestDevice(tenant.Id);
     var controller = scope.CreateController<LogonTokensController>();
     controller.ControllerContext.HttpContext.User = await services.CreateServerPrincipal();
-    controller.ControllerContext.HttpContext.Request.Scheme = "https";
-    controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
 
     var result = await controller.CreateForUser(
       services.GetRequiredService<AppDb>(),
       services.GetRequiredService<IAuthorizationService>(),
       services.GetRequiredService<ILogonTokenScopeService>(),
+      services.GetRequiredService<IPublicUrlProvider>(),
       new CreateLogonTokenForUserRequestDto(device.Id, tenant.Id, user.Id, ExpirationMinutes: 15));
 
     Assert.NotNull(result.Result);
     var okResult = Assert.IsType<OkObjectResult>(result.Result);
     var response = Assert.IsType<V1Dtos.LogonTokenResponseDto>(okResult.Value);
     Assert.Contains($"deviceId={device.Id}", response.DeviceAccessUrl.Query, StringComparison.OrdinalIgnoreCase);
+    Assert.StartsWith("https://controlr.test/device-access?", response.DeviceAccessUrl.ToString());
   }
 
   [Fact]

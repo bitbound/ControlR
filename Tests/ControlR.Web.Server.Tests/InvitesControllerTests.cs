@@ -16,16 +16,20 @@ public class InvitesControllerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task GetAll_ReadOnlyUser_DoesNotExposeActivationCode()
   {
-    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      _testOutput,
+      settings: new Dictionary<string, string?>
+      {
+        ["AppOptions:PublicBaseUrl"] = "https://test.example.com",
+      });
     var services = testServer.Services;
 
     var tenant = await services.CreateTestTenant();
     await services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
 
     var invitesProvider = services.GetRequiredService<ITenantInvitesProvider>();
-    var origin = new Uri("https://test.example.com");
     var createResult = await invitesProvider.CreateInvite(
-      "invitee@t.local", tenant.Id, origin, TestContext.Current.CancellationToken);
+      "invitee@t.local", tenant.Id, TestContext.Current.CancellationToken);
     Assert.True(createResult.IsSuccess);
     var activationCode = createResult.Value.InviteUrl.Segments[^1];
 

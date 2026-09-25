@@ -17,7 +17,13 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task AcceptInvite_ClearsAssignmentsAndMemberships_RetainsTokensAndPreferences()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(testOutput, useInMemoryDatabase: false);
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      testOutput,
+      useInMemoryDatabase: false,
+      extraConfiguration: new Dictionary<string, string?>
+      {
+        ["AppOptions:PublicBaseUrl"] = "https://test.example.com",
+      });
 
     AppUser adminUser;
     Guid tenantAId;
@@ -52,8 +58,6 @@ public class InviteAcceptanceTests(ITestOutputHelper testOutput)
     using (var scope = testApp.CreateScope())
     {
       var controller = await scope.CreateControllerWithUser<InvitesController>(adminUser);
-      controller.ControllerContext.HttpContext!.Request.Scheme = "https";
-      controller.ControllerContext.HttpContext.Request.Host = new HostString("test.example.com");
 
       var tenantInvitesProvider = scope.ServiceProvider.GetRequiredService<ITenantInvitesProvider>();
 
