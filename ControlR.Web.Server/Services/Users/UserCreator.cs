@@ -197,7 +197,39 @@ public interface IUserCreator
   {
     try
     {
+      if (_appOptions.CurrentValue.DisableEmailSending && _appOptions.CurrentValue.RequireUserEmailConfirmation)
+      {
+        throw new InvalidOperationException(
+          "Email sending is disabled, but user email confirmation is required. " +
+          "Cannot proceed with user creation.");
+      }
+
       var isNewTenant = tenantId is null;
+      var isFirstUser = !await _userManager.Users.AnyAsync(cancellationToken);
+      var isServerAdmin = !DisableFirstUserSelfRegistration && isFirstUser;
+
+      // A brand-new tenant that isn't started by the first user receives its confirmation link by
+      // email. Everything that email depends on is verified here, before the account exists, so a
+      // missing origin fails without leaving a created user behind.
+      var needsConfirmationEmail =
+        isNewTenant && !isServerAdmin && !_appOptions.CurrentValue.DisableEmailSending;
+
+      if (needsConfirmationEmail && !_publicUrlProvider.HasTrustworthyOrigin)
+      {
+        _logger.LogError(
+          "Cannot send a confirmation email for {Email}. This server has no trustworthy origin to " +
+          "build the link from, so set AppOptions:PublicBaseUrl.",
+          emailAddress);
+
+        return new CreateUserResult(
+          false,
+          IdentityResult.Failed(new IdentityError
+          {
+            Code = ConfirmationEmailUnavailableErrorCode,
+            Description = "This server cannot send confirmation emails. Contact an administrator."
+          }));
+      }
+
       var user = new AppUser();
 
       if (tenantId is not null)
@@ -238,8 +270,6 @@ public interface IUserCreator
 
       _logger.LogInformation("Created new account: {Email}.", emailAddress);
 
-      var isFirstUser = await _userManager.Users.CountAsync(cancellationToken: cancellationToken) == 1;
-      var isServerAdmin = !DisableFirstUserSelfRegistration && isFirstUser;
       if (isServerAdmin)
       {
         _logger.LogInformation(
@@ -288,14 +318,7 @@ public interface IUserCreator
       var userId = await _userManager.GetUserIdAsync(user);
       var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-      if (_appOptions.CurrentValue.DisableEmailSending && _appOptions.CurrentValue.RequireUserEmailConfirmation)
-      {
-        throw new InvalidOperationException(
-          "Email sending is disabled, but user email confirmation is required. " +
-          "Cannot proceed with user creation.");
-      }
-
-      if (isNewTenant && !isServerAdmin && !_appOptions.CurrentValue.DisableEmailSending)
+      if (needsConfirmationEmail)
       {
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
@@ -308,26 +331,9 @@ public interface IUserCreator
             ["returnUrl"] = returnUrl
           });
 
-        if (callbackUrl is null)
-        {
-          // Confirming the address here instead would hand out exactly what the link exists to verify.
-          // Reporting success would leave the caller with an account nobody can activate, so the
-          // failure is returned instead. The user row is left alone: the tenant and permission
-          // assignments seeded above it would orphan if it were deleted here.
-          _logger.LogError(
-            "Cannot send a confirmation email for {Email}. This server has no trustworthy origin to " +
-            "build the link from, so set AppOptions:PublicBaseUrl.",
-            emailAddress);
-
-          return new CreateUserResult(
-            false,
-            IdentityResult.Failed(new IdentityError
-            {
-              Code = ConfirmationEmailUnavailableErrorCode,
-              Description = "This server cannot send confirmation emails. Contact an administrator."
-            }),
-            user);
-        }
+        // HasTrustworthyOrigin was verified before the account was created, so a null here means
+        // the origin became untrustworthy mid-request.
+        ArgumentNullException.ThrowIfNull(callbackUrl);
 
         await _emailSender.SendConfirmationLinkAsync(
           user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));

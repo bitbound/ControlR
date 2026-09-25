@@ -1,5 +1,7 @@
+using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests;
@@ -18,8 +20,8 @@ public class UserCreatorConfirmationEmailTests(ITestOutputHelper testOutput)
   public async Task CreateUser_Fails_WhenNoTrustworthyOriginCanBackTheConfirmationLink()
   {
     // No AppOptions:PublicBaseUrl and AllowedHosts still "*", so there is no origin the server may put
-    // in front of a user. Before this change the account was created and reported back as a success,
-    // leaving every one of UserCreator's six callers believing a usable account existed.
+    // in front of a user. The failure is returned before the account is created, so no unusable user
+    // row is left behind.
     await using var testApp = await TestAppBuilder.CreateTestApp(
       testOutput,
       extraConfiguration: new Dictionary<string, string?>
@@ -40,5 +42,12 @@ public class UserCreatorConfirmationEmailTests(ITestOutputHelper testOutput)
     Assert.Contains(
       result.IdentityResult.Errors,
       error => error.Code == UserCreator.ConfirmationEmailUnavailableErrorCode);
+
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var userExists = await db.Users.AnyAsync(
+      x => x.Email == "orphan@t.local",
+      TestContext.Current.CancellationToken);
+      
+    Assert.False(userExists);
   }
 }
