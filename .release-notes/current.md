@@ -43,6 +43,7 @@
 - Disposing a `ControlR.ApiClient` interactive auth session now moves it to a new terminal `Disposed` state and raises `StateChanged`.
 - Interactive sign-in in `ControlR.ApiClient` now clears a personal access token or service account key if one was already configured on the session.
 - The dashboard's file operations no longer report success when the agent reports a failure.
+- Fixed an issue where the Enter key did not work on Windows when using mobile input with physical input mode enabled.
 
 ## Removals
 
