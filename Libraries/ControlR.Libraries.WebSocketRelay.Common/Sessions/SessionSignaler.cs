@@ -159,7 +159,7 @@ internal class SessionSignaler : IAsyncDisposable
   public bool ValidateToken(string accessToken)
   {
     // Compared in fixed time against a cached digest, so neither the length nor the contents of the
-    // expected token leak through timing.  That said, the a timing attack over the network like this
+    // expected token leak through timing.  That said, a timing attack over the network like this
     // would be impossible.
     return !string.IsNullOrEmpty(accessToken) &&
       CryptographicOperations.FixedTimeEquals(
