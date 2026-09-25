@@ -15,6 +15,7 @@ name: controlr
 x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error}
 x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
 x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
+x-public-base-url: &publicBaseUrl ${ControlR_AppOptions__PublicBaseUrl:?error}
 
 # The public URL where the Aspire Dashboard will be accessible via browser.
 # For example, if your reverse proxy is set up to route https://metrics.example.com
@@ -72,14 +73,11 @@ services:
       # that auto-disables after the first user is created.
       ControlR_AppOptions__EnablePublicRegistration: false
 
-      # The absolute URL this server is reachable at by its users, e.g.
-      # "https://controlr.example.com".  The links this server emails out (password reset, email
-      # confirmation, email change) are built from this value.  Leave it unset and those links fall back
-      # to the host of the arriving request, which is a host the caller picks.  A forged host then
-      # produces a genuine email from this server carrying a valid token that points at an origin the
-      # attacker owns.  Set this on every deployment that sends email.  Until it is set, password reset
-      # and email confirmation are refused, and the server says so at startup and on those pages.
-      ControlR_AppOptions__PublicBaseUrl: ""
+      # The HTTPS URL users use to reach this server, e.g. "https://controlr.example.com".
+      # Password reset and email confirmation links use this value. Set it on every deployment
+      # that sends email. Without it, links use the request host, which callers can forge, and
+      # password reset and email confirmation are disabled.
+      ControlR_AppOptions__PublicBaseUrl: *aspirePublicUrl
 
       # The hostnames this server answers to.  Semicolon-separated, without port numbers.  It rejects a
       # forged host with a 400 before the request reaches the application, and naming this server's
