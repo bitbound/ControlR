@@ -7,24 +7,12 @@ namespace ControlR.Web.Server.Startup;
 public static class ForwardedHeadersRegistrationExtensions
 {
   /// <summary>
-  /// The forwarded headers ControlR consumes. A forwarded host and a forwarded path prefix are
-  /// deliberately excluded.
+  /// Forwarded headers ControlR trusts. Host and path prefix are intentionally excluded.
   /// </summary>
   /// <remarks>
-  /// <para>
-  /// Emailed links are built on this server's authority but inherited their origin from the request, so
-  /// an adopted <c>X-Forwarded-Host</c> let a caller aim a genuine password-reset email carrying a valid
-  /// token at an origin they control. Cloudflare passes a client-supplied <c>X-Forwarded-Host</c> through
-  /// to the origin rather than overwriting it, and <c>ForwardedHeaders.All</c> adopted the value
-  /// verbatim.
-  /// </para>
-  /// <para>
-  /// The raw <c>Host</c> header carries everything ControlR needs. Proxies that rewrite it (Cloudflare,
-  /// Caddy, nginx with <c>proxy_set_header Host $host</c>) already deliver the public hostname. A
-  /// deployment behind a balancer that only ever sets <c>X-Forwarded-Host</c> and leaves <c>Host</c> at
-  /// the upstream address must pin <c>AllowedHosts</c> and set <c>AppOptions:PublicBaseUrl</c>, which is
-  /// what emailed links use in preference to the request.
-  /// </para>
+  /// Trusting <c>X-Forwarded-Host</c> can redirect password-reset links to an attacker-controlled origin.
+  /// If a proxy does not rewrite <c>Host</c>, pin <c>AllowedHosts</c> and configure
+  /// <c>AppOptions:PublicBaseUrl</c> for emailed links.
   /// </remarks>
   private const ForwardedHeaders TrustedForwardedHeaders =
     ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
