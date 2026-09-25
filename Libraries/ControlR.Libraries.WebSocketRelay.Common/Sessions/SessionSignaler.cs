@@ -7,7 +7,7 @@ namespace ControlR.Libraries.WebSocketRelay.Common.Sessions;
 
 internal class SessionSignaler : IAsyncDisposable
 {
-  private readonly string _accessToken;
+  private readonly byte[] _accessTokenHash;
   private readonly TaskCompletionSource _requesterSignaled = new();
   private readonly TaskCompletionSource _requesterWebsocketSet = new();
   private readonly TaskCompletionSource _responderSignaled = new();
@@ -21,7 +21,7 @@ internal class SessionSignaler : IAsyncDisposable
 
   public SessionSignaler(string accessToken)
   {
-    _accessToken = accessToken;
+    _accessTokenHash = SHA256.HashData(Encoding.UTF8.GetBytes(accessToken));
     _signalTasks = [_requesterSignaled.Task, _responderSignaled.Task];
   }
 
@@ -158,12 +158,13 @@ internal class SessionSignaler : IAsyncDisposable
 
   public bool ValidateToken(string accessToken)
   {
-    // Compared in fixed time. The responder half of a relay session is unauthenticated, so for that
-    // half this token is the only thing between a caller and the peer on the other end.
+    // Compared in fixed time against a cached digest, so neither the length nor the contents of the
+    // expected token leak through timing.  That said, the a timing attack over the network like this
+    // would be impossible.
     return !string.IsNullOrEmpty(accessToken) &&
       CryptographicOperations.FixedTimeEquals(
-        Encoding.UTF8.GetBytes(accessToken),
-        Encoding.UTF8.GetBytes(_accessToken));
+        SHA256.HashData(Encoding.UTF8.GetBytes(accessToken)),
+        _accessTokenHash);
   }
 
   public async Task WaitForPartner(CancellationToken cancellationToken)
