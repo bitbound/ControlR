@@ -1037,7 +1037,11 @@ jobs:
         env:
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
-          $PrereleaseValue = $env:PRERELEASE.ToLowerInvariant()
+          $PrereleaseValue = "$env:PRERELEASE".Trim().ToLowerInvariant()
+          if ($PrereleaseValue -notin @('true', 'false')) {
+            Write-Error "prerelease input must be true or false; got '$env:PRERELEASE'."
+            exit 1
+          }
           Set-Content -Path "ControlR.Web.Server/bin/publish/Prerelease.txt" -Value $PrereleaseValue -NoNewline -Encoding ascii
 
       - name: Upload Server

@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       prerelease:
-        description: "Mark as pre-release"
+        description: "Fallback pre-release flag; the build artifact's prerelease metadata takes precedence"
         required: true
         type: boolean
         default: false
@@ -26,7 +26,7 @@ on:
   workflow_call:
     inputs:
       prerelease:
-        description: "Mark as pre-release"
+        description: "Fallback pre-release flag; the build artifact's prerelease metadata takes precedence"
         required: true
         type: boolean
         default: false
@@ -103,26 +103,27 @@ jobs:
         with:
           path: ./server-publish
 
+      - name: Resolve Prerelease Flag
+        id: prerelease
+        uses: ./.github/actions/get-build-prerelease
+        with:
+          path: ./server-publish
+          fallback: ${{ inputs.prerelease }}
+
       # The Server artifact holds one subdirectory per runtime the build produced, so the
-      # archive itself is the record of what to publish.
+      # archive itself is the record of what to publish. The build's prerelease flag
+      # travels in the artifact too, so the release can't be mislabeled.
       - name: Prepare Release Artifacts
         id: payloads
         shell: bash
+        env:
+          PRERELEASE: ${{ steps.prerelease.outputs.prerelease }}
         run: |
           set -euo pipefail
 
           VERSION=
           PRIMARY_RID=
           SUMMARY=
-          PRERELEASE="${{ inputs.prerelease }}"
-          PRERELEASE_FILE="./server-publish/Prerelease.txt"
-          if [ -f "$PRERELEASE_FILE" ]; then
-            PRERELEASE=$(tr -d '\r\n' < "$PRERELEASE_FILE")
-          fi
-          case "$PRERELEASE" in
-            true|false) ;;
-            *) echo "::error::Invalid prerelease metadata: $PRERELEASE"; exit 1 ;;
-          esac
           RELEASE_VERSION=
           for PAIR in linux-x64:linux-amd64 linux-arm64:linux-arm64 win-x64:win-x64; do
             RID="${PAIR%%:*}"

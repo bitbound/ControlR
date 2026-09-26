@@ -89,30 +89,29 @@ jobs:
         with:
           path: ./server-publish
 
+      - name: Resolve Prerelease Flag
+        id: prerelease
+        uses: ./.github/actions/get-build-prerelease
+        with:
+          path: ./server-publish
+          fallback: ${{ inputs.docker_tag == 'dev' }}
+
       # The Server artifact holds one subdirectory per runtime the build produced, so the
-      # archive itself is the record of what to publish. Nothing here re-reads the build's
-      # inputs.
+      # archive itself is the record of what to publish. The build's prerelease flag
+      # travels in the artifact too, so a prerelease build can't be published under a
+      # stable tag.
       - name: Prepare Docker Context
         id: payload
         shell: bash
         env:
           DOCKER_TAG_INPUT: ${{ inputs.docker_tag }}
-          PRERELEASE_FALLBACK: ${{ inputs.docker_tag == 'dev' }}
+          PRERELEASE: ${{ steps.prerelease.outputs.prerelease }}
         run: |
           set -euo pipefail
 
           mkdir -p ./payload
           PLATFORMS=
           VERSION=
-          PRERELEASE="$PRERELEASE_FALLBACK"
-          PRERELEASE_FILE="./server-publish/Prerelease.txt"
-          if [ -f "$PRERELEASE_FILE" ]; then
-            PRERELEASE=$(tr -d '\r\n' < "$PRERELEASE_FILE")
-          fi
-          case "$PRERELEASE" in
-            true|false) ;;
-            *) echo "::error::Invalid prerelease metadata: $PRERELEASE"; exit 1 ;;
-          esac
           for PAIR in amd64:linux-x64 arm64:linux-arm64; do
             ARCH="${PAIR%%:*}"
             RID="${PAIR##*:}"
@@ -130,7 +129,10 @@ jobs:
           DOCKER_TAG="$DOCKER_TAG_INPUT"
           if [ "$PRERELEASE" = "true" ]; then
             IMAGE_VERSION="${VERSION}-dev"
-            DOCKER_TAG=dev
+            if [ "$DOCKER_TAG" != "dev" ]; then
+              echo "::error::This build was flagged prerelease, so it must publish to the 'dev' tag, not '$DOCKER_TAG'. Re-run with docker_tag=dev or rebuild without the prerelease flag."
+              exit 1
+            fi
           fi
 
           {

@@ -75,9 +75,10 @@ When creating a GitHub Release, the following assets are included:
 
 Docker images are published to Docker Hub:
 
-- `bitbound/controlr:preview` - Preview/development version
+- `bitbound/controlr:dev` - Prerelease builds, whose version tag carries a `-dev` suffix
+- `bitbound/controlr:preview` - Preview channel (stable builds)
 - `bitbound/controlr:latest` - Production version
-- `bitbound/controlr:[version]` - Specific version
+- `bitbound/controlr:[version]` - Specific version (`[version]-dev` for prerelease builds)
 - `bitbound/controlr-relay:preview` - Preview relay server
 - `bitbound/controlr-relay:latest` - Production relay server
 - `bitbound/controlr-relay:[version]` - Specific version of relay server
