@@ -62,8 +62,10 @@ output of one of these runs.
 
 ### publish-*.yml - Publishing
 
-Each publishing workflow takes a run ID (empty means "most recent successful build") and
-reads its version and prerelease state from the build metadata.
+Each publishing workflow takes a run ID (empty means "most recent successful build"). The
+Docker, GitHub, ZIP and ACR publishers read their version and prerelease state from the
+build metadata; `publish-nugets.yml` pushes the nupkg files, whose version and `-dev`
+suffix were baked in at pack time by `build-sign-pack-nugets.yml`.
 
 | Workflow             | Publishes                                                       |
 | -------------------- | --------------------------------------------------------------- |
@@ -118,8 +120,10 @@ a `-dev` suffix for prerelease builds, and such builds are also marked as a prer
 Docker images are published to Docker Hub:
 
 - `bitbound/controlr:dev` - Prerelease builds, whose version tag carries a `-dev` suffix
-- `bitbound/controlr:preview` - Preview channel (stable builds)
 - `bitbound/controlr:latest` - Production version
+- `bitbound/controlr:preview` - Manual preview-channel override; only reachable through a
+  `workflow_dispatch` that picks `preview`. The auto-derived channel is `dev` for a
+  prerelease build and `latest` for a stable one.
 - `bitbound/controlr:[version]` - Specific version (`[version]-dev` for prerelease builds)
 - `bitbound/controlr-relay:preview` - Preview relay server
 - `bitbound/controlr-relay:latest` - Production relay server
