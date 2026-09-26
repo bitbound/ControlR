@@ -1652,7 +1652,10 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private bool ConvertBrowserKeyArgToVirtualKey(string key, string code, KeyboardInputMode inputMode, [NotNullWhen(true)] out VIRTUAL_KEY? result)
   {
     var shouldTryCode = inputMode is KeyboardInputMode.Physical or KeyboardInputMode.Auto;
-    var shouldTryKey = inputMode is KeyboardInputMode.Virtual or KeyboardInputMode.Auto;
+    // Physical mode resolves from the code to stay layout-independent, but a soft keyboard supplies
+    // no code, so fall back to the key name whenever there is nothing physical to resolve against.
+    var shouldTryKey = inputMode is KeyboardInputMode.Virtual or KeyboardInputMode.Auto
+      || string.IsNullOrWhiteSpace(code);
 
     if (shouldTryCode && !string.IsNullOrWhiteSpace(code))
     {

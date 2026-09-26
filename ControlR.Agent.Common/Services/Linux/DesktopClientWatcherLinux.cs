@@ -85,7 +85,10 @@ internal class DesktopClientWatcherLinux(
       await CheckLoginScreenDesktopClient(cancellationToken);
 
       // Then check for logged-in users
-      var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
+      var loggedInUsers = (await _loggedInUserProvider.GetLoggedInUsers())
+          .Where(user => user.IsActive)
+          .Select(user => user.Uid)
+          .ToList();
       if (loggedInUsers.Count == 0)
       {
         _logger.LogDebugDeduped( "No logged-in users found.");

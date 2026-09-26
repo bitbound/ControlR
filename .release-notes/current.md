@@ -50,6 +50,7 @@
 - The dashboard's file operations no longer report success when the agent reports a failure.
 - Emailed account links no longer take their address from the incoming request, which let a forged `X-Forwarded-Host` header aim a genuine password-reset token at an attacker's site. Ref: https://github.com/bitbound/ControlR/issues/175
   - The same rule now covers every absolute URL the server hands out, including device access links and tenant invites.
+- Fixed an issue where the Enter key did not work on Windows when using mobile input with physical input mode enabled.
 
 ## Removals
 
