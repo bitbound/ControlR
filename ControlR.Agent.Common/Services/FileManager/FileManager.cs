@@ -469,15 +469,36 @@ internal class FileManager(
       return false;
     }
 
-    foreach (var root in GetLogRootDirectories())
+    var roots = GetLogRootDirectories().ToList();
+    if (!roots.Any(root => IsWithinDirectory(fullPath, root)))
     {
-      if (IsWithinDirectory(fullPath, root))
+      return false;
+    }
+
+    // A path can sit inside a log root and still stream a file outside it when
+    // the local user owns that root and planted a symlink (or pointed an
+    // intermediate directory at one). The agent typically runs elevated on
+    // Linux and macOS, so following such a link exposes files the user cannot
+    // read directly. Require the fully-resolved target to also be within roots;
+    // an unresolved path is left to the caller's existence check.
+    try
+    {
+      var finalTarget = File.ResolveLinkTarget(fullPath, returnFinalTarget: true);
+      if (finalTarget is null)
       {
         return true;
       }
-    }
 
-    return false;
+      return roots.Any(root => IsWithinDirectory(Path.GetFullPath(finalTarget.FullName), root));
+    }
+    catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+    {
+      return true;
+    }
+    catch
+    {
+      return false;
+    }
   }
 
   public async Task<FileReferenceResult> ResolveTargetFilePath(string filePath)
