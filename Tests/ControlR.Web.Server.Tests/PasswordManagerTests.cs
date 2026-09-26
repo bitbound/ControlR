@@ -13,6 +13,35 @@ public class PasswordManagerTests(ITestOutputHelper testOutput)
   private readonly ITestOutputHelper _testOutputHelper = testOutput;
 
   [Fact]
+  public async Task ForgotPassword_FailsForKnownUser_ButNotForUnknownUser_WhenNoTrustworthyOrigin()
+  {
+    // Email sending is on but there is no origin to build the reset link from, so the send has to fail
+    // rather than mail a link with a request-derived origin. The unknown address still reports success,
+    // which is what keeps the failure from revealing whether an address exists.
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      _testOutputHelper,
+      extraConfiguration: new Dictionary<string, string?>
+      {
+        ["AppOptions:DisableEmailSending"] = "false",
+        ["AppOptions:PublicBaseUrl"] = "",
+      });
+
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var passwordManager = services.GetRequiredService<IPasswordManager>();
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id, "no-origin@t.local");
+
+    var knownUserResult = await passwordManager.ForgotPassword(
+      new InternalDtos.ForgotPasswordRequestDto(user.Email!));
+    var unknownUserResult = await passwordManager.ForgotPassword(
+      new InternalDtos.ForgotPasswordRequestDto("missing@t.local"));
+
+    Assert.False(knownUserResult.IsSuccess);
+    Assert.True(unknownUserResult.IsSuccess);
+  }
+
+  [Fact]
   public async Task ForgotPassword_ReturnsOk_WhenEmailSendingIsDisabled()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);

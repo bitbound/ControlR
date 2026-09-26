@@ -15,7 +15,8 @@ name: controlr
 x-postgres-user: &pgUser ${ControlR_POSTGRES_USER:?error}
 x-postgres-password: &pgPassword ${ControlR_POSTGRES_PASSWORD:?error}
 x-aspire-browser-token: &aspireToken ${ControlR_ASPIRE_BROWSER_TOKEN:?error}
-x-public-base-url: &publicBaseUrl ${ControlR_AppOptions__PublicBaseUrl:?error}
+# Optional.  When unset, the actions that need an outbound link refuse instead of failing to start.
+x-public-base-url: &publicBaseUrl ${ControlR_AppOptions__PublicBaseUrl:-}
 
 # The public URL where the Aspire Dashboard will be accessible via browser.
 # For example, if your reverse proxy is set up to route https://metrics.example.com
@@ -74,8 +75,9 @@ services:
       ControlR_AppOptions__EnablePublicRegistration: false
 
       # The public URL of this server, e.g. "https://controlr.example.com".  Used to build links
-      # that leave this server.  Include the scheme and, if non-standard, the port.  No path,
-      # query, or fragment.
+      # that leave this server, such as emailed password reset and confirmation links, device access
+      # URLs, and tenant invites.  Include the scheme and, if non-standard, the port.  No path,
+      # query, or fragment.  While it is unset, the actions that need such a link refuse.
       ControlR_AppOptions__PublicBaseUrl: *publicBaseUrl
 
       # The hostnames this server answers to.  Semicolon-separated, without port numbers.  It rejects a

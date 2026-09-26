@@ -83,12 +83,16 @@ public sealed class PublicUrlProvider(
   public string? TryGetBaseUrl()
   {
     var configuredBaseUrl = _appOptions.CurrentValue.PublicBaseUrl;
-    if (string.IsNullOrWhiteSpace(configuredBaseUrl))
+    var normalized = PublicBaseUrlValidator.TryNormalize(configuredBaseUrl, out var rejectionReason);
+
+    // An unset value is the documented fail-closed state, not a misconfiguration to report. A value
+    // that is present but unusable is a typo an operator needs to hear about.
+    if (normalized is null && !string.IsNullOrWhiteSpace(configuredBaseUrl))
     {
-      return null;
+      EnsureReportedBaseUrlRejected(configuredBaseUrl, rejectionReason);
     }
 
-    return TryNormalizeConfiguredBaseUrl(configuredBaseUrl);
+    return normalized;
   }
 
   private static string Combine(string baseUrl, string relativePath)
@@ -96,19 +100,46 @@ public sealed class PublicUrlProvider(
     return $"{baseUrl}/{relativePath.TrimStart('/')}";
   }
 
-  private void EnsureReportedBaseUrlRejected(string configuredBaseUrl)
+  private void EnsureReportedBaseUrlRejected(string configuredBaseUrl, string? rejectionReason)
   {
     if (Interlocked.Exchange(ref _configuredBaseUrlRejectedReported, 1) == 0)
     {
       _logger.LogError(
-        "AppOptions:PublicBaseUrl '{PublicBaseUrl}' is not an absolute http(s) origin. Outbound links are " +
-        "being omitted until it is corrected.",
-        configuredBaseUrl);
+        "AppOptions:PublicBaseUrl '{PublicBaseUrl}' cannot be used as the origin for outbound links " +
+        "because {RejectionReason}. Outbound links are being omitted until it is corrected.",
+        configuredBaseUrl,
+        rejectionReason);
     }
   }
+}
 
-  private string? TryNormalizeConfiguredBaseUrl(string configuredBaseUrl)
+/// <summary>
+/// Validates the configured <see cref="AppOptions.PublicBaseUrl"/> value.
+/// </summary>
+/// <remarks>
+/// Startup shares this rule so a misconfigured value is reported once at boot, with the same definition
+/// of a usable origin that <see cref="PublicUrlProvider"/> applies to every link.
+/// </remarks>
+internal static class PublicBaseUrlValidator
+{
+  /// <summary>
+  /// Normalizes a configured base URL to an origin with no trailing slash.
+  /// </summary>
+  /// <param name="configuredBaseUrl">The configured value.</param>
+  /// <param name="rejectionReason">
+  /// Why the value cannot serve as an origin when it cannot. <see langword="null"/> when it can.
+  /// </param>
+  /// <returns>The normalized origin, or <see langword="null"/> when the value is unusable.</returns>
+  internal static string? TryNormalize(string? configuredBaseUrl, out string? rejectionReason)
   {
+    rejectionReason = null;
+
+    if (string.IsNullOrWhiteSpace(configuredBaseUrl))
+    {
+      rejectionReason = "it is not set";
+      return null;
+    }
+
     var trimmed = configuredBaseUrl.Trim().TrimEnd('/');
 
     // This app is served from the site root, so a configured path would produce broken links.
@@ -120,7 +151,7 @@ public sealed class PublicUrlProvider(
         !string.IsNullOrEmpty(uri.Fragment) ||
         !string.IsNullOrEmpty(uri.UserInfo))
     {
-      EnsureReportedBaseUrlRejected(configuredBaseUrl);
+      rejectionReason = "it is not an absolute http(s) origin free of a path, query, fragment, or user info";
       return null;
     }
 

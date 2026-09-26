@@ -3,6 +3,7 @@ using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Extensions.Dtos.Internal;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace ControlR.Web.Server.Api.Internal;
 
@@ -54,8 +55,10 @@ public class LogonTokensController : ControllerBase
     }
 
     // The access URL is opened by someone else's browser, so it comes only from the configured
-    // public origin. Refuse before minting the token rather than returning one that cannot be used.
-    if (!publicUrlProvider.HasTrustworthyOrigin)
+    // public origin. Resolve it before minting the token, so a server without one refuses instead of
+    // minting a token whose URL cannot be built.
+    var deviceAccessBaseUrl = publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.DeviceAccess);
+    if (deviceAccessBaseUrl is null)
     {
       return StatusCode(
         StatusCodes.Status503ServiceUnavailable,
@@ -71,14 +74,13 @@ public class LogonTokensController : ControllerBase
       return result.ToHttpResult().ToActionResult();
     }
 
-    // HasTrustworthyOrigin was checked before the token was minted, so a null here is a bug.
-    var url = publicUrlProvider.TryGetAbsoluteUrl(
-      ClientRoutes.DeviceAccess,
+    var url = QueryHelpers.AddQueryString(
+      deviceAccessBaseUrl,
       new Dictionary<string, string?>
       {
         ["deviceId"] = $"{request.DeviceId}",
         ["logonToken"] = result.Value.Token
-      }) ?? throw new InvalidOperationException("No trustworthy origin for the device access URL.");
+      });
 
     var response = new InternalDtos.LogonTokenResponseDto(
       DeviceAccessUrl: new Uri(url),

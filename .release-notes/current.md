@@ -1,8 +1,8 @@
 ## Breaking Changes
 
-- ⚠️ `AppOptions:PublicBaseUrl` is now required. ⚠️
-  - Password reset, email confirmation, device access links, and tenant invites now build their URL from this setting instead of from the incoming request, and are refused until it is set.
-  - Set `ControlR_AppOptions__PublicBaseUrl` to the server's public URL.
+- The new `AppOptions:PublicBaseUrl` should be set to this server's public URL (`ControlR_AppOptions__PublicBaseUrl` for container deployments).
+  - Links this server sends out (emailed password reset and confirmation, device access, and tenant invites) are built from it instead of the incoming request.
+  - The actions that produce those links are refused until it is set.
 - You will need to log out and back in if you have "Remember Me" enabled.
   - A pre-existing auth cookie will lack the new permission claims.
 - Failures from `/api/v1/*` endpoints now answer with an RFC 9457 `application/problem+json` body.

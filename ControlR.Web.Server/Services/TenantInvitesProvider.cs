@@ -167,9 +167,10 @@ public class TenantInvitesProvider(
     CancellationToken cancellationToken = default)
   {
     // The invite link is opened by the invitee's browser, so its origin comes only from the
-    // configured PublicBaseUrl. Refuse before creating the account, so a server that cannot
+    // configured PublicBaseUrl. Resolve it before creating the account, so a server that cannot
     // deliver the link does not leave an unusable user behind.
-    if (!_publicUrlProvider.HasTrustworthyOrigin)
+    var inviteBaseUrl = _publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.InviteConfirmationBase);
+    if (inviteBaseUrl is null)
     {
       return HttpResult.Fail<InternalDtos.InviteResponseDto>(
         HttpResultErrorCode.ServiceUnavailable,
@@ -221,7 +222,7 @@ public class TenantInvitesProvider(
     await appDb.TenantInvites.AddAsync(invite, cancellationToken);
     await appDb.SaveChangesAsync(cancellationToken);
 
-    var inviteUrl = BuildInviteUrl(invite.ActivationCode);
+    var inviteUrl = BuildInviteUrl(inviteBaseUrl, invite.ActivationCode);
     var retDto = new InternalDtos.InviteResponseDto(invite.Id, invite.CreatedAt, normalizedEmail, inviteUrl);
     return HttpResult.Ok(retDto);
   }
@@ -257,7 +258,9 @@ public class TenantInvitesProvider(
     Guid tenantId,
     bool includeActivationCode)
   {
-    if (!_publicUrlProvider.HasTrustworthyOrigin)
+    // Resolved once before the query, so every invite in the response shares the same origin.
+    var inviteBaseUrl = _publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.InviteConfirmationBase);
+    if (inviteBaseUrl is null)
     {
       return HttpResult.Fail<InternalDtos.InviteResponseDto[]>(
         HttpResultErrorCode.ServiceUnavailable,
@@ -276,24 +279,21 @@ public class TenantInvitesProvider(
         x.Id,
         x.CreatedAt,
         x.InviteeEmail,
-        BuildInviteUrl(includeActivationCode ? x.ActivationCode : null)))
+        BuildInviteUrl(inviteBaseUrl, includeActivationCode ? x.ActivationCode : null)))
       .ToArray();
 
     return HttpResult.Ok(dtos);
   }
 
   /// <summary>
-  /// Builds the invite link from the configured public origin. Callers check
-  /// <see cref="IPublicUrlProvider.HasTrustworthyOrigin"/> first, so a null here is a bug.
+  /// Builds the invite link from an origin the caller already resolved, so the origin is read once per
+  /// operation and the link cannot fail after an account has been created.
   /// </summary>
-  private Uri BuildInviteUrl(string? activationCode)
+  private static Uri BuildInviteUrl(string inviteBaseUrl, string? activationCode)
   {
-    var path = string.IsNullOrEmpty(activationCode)
-      ? ClientRoutes.InviteConfirmationBase
-      : $"{ClientRoutes.InviteConfirmationBase}/{activationCode}";
-
-    var url = _publicUrlProvider.TryGetAbsoluteUrl(path)
-      ?? throw new InvalidOperationException(NoTrustworthyOriginMessage);
+    var url = string.IsNullOrEmpty(activationCode)
+      ? inviteBaseUrl
+      : $"{inviteBaseUrl}/{activationCode}";
 
     return new Uri(url);
   }

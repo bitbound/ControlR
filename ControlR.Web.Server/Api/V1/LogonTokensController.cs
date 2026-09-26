@@ -4,6 +4,7 @@ using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Extensions.Dtos.V1;
 using ControlR.Web.Server.Services.LogonTokens;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using ControlR.Web.Server.Constants;
 
 namespace ControlR.Web.Server.Api.V1;
@@ -66,8 +67,10 @@ public class LogonTokensController : ControllerBase
     }
 
     // The access URL is opened by someone else's browser, so it comes only from the configured
-    // public origin. Refuse before minting the token rather than returning one that cannot be used.
-    if (!publicUrlProvider.HasTrustworthyOrigin)
+    // public origin. Resolve it before minting the token, so a server without one refuses instead of
+    // minting a token whose URL cannot be built.
+    var deviceAccessBaseUrl = publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.DeviceAccess);
+    if (deviceAccessBaseUrl is null)
     {
       return Problem(
         detail: NoTrustworthyOriginDetail,
@@ -85,7 +88,7 @@ public class LogonTokensController : ControllerBase
       return result.ToHttpResult().ToActionResult();
     }
 
-    return Ok(BuildResponse(result.Value, publicUrlProvider));
+    return Ok(BuildResponse(result.Value, deviceAccessBaseUrl));
   }
 
   [HttpPost("user")]
@@ -135,7 +138,9 @@ public class LogonTokensController : ControllerBase
         title: V1ProblemTitles.InvalidRequest);
     }
 
-    if (!publicUrlProvider.HasTrustworthyOrigin)
+    // Resolved before the token is minted, so a server without a public origin leaves nothing behind.
+    var deviceAccessBaseUrl = publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.DeviceAccess);
+    if (deviceAccessBaseUrl is null)
     {
       return Problem(
         detail: NoTrustworthyOriginDetail,
@@ -153,21 +158,20 @@ public class LogonTokensController : ControllerBase
       return result.ToHttpResult().ToActionResult();
     }
 
-    return Ok(BuildResponse(result.Value, publicUrlProvider));
+    return Ok(BuildResponse(result.Value, deviceAccessBaseUrl));
   }
 
   private static V1Dtos.LogonTokenResponseDto BuildResponse(
     LogonTokenResult logonToken,
-    IPublicUrlProvider publicUrlProvider)
+    string deviceAccessBaseUrl)
   {
-    // HasTrustworthyOrigin was checked before the token was minted, so a null here is a bug.
-    var url = publicUrlProvider.TryGetAbsoluteUrl(
-      ClientRoutes.DeviceAccess,
+    var url = QueryHelpers.AddQueryString(
+      deviceAccessBaseUrl,
       new Dictionary<string, string?>
       {
         ["deviceId"] = $"{logonToken.DeviceId}",
         ["logonToken"] = logonToken.Token
-      }) ?? throw new InvalidOperationException(NoTrustworthyOriginDetail);
+      });
 
     return new V1Dtos.LogonTokenResponseDto(
       DeviceAccessUrl: new Uri(url),

@@ -94,12 +94,12 @@ public static class WebApplicationBuilderExtensions
         "users can reach.");
     }
 
-    if (string.IsNullOrWhiteSpace(appOptions.PublicBaseUrl))
+    if (PublicBaseUrlValidator.TryNormalize(appOptions.PublicBaseUrl, out var publicBaseUrlRejection) is null)
     {
       Console.WriteLine(
-        "AppOptions:PublicBaseUrl is not set, so links this server emails out have no origin to point " +
-        "at. Password reset and email confirmation will be refused until it is set to this server's " +
-        "public URL.");
+        $"AppOptions:PublicBaseUrl cannot be used as the origin for links this server sends out, because " +
+        $"{publicBaseUrlRejection}. Links in account emails, device access URLs, and tenant invites will be " +
+        "refused until it is set to this server's public URL.");
     }
 
     // Configure logging.

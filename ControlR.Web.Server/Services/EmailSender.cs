@@ -21,14 +21,12 @@ public interface IControlrEmailSender
 
 public class EmailSender(
   IWebHostEnvironment webHostEnvironment,
-  IHttpContextAccessor httpContextAccessor,
   IOptionsMonitor<AppOptions> appOptions,
   IPublicUrlProvider publicUrlProvider,
   ILogger<EmailSender> logger) : IControlrEmailSender, IEmailSender
 {
 
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
-  private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
   private readonly ILogger<EmailSender> _logger = logger;
   private readonly IPublicUrlProvider _publicUrlProvider = publicUrlProvider;
   private readonly IWebHostEnvironment _webHostEnvironment = webHostEnvironment;
@@ -201,29 +199,19 @@ public class EmailSender(
 
   private bool TryGetLogoHtml([NotNullWhen(true)] out string? logoHtml)
   {
-    if (_httpContextAccessor.HttpContext?.Request is not { } request)
+    logoHtml = null;
+
+    // The logo rides inside an email this server delivered, so its origin comes only from the
+    // configured public URL, never from the request that happened to be in flight.
+    if (_publicUrlProvider.TryGetBaseUrl() is not { } baseUrl ||
+        !Uri.TryCreate($"{baseUrl}/images/company-logo.png", UriKind.Absolute, out var imageUrl))
     {
-      logoHtml = null;
       return false;
     }
 
-    if (request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+    // A loopback origin only exists in a local dev setup, where nobody receiving the mail can reach it.
+    if (imageUrl.IsLoopback)
     {
-      logoHtml = null;
-      return false;
-    }
-
-    // The logo rides inside an email this server delivered, so it must not point at a host that the
-    // caller of whatever request happened to be in flight chose.
-    if (_publicUrlProvider.TryGetBaseUrl() is not { } baseUrl)
-    {
-      logoHtml = null;
-      return false;
-    }
-
-    if (!Uri.TryCreate($"{baseUrl}/images/company-logo.png", UriKind.Absolute, out var imageUrl))
-    {
-      logoHtml = null;
       return false;
     }
 
