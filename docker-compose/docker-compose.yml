@@ -82,10 +82,11 @@ services:
       # query, or fragment.  While it is unset, the actions that need such a link refuse.
       ControlR_AppOptions__PublicBaseUrl: *publicBaseUrl
 
-      # The hostnames this server answers to.  Semicolon-separated, without port numbers.  It rejects a
-      # forged host with a 400 before the request reaches the application.  Emailed links are built only
-      # from ControlR_AppOptions__PublicBaseUrl, never from the arriving host, so "*" here does not
-      # weaken them.
+      # The hostnames this server answers to.  Semicolon-separated, without port numbers.  A pinned list
+      # makes the server answer 400 to any other Host before the request reaches the application, so it is
+      # worth setting once the deployment is known.  The shipped "*" accepts every host instead.  Neither
+      # choice weakens the links this server sends out, because those are built only from
+      # ControlR_AppOptions__PublicBaseUrl and never from the arriving host.
       ControlR_AllowedHosts: "*"
 
       # DEVELOPMENT AND LOAD TESTING ONLY.  Never enable this on a server that users can reach.
