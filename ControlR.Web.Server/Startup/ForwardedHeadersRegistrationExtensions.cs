@@ -44,7 +44,7 @@ public static class ForwardedHeadersRegistrationExtensions
 
       using var ip6Response = await httpClient.GetAsync("https://www.cloudflare.com/ips-v6");
       ip6Response.EnsureSuccessStatusCode();
-      var ip6Content = await ip4Response.Content.ReadAsStringAsync();
+      var ip6Content = await ip6Response.Content.ReadAsStringAsync();
       var ip6Networks = ip6Content.Split();
 
       string[] ipNetworks = [.. ip4Networks, .. ip6Networks];

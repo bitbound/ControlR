@@ -43,7 +43,7 @@ public class RequestOriginGuardrailTests
   ];
 
   [Fact]
-  public void ServerCode_DoesNotBuildUrlsFromTheRequestOrigin()
+  public void ServerSource_DoesNotDeriveUrlOriginFromTheRequest()
   {
     var serverRoot = Path.Combine(FindRepositoryRoot(), "ControlR.Web.Server");
     var offenders = new List<string>();
