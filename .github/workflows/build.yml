@@ -1087,16 +1087,24 @@ jobs:
 
       - name: Print Build Summary
         shell: pwsh
+        env:
+          GIT_REF: ${{ github.ref }}
+          SERVER_RUNTIME: ${{ inputs.server_runtime }}
+          SERVER_RIDS: ${{ steps.runtimes.outputs.rids }}
+          USE_SELF_HOSTED_RUNNERS: ${{ inputs.use_self_hosted_runners }}
+          USE_LOCAL_STORAGE: ${{ inputs.use_local_storage }}
+          CUSTOMIZATION_CONFIG_URL: ${{ inputs.customization_config_url }}
+          PRERELEASE: ${{ inputs.prerelease }}
         run: |
           $Summary = @(
             "## Build Summary",
             "**Version:** v$env:VERSION",
-            "**Git Ref:** ${{ github.ref }}",
-            "**Server Runtime:** ${{ inputs.server_runtime }}",
-            "**Resolved Server Runtimes:** ${{ steps.runtimes.outputs.rids }}",
-            "**Use Self-Hosted Runners:** ${{ inputs.use_self_hosted_runners }}",
-            "**Use Local Storage for Artifacts:** ${{ inputs.use_local_storage }}",
-            "**Customization Config URL:** ${{ inputs.customization_config_url }}",
-            "**Pre-release:** ${{ inputs.prerelease }}"
+            "**Git Ref:** $env:GIT_REF",
+            "**Server Runtime:** $env:SERVER_RUNTIME",
+            "**Resolved Server Runtimes:** $env:SERVER_RIDS",
+            "**Use Self-Hosted Runners:** $env:USE_SELF_HOSTED_RUNNERS",
+            "**Use Local Storage for Artifacts:** $env:USE_LOCAL_STORAGE",
+            "**Customization Config URL:** $env:CUSTOMIZATION_CONFIG_URL",
+            "**Pre-release:** $env:PRERELEASE"
           )
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $Summary
