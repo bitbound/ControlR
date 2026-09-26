@@ -297,8 +297,11 @@ public class PersonalAccessTokenManager(
         return Result.Fail<InternalDtos.PersonalAccessTokenResponseDto>("Personal access token not found.");
       }
 
-      personalAccessToken.RevokedAt = _timeProvider.GetUtcNow();
-      await _appDb.SaveChangesAsync();
+      if (personalAccessToken.RevokedAt is null)
+      {
+        personalAccessToken.RevokedAt = _timeProvider.GetUtcNow();
+        await _appDb.SaveChangesAsync();
+      }
 
       var permissionsLookup = await GetPermissionCountLookup([id]);
       return Result.Ok(MapToDto(personalAccessToken, permissionsLookup.GetValueOrDefault(id)));

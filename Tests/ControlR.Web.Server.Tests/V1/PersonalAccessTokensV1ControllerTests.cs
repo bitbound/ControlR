@@ -263,6 +263,47 @@ public class PersonalAccessTokensV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task Revoke_WhenAlreadyRevoked_KeepsTheOriginalRevokedAt()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var manager = services.GetRequiredService<IPersonalAccessTokenManager>();
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<PersonalAccessTokensController>(
+      userEmail: "pat-self-rerevoke@test.local",
+      presets: PermissionPresets.TenantAdministrator);
+
+    var createResult = await controller.Create(
+      manager,
+      services.GetRequiredService<UserManager<AppUser>>(),
+      tenant.Id,
+      new CreatePersonalAccessTokenRequestDto("revoke-twice", PersonalAccessTokenPermissionMode.InheritOwner));
+    var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
+    var dto = Assert.IsType<CreatePersonalAccessTokenResponseDto>(created.Value);
+
+    var firstRevoke = Assert.IsType<OkObjectResult>(
+      (await controller.Revoke(
+        manager,
+        services.GetRequiredService<UserManager<AppUser>>(),
+        dto.PersonalAccessToken.Id,
+        tenant.Id)).Result);
+    var first = Assert.IsType<PersonalAccessTokenResponseDto>(firstRevoke.Value);
+    Assert.NotNull(first.RevokedAt);
+
+    testApp.TimeProvider.Advance(TimeSpan.FromDays(7));
+
+    var secondRevoke = Assert.IsType<OkObjectResult>(
+      (await controller.Revoke(
+        manager,
+        services.GetRequiredService<UserManager<AppUser>>(),
+        dto.PersonalAccessToken.Id,
+        tenant.Id)).Result);
+    var second = Assert.IsType<PersonalAccessTokenResponseDto>(secondRevoke.Value);
+
+    Assert.Equal(first.RevokedAt, second.RevokedAt);
+  }
+
+  [Fact]
   public async Task Revoke_WhenTokenBelongsToAnotherUser_ReturnsBadRequest()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
