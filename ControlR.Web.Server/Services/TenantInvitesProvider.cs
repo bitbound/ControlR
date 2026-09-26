@@ -14,16 +14,14 @@ public interface ITenantInvitesProvider
   Task<HttpResult<InternalDtos.InviteResponseDto>> CreateInvite(
     string inviteeEmail,
     Guid tenantId,
-    Uri origin,
     CancellationToken cancellationToken = default);
 
   Task<HttpResult> DeleteInvite(
     Guid inviteId,
     Guid tenantId);
 
-  Task<InternalDtos.InviteResponseDto[]> GetAllInvites(
+  Task<HttpResult<InternalDtos.InviteResponseDto[]>> GetAllInvites(
     Guid tenantId,
-    Uri origin,
     bool includeActivationCode);
 }
 
@@ -31,14 +29,20 @@ public class TenantInvitesProvider(
   IDbContextFactory<AppDb> dbContextFactory,
   UserManager<AppUser> userManager,
   IUserCreator userCreator,
+  IPublicUrlProvider publicUrlProvider,
   IAuthorizationChangeLogFactory changeLogFactory,
   IPermissionAssignmentSeeder assignmentSeeder,
   ILogger<TenantInvitesProvider> logger) : ITenantInvitesProvider
 {
+  private const string NoTrustworthyOriginMessage =
+    "This server has no public URL configured, so it cannot build the links an invitation depends on. " +
+    "Set AppOptions:PublicBaseUrl to this server's public URL.";
+
   private readonly IPermissionAssignmentSeeder _assignmentSeeder = assignmentSeeder;
   private readonly IAuthorizationChangeLogFactory _changeLogFactory = changeLogFactory;
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
   private readonly ILogger<TenantInvitesProvider> _logger = logger;
+  private readonly IPublicUrlProvider _publicUrlProvider = publicUrlProvider;
   private readonly IUserCreator _userCreator = userCreator;
   private readonly UserManager<AppUser> _userManager = userManager;
 
@@ -160,9 +164,17 @@ public class TenantInvitesProvider(
   public async Task<HttpResult<InternalDtos.InviteResponseDto>> CreateInvite(
     string inviteeEmail,
     Guid tenantId,
-    Uri origin,
     CancellationToken cancellationToken = default)
   {
+    // The invite link is opened by the invitee's browser, so its origin comes only from the
+    // configured PublicBaseUrl. Resolve it before creating the account, so a server that cannot
+    // deliver the link does not leave an unusable user behind.
+    var inviteBaseUrl = _publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.InviteConfirmationBase);
+    if (inviteBaseUrl is null)
+    {
+      return NoTrustworthyOrigin<InternalDtos.InviteResponseDto>();
+    }
+
     var normalizedEmail = inviteeEmail.Trim().ToLower();
 
     await using var appDb = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -208,7 +220,7 @@ public class TenantInvitesProvider(
     await appDb.TenantInvites.AddAsync(invite, cancellationToken);
     await appDb.SaveChangesAsync(cancellationToken);
 
-    var inviteUrl = new Uri(origin, $"{ClientRoutes.InviteConfirmationBase}/{invite.ActivationCode}");
+    var inviteUrl = BuildInviteUrl(inviteBaseUrl, invite.ActivationCode);
     var retDto = new InternalDtos.InviteResponseDto(invite.Id, invite.CreatedAt, normalizedEmail, inviteUrl);
     return HttpResult.Ok(retDto);
   }
@@ -240,24 +252,50 @@ public class TenantInvitesProvider(
     return HttpResult.Ok();
   }
 
-  public async Task<InternalDtos.InviteResponseDto[]> GetAllInvites(
+  public async Task<HttpResult<InternalDtos.InviteResponseDto[]>> GetAllInvites(
     Guid tenantId,
-    Uri origin,
     bool includeActivationCode)
   {
+    // Resolved once before the query, so every invite in the response shares the same origin.
+    var inviteBaseUrl = _publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.InviteConfirmationBase);
+    if (inviteBaseUrl is null)
+    {
+      return NoTrustworthyOrigin<InternalDtos.InviteResponseDto[]>();
+    }
+
     await using var appDb = await _dbContextFactory.CreateDbContextAsync();
 
-    return await appDb.TenantInvites
+    var invites = await appDb.TenantInvites
       .Where(x => x.TenantId == tenantId)
+      .Select(x => new { x.Id, x.CreatedAt, x.InviteeEmail, x.ActivationCode })
+      .ToArrayAsync();
+
+    var dtos = invites
       .Select(x => new InternalDtos.InviteResponseDto(
         x.Id,
         x.CreatedAt,
         x.InviteeEmail,
-        includeActivationCode
-          ? new Uri(origin, $"{ClientRoutes.InviteConfirmationBase}/{x.ActivationCode}")
-          : new Uri(origin, ClientRoutes.InviteConfirmationBase)))
-      .ToArrayAsync();
+        BuildInviteUrl(inviteBaseUrl, includeActivationCode ? x.ActivationCode : null)))
+      .ToArray();
+
+    return HttpResult.Ok(dtos);
   }
+
+  /// <summary>
+  /// Builds the invite link from an origin the caller already resolved, so the origin is read once per
+  /// operation and the link cannot fail after an account has been created.
+  /// </summary>
+  private static Uri BuildInviteUrl(string inviteBaseUrl, string? activationCode)
+  {
+    var url = string.IsNullOrEmpty(activationCode)
+      ? inviteBaseUrl
+      : $"{inviteBaseUrl}/{activationCode}";
+
+    return new Uri(url);
+  }
+
+  private static HttpResult<T> NoTrustworthyOrigin<T>() =>
+    HttpResult.Fail<T>(HttpResultErrorCode.ServiceUnavailable, NoTrustworthyOriginMessage);
 
   private async Task<AppUser> GetTrackedUser(AppDb appDb, Guid userId)
   {

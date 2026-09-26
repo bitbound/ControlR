@@ -25,6 +25,7 @@ public class InvitesController : ControllerBase
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict, "application/problem+json")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable, "application/problem+json")]
   public async Task<ActionResult<InviteResponseDto>> Create(
     [FromServices] ITenantInvitesProvider tenantInvitesProvider,
     [FromQuery] Guid tenantId,
@@ -35,11 +36,9 @@ public class InvitesController : ControllerBase
       return Forbid();
     }
 
-    var origin = Request.ToOrigin();
     var result = await tenantInvitesProvider.CreateInvite(
       request.InviteeEmail,
       resolvedTenantId,
-      origin,
       HttpContext.RequestAborted);
 
     if (!result.IsSuccess)
@@ -79,6 +78,7 @@ public class InvitesController : ControllerBase
   [ProducesResponseType<InvitesResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable, "application/problem+json")]
   public async Task<ActionResult<InvitesResponseDto>> GetAll(
     [FromServices] ITenantInvitesProvider tenantInvitesProvider,
     [FromServices] IPermissionEvaluator permissionEvaluator,
@@ -103,12 +103,16 @@ public class InvitesController : ControllerBase
     var evalResult = await permissionEvaluator.Evaluate(
       callerPrincipal, PermissionNames.TenantUsersWrite, resource, HttpContext.RequestAborted);
 
-    var origin = Request.ToOrigin();
-    var invites = await tenantInvitesProvider.GetAllInvites(resolvedTenantId, origin, evalResult.Allowed);
+    var result = await tenantInvitesProvider.GetAllInvites(resolvedTenantId, evalResult.Allowed);
+
+    if (!result.IsSuccess)
+    {
+      return result.ToHttpResult().ToActionResult();
+    }
 
     return Ok(new InvitesResponseDto
     {
-      Items = [.. invites.Select(ToV1Dto)]
+      Items = [.. result.Value.Select(ToV1Dto)]
     });
   }
 

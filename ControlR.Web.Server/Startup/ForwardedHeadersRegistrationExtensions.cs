@@ -6,6 +6,16 @@ namespace ControlR.Web.Server.Startup;
 
 public static class ForwardedHeadersRegistrationExtensions
 {
+  /// <summary>
+  /// Forwarded headers ControlR trusts. Host and path prefix are intentionally excluded.
+  /// </summary>
+  /// <remarks>
+  /// Trusting <c>X-Forwarded-Host</c> can redirect password-reset links to an attacker-controlled origin.
+  /// Emailed links are built only from <c>AppOptions:PublicBaseUrl</c>, never from the request host.
+  /// </remarks>
+  private const ForwardedHeaders TrustedForwardedHeaders =
+    ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
   public static async Task AddControlrForwardedHeaders(
     this IHostApplicationBuilder hostBuilder,
     AppOptions appOptions)
@@ -14,11 +24,10 @@ public static class ForwardedHeadersRegistrationExtensions
     {
       hostBuilder.Services.Configure<ForwardedHeadersOptions>(options =>
       {
-        options.ForwardedHeaders = ForwardedHeaders.All;
+        options.ForwardedHeaders = TrustedForwardedHeaders;
         options.ForwardLimit = null;
         options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
-        options.KnownIPNetworks.Clear();
       });
       return;
     }
@@ -35,7 +44,7 @@ public static class ForwardedHeadersRegistrationExtensions
 
       using var ip6Response = await httpClient.GetAsync("https://www.cloudflare.com/ips-v6");
       ip6Response.EnsureSuccessStatusCode();
-      var ip6Content = await ip4Response.Content.ReadAsStringAsync();
+      var ip6Content = await ip6Response.Content.ReadAsStringAsync();
       var ip6Networks = ip6Content.Split();
 
       string[] ipNetworks = [.. ip4Networks, .. ip6Networks];
@@ -56,7 +65,7 @@ public static class ForwardedHeadersRegistrationExtensions
 
     hostBuilder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
-      options.ForwardedHeaders = ForwardedHeaders.All;
+      options.ForwardedHeaders = TrustedForwardedHeaders;
       options.ForwardLimit = null;
 
       // Default Docker host. We want to allow forwarded headers from this address.

@@ -19,6 +19,7 @@ public class AgentHub(
   IHubStreamStore hubStreamStore,
   IAgentVersionProvider agentVersionProvider,
   IOptions<AppOptions> appOptions,
+  IOptions<DeveloperOptions> developerOptions,
   IOptions<ServerLifecycleOptions> serverOptions,
   IEd25519KeyProvider keyProvider,
   ILogger<AgentHub> logger) : HubWithItems<IAgentHubClient>, IAgentHub
@@ -26,6 +27,7 @@ public class AgentHub(
   private readonly IAgentVersionProvider _agentVersionProvider = agentVersionProvider;
   private readonly AppDb _appDb = appDb;
   private readonly IOptions<AppOptions> _appOptions = appOptions;
+  private readonly IOptions<DeveloperOptions> _developerOptions = developerOptions;
   private readonly IDeviceManager _deviceManager = deviceManager;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly IEd25519KeyProvider _keyProvider = keyProvider;
@@ -252,9 +254,9 @@ public class AgentHub(
         return await HandleAgentUpdateForDecommission(agentDto, device);
       }
 
-      // Self-bootstrap: only permitted when exactly one tenant exists.
+      // Developer-only self-bootstrap: only permitted when exactly one tenant exists.
       // Multi-tenant deployments must use installer keys with an explicit tenant.
-      if (_appOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
+      if (_developerOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
       {
         var tenants = await _appDb.Tenants
           .OrderByDescending(x => x.CreatedAt)
@@ -327,7 +329,7 @@ public class AgentHub(
       var device = await _appDb.Devices.FindAsync(agentDto.Id);
       var storedPublicKey = device?.PublicKey;
       
-      if (string.IsNullOrEmpty(storedPublicKey) && !_appOptions.Value.AllowAgentsToSelfBootstrap)
+      if (string.IsNullOrEmpty(storedPublicKey) && !_developerOptions.Value.AllowAgentsToSelfBootstrap)
       {
         _logger.LogWarning(
           "Rejecting update from unknown device {DeviceId}. Self-bootstrap is disabled.",
@@ -378,10 +380,10 @@ public class AgentHub(
         return await HandleAgentUpdateForDecommission(agentDto, device);
       }
 
-      // Allow agents to self-bootstrap when enabled. Only permitted when exactly one
+      // Developer-only self-bootstrap. Only permitted when exactly one
       // tenant exists, so there's no ambiguity about where the agent lands. Multi-tenant
       // deployments must use installer keys, which carry an explicit tenant.
-      if (_appOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
+      if (_developerOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
       {
         var tenants = await _appDb.Tenants
           .OrderByDescending(x => x.CreatedAt)
@@ -551,8 +553,8 @@ public class AgentHub(
     DeviceConnectionContext context,
     string? publicKeyBase64 = null)
   {
-    // Allow agents to self-bootstrap when enabled
-    if (_appOptions.Value.AllowAgentsToSelfBootstrap)
+    // Developer-only self-bootstrap.
+    if (_developerOptions.Value.AllowAgentsToSelfBootstrap)
     {
       var device = await _deviceManager.AddOrUpdate(agentDto, context, publicKeyBase64: publicKeyBase64);
       return HubResult.Ok(device);

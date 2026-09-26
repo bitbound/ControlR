@@ -2,7 +2,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using ControlR.Web.Client.Services;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace ControlR.Web.Server.Services.Users;
@@ -35,21 +34,12 @@ public interface IUserCreator
     Guid tenantId,
     IEnumerable<string>? presetNames = null,
     CancellationToken cancellationToken = default);
-
-  // Overload for API context where NavigationManager is unavailable.
-  Task<CreateUserResult> CreateUser(
-    string emailAddress,
-    string password,
-    string? returnUrl,
-    string confirmationBaseUrl,
-    bool isPublicRegistration = false,
-    CancellationToken cancellationToken = default);
 }
 
   public class UserCreator(
     IPermissionAssignmentSeeder assignmentSeeder,
     UserManager<AppUser> userManager,
-    NavigationManager navigationManager,
+    IPublicUrlProvider publicUrlProvider,
     IUserStore<AppUser> userStore,
     IEmailSender<AppUser> emailSender,
     IOptionsMonitor<AppOptions> appOptions,
@@ -57,14 +47,16 @@ public interface IUserCreator
     IPublicServerSettingsProvider serverSettings,
     ILogger<UserCreator> logger) : IUserCreator
   {
+    public const string ConfirmationEmailUnavailableErrorCode = "ConfirmationEmailUnavailable";
     public const string PresetsNotFoundErrorCode = "PresetsNotFound";
     public const string RegistrationDisabledErrorCode = "RegistrationDisabled";
+
     private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
     private readonly IPermissionAssignmentSeeder _assignmentSeeder = assignmentSeeder;
     private readonly IPublicRegistrationBootstrapGate _bootstrapGate = bootstrapGate;
     private readonly IEmailSender<AppUser> _emailSender = emailSender;
     private readonly ILogger<UserCreator> _logger = logger;
-    private readonly NavigationManager _navigationManager = navigationManager;
+    private readonly IPublicUrlProvider _publicUrlProvider = publicUrlProvider;
     private readonly IPublicServerSettingsProvider _serverSettings = serverSettings;
     private readonly UserManager<AppUser> _userManager = userManager;
     private readonly IUserStore<AppUser> _userStore = userStore;
@@ -157,30 +149,12 @@ public interface IUserCreator
     return new CreateUserResult(true, result.IdentityResult, user);
   }
 
-  public async Task<CreateUserResult> CreateUser(
-    string emailAddress,
-    string password,
-    string? returnUrl,
-    string confirmationBaseUrl,
-    bool isPublicRegistration = false,
-    CancellationToken cancellationToken = default)
-  {
-    return await CreateUserImpl(
-      emailAddress,
-      returnUrl: returnUrl,
-      password: password,
-      confirmationBaseUrl: confirmationBaseUrl,
-      isPublicRegistration: isPublicRegistration,
-      cancellationToken: cancellationToken);
-  }
-
   private async Task<CreateUserResult> CreateUserImpl(
     string emailAddress,
     string? password = null,
     ExternalLoginInfo? externalLoginInfo = null,
     string? returnUrl = null,
     Guid? tenantId = null,
-    string? confirmationBaseUrl = null,
     bool isPublicRegistration = false,
     CancellationToken cancellationToken = default)
   {
@@ -205,12 +179,12 @@ public interface IUserCreator
 
       return await CreateUserInternal(
         emailAddress, password, externalLoginInfo, returnUrl,
-        tenantId, confirmationBaseUrl, cancellationToken);
+        tenantId, cancellationToken);
     }
 
     return await CreateUserInternal(
       emailAddress, password, externalLoginInfo, returnUrl,
-      tenantId, confirmationBaseUrl, cancellationToken);
+      tenantId, cancellationToken);
   }
 
   private async Task<CreateUserResult> CreateUserInternal(
@@ -219,12 +193,42 @@ public interface IUserCreator
     ExternalLoginInfo? externalLoginInfo = null,
     string? returnUrl = null,
     Guid? tenantId = null,
-    string? confirmationBaseUrl = null,
     CancellationToken cancellationToken = default)
   {
     try
     {
+      if (_appOptions.CurrentValue.DisableEmailSending && _appOptions.CurrentValue.RequireUserEmailConfirmation)
+      {
+        throw new InvalidOperationException(
+          "Email sending is disabled, but user email confirmation is required. " +
+          "Cannot proceed with user creation.");
+      }
+
       var isNewTenant = tenantId is null;
+      var isFirstUser = !await _userManager.Users.AnyAsync(cancellationToken);
+      var isServerAdmin = !DisableFirstUserSelfRegistration && isFirstUser;
+
+      // A brand-new tenant that isn't started by the first user receives its confirmation link by
+      // email. Everything that email depends on is verified here, before the account exists, so a
+      // missing origin fails without leaving a created user behind.
+      var needsConfirmationEmail =
+        isNewTenant && !isServerAdmin && !_appOptions.CurrentValue.DisableEmailSending;
+
+      var confirmationUrl = needsConfirmationEmail
+        ? _publicUrlProvider.TryGetAbsoluteUrl("Account/ConfirmEmail")
+        : null;
+
+      if (needsConfirmationEmail && confirmationUrl is null)
+      {
+        return new CreateUserResult(
+          false,
+          IdentityResult.Failed(new IdentityError
+          {
+            Code = ConfirmationEmailUnavailableErrorCode,
+            Description = "This server cannot send confirmation emails. Contact an administrator."
+          }));
+      }
+
       var user = new AppUser();
 
       if (tenantId is not null)
@@ -265,8 +269,6 @@ public interface IUserCreator
 
       _logger.LogInformation("Created new account: {Email}.", emailAddress);
 
-      var isFirstUser = await _userManager.Users.CountAsync(cancellationToken: cancellationToken) == 1;
-      var isServerAdmin = !DisableFirstUserSelfRegistration && isFirstUser;
       if (isServerAdmin)
       {
         _logger.LogInformation(
@@ -315,33 +317,21 @@ public interface IUserCreator
       var userId = await _userManager.GetUserIdAsync(user);
       var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-      if (_appOptions.CurrentValue.DisableEmailSending && _appOptions.CurrentValue.RequireUserEmailConfirmation)
-      {
-        throw new InvalidOperationException(
-          "Email sending is disabled, but user email confirmation is required. " +
-          "Cannot proceed with user creation.");
-      }
-
-      if (isNewTenant && !isServerAdmin && !_appOptions.CurrentValue.DisableEmailSending)
+      if (needsConfirmationEmail)
       {
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
-        var queryParams = new Dictionary<string, string?>
-        {
-          ["userId"] = userId,
-          ["code"] = code,
-          ["returnUrl"] = returnUrl
-        };
+        var callbackUrl = QueryHelpers.AddQueryString(
+          confirmationUrl ?? throw new InvalidOperationException("Confirmation URL was not resolved."),
+          new Dictionary<string, string?>
+          {
+            ["userId"] = userId,
+            ["code"] = code,
+            ["returnUrl"] = returnUrl
+          });
 
-        var callbackUrl = confirmationBaseUrl is not null
-          ? QueryHelpers.AddQueryString(
-            $"{confirmationBaseUrl.TrimEnd('/')}/Account/ConfirmEmail",
-            queryParams)
-          : _navigationManager.GetUriWithQueryParameters(
-            _navigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = returnUrl });
-
-        await _emailSender.SendConfirmationLinkAsync(user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
+        await _emailSender.SendConfirmationLinkAsync(
+          user, emailAddress, HtmlEncoder.Default.Encode(callbackUrl));
       }
       else
       {

@@ -134,6 +134,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       mockHubStreamStore.Object,
       mockAgentVersionProvider.Object,
       appOptions,
+      Microsoft.Extensions.Options.Options.Create(new DeveloperOptions()),
       serverOptions,
       mockKeyProvider.Object,
       mockLogger.Object);
@@ -234,6 +235,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       mockHubStreamStore.Object,
       mockAgentVersionProvider.Object,
       appOptions,
+      Microsoft.Extensions.Options.Options.Create(new DeveloperOptions()),
       serverOptions,
       mockKeyProvider.Object,
       mockLogger.Object);

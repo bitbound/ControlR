@@ -80,6 +80,37 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task Register_WhenConfirmationEmailHasNoOrigin_ReturnsServiceUnavailable()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      _testOutput,
+      settings: new Dictionary<string, string?>
+      {
+        ["AppOptions:EnableInteractiveBearerLogin"] = "true",
+        ["AppOptions:EnablePublicRegistration"] = "true",
+        ["AppOptions:DisableEmailSending"] = "false",
+        ["AppOptions:PublicBaseUrl"] = "",
+      });
+
+    var tenant = await testServer.Services.CreateTestTenant();
+    await testServer.Services.CreateTestUser(tenant.Id, email: "existing@test.local");
+
+    using var httpClient = await testServer.GetHttpClient();
+    var request = new RegisterRequest { Email = "new@test.local", Password = "T3stP@ssw0rd!" };
+    var response = await httpClient.PostAsJsonAsync(
+      $"{HttpConstants.Internal.AuthEndpoint}/register",
+      request,
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+
+    using var scope = testServer.Services.CreateScope();
+    var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    Assert.False(await appDb.Users.AnyAsync(
+      user => user.Email == request.Email, TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
   public async Task Register_WhenDuplicateEmail_ReturnsValidationProblem()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(
@@ -268,5 +299,39 @@ public class IdentityApiRegisterFilterTests(ITestOutputHelper testOutput)
       TestContext.Current.CancellationToken);
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task Register_WithTrailingSlash_IsStillInterceptedByFilter()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      _testOutput,
+      settings: new Dictionary<string, string?>
+      {
+        ["AppOptions:EnableInteractiveBearerLogin"] = "true",
+        ["AppOptions:EnablePublicRegistration"] = "false",
+        ["AppOptions:DisableEmailSending"] = "true",
+      });
+
+    // Pre-populate so this is not the first-user scenario, which registration allows anyway.
+    var tenant = await testServer.Services.CreateTestTenant();
+    await testServer.Services.CreateTestUser(tenant.Id, email: "existing@test.local");
+
+    using var httpClient = await testServer.GetHttpClient();
+    var request = new RegisterRequest { Email = "slash@test.local", Password = "T3stP@ssw0rd!" };
+
+    var response = await httpClient.PostAsJsonAsync(
+      $"{HttpConstants.Internal.AuthEndpoint}/register/",
+      request,
+      TestContext.Current.CancellationToken);
+
+    _testOutput.WriteLine($"Trailing-slash register returned {(int)response.StatusCode} {response.StatusCode}.");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    using var scope = testServer.Services.CreateScope();
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    Assert.False(await appDb.Users.AnyAsync(
+      user => user.Email == request.Email, TestContext.Current.CancellationToken));
   }
 }

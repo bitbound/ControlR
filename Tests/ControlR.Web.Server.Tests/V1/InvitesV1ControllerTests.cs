@@ -17,19 +17,19 @@ namespace ControlR.Web.Server.Tests.V1;
 public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
 {
   private const string InviteConfirmationBasePath = "/invite-confirmation";
+  private const string PublicBaseUrl = "https://invites.test";
 
   private readonly ITestOutputHelper _testOutput = testOutput;
 
   [Fact]
   public async Task Create_ReturnsCreatedWithActivationCodeUrl()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    await using var testApp = await CreateApp();
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var (controller, tenant, _) = await scope.CreateControllerWithTestData<InvitesController>(
       userEmail: "invites-create@test.local",
       presets: PermissionPresets.TenantAdministrator);
-    ConfigureOrigin(controller);
 
     var result = await controller.Create(
       services.GetRequiredService<ITenantInvitesProvider>(),
@@ -40,18 +40,18 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
     var dto = Assert.IsType<InviteResponseDto>(created.Value);
     Assert.Equal("invitee@test.local", dto.InviteeEmail);
     Assert.StartsWith($"{InviteConfirmationBasePath}/", dto.InviteUrl.AbsolutePath);
+    Assert.StartsWith(PublicBaseUrl, dto.InviteUrl.ToString());
   }
 
   [Fact]
   public async Task Create_WhenCallerRequestsAnotherTenant_Forbids()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    await using var testApp = await CreateApp();
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var (controller, _, _) = await scope.CreateControllerWithTestData<InvitesController>(
       userEmail: "invites-forbid@test.local",
       presets: PermissionPresets.TenantAdministrator);
-    ConfigureOrigin(controller);
 
     var foreignTenant = await services.CreateTestTenant("Invites Foreign");
 
@@ -66,13 +66,12 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task Create_WhenInviteeAlreadyInvited_ReturnsConflict()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    await using var testApp = await CreateApp();
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var (controller, tenant, _) = await scope.CreateControllerWithTestData<InvitesController>(
       userEmail: "invites-dup@test.local",
       presets: PermissionPresets.TenantAdministrator);
-    ConfigureOrigin(controller);
 
     var provider = services.GetRequiredService<ITenantInvitesProvider>();
     var first = await controller.Create(
@@ -93,13 +92,12 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task Delete_RemovesInvite()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    await using var testApp = await CreateApp();
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var (controller, tenant, _) = await scope.CreateControllerWithTestData<InvitesController>(
       userEmail: "invites-delete@test.local",
       presets: PermissionPresets.TenantAdministrator);
-    ConfigureOrigin(controller);
 
     var provider = services.GetRequiredService<ITenantInvitesProvider>();
     var createResult = await controller.Create(
@@ -125,13 +123,12 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task Delete_WhenInviteUnknown_ReturnsNotFoundProblem()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    await using var testApp = await CreateApp();
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var (controller, tenant, _) = await scope.CreateControllerWithTestData<InvitesController>(
       userEmail: "invites-unknowndelete@test.local",
       presets: PermissionPresets.TenantAdministrator);
-    ConfigureOrigin(controller);
 
     var result = await controller.Delete(
       services.GetRequiredService<ITenantInvitesProvider>(),
@@ -145,13 +142,12 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task GetAll_ReturnsOnlyCallersTenantInvites()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    await using var testApp = await CreateApp();
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var (controller, tenant, _) = await scope.CreateControllerWithTestData<InvitesController>(
       userEmail: "invites-isolation@test.local",
       presets: PermissionPresets.TenantAdministrator);
-    ConfigureOrigin(controller);
 
     var provider = services.GetRequiredService<ITenantInvitesProvider>();
     await controller.Create(
@@ -161,11 +157,9 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
 
     // Seed an invite in a foreign tenant directly. The V1 list must never surface it.
     var foreignTenant = await services.CreateTestTenant("Invites Isolation Foreign");
-    var foreignOrigin = new Uri("https://foreign.example");
     var foreignInvite = await provider.CreateInvite(
       "theirs@test.local",
       foreignTenant.Id,
-      foreignOrigin,
       TestContext.Current.CancellationToken);
     Assert.True(foreignInvite.IsSuccess);
 
@@ -185,13 +179,12 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
   [Fact]
   public async Task GetAll_WhenCallerLacksTenantUsersWrite_OmitsActivationCode()
   {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    await using var testApp = await CreateApp();
     using var scope = testApp.CreateScope();
     var services = scope.ServiceProvider;
     var (controller, tenant, _) = await scope.CreateControllerWithTestData<InvitesController>(
       userEmail: "invites-codemgr@test.local",
       presets: PermissionPresets.TenantAdministrator);
-    ConfigureOrigin(controller);
 
     var provider = services.GetRequiredService<ITenantInvitesProvider>();
     await controller.Create(
@@ -206,7 +199,6 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
       "invites-readonly@t.local",
       PermissionPresets.DeviceSuperUser);
     var readOnlyController = await scope.CreateControllerWithUser<InvitesController>(readOnlyUser);
-    ConfigureOrigin(readOnlyController);
 
     var getResult = await readOnlyController.GetAll(
       provider,
@@ -221,9 +213,13 @@ public class InvitesV1ControllerTests(ITestOutputHelper testOutput)
     Assert.Equal(InviteConfirmationBasePath, invite.InviteUrl.AbsolutePath);
   }
 
-  private static void ConfigureOrigin(InvitesController controller)
+  private Task<TestApp> CreateApp()
   {
-    controller.ControllerContext.HttpContext!.Request.Scheme = Uri.UriSchemeHttps;
-    controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost");
+    return TestAppBuilder.CreateTestApp(
+      _testOutput,
+      extraConfiguration: new Dictionary<string, string?>
+      {
+        ["AppOptions:PublicBaseUrl"] = PublicBaseUrl,
+      });
   }
 }

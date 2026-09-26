@@ -38,11 +38,9 @@ public class InvitesController : ControllerBase
       return Unauthorized();
     }
 
-    var origin = Request.ToOrigin();
     var result = await tenantInvitesProvider.CreateInvite(
       dto.InviteeEmail,
       tenantId,
-      origin,
       HttpContext.RequestAborted);
 
     return result.ToActionResult();
@@ -91,7 +89,8 @@ public class InvitesController : ControllerBase
     var evalResult = await permissionEvaluator.Evaluate(
       callerPrincipal, PermissionNames.TenantUsersWrite, resource, HttpContext.RequestAborted);
 
-    var origin = Request.ToOrigin();
-    return await tenantInvitesProvider.GetAllInvites(tenantId, origin, evalResult.Allowed);
+    var result = await tenantInvitesProvider.GetAllInvites(tenantId, evalResult.Allowed);
+
+    return result.ToActionResult();
   }
 }

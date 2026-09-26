@@ -7,8 +7,11 @@ public class IdentityApiRegisterFilter : IEndpointFilter
 {
   public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext invocationContext, EndpointFilterDelegate next)
   {
-    var path = invocationContext.HttpContext.Request.Path.Value;
-    if (path?.EndsWith("/register", StringComparison.OrdinalIgnoreCase) != true)
+    // Routing ignores a trailing slash, so "/api/auth/register/" selects the same endpoint and reaches
+    // this filter. Without normalizing, that request falls through to the framework's own handler, which
+    // knows nothing about the registration gate.
+    var path = invocationContext.HttpContext.Request.Path.Value?.TrimEnd('/');
+    if (path is null || !path.EndsWith("/register", StringComparison.OrdinalIgnoreCase))
     {
       return await next(invocationContext);
     }
@@ -22,14 +25,10 @@ public class IdentityApiRegisterFilter : IEndpointFilter
       return Results.Problem("Invalid registration request.", statusCode: StatusCodes.Status400BadRequest);
     }
 
-    var confirmationBaseUrl =
-      $"{invocationContext.HttpContext.Request.Scheme}://{invocationContext.HttpContext.Request.Host}";
-
     var result = await userCreator.CreateUser(
       registerRequest.Email,
       registerRequest.Password,
       returnUrl: null,
-      confirmationBaseUrl,
       isPublicRegistration: true,
       cancellationToken: invocationContext.HttpContext.RequestAborted);
 
@@ -38,6 +37,13 @@ public class IdentityApiRegisterFilter : IEndpointFilter
       if (result.IdentityResult.Errors.Any(e => e.Code == UserCreator.RegistrationDisabledErrorCode))
       {
         return Results.NotFound();
+      }
+
+      if (result.IdentityResult.Errors.Any(e => e.Code == UserCreator.ConfirmationEmailUnavailableErrorCode))
+      {
+        return Results.Problem(
+          "This server cannot send confirmation emails. Contact an administrator.",
+          statusCode: StatusCodes.Status503ServiceUnavailable);
       }
 
       return Results.ValidationProblem(

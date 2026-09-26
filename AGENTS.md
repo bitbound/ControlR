@@ -145,6 +145,16 @@ DTOs live in `Dtos/ServerApi/` under `ControlR.Libraries.Api.Contracts.Dtos.Serv
 - Reduce indentation by returning/continuing early and inverting conditions when appropriate.
 - Constructor parameter order: put concrete classes/implementations before interfaces.
 
+## Outbound URLs (Public Origin)
+
+Any absolute URL this server hands to someone (emailed links, `DeviceAccessUrl`, `InviteUrl`) is built through `IPublicUrlProvider`, which reads only `AppOptions:PublicBaseUrl`. Never derive an origin from the request. `Request.Scheme`/`Request.Host` are caller-controlled, so a forged `Host` or `X-Forwarded-Host` aims a genuine token-bearing link at an attacker's host.
+
+- Build with `IPublicUrlProvider.TryGetAbsoluteUrl(path[, query])`. It returns `null` when no valid `PublicBaseUrl` is set.
+- Fail upstream, not in the DTO. When an operation's whole purpose is to produce such a URL, check `HasTrustworthyOrigin` first and refuse (503 for APIs, a returned error for services) before creating any state. Do not make the URL field nullable and push the problem onto every consumer.
+- The `Request.ToOrigin()` extension is deleted on purpose. `RequestOriginGuardrailTests` fails the test run if request-origin URL building reappears anywhere under `ControlR.Web.Server` outside its `_allowList` (currently only `IdentityRedirectManager.cs`, which redirects back to the same caller). It is a source scan, so it runs under `dotnet run` on the test project, not under `dotnet build`.
+- Framework-generated Identity links are rebuilt from the configured origin in `IdentityEmailSender`, which is the single seam every `MapIdentityApi` email passes through. Do not build those links from `LinkGenerator` at a call site.
+- Relative URLs and same-caller redirects are fine from the request. This rule is about absolute URLs that leave the server.
+
 ## Web UI
 
 - Component-scoped JS/CSS: `MyComponent.razor.js` and `MyComponent.razor.css` alongside `MyComponent.razor`.

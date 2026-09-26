@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace ControlR.Libraries.WebSocketRelay.Common.Sessions;
 
 internal class SessionSignaler : IAsyncDisposable
 {
-  private readonly string _accessToken;
+  private readonly byte[] _accessTokenHash;
   private readonly TaskCompletionSource _requesterSignaled = new();
   private readonly TaskCompletionSource _requesterWebsocketSet = new();
   private readonly TaskCompletionSource _responderSignaled = new();
@@ -19,7 +21,7 @@ internal class SessionSignaler : IAsyncDisposable
 
   public SessionSignaler(string accessToken)
   {
-    _accessToken = accessToken;
+    _accessTokenHash = SHA256.HashData(Encoding.UTF8.GetBytes(accessToken));
     _signalTasks = [_requesterSignaled.Task, _responderSignaled.Task];
   }
 
@@ -156,7 +158,13 @@ internal class SessionSignaler : IAsyncDisposable
 
   public bool ValidateToken(string accessToken)
   {
-    return accessToken == _accessToken;
+    // Compared in fixed time against a cached digest, so neither the length nor the contents of the
+    // expected token leak through timing.  That said, a timing attack over the network like this
+    // would be impossible.
+    return !string.IsNullOrEmpty(accessToken) &&
+      CryptographicOperations.FixedTimeEquals(
+        SHA256.HashData(Encoding.UTF8.GetBytes(accessToken)),
+        _accessTokenHash);
   }
 
   public async Task WaitForPartner(CancellationToken cancellationToken)
