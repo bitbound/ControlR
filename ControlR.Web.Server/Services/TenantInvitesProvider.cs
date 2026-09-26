@@ -172,9 +172,7 @@ public class TenantInvitesProvider(
     var inviteBaseUrl = _publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.InviteConfirmationBase);
     if (inviteBaseUrl is null)
     {
-      return HttpResult.Fail<InternalDtos.InviteResponseDto>(
-        HttpResultErrorCode.ServiceUnavailable,
-        NoTrustworthyOriginMessage);
+      return NoTrustworthyOrigin<InternalDtos.InviteResponseDto>();
     }
 
     var normalizedEmail = inviteeEmail.Trim().ToLower();
@@ -262,9 +260,7 @@ public class TenantInvitesProvider(
     var inviteBaseUrl = _publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.InviteConfirmationBase);
     if (inviteBaseUrl is null)
     {
-      return HttpResult.Fail<InternalDtos.InviteResponseDto[]>(
-        HttpResultErrorCode.ServiceUnavailable,
-        NoTrustworthyOriginMessage);
+      return NoTrustworthyOrigin<InternalDtos.InviteResponseDto[]>();
     }
 
     await using var appDb = await _dbContextFactory.CreateDbContextAsync();
@@ -297,6 +293,9 @@ public class TenantInvitesProvider(
 
     return new Uri(url);
   }
+
+  private static HttpResult<T> NoTrustworthyOrigin<T>() =>
+    HttpResult.Fail<T>(HttpResultErrorCode.ServiceUnavailable, NoTrustworthyOriginMessage);
 
   private async Task<AppUser> GetTrackedUser(AppDb appDb, Guid userId)
   {

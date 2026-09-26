@@ -72,10 +72,7 @@ public class LogonTokensController : ControllerBase
     var deviceAccessBaseUrl = publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.DeviceAccess);
     if (deviceAccessBaseUrl is null)
     {
-      return Problem(
-        detail: NoTrustworthyOriginDetail,
-        statusCode: StatusCodes.Status503ServiceUnavailable,
-        title: V1ProblemTitles.ServiceUnavailable);
+      return NoTrustworthyOriginProblem();
     }
 
     var result = await logonTokenScopeService.CreateTokenWithScopes(
@@ -142,10 +139,7 @@ public class LogonTokensController : ControllerBase
     var deviceAccessBaseUrl = publicUrlProvider.TryGetAbsoluteUrl(ClientRoutes.DeviceAccess);
     if (deviceAccessBaseUrl is null)
     {
-      return Problem(
-        detail: NoTrustworthyOriginDetail,
-        statusCode: StatusCodes.Status503ServiceUnavailable,
-        title: V1ProblemTitles.ServiceUnavailable);
+      return NoTrustworthyOriginProblem();
     }
 
     var result = await logonTokenScopeService.CreateTokenWithScopes(
@@ -178,4 +172,10 @@ public class LogonTokensController : ControllerBase
       ExpiresAt: logonToken.ExpiresAt,
       Token: logonToken.Token);
   }
+
+  private ObjectResult NoTrustworthyOriginProblem() =>
+    Problem(
+      detail: NoTrustworthyOriginDetail,
+      statusCode: StatusCodes.Status503ServiceUnavailable,
+      title: V1ProblemTitles.ServiceUnavailable);
 }
