@@ -106,10 +106,8 @@ jobs:
           VERSION=
           PRERELEASE="$PRERELEASE_FALLBACK"
           PRERELEASE_FILE="./server-publish/Prerelease.txt"
-          HAS_PRERELEASE_METADATA=false
           if [ -f "$PRERELEASE_FILE" ]; then
             PRERELEASE=$(tr -d '\r\n' < "$PRERELEASE_FILE")
-            HAS_PRERELEASE_METADATA=true
           fi
           case "$PRERELEASE" in
             true|false) ;;
@@ -133,8 +131,6 @@ jobs:
           if [ "$PRERELEASE" = "true" ]; then
             IMAGE_VERSION="${VERSION}-dev"
             DOCKER_TAG=dev
-          elif [ "$HAS_PRERELEASE_METADATA" = "true" ]; then
-            DOCKER_TAG=latest
           fi
 
           {
