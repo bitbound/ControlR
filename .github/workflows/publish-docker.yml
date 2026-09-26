@@ -95,12 +95,26 @@ jobs:
       - name: Prepare Docker Context
         id: payload
         shell: bash
+        env:
+          DOCKER_TAG_INPUT: ${{ inputs.docker_tag }}
+          PRERELEASE_FALLBACK: ${{ inputs.docker_tag == 'dev' }}
         run: |
           set -euo pipefail
 
           mkdir -p ./payload
           PLATFORMS=
           VERSION=
+          PRERELEASE="$PRERELEASE_FALLBACK"
+          PRERELEASE_FILE="./server-publish/Prerelease.txt"
+          HAS_PRERELEASE_METADATA=false
+          if [ -f "$PRERELEASE_FILE" ]; then
+            PRERELEASE=$(tr -d '\r\n' < "$PRERELEASE_FILE")
+            HAS_PRERELEASE_METADATA=true
+          fi
+          case "$PRERELEASE" in
+            true|false) ;;
+            *) echo "::error::Invalid prerelease metadata: $PRERELEASE"; exit 1 ;;
+          esac
           for PAIR in amd64:linux-x64 arm64:linux-arm64; do
             ARCH="${PAIR%%:*}"
             RID="${PAIR##*:}"
@@ -114,9 +128,21 @@ jobs:
 
           [ -n "$PLATFORMS" ] || { echo "::error::No Linux payload in the Server artifact."; exit 1; }
           [ -n "$VERSION" ] || { echo "::error::Version.txt is empty."; exit 1; }
+          IMAGE_VERSION="$VERSION"
+          DOCKER_TAG="$DOCKER_TAG_INPUT"
+          if [ "$PRERELEASE" = "true" ]; then
+            IMAGE_VERSION="${VERSION}-dev"
+            DOCKER_TAG=dev
+          elif [ "$HAS_PRERELEASE_METADATA" = "true" ]; then
+            DOCKER_TAG=latest
+          fi
 
-          { echo "version=$VERSION"; echo "platforms=$PLATFORMS"; } >> "$GITHUB_OUTPUT"
-          echo "Version: $VERSION"
+          {
+            echo "version=$IMAGE_VERSION"
+            echo "platforms=$PLATFORMS"
+            echo "docker_tag=$DOCKER_TAG"
+          } >> "$GITHUB_OUTPUT"
+          echo "Version: $IMAGE_VERSION"
           echo "Platforms: $PLATFORMS"
 
       - name: Create Dockerfile
@@ -163,7 +189,7 @@ jobs:
           push: true
           platforms: ${{ steps.payload.outputs.platforms }}
           tags: |
-            bitbound/controlr:${{ inputs.docker_tag }}
+            bitbound/controlr:${{ steps.payload.outputs.docker_tag }}
             bitbound/controlr:${{ steps.payload.outputs.version }}
 
       - name: Image Published
@@ -172,5 +198,5 @@ jobs:
           echo "**Version:** ${{ steps.payload.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Platforms:** ${{ steps.payload.outputs.platforms }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
-          echo "- bitbound/controlr:${{ inputs.docker_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- bitbound/controlr:${{ steps.payload.outputs.docker_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- bitbound/controlr:${{ steps.payload.outputs.version }}" >> $GITHUB_STEP_SUMMARY

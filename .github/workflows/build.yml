@@ -1032,6 +1032,14 @@ jobs:
             }
           }
 
+      - name: Write Build Metadata
+        shell: pwsh
+        env:
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          $PrereleaseValue = $env:PRERELEASE.ToLowerInvariant()
+          Set-Content -Path "ControlR.Web.Server/bin/publish/Prerelease.txt" -Value $PrereleaseValue -NoNewline -Encoding ascii
+
       - name: Upload Server
         uses: ./.github/actions/upload-artifact
         with:

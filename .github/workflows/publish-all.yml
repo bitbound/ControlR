@@ -34,7 +34,7 @@ jobs:
     uses: ./.github/workflows/publish-docker.yml
     secrets: inherit
     with:
-      docker_tag: latest
+      docker_tag: ${{ inputs.prerelease && 'dev' || 'latest' }}
       run_id: ${{ inputs.run_id }}
       use_local_storage: ${{ inputs.use_local_storage }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}

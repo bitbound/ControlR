@@ -114,6 +114,16 @@ jobs:
           VERSION=
           PRIMARY_RID=
           SUMMARY=
+          PRERELEASE="${{ inputs.prerelease }}"
+          PRERELEASE_FILE="./server-publish/Prerelease.txt"
+          if [ -f "$PRERELEASE_FILE" ]; then
+            PRERELEASE=$(tr -d '\r\n' < "$PRERELEASE_FILE")
+          fi
+          case "$PRERELEASE" in
+            true|false) ;;
+            *) echo "::error::Invalid prerelease metadata: $PRERELEASE"; exit 1 ;;
+          esac
+          RELEASE_VERSION=
           for PAIR in linux-x64:linux-amd64 linux-arm64:linux-arm64 win-x64:win-x64; do
             RID="${PAIR%%:*}"
             LABEL="${PAIR##*:}"
@@ -129,21 +139,29 @@ jobs:
 
           [ -n "$PRIMARY_RID" ] || { echo "::error::No server payload in the Server artifact."; exit 1; }
           [ -n "$VERSION" ] || { echo "::error::Version.txt is empty."; exit 1; }
+          RELEASE_VERSION="$VERSION"
+          if [ "$PRERELEASE" = "true" ]; then
+            RELEASE_VERSION="${VERSION}-dev"
+          fi
 
           cp "./server-publish/$PRIMARY_RID/ControlR.Web.Server_internal.json" .
           cp "./server-publish/$PRIMARY_RID/ControlR.Web.Server_v1.json" .
           cp docker-compose-download/docker-compose.yml .
 
-          { echo "version=$VERSION"; echo "primary_rid=$PRIMARY_RID"; } >> "$GITHUB_OUTPUT"
-          echo "Version: $VERSION"
+          {
+            echo "version=$RELEASE_VERSION"
+            echo "prerelease=$PRERELEASE"
+            echo "primary_rid=$PRIMARY_RID"
+          } >> "$GITHUB_OUTPUT"
+          echo "Version: $RELEASE_VERSION"
 
           {
             echo "## Release Summary"
-            echo "**Version:** v$VERSION"
+            echo "**Version:** v$RELEASE_VERSION"
             echo "**Server Runtimes:**"
             printf '%s\n' "$SUMMARY"
             echo "**Status:** Draft"
-            echo "**Pre-release:** ${{ inputs.prerelease }}"
+            echo "**Pre-release:** $PRERELEASE"
             echo ""
             echo "⚠️ Release is in DRAFT mode - review and publish when ready"
           } >> $GITHUB_STEP_SUMMARY
@@ -154,7 +172,7 @@ jobs:
           name: v${{ steps.payloads.outputs.version }} Release
           tag_name: v${{ steps.payloads.outputs.version }}
           draft: true
-          prerelease: ${{ inputs.prerelease }}
+          prerelease: ${{ steps.payloads.outputs.prerelease == 'true' }}
           generate_release_notes: false
           body_path: ./server-publish/${{ steps.payloads.outputs.primary_rid }}/wwwroot/downloads/release-notes.md
           files: |
@@ -166,7 +184,7 @@ jobs:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Archive Release Notes
-        if: ${{ !inputs.prerelease }}
+        if: ${{ steps.payloads.outputs.prerelease == 'false' }}
         shell: bash
         env:
           PRIMARY_RID: ${{ steps.payloads.outputs.primary_rid }}
