@@ -8,11 +8,6 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
-      prerelease:
-        description: "Mark GitHub release as pre-release"
-        required: true
-        type: boolean
-        default: false
       use_local_storage:
         description: "Use local storage"
         required: false
@@ -34,7 +29,8 @@ jobs:
     uses: ./.github/workflows/publish-docker.yml
     secrets: inherit
     with:
-      docker_tag: ${{ inputs.prerelease && 'dev' || 'latest' }}
+      # docker_tag is deliberately omitted: publish-docker derives the tag from the build
+      # metadata, so a prerelease build goes to 'dev' and a stable build to 'latest'.
       run_id: ${{ inputs.run_id }}
       use_local_storage: ${{ inputs.use_local_storage }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
@@ -48,7 +44,6 @@ jobs:
     uses: ./.github/workflows/publish-github.yml
     secrets: inherit
     with:
-      prerelease: ${{ inputs.prerelease }}
       run_id: ${{ inputs.run_id }}
       use_local_storage: ${{ inputs.use_local_storage }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}

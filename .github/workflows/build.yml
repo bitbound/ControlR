@@ -1032,17 +1032,40 @@ jobs:
             }
           }
 
+      # The authoritative record of what this build produced. Publishing workflows read it
+      # through .github/actions/get-build-metadata instead of re-deriving version and
+      # prerelease state from the payload. Add properties here as the need arises.
       - name: Write Build Metadata
         shell: pwsh
         env:
           PRERELEASE: ${{ inputs.prerelease }}
+          SERVER_RUNTIME: ${{ inputs.server_runtime }}
+          SERVER_RIDS: ${{ steps.runtimes.outputs.rids }}
         run: |
           $PrereleaseValue = "$env:PRERELEASE".Trim().ToLowerInvariant()
           if ($PrereleaseValue -notin @('true', 'false')) {
-            Write-Error "prerelease input must be true or false; got '$env:PRERELEASE'."
-            exit 1
+            throw "prerelease input must be true or false; got '$env:PRERELEASE'."
           }
-          Set-Content -Path "ControlR.Web.Server/bin/publish/Prerelease.txt" -Value $PrereleaseValue -NoNewline -Encoding ascii
+
+          $Metadata = [ordered]@{
+            version       = $env:VERSION
+            prerelease    = $PrereleaseValue -eq 'true'
+            serverRuntime = $env:SERVER_RUNTIME
+            serverRids    = @(ConvertFrom-Json $env:SERVER_RIDS)
+          }
+
+          New-Item -Path build-metadata -ItemType Directory -Force | Out-Null
+          $Metadata | ConvertTo-Json -Depth 5 | Set-Content -Path build-metadata/build_metadata.json -Encoding utf8
+          Get-Content -Path build-metadata/build_metadata.json
+
+      - name: Upload Build Metadata
+        uses: ./.github/actions/upload-artifact
+        with:
+          name: BuildMetadata
+          path: build-metadata/build_metadata.json
+          retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
       - name: Upload Server
         uses: ./.github/actions/upload-artifact
@@ -1064,15 +1087,16 @@ jobs:
 
       - name: Print Build Summary
         shell: pwsh
-        env:
-          VERSION: ${{ env.VERSION }}
         run: |
-          echo "## Build Summary" >> $env:GITHUB_STEP_SUMMARY
-          echo "**Version:** v${{ env.VERSION }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "**Git Ref:** ${{ github.ref }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "**Server Runtime:** ${{ inputs.server_runtime }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "**Resolved Server Runtimes:** ${{ steps.runtimes.outputs.rids }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "**Use Self-Hosted Runners:** ${{ inputs.use_self_hosted_runners }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "**Use Local Storage for Artifacts:** ${{ inputs.use_local_storage }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "**Customization Config URL:** ${{ inputs.customization_config_url }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "**Pre-release:** ${{ inputs.prerelease }}" >> $env:GITHUB_STEP_SUMMARY
+          $Summary = @(
+            "## Build Summary",
+            "**Version:** v$env:VERSION",
+            "**Git Ref:** ${{ github.ref }}",
+            "**Server Runtime:** ${{ inputs.server_runtime }}",
+            "**Resolved Server Runtimes:** ${{ steps.runtimes.outputs.rids }}",
+            "**Use Self-Hosted Runners:** ${{ inputs.use_self_hosted_runners }}",
+            "**Use Local Storage for Artifacts:** ${{ inputs.use_local_storage }}",
+            "**Customization Config URL:** ${{ inputs.customization_config_url }}",
+            "**Pre-release:** ${{ inputs.prerelease }}"
+          )
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $Summary

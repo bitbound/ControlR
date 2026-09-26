@@ -106,16 +106,22 @@ jobs:
 
       - name: Resolve image platform
         id: platform
-        shell: bash
+        shell: pwsh
+        env:
+          SERVER_RID: ${{ inputs.server_runtime }}
         run: |
-          case "${{ inputs.server_runtime }}" in
-            linux-x64)   echo "platform=linux/amd64" >> "$GITHUB_OUTPUT" ;;
-            linux-arm64) echo "platform=linux/arm64" >> "$GITHUB_OUTPUT" ;;
-            *)
-              echo "::error::Unsupported server runtime '${{ inputs.server_runtime }}'. Expected linux-x64 or linux-arm64."
-              exit 1
-              ;;
-          esac
+          $PlatformsByRid = @{
+            'linux-x64'   = 'linux/amd64'
+            'linux-arm64' = 'linux/arm64'
+          }
+
+          $Platform = $PlatformsByRid[$env:SERVER_RID]
+          if (-not $Platform) {
+            throw "'$env:SERVER_RID' is not a supported server runtime. Expected linux-x64 or linux-arm64."
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "platform=$Platform"
+          Write-Host "Platform: $Platform"
 
       - name: Set up QEMU
         if: steps.platform.outputs.platform == 'linux/arm64'
@@ -130,30 +136,35 @@ jobs:
 
       - name: Normalize sponsor login
         id: normalize
-        shell: bash
+        shell: pwsh
         run: |
-          NORMALIZED=$(echo "$SPONSOR_LOGIN" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/^-//;s/-$//')
-          if [ -z "$NORMALIZED" ]; then
-            NORMALIZED="sponsor"
-          fi
-          echo "normalized=$NORMALIZED" >> $GITHUB_OUTPUT
-          echo "Normalized sponsor login: $NORMALIZED"
+          $Normalized = "$env:SPONSOR_LOGIN".ToLowerInvariant() -replace '[^a-z0-9._-]', '-'
+          $Normalized = $Normalized -replace '^-', ''
+          $Normalized = $Normalized -replace '-$', ''
+          if (-not $Normalized) {
+            $Normalized = 'sponsor'
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "normalized=$Normalized"
+          Write-Host "Normalized sponsor login: $Normalized"
 
       - name: Resolve image reference
         id: image-ref
-        shell: bash
+        shell: pwsh
         env:
           IMAGE_REF_INPUT: ${{ inputs.image_reference }}
           SLOT_NUMBER: ${{ inputs.slot_number }}
           NORMALIZED: ${{ steps.normalize.outputs.normalized }}
         run: |
-          if [ -n "$IMAGE_REF_INPUT" ]; then
-            IMAGE_REF="$IMAGE_REF_INPUT"
-          else
-            IMAGE_REF="$ACR_LOGIN_SERVER/$NORMALIZED/controlr:$NORMALIZED-slot$SLOT_NUMBER"
-          fi
-          echo "ref=$IMAGE_REF" >> $GITHUB_OUTPUT
-          echo "Image reference: $IMAGE_REF"
+          $ImageRef = if ($env:IMAGE_REF_INPUT) {
+            $env:IMAGE_REF_INPUT
+          }
+          else {
+            "$env:ACR_LOGIN_SERVER/$env:NORMALIZED/controlr:$env:NORMALIZED-slot$env:SLOT_NUMBER"
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "ref=$ImageRef"
+          Write-Host "Image reference: $ImageRef"
 
       - name: Download Server Artifact
         uses: ./.github/actions/download-artifact
@@ -165,15 +176,15 @@ jobs:
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
           run-id: ${{ inputs.run_id }}
 
-      - name: Get Version from Version.txt
-        id: get-version
-        shell: bash
-        env:
-          SERVER_RID: ${{ inputs.server_runtime }}
-        run: |
-          VERSION=$(cat "./server-publish/${SERVER_RID}/wwwroot/downloads/Version.txt")
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
+      - name: Get Build Metadata
+        id: metadata
+        uses: ./.github/actions/get-build-metadata
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          expected-rid: ${{ inputs.server_runtime }}
 
       # Download the customization config (uploaded by build.yml download-customization
       # job) so the brand name and other properties are available for the publish steps.
@@ -193,51 +204,54 @@ jobs:
 
       - name: Resolve Brand Key
         id: brand
-        shell: bash
+        shell: pwsh
         run: |
-          BRAND_NAME="ControlR"
-          if [ -f "./customization/customization.json" ]; then
-            BRAND_NAME=$(jq -r '.brandName // "ControlR"' ./customization/customization.json)
-          fi
-          if [ -z "$BRAND_NAME" ] || [ "$BRAND_NAME" = "null" ]; then
-            BRAND_NAME="ControlR"
-          fi
+          $BrandName = 'ControlR'
+          $CustomizationFile = './customization/customization.json'
+          if (Test-Path -PathType Leaf $CustomizationFile) {
+            $BrandName = (Get-Content -Path $CustomizationFile -Raw | ConvertFrom-Json).brandName
+          }
+
+          if (-not $BrandName -or $BrandName -eq 'null') {
+            $BrandName = 'ControlR'
+          }
+
           # Mirrors Invoke-Customize.ps1 sanitization: keep only alphanumerics, others -> '_'
-          BRAND_KEY=$(printf '%s' "$BRAND_NAME" | sed 's/[^A-Za-z0-9]/_/g')
-          echo "brand_name=$BRAND_NAME" >> $GITHUB_OUTPUT
-          echo "brand_key=$BRAND_KEY" >> $GITHUB_OUTPUT
-          echo "Brand name: $BRAND_NAME"
-          echo "Brand key: $BRAND_KEY"
+          $BrandKey = $BrandName -replace '[^A-Za-z0-9]', '_'
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "brand_name=$BrandName"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "brand_key=$BrandKey"
+          Write-Host "Brand name: $BrandName"
+          Write-Host "Brand key: $BrandKey"
 
       - name: Verify Downloaded Files
-        shell: bash
+        shell: pwsh
         env:
           BRAND_KEY: ${{ steps.brand.outputs.brand_key }}
           SERVER_RID: ${{ inputs.server_runtime }}
         run: |
-          set -euo pipefail
-
-          TEST_PATHS=(
-            "./server-publish/${SERVER_RID}/wwwroot/downloads/Version.txt"
-            "./server-publish/${SERVER_RID}/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.Installer"
-            "./server-publish/${SERVER_RID}/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.bundle.zip"
-            "./server-publish/${SERVER_RID}/novnc/vnc.html"
+          $Rid = $env:SERVER_RID
+          $BrandKey = $env:BRAND_KEY
+          $RequiredPaths = @(
+            "./server-publish/$Rid/wwwroot/downloads/Version.txt",
+            "./server-publish/$Rid/wwwroot/downloads/linux-x64/$BrandKey.Agent.Installer",
+            "./server-publish/$Rid/wwwroot/downloads/linux-x64/$BrandKey.Agent.bundle.zip",
+            "./server-publish/$Rid/novnc/vnc.html"
           )
 
-          for TEST_PATH in "${TEST_PATHS[@]}"; do
-            if [ ! -f "$TEST_PATH" ] && [ ! -d "$TEST_PATH" ]; then
-              echo "::error::$TEST_PATH not found."
-              exit 1
-            fi
-          done
-          echo "All required files verified successfully"
+          $Missing = @($RequiredPaths | Where-Object { -not (Test-Path -Path $_) })
+          if ($Missing) {
+            throw "Missing from the Server artifact: $($Missing -join ', ')."
+          }
+
+          Write-Host "All required files verified successfully"
 
       - name: Create Custom Dockerfile
-        shell: bash
+        shell: pwsh
         env:
           SERVER_RID: ${{ inputs.server_runtime }}
         run: |
-          cat > "./server-publish/${SERVER_RID}/Dockerfile" << 'EOF'
+          @'
           FROM mcr.microsoft.com/dotnet/aspnet:10.0
           RUN apt-get update \
               && apt-get install -y --no-install-recommends curl \
@@ -262,7 +276,7 @@ jobs:
 
           HEALTHCHECK \
             CMD curl -f http://localhost:8080/health || exit 1
-          EOF
+          '@ | Set-Content -Path "./server-publish/$env:SERVER_RID/Dockerfile" -Encoding utf8
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -275,9 +289,9 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to ACR
-        shell: bash
+        shell: pwsh
         run: |
-          az acr login --name "${ACR_LOGIN_SERVER}"
+          az acr login --name $env:ACR_LOGIN_SERVER
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v7
@@ -290,22 +304,25 @@ jobs:
           provenance: true
           sbom: true
           build-args: |
-            CURRENT_VERSION=${{ steps.get-version.outputs.VERSION }}
+            CURRENT_VERSION=${{ steps.metadata.outputs.version }}
             SPONSOR_LOGIN=${{ steps.normalize.outputs.normalized }}
             SLOT_NUMBER=${{ inputs.slot_number }}
 
       - name: Image Published
-        shell: bash
+        shell: pwsh
         env:
           SPONSOR: ${{ inputs.sponsor_login }}
           SLOT: ${{ inputs.slot_number }}
-          VERSION: ${{ steps.get-version.outputs.VERSION }}
+          VERSION: ${{ steps.metadata.outputs.version }}
           IMAGE_REF: ${{ steps.image-ref.outputs.ref }}
           RUN_ID: ${{ inputs.run_id }}
         run: |
-          echo "## ACR Publish Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Sponsor:** $SPONSOR" >> $GITHUB_STEP_SUMMARY
-          echo "**Slot:** $SLOT" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** $IMAGE_REF" >> $GITHUB_STEP_SUMMARY
-          echo "**Build Run:** $RUN_ID" >> $GITHUB_STEP_SUMMARY
+          $Summary = @(
+            "## ACR Publish Summary",
+            "**Sponsor:** $env:SPONSOR",
+            "**Slot:** $env:SLOT",
+            "**Version:** $env:VERSION",
+            "**Image:** $env:IMAGE_REF",
+            "**Build Run:** $env:RUN_ID"
+          )
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $Summary

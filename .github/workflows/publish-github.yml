@@ -4,11 +4,6 @@ run-name: "GitHub Release (Run ID: ${{ inputs.run_id || 'latest build' }})"
 on:
   workflow_dispatch:
     inputs:
-      prerelease:
-        description: "Fallback pre-release flag; the build artifact's prerelease metadata takes precedence"
-        required: true
-        type: boolean
-        default: false
       run_id:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
@@ -25,11 +20,6 @@ on:
         default: true
   workflow_call:
     inputs:
-      prerelease:
-        description: "Fallback pre-release flag; the build artifact's prerelease metadata takes precedence"
-        required: true
-        type: boolean
-        default: false
       run_id:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
@@ -103,79 +93,95 @@ jobs:
         with:
           path: ./server-publish
 
-      - name: Resolve Prerelease Flag
-        id: prerelease
-        uses: ./.github/actions/get-build-prerelease
+      - name: Get Build Metadata
+        id: metadata
+        uses: ./.github/actions/get-build-metadata
         with:
-          path: ./server-publish
-          fallback: ${{ inputs.prerelease }}
+          run-id: ${{ steps.get-run-id.outputs.run_id }}
+          github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      # The Server artifact holds one subdirectory per runtime the build produced, so the
-      # archive itself is the record of what to publish. The build's prerelease flag
-      # travels in the artifact too, so the release can't be mislabeled.
+      # The build metadata lists the runtimes the build produced, so the archive set is
+      # decided by the build rather than by whatever happens to be on disk. Only the
+      # runtimes that have a release archive are zipped; the rest are reported and skipped.
       - name: Prepare Release Artifacts
-        id: payloads
-        shell: bash
+        shell: pwsh
         env:
-          PRERELEASE: ${{ steps.prerelease.outputs.prerelease }}
+          SERVER_RIDS: ${{ steps.metadata.outputs.server_rids }}
+          PRIMARY_RID: ${{ steps.metadata.outputs.primary_rid }}
+          RELEASE_VERSION: ${{ steps.metadata.outputs.release_version }}
+          PRERELEASE: ${{ steps.metadata.outputs.prerelease }}
         run: |
-          set -euo pipefail
+          $RidLabels = [ordered]@{
+            'linux-x64'   = 'linux-amd64'
+            'linux-arm64' = 'linux-arm64'
+            'win-x64'     = 'win-x64'
+          }
 
-          VERSION=
-          PRIMARY_RID=
-          SUMMARY=
-          RELEASE_VERSION=
-          for PAIR in linux-x64:linux-amd64 linux-arm64:linux-arm64 win-x64:win-x64; do
-            RID="${PAIR%%:*}"
-            LABEL="${PAIR##*:}"
-            [ -d "./server-publish/$RID" ] || continue
+          $ArchiveCount = 0
+          $Archived = [System.Collections.Generic.List[string]]::new()
 
-            rm -f "server-$LABEL.zip"
-            ( cd "./server-publish/$RID" && zip -qr "../../server-$LABEL.zip" . )
-            [ -n "$PRIMARY_RID" ] || PRIMARY_RID="$RID"
-            [ -n "$VERSION" ] || VERSION=$(tr -d '\r\n' < "./server-publish/$RID/wwwroot/downloads/Version.txt")
-            SUMMARY="${SUMMARY}${SUMMARY:+$'\n'}- \`$RID\` -> \`server-$LABEL.zip\`"
-            echo "server-$LABEL.zip <- $RID"
-          done
+          foreach ($Rid in $env:SERVER_RIDS.Split(',')) {
+            if (-not $RidLabels.Contains($Rid)) {
+              Write-Host "No release archive for '$Rid'; skipping."
+              continue
+            }
 
-          [ -n "$PRIMARY_RID" ] || { echo "::error::No server payload in the Server artifact."; exit 1; }
-          [ -n "$VERSION" ] || { echo "::error::Version.txt is empty."; exit 1; }
-          RELEASE_VERSION="$VERSION"
-          if [ "$PRERELEASE" = "true" ]; then
-            RELEASE_VERSION="${VERSION}-dev"
-          fi
+            $RidDirectory = "./server-publish/$Rid"
+            if (-not (Test-Path -PathType Container $RidDirectory)) {
+              Write-Warning "'$RidDirectory' is missing from the Server artifact; skipping its archive."
+              continue
+            }
 
-          cp "./server-publish/$PRIMARY_RID/ControlR.Web.Server_internal.json" .
-          cp "./server-publish/$PRIMARY_RID/ControlR.Web.Server_v1.json" .
-          cp docker-compose-download/docker-compose.yml .
+            $Label = $RidLabels[$Rid]
+            $Archive = "server-$Label.zip"
+            Remove-Item -Path $Archive -Force -ErrorAction SilentlyContinue
 
-          {
-            echo "version=$RELEASE_VERSION"
-            echo "prerelease=$PRERELEASE"
-            echo "primary_rid=$PRIMARY_RID"
-          } >> "$GITHUB_OUTPUT"
-          echo "Version: $RELEASE_VERSION"
+            # Zip from inside the runtime directory so the archive root is the payload root.
+            Push-Location -Path $RidDirectory
+            try {
+              zip -qr "../../$Archive" .
+              if ($LASTEXITCODE -ne 0) {
+                throw "zip failed for $Rid with exit code $LASTEXITCODE."
+              }
+            }
+            finally {
+              Pop-Location
+            }
 
-          {
-            echo "## Release Summary"
-            echo "**Version:** v$RELEASE_VERSION"
-            echo "**Server Runtimes:**"
-            printf '%s\n' "$SUMMARY"
-            echo "**Status:** Draft"
-            echo "**Pre-release:** $PRERELEASE"
-            echo ""
-            echo "⚠️ Release is in DRAFT mode - review and publish when ready"
-          } >> $GITHUB_STEP_SUMMARY
+            $Archived.Add("- ``$Rid`` -> ``$Archive``")
+            Write-Host "$Archive <- $Rid"
+            $ArchiveCount++
+          }
+
+          if ($ArchiveCount -eq 0) {
+            throw "The Server artifact contains no payload for the runtimes in the build metadata ($env:SERVER_RIDS)."
+          }
+
+          # The primary runtime supplies the release notes and API schemas for the release.
+          Copy-Item -Path "./server-publish/$env:PRIMARY_RID/ControlR.Web.Server_internal.json" -Destination . -Force
+          Copy-Item -Path "./server-publish/$env:PRIMARY_RID/ControlR.Web.Server_v1.json" -Destination . -Force
+          Copy-Item -Path "docker-compose-download/docker-compose.yml" -Destination . -Force
+
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## Release Summary"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Version:** v$env:RELEASE_VERSION"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Server Runtimes:**"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $Archived
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Status:** Draft"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Pre-release:** $env:PRERELEASE"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "⚠️ Release is in DRAFT mode - review and publish when ready"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: v${{ steps.payloads.outputs.version }} Release
-          tag_name: v${{ steps.payloads.outputs.version }}
+          name: v${{ steps.metadata.outputs.release_version }} Release
+          tag_name: v${{ steps.metadata.outputs.release_version }}
           draft: true
-          prerelease: ${{ steps.payloads.outputs.prerelease == 'true' }}
+          prerelease: ${{ steps.metadata.outputs.prerelease == 'true' }}
           generate_release_notes: false
-          body_path: ./server-publish/${{ steps.payloads.outputs.primary_rid }}/wwwroot/downloads/release-notes.md
+          body_path: ./server-publish/${{ steps.metadata.outputs.primary_rid }}/wwwroot/downloads/release-notes.md
           files: |
             server-*.zip
             ControlR.Web.Server_internal.json
@@ -185,14 +191,16 @@ jobs:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Archive Release Notes
-        if: ${{ steps.payloads.outputs.prerelease == 'false' }}
-        shell: bash
+        if: ${{ steps.metadata.outputs.prerelease == 'false' }}
+        shell: pwsh
         env:
-          PRIMARY_RID: ${{ steps.payloads.outputs.primary_rid }}
+          PRIMARY_RID: ${{ steps.metadata.outputs.primary_rid }}
+          RELEASE_VERSION: ${{ steps.metadata.outputs.release_version }}
         run: |
-          VERSION="${{ steps.payloads.outputs.version }}"
-          cp "./server-publish/${PRIMARY_RID}/wwwroot/downloads/release-notes.md" ".release-notes/v${VERSION}.md"
-          cat > .release-notes/current.md << 'TEMPLATE'
+          Copy-Item -Path "./server-publish/$env:PRIMARY_RID/wwwroot/downloads/release-notes.md" `
+            -Destination ".release-notes/v$env:RELEASE_VERSION.md" -Force
+
+          @'
           ## Breaking Changes
 
           None.
@@ -212,13 +220,24 @@ jobs:
           ## Internal
 
           None.
-          TEMPLATE
+          '@ | Set-Content -Path .release-notes/current.md -Encoding utf8
+
           git config user.name "bitbound-bot[bot]"
           git config user.email "bitbound-bot[bot]@users.noreply.github.com"
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "No changes to commit."
-          else
-            git add .release-notes/
-            git commit -m "chore: archive release notes for v${VERSION}"
+
+          git add .release-notes/
+          $Changes = git status --porcelain -- .release-notes/
+          if (-not $Changes) {
+            Write-Host "Release notes are already up to date; nothing to commit."
+          }
+          else {
+            git commit -m "chore: archive release notes for v$env:RELEASE_VERSION"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to commit the archived release notes."
+            }
+
             git push "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
-          fi
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to push the archived release notes."
+            }
+          }

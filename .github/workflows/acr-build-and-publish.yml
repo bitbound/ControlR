@@ -72,25 +72,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate delivery format and runtime
+        shell: pwsh
         env:
           DELIVERY_FORMAT: ${{ inputs.delivery_format }}
           SERVER_RUNTIME: ${{ inputs.server_runtime }}
           ARTIFACT_BLOB_KEY: ${{ inputs.artifact_blob_key }}
           IMAGE_REFERENCE: ${{ inputs.image_reference }}
         run: |
-          if [ "$DELIVERY_FORMAT" = "docker" ] && [ "$SERVER_RUNTIME" = "win-x64" ]; then
-            echo "::error::server_runtime win-x64 requires delivery_format zip; container delivery only supports Linux runtimes."
-            exit 1
-          fi
-          if [ "$DELIVERY_FORMAT" = "zip" ] && [ -z "$ARTIFACT_BLOB_KEY" ]; then
-            echo "::error::artifact_blob_key is required for zip delivery."
-            exit 1
-          fi
-          if [ "$DELIVERY_FORMAT" = "docker" ] && [ -z "$IMAGE_REFERENCE" ]; then
-            echo "::error::image_reference is required for docker delivery."
-            exit 1
-          fi
-          echo "Inputs OK (format=$DELIVERY_FORMAT, runtime=$SERVER_RUNTIME)"
+          if ($env:DELIVERY_FORMAT -eq 'docker' -and $env:SERVER_RUNTIME -eq 'win-x64') {
+            throw "server_runtime win-x64 requires delivery_format zip; container delivery only supports Linux runtimes."
+          }
+
+          if ($env:DELIVERY_FORMAT -eq 'zip' -and -not $env:ARTIFACT_BLOB_KEY) {
+            throw "artifact_blob_key is required for zip delivery."
+          }
+
+          if ($env:DELIVERY_FORMAT -eq 'docker' -and -not $env:IMAGE_REFERENCE) {
+            throw "image_reference is required for docker delivery."
+          }
+
+          Write-Host "Inputs OK (format=$env:DELIVERY_FORMAT, runtime=$env:SERVER_RUNTIME)"
 
   build:
     name: Build
@@ -122,14 +123,22 @@ jobs:
     if: ${{ always() }}
     steps:
       - name: Echo Build Summary
+        shell: pwsh
+        env:
+          SPONSOR_LOGIN: ${{ inputs.sponsor_login }}
+          SLOT_NUMBER: ${{ inputs.slot_number }}
+          IMAGE_REFERENCE: ${{ inputs.image_reference }}
+          ARTIFACT_BLOB_KEY: ${{ inputs.artifact_blob_key }}
+          DELIVERY_FORMAT: ${{ inputs.delivery_format }}
+          ENVIRONMENT: ${{ inputs.environment }}
         run: |
-          echo "Run ID: ${{ github.run_id }}"
-          echo "Sponsor Login: ${{ inputs.sponsor_login }}"
-          echo "Slot Number: ${{ inputs.slot_number }}"
-          echo "Image Reference: ${{ inputs.image_reference }}"
-          echo "Artifact Blob Key: ${{ inputs.artifact_blob_key }}"
-          echo "Delivery Format: ${{ inputs.delivery_format }}"
-          echo "Environment: ${{ inputs.environment }}"
+          Write-Host "Run ID: $env:GITHUB_RUN_ID"
+          Write-Host "Sponsor Login: $env:SPONSOR_LOGIN"
+          Write-Host "Slot Number: $env:SLOT_NUMBER"
+          Write-Host "Image Reference: $env:IMAGE_REFERENCE"
+          Write-Host "Artifact Blob Key: $env:ARTIFACT_BLOB_KEY"
+          Write-Host "Delivery Format: $env:DELIVERY_FORMAT"
+          Write-Host "Environment: $env:ENVIRONMENT"
 
   publish-acr:
     name: Publish to ACR
