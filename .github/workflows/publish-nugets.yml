@@ -56,6 +56,7 @@ jobs:
           use_local_storage: ${{ inputs.use_local_storage }}
           artifact_host: ${{ vars.ARTIFACT_HOST }}
           artifact_base_path: ${{ vars.ARTIFACT_BASE_PATH }}
+
       - name: Get Latest Build Run ID
         id: get-run-id
         uses: ./.github/actions/get-latest-build-run-id
@@ -111,8 +112,8 @@ jobs:
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## NuGet Publish Summary"
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Files Published:**"
           $packages = Get-ChildItem -Path ./nuget-packages/*.nupkg
-          foreach ($Item in $packages) {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "  - $($Item.Name)"
+          foreach ($package in $packages) {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "  - $($package.Name)"
           }
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "✅ Successfully published to NuGet.org"

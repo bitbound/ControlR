@@ -1,0 +1,105 @@
+name: Get Build Metadata
+description: Downloads the build_metadata.json artifact written by build.yml and exposes the fields publishing workflows need
+
+# build.yml records the authoritative facts about a build (version, prerelease flag, and
+# the server runtimes it produced) in a dedicated BuildMetadata artifact. Publishing
+# workflows read them from here instead of re-deriving them from the payload, so a build
+# can never be published under the wrong version or release channel.
+#
+# Add new fields to build_metadata.json in build.yml and surface them here; consumers
+# then get them without any further plumbing.
+
+inputs:
+  run-id:
+    description: 'Build workflow run ID the metadata belongs to'
+    required: true
+  github-token:
+    description: 'GitHub token with actions:read permission'
+    required: true
+  artifact-host:
+    description: 'SCP host for local artifact storage (empty to use GitHub artifacts)'
+    required: false
+    default: ''
+  artifact-base-path:
+    description: 'Remote base path for local artifact storage'
+    required: false
+    default: ''
+  expected-rid:
+    description: 'Optional server RID the caller expects to be present; fails when the build did not produce it'
+    required: false
+    default: ''
+
+outputs:
+  version:
+    description: 'Numeric build version, for example 1.2.3.0'
+    value: ${{ steps.read.outputs.version }}
+  prerelease:
+    description: '"true" when the build was flagged prerelease'
+    value: ${{ steps.read.outputs.prerelease }}
+  release_version:
+    description: 'Version carrying the prerelease suffix when applicable, for example 1.2.3.0-dev'
+    value: ${{ steps.read.outputs.release_version }}
+  server_rids:
+    description: 'Comma-separated server RIDs the build produced, in build order'
+    value: ${{ steps.read.outputs.server_rids }}
+  primary_rid:
+    description: 'First server RID the build produced'
+    value: ${{ steps.read.outputs.primary_rid }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download Build Metadata
+      uses: ./.github/actions/download-artifact
+      with:
+        name: BuildMetadata
+        path: ${{ runner.temp }}/build-metadata
+        github-token: ${{ inputs.github-token }}
+        artifact-host: ${{ inputs.artifact-host }}
+        artifact-base-path: ${{ inputs.artifact-base-path }}
+        run-id: ${{ inputs.run-id }}
+
+    - name: Read Build Metadata
+      id: read
+      shell: pwsh
+      env:
+        METADATA_FILE: ${{ runner.temp }}/build-metadata/build_metadata.json
+        EXPECTED_RID: ${{ inputs.expected-rid }}
+      run: |
+        if (-not (Test-Path -PathType Leaf $env:METADATA_FILE)) {
+          throw "Build metadata was not found at '$env:METADATA_FILE'. Re-run the Build workflow so it uploads the BuildMetadata artifact."
+        }
+
+        $Metadata = Get-Content -Path $env:METADATA_FILE -Raw | ConvertFrom-Json
+
+        $Version = "$($Metadata.version)".Trim()
+        if ($Version -notmatch '^[0-9]+(\.[0-9]+){1,3}\z') {
+          throw "Build metadata '$env:METADATA_FILE' has an invalid version '$($Metadata.version)'."
+        }
+
+        if ($Metadata.prerelease -isnot [bool]) {
+          throw "Build metadata '$env:METADATA_FILE' has an invalid prerelease flag '$($Metadata.prerelease)'. Expected true or false."
+        }
+
+        $ServerRids = @($Metadata.serverRids | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        if ($ServerRids.Count -eq 0) {
+          throw "Build metadata '$env:METADATA_FILE' lists no server runtimes."
+        }
+
+        if ($env:EXPECTED_RID -and $ServerRids -notcontains $env:EXPECTED_RID) {
+          throw "This build produced '$($ServerRids -join ', ')', which does not include the requested server runtime '$env:EXPECTED_RID'."
+        }
+
+        $Prerelease = if ($Metadata.prerelease) { 'true' } else { 'false' }
+        $ReleaseVersion = if ($Metadata.prerelease) { "$Version-dev" } else { $Version }
+
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$Version"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "prerelease=$Prerelease"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "release_version=$ReleaseVersion"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "server_rids=$($ServerRids -join ',')"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "primary_rid=$($ServerRids[0])"
+
+        Write-Host "Version: $Version"
+        Write-Host "Release version: $ReleaseVersion"
+        Write-Host "Pre-release: $Prerelease"
+        Write-Host "Server runtimes: $($ServerRids -join ', ')"
