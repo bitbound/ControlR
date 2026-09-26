@@ -16,6 +16,12 @@
     System emails are disabled.  Please contact your administrator.
   </MudAlert>
 }
+else if (!PublicUrlProvider.HasTrustworthyOrigin)
+{
+  <MudAlert Severity="Severity.Warning">
+    Verification emails cannot be sent from this server.  Please contact your administrator.
+  </MudAlert>
+}
 else
 {
   <StatusMessage Message="@_message" Class="mb-4" />
@@ -74,7 +80,7 @@ else
 
     if (callbackUrl is null)
     {
-      _message = "Verification email could not be sent. Please contact your administrator.";
+      _message = "Error: Verification email could not be sent. Please contact your administrator.";
       return;
     }
 

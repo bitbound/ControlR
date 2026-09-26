@@ -27,7 +27,7 @@ public class RequestOriginGuardrailTests
   /// </summary>
   private static readonly string[] _allowList =
   [
-    @"Components\Account\IdentityRedirectManager.cs",
+    Path.Combine("Components", "Account", "IdentityRedirectManager.cs"),
   ];
   private static readonly string[] _bannedPatterns =
   [
@@ -40,7 +40,37 @@ public class RequestOriginGuardrailTests
     // password-reset link took its origin from a forged header. GetUriWithQueryParameters on a relative
     // path is fine, because it stays relative for the same caller.
     "ToAbsoluteUri(",
+    "BaseUri",
+    "GetDisplayUrl(",
+    "Headers[HeaderNames.Host]",
+    "Headers[\"Host\"]",
+    // MapIdentityApi builds its confirmation links with this, resolving against the arriving request's
+    // scheme and host. IdentityEmailSender rewrites whatever link it receives from the configured
+    // origin, so no call site may generate one directly.
+    "LinkGenerator.GetUriByName",
   ];
+
+  /// <summary>
+  /// Pins that each allow-list entry still matches the file it names once the path is made relative the
+  /// way the scan does it. An entry with a hard-coded separator matches on one OS and silently stops
+  /// matching on the other, which turns the scan red only in CI.
+  /// </summary>
+  [Fact]
+  public void AllowListEntries_MatchTheFilesTheyName()
+  {
+    var serverRoot = Path.Combine(FindRepositoryRoot(), "ControlR.Web.Server");
+    var relativePaths = EnumerateServerSourceFiles(serverRoot)
+      .Select(file => Path.GetRelativePath(serverRoot, file))
+      .ToArray();
+
+    foreach (var allowed in _allowList)
+    {
+      Assert.True(
+        relativePaths.Any(relative => relative.EndsWith(allowed, StringComparison.OrdinalIgnoreCase)),
+        $"The allow-list entry '{allowed}' matches no file under ControlR.Web.Server. " +
+        $"Build it with Path.Combine so it matches on every OS.");
+    }
+  }
 
   [Fact]
   public void ServerSource_DoesNotDeriveUrlOriginFromTheRequest()

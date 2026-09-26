@@ -151,7 +151,8 @@ Any absolute URL this server hands to someone (emailed links, `DeviceAccessUrl`,
 
 - Build with `IPublicUrlProvider.TryGetAbsoluteUrl(path[, query])`. It returns `null` when no valid `PublicBaseUrl` is set.
 - Fail upstream, not in the DTO. When an operation's whole purpose is to produce such a URL, check `HasTrustworthyOrigin` first and refuse (503 for APIs, a returned error for services) before creating any state. Do not make the URL field nullable and push the problem onto every consumer.
-- The `Request.ToOrigin()` extension is deleted on purpose. `RequestOriginGuardrailTests` fails the build if request-origin URL building reappears outside `PublicUrlProvider` and the allow-listed `EmailSender` logo check.
+- The `Request.ToOrigin()` extension is deleted on purpose. `RequestOriginGuardrailTests` fails the test run if request-origin URL building reappears anywhere under `ControlR.Web.Server` outside its `_allowList` (currently only `IdentityRedirectManager.cs`, which redirects back to the same caller). It is a source scan, so it runs under `dotnet run` on the test project, not under `dotnet build`.
+- Framework-generated Identity links are rebuilt from the configured origin in `IdentityEmailSender`, which is the single seam every `MapIdentityApi` email passes through. Do not build those links from `LinkGenerator` at a call site.
 - Relative URLs and same-caller redirects are fine from the request. This rule is about absolute URLs that leave the server.
 
 ## Web UI

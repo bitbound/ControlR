@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -123,6 +124,50 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
     Assert.Contains("Account/ForgotPasswordConfirmation", location);
   }
 
+  /// <summary>
+  /// The <c>MapIdentityApi</c> endpoints build their own links from the request, and only
+  /// <c>IdentityEmailSender</c> stands between them and the mailbox. This pins that seam for the
+  /// anonymous resend path, which no ControlR page guards.
+  /// </summary>
+  /// <remarks>
+  /// The forged value is the <c>Host</c> header rather than <c>X-Forwarded-Host</c>, because the
+  /// forwarded-headers middleware is configured for <c>X-Forwarded-For</c> and <c>X-Forwarded-Proto</c>
+  /// only and never reads the host variant. <c>AllowedHosts</c> ships as <c>"*"</c>, so an arbitrary
+  /// <c>Host</c> reaches <c>Request.Host</c> and therefore reaches <c>LinkGenerator</c>.
+  /// </remarks>
+  [Fact]
+  public async Task ResendConfirmationEmail_RewritesTheFrameworkLink_WhenTheHostIsForged()
+  {
+    var sender = new CapturingEmailSender();
+    var settings = NewSettings();
+    settings["AppOptions:PublicBaseUrl"] = ConfiguredOrigin;
+    // The Identity API endpoints only exist when interactive bearer login is on.
+    settings["AppOptions:EnableInteractiveBearerLogin"] = "true";
+
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      testOutput, settings: settings, configureServices: services => services.UseSender(sender));
+
+    var tenant = await testServer.Services.CreateTestTenant();
+    var user = await testServer.Services.CreateTestUser(tenant.Id, "resend@t.local");
+
+    using var httpClient = await testServer.GetHttpClient();
+    using var request = new HttpRequestMessage(
+      HttpMethod.Post, $"{HttpConstants.Internal.AuthEndpoint}/resendConfirmationEmail")
+    {
+      Content = JsonContent.Create(new { email = user.Email }),
+    };
+    request.Headers.Host = ForgedHost;
+
+    var response = await httpClient.SendAsync(request, TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    AssertNoForgedHost(sender.Body);
+    AssertNoForgedHost(sender.ConfirmationLink);
+    Assert.True(
+      sender.ConfirmationLink.StartsWith(ConfiguredOrigin, StringComparison.Ordinal),
+      $"Expected the configured origin, got: {sender.ConfirmationLink}");
+  }
+
   [GeneratedRegex("https?://[^'\"\\s<]+")]
   private static partial Regex AbsoluteUrlRegex();
 
@@ -189,9 +234,12 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
   /// </summary>
   private sealed class CapturingEmailSender : IEmailSender
   {
+    private readonly List<string> _confirmationLinks = [];
     private readonly List<string> _resetLinks = [];
 
     public string Body { get; private set; } = string.Empty;
+
+    public string ConfirmationLink => _confirmationLinks.FirstOrDefault() ?? string.Empty;
 
     public string ResetLink => _resetLinks.FirstOrDefault() ?? string.Empty;
 
@@ -204,6 +252,10 @@ public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
         if (match.Value.Contains("ResetPassword", StringComparison.OrdinalIgnoreCase))
         {
           _resetLinks.Add(match.Value);
+        }
+        else if (match.Value.Contains("confirmEmail", StringComparison.OrdinalIgnoreCase))
+        {
+          _confirmationLinks.Add(match.Value);
         }
       }
 
