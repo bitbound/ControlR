@@ -1039,7 +1039,6 @@ jobs:
         shell: pwsh
         env:
           PRERELEASE: ${{ inputs.prerelease }}
-          SERVER_RUNTIME: ${{ inputs.server_runtime }}
           SERVER_RIDS: ${{ steps.runtimes.outputs.rids }}
         run: |
           $PrereleaseValue = "$env:PRERELEASE".Trim().ToLowerInvariant()
@@ -1048,10 +1047,9 @@ jobs:
           }
 
           $Metadata = [ordered]@{
-            version       = $env:VERSION
-            prerelease    = $PrereleaseValue -eq 'true'
-            serverRuntime = $env:SERVER_RUNTIME
-            serverRids    = @(ConvertFrom-Json $env:SERVER_RIDS)
+            version    = $env:VERSION
+            prerelease = $PrereleaseValue -eq 'true'
+            serverRids = @(ConvertFrom-Json $env:SERVER_RIDS)
           }
 
           New-Item -Path build-metadata -ItemType Directory -Force | Out-Null

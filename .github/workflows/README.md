@@ -13,17 +13,19 @@ payload, which is what keeps a build from being published under the wrong versio
 {
   "version": "1.2.3.0",
   "prerelease": false,
-  "serverRuntime": "linux-multiarch",
   "serverRids": ["linux-x64", "linux-arm64"]
 }
 ```
 
-| Property        | Meaning                                                                    |
-| --------------- | -------------------------------------------------------------------------- |
-| `version`       | Numeric build version, without any prerelease suffix                       |
-| `prerelease`    | `true` when the build came from `build.yml` with the prerelease input       |
-| `serverRuntime` | The `server_runtime` input the build used (`linux-multiarch`, `win-x64`, ...) |
-| `serverRids`    | Runtime identifiers the build published, in build order                    |
+| Property     | Meaning                                                                    |
+| ------------ | -------------------------------------------------------------------------- |
+| `version`    | Numeric build version, without any prerelease suffix                       |
+| `prerelease` | `true` when the build came from `build.yml` with the prerelease input       |
+| `serverRids` | Runtime identifiers the build published, in build order                    |
+
+`serverRids` is the authoritative list of what the build actually published, and it is what the
+`server_runtime` input resolves to (one runtime, or two for `linux-multiarch`). The input itself
+is not carried forward, so a consumer cannot disagree with the payload about what exists.
 
 Consumers use the `.github/actions/get-build-metadata` composite action, which downloads the
 artifact and exposes `version`, `prerelease`, `release_version` (`<version>-dev` for prerelease
