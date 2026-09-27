@@ -6880,6 +6880,13 @@
             "items": {
               "$ref": "#/components/schemas/CredentialScopeDto"
             }
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -8054,7 +8061,9 @@
           "createdAt",
           "lastUsed",
           "permissionCount",
-          "permissionMode"
+          "permissionMode",
+          "expiresAt",
+          "revokedAt"
         ],
         "type": "object",
         "properties": {
@@ -8083,6 +8092,20 @@
           },
           "permissionMode": {
             "$ref": "#/components/schemas/PersonalAccessTokenPermissionMode"
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },

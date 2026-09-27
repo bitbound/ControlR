@@ -9,4 +9,5 @@ public record CustomizationConfigDto(
     string? Publisher = null,
     string? Version = null,
     CustomizationColorsDto? Colors = null,
-    CustomizationImagesDto? Images = null);
+    CustomizationImagesDto? Images = null,
+    string? CustomCss = null);

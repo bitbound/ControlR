@@ -59,15 +59,20 @@ internal class ServiceControlLinux(
             var serviceName = GetDesktopClientServiceName();
             _logger.LogInformation("Starting desktop client service for all logged-in users: {ServiceName}", serviceName);
 
-            var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
-            if (loggedInUsers.Count == 0)
+            // Only launch for a user who is active at the seat. An inactive graphical session
+            // (greeter, switched VT) must not get a client. See #157.
+            var uids = (await _loggedInUserProvider.GetLoggedInUsers())
+                .Where(user => user.IsActive)
+                .Select(user => user.Uid)
+                .ToList();
+            if (uids.Count == 0)
             {
                 _logger.LogWarning("No logged-in users found. Desktop client service will not be started.");
                 return;
             }
 
             var tasks = new List<Task>();
-            foreach (var uid in loggedInUsers)
+            foreach (var uid in uids)
             {
                 tasks.Add(StartDesktopClientForUser(uid, serviceName, throwOnFailure));
             }
@@ -127,15 +132,20 @@ internal class ServiceControlLinux(
             var serviceName = GetDesktopClientServiceName();
             _logger.LogInformation("Stopping desktop client service for all logged-in users: {ServiceName}", serviceName);
 
-            var loggedInUsers = await _loggedInUserProvider.GetLoggedInUserUids();
-            if (loggedInUsers.Count == 0)
+            // Stop every logged-in user, active or not. A user who launched a client and then
+            // switched VT still has the client running in their user session; restricting the
+            // stop list to active sessions would orphan it after the agent stops. See #157.
+            var uids = (await _loggedInUserProvider.GetLoggedInUsers())
+                .Select(user => user.Uid)
+                .ToList();
+            if (uids.Count == 0)
             {
                 _logger.LogInformation("No logged-in users found. Nothing to stop.");
                 return;
             }
 
             var tasks = new List<Task>();
-            foreach (var uid in loggedInUsers)
+            foreach (var uid in uids)
             {
                 tasks.Add(StopDesktopClientForUser(uid, serviceName, throwOnFailure));
             }

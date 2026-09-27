@@ -22,10 +22,10 @@ public static class BitmapExtensions
   public static SKImage ToSkImage(this Bitmap bitmap)
   {
     var info = new SKImageInfo(bitmap.Width, bitmap.Height);
-    using var sKImage = SKImage.Create(info).AsMaybeDisposable();
-    using var pixmap = sKImage.Value.PeekPixels();
+    using var imageGuard = SKImage.Create(info).Guard();
+    using var pixmap = imageGuard.Value.PeekPixels();
     bitmap.ToSkPixmap(pixmap);
-    return sKImage.Suppress();
+    return imageGuard.Dismiss();
   }
 
   public static void ToSkPixmap(this Bitmap bitmap, SKPixmap pixmap)

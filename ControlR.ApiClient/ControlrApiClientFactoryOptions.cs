@@ -64,20 +64,22 @@ public class ControlrApiClientFactoryOptions
   public TimeSpan? MaxIdleClientLifetime { get; set; } = TimeSpan.FromMinutes(30);
 
   /// <summary>
-  /// The maximum number of tracked targets. When the limit is reached, creating a new client
-  /// evicts the least-recently-used existing client. <c>null</c> (default) means unlimited.
-  /// Values below <c>1</c> are rejected at startup.
+  /// The maximum number of tracked targets. When the limit is reached, creating a new client evicts the
+  /// least-recently-used existing one.
   /// </summary>
   /// <remarks>
-  /// Unlike <see cref="MaxIdleClientLifetime"/>, this can evict a target that holds a live interactive
+  /// <c>null</c> (the default) means unlimited; values below <c>1</c> are rejected at startup. Unlike
+  /// <see cref="MaxIdleClientLifetime"/>, this can evict a target that holds a live interactive
   /// session, because a hard cap has to be able to evict something. Set it for a fleet that hosts
   /// sign-ins only when losing a login and re-authenticating is acceptable.
   /// </remarks>
   public int? MaxTrackedClients { get; set; }
 
   /// <summary>
-  /// How often the background sweeper checks for idle clients. Must be greater than
-  /// <see cref="TimeSpan.Zero"/>. Defaults to 1 minute. Changes require an application restart.
+  /// How often the background sweeper checks for idle clients. Defaults to 1 minute.
   /// </summary>
+  /// <remarks>
+  /// Must be greater than <see cref="TimeSpan.Zero"/>. Changes require an application restart.
+  /// </remarks>
   public TimeSpan SweeperInterval { get; set; } = TimeSpan.FromMinutes(1);
 }

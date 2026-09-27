@@ -5,26 +5,18 @@ namespace ControlR.Libraries.Shared.Extensions;
 public static class IDisposableExtensions
 {
   /// <summary>
-  ///   Wraps the specified disposable object in a <see cref="MaybeDisposable{T}"/> instance.
+  /// Guards the disposable for the current scope with a <see cref="ScopeGuard{T}"/>.
   /// </summary>
   /// <remarks>
-  ///   This method enables fluent usage of <see cref="MaybeDisposable{T}"/> for any object that implements
-  ///   IDisposable. The returned <see cref="MaybeDisposable{T}"/> can be used to manage the lifetime of the 
-  ///   wrapped object in scenarios where conditional disposal is required.
+  /// The value is disposed at scope end unless <c>Dismiss()</c> is called first. Use this to create
+  /// a disposable inside a scope and conditionally return it (see the guarded value via
+  /// <c>Value</c>) without leaking on early-return or exception paths.
   /// </remarks>
-  /// <typeparam name="T">
-  ///   The type of the disposable object to wrap. Must implement IDisposable.
-  /// </typeparam>
-  /// <param name="disposable">
-  ///   The disposable object to wrap. Cannot be null.
-  /// </param>
-  /// <returns>
-  ///   A <see cref="MaybeDisposable{T}"/> instance that encapsulates the specified disposable object.
-  /// </returns>
-  public static MaybeDisposable<T> AsMaybeDisposable<T>(this T disposable)
+  public static ScopeGuard<T> Guard<T>(this T disposable)
     where T : IDisposable
   {
-    return new MaybeDisposable<T>(disposable);
+    ArgumentNullException.ThrowIfNull(disposable);
+    return new ScopeGuard<T>(disposable);
   }
 
   /// <summary>

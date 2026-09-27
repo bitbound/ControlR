@@ -15,76 +15,70 @@ runs:
   using: composite
   steps:
     - name: Verify Server Payload
-      shell: bash
+      shell: pwsh
       env:
         PAYLOAD: ${{ inputs.path }}
       run: |
-        set -euo pipefail
-
-        if [ ! -d "$PAYLOAD" ]; then
-          echo "::error::$PAYLOAD does not exist. Re-run the Build workflow."
-          exit 1
-        fi
+        $Payload = $env:PAYLOAD
+        if (-not (Test-Path -PathType Container $Payload)) {
+          throw "'$Payload' does not exist. Re-run the Build workflow."
+        }
 
         # Static assets the server serves directly.
-        STATIC_PATHS=(
-          "wwwroot/downloads/Version.txt"
-          "wwwroot/downloads/release-notes.md"
-          "wwwroot/lib/monaco-editor/min/vs/editor/editor.main.js"
-          "novnc/vnc.html"
+        $StaticPaths = @(
+          'wwwroot/downloads/Version.txt',
+          'wwwroot/downloads/release-notes.md',
+          'wwwroot/lib/monaco-editor/min/vs/editor/editor.main.js',
+          'novnc/vnc.html'
         )
 
-        # Platform directories holding the agent installers users download. The installer
-        # file name carries the brand key, so match on the suffix instead of naming it.
-        PLATFORMS=(win-x86 win-x64 linux-x64 osx-arm64 osx-x64)
+        # Platform directories holding the agent installers users download.
+        $Platforms = @('win-x86', 'win-x64', 'linux-x64', 'osx-arm64', 'osx-x64')
 
-        shopt -s nullglob
-        RUNTIME_DIRS=("$PAYLOAD"/*/)
-        shopt -u nullglob
+        $RuntimeDirs = @(Get-ChildItem -Path $Payload -Directory)
+        if ($RuntimeDirs.Count -eq 0) {
+          throw "'$Payload' contains no runtime directories."
+        }
 
-        if [ ${#RUNTIME_DIRS[@]} -eq 0 ]; then
-          echo "::error::$PAYLOAD contains no runtime directories."
-          exit 1
-        fi
+        $Failures = [System.Collections.Generic.List[string]]::new()
 
-        FAILED=0
-        for RUNTIME_DIR in "${RUNTIME_DIRS[@]}"; do
-          RUNTIME="${RUNTIME_DIR%/}"
-          RUNTIME="${RUNTIME##*/}"
-          RUNTIME_FAILED=0
+        foreach ($RuntimeDir in $RuntimeDirs) {
+          $Runtime = $RuntimeDir.Name
+          $RuntimeFailures = [System.Collections.Generic.List[string]]::new()
 
-          for STATIC_PATH in "${STATIC_PATHS[@]}"; do
-            if [ ! -f "$RUNTIME_DIR$STATIC_PATH" ]; then
-              echo "::error::$RUNTIME is missing $STATIC_PATH."
-              RUNTIME_FAILED=1
-            fi
-          done
+          foreach ($StaticPath in $StaticPaths) {
+            if (-not (Test-Path -PathType Leaf (Join-Path $RuntimeDir.FullName $StaticPath))) {
+              $RuntimeFailures.Add("$Runtime is missing $StaticPath.")
+            }
+          }
 
-          for PLATFORM in "${PLATFORMS[@]}"; do
-            shopt -s nullglob
-            INSTALLERS=("$RUNTIME_DIR"wwwroot/downloads/"$PLATFORM"/*.Agent.Installer*)
-            BUNDLES=("$RUNTIME_DIR"wwwroot/downloads/"$PLATFORM"/*.Agent.bundle.zip)
-            shopt -u nullglob
+          foreach ($Platform in $Platforms) {
+            $DownloadDir = Join-Path $RuntimeDir.FullName "wwwroot/downloads/$Platform"
 
-            if [ ${#INSTALLERS[@]} -eq 0 ]; then
-              echo "::error::$RUNTIME is missing the $PLATFORM agent installer."
-              RUNTIME_FAILED=1
-            fi
-            if [ ${#BUNDLES[@]} -eq 0 ]; then
-              echo "::error::$RUNTIME is missing the $PLATFORM agent bundle."
-              RUNTIME_FAILED=1
-            fi
-          done
+            # The installer file name carries the brand key, so match on the suffix.
+            $Installers = @(Get-ChildItem -Path $DownloadDir -Filter '*.Agent.Installer*' -File -ErrorAction SilentlyContinue)
+            $Bundles = @(Get-ChildItem -Path $DownloadDir -Filter '*.Agent.bundle.zip' -File -ErrorAction SilentlyContinue)
 
-          if [ "$RUNTIME_FAILED" -eq 0 ]; then
-            echo "Verified $RUNTIME"
-          else
-            FAILED=1
-          fi
-        done
+            if ($Installers.Count -eq 0) {
+              $RuntimeFailures.Add("$Runtime is missing the $Platform agent installer.")
+            }
+            if ($Bundles.Count -eq 0) {
+              $RuntimeFailures.Add("$Runtime is missing the $Platform agent bundle.")
+            }
+          }
 
-        if [ "$FAILED" -ne 0 ]; then
-          exit 1
-        fi
+          if ($RuntimeFailures.Count -eq 0) {
+            Write-Host "Verified $Runtime"
+          }
 
-        echo "Server payload verified: ${#RUNTIME_DIRS[@]} runtime(s) in $PAYLOAD"
+          $Failures.AddRange($RuntimeFailures)
+        }
+
+        if ($Failures.Count -gt 0) {
+          foreach ($Failure in $Failures) {
+            Write-Host "::error::$Failure"
+          }
+          throw "Server payload verification failed ($($Failures.Count) problem(s) in '$Payload')."
+        }
+
+        Write-Host "Server payload verified: $($RuntimeDirs.Count) runtime(s) in $Payload"

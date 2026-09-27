@@ -5,10 +5,12 @@ public partial class ExpirationPicker : ComponentBase
   private const int CustomValue = -1;
   private const int NeverValue = 0;
 
+  private static readonly int[] _sourceArray = [30, 90, 365];
+
   private int _choice = NeverValue;
   private DateTime? _customDate;
   private TimeSpan? _customTime;
-  private bool _isInitialized;
+  private DateTimeOffset? _lastValue;
 
   [Inject]
   public required TimeProvider TimeProvider { get; init; }
@@ -25,32 +27,43 @@ public partial class ExpirationPicker : ComponentBase
   {
     base.OnParametersSet();
 
-    if (_isInitialized)
+    // Only resync when Value changes to something we did not just emit, so we
+    // don't clobber an in-progress custom date/time edit on unrelated re-renders.
+    if (_lastValue == Value)
     {
       return;
     }
 
-    _isInitialized = true;
+    _lastValue = Value;
+    ApplyValue(Value);
+  }
 
-    if (Value is null)
+  private void ApplyValue(DateTimeOffset? value)
+  {
+    if (value is null)
     {
       _choice = NeverValue;
+      _customDate = null;
+      _customTime = null;
       return;
     }
 
     // Reflect a pre-seeded expiration in the dropdown. Match the closest preset
     // (30/90/365 days) for the common case; otherwise fall back to the custom picker.
-    var expiresIn = Value.Value - TimeProvider.GetUtcNow();
-    var presetDays = new int[] { 30, 90, 365 }
-      .FirstOrDefault(d => (expiresIn - TimeSpan.FromDays(d)).Duration() <= TimeSpan.FromDays(1));
+    var expiresIn = value.Value - TimeProvider.GetUtcNow();
+    var presetDays = _sourceArray.FirstOrDefault(d =>
+      (expiresIn - TimeSpan.FromDays(d)).Duration() <= TimeSpan.FromDays(1));
+
     if (presetDays != 0)
     {
       _choice = presetDays;
+      _customDate = null;
+      _customTime = null;
       return;
     }
 
     _choice = CustomValue;
-    var local = Value.Value.ToLocalTime();
+    var local = value.Value.ToLocalTime();
     _customDate = local.Date;
     _customTime = local.TimeOfDay;
   }

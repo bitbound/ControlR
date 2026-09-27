@@ -7,11 +7,8 @@ using ControlR.Web.Server.Constants;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Self-service personal access tokens for the calling user. The tokens are always owned by
-/// the caller, so no resource is addressed by id across principals. TenantId stays required on
-/// every operation to keep the V1 convention uniform (server principals resolve the tenant
-/// check but then fail the caller-has-no-AppUser lookup). Create returns 201 and the list
-/// returns an Items envelope. Delete answers 204.
+/// Self-service personal access tokens for the calling user. The tokens are always caller-owned,
+/// and every operation requires a tenantId per the V1 convention.
 /// </summary>
 [Route(HttpConstants.V1.PersonalAccessTokensEndpoint)]
 [ApiController]
@@ -62,7 +59,8 @@ public class PersonalAccessTokensController : ControllerBase
             scope.PermissionName,
             scope.ScopeKind,
             scope.ScopeId))
-          .ToList()),
+          .ToList(),
+        request.ExpiresAt),
       user.Id,
       actor);
 
@@ -154,6 +152,44 @@ public class PersonalAccessTokensController : ControllerBase
     });
   }
 
+  [HttpPost("{id:guid}/revoke")]
+  [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
+  [ProducesResponseType<PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
+  public async Task<ActionResult<PersonalAccessTokenResponseDto>> Revoke(
+    [FromServices] IPersonalAccessTokenManager personalAccessTokenManager,
+    [FromServices] UserManager<AppUser> userManager,
+    [FromRoute] Guid id,
+    [FromQuery] Guid tenantId)
+  {
+    if (!User.TryResolveTenantId(tenantId, out _))
+    {
+      return Forbid();
+    }
+
+    var user = await userManager.GetUserAsync(User);
+    if (user is null)
+    {
+      return Problem(
+        detail: "User not found.",
+        statusCode: StatusCodes.Status400BadRequest,
+        title: V1ProblemTitles.InvalidRequest);
+    }
+
+    var result = await personalAccessTokenManager.Revoke(id, user.Id);
+    if (!result.IsSuccess)
+    {
+      return Problem(
+        detail: result.Reason,
+        statusCode: StatusCodes.Status400BadRequest,
+        title: V1ProblemTitles.InvalidRequest);
+    }
+
+    return Ok(ToV1ResponseDto(result.Value));
+  }
+
   [HttpPut("{id:guid}")]
   [Authorize(Policy = PolicyNames.RequirePersonalAccessTokenSelfWrite)]
   [ProducesResponseType<PersonalAccessTokenResponseDto>(StatusCodes.Status200OK)]
@@ -206,6 +242,8 @@ public class PersonalAccessTokensController : ControllerBase
       token.CreatedAt,
       token.LastUsed,
       token.PermissionCount,
-      token.PermissionMode);
+      token.PermissionMode,
+      token.ExpiresAt,
+      token.RevokedAt);
   }
 }

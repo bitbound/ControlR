@@ -81,11 +81,13 @@ public interface IControlrAuthSession : IDisposable
   /// </returns>
   Task<string?> GetBearerToken(CancellationToken cancellationToken = default);
   /// <summary>
-  /// Restores a previously captured <see cref="AuthSnapshot"/>.
-  /// If the snapshot contains a personal access token it is restored as a PAT session (state: <see cref="ControlrAuthSessionState.PatConfigured"/>).
-  /// Otherwise, if it contains a service account credential it is restored as a service account session (state: <see cref="ControlrAuthSessionState.ServiceAccountConfigured"/>).
-  /// Otherwise bearer tokens are restored and the background token-refresh loop is started (state: <see cref="ControlrAuthSessionState.Authenticated"/>).
+  /// Restores a previously captured <see cref="AuthSnapshot"/>, re-establishing the session kind it held.
   /// </summary>
+  /// <remarks>
+  /// A snapshot carrying a personal access token restores a PAT session, one carrying a service account
+  /// credential restores a service-account session, and otherwise bearer tokens are restored and the
+  /// background token-refresh loop is started.
+  /// </remarks>
   /// <param name="snapshot">The previously captured auth snapshot.</param>
   /// <exception cref="ObjectDisposedException">
   /// This session was disposed. Obtain a new session and restore it there.
@@ -170,8 +172,7 @@ public sealed class ControlrAuthSession(
 
   /// <summary>
   /// Counts this session's calls so that a tracked target is not released while a sign-in or password
-  /// change is still on the wire. The factory assigns the target's tracker here. The single-client
-  /// registration keeps the default instance, where nothing ever requests teardown.
+  /// change is still on the wire. The factory assigns the target's tracker here.
   /// </summary>
   internal InFlightTracker Requests { get; set; } = new();
 

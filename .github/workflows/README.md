@@ -2,58 +2,97 @@
 
 This repository uses GitHub Actions to build, test, and deploy ControlR.
 
+## Build Metadata
+
+`build.yml` is the only workflow that knows what a build actually produced, so it writes that
+down as `build_metadata.json` and uploads it as the `BuildMetadata` artifact. Every publishing
+workflow reads the metadata instead of re-deriving version and prerelease state from the
+payload, which is what keeps a build from being published under the wrong version or channel.
+
+```json
+{
+  "version": "1.2.3.0",
+  "prerelease": false,
+  "serverRids": ["linux-x64", "linux-arm64"]
+}
+```
+
+| Property     | Meaning                                                                    |
+| ------------ | -------------------------------------------------------------------------- |
+| `version`    | Numeric build version, without any prerelease suffix                       |
+| `prerelease` | `true` when the build came from `build.yml` with the prerelease input       |
+| `serverRids` | Runtime identifiers the build published, in build order                    |
+
+`serverRids` is the authoritative list of what the build actually published, and it is what the
+`server_runtime` input resolves to (one runtime, or two for `linux-multiarch`). The input itself
+is not carried forward, so a consumer cannot disagree with the payload about what exists.
+
+Consumers use the `.github/actions/get-build-metadata` composite action, which downloads the
+artifact and exposes `version`, `prerelease`, `release_version` (`<version>-dev` for prerelease
+builds), `server_rids`, and `primary_rid`. Pass `expected-rid` when a workflow only makes sense
+for one runtime; the action then fails if the build did not produce it.
+
+To carry a new property from the build to its consumers:
+
+1. Add it to the `$Metadata` hashtable in the `Write Build Metadata` step of `build.yml`.
+2. Add a matching output in `.github/actions/get-build-metadata/action.yml`.
+3. Read it in the publishing workflow that needs it.
+
+`Version.txt` is separate and stays numeric: it is served by the running server at
+`/downloads/Version.txt`, so it is a runtime artifact rather than build metadata.
+
 ## Available Workflows
 
-### 1. Build and Deploy (Main Application)
+### build.yml - Build
 
-The main workflow (`build-and-deploy.yml`) handles building the ControlR application and deploying it to various targets.
+The producer. Builds the server payloads for the requested runtimes, packs the NuGet
+packages, and writes the `BuildMetadata` artifact. Every publishing workflow consumes the
+output of one of these runs.
 
-#### Triggering the Workflow
+| Input                | Purpose                                                        |
+| -------------------- | -------------------------------------------------------------- |
+| `version`            | Version to build; defaults to the version resolved by `set-version` |
+| `ref`                | Git ref to build from (reusable calls only)                    |
+| `server_runtime`     | Runtime to build: `linux-multiarch`, `linux-x64`, `linux-arm64`, `win-x64` |
+| `prerelease`         | Marks the build as a prerelease, which suffixes the release version with `-dev` |
+| `build_nugets`       | Also pack and sign the NuGet packages                          |
+| `run_tests`          | Run the test workflows first                                   |
+| `use_local_storage`  | Store artifacts on the SCP host instead of on GitHub           |
+| `use_self_hosted_runners` | Run on self-hosted runners instead of GitHub-hosted ones  |
 
-This workflow is manually triggered. To start it:
+### publish-*.yml - Publishing
 
-1. Go to the "Actions" tab in your repository
-2. Select "Build and Deploy" from the list of workflows
-3. Click "Run workflow"
-4. Choose your deployment target:
-   - **preview**: Deploys to Docker Hub with the `preview` tag
-   - **production**: Deploys to Docker Hub with the `latest` tag
-   - **github_release**: Creates a GitHub release with artifacts
-5. Optionally specify a custom version number
-6. Choose whether to create a GitHub Release
+Each publishing workflow takes a run ID (empty means "most recent successful build"). The
+Docker, GitHub, ZIP and ACR publishers read their version and prerelease state from the
+build metadata; `publish-nugets.yml` pushes the nupkg files, whose version and `-dev`
+suffix were baked in at pack time by `build-sign-pack-nugets.yml`.
 
-#### Workflow Steps
+| Workflow             | Publishes                                                       |
+| -------------------- | --------------------------------------------------------------- |
+| `publish-github.yml` | A draft GitHub Release, tagged `v<version>` (`v<version>-dev` for prerelease builds) |
+| `publish-docker.yml` | `bitbound/controlr` on Docker Hub, tagged with the derived channel and the version |
+| `publish-nugets.yml` | The NuGet packages to NuGet.org                                  |
+| `publish-zip.yml`    | A slot server ZIP to the sponsor's Azure blob container          |
+| `publish-acr.yml`    | A slot container image to Azure Container Registry               |
 
-1. Builds the ControlR application using the Build.ps1 script
-2. Runs tests
-3. Signs the executables (if code signing certificate is available)
-4. Creates artifacts
-5. Deploys to the selected target
+These are also called by the two orchestrators:
 
-### 2. Relay Server
+- `publish-all.yml` (Production Release) - dispatch only. Runs `publish-docker`, then
+  `publish-github` and `publish-nugets` for the same build run.
+- `acr-build-and-publish.yml` (ACR Build and Publish) - dispatch only, driven by the
+  Subscriber Portal. Validates the requested delivery format and runtime, calls `build.yml`,
+  and then runs either `publish-acr` (container delivery) or `publish-zip` (ZIP delivery).
 
-The relay server workflow (`relay-server.yml`) handles building and deploying the WebSocket Relay server.
+### Test and automation workflows
 
-#### Triggering the Workflow
-
-This workflow can be triggered:
-
-- Automatically on push to the `main` branch
-- Manually with workflow dispatch
-
-For manual triggering:
-
-1. Go to the "Actions" tab in your repository
-2. Select "Relay Server" from the list of workflows
-3. Click "Run workflow"
-4. Choose your deployment target:
-   - **preview**: Deploys to Docker Hub with the `preview` tag
-   - **production**: Deploys to Docker Hub with the `latest` tag
-
-#### Workflow Steps
-
-1. Builds the WebSocket Relay Server
-2. Creates and pushes Docker images with appropriate tags
+| Workflow                  | Purpose                                                       |
+| ------------------------- | ------------------------------------------------------------- |
+| `run-tests.yml`           | Called by `build.yml` when `run_tests` is set                 |
+| `build-sign-pack-nugets.yml` | Called by `build.yml` when `build_nugets` is set           |
+| `test.yml` (Tests)        | Unit tests on pull requests to `main`/`dev` and pushes to `main` |
+| `ui-tests.yml` (UI Tests) | Playwright UI tests, dispatch only                             |
+| `bitbound-bot.yml`        | Bot replies to review comments and pull requests               |
+| `auto-close-external-prs.yml` | Closes pull requests from external forks                   |
 
 ## Required Secrets
 
@@ -68,16 +107,24 @@ For these workflows to function properly, you need to set up the following repos
 
 When creating a GitHub Release, the following assets are included:
 
-- `ControlR.Server.[version].zip`: Server application
-- `docker-compose.yaml`: Docker Compose file
+- `server-linux-amd64.zip`, `server-linux-arm64.zip`, `server-win-x64.zip`: server payloads, one
+  per runtime in the build metadata that has a release archive
+- `ControlR.Web.Server_internal.json`, `ControlR.Web.Server_v1.json`: API schemas
+- `docker-compose.yml`: Docker Compose file
+
+Releases are created as drafts. The release name and tag are `v<release_version>`, which carries
+a `-dev` suffix for prerelease builds, and such builds are also marked as a prerelease on GitHub.
 
 ## Docker Images
 
 Docker images are published to Docker Hub:
 
-- `bitbound/controlr:preview` - Preview/development version
+- `bitbound/controlr:dev` - Prerelease builds, whose version tag carries a `-dev` suffix
 - `bitbound/controlr:latest` - Production version
-- `bitbound/controlr:[version]` - Specific version
+- `bitbound/controlr:preview` - Manual preview-channel override; only reachable through a
+  `workflow_dispatch` that picks `preview`. The auto-derived channel is `dev` for a
+  prerelease build and `latest` for a stable one.
+- `bitbound/controlr:[version]` - Specific version (`[version]-dev` for prerelease builds)
 - `bitbound/controlr-relay:preview` - Preview relay server
 - `bitbound/controlr-relay:latest` - Production relay server
 - `bitbound/controlr-relay:[version]` - Specific version of relay server

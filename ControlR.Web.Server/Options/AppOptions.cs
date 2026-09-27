@@ -37,12 +37,6 @@ public class AppOptions
   public int AgentInstallerKeyHistoryDays { get; init; } = 90;
 
   /// <summary>
-  /// Allows devices to self-register without requiring an installer key.
-  /// When enabled, agents can bootstrap themselves without manual intervention.
-  /// </summary>
-  public bool AllowAgentsToSelfBootstrap { get; init; }
-
-  /// <summary>
   /// The name that appears in TOTP authenticator apps when users set up two-factor authentication.
   /// </summary>
   public string? AuthenticatorIssuerName { get; init; }
@@ -237,6 +231,16 @@ public class AppOptions
   /// This provides a more seamless authentication experience for passkey users.
   /// </summary>
   public bool PersistPasskeyLogin { get; init; }
+
+  /// <summary>
+  /// The public URL of this server, e.g. "https://controlr.example.com".
+  /// </summary>
+  /// <remarks>
+  /// Used to build links that leave this server. Include the scheme and, if non-standard, the port.
+  /// A trailing slash is optional. Do not include a path, query, or fragment. This is the only origin
+  /// used for emailed links. Without it, those links cannot be built.
+  /// </remarks>
+  public string? PublicBaseUrl { get; init; }
 
   /// <summary>
   /// Whether users must confirm their email address before being allowed to log in.

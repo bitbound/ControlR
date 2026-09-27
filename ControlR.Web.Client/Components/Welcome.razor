@@ -1,4 +1,4 @@
-@inject IControlrInternalApi ServerSettingsApi
+@inject IControlrApi ServerSettingsApi
 
 <div class="welcome-container">
   <div class="welcome-card">
@@ -59,7 +59,7 @@
 
   protected override async Task OnInitializedAsync()
   {
-    var settingsResults = await ServerSettingsApi.PublicServerSettings.GetPublicServerSettings();
+    var settingsResults = await ServerSettingsApi.V1.PublicServerSettings.GetPublicServerSettings();
     if (settingsResults.IsSuccess)
     {
       _isPublicRegistrationEnabled = settingsResults.Value.IsPublicRegistrationEnabled;

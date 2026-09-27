@@ -28,6 +28,17 @@ jobs:
           fetch-depth: 0
           clean: true
 
+      # customize.ps1 runs in every slot build, so its script tests gate here even though they need no .NET.
+      - name: Run build-script tests
+        run: |
+          foreach ($script in Get-ChildItem -Path ".scripts/tests" -Filter "Test-*.ps1") {
+            Write-Host "Running $($script.FullName)..."
+            pwsh -NoProfile -File $script.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test execution failed for $($script.FullName)."
+            }
+          }
+
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 

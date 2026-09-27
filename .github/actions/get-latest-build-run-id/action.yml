@@ -18,31 +18,26 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Get Latest Build Run ID
-      if: inputs.run_id == ''
-      id: get-run-id
-      shell: bash
-      run: |
-        RUN_ID=$(gh run list --workflow=build.yml --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
-        echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-        echo "Using build run ID: $RUN_ID"
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-
-    - name: Use Provided Run ID
-      if: inputs.run_id != ''
-      id: use-provided-run-id
-      shell: bash
-      run: |
-        echo "run_id=${{ inputs.run_id }}" >> $GITHUB_OUTPUT
-        echo "Using provided build run ID: ${{ inputs.run_id }}"
-
-    - name: Determine Run ID
+    - name: Determine Build Run ID
       id: determine-run-id
-      shell: bash
+      shell: pwsh
+      env:
+        PROVIDED_RUN_ID: ${{ inputs.run_id }}
+        GH_TOKEN: ${{ inputs.github_token }}
       run: |
-        if [ -n "${{ inputs.run_id }}" ]; then
-          echo "run_id=${{ inputs.run_id }}" >> $GITHUB_OUTPUT
-        else
-          echo "run_id=${{ steps.get-run-id.outputs.run_id }}" >> $GITHUB_OUTPUT
-        fi
+        $RunId = $env:PROVIDED_RUN_ID
+        if ($RunId) {
+          Write-Host "Using provided build run ID: $RunId"
+        }
+        else {
+          $RunId = gh run list --workflow=build.yml --status=success --limit=1 --json databaseId --jq '.[0].databaseId'
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to look up the latest successful build run."
+          }
+        }
+
+        if (-not $RunId -or $RunId -eq 'null') {
+          throw "No successful build.yml run was found. Run the Build workflow first, or pass a run ID explicitly."
+        }
+
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "run_id=$RunId"

@@ -1,4 +1,4 @@
-name: opencode
+name: bitbound-bot
 
 on:
   issue_comment:
@@ -44,7 +44,8 @@ jobs:
           client-id: ${{ secrets.BBB_CLIENT_ID }}
           private-key: ${{ secrets.BBB_PRIVATE_KEY }}
 
-      - uses: anomalyco/opencode/github@2c14fc5586fe0b88e5c04732d2e846769cc35671
+      - name: Run OpenCode
+        uses: anomalyco/opencode/github@2c14fc5586fe0b88e5c04732d2e846769cc35671
         timeout-minutes: 30
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

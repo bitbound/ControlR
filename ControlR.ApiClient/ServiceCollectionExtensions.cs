@@ -14,18 +14,14 @@ namespace ControlR.ApiClient;
 public static class ServiceCollectionExtensions
 {
   /// <summary>
-  /// <para>
-  ///   Adds services for interacting with the ControlR API via the custom HTTP API client.
-  /// </para>
-  /// <para>
-  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
-  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV1Api"/>
-  ///   via the <c>Internal</c> and <c>V1</c> properties.
-  /// </para>
-  /// <para>
-  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
-  /// </para>
+  /// Adds services for interacting with the ControlR API via the custom HTTP API client. The
+  /// <see cref="IControlrApi"/> is registered as a transient service and can be injected directly.
   /// </summary>
+  /// <remarks>
+  /// <see cref="IControlrApi"/> exposes <see cref="IControlrInternalApi"/> and <see cref="IControlrV1Api"/>
+  /// via its <c>Internal</c> and <c>V1</c> properties. The sub-interfaces are also registered individually
+  /// for callers that prefer narrower injection.
+  /// </remarks>
   /// <param name="services">
   ///   The <see cref="IServiceCollection"/> to which the services are added.
   /// </param>
@@ -83,21 +79,14 @@ public static class ServiceCollectionExtensions
   }
 
   /// <summary>
-  /// <para>
-  ///   Adds services for interacting with the ControlR API via the custom HTTP API client.
-  /// </para>
-  /// <para>
-  ///   Configuration is loaded from the specified configuration section.
-  /// </para>
-  /// <para>
-  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
-  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV1Api"/>
-  ///   via the <c>Internal</c> and <c>V1</c> properties.
-  /// </para>
-  /// <para>
-  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
-  /// </para>
+  /// Adds services for interacting with the ControlR API via the custom HTTP API client. Configuration is
+  /// loaded from the specified configuration section.
   /// </summary>
+  /// <remarks>
+  /// <see cref="IControlrApi"/> is registered as a transient, exposes <see cref="IControlrInternalApi"/> and
+  /// <see cref="IControlrV1Api"/> via its <c>Internal</c> and <c>V1</c> properties, and registers the
+  /// sub-interfaces individually for callers that prefer narrower injection.
+  /// </remarks>
   /// <param name="services">
   ///   The <see cref="IServiceCollection"/> to which the services are added.
   /// </param>
@@ -160,21 +149,14 @@ public static class ServiceCollectionExtensions
   }
 
   /// <summary>
-  /// <para>
-  ///   Adds services for interacting with the ControlR API via the custom HTTP API client.
-  /// </para>
-  /// <para>
-  ///   Configuration is loaded from the specified configuration section using the builder's <see cref="IHostApplicationBuilder.Configuration"/>.
-  /// </para>
-  /// <para>
-  ///   The <see cref="IControlrApi"/> will be registered as a transient service and can be injected directly.
-  ///   It provides <see cref="IControlrInternalApi"/> and <see cref="IControlrV1Api"/>
-  ///   via the <c>Internal</c> and <c>V1</c> properties.
-  /// </para>
-  /// <para>
-  ///   The sub-interfaces are also registered individually for callers that prefer narrower injection.
-  /// </para>
+  /// Adds services for interacting with the ControlR API via the custom HTTP API client. Configuration is
+  /// loaded from the builder's <see cref="IHostApplicationBuilder.Configuration"/>.
   /// </summary>
+  /// <remarks>
+  /// <see cref="IControlrApi"/> is registered as a transient, exposes <see cref="IControlrInternalApi"/> and
+  /// <see cref="IControlrV1Api"/> via its <c>Internal</c> and <c>V1</c> properties, and registers the
+  /// sub-interfaces individually for callers that prefer narrower injection.
+  /// </remarks>
   /// <param name="builder">
   ///   The <see cref="IHostApplicationBuilder"/> to add the services to.
   /// </param>
@@ -193,20 +175,14 @@ public static class ServiceCollectionExtensions
   }
 
   /// <summary>
-  /// <para>
-  ///   Adds the <see cref="IControlrApiClientFactory"/> service for applications that integrate with
-  ///   multiple, runtime-discovered ControlR servers.
-  /// </para>
-  /// <para>
-  ///   Unlike <see cref="AddControlrApiClient(IServiceCollection, Action{ControlrApiClientOptions})"/>,
-  ///   which configures a single server statically, the factory creates one self-contained client per
-  ///   named target via <see cref="IControlrApiClientFactory.GetOrCreateClient"/>.
-  /// </para>
-  /// <para>
-  ///   This registration is server-only. Do not use it from Blazor WebAssembly. Use
-  ///   <see cref="AddControlrApiClient(IServiceCollection, Action{ControlrApiClientOptions})"/> there instead.
-  /// </para>
+  /// Adds the <see cref="IControlrApiClientFactory"/> service for applications that integrate with multiple,
+  /// runtime-discovered ControlR servers. It creates one self-contained client per named target via
+  /// <see cref="IControlrApiClientFactory.GetOrCreateClient"/>.
   /// </summary>
+  /// <remarks>
+  /// This registration is server-only. Do not use it from Blazor WebAssembly. Use
+  /// <see cref="AddControlrApiClient(IServiceCollection, Action{ControlrApiClientOptions})"/> there instead.
+  /// </remarks>
   /// <param name="services">
   ///   The <see cref="IServiceCollection"/> to which the services are added.
   /// </param>

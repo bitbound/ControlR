@@ -1,10 +1,10 @@
-@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal
+@using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerAlerts
 
 @attribute [Route(ClientRoutes.ServerSettings)]
 @attribute [Authorize(Policy = PolicyNames.RequireServerSettingsWrite)]
 
 @inject ISnackbar Snackbar
-@inject IControlrInternalApi ControlrApi
+@inject IControlrApi ControlrApi
 @inject ILogger<ServerSettings> Logger
 
 <PageTitle>Server Settings</PageTitle>
@@ -119,7 +119,7 @@
   {
     try
     {
-      var result = await ControlrApi.ServerAlert.GetServerAlert();
+      var result = await ControlrApi.V1.ServerAlert.GetServerAlert();
       if (result is { IsSuccess: true, Value: { HasAlertSet: true } alert })
       {
         _alertMessage = alert.Message;
@@ -148,7 +148,7 @@
         _alertIsSticky,
         _alertIsEnabled);
 
-      var result = await ControlrApi.ServerAlert.UpdateServerAlert(request);
+      var result = await ControlrApi.V1.ServerAlert.UpdateServerAlert(request);
 
       if (result.IsSuccess)
       {
@@ -176,7 +176,7 @@
     StateHasChanged();
     try
     {
-      var result = await ControlrApi.TestEmail.SendTestEmail();
+      var result = await ControlrApi.V1.TestEmail.SendTestEmail();
 
       if (result.IsSuccess)
       {

@@ -1,5 +1,5 @@
 name: Publish to Docker Hub
-run-name: Docker Publish (${{ inputs.docker_tag }} - ${{ inputs.run_id || 'latest build' }})
+run-name: Docker Publish (${{ inputs.docker_tag || 'auto' }} - ${{ inputs.run_id || 'latest build' }})
 
 on:
   workflow_dispatch:
@@ -30,9 +30,10 @@ on:
   workflow_call:
     inputs:
       docker_tag:
-        description: "Docker tag to publish"
-        required: true
+        description: "Docker tag to publish (leave empty to derive from the build metadata)"
+        required: false
         type: string
+        default: ""
       run_id:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
@@ -89,40 +90,80 @@ jobs:
         with:
           path: ./server-publish
 
-      # The Server artifact holds one subdirectory per runtime the build produced, so the
-      # archive itself is the record of what to publish. Nothing here re-reads the build's
-      # inputs.
+      - name: Get Build Metadata
+        id: metadata
+        uses: ./.github/actions/get-build-metadata
+        with:
+          run-id: ${{ steps.get-run-id.outputs.run_id }}
+          github-token: ${{ github.token }}
+          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
+          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+
+      # Each Linux runtime the build produced becomes one architecture in the image. The
+      # build metadata decides which runtimes matter; a prerelease build can only go out
+      # on the 'dev' tag, so a stable image can never be clobbered by a dev build.
       - name: Prepare Docker Context
         id: payload
-        shell: bash
+        shell: pwsh
+        env:
+          DOCKER_TAG_INPUT: ${{ inputs.docker_tag }}
+          PRERELEASE: ${{ steps.metadata.outputs.prerelease }}
+          RELEASE_VERSION: ${{ steps.metadata.outputs.release_version }}
+          SERVER_RIDS: ${{ steps.metadata.outputs.server_rids }}
         run: |
-          set -euo pipefail
+          $ArchByRid = [ordered]@{
+            'linux-x64'   = 'amd64'
+            'linux-arm64' = 'arm64'
+          }
 
-          mkdir -p ./payload
-          PLATFORMS=
-          VERSION=
-          for PAIR in amd64:linux-x64 arm64:linux-arm64; do
-            ARCH="${PAIR%%:*}"
-            RID="${PAIR##*:}"
-            [ -d "./server-publish/$RID" ] || continue
+          # An explicit tag wins; otherwise the build metadata decides, so a prerelease
+          # build can never be published over the stable 'latest' image.
+          $DockerTag = $env:DOCKER_TAG_INPUT
+          if (-not $DockerTag) {
+            $DockerTag = if ($env:PRERELEASE -eq 'true') { 'dev' } else { 'latest' }
+          }
 
-            cp -R "./server-publish/$RID" "./payload/$ARCH"
-            PLATFORMS="${PLATFORMS:+$PLATFORMS,}linux/$ARCH"
-            [ -n "$VERSION" ] || VERSION=$(tr -d '\r\n' < "./server-publish/$RID/wwwroot/downloads/Version.txt")
-            echo "linux/$ARCH <- $RID"
-          done
+          if ($env:PRERELEASE -eq 'true' -and $DockerTag -ne 'dev') {
+            throw "This build was flagged prerelease, so it must publish to the 'dev' tag, not '$DockerTag'. Re-run with docker_tag=dev or rebuild without the prerelease flag."
+          }
 
-          [ -n "$PLATFORMS" ] || { echo "::error::No Linux payload in the Server artifact."; exit 1; }
-          [ -n "$VERSION" ] || { echo "::error::Version.txt is empty."; exit 1; }
+          New-Item -Path ./payload -ItemType Directory -Force | Out-Null
 
-          { echo "version=$VERSION"; echo "platforms=$PLATFORMS"; } >> "$GITHUB_OUTPUT"
-          echo "Version: $VERSION"
-          echo "Platforms: $PLATFORMS"
+          $BuildRids = $env:SERVER_RIDS.Split(',')
+          $Platforms = [System.Collections.Generic.List[string]]::new()
+
+          foreach ($Rid in $ArchByRid.Keys) {
+            if ($BuildRids -notcontains $Rid) {
+              continue
+            }
+
+            $Arch = $ArchByRid[$Rid]
+            $Source = "./server-publish/$Rid"
+            if (-not (Test-Path -PathType Container $Source)) {
+              throw "'$Source' is listed in the build metadata but is missing from the Server artifact."
+            }
+
+            Copy-Item -Path $Source -Destination "./payload/$Arch" -Recurse -Force
+            $Platforms.Add("linux/$Arch")
+            Write-Host "linux/$Arch <- $Rid"
+          }
+
+          if ($Platforms.Count -eq 0) {
+            throw "This build produced no Linux runtime ($env:SERVER_RIDS), so there is nothing to put in a container image."
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$env:RELEASE_VERSION"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "platforms=$($Platforms -join ',')"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "docker_tag=$DockerTag"
+
+          Write-Host "Version: $env:RELEASE_VERSION"
+          Write-Host "Platforms: $($Platforms -join ',')"
+          Write-Host "Docker tag: $DockerTag"
 
       - name: Create Dockerfile
-        shell: bash
+        shell: pwsh
         run: |
-          cat > ./payload/Dockerfile << 'EOF'
+          @'
           FROM mcr.microsoft.com/dotnet/aspnet:10.0
           RUN apt update
           RUN apt -y install curl
@@ -140,7 +181,7 @@ jobs:
 
           HEALTHCHECK \
             CMD curl -f http://localhost:8080/health || exit 1
-          EOF
+          '@ | Set-Content -Path ./payload/Dockerfile -Encoding utf8
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -163,14 +204,19 @@ jobs:
           push: true
           platforms: ${{ steps.payload.outputs.platforms }}
           tags: |
-            bitbound/controlr:${{ inputs.docker_tag }}
+            bitbound/controlr:${{ steps.payload.outputs.docker_tag }}
             bitbound/controlr:${{ steps.payload.outputs.version }}
 
       - name: Image Published
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.payload.outputs.version }}
+          PLATFORMS: ${{ steps.payload.outputs.platforms }}
+          DOCKER_TAG: ${{ steps.payload.outputs.docker_tag }}
         run: |
-          echo "## Publish Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.payload.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Platforms:** ${{ steps.payload.outputs.platforms }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
-          echo "- bitbound/controlr:${{ inputs.docker_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- bitbound/controlr:${{ steps.payload.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## Publish Summary"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Version:** $env:VERSION"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Platforms:** $env:PLATFORMS"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Tags:**"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- bitbound/controlr:$env:DOCKER_TAG"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- bitbound/controlr:$env:VERSION"
