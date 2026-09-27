@@ -7,10 +7,7 @@ param(
   [string] $ConfigUrl = "",
 
   [Parameter()]
-  [string] $ConfigPath = "",
-
-  [Parameter()]
-  [string] $ControlrServerUrl = ""
+  [string] $ConfigPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -104,8 +101,11 @@ if ($ConfigPath -or $ConfigUrl) {
     $customizeParams.CustomCss = [string]$customCssProp.Value
   }
 
-  if ($ControlrServerUrl) {
-    $customizeParams.ControlrServerUrl = $ControlrServerUrl
+  # Same PSObject property check as customCss, for payloads produced before the
+  # server URL moved into the customization config.
+  $serverUrlProp = $config.PSObject.Properties['controlrServerUrl']
+  if ($serverUrlProp -and $serverUrlProp.Value) {
+    $customizeParams.ControlrServerUrl = [string]$serverUrlProp.Value
   }
 
   Write-Host "Applying customization for brand: $brandName"

@@ -10,4 +10,5 @@ public record CustomizationConfigDto(
     string? Version = null,
     CustomizationColorsDto? Colors = null,
     CustomizationImagesDto? Images = null,
-    string? CustomCss = null);
+    string? CustomCss = null,
+    string? ControlrServerUrl = null);
