@@ -2,13 +2,18 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Services.Encryption;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Connections.Client;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ControlR.Agent.LoadTester.Helpers;
 
@@ -83,6 +88,22 @@ public static class ConnectionHelper
     );
 
     return device.AsTaskResult();
+  }
+
+  /// <summary>
+  /// Signs a simulated agent's device update with a key derived from its index. The key must
+  /// be stable across runs so an already-enrolled device can still pass signature checks.
+  /// </summary>
+  public static SignedDto<DeviceUpdateRequestDto> CreateSignedDeviceUpdate(
+    DeviceUpdateRequestDto deviceDto,
+    int deviceNumber)
+  {
+    var keyProvider = new Ed25519KeyProvider(TimeProvider.System, NullLogger<Ed25519KeyProvider>.Instance);
+
+    var privateKey = SHA256.HashData(Encoding.UTF8.GetBytes($"ControlR.Agent.LoadTester.{deviceNumber}"));
+    var publicKeyBase64 = Convert.ToBase64String(keyProvider.DerivePublicKey(privateKey));
+
+    return keyProvider.Sign(deviceDto, privateKey, publicKeyBase64);
   }
 
   public static HttpMessageInvoker GetMessageInvoker(int agentNum)

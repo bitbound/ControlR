@@ -128,7 +128,8 @@ internal static class ServiceExtensions
   public static async Task<Device> CreateTestDevice(
     this IServiceProvider services,
     Guid tenantId,
-    Guid? deviceId = null)
+    Guid? deviceId = null,
+    string? publicKeyBase64 = null)
   {
     using var scope = services.CreateScope();
     var deviceManager = scope.ServiceProvider.GetRequiredService<IDeviceManager>();
@@ -163,7 +164,7 @@ internal static class ServiceExtensions
       IsOnline: true
     );
 
-    var device = await deviceManager.AddOrUpdate(deviceDto, connectionContext, tagIds: null);
+    var device = await deviceManager.AddOrUpdate(deviceDto, connectionContext, tagIds: null, publicKeyBase64: publicKeyBase64);
     return device;
   }
 

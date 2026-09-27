@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using ControlR.Libraries.Shared.Services.Encryption;
@@ -95,7 +96,10 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
 
     var tenant = await services.CreateTestTenant();
     var deviceId = Guid.NewGuid();
-    _ = await services.CreateTestDevice(tenant.Id, deviceId);
+    var keyProvider = new Ed25519KeyProvider(TimeProvider.System, NullLogger<Ed25519KeyProvider>.Instance);
+    var keyPair = keyProvider.GenerateKeyPair();
+    var publicKeyBase64 = Convert.ToBase64String(keyPair.PublicKey);
+    _ = await services.CreateTestDevice(tenant.Id, deviceId, publicKeyBase64);
 
     await using var appDb = services.GetRequiredService<AppDb>();
     var timeProvider = services.GetRequiredService<TimeProvider>();
@@ -114,7 +118,6 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     var mockOutputCache = new Mock<IOutputCacheStore>();
     var mockHubStreamStore = new Mock<IHubStreamStore>();
     var mockAgentVersionProvider = new Mock<IAgentVersionProvider>();
-    var mockKeyProvider = new Mock<IEd25519KeyProvider>();
     var mockLogger = new Mock<ILogger<AgentHub>>();
 
     var serverOptions = Microsoft.Extensions.Options.Options.Create(
@@ -136,7 +139,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       appOptions,
       Microsoft.Extensions.Options.Options.Create(new DeveloperOptions()),
       serverOptions,
-      mockKeyProvider.Object,
+      keyProvider,
       mockLogger.Object);
 
     hub.Clients = mockClients.Object;
@@ -172,7 +175,8 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       ]);
 
     // Act
-    var result = await hub.UpdateDevice(deviceDto);
+    var signedDto = keyProvider.Sign(deviceDto, keyPair.PrivateKey, publicKeyBase64);
+    var result = await hub.UpdateDeviceSigned(signedDto);
 
     // Assert - HubResult indicates failure with the decommissioned message.
     Assert.False(result.IsSuccess);
@@ -203,7 +207,10 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
 
     var tenant = await services.CreateTestTenant();
     var deviceId = Guid.NewGuid();
-    _ = await services.CreateTestDevice(tenant.Id, deviceId);
+    var keyProvider = new Ed25519KeyProvider(TimeProvider.System, NullLogger<Ed25519KeyProvider>.Instance);
+    var keyPair = keyProvider.GenerateKeyPair();
+    var publicKeyBase64 = Convert.ToBase64String(keyPair.PublicKey);
+    _ = await services.CreateTestDevice(tenant.Id, deviceId, publicKeyBase64);
 
     await using var appDb = services.GetRequiredService<AppDb>();
     var timeProvider = services.GetRequiredService<TimeProvider>();
@@ -215,7 +222,6 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     var mockOutputCache = new Mock<IOutputCacheStore>();
     var mockHubStreamStore = new Mock<IHubStreamStore>();
     var mockAgentVersionProvider = new Mock<IAgentVersionProvider>();
-    var mockKeyProvider = new Mock<IEd25519KeyProvider>();
     var mockLogger = new Mock<ILogger<AgentHub>>();
 
     // DecommissionServer is false (the default).
@@ -237,7 +243,7 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       appOptions,
       Microsoft.Extensions.Options.Options.Create(new DeveloperOptions()),
       serverOptions,
-      mockKeyProvider.Object,
+      keyProvider,
       mockLogger.Object);
 
     hub.Clients = mockClients.Object;
@@ -273,7 +279,8 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       ]);
 
     // Act
-    var result = await hub.UpdateDevice(deviceDto);
+    var signedDto = keyProvider.Sign(deviceDto, keyPair.PrivateKey, publicKeyBase64);
+    var result = await hub.UpdateDeviceSigned(signedDto);
 
     // Assert - UninstallAgent was NOT called.
     mockCaller.Verify(

@@ -238,103 +238,35 @@ public class AgentHub(
     }
   }
 
-  [Obsolete("This method is deprecated. Please use UpdateDeviceSigned instead.")]
-  public async Task<HubResult<InternalDtos.DeviceResponseDto>> UpdateDevice(DeviceUpdateRequestDto agentDto)
-  {
-    try
-    {
-      var device = await _appDb.Devices.FindAsync(agentDto.Id);
-      if (device is not null && !string.IsNullOrEmpty(device.PublicKey))
-      {
-        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Device requires signed updates.");
-      }
-
-      if (_serverOptions.Value.DecommissionServer)
-      {
-        return await HandleAgentUpdateForDecommission(agentDto, device);
-      }
-
-      // Developer-only self-bootstrap: only permitted when exactly one tenant exists.
-      // Multi-tenant deployments must use installer keys with an explicit tenant.
-      if (_developerOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
-      {
-        var tenants = await _appDb.Tenants
-          .OrderByDescending(x => x.CreatedAt)
-          .Take(2)
-          .ToListAsync();
-
-        if (tenants.Count == 0)
-        {
-          return HubResult.Fail<InternalDtos.DeviceResponseDto>("No tenants found.");
-        }
-
-        if (tenants.Count > 1)
-        {
-          return HubResult.Fail<InternalDtos.DeviceResponseDto>(
-            "Self-bootstrap is only allowed on single-tenant servers. Use an installer key instead.");
-        }
-
-        // Update the DTO with the assigned TenantId
-        agentDto = agentDto with { TenantId = tenants[0].Id };
-      }
-
-      if (agentDto.TenantId == Guid.Empty)
-      {
-        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Invalid tenant ID.");
-      }
-
-      if (!await _appDb.Tenants.AnyAsync(x => x.Id == agentDto.TenantId))
-      {
-        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Invalid tenant ID.");
-      }
-
-      var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
-      var connectionContext = new DeviceConnectionContext(
-        ConnectionId: Context.ConnectionId,
-        RemoteIpAddress: remoteIp,
-        LastSeen: _timeProvider.GetLocalNow(),
-        IsOnline: true
-      );
-
-      var updateResult = await UpdateDeviceEntity(agentDto, connectionContext);
-
-      if (!updateResult.IsSuccess)
-      {
-        return HubResult.Fail<InternalDtos.DeviceResponseDto>(updateResult.Reason);
-      }
-
-      var deviceEntity = updateResult.Value;
-
-      var isOutdated = await GetIsAgentOutdated(deviceEntity);
-      Device = deviceEntity.ToInternalResponseDto(isOutdated);
-
-      await SendDeviceUpdate(deviceEntity, Device);
-
-      return HubResult.Ok(Device);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while updating device.");
-      return HubResult.Fail<InternalDtos.DeviceResponseDto>("An error occurred while updating the device.");
-    }
-  }
-
   public async Task<HubResult<InternalDtos.DeviceResponseDto>> UpdateDeviceSigned(SignedDto<DeviceUpdateRequestDto> signedDto)
   {
     try
     {
       var agentDto = signedDto.Dto;
+      var allowSelfBootstrap = _developerOptions.Value.AllowAgentsToSelfBootstrap;
 
-      // Only trust the agent-supplied key when self-bootstrap is enabled.
-      var device = await _appDb.Devices.FindAsync(agentDto.Id);
+      // Trust only the key stored for a known device. A caller-supplied key is accepted only
+      // for a device the server has never seen, with self-bootstrap enabled.
+      var device = await _appDb.Devices
+        .IgnoreQueryFilters()
+        .FirstOrDefaultAsync(x => x.Id == agentDto.Id);
       var storedPublicKey = device?.PublicKey;
-      
-      if (string.IsNullOrEmpty(storedPublicKey) && !_developerOptions.Value.AllowAgentsToSelfBootstrap)
+      var isUnknownDevice = device is null;
+
+      if (isUnknownDevice && !allowSelfBootstrap)
       {
         _logger.LogWarning(
           "Rejecting update from unknown device {DeviceId}. Self-bootstrap is disabled.",
           agentDto.Id);
         return HubResult.Fail<InternalDtos.DeviceResponseDto>("Unknown device.");
+      }
+
+      if (!isUnknownDevice && string.IsNullOrEmpty(storedPublicKey))
+      {
+        _logger.LogWarning(
+          "Rejecting update from keyless device {DeviceId}. The device must be enrolled with an installer key.",
+          agentDto.Id);
+        return HubResult.Fail<InternalDtos.DeviceResponseDto>("Device requires enrollment.");
       }
 
       var publicKeyBase64 = !string.IsNullOrEmpty(storedPublicKey)
@@ -380,10 +312,14 @@ public class AgentHub(
         return await HandleAgentUpdateForDecommission(agentDto, device);
       }
 
-      // Developer-only self-bootstrap. Only permitted when exactly one
-      // tenant exists, so there's no ambiguity about where the agent lands. Multi-tenant
-      // deployments must use installer keys, which carry an explicit tenant.
-      if (_developerOptions.Value.AllowAgentsToSelfBootstrap && agentDto.TenantId == Guid.Empty)
+      // A known device's tenant is immutable, so ignore the caller-supplied value.
+      if (device is not null && device.TenantId != Guid.Empty)
+      {
+        agentDto = agentDto with { TenantId = device.TenantId };
+      }
+      // Developer-only self-bootstrap. Take the tenant from the server, never the caller, and
+      // require exactly one tenant. Multi-tenant servers must use installer keys.
+      else if (allowSelfBootstrap)
       {
         var tenants = await _appDb.Tenants
           .OrderByDescending(x => x.CreatedAt)
@@ -414,7 +350,6 @@ public class AgentHub(
         return HubResult.Fail<InternalDtos.DeviceResponseDto>("Invalid tenant ID.");
       }
 
-      // 8. Update device entity and adopt public key if necessary.
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress;
       var connectionContext = new DeviceConnectionContext(
         ConnectionId: Context.ConnectionId,
@@ -423,7 +358,9 @@ public class AgentHub(
         IsOnline: true
       );
 
-      var updateResult = await UpdateDeviceEntity(agentDto, connectionContext, publicKeyBase64);
+      var updateResult = allowSelfBootstrap
+        ? await UpdateOrBootstrapDevice(agentDto, device, connectionContext, publicKeyBase64)
+        : await UpdateKnownDevice(agentDto, connectionContext);
 
       if (!updateResult.IsSuccess)
       {
@@ -548,24 +485,39 @@ public class AgentHub(
     _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", device.Id);
   }
 
-  private async Task<HubResult<Device>> UpdateDeviceEntity(
+  /// <summary>
+  /// Updates a device that is already enrolled with a stored public key. The stored key is
+  /// never replaced.
+  /// </summary>
+  private async Task<HubResult<Device>> UpdateKnownDevice(
     DeviceUpdateRequestDto agentDto,
-    DeviceConnectionContext context,
-    string? publicKeyBase64 = null)
+    DeviceConnectionContext context)
   {
-    // Developer-only self-bootstrap.
-    if (_developerOptions.Value.AllowAgentsToSelfBootstrap)
-    {
-      var device = await _deviceManager.AddOrUpdate(agentDto, context, publicKeyBase64: publicKeyBase64);
-      return HubResult.Ok(device);
-    }
-
-    var updateResult = await _deviceManager.UpdateDevice(agentDto, context, publicKeyBase64: publicKeyBase64);
+    var updateResult = await _deviceManager.UpdateDevice(agentDto, context);
     if (updateResult.IsSuccess)
     {
       return HubResult.Ok(updateResult.Value);
     }
 
     return HubResult.Fail<Device>(updateResult.Reason);
+  }
+
+  /// <summary>
+  /// Creates a device the server has never seen. Developer-only, reached only when
+  /// self-bootstrap is enabled. The caller-supplied key is adopted here and nowhere else.
+  /// </summary>
+  private async Task<HubResult<Device>> UpdateOrBootstrapDevice(
+    DeviceUpdateRequestDto agentDto,
+    Device? existingDevice,
+    DeviceConnectionContext context,
+    string? newDevicePublicKey)
+  {
+    if (existingDevice is null)
+    {
+      var created = await _deviceManager.AddOrUpdate(agentDto, context, publicKeyBase64: newDevicePublicKey);
+      return HubResult.Ok(created);
+    }
+
+    return await UpdateKnownDevice(agentDto, context);
   }
 }
