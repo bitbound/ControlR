@@ -711,6 +711,76 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task GetLogFileContents_WhenPathIsInAgentLogListing_ForwardsOnlyTheSelector()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput, recordHubStreamSessions: true);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "dfs-log-contents-listed@test.local");
+    var filePath = "/logs/alice/LogFile20260101.log";
+    harness.AgentClient
+      .Setup(x => x.GetLogFiles())
+      .ReturnsAsync(HubResult.Ok(new InternalDtos.GetLogFilesResponseDto(
+      [
+        new InternalDtos.LogFileGroupDto(
+          "DesktopClient Logs (alice)",
+          LogKind.DesktopClient,
+          "alice",
+          [new InternalDtos.LogFileEntryDto("LogFile20260101.log", filePath, 12, DateTimeOffset.UnixEpoch)])
+      ])));
+    harness.AgentClient
+      .Setup(x => x.StreamFileContents(It.IsAny<StreamFileContentsRequestHubDto>()))
+      .ReturnsAsync((StreamFileContentsRequestHubDto request) =>
+      {
+        var signaler = harness.HubStreamStore.GetOrCreate<byte[]>(request.StreamId, HubStreamExpiration.FileTransfer);
+        signaler.Writer.TryWrite("log"u8.ToArray());
+        signaler.SetWriteCompleted();
+        return HubResult.Ok();
+      });
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      filePath,
+      harness.Db,
+      harness.AgentHub.Object,
+      harness.HubStreamStore,
+      harness.Authz,
+      scope.ServiceProvider.GetRequiredService<ILogger<DeviceFileSystemController>>(),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<EmptyResult>(result);
+    harness.AgentClient.Verify(
+      x => x.StreamFileContents(It.Is<StreamFileContentsRequestHubDto>(request =>
+        request.Kind == LogKind.DesktopClient
+        && request.FileName == "LogFile20260101.log"
+        && request.Username == "alice")),
+      Times.Once);
+  }
+
+  [Fact]
+  public async Task GetLogFileContents_WhenPathIsNotInAgentLogListing_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "dfs-log-contents-unlisted@test.local");
+    harness.AgentClient
+      .Setup(x => x.GetLogFiles())
+      .ReturnsAsync(HubResult.Ok(new InternalDtos.GetLogFilesResponseDto([])));
+
+    var result = await harness.Controller.GetLogFileContents(
+      harness.Device.Id,
+      "/etc/shadow",
+      harness.Db,
+      harness.AgentHub.Object,
+      harness.HubStreamStore,
+      harness.Authz,
+      scope.ServiceProvider.GetRequiredService<ILogger<DeviceFileSystemController>>(),
+      TestContext.Current.CancellationToken);
+
+    Assert.IsType<NotFoundResult>(result);
+    harness.AgentClient.Verify(x => x.StreamFileContents(It.IsAny<StreamFileContentsRequestHubDto>()), Times.Never);
+  }
+
+  [Fact]
   public async Task GetLogFiles_WhenCallerLacksLogsRead_Forbids()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);

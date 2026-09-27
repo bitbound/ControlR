@@ -1397,8 +1397,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     ArmLogFiles(harness, [
       new InternalDtos.LogFileGroupDto(
         "Server",
-        LogKind.Agent,
-        null,
+        LogKind.DesktopClient,
+        "alice",
         [
           new InternalDtos.LogFileEntryDto("server.log", "/logs/server.log", 4_567, DateTimeOffset.UnixEpoch),
           new InternalDtos.LogFileEntryDto("startup.log", "/logs/startup.log", 89, DateTimeOffset.UnixEpoch),
@@ -1414,8 +1414,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var response = Assert.IsType<DeviceLogFileListResponseDto>(ok.Value);
     var group = Assert.Single(response.LogFileGroups);
     Assert.Equal("Server", group.GroupName);
-    Assert.Equal(LogKind.Agent, group.Kind);
-    Assert.Null(group.Username);
+    Assert.Equal(LogKind.DesktopClient, group.Kind);
+    Assert.Equal("alice", group.Username);
     Assert.Equal(["server.log", "startup.log"], group.LogFiles.Select(x => x.FileName));
     Assert.Equal(4_567L, group.LogFiles[0].Size);
   }

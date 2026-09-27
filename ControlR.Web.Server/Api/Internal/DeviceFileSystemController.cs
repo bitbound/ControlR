@@ -248,9 +248,7 @@ public class DeviceFileSystemController : ControllerBase
   [ApiDeprecated("/api/v1/device-file-system/logs/{deviceId}/contents?tenantId={tenantId}", Note = "Use GET /api/v1/device-file-system/logs/{deviceId}/contents with a required tenantId. The response is the same text stream, and V1 answers every failure with a ProblemDetails body.")]
   public async Task<IActionResult> GetLogFileContents(
     [FromRoute] Guid deviceId,
-    [FromQuery] LogKind? kind,
-    [FromQuery] string fileName,
-    [FromQuery] string? username,
+    [FromQuery] string filePath,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
@@ -258,9 +256,9 @@ public class DeviceFileSystemController : ControllerBase
     [FromServices] ILogger<DeviceFileSystemController> logger,
     CancellationToken cancellationToken)
   {
-    if (kind is null || string.IsNullOrWhiteSpace(fileName))
+    if (string.IsNullOrWhiteSpace(filePath))
     {
-      return BadRequest("Log kind and file name are required.");
+      return BadRequest("File path is required.");
     }
 
     var device = await appDb.Devices
@@ -294,10 +292,36 @@ public class DeviceFileSystemController : ControllerBase
     var streamId = Guid.NewGuid();
     using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, HubStreamExpiration.FileTransfer);
 
-    var streamRequest = new StreamFileContentsRequestHubDto(streamId, kind.Value, fileName, username);
-
     try
     {
+      var logFilesResult = await agentHub
+        .Clients
+        .Client(device.ConnectionId)
+        .GetLogFiles();
+
+      if (logFilesResult is not { IsSuccess: true, Value: { } logFiles })
+      {
+        logger.LogWarning("Could not resolve legacy log path {FilePath} on device {DeviceId}: {Reason}",
+          filePath, deviceId, logFilesResult?.Reason);
+        return StatusCode(StatusCodes.Status500InternalServerError);
+      }
+
+      var selectedLog = logFiles.LogFileGroups
+        .SelectMany(group => group.LogFiles.Select(file => (Group: group, File: file)))
+        .FirstOrDefault(item => string.Equals(item.File.FullPath, filePath, StringComparison.Ordinal));
+
+      if (selectedLog.File is null)
+      {
+        logger.LogWarning("Legacy log path was not present in the agent's log listing for device {DeviceId}.", deviceId);
+        return NotFound();
+      }
+
+      var streamRequest = new StreamFileContentsRequestHubDto(
+        streamId,
+        selectedLog.Group.Kind,
+        selectedLog.File.FileName,
+        selectedLog.Group.Username);
+
       var streamResult = await agentHub
         .Clients
         .Client(device.ConnectionId)
@@ -305,8 +329,8 @@ public class DeviceFileSystemController : ControllerBase
 
       if (!streamResult.IsSuccess)
       {
-        logger.LogWarning("Log file contents stream request failed for {FileName} on device {DeviceId}.",
-          fileName, deviceId);
+        logger.LogWarning("Log file contents stream request failed for {FilePath} on device {DeviceId}.",
+          filePath, deviceId);
         return Problem(
           detail: streamResult.Reason,
           statusCode: StatusCodes.Status500InternalServerError,
@@ -315,7 +339,7 @@ public class DeviceFileSystemController : ControllerBase
 
       var contentDisposition = new ContentDispositionHeaderValue("inline")
       {
-        FileName = fileName
+        FileName = selectedLog.File.FileName
       };
 
       Response.Headers.ContentDisposition = contentDisposition.ToString();
@@ -333,7 +357,7 @@ public class DeviceFileSystemController : ControllerBase
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error streaming log file {FileName} from device {DeviceId}", fileName, deviceId);
+      logger.LogError(ex, "Error streaming log file {FilePath} from device {DeviceId}", filePath, deviceId);
       return StatusCode(500, "An error occurred while streaming the log file.");
     }
   }

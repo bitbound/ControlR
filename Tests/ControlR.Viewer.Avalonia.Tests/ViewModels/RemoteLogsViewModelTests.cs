@@ -5,7 +5,9 @@ using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.TestingUtilities.Extensions;
 using ControlR.Viewer.Avalonia.Tests.Fakes;
 using ControlR.Viewer.Avalonia.ViewModels;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceFileSystem;
 using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.ApiClient.Interfaces.V1;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 
@@ -17,8 +19,8 @@ public class RemoteLogsViewModelTests
   private readonly TestUiDispatcher _dispatcher;
   private readonly XunitLogger<RemoteLogsViewModel> _logger;
   private readonly Mock<IControlrApi> _mockApi;
-  private readonly Mock<IDeviceFileSystemApi> _mockFileSystemApi;
-  private readonly Mock<IControlrInternalApi> _mockInternalApi;
+  private readonly Mock<ControlR.ApiClient.Interfaces.V1.IDeviceFileSystemApi> _mockFileSystemApi;
+  private readonly Mock<IControlrV1Api> _mockV1Api;
   private readonly FakeSnackbar _snackbar;
   private readonly FakeTimeProvider _timeProvider;
 
@@ -30,12 +32,12 @@ public class RemoteLogsViewModelTests
     _dispatcher = new TestUiDispatcher();
     _logger = new XunitLogger<RemoteLogsViewModel>(testOutputHelper);
 
-    _mockFileSystemApi = new Mock<IDeviceFileSystemApi>();
-    _mockInternalApi = new Mock<IControlrInternalApi>(MockBehavior.Loose) { DefaultValue = DefaultValue.Mock };
-    _mockInternalApi.SetupGet(x => x.DeviceFileSystem).Returns(_mockFileSystemApi.Object);
+    _mockFileSystemApi = new Mock<ControlR.ApiClient.Interfaces.V1.IDeviceFileSystemApi>();
+    _mockV1Api = new Mock<IControlrV1Api>(MockBehavior.Loose) { DefaultValue = DefaultValue.Mock };
+    _mockV1Api.SetupGet(x => x.DeviceFileSystem).Returns(_mockFileSystemApi.Object);
 
     _mockApi = new Mock<IControlrApi>(MockBehavior.Loose) { DefaultValue = DefaultValue.Mock };
-    _mockApi.SetupGet(x => x.Internal).Returns(_mockInternalApi.Object);
+    _mockApi.SetupGet(x => x.V1).Returns(_mockV1Api.Object);
   }
 
   [Fact]
@@ -76,7 +78,8 @@ public class RemoteLogsViewModelTests
     var fileNode = new LogFilesTreeItemViewModel("LogFile.log", LogKind.Agent, null, isFile: true);
 
     _mockFileSystemApi
-      .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetDeviceLogFileContents(
+        It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<LogKind>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(ApiResult.Ok("line1\nline2"));
 
     await vm.SelectNode(fileNode);
@@ -161,8 +164,8 @@ public class RemoteLogsViewModelTests
     var vm = CreateViewModel();
 
     _mockFileSystemApi
-      .Setup(x => x.GetLogFiles(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-      .ReturnsAsync(ApiResult.Fail<GetLogFilesResponseDto>("API error"));
+      .Setup(x => x.GetDeviceLogFiles(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Fail<DeviceLogFileListResponseDto>("API error"));
 
     // Act
     await vm.Initialize();
@@ -178,19 +181,20 @@ public class RemoteLogsViewModelTests
     // Arrange
     var vm = CreateViewModel();
 
-    var logGroup = new LogFileGroupDto(
+    var logGroup = new DeviceLogFileGroupDto(
       "DesktopClient Logs (alice)",
       LogKind.DesktopClient,
       "alice",
-      [new LogFileEntryDto("LogFile20260101.log", "/home/alice/logs/LogFile20260101.log", 1024, DateTimeOffset.UtcNow)]);
+      [new DeviceLogFileEntryDto("LogFile20260101.log", "/home/alice/logs/LogFile20260101.log", 1024, DateTimeOffset.UtcNow)]);
 
-    var response = new GetLogFilesResponseDto([logGroup]);
+    var response = new DeviceLogFileListResponseDto([logGroup]);
 
     _mockFileSystemApi
-      .Setup(x => x.GetLogFiles(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetDeviceLogFiles(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(ApiResult.Ok(response));
     _mockFileSystemApi
-      .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetDeviceLogFileContents(
+        It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<LogKind>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(ApiResult.Ok("log contents"));
 
     // Act
@@ -212,12 +216,12 @@ public class RemoteLogsViewModelTests
     await vm.SelectNode(logFileItem);
 
     _mockFileSystemApi.Verify(
-      x => x.GetLogFileContents(
+      x => x.GetDeviceLogFileContents(
         It.IsAny<Guid>(),
-        It.Is<GetLogFileContentsRequestDto>(request =>
-          request.Kind == LogKind.DesktopClient
-          && request.FileName == "LogFile20260101.log"
-          && request.Username == "alice"),
+        It.Is<Guid>(tenantId => tenantId == _deviceState.CurrentDevice.TenantId),
+        It.Is<LogKind>(kind => kind == LogKind.DesktopClient),
+        It.Is<string>(fileName => fileName == "LogFile20260101.log"),
+        It.Is<string?>(username => username == "alice"),
         It.IsAny<CancellationToken>()),
       Times.Once);
   }
@@ -230,7 +234,8 @@ public class RemoteLogsViewModelTests
     var fileNode = new LogFilesTreeItemViewModel("LogFile.log", LogKind.Agent, null, isFile: true);
 
     _mockFileSystemApi
-      .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetDeviceLogFileContents(
+        It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<LogKind>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(ApiResult.Ok("initial content"));
 
     await vm.SelectNode(fileNode);
@@ -279,7 +284,8 @@ public class RemoteLogsViewModelTests
     var fileNode = new LogFilesTreeItemViewModel("LogFile.log", LogKind.Agent, null, isFile: true);
 
     _mockFileSystemApi
-      .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetDeviceLogFileContents(
+        It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<LogKind>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(ApiResult.Ok("file contents"));
 
     // Act
@@ -303,7 +309,8 @@ public class RemoteLogsViewModelTests
     // Assert
     Assert.Empty(vm.LogContents);
     _mockFileSystemApi.Verify(
-      x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()),
+      x => x.GetDeviceLogFileContents(
+        It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<LogKind>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
       Times.Never);
   }
 
@@ -316,7 +323,8 @@ public class RemoteLogsViewModelTests
     var fileNode = new LogFilesTreeItemViewModel("LogFile.log", LogKind.Agent, null, isFile: true);
 
     _mockFileSystemApi
-      .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
+      .Setup(x => x.GetDeviceLogFileContents(
+        It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<LogKind>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(ApiResult.Ok("file contents"));
 
     // Act - first select a file node to set _selectedNode

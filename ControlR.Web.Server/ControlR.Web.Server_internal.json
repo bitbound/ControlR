@@ -813,21 +813,7 @@
             }
           },
           {
-            "name": "kind",
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/LogKind"
-            }
-          },
-          {
-            "name": "fileName",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "username",
+            "name": "filePath",
             "in": "query",
             "schema": {
               "type": "string"
@@ -8001,9 +7987,6 @@
             ]
           }
         }
-      },
-      "LogKind": {
-        "type": "integer"
       },
       "LogonTokenRequestDto": {
         "required": [
