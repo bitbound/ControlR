@@ -312,35 +312,32 @@ public class AgentHub(
         return await HandleAgentUpdateForDecommission(agentDto, device);
       }
 
+      // A known device's tenant is immutable, so ignore the caller-supplied value.
+      if (device is not null && device.TenantId != Guid.Empty)
+      {
+        agentDto = agentDto with { TenantId = device.TenantId };
+      }
       // Developer-only self-bootstrap. Take the tenant from the server, never the caller, and
       // require exactly one tenant. Multi-tenant servers must use installer keys.
-      if (allowSelfBootstrap)
+      else if (allowSelfBootstrap)
       {
-        if (device is null || device.TenantId == Guid.Empty)
+        var tenants = await _appDb.Tenants
+          .OrderByDescending(x => x.CreatedAt)
+          .Take(2)
+          .ToListAsync();
+
+        if (tenants.Count == 0)
         {
-          var tenants = await _appDb.Tenants
-            .OrderByDescending(x => x.CreatedAt)
-            .Take(2)
-            .ToListAsync();
-
-          if (tenants.Count == 0)
-          {
-            return HubResult.Fail<InternalDtos.DeviceResponseDto>("No tenants found.");
-          }
-
-          if (tenants.Count > 1)
-          {
-            return HubResult.Fail<InternalDtos.DeviceResponseDto>(
-              "Self-bootstrap is only allowed on single-tenant servers. Use an installer key instead.");
-          }
-
-          agentDto = agentDto with { TenantId = tenants[0].Id };
+          return HubResult.Fail<InternalDtos.DeviceResponseDto>("No tenants found.");
         }
-        else
+
+        if (tenants.Count > 1)
         {
-          // Known device. Its tenant is immutable, so ignore the caller-supplied value.
-          agentDto = agentDto with { TenantId = device.TenantId };
+          return HubResult.Fail<InternalDtos.DeviceResponseDto>(
+            "Self-bootstrap is only allowed on single-tenant servers. Use an installer key instead.");
         }
+
+        agentDto = agentDto with { TenantId = tenants[0].Id };
       }
 
       if (agentDto.TenantId == Guid.Empty)

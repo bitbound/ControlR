@@ -100,7 +100,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
 
       var deviceId = DeterministicGuid.Create(i);
       var deviceDto = await ConnectionHelper.CreateDevice(deviceId, tenantId, i, agentVersion);
-      var signedDto = ConnectionHelper.CreateSignedDeviceUpdate(deviceDto);
+      var signedDto = ConnectionHelper.CreateSignedDeviceUpdate(deviceDto, i);
 
       await connection.InvokeAsync(nameof(IAgentHub.UpdateDeviceSigned), signedDto, ct);
 

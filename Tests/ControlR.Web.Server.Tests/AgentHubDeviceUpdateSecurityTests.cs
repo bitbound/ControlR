@@ -58,6 +58,58 @@ public class AgentHubDeviceUpdateSecurityTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task UpdateDeviceSigned_KnownDeviceWithSelfBootstrapDisabled_UsesServerTenant()
+  {
+    await using var fixture = await HubFixture.Create(_testOutput, allowSelfBootstrap: false);
+
+    var deviceId = Guid.NewGuid();
+    var keyPair = fixture.KeyProvider.GenerateKeyPair();
+    var publicKeyBase64 = Convert.ToBase64String(keyPair.PublicKey);
+    _ = await fixture.Services.CreateTestDevice(fixture.TenantId, deviceId, publicKeyBase64);
+
+    // The caller names a tenant that does not exist. The server must ignore it and use the
+    // tenant the device is already enrolled under.
+    var signedDto = fixture.KeyProvider.Sign(
+      CreateDeviceDto(deviceId, Guid.NewGuid()),
+      keyPair.PrivateKey,
+      publicKeyBase64);
+
+    var result = await fixture.Hub.UpdateDeviceSigned(signedDto);
+
+    Assert.True(result.IsSuccess, result.Reason);
+
+    var device = await fixture.AppDb.Devices
+      .IgnoreQueryFilters()
+      .FirstAsync(x => x.Id == deviceId, TestContext.Current.CancellationToken);
+    Assert.Equal(fixture.TenantId, device.TenantId);
+  }
+
+  [Fact]
+  public async Task UpdateDeviceSigned_KnownDevice_DoesNotReplaceStoredKey()
+  {
+    await using var fixture = await HubFixture.Create(_testOutput, allowSelfBootstrap: true);
+
+    var deviceId = Guid.NewGuid();
+    var keyPair = fixture.KeyProvider.GenerateKeyPair();
+    var publicKeyBase64 = Convert.ToBase64String(keyPair.PublicKey);
+    _ = await fixture.Services.CreateTestDevice(fixture.TenantId, deviceId, publicKeyBase64);
+
+    var signedDto = fixture.KeyProvider.Sign(
+      CreateDeviceDto(deviceId, fixture.TenantId),
+      keyPair.PrivateKey,
+      publicKeyBase64);
+
+    var result = await fixture.Hub.UpdateDeviceSigned(signedDto);
+
+    Assert.True(result.IsSuccess, result.Reason);
+
+    var device = await fixture.AppDb.Devices
+      .IgnoreQueryFilters()
+      .FirstAsync(x => x.Id == deviceId, TestContext.Current.CancellationToken);
+    Assert.Equal(publicKeyBase64, device.PublicKey);
+  }
+
+  [Fact]
   public async Task UpdateDeviceSigned_SelfBootstrapOnMultiTenantServer_NamingAnExistingTenant_IsRejected()
   {
     await using var fixture = await HubFixture.Create(_testOutput, allowSelfBootstrap: true);
