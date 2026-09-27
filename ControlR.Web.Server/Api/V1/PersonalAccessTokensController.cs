@@ -7,11 +7,8 @@ using ControlR.Web.Server.Constants;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Self-service personal access tokens for the calling user. The tokens are always owned by
-/// the caller, so no resource is addressed by id across principals. TenantId stays required on
-/// every operation to keep the V1 convention uniform (server principals resolve the tenant
-/// check but then fail the caller-has-no-AppUser lookup). Create returns 201 and the list
-/// returns an Items envelope. Delete answers 204.
+/// Self-service personal access tokens for the calling user. The tokens are always caller-owned,
+/// and every operation requires a tenantId per the V1 convention.
 /// </summary>
 [Route(HttpConstants.V1.PersonalAccessTokensEndpoint)]
 [ApiController]
