@@ -2,6 +2,7 @@ using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ControlR.Agent.Shared.Options;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Options;
 
@@ -48,6 +49,7 @@ internal class OptionsAccessor(
   public string InstanceId => _instanceOptions.Value.InstanceId ?? string.Empty;
   public string? PrivateKey => _appOptions.CurrentValue.PrivateKey;
   public Uri ServerUri =>
+    BrandingConstants.ControlrServerUrl ??
     _appOptions.CurrentValue.ServerUri ??
     AppConstants.ServerUri ??
     throw new InvalidOperationException("Server URI is not configured correctly.");

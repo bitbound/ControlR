@@ -34,6 +34,28 @@ public static partial class BrandingConstants
   private static string BrandKey => BrandNameSanitizer().Replace(BrandName, "_");
   private static string UnixBrandKey => BrandKey.ToLowerInvariant();
 
+  private static Uri? ParseControlrServerUrl(string? value)
+  {
+    if (string.IsNullOrWhiteSpace(value))
+    {
+      return null;
+    }
+
+    if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
+      || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+    {
+      throw new InvalidOperationException(
+        $"The baked-in ControlR server URL must be an absolute http/https URL. Got: '{value}'.");
+    }
+
+    return uri;
+  }
+
+  /// <summary>
+  /// The server URL baked into a customized build. Null in the default build.
+  /// </summary>
+  public static Uri? ControlrServerUrl { get; } = ParseControlrServerUrl(null);
+
   public static string AuthenticatorIssuerName => BrandName;
 
   public static string WindowsInstallDirectoryName => BrandKey;

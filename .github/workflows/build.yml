@@ -69,6 +69,12 @@ on:
         default: ""
         type: string
 
+      controlr_server_url:
+        description: "Absolute http/https URL of the ControlR server to bake into the build (empty for none)"
+        required: false
+        default: ""
+        type: string
+
       skip_version_increment:
         description: "Use the supplied version without incrementing or setting the current version."
         required: false
@@ -136,6 +142,12 @@ on:
         default: ""
         type: string
 
+      controlr_server_url:
+        description: "Absolute http/https URL of the ControlR server to bake into the build (empty for none)"
+        required: false
+        default: ""
+        type: string
+
       ref:
         description: "Git ref (branch or tag) to build. Defaults to the default branch."
         required: false
@@ -151,6 +163,9 @@ on:
 env:
   VERSION: ${{ inputs.version || vars.CURRENT_VERSION }}
   RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || 1 }}
+  # Transported as an environment variable so older source refs, whose scripts do not
+  # accept the parameter, ignore it instead of failing parameter binding.
+  CONTROLR_SERVER_URL: ${{ inputs.controlr_server_url }}
 
 jobs:
   set-version:
@@ -266,6 +281,24 @@ jobs:
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
           artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+
+      - name: Validate ControlR Server URL
+        if: inputs.controlr_server_url != ''
+        shell: pwsh
+        env:
+          SERVER_URL_INPUT: ${{ inputs.controlr_server_url }}
+          HAS_CONFIG: ${{ steps.download.outputs.has_config || 'false' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $uri = $null
+          if (-not [uri]::TryCreate($env:SERVER_URL_INPUT, [System.UriKind]::Absolute, [ref] $uri) `
+            -or ($uri.Scheme -ne 'http' -and $uri.Scheme -ne 'https')) {
+            throw "controlr_server_url must be an absolute http or https URL."
+          }
+          if ($env:HAS_CONFIG -ne 'true') {
+            throw "controlr_server_url requires customization_config_url."
+          }
+          Write-Host "controlr_server_url OK: $uri"
 
   run-tests:
     name: Run Tests
