@@ -1066,7 +1066,7 @@ public class ViewerHub(
 
       var deviceId = fileUploadMetadata.DeviceId;
 
-      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.FileSystemWrite) is not { IsSuccess: true } authResult)
+      if (await TryAuthorizeAgainstDevice(deviceId, DeviceResourcePolicies.FileSystemTransferUpload) is not { IsSuccess: true } authResult)
       {
         return HubResult.Fail("Unauthorized.");
       }
