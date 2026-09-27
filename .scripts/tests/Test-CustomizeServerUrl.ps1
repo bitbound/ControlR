@@ -82,11 +82,16 @@ function Invoke-CustomizeScript {
 }
 
 function Invoke-CustomizeFromConfig {
-  param([string] $Root, [string] $ConfigPath)
+  param([string] $Root, [string] $ConfigPath, [string] $ControlrServerUrl = "")
   $prevEnvFile = $env:GITHUB_ENV
   try {
     $env:GITHUB_ENV = Join-Path $Root "github-env.txt"
-    & (Join-Path $Root ".scripts/Invoke-Customize.ps1") -ConfigPath $ConfigPath -Version "1.2.3.4"
+    if ($ControlrServerUrl) {
+      & (Join-Path $Root ".scripts/Invoke-Customize.ps1") -ConfigPath $ConfigPath -Version "1.2.3.4" -ControlrServerUrl $ControlrServerUrl
+    }
+    else {
+      & (Join-Path $Root ".scripts/Invoke-Customize.ps1") -ConfigPath $ConfigPath -Version "1.2.3.4"
+    }
   }
   finally {
     $env:GITHUB_ENV = $prevEnvFile
@@ -128,49 +133,23 @@ $repo = New-FakeRepo -Name "dollar"
 Invoke-CustomizeScript -Root $repo -ExtraParams @{ ControlrServerUrl = 'https://controlr.example.com/$&' }
 Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains('ParseControlrServerUrl("https://controlr.example.com/$&")')) -TestName "customize.ps1 bakes a URL containing `$& literally"
 
-# Invoke-Customize.ps1 picks the URL up from the environment variable, which is how the
-# workflow transports it to a script checked out from an older source ref.
-$repo = New-FakeRepo -Name "envvar"
+# Invoke-Customize.ps1 forwards -ControlrServerUrl to customize.ps1.
+$repo = New-FakeRepo -Name "param"
 $configPath = New-ConfigPayload -Root $repo
-$prevUrl = $env:CONTROLR_SERVER_URL
-try {
-  $env:CONTROLR_SERVER_URL = $serverUrl
-  Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath
-}
-finally {
-  $env:CONTROLR_SERVER_URL = $prevUrl
-}
-Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("ParseControlrServerUrl(`"$normalizedUrl`")")) -TestName "Invoke-Customize.ps1 bakes the URL from CONTROLR_SERVER_URL"
+Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath -ControlrServerUrl $serverUrl
+Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("ParseControlrServerUrl(`"$normalizedUrl`")")) -TestName "Invoke-Customize.ps1 bakes the URL from -ControlrServerUrl"
 
-# Invoke-Customize.ps1 without the environment variable leaves the declaration untouched.
-$repo = New-FakeRepo -Name "noenvvar"
+# Invoke-Customize.ps1 without -ControlrServerUrl leaves the declaration untouched.
+$repo = New-FakeRepo -Name "noparam"
 $configPath = New-ConfigPayload -Root $repo
-$prevUrl = $env:CONTROLR_SERVER_URL
-try {
-  $env:CONTROLR_SERVER_URL = $null
-  Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath
-}
-finally {
-  $env:CONTROLR_SERVER_URL = $prevUrl
-}
-Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("ParseControlrServerUrl(null)")) -TestName "Invoke-Customize.ps1 without CONTROLR_SERVER_URL leaves the declaration alone"
+Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath
+Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("ParseControlrServerUrl(null)")) -TestName "Invoke-Customize.ps1 without -ControlrServerUrl leaves the declaration alone"
 
-# Invoke-Customize.ps1 rejects a malformed URL from the environment variable.
-$repo = New-FakeRepo -Name "badenvvar"
+# Invoke-Customize.ps1 rejects a malformed URL passed as a parameter.
+$repo = New-FakeRepo -Name "badparam"
 $configPath = New-ConfigPayload -Root $repo
-$prevUrl = $env:CONTROLR_SERVER_URL
-$threw = $false
-try {
-  $env:CONTROLR_SERVER_URL = "not a url"
-  Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath
-}
-catch {
-  $threw = $true
-}
-finally {
-  $env:CONTROLR_SERVER_URL = $prevUrl
-}
-Assert-True -Condition $threw -TestName "Invoke-Customize.ps1 rejects a malformed CONTROLR_SERVER_URL"
+$threw = Test-Throws { Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath -ControlrServerUrl "not a url" }
+Assert-True -Condition $threw -TestName "Invoke-Customize.ps1 rejects a malformed -ControlrServerUrl"
 
 if ($failures.Count -gt 0) {
   Write-Host ""

@@ -163,9 +163,6 @@ on:
 env:
   VERSION: ${{ inputs.version || vars.CURRENT_VERSION }}
   RETENTION_DAYS_ARTIFACTS: ${{ inputs.retention_days_artifacts || 1 }}
-  # Transported as an environment variable so older source refs, whose scripts do not
-  # accept the parameter, ignore it instead of failing parameter binding.
-  CONTROLR_SERVER_URL: ${{ inputs.controlr_server_url }}
 
 jobs:
   set-version:
@@ -410,7 +407,9 @@ jobs:
         id: customize
         if: needs.download-customization.outputs.has_config == 'true'
         shell: pwsh
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
+        env:
+          SERVER_URL: ${{ inputs.controlr_server_url }}
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}' -ControlrServerUrl $env:SERVER_URL
 
       - name: Set Default Branding
         if: needs.download-customization.outputs.has_config != 'true'
@@ -659,7 +658,9 @@ jobs:
         id: customize
         if: needs.download-customization.outputs.has_config == 'true'
         shell: pwsh
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
+        env:
+          SERVER_URL: ${{ inputs.controlr_server_url }}
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}' -ControlrServerUrl $env:SERVER_URL
 
       - name: Set Default Branding
         if: needs.download-customization.outputs.has_config != 'true'
@@ -830,7 +831,9 @@ jobs:
         id: customize
         if: needs.download-customization.outputs.has_config == 'true'
         shell: pwsh
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
+        env:
+          SERVER_URL: ${{ inputs.controlr_server_url }}
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}' -ControlrServerUrl $env:SERVER_URL
 
       - name: Set Default Branding
         if: needs.download-customization.outputs.has_config != 'true'
@@ -928,7 +931,9 @@ jobs:
         id: customize
         if: needs.download-customization.outputs.has_config == 'true'
         shell: pwsh
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ env.VERSION }}'
+        env:
+          SERVER_URL: ${{ inputs.controlr_server_url }}
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ env.VERSION }}' -ControlrServerUrl $env:SERVER_URL
 
       - name: Set Default Branding
         if: needs.download-customization.outputs.has_config != 'true'

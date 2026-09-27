@@ -9,11 +9,8 @@ param(
   [Parameter()]
   [string] $ConfigPath = "",
 
-  # Read from the environment rather than only from a parameter. The workflow file comes
-  # from the dispatched ref while the scripts come from the built source ref, so an older
-  # source ref would fail parameter binding on a newly added parameter.
   [Parameter()]
-  [string] $ControlrServerUrl = $env:CONTROLR_SERVER_URL
+  [string] $ControlrServerUrl = ""
 )
 
 $ErrorActionPreference = "Stop"
