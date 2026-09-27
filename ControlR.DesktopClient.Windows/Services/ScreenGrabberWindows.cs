@@ -32,6 +32,9 @@ namespace ControlR.DesktopClient.Windows.Services;
 internal sealed class ScreenGrabberWindows : IScreenGrabber
 {
   private const string DirectXCaptureMode = "DirectX";
+
+  // DXGI_ERROR_WAIT_TIMEOUT
+  private const int DxgiErrorWaitTimeout = unchecked((int)0x887A0027);
   private const string GdiCaptureMode = "GDI";
 
   private readonly IDisplayManager _displayManager;
@@ -347,7 +350,10 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
 
       return CaptureResult.Ok(skBitmap, captureMode: DirectXCaptureMode, dirtyRects);
     }
-    catch (COMException ex) when (ex.Message.StartsWith("The timeout value has elapsed"))
+    // AcquireNextFrame with a 0ms timeout answers DXGI_ERROR_WAIT_TIMEOUT whenever no new frame
+    // is queued yet. That is the common case, not a fault. Match the HRESULT because the
+    // message text is localized on non-English installs.
+    catch (COMException ex) when (ex.HResult == DxgiErrorWaitTimeout)
     {
       return CaptureResult.NoChanges(captureMode: DirectXCaptureMode);
     }
