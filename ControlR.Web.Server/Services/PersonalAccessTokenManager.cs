@@ -288,19 +288,29 @@ public class PersonalAccessTokenManager(
   {
     try
     {
+      var revokedAt = _timeProvider.GetUtcNow();
+
+      // The RevokedAt == null predicate makes the write conditional, so the first revoke
+      // wins even under concurrency. A later revoke matches no row and leaves the original
+      // timestamp intact, preserving the audit trail.
+      await _appDb.PersonalAccessTokens
+        .IgnoreQueryFilters()
+        .Where(x => x.Id == id && x.UserId == userId && x.RevokedAt == null)
+        .ExecuteUpdateCompatAsync(
+          _appDb,
+          q => q.ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, revokedAt)),
+          x => x.RevokedAt = revokedAt);
+
+      // Re-read so the response carries the persisted timestamp. A token that was already
+      // revoked returns its original time, and an unknown or foreign token returns null.
       var personalAccessToken = await _appDb.PersonalAccessTokens
         .IgnoreQueryFilters()
+        .AsNoTracking()
         .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
 
       if (personalAccessToken is null)
       {
         return Result.Fail<InternalDtos.PersonalAccessTokenResponseDto>("Personal access token not found.");
-      }
-
-      if (personalAccessToken.RevokedAt is null)
-      {
-        personalAccessToken.RevokedAt = _timeProvider.GetUtcNow();
-        await _appDb.SaveChangesAsync();
       }
 
       var permissionsLookup = await GetPermissionCountLookup([id]);

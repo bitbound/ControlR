@@ -252,7 +252,8 @@ public class UsersController : ControllerBase
             scope.PermissionName,
             scope.ScopeKind,
             scope.ScopeId))
-          .ToList()),
+          .ToList(),
+        request.ExpiresAt),
       userId,
       actor);
 
