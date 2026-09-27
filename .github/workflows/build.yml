@@ -69,12 +69,6 @@ on:
         default: ""
         type: string
 
-      controlr_server_url:
-        description: "Absolute http/https URL of the ControlR server to bake into the build (empty for none)"
-        required: false
-        default: ""
-        type: string
-
       skip_version_increment:
         description: "Use the supplied version without incrementing or setting the current version."
         required: false
@@ -138,12 +132,6 @@ on:
 
       customization_config_url:
         description: "URL to JSON customization config (empty for default branding)"
-        required: false
-        default: ""
-        type: string
-
-      controlr_server_url:
-        description: "Absolute http/https URL of the ControlR server to bake into the build (empty for none)"
         required: false
         default: ""
         type: string
@@ -279,24 +267,6 @@ jobs:
           artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Validate ControlR Server URL
-        if: inputs.controlr_server_url != ''
-        shell: pwsh
-        env:
-          SERVER_URL_INPUT: ${{ inputs.controlr_server_url }}
-          HAS_CONFIG: ${{ steps.download.outputs.has_config || 'false' }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $uri = $null
-          if (-not [uri]::TryCreate($env:SERVER_URL_INPUT, [System.UriKind]::Absolute, [ref] $uri) `
-            -or ($uri.Scheme -ne 'http' -and $uri.Scheme -ne 'https')) {
-            throw "controlr_server_url must be an absolute http or https URL."
-          }
-          if ($env:HAS_CONFIG -ne 'true') {
-            throw "controlr_server_url requires customization_config_url."
-          }
-          Write-Host "controlr_server_url OK: $uri"
-
   run-tests:
     name: Run Tests
     needs: set-version
@@ -407,9 +377,7 @@ jobs:
         id: customize
         if: needs.download-customization.outputs.has_config == 'true'
         shell: pwsh
-        env:
-          SERVER_URL: ${{ inputs.controlr_server_url }}
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}' -ControlrServerUrl $env:SERVER_URL
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
 
       - name: Set Default Branding
         if: needs.download-customization.outputs.has_config != 'true'
@@ -658,9 +626,7 @@ jobs:
         id: customize
         if: needs.download-customization.outputs.has_config == 'true'
         shell: pwsh
-        env:
-          SERVER_URL: ${{ inputs.controlr_server_url }}
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}' -ControlrServerUrl $env:SERVER_URL
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
 
       - name: Set Default Branding
         if: needs.download-customization.outputs.has_config != 'true'
@@ -831,9 +797,7 @@ jobs:
         id: customize
         if: needs.download-customization.outputs.has_config == 'true'
         shell: pwsh
-        env:
-          SERVER_URL: ${{ inputs.controlr_server_url }}
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}' -ControlrServerUrl $env:SERVER_URL
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
 
       - name: Set Default Branding
         if: needs.download-customization.outputs.has_config != 'true'
@@ -931,9 +895,7 @@ jobs:
         id: customize
         if: needs.download-customization.outputs.has_config == 'true'
         shell: pwsh
-        env:
-          SERVER_URL: ${{ inputs.controlr_server_url }}
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ env.VERSION }}' -ControlrServerUrl $env:SERVER_URL
+        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ env.VERSION }}'
 
       - name: Set Default Branding
         if: needs.download-customization.outputs.has_config != 'true'

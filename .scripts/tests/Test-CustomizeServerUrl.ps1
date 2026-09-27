@@ -62,10 +62,13 @@ function Get-BrandingConstantsContent {
 }
 
 function New-ConfigPayload {
-  param([string] $Root)
-  $payload = [ordered]@{ brandName = "Acme"; publisher = "Acme Inc."; version = "1.2.3.4"; colors = $null; images = $null } | ConvertTo-Json
+  param([string] $Root, [string] $ControlrServerUrl = "")
+  $payload = [ordered]@{ brandName = "Acme"; publisher = "Acme Inc."; version = "1.2.3.4"; colors = $null; images = $null }
+  if ($ControlrServerUrl) {
+    $payload.controlrServerUrl = $ControlrServerUrl
+  }
   $path = Join-Path $Root "config.json"
-  Set-Content -Path $path -Value $payload -Encoding UTF8
+  Set-Content -Path $path -Value ($payload | ConvertTo-Json) -Encoding UTF8
   return $path
 }
 
@@ -82,16 +85,11 @@ function Invoke-CustomizeScript {
 }
 
 function Invoke-CustomizeFromConfig {
-  param([string] $Root, [string] $ConfigPath, [string] $ControlrServerUrl = "")
+  param([string] $Root, [string] $ConfigPath)
   $prevEnvFile = $env:GITHUB_ENV
   try {
     $env:GITHUB_ENV = Join-Path $Root "github-env.txt"
-    if ($ControlrServerUrl) {
-      & (Join-Path $Root ".scripts/Invoke-Customize.ps1") -ConfigPath $ConfigPath -Version "1.2.3.4" -ControlrServerUrl $ControlrServerUrl
-    }
-    else {
-      & (Join-Path $Root ".scripts/Invoke-Customize.ps1") -ConfigPath $ConfigPath -Version "1.2.3.4"
-    }
+    & (Join-Path $Root ".scripts/Invoke-Customize.ps1") -ConfigPath $ConfigPath -Version "1.2.3.4"
   }
   finally {
     $env:GITHUB_ENV = $prevEnvFile
@@ -133,23 +131,25 @@ $repo = New-FakeRepo -Name "dollar"
 Invoke-CustomizeScript -Root $repo -ExtraParams @{ ControlrServerUrl = 'https://controlr.example.com/$&' }
 Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains('ParseControlrServerUrl("https://controlr.example.com/$&")')) -TestName "customize.ps1 bakes a URL containing `$& literally"
 
-# Invoke-Customize.ps1 forwards -ControlrServerUrl to customize.ps1.
-$repo = New-FakeRepo -Name "param"
-$configPath = New-ConfigPayload -Root $repo
-Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath -ControlrServerUrl $serverUrl
-Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("ParseControlrServerUrl(`"$normalizedUrl`")")) -TestName "Invoke-Customize.ps1 bakes the URL from -ControlrServerUrl"
+# Invoke-Customize.ps1 reads the URL from the customization payload and forwards it to customize.ps1.
+$repo = New-FakeRepo -Name "payload"
+$configPath = New-ConfigPayload -Root $repo -ControlrServerUrl $serverUrl
+Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath
+Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("ParseControlrServerUrl(`"$normalizedUrl`")")) -TestName "Invoke-Customize.ps1 bakes the URL from the customization payload"
 
-# Invoke-Customize.ps1 without -ControlrServerUrl leaves the declaration untouched.
-$repo = New-FakeRepo -Name "noparam"
+# A payload without the URL leaves the declaration untouched. This covers payloads produced
+# before the server URL moved into the customization config.
+$repo = New-FakeRepo -Name "nopayloadurl"
 $configPath = New-ConfigPayload -Root $repo
 Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath
-Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("ParseControlrServerUrl(null)")) -TestName "Invoke-Customize.ps1 without -ControlrServerUrl leaves the declaration alone"
+Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("ParseControlrServerUrl(null)")) -TestName "Invoke-Customize.ps1 without a payload URL leaves the declaration alone"
 
-# Invoke-Customize.ps1 rejects a malformed URL passed as a parameter.
-$repo = New-FakeRepo -Name "badparam"
-$configPath = New-ConfigPayload -Root $repo
-$threw = Test-Throws { Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath -ControlrServerUrl "not a url" }
-Assert-True -Condition $threw -TestName "Invoke-Customize.ps1 rejects a malformed -ControlrServerUrl"
+# A malformed URL in the payload fails the build. The portal normally prevents this, but a
+# hand-crafted payload must not bake a broken URL into the constant.
+$repo = New-FakeRepo -Name "badpayloadurl"
+$configPath = New-ConfigPayload -Root $repo -ControlrServerUrl "not a url"
+$threw = Test-Throws { Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath }
+Assert-True -Condition $threw -TestName "Invoke-Customize.ps1 rejects a malformed payload URL"
 
 if ($failures.Count -gt 0) {
   Write-Host ""
