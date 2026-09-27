@@ -79,6 +79,40 @@ public class UsersV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task CreateUserPersonalAccessToken_ForwardsExpiryToPersistedToken()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+    var (controller, tenant, _) = await scope.CreateControllerWithTestData<UsersController>(
+      userEmail: "v1-pat-expiry@test.local",
+      presets: PermissionPresets.TenantAdministrator);
+    var targetUser = await services.CreateTestUser(tenant.Id, "v1-pat-expiry-target@t.local");
+    var manager = services.GetRequiredService<IPersonalAccessTokenManager>();
+
+    var expiresAt = DateTimeOffset.UtcNow.AddDays(30);
+
+    var createResult = await controller.CreateUserPersonalAccessToken(
+      manager,
+      services.GetRequiredService<AppDb>(),
+      targetUser.Id,
+      tenant.Id,
+      new CreatePersonalAccessTokenRequestDto(
+        "Expiring Admin PAT",
+        PersonalAccessTokenPermissionMode.InheritOwner,
+        ExpiresAt: expiresAt),
+      TestContext.Current.CancellationToken);
+
+    var created = Assert.IsType<CreatedAtActionResult>(createResult.Result);
+    var createDto = Assert.IsType<CreatePersonalAccessTokenResponseDto>(created.Value);
+    Assert.Equal(expiresAt, createDto.PersonalAccessToken.ExpiresAt);
+
+    // The write path must persist the expiry, not just echo it in the response.
+    var persisted = Assert.Single(await manager.GetForUser(targetUser.Id));
+    Assert.Equal(expiresAt, persisted.ExpiresAt);
+  }
+
+  [Fact]
   public async Task CreateUserPersonalAccessToken_WhenTargetIsOutsideTenant_ReturnsNotFound()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);

@@ -8,6 +8,7 @@ namespace ControlR.Web.Client.Components.Pages;
 public partial class PersonalAccessTokens
 {
   private bool _isLoading = false;
+  private DateTimeOffset? _newTokenExpiresAt = null;
   private PersonalAccessTokenPermissionMode _newTokenMode = PersonalAccessTokenPermissionMode.Restricted;
   private string _newTokenName = string.Empty;
   private PersonalAccessTokenResponseDto[] _personalAccessTokens = [];
@@ -23,6 +24,9 @@ public partial class PersonalAccessTokens
 
   [Inject]
   public required ISnackbar Snackbar { get; init; }
+
+  [Inject]
+  public required TimeProvider TimeProvider { get; init; }
 
   private bool CanCreatePersonalAccessToken =>
     !string.IsNullOrWhiteSpace(_newTokenName) &&
@@ -48,7 +52,8 @@ public partial class PersonalAccessTokens
 
       var request = new CreatePersonalAccessTokenRequestDto(
         _newTokenName.Trim(),
-        _newTokenMode);
+        _newTokenMode,
+        ExpiresAt: _newTokenExpiresAt);
       var result = await ControlrApi.V1.PersonalAccessTokens.CreatePersonalAccessToken(tenantId, request);
 
       if (result.IsSuccess)
@@ -73,6 +78,7 @@ public partial class PersonalAccessTokens
         var createdMode = _newTokenMode;
         _newTokenName = string.Empty;
         _newTokenMode = PersonalAccessTokenPermissionMode.Restricted;
+        _newTokenExpiresAt = null;
         Snackbar.Add("Personal access token created successfully", Severity.Success);
 
         if (createdMode != PersonalAccessTokenPermissionMode.InheritOwner)
@@ -236,6 +242,41 @@ public partial class PersonalAccessTokens
     catch (Exception ex)
     {
       Snackbar.Add($"Error renaming personal access token: {ex.Message}", Severity.Error);
+    }
+  }
+
+  private async Task RevokePersonalAccessToken(PersonalAccessTokenResponseDto personalAccessToken)
+  {
+    var confirmed = await DialogService.ShowMessageBoxAsync(
+      "Confirm Revoke",
+      $"Revoke the personal access token '{personalAccessToken.Name}'?",
+      yesText: "Revoke",
+      cancelText: "Cancel");
+
+    if (confirmed == true)
+    {
+      try
+      {
+        if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
+        {
+          return;
+        }
+
+        var result = await ControlrApi.V1.PersonalAccessTokens.RevokePersonalAccessToken(personalAccessToken.Id, tenantId);
+        if (result.IsSuccess)
+        {
+          await LoadPersonalAccessTokens();
+          Snackbar.Add("Personal access token revoked successfully", Severity.Success);
+        }
+        else
+        {
+          Snackbar.Add($"Failed to revoke personal access token: {result.Reason}", Severity.Error);
+        }
+      }
+      catch (Exception ex)
+      {
+        Snackbar.Add($"Error revoking personal access token: {ex.Message}", Severity.Error);
+      }
     }
   }
 }

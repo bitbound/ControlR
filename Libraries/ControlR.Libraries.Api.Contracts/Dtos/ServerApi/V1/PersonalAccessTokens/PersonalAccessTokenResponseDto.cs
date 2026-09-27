@@ -6,4 +6,6 @@ public record PersonalAccessTokenResponseDto(
   DateTimeOffset CreatedAt,
   DateTimeOffset? LastUsed,
   int PermissionCount,
-  PersonalAccessTokenPermissionMode PermissionMode);
+  PersonalAccessTokenPermissionMode PermissionMode,
+  DateTimeOffset? ExpiresAt,
+  DateTimeOffset? RevokedAt);

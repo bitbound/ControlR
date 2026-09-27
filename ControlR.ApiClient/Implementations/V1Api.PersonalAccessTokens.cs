@@ -37,6 +37,17 @@ internal partial class V1Api
         cancellationToken));
   }
 
+  async Task<ApiResult<PersonalAccessTokenResponseDto>> IPersonalAccessTokensApi.RevokePersonalAccessToken(Guid id, Guid tenantId, CancellationToken cancellationToken)
+  {
+    return await _client.ExecuteApiCall(async () =>
+    {
+      using var response = await _client.HttpClient.PostAsync(
+        $"{HttpConstants.V1.PersonalAccessTokensEndpoint}/{id}/revoke?tenantId={tenantId}", content: null, cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<PersonalAccessTokenResponseDto>(cancellationToken);
+    });
+  }
+
   async Task<ApiResult<PersonalAccessTokenResponseDto>> IPersonalAccessTokensApi.UpdatePersonalAccessToken(Guid id, Guid tenantId, UpdatePersonalAccessTokenRequestDto request, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>

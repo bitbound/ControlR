@@ -2,6 +2,12 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "aspire",
+      "request": "launch",
+      "name": "Aspire: Launch AppHost",
+      "program": ""
+    },
+    {
       "name": "Agent (Debug)",
       "type": "coreclr",
       "request": "launch",

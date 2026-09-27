@@ -252,7 +252,8 @@ public class UsersController : ControllerBase
             scope.PermissionName,
             scope.ScopeKind,
             scope.ScopeId))
-          .ToList()),
+          .ToList(),
+        request.ExpiresAt),
       userId,
       actor);
 
@@ -499,7 +500,9 @@ public class UsersController : ControllerBase
       token.CreatedAt,
       token.LastUsed,
       token.PermissionCount,
-      token.PermissionMode);
+      token.PermissionMode,
+      token.ExpiresAt,
+      token.RevokedAt);
   }
 
   /// <summary>

@@ -18,11 +18,14 @@ public interface IPersonalAccessTokenManager
   /// </summary>
   Task<Result<InternalDtos.PersonalAccessTokenResponseDto>> CreateTokenWithKey(
     Guid tokenId, string secret, string name, Guid userId, PersonalAccessTokenPermissionMode permissionMode);
-
   Task<Result> Delete(Guid id, Guid userId);
-
   Task<IEnumerable<InternalDtos.PersonalAccessTokenResponseDto>> GetForUser(Guid userId);
 
+  /// <summary>
+  /// Marks the caller's own token revoked. A revoked token keeps its row for audit but
+  /// fails validation immediately.
+  /// </summary>
+  Task<Result<InternalDtos.PersonalAccessTokenResponseDto>> Revoke(Guid id, Guid userId);
   Task<Result<InternalDtos.PersonalAccessTokenResponseDto>> Update(Guid id, InternalDtos.UpdatePersonalAccessTokenRequestDto request, Guid userId);
 
   /// <summary>
@@ -112,7 +115,8 @@ public class PersonalAccessTokenManager(
         Name = request.Name,
         HashedKey = hashedKey,
         UserId = userId,
-        PermissionMode = request.PermissionMode
+        PermissionMode = request.PermissionMode,
+        ExpiresAt = request.ExpiresAt
       };
 
       _appDb.PersonalAccessTokens.Add(personalAccessToken);
@@ -280,6 +284,44 @@ public class PersonalAccessTokenManager(
       .ToList();
   }
 
+  public async Task<Result<InternalDtos.PersonalAccessTokenResponseDto>> Revoke(Guid id, Guid userId)
+  {
+    try
+    {
+      var revokedAt = _timeProvider.GetUtcNow();
+
+      // The RevokedAt == null predicate makes the write conditional, so the first revoke
+      // wins even under concurrency. A later revoke matches no row and leaves the original
+      // timestamp intact, preserving the audit trail.
+      await _appDb.PersonalAccessTokens
+        .IgnoreQueryFilters()
+        .Where(x => x.Id == id && x.UserId == userId && x.RevokedAt == null)
+        .ExecuteUpdateCompatAsync(
+          _appDb,
+          q => q.ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, revokedAt)),
+          x => x.RevokedAt = revokedAt);
+
+      // Re-read so the response carries the persisted timestamp. A token that was already
+      // revoked returns its original time, and an unknown or foreign token returns null.
+      var personalAccessToken = await _appDb.PersonalAccessTokens
+        .IgnoreQueryFilters()
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+
+      if (personalAccessToken is null)
+      {
+        return Result.Fail<InternalDtos.PersonalAccessTokenResponseDto>("Personal access token not found.");
+      }
+
+      var permissionsLookup = await GetPermissionCountLookup([id]);
+      return Result.Ok(MapToDto(personalAccessToken, permissionsLookup.GetValueOrDefault(id)));
+    }
+    catch (Exception ex)
+    {
+      return Result.Fail<InternalDtos.PersonalAccessTokenResponseDto>(ex, "Failed to revoke personal access token.");
+    }
+  }
+
   public async Task<Result<InternalDtos.PersonalAccessTokenResponseDto>> Update(Guid id, InternalDtos.UpdatePersonalAccessTokenRequestDto request, Guid userId)
   {
     try
@@ -371,7 +413,9 @@ public class PersonalAccessTokenManager(
       personalAccessToken.CreatedAt,
       personalAccessToken.LastUsed,
       permissionCount,
-      personalAccessToken.PermissionMode);
+      personalAccessToken.PermissionMode,
+      personalAccessToken.ExpiresAt,
+      personalAccessToken.RevokedAt);
   }
 
   private async Task<Dictionary<Guid, int>> GetPermissionCountLookup(IReadOnlyCollection<Guid> tokenIds)
