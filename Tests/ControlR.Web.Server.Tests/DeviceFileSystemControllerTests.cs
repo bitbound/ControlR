@@ -793,6 +793,8 @@ public class DeviceFileSystemControllerTests(ITestOutputHelper testOutput)
     var hubValue = new InternalDtos.GetLogFilesResponseDto(
       [new InternalDtos.LogFileGroupDto(
         "Agent",
+        LogKind.Agent,
+        null,
         [new InternalDtos.LogFileEntryDto("agent.log", "/logs/agent.log", 123, DateTimeOffset.UnixEpoch)])]);
     harness.AgentClient
       .Setup(x => x.GetLogFiles())

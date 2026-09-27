@@ -5,6 +5,7 @@ using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.TestingUtilities.Extensions;
 using ControlR.Viewer.Avalonia.Tests.Fakes;
 using ControlR.Viewer.Avalonia.ViewModels;
+using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 
@@ -72,7 +73,7 @@ public class RemoteLogsViewModelTests
   {
     // Arrange
     var vm = CreateViewModel();
-    var fileNode = new LogFilesTreeItemViewModel("log.txt", "/var/log/log.txt", isFile: true);
+    var fileNode = new LogFilesTreeItemViewModel("LogFile.log", LogKind.Agent, null, isFile: true);
 
     _mockFileSystemApi
       .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
@@ -178,14 +179,19 @@ public class RemoteLogsViewModelTests
     var vm = CreateViewModel();
 
     var logGroup = new LogFileGroupDto(
-      "Agent Logs",
-      [new LogFileEntryDto("agent.log", "/var/log/agent.log", 1024, DateTimeOffset.UtcNow)]);
+      "DesktopClient Logs (alice)",
+      LogKind.DesktopClient,
+      "alice",
+      [new LogFileEntryDto("LogFile20260101.log", "/home/alice/logs/LogFile20260101.log", 1024, DateTimeOffset.UtcNow)]);
 
     var response = new GetLogFilesResponseDto([logGroup]);
 
     _mockFileSystemApi
       .Setup(x => x.GetLogFiles(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
       .ReturnsAsync(ApiResult.Ok(response));
+    _mockFileSystemApi
+      .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Ok("log contents"));
 
     // Act
     await vm.Initialize();
@@ -194,11 +200,26 @@ public class RemoteLogsViewModelTests
     Assert.True(vm.HasRootItems);
     var rootItem = vm.RootItems.FirstOrDefault();
     Assert.NotNull(rootItem);
-    Assert.Equal("Agent Logs", rootItem.Name);
+    Assert.Equal("DesktopClient Logs (alice)", rootItem.Name);
     Assert.False(rootItem.IsFile);
     Assert.Single(rootItem.Children);
-    Assert.Equal("agent.log", rootItem.Children[0].Name);
-    Assert.True(rootItem.Children[0].IsFile);
+    var logFileItem = rootItem.Children[0];
+    Assert.Equal("LogFile20260101.log", logFileItem.Name);
+    Assert.True(logFileItem.IsFile);
+    Assert.Equal(LogKind.DesktopClient, logFileItem.Kind);
+    Assert.Equal("alice", logFileItem.Username);
+
+    await vm.SelectNode(logFileItem);
+
+    _mockFileSystemApi.Verify(
+      x => x.GetLogFileContents(
+        It.IsAny<Guid>(),
+        It.Is<GetLogFileContentsRequestDto>(request =>
+          request.Kind == LogKind.DesktopClient
+          && request.FileName == "LogFile20260101.log"
+          && request.Username == "alice"),
+        It.IsAny<CancellationToken>()),
+      Times.Once);
   }
 
   [Fact]
@@ -206,7 +227,7 @@ public class RemoteLogsViewModelTests
   {
     // Arrange
     var vm = CreateViewModel();
-    var fileNode = new LogFilesTreeItemViewModel("test.log", "/var/log/test.log", isFile: true);
+    var fileNode = new LogFilesTreeItemViewModel("LogFile.log", LogKind.Agent, null, isFile: true);
 
     _mockFileSystemApi
       .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
@@ -227,7 +248,7 @@ public class RemoteLogsViewModelTests
   {
     // Arrange
     var vm = CreateViewModel();
-    var folderNode = new LogFilesTreeItemViewModel("MyGroup", fullPath: null, isFile: false);
+    var folderNode = new LogFilesTreeItemViewModel("MyGroup", kind: null, username: null, isFile: false);
     await vm.SelectNode(folderNode);
 
     // Act
@@ -255,7 +276,7 @@ public class RemoteLogsViewModelTests
   {
     // Arrange
     var vm = CreateViewModel();
-    var fileNode = new LogFilesTreeItemViewModel("test.log", "/var/log/test.log", isFile: true);
+    var fileNode = new LogFilesTreeItemViewModel("LogFile.log", LogKind.Agent, null, isFile: true);
 
     _mockFileSystemApi
       .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))
@@ -274,7 +295,7 @@ public class RemoteLogsViewModelTests
   {
     // Arrange
     var vm = CreateViewModel();
-    var folderNode = new LogFilesTreeItemViewModel("MyGroup", fullPath: null, isFile: false);
+    var folderNode = new LogFilesTreeItemViewModel("MyGroup", kind: null, username: null, isFile: false);
 
     // Act
     await vm.SelectNode(folderNode);
@@ -292,7 +313,7 @@ public class RemoteLogsViewModelTests
     // Arrange
     var vm = CreateViewModel();
     vm.LogContents = "some content";
-    var fileNode = new LogFilesTreeItemViewModel("log.txt", "/var/log/log.txt", isFile: true);
+    var fileNode = new LogFilesTreeItemViewModel("LogFile.log", LogKind.Agent, null, isFile: true);
 
     _mockFileSystemApi
       .Setup(x => x.GetLogFileContents(It.IsAny<Guid>(), It.IsAny<GetLogFileContentsRequestDto>(), It.IsAny<CancellationToken>()))

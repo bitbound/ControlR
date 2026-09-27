@@ -20,6 +20,7 @@ public interface IFileManager
   Task<FileSystemEntryDto[]> GetRootDrives();
   Task<FileSystemEntryDto[]> GetSubdirectories(string directoryPath);
   bool IsPathWithinLogRoots(string filePath);
+  FileReferenceResult ResolveLogFile(LogKind kind, string fileName, string? username);
   Task<FileReferenceResult> ResolveTargetFilePath(string targetPath);
   Task<FileReferenceResult> SaveUploadedFile(string targetDirectoryPath, string fileName, Stream fileStream, bool overwrite = false);
   Task<ValidateFilePathResponseDto> ValidateFilePath(string directoryPath, string fileName);
@@ -31,6 +32,8 @@ internal class FileManager(
   ISystemEnvironment systemEnvironment,
   ILogger<FileManager> logger) : IFileManager
 {
+  private const string LogFilesSearchPattern = "LogFile*.log";
+
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly ILogger<FileManager> _logger = logger;
@@ -512,6 +515,69 @@ internal class FileManager(
     return true;
   }
 
+  public FileReferenceResult ResolveLogFile(LogKind kind, string fileName, string? username)
+  {
+    if (!IsSinglePathSegment(fileName))
+    {
+      return FileReferenceResult.Fail("Log file name must be a single path segment.", OperationFailureCode.InvalidInput);
+    }
+
+    if (username is not null && !IsSinglePathSegment(username))
+    {
+      return FileReferenceResult.Fail("Username must be a single path segment.", OperationFailureCode.InvalidInput);
+    }
+
+    string? directoryPath;
+    try
+    {
+      directoryPath = kind switch
+      {
+        LogKind.Agent when username is null => _fileSystemPathProvider.GetAgentLogsDirectoryPath(),
+        LogKind.Installer when username is null => _fileSystemPathProvider.GetInstallerLogsDirectoryPath(),
+        LogKind.DesktopClient when _systemEnvironment.IsWindows() && username is null =>
+          _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory(),
+        LogKind.DesktopClient when _systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS() =>
+          username is null
+            ? _fileSystemPathProvider.GetUnixDesktopClientLogsDirectoryForRoot()
+            : _fileSystemPathProvider.GetUnixDesktopClientLogsDirectory(username),
+        _ => null
+      };
+    }
+    catch (Exception ex)
+    {
+      _logger.LogDebug(ex, "Could not resolve log directory for {LogKind}", kind);
+      return FileReferenceResult.Fail("Log file selector is not valid for this device.", OperationFailureCode.InvalidInput);
+    }
+
+    if (directoryPath is null)
+    {
+      return FileReferenceResult.Fail("Log file selector is not valid for this device.", OperationFailureCode.InvalidInput);
+    }
+
+    try
+    {
+      var filePath = _fileSystem.GetFiles(directoryPath, LogFilesSearchPattern)
+        .FirstOrDefault(path => string.Equals(Path.GetFileName(path), fileName, StringComparison.Ordinal));
+
+      if (filePath is null || !_fileSystem.FileExists(filePath))
+      {
+        return FileReferenceResult.Fail("Log file was not found.", OperationFailureCode.NotFound);
+      }
+
+      if (!IsPathWithinLogRoots(filePath))
+      {
+        return FileReferenceResult.Fail("Log file resolves outside an allowed log directory.", OperationFailureCode.PermissionDenied);
+      }
+
+      return FileReferenceResult.Ok(filePath, fileName);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogDebug(ex, "Could not enumerate log file {FileName} in {DirectoryPath}", fileName, directoryPath);
+      return FileReferenceResult.Fail("Could not read log file.", OperationFailureCode.DeviceFailure);
+    }
+  }
+
   public async Task<FileReferenceResult> ResolveTargetFilePath(string filePath)
   {
     try
@@ -663,6 +729,15 @@ internal class FileManager(
     return candidate;
   }
 
+  private static bool IsSinglePathSegment(string value)
+  {
+    return !string.IsNullOrWhiteSpace(value)
+      && value is not "." and not ".."
+      && !value.Contains('\0')
+      && !value.Contains('/')
+      && !value.Contains('\\');
+  }
+
   private static void TryAddLogRoot(ICollection<string> roots, Func<string> getRoot)
   {
     try
@@ -746,7 +821,7 @@ internal class FileManager(
       _logger.LogError(ex, "Error getting Windows agent logs");
     }
 
-    return new LogFileGroupDto("Agent Logs", logFiles);
+    return new LogFileGroupDto("Agent Logs", LogKind.Agent, null, logFiles);
   }
 
   private LogFileGroupDto GetInstallerLogs()
@@ -766,7 +841,7 @@ internal class FileManager(
       _logger.LogError(ex, "Error getting installer logs");
     }
 
-    return new LogFileGroupDto("Installer Logs", logFiles);
+    return new LogFileGroupDto("Installer Logs", LogKind.Installer, null, logFiles);
   }
 
   private List<LogFileEntryDto> GetLogFilesFromDirectory(string directoryPath)
@@ -775,7 +850,7 @@ internal class FileManager(
 
     try
     {
-      var files = _fileSystem.GetFiles(directoryPath, "LogFile*.log");
+      var files = _fileSystem.GetFiles(directoryPath, LogFilesSearchPattern);
 
       foreach (var filePath in files)
       {
@@ -858,7 +933,7 @@ internal class FileManager(
       if (_fileSystem.DirectoryExists(rootLogsDir))
       {
         var rootLogs = GetLogFilesFromDirectory(rootLogsDir);
-        logGroups.Add(new LogFileGroupDto("DesktopClient Logs (root)", rootLogs));
+        logGroups.Add(new LogFileGroupDto("DesktopClient Logs (root)", LogKind.DesktopClient, null, rootLogs));
       }
     }
     catch (Exception ex)
@@ -881,7 +956,7 @@ internal class FileManager(
           if (_fileSystem.DirectoryExists(userLogsPath))
           {
             var userLogs = GetLogFilesFromDirectory(userLogsPath);
-            logGroups.Add(new LogFileGroupDto($"DesktopClient Logs ({username})", userLogs));
+            logGroups.Add(new LogFileGroupDto($"DesktopClient Logs ({username})", LogKind.DesktopClient, username, userLogs));
           }
         }
         catch (Exception ex)
@@ -915,7 +990,7 @@ internal class FileManager(
       _logger.LogError(ex, "Error getting Windows desktop client logs");
     }
 
-    return new LogFileGroupDto("DesktopClient Logs", logFiles);
+    return new LogFileGroupDto("DesktopClient Logs", LogKind.DesktopClient, null, logFiles);
   }
 
   private bool HasSubdirectories(string directoryPath)

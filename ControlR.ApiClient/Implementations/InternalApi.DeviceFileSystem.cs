@@ -78,8 +78,11 @@ internal partial class InternalApi
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      var encodedPath = Uri.EscapeDataString(request.FilePath);
-      using var response = await _client.HttpClient.GetAsync($"{HttpConstants.Internal.DeviceFileSystemEndpoint}/logs/{deviceId}/contents?filePath={encodedPath}", cancellationToken);
+      var fileName = Uri.EscapeDataString(request.FileName);
+      var usernameQuery = request.Username is null ? string.Empty : $"&username={Uri.EscapeDataString(request.Username)}";
+      using var response = await _client.HttpClient.GetAsync(
+        $"{HttpConstants.Internal.DeviceFileSystemEndpoint}/logs/{deviceId}/contents?kind={request.Kind}&fileName={fileName}{usernameQuery}",
+        cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadAsStringAsync(cancellationToken);
     });

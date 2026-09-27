@@ -107,7 +107,7 @@ public partial class RemoteLogs : JsInteropableComponent
   {
     try
     {
-      if (_selectedNode?.Path is null || _selectedNode.IsFolder)
+      if (_selectedNode?.Kind is null || _selectedNode.FileName is null || _selectedNode.IsFolder)
       {
         LogContents = string.Empty;
         ApplyFilter();
@@ -118,7 +118,10 @@ public partial class RemoteLogs : JsInteropableComponent
       ScrollToBottomOnLoad = true;
       await InvokeAsync(StateHasChanged);
 
-      var request = new InternalDtos.GetLogFileContentsRequestDto(_selectedNode.Path);
+      var request = new InternalDtos.GetLogFileContentsRequestDto(
+        _selectedNode.Kind.Value,
+        _selectedNode.FileName,
+        _selectedNode.Username);
       var result = await ControlrApi.Internal.DeviceFileSystem.GetLogFileContents(DeviceId, request);
 
       if (!result.IsSuccess)
@@ -168,7 +171,7 @@ public partial class RemoteLogs : JsInteropableComponent
       LogTreeItems = responseDto.LogFileGroups
         .Select(group => new TreeItemData<LogTreeNode>
         {
-          Value = new LogTreeNode(true, null, null),
+          Value = new LogTreeNode(true, null, null, null),
           Text = group.GroupName,
           Icon = Icons.Material.Filled.Folder,
           Expandable = true,
@@ -177,7 +180,7 @@ public partial class RemoteLogs : JsInteropableComponent
           [
             ..group.LogFiles.Select(file => new TreeItemData<LogTreeNode>
             {
-              Value = new LogTreeNode(false, file.FullPath, file.FileName),
+              Value = new LogTreeNode(false, group.Kind, group.Username, file.FileName),
               Text = file.FileName,
               Icon = Icons.Material.Filled.Description,
               Expandable = false
@@ -211,7 +214,7 @@ public partial class RemoteLogs : JsInteropableComponent
     await InvokeAsync(StateHasChanged);
   }
 
-  private record LogTreeNode(bool IsFolder, string? Path, string? FileName)
+  private record LogTreeNode(bool IsFolder, LogKind? Kind, string? Username, string? FileName)
   {
     public Guid Id { get; } = Guid.NewGuid();
   };

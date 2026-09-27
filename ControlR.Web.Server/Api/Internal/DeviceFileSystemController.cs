@@ -248,7 +248,9 @@ public class DeviceFileSystemController : ControllerBase
   [ApiDeprecated("/api/v1/device-file-system/logs/{deviceId}/contents?tenantId={tenantId}", Note = "Use GET /api/v1/device-file-system/logs/{deviceId}/contents with a required tenantId. The response is the same text stream, and V1 answers every failure with a ProblemDetails body.")]
   public async Task<IActionResult> GetLogFileContents(
     [FromRoute] Guid deviceId,
-    [FromQuery] string filePath,
+    [FromQuery] LogKind? kind,
+    [FromQuery] string fileName,
+    [FromQuery] string? username,
     [FromServices] AppDb appDb,
     [FromServices] IHubContext<AgentHub, IAgentHubClient> agentHub,
     [FromServices] IHubStreamStore hubStreamStore,
@@ -256,9 +258,9 @@ public class DeviceFileSystemController : ControllerBase
     [FromServices] ILogger<DeviceFileSystemController> logger,
     CancellationToken cancellationToken)
   {
-    if (string.IsNullOrWhiteSpace(filePath))
+    if (kind is null || string.IsNullOrWhiteSpace(fileName))
     {
-      return BadRequest("File path is required.");
+      return BadRequest("Log kind and file name are required.");
     }
 
     var device = await appDb.Devices
@@ -292,7 +294,7 @@ public class DeviceFileSystemController : ControllerBase
     var streamId = Guid.NewGuid();
     using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, HubStreamExpiration.FileTransfer);
 
-    var streamRequest = new StreamFileContentsRequestHubDto(streamId, filePath);
+    var streamRequest = new StreamFileContentsRequestHubDto(streamId, kind.Value, fileName, username);
 
     try
     {
@@ -303,15 +305,13 @@ public class DeviceFileSystemController : ControllerBase
 
       if (!streamResult.IsSuccess)
       {
-        logger.LogWarning("Log file contents stream request failed for {FilePath} on device {DeviceId}.",
-          filePath, deviceId);
+        logger.LogWarning("Log file contents stream request failed for {FileName} on device {DeviceId}.",
+          fileName, deviceId);
         return Problem(
           detail: streamResult.Reason,
           statusCode: StatusCodes.Status500InternalServerError,
           title: V1ProblemTitles.InternalServerError);
       }
-
-      var fileName = Path.GetFileName(filePath);
 
       var contentDisposition = new ContentDispositionHeaderValue("inline")
       {
@@ -333,7 +333,7 @@ public class DeviceFileSystemController : ControllerBase
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Error streaming log file {FilePath} from device {DeviceId}", filePath, deviceId);
+      logger.LogError(ex, "Error streaming log file {FileName} from device {DeviceId}", fileName, deviceId);
       return StatusCode(500, "An error occurred while streaming the log file.");
     }
   }

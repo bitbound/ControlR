@@ -5,4 +5,6 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceFileSystem;
 /// </summary>
 public sealed record DeviceLogFileGroupDto(
   string GroupName,
+  LogKind Kind,
+  string? Username,
   IReadOnlyList<DeviceLogFileEntryDto> LogFiles);

@@ -131,6 +131,72 @@ public class FileManagerLogRootsTests
     Assert.True(manager.IsPathWithinLogRoots(Join(WindowsDesktopClientLogs, SampleLogFile).ToUpperInvariant()));
   }
 
+  [Fact]
+  public void ResolveLogFile_WhenFileNameContainsSeparator_RejectsSelector()
+  {
+    var result = CreateLinuxManager().ResolveLogFile(LogKind.Agent, "LogFile/../shadow.log", null);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(OperationFailureCode.InvalidInput, result.Code);
+  }
+
+  [Fact]
+  public void ResolveLogFile_WhenFileNameContainsTraversal_RejectsSelector()
+  {
+    var result = CreateLinuxManager().ResolveLogFile(LogKind.Agent, "../shadow", null);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(OperationFailureCode.InvalidInput, result.Code);
+  }
+
+  [Fact]
+  public void ResolveLogFile_WhenKindIsUnknown_RejectsSelector()
+  {
+    var result = CreateLinuxManager().ResolveLogFile((LogKind)99, SampleLogFile, null);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(OperationFailureCode.InvalidInput, result.Code);
+  }
+
+  [Fact]
+  public void ResolveLogFile_WhenSelectingPerUserDesktopLogsOnLinux_UsesThatUsersLogRoot()
+  {
+    var result = CreateLinuxManager().ResolveLogFile(LogKind.DesktopClient, SampleLogFile, "alice");
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal(
+      Path.GetFullPath(Join(AliceDesktopClientLogs, SampleLogFile)),
+      Path.GetFullPath(result.FileSystemPath));
+  }
+
+  [Fact]
+  public void ResolveLogFile_WhenSelectingPerUserDesktopLogsOnMacOS_UsesThatUsersLogRoot()
+  {
+    var fileSystem = new FakeFileSystem('/');
+    var userHome = Join("Users", "alice");
+    var userLogs = Join(userHome, ".local", "share", "controlr", "logs");
+    fileSystem.AddDirectory(Join("Users"));
+    fileSystem.AddDirectory(userHome);
+    fileSystem.AddFile(Join(userLogs, SampleLogFile), "alice-desktop");
+
+    var result = CreateManager(fileSystem, SystemPlatform.MacOs)
+      .ResolveLogFile(LogKind.DesktopClient, SampleLogFile, "alice");
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal(
+      Path.GetFullPath(Join(userLogs, SampleLogFile)),
+      Path.GetFullPath(result.FileSystemPath));
+  }
+
+  [Fact]
+  public void ResolveLogFile_WhenUsernameContainsSeparator_RejectsSelector()
+  {
+    var result = CreateLinuxManager().ResolveLogFile(LogKind.DesktopClient, SampleLogFile, "../alice");
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(OperationFailureCode.InvalidInput, result.Code);
+  }
+
   private static Mock<ISystemEnvironment> CreateEnvironment(SystemPlatform platform)
   {
     var environment = new Mock<ISystemEnvironment>();
@@ -171,7 +237,13 @@ public class FileManagerLogRootsTests
     provider.Setup(x => x.GetWindowsDesktopClientLogsDirectory()).Returns(WindowsDesktopClientLogs);
     provider.Setup(x => x.GetUnixDesktopClientLogsDirectoryForRoot()).Returns(RootDesktopClientLogs);
     provider.Setup(x => x.GetUnixDesktopClientLogsDirectory(It.IsAny<string>()))
-      .Returns((string username) => Join("home", username, ".local", "share", "controlr", "logs"));
+      .Returns((string username) => Join(
+        environment.Object.IsMacOS() ? "Users" : "home",
+        username,
+        ".local",
+        "share",
+        "controlr",
+        "logs"));
 
     return new FileManager(
       fileSystem,

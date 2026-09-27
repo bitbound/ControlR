@@ -711,33 +711,27 @@ internal class AgentHubClient(
   {
     try
     {
-      _logger.LogDebug(
-        "Streaming file contents: {FilePath}, Stream ID: {StreamId}",
-        dto.FilePath,
-        dto.StreamId);
+      _logger.LogDebug("Resolving log contents selector {Kind}/{Username}/{FileName}, Stream ID: {StreamId}",
+        dto.Kind, dto.Username, dto.FileName, dto.StreamId);
 
-      if (!_fileManager.IsPathWithinLogRoots(dto.FilePath))
+      var fileReference = _fileManager.ResolveLogFile(dto.Kind, dto.FileName, dto.Username);
+      if (!fileReference.IsSuccess)
       {
-        _logger.LogWarning("Refused to stream file contents outside the log directories: {FilePath}", dto.FilePath);
-        return HubResult.Fail("File is not within an allowed log directory.", OperationFailureCode.PermissionDenied);
-      }
-
-      if (!_fileSystem.FileExists(dto.FilePath))
-      {
-        _logger.LogWarning("File not found: {FilePath}", dto.FilePath);
-        return HubResult.Fail("File not found.", OperationFailureCode.NotFound);
+        _logger.LogWarning("Refused log contents selector {Kind}/{Username}/{FileName}: {Reason}",
+          dto.Kind, dto.Username, dto.FileName, fileReference.ErrorMessage);
+        return HubResult.Fail(fileReference.ErrorMessage, fileReference.Code);
       }
 
       Task
-        .Run(() => SendFileStream(dto.StreamId, dto.FilePath, isTempFile: false))
+        .Run(() => SendFileStream(dto.StreamId, fileReference.FileSystemPath, isTempFile: false))
         .Forget();
 
-      _logger.LogDebug("Successfully started file stream: {FilePath}", dto.FilePath);
+      _logger.LogDebug("Successfully started log file stream: {FileName}", dto.FileName);
       return HubResult.Ok();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while streaming file: {FilePath}", dto.FilePath);
+      _logger.LogError(ex, "Error while streaming log file: {FileName}", dto.FileName);
       return HubResult.Fail("An error occurred while streaming file.", OperationFailureCode.DeviceFailure);
     }
   }
