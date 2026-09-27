@@ -1,6 +1,7 @@
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Shared.Services;
 using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -55,6 +56,7 @@ public class FileManagerFailureCodesTests
     return new FileManager(
       fileSystem,
       new Mock<IFileSystemPathProvider>().Object,
+      new Mock<ISystemEnvironment>().Object,
       NullLogger<FileManager>.Instance);
   }
 }

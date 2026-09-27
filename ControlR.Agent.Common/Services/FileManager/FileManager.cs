@@ -28,11 +28,13 @@ public interface IFileManager
 internal class FileManager(
   IFileSystem fileSystem,
   IFileSystemPathProvider fileSystemPathProvider,
+  ISystemEnvironment systemEnvironment,
   ILogger<FileManager> logger) : IFileManager
 {
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IFileSystemPathProvider _fileSystemPathProvider = fileSystemPathProvider;
   private readonly ILogger<FileManager> _logger = logger;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
   public Task<FileReferenceResult> CreateDirectory(string parentPath, string directoryName)
   {
@@ -298,12 +300,12 @@ internal class FileManager(
       var installerLogs = GetInstallerLogs();
       logGroups.Add(installerLogs);
 
-      if (OperatingSystem.IsWindows())
+      if (_systemEnvironment.IsWindows())
       {
         var desktopLogs = GetWindowsDesktopClientLogs();
         logGroups.Add(desktopLogs);
       }
-      else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+      else if (_systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS())
       {
         var desktopLogGroups = GetUnixDesktopClientLogs();
         logGroups.AddRange(desktopLogGroups);
@@ -483,7 +485,7 @@ internal class FileManager(
     // an unresolved path is left to the caller's existence check.
     try
     {
-      var finalTarget = File.ResolveLinkTarget(fullPath, returnFinalTarget: true);
+      var finalTarget = _fileSystem.ResolveLinkTarget(fullPath, returnFinalTarget: true);
       if (finalTarget is null)
       {
         return true;
@@ -641,26 +643,6 @@ internal class FileManager(
     return candidate;
   }
 
-  private static bool IsWithinDirectory(string fullPath, string root)
-  {
-    var normalizedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-    if (string.IsNullOrEmpty(normalizedRoot))
-    {
-      return false;
-    }
-
-    var comparison = OperatingSystem.IsWindows()
-      ? StringComparison.OrdinalIgnoreCase
-      : StringComparison.Ordinal;
-
-    if (string.Equals(fullPath, normalizedRoot, comparison))
-    {
-      return true;
-    }
-
-    return fullPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison);
-  }
-
   private static void TryAddLogRoot(ICollection<string> roots, Func<string> getRoot)
   {
     try
@@ -809,15 +791,28 @@ internal class FileManager(
     TryAddLogRoot(roots, () => _fileSystemPathProvider.GetAgentLogsDirectoryPath());
     TryAddLogRoot(roots, () => _fileSystemPathProvider.GetInstallerLogsDirectoryPath());
 
-    if (OperatingSystem.IsWindows())
+    if (_systemEnvironment.IsWindows())
     {
       TryAddLogRoot(roots, () => _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory());
       return roots;
     }
 
     TryAddLogRoot(roots, () => _fileSystemPathProvider.GetUnixDesktopClientLogsDirectoryForRoot());
-    var homeRoot = OperatingSystem.IsMacOS() ? "/Users" : "/home";
-    foreach (var homeDir in _fileSystem.GetDirectories(homeRoot) ?? [])
+    var homeRoot = _systemEnvironment.IsMacOS() ? "/Users" : "/home";
+    string[] homeDirectories;
+    try
+    {
+      homeDirectories = _fileSystem.GetDirectories(homeRoot);
+    }
+    catch (Exception ex)
+    {
+      // /home can be missing or unreadable on minimal hosts. That only removes
+      // the per-user roots; the roots gathered so far must still be honored.
+      _logger.LogDebug(ex, "Could not enumerate per-user log roots under {HomeRoot}", homeRoot);
+      return roots;
+    }
+
+    foreach (var homeDir in homeDirectories)
     {
       try
       {
@@ -853,7 +848,7 @@ internal class FileManager(
 
     try
     {
-      var homeRoot = OperatingSystem.IsMacOS() ? "/Users" : "/home";
+      var homeRoot = _systemEnvironment.IsMacOS() ? "/Users" : "/home";
       var homeDirectories = _fileSystem.GetDirectories(homeRoot);
       foreach (var homeDir in homeDirectories)
       {
@@ -922,6 +917,26 @@ internal class FileManager(
       _logger.LogDebug(ex, "Could not check subdirectories for {DirectoryPath}", directoryPath);
       return false;
     }
+  }
+
+  private bool IsWithinDirectory(string fullPath, string root)
+  {
+    var normalizedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    if (string.IsNullOrEmpty(normalizedRoot))
+    {
+      return false;
+    }
+
+    var comparison = _systemEnvironment.IsWindows()
+      ? StringComparison.OrdinalIgnoreCase
+      : StringComparison.Ordinal;
+
+    if (string.Equals(fullPath, normalizedRoot, comparison))
+    {
+      return true;
+    }
+
+    return fullPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison);
   }
 }
 

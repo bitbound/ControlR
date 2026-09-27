@@ -32,7 +32,7 @@ public sealed class FakeFileSystemFileInfo(string fullName) : IFileSystemFile
   public string Name { get; init; } = Path.GetFileName(fullName);
 }
 
-public sealed class FakeFileSystemInfo(string fullName) : IFileSystemInfo
+public sealed class FakeFileSystemItemInfo(string fullName) : IFileSystemItemInfo
 {
   public FileAttributes Attributes { get; init; } = FileAttributes.Normal;
 

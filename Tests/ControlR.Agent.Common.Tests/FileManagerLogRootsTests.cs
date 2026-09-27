@@ -1,6 +1,9 @@
 using ControlR.Agent.Common.Services.FileManager;
 using ControlR.Agent.Shared.Services;
-using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.TestingUtilities;
+using ControlR.Libraries.TestingUtilities.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -10,153 +13,163 @@ namespace ControlR.Agent.Common.Tests;
 /// Pins that the log-contents stream is confined to the log roots the agent itself enumerates, so
 /// log-read on one device cannot be aimed at an arbitrary file the agent process can open (#260).
 /// </summary>
+/// <remarks>
+/// The root checks run through <see cref="Path.GetFullPath(string)"/>, which always uses the host
+/// separator, so the fixtures use host-native paths. Platform selection is mocked, which means the
+/// same assertions run on Windows, Linux, and macOS while still exercising each platform's branch.
+/// </remarks>
 public class FileManagerLogRootsTests
 {
-  private const string AgentLogs = "/var/log/controlr-agent";
-  private const string AliceDesktopClientLogs = "/home/alice/.local/share/controlr/logs";
-  private const string InstallerLogs = "/var/log/controlr-installer";
-  private const string RootDesktopClientLogs = "/root/.local/share/controlr/logs";
+  private const string SampleLogFile = "LogFile20260101.log";
+
+  private static string AgentLogs => Join("var", "log", "controlr-agent");
+  private static string AliceDesktopClientLogs => Join(AliceHome, ".local", "share", "controlr", "logs");
+  private static string AliceHome => Join("home", "alice");
+  private static string InstallerLogs => Join("var", "log", "controlr-installer");
+  private static string RootDesktopClientLogs => Join("root", ".local", "share", "controlr", "logs");
+  private static string WindowsDesktopClientLogs => Join("ProgramData", "ControlR", "Logs");
 
   [Theory]
-  [InlineData("/etc/shadow")]
-  [InlineData("/home/alice/.ssh/id_rsa")]
-  [InlineData("/home/alice/.local/share/controlr/logs/../../.ssh/id_rsa")]
-  [InlineData("/var/log/controlr-agentevil/LogFile20260101.log")]
-  [InlineData("")]
-  public void IsPathWithinLogRoots_WhenOutsideTheLogRoots_ReturnsFalse(string path)
+  [InlineData("etc", "shadow")]
+  [InlineData("home", "alice", ".ssh", "id_rsa")]
+  [InlineData("var", "log", "controlr-agentevil", "LogFile20260101.log")]
+  public void IsPathWithinLogRoots_WhenOutsideTheLogRoots_ReturnsFalse(params string[] segments)
   {
-    Assert.False(CreateManager().IsPathWithinLogRoots(path));
+    Assert.False(CreateLinuxManager().IsPathWithinLogRoots(Join(segments ?? [])));
+  }
+
+  [Fact]
+  public void IsPathWithinLogRoots_WhenPathIsBlank_ReturnsFalse()
+  {
+    Assert.False(CreateLinuxManager().IsPathWithinLogRoots(string.Empty));
+  }
+
+  [Fact]
+  public void IsPathWithinLogRoots_WhenPathIsLexicalTraversalOutOfRoot_ReturnsFalse()
+  {
+    var path = Join(AliceDesktopClientLogs, "..", "..", ".ssh", "id_rsa");
+
+    Assert.False(CreateLinuxManager().IsPathWithinLogRoots(path));
+  }
+
+  [Fact]
+  public void IsPathWithinLogRoots_WhenPathSitsInSiblingDirectoryWithSharedPrefix_ReturnsFalse()
+  {
+    Assert.False(CreateLinuxManager().IsPathWithinLogRoots(Join(AgentLogs + "evil", SampleLogFile)));
   }
 
   [Fact]
   public void IsPathWithinLogRoots_WhenSymlinkInsideRootLeavesTheRoot_ReturnsFalse()
   {
-    var rootDir = Path.Combine(Path.GetTempPath(), "controlr-logroot-" + Guid.NewGuid().ToString("N"));
-    var outsideFile = Path.Combine(Path.GetTempPath(), "controlr-outside-" + Guid.NewGuid().ToString("N") + ".txt");
-    Directory.CreateDirectory(rootDir);
-    File.WriteAllText(outsideFile, "secret");
+    var fileSystem = CreateLinuxFileSystem();
+    var linkPath = Join(AgentLogs, "LogFile20260102.log");
+    fileSystem.AddSymbolicLink(linkPath, Join("etc", "shadow"));
 
-    try
-    {
-      var linkPath = Path.Combine(rootDir, "LogFile20260101.log");
-      try
-      {
-        File.CreateSymbolicLink(linkPath, outsideFile);
-      }
-      catch (Exception)
-      {
-        // Symlink creation needs SeCreateSymbolicLinkPrivilege or developer mode
-        // on Windows. The Linux CI job is the one that runs this project, so the
-        // test silently passes the privilege gap on hosts that cannot plant a link.
-        return;
-      }
-
-      Assert.False(CreateManagerWithRoot(rootDir).IsPathWithinLogRoots(linkPath));
-    }
-    finally
-    {
-      TryDeleteFile(Path.Combine(rootDir, "LogFile20260101.log"), rootDir);
-      TryDeleteFile(outsideFile, null);
-    }
+    Assert.False(CreateLinuxManager(fileSystem).IsPathWithinLogRoots(linkPath));
   }
 
   [Fact]
   public void IsPathWithinLogRoots_WhenSymlinkInsideRootStaysInside_ReturnsTrue()
   {
-    var rootDir = Path.Combine(Path.GetTempPath(), "controlr-logroot-" + Guid.NewGuid().ToString("N"));
-    Directory.CreateDirectory(rootDir);
-    var targetFile = Path.Combine(rootDir, "real.log");
-    File.WriteAllText(targetFile, "log");
+    var fileSystem = CreateLinuxFileSystem();
+    var linkPath = Join(AgentLogs, "CurrentLog.log");
+    fileSystem.AddSymbolicLink(linkPath, Join(AgentLogs, SampleLogFile));
 
-    try
-    {
-      var linkPath = Path.Combine(rootDir, "LogFile20260101.log");
-      try
-      {
-        File.CreateSymbolicLink(linkPath, targetFile);
-      }
-      catch (Exception)
-      {
-        return;
-      }
-
-      Assert.True(CreateManagerWithRoot(rootDir).IsPathWithinLogRoots(linkPath));
-    }
-    finally
-    {
-      TryDeleteFile(Path.Combine(rootDir, "LogFile20260101.log"), rootDir);
-      TryDeleteFile(targetFile, null);
-    }
+    Assert.True(CreateLinuxManager(fileSystem).IsPathWithinLogRoots(linkPath));
   }
 
   [Theory]
-  [InlineData("/var/log/controlr-agent/LogFile20260101.log")]
-  [InlineData("/var/log/controlr-installer/LogFile20260101.log")]
-  [InlineData("/root/.local/share/controlr/logs/LogFile20260101.log")]
-  [InlineData("/home/alice/.local/share/controlr/logs/LogFile20260101.log")]
-  public void IsPathWithinLogRoots_WhenUnderAKnownLogRoot_ReturnsTrue(string path)
+  [InlineData("agent")]
+  [InlineData("installer")]
+  [InlineData("root-desktop")]
+  [InlineData("alice-desktop")]
+  public void IsPathWithinLogRoots_WhenUnderAKnownLogRoot_ReturnsTrue(string root)
   {
-    Assert.True(CreateManager().IsPathWithinLogRoots(path));
+    var path = root switch
+    {
+      "agent" => Join(AgentLogs, SampleLogFile),
+      "installer" => Join(InstallerLogs, SampleLogFile),
+      "root-desktop" => Join(RootDesktopClientLogs, SampleLogFile),
+      "alice-desktop" => Join(AliceDesktopClientLogs, SampleLogFile),
+      _ => throw new ArgumentOutOfRangeException(nameof(root))
+    };
+
+    var manager = CreateLinuxManager();
+    Assert.True(manager.IsPathWithinLogRoots(path));
   }
 
-  private static FileManager CreateManager()
+  [WindowsOnlyFact]
+  public void IsPathWithinLogRoots_WhenWindowsPathDiffersOnlyByCase_ReturnsTrue()
   {
-    var fileSystem = new Mock<IFileSystem>();
-    fileSystem.Setup(x => x.GetDirectories(It.Is<string>(p => p == "/home" || p == "/Users")))
-      .Returns(["/home/alice"]);
-    var aliceHome = new Mock<IFileSystemDirectory>();
-    aliceHome.SetupGet(x => x.Name).Returns("alice");
-    fileSystem.Setup(x => x.GetDirectoryInfo("/home/alice")).Returns(aliceHome.Object);
+    var fileSystem = new FakeFileSystem('\\');
+    fileSystem.AddFile(Join(WindowsDesktopClientLogs, SampleLogFile), "log");
 
+    var manager = CreateManager(fileSystem, SystemPlatform.Windows);
+
+    Assert.True(manager.IsPathWithinLogRoots(Join(WindowsDesktopClientLogs, SampleLogFile).ToUpperInvariant()));
+  }
+
+  private static Mock<ISystemEnvironment> CreateEnvironment(SystemPlatform platform)
+  {
+    var environment = new Mock<ISystemEnvironment>();
+    environment.Setup(x => x.Platform).Returns(platform);
+    environment.Setup(x => x.IsWindows()).Returns(platform == SystemPlatform.Windows);
+    environment.Setup(x => x.IsLinux()).Returns(platform == SystemPlatform.Linux);
+    environment.Setup(x => x.IsMacOS()).Returns(platform == SystemPlatform.MacOs);
+    return environment;
+  }
+
+  private static FakeFileSystem CreateLinuxFileSystem()
+  {
+    var fileSystem = new FakeFileSystem('/');
+    fileSystem.AddDirectory(Join("home"));
+    fileSystem.AddDirectory(AliceHome);
+    fileSystem.AddFile(Join(AgentLogs, SampleLogFile), "agent");
+    fileSystem.AddFile(Join(InstallerLogs, SampleLogFile), "installer");
+    fileSystem.AddFile(Join(RootDesktopClientLogs, SampleLogFile), "root-desktop");
+    fileSystem.AddFile(Join(AliceDesktopClientLogs, SampleLogFile), "alice-desktop");
+    return fileSystem;
+  }
+
+  private static FileManager CreateLinuxManager(FakeFileSystem? fileSystem = null)
+  {
+    return CreateManager(fileSystem ?? CreateLinuxFileSystem(), SystemPlatform.Linux);
+  }
+
+  private static FileManager CreateManager(FakeFileSystem fileSystem, SystemPlatform platform)
+  {
+    return CreateManager(fileSystem, CreateEnvironment(platform));
+  }
+
+  private static FileManager CreateManager(FakeFileSystem fileSystem, Mock<ISystemEnvironment> environment)
+  {
     var provider = new Mock<IFileSystemPathProvider>();
     provider.Setup(x => x.GetAgentLogsDirectoryPath()).Returns(AgentLogs);
     provider.Setup(x => x.GetInstallerLogsDirectoryPath()).Returns(InstallerLogs);
+    provider.Setup(x => x.GetWindowsDesktopClientLogsDirectory()).Returns(WindowsDesktopClientLogs);
     provider.Setup(x => x.GetUnixDesktopClientLogsDirectoryForRoot()).Returns(RootDesktopClientLogs);
     provider.Setup(x => x.GetUnixDesktopClientLogsDirectory(It.IsAny<string>()))
-      .Returns((string username) => username == "alice"
-        ? AliceDesktopClientLogs
-        : $"/home/{username}/.local/share/controlr/logs");
+      .Returns((string username) => Join("home", username, ".local", "share", "controlr", "logs"));
 
-    return new FileManager(fileSystem.Object, provider.Object, NullLogger<FileManager>.Instance);
+    return new FileManager(
+      fileSystem,
+      provider.Object,
+      environment.Object,
+      NullLogger<FileManager>.Instance);
   }
 
-  private static FileManager CreateManagerWithRoot(string agentLogsRoot)
+  private static string Join(params string[]? segments)
   {
-    var fileSystem = new Mock<IFileSystem>();
-    fileSystem.Setup(x => x.GetDirectories(It.IsAny<string>())).Returns(Array.Empty<string>());
-
-    var provider = new Mock<IFileSystemPathProvider>();
-    provider.Setup(x => x.GetAgentLogsDirectoryPath()).Returns(agentLogsRoot);
-    provider.Setup(x => x.GetInstallerLogsDirectoryPath()).Returns(string.Empty);
-    provider.Setup(x => x.GetWindowsDesktopClientLogsDirectory()).Returns(string.Empty);
-    provider.Setup(x => x.GetUnixDesktopClientLogsDirectoryForRoot()).Returns(string.Empty);
-    provider.Setup(x => x.GetUnixDesktopClientLogsDirectory(It.IsAny<string>())).Returns(string.Empty);
-
-    return new FileManager(fileSystem.Object, provider.Object, NullLogger<FileManager>.Instance);
-  }
-
-  private static void TryDeleteFile(string path, string? containingDir)
-  {
-    try
+    var parts = (segments ?? []).Where(segment => !string.IsNullOrEmpty(segment)).ToArray();
+    if (parts.Length == 0)
     {
-      if (File.Exists(path) || new FileInfo(path).LinkTarget is not null)
-      {
-        File.Delete(path);
-      }
-    }
-    catch
-    {
+      return string.Empty;
     }
 
-    if (containingDir is not null)
-    {
-      try
-      {
-        Directory.Delete(containingDir, recursive: true);
-      }
-      catch
-      {
-      }
-    }
+    var separator = Path.DirectorySeparatorChar;
+    var combined = string.Join(separator, parts);
+    return combined[0] == separator
+      ? combined
+      : separator + combined;
   }
 }
