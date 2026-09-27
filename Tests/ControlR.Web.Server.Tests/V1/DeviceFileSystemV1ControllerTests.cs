@@ -1054,7 +1054,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.GetLogFileContents(
       harness.Device.Id,
       harness.Tenant.Id,
-      "/var/log/controlr/app.log",
+      LogKind.Agent,
+      "LogFile20260101.log",
+      null,
       TestContext.Current.CancellationToken);
 
     AssertNoAnswerFromDevice(result);
@@ -1073,7 +1075,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.GetLogFileContents(
       harness.Device.Id,
       harness.Tenant.Id,
-      "/var/log/controlr/app.log",
+      LogKind.Agent,
+      "LogFile20260101.log",
+      null,
       TestContext.Current.CancellationToken);
 
     var problem = AssertDeviceRefusal(result);
@@ -1097,7 +1101,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.GetLogFileContents(
       harness.Device.Id,
       harness.Tenant.Id,
-      "/var/log/controlr/app.log",
+      LogKind.Agent,
+      "LogFile20260101.log",
+      null,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result);
@@ -1114,7 +1120,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.GetLogFileContents(
       Guid.NewGuid(),
       harness.Tenant.Id,
-      "/var/log/controlr/app.log",
+      LogKind.Agent,
+      "LogFile20260101.log",
+      null,
       TestContext.Current.CancellationToken);
 
     AssertNotFound(result);
@@ -1122,7 +1130,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetLogFileContents_WhenFilePathIsMissing_ReturnsBadRequest()
+  public async Task GetLogFileContents_WhenFileNameIsMissing_ReturnsBadRequest()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -1131,7 +1139,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.GetLogFileContents(
       harness.Device.Id,
       harness.Tenant.Id,
+      LogKind.Agent,
       " ",
+      null,
       TestContext.Current.CancellationToken);
 
     AssertBadRequest(harness, result);
@@ -1149,7 +1159,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.GetLogFileContents(
       harness.Device.Id,
       otherTenant.Id,
-      "/var/log/controlr/app.log",
+      LogKind.Agent,
+      "LogFile20260101.log",
+      null,
       TestContext.Current.CancellationToken);
 
     AssertNotFound(result);
@@ -1167,7 +1179,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.GetLogFileContents(
       harness.Device.Id,
       foreignTenant.Id,
-      "/var/log/controlr/app.log",
+      LogKind.Agent,
+      "LogFile20260101.log",
+      null,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<ForbidResult>(result);
@@ -1194,7 +1208,9 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var result = await harness.Controller.GetLogFileContents(
       harness.Device.Id,
       harness.Tenant.Id,
-      "/var/log/controlr/app.log",
+      LogKind.Agent,
+      "LogFile20260101.log",
+      null,
       TestContext.Current.CancellationToken);
 
     Assert.IsType<EmptyResult>(result);
@@ -1202,11 +1218,13 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     Assert.Equal("text/plain", harness.Controller.Response.ContentType);
     // The agent streams text with no length, so the response states none.
     Assert.Null(harness.Controller.Response.ContentLength);
-    AssertDisposition(harness, "inline", "app.log");
+    AssertDisposition(harness, "inline", "LogFile20260101.log");
     AssertTransferLifetime(harness);
     harness.AgentClient.Verify(
       x => x.StreamFileContents(It.Is<StreamFileContentsRequestHubDto>(
-        dto => dto.FilePath == "/var/log/controlr/app.log")),
+        dto => dto.Kind == LogKind.Agent
+          && dto.FileName == "LogFile20260101.log"
+          && dto.Username == null)),
       Times.Once());
   }
 
@@ -1316,6 +1334,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     ArmLogFiles(harness, [
       new InternalDtos.LogFileGroupDto(
         "Agent",
+        LogKind.Agent,
+        null,
         [new InternalDtos.LogFileEntryDto("agent.log", "/logs/agent.log", 123, DateTimeOffset.UnixEpoch)]),
     ]);
 
@@ -1377,6 +1397,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     ArmLogFiles(harness, [
       new InternalDtos.LogFileGroupDto(
         "Server",
+        LogKind.DesktopClient,
+        "alice",
         [
           new InternalDtos.LogFileEntryDto("server.log", "/logs/server.log", 4_567, DateTimeOffset.UnixEpoch),
           new InternalDtos.LogFileEntryDto("startup.log", "/logs/startup.log", 89, DateTimeOffset.UnixEpoch),
@@ -1392,6 +1414,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var response = Assert.IsType<DeviceLogFileListResponseDto>(ok.Value);
     var group = Assert.Single(response.LogFileGroups);
     Assert.Equal("Server", group.GroupName);
+    Assert.Equal(LogKind.DesktopClient, group.Kind);
+    Assert.Equal("alice", group.Username);
     Assert.Equal(["server.log", "startup.log"], group.LogFiles.Select(x => x.FileName));
     Assert.Equal(4_567L, group.LogFiles[0].Size);
   }

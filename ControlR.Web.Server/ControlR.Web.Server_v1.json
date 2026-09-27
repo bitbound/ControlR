@@ -2241,7 +2241,21 @@
             }
           },
           {
-            "name": "filePath",
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/LogKind"
+            }
+          },
+          {
+            "name": "fileName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
             "in": "query",
             "schema": {
               "type": "string"
@@ -16237,12 +16251,23 @@
       "DeviceLogFileGroupDto": {
         "required": [
           "groupName",
+          "kind",
+          "username",
           "logFiles"
         ],
         "type": "object",
         "properties": {
           "groupName": {
             "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LogKind"
+          },
+          "username": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "logFiles": {
             "type": "array",
@@ -17038,6 +17063,14 @@
           "Auto",
           "Physical",
           "Virtual"
+        ]
+      },
+      "LogKind": {
+        "enum": [
+          "Agent",
+          "Installer",
+          "DesktopClient",
+          null
         ]
       },
       "LogonTokenResponseDto": {

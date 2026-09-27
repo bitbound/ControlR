@@ -292,10 +292,36 @@ public class DeviceFileSystemController : ControllerBase
     var streamId = Guid.NewGuid();
     using var signaler = hubStreamStore.GetOrCreate<byte[]>(streamId, HubStreamExpiration.FileTransfer);
 
-    var streamRequest = new StreamFileContentsRequestHubDto(streamId, filePath);
-
     try
     {
+      var logFilesResult = await agentHub
+        .Clients
+        .Client(device.ConnectionId)
+        .GetLogFiles();
+
+      if (logFilesResult is not { IsSuccess: true, Value: { } logFiles })
+      {
+        logger.LogWarning("Could not resolve legacy log path {FilePath} on device {DeviceId}: {Reason}",
+          filePath, deviceId, logFilesResult?.Reason);
+        return StatusCode(StatusCodes.Status500InternalServerError);
+      }
+
+      var selectedLog = logFiles.LogFileGroups
+        .SelectMany(group => group.LogFiles.Select(file => (Group: group, File: file)))
+        .FirstOrDefault(item => string.Equals(item.File.FullPath, filePath, StringComparison.Ordinal));
+
+      if (selectedLog.File is null)
+      {
+        logger.LogWarning("Legacy log path was not present in the agent's log listing for device {DeviceId}.", deviceId);
+        return NotFound();
+      }
+
+      var streamRequest = new StreamFileContentsRequestHubDto(
+        streamId,
+        selectedLog.Group.Kind,
+        selectedLog.File.FileName,
+        selectedLog.Group.Username);
+
       var streamResult = await agentHub
         .Clients
         .Client(device.ConnectionId)
@@ -311,11 +337,9 @@ public class DeviceFileSystemController : ControllerBase
           title: V1ProblemTitles.InternalServerError);
       }
 
-      var fileName = Path.GetFileName(filePath);
-
       var contentDisposition = new ContentDispositionHeaderValue("inline")
       {
-        FileName = fileName
+        FileName = selectedLog.File.FileName
       };
 
       Response.Headers.ContentDisposition = contentDisposition.ToString();

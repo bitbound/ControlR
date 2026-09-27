@@ -275,9 +275,7 @@ public class DeviceFileSystemController(
   }
 
   /// <summary>
-  /// Streams one file's contents as text, named by <paramref name="filePath"/>. The agent answers with
-  /// any path it can read, so the caller needs the device's log-read permission rather than a
-  /// directory listing first.
+  /// Streams one enumerated log file's contents as text.
   /// </summary>
   [HttpGet("logs/{deviceId:guid}/contents")]
   [DisableRequestTimeout]
@@ -294,7 +292,9 @@ public class DeviceFileSystemController(
   public async Task<IActionResult> GetLogFileContents(
     [FromRoute] Guid deviceId,
     [FromQuery] Guid tenantId,
-    [FromQuery] string filePath,
+    [FromQuery] LogKind? kind,
+    [FromQuery] string fileName,
+    [FromQuery] string? username,
     CancellationToken cancellationToken)
   {
     if (!User.TryResolveTenantId(tenantId, out var resolvedTenantId))
@@ -302,15 +302,17 @@ public class DeviceFileSystemController(
       return Forbid();
     }
 
-    if (string.IsNullOrWhiteSpace(filePath))
+    if (kind is null || string.IsNullOrWhiteSpace(fileName))
     {
-      return InvalidRequest("A file path is required.");
+      return InvalidRequest("A log kind and file name are required.");
     }
 
     var outcome = await _deviceFileSystem.StartLogFileContents(
       User,
       deviceId,
-      filePath,
+      kind.Value,
+      fileName,
+      username,
       cancellationToken,
       resolvedTenantId);
 
@@ -664,7 +666,11 @@ public class DeviceFileSystemController(
 
   private static DeviceLogFileGroupDto ToV1Dto(InternalDtos.LogFileGroupDto source)
   {
-    return new DeviceLogFileGroupDto(source.GroupName, [.. (source.LogFiles ?? []).Select(ToV1Dto)]);
+    return new DeviceLogFileGroupDto(
+      source.GroupName,
+      source.Kind,
+      source.Username,
+      [.. (source.LogFiles ?? []).Select(ToV1Dto)]);
   }
 
   private static DeviceLogFileListResponseDto ToV1Dto(InternalDtos.GetLogFilesResponseDto source)

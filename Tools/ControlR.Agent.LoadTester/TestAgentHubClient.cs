@@ -177,7 +177,7 @@ public class TestAgentHubClient : IAgentHubClient
 
   public Task<HubResult> StreamFileContents(StreamFileContentsRequestHubDto dto)
   {
-    Console.WriteLine($"Streaming log file contents for {dto.FilePath} (stream {dto.StreamId})");
+    Console.WriteLine($"Streaming log file contents for {dto.Kind}/{dto.Username}/{dto.FileName} (stream {dto.StreamId})");
     return HubResult.Ok().AsTaskResult();
   }
 

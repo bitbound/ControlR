@@ -128,13 +128,15 @@ public interface IDeviceFileSystemService
     Guid? expectedTenantId = null);
 
   /// <summary>
-  /// Asks the agent to stream the contents of one log file back. A log file's length is unknown up
-  /// front, so the session reports no size.
+  /// Asks the agent to stream one enumerated log file's contents back. A log file's length is unknown
+  /// up front, so the session reports no size.
   /// </summary>
   Task<FileSystemOutcome<FileTransferSession>> StartLogFileContents(
     ClaimsPrincipal user,
     Guid deviceId,
-    string filePath,
+    LogKind kind,
+    string fileName,
+    string? username,
     CancellationToken cancellationToken,
     Guid? expectedTenantId = null);
 
@@ -702,7 +704,9 @@ public class DeviceFileSystemService(
   public async Task<FileSystemOutcome<FileTransferSession>> StartLogFileContents(
     ClaimsPrincipal user,
     Guid deviceId,
-    string filePath,
+    LogKind kind,
+    string fileName,
+    string? username,
     CancellationToken cancellationToken,
     Guid? expectedTenantId = null)
   {
@@ -724,7 +728,7 @@ public class DeviceFileSystemService(
 
     try
     {
-      var streamRequest = new StreamFileContentsRequestHubDto(streamId, filePath);
+      var streamRequest = new StreamFileContentsRequestHubDto(streamId, kind, fileName, username);
 
       var result = await _agentHub.Clients
         .Client(device.ConnectionId)
@@ -732,33 +736,33 @@ public class DeviceFileSystemService(
 
       if (result is null)
       {
-        _logger.LogWarning("No response received from agent for log file contents of {FilePath} on device {DeviceId}",
-          filePath, deviceId);
+        _logger.LogWarning("No response received from agent for log file {FileName} on device {DeviceId}",
+          fileName, deviceId);
         return new(FileSystemFailure.NoResponse, null, null);
       }
 
       if (!result.IsSuccess)
       {
-        _logger.LogWarning("Log file contents stream request failed for {FilePath} on device {DeviceId}: {Reason}",
-          filePath, deviceId, result.Reason);
+        _logger.LogWarning("Log file contents stream request failed for {FileName} on device {DeviceId}: {Reason}",
+          fileName, deviceId, result.Reason);
         return new(FileSystemFailure.RemoteFailure, result.Reason, null) { Code = result.FailureCode };
       }
 
       // The agent streams text with no length, so the response states none.
-      session = new FileTransferSession(signaler, Path.GetFileName(filePath), null, cancellationToken);
+      session = new FileTransferSession(signaler, fileName, null, cancellationToken);
 
       return new(FileSystemFailure.None, null, session);
     }
     catch (OperationCanceledException)
     {
-      _logger.LogWarning("Log file contents stream for {FilePath} on device {DeviceId} was canceled.",
-        filePath, deviceId);
+      _logger.LogWarning("Log file contents stream for {FileName} on device {DeviceId} was canceled.",
+        fileName, deviceId);
       return new(FileSystemFailure.Cancelled, null, null);
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error starting log file contents stream for {FilePath} on device {DeviceId}",
-        filePath, deviceId);
+      _logger.LogError(ex, "Error starting log file contents stream for {FileName} on device {DeviceId}",
+        fileName, deviceId);
       return new(FileSystemFailure.Unexpected, ex.Message, null);
     }
     finally

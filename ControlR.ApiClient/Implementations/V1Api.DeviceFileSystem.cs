@@ -4,6 +4,7 @@ using ControlR.ApiClient.Interfaces.V1;
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceFileSystem;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.ApiClient;
 
@@ -127,14 +128,17 @@ internal partial class V1Api
   async Task<ApiResult<string>> IDeviceFileSystemApi.GetDeviceLogFileContents(
     Guid deviceId,
     Guid tenantId,
-    string filePath,
+    LogKind kind,
+    string fileName,
+    string? username,
     CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
     {
-      var encodedFilePath = Uri.EscapeDataString(filePath);
+      var encodedFileName = Uri.EscapeDataString(fileName);
+      var usernameQuery = username is null ? string.Empty : $"&username={Uri.EscapeDataString(username)}";
       using var response = await _client.HttpClient.GetAsync(
-        $"{HttpConstants.V1.DeviceFileSystemEndpoint}/logs/{deviceId}/contents?tenantId={tenantId}&filePath={encodedFilePath}",
+        $"{HttpConstants.V1.DeviceFileSystemEndpoint}/logs/{deviceId}/contents?tenantId={tenantId}&kind={kind}&fileName={encodedFileName}{usernameQuery}",
         cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadAsStringAsync(cancellationToken);

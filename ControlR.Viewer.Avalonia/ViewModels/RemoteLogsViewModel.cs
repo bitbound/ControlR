@@ -278,7 +278,7 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
 
   private async Task LoadLogContentsCore(LogFilesTreeItemViewModel node)
   {
-    if (node.FullPath is null)
+    if (!node.IsFile || node.Kind is null)
     {
       LogContents = string.Empty;
       return;
@@ -292,8 +292,12 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
     try
     {
       IsLoadingContents = true;
-      var request = new GetLogFileContentsRequestDto(node.FullPath);
-      var result = await _controlrApi.Internal.DeviceFileSystem.GetLogFileContents(_deviceState.CurrentDevice.Id, request);
+      var result = await _controlrApi.V1.DeviceFileSystem.GetDeviceLogFileContents(
+        _deviceState.CurrentDevice.Id,
+        _deviceState.CurrentDevice.TenantId,
+        node.Kind.Value,
+        node.Name,
+        node.Username);
 
       if (token.IsCancellationRequested)
       {
@@ -352,7 +356,9 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
       OnPropertyChanged(nameof(IsRefreshContentsButtonEnabled));
       OnPropertyChanged(nameof(SelectedFileName));
 
-      var result = await _controlrApi.Internal.DeviceFileSystem.GetLogFiles(_deviceState.CurrentDevice.Id);
+      var result = await _controlrApi.V1.DeviceFileSystem.GetDeviceLogFiles(
+        _deviceState.CurrentDevice.Id,
+        _deviceState.CurrentDevice.TenantId);
       if (!result.IsSuccess || result.Value is null)
       {
         _logger.LogError("Failed to load log files: {Error}", result.Reason);
@@ -363,14 +369,14 @@ public partial class RemoteLogsViewModel : ViewModelBase<RemoteLogsView>, IRemot
       var responseDto = result.Value;
       foreach (var group in responseDto.LogFileGroups)
       {
-        var groupNode = new LogFilesTreeItemViewModel(group.GroupName, fullPath: null, isFile: false)
+        var groupNode = new LogFilesTreeItemViewModel(group.GroupName, null, null, isFile: false)
         {
           IsExpanded = true,
         };
 
         foreach (var file in group.LogFiles)
         {
-          var fileNode = new LogFilesTreeItemViewModel(file.FileName, file.FullPath, isFile: true);
+          var fileNode = new LogFilesTreeItemViewModel(file.FileName, group.Kind, group.Username, isFile: true);
           SubscribeToTreeItem(fileNode);
           groupNode.Children.Add(fileNode);
         }

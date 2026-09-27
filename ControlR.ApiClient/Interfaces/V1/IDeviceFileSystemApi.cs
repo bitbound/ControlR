@@ -1,6 +1,7 @@
 using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceFileSystem;
+using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.ApiClient.Interfaces.V1;
 
@@ -55,11 +56,13 @@ public interface IDeviceFileSystemApi
   /// <summary>
   /// Streams the contents of one log file back as text.
   /// </summary>
-  [ApiRoute($"{HttpConstants.V1.DeviceFileSystemEndpoint}/logs/{{deviceId}}/contents?tenantId={{tenantId}}&filePath={{filePath}}", "GET")]
+  [ApiRoute($"{HttpConstants.V1.DeviceFileSystemEndpoint}/logs/{{deviceId}}/contents?tenantId={{tenantId}}&kind={{kind}}&fileName={{fileName}}&username={{username}}", "GET")]
   Task<ApiResult<string>> GetDeviceLogFileContents(
     Guid deviceId,
     Guid tenantId,
-    string filePath,
+    LogKind kind,
+    string fileName,
+    string? username,
     CancellationToken cancellationToken = default);
 
   [ApiRoute($"{HttpConstants.V1.DeviceFileSystemEndpoint}/logs/{{deviceId}}?tenantId={{tenantId}}", "GET")]
