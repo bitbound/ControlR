@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Threading.Channels;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
@@ -313,6 +314,62 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     agentClient.Verify(
       client => client.TestVncConnection(It.IsAny<int>()),
       Times.Never);
+  }
+
+  [Fact]
+  public async Task UploadFile_DeviceGrantIsTransferUpload_ForwardsUpload()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceFileSystemTransferUpload);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    agentClient
+      .Setup(client => client.DownloadFileFromViewer(It.IsAny<FileUploadHubDto>()))
+      .ReturnsAsync(HubResult.Ok());
+
+    var result = await hub.UploadFile(
+      new FileUploadMetadata(device.Id, "/incoming", "payload.txt", 4, "text/plain", false),
+      CreateFileChannel("data"));
+
+    Assert.True(result.IsSuccess);
+    agentClient.Verify(
+      client => client.DownloadFileFromViewer(It.Is<FileUploadHubDto>(upload =>
+        upload.TargetDirectoryPath == "/incoming" &&
+        upload.FileName == "payload.txt")),
+      Times.Once);
+  }
+
+  [Fact]
+  public async Task UploadFile_DeviceGrantIsWriteOnly_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceFileSystemWrite);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+
+    var result = await hub.UploadFile(
+      new FileUploadMetadata(device.Id, "/incoming", "payload.txt", 4, "text/plain", false),
+      CreateFileChannel("data"));
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+    agentClient.Verify(
+      client => client.DownloadFileFromViewer(It.IsAny<FileUploadHubDto>()),
+      Times.Never);
+  }
+
+  private static ChannelReader<byte[]> CreateFileChannel(string content)
+  {
+    var channel = Channel.CreateBounded<byte[]>(1);
+    channel.Writer.TryWrite(System.Text.Encoding.UTF8.GetBytes(content));
+    channel.Writer.TryComplete();
+    return channel.Reader;
   }
 
   private static (ViewerHub Hub, Mock<IAgentHubClient> AgentClient) CreateHub(
