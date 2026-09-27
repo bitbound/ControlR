@@ -87,16 +87,14 @@ internal static class HostApplicationBuilderExtensions
       .GetSection(AgentAppOptions.SectionKey)
       .Get<AgentAppOptions>() ?? new AgentAppOptions();
 
-    services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
-    services.AddControlrApiClient(options =>
+    var apiBaseUrl = BrandingConstants.ControlrServerUrl ?? appOptions.ServerUri;
+    if (apiBaseUrl is null)
     {
-      var baseUrl = BrandingConstants.ControlrServerUrl ?? appOptions.ServerUri;
-      if (baseUrl is null)
-      {
-        throw new ArgumentException("ServerUri must be provided in configuration or app settings.");
-      }
-      options.BaseUrl = baseUrl;
-    });
+      throw new ArgumentException("ServerUri must be provided in configuration or app settings.");
+    }
+
+    services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
+    services.AddControlrApiClient(options => options.BaseUrl = apiBaseUrl);
 
     builder.Services.AddStarRedactor();
     services.AddAgentSharedServices();
@@ -204,7 +202,7 @@ internal static class HostApplicationBuilderExtensions
   private static void ConfigureHttpClient(IServiceProvider provider, HttpClient client)
   {
     var options = provider.GetRequiredService<IOptionsMonitor<AgentAppOptions>>();
-    client.BaseAddress = options.CurrentValue.ServerUri;
+    client.BaseAddress = BrandingConstants.ControlrServerUrl ?? options.CurrentValue.ServerUri;
   }
 
   private static FileSystemPathProvider GetTempPathProvider(HostApplicationBuilder builder)

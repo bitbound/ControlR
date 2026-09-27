@@ -122,6 +122,12 @@ Assert-True -Condition (Test-Throws { Invoke-CustomizeScript -Root $repo -ExtraP
 $repo = New-FakeRepo -Name "scheme"
 Assert-True -Condition (Test-Throws { Invoke-CustomizeScript -Root $repo -ExtraParams @{ ControlrServerUrl = "ftp://example.com" } }) -TestName "customize.ps1 rejects a non-http scheme"
 
+# customize.ps1 bakes a URL containing regex-substitution characters literally instead of
+# letting -replace interpret them.
+$repo = New-FakeRepo -Name "dollar"
+Invoke-CustomizeScript -Root $repo -ExtraParams @{ ControlrServerUrl = 'https://controlr.example.com/$&' }
+Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains('ParseControlrServerUrl("https://controlr.example.com/$&")')) -TestName "customize.ps1 bakes a URL containing `$& literally"
+
 # Invoke-Customize.ps1 picks the URL up from the environment variable, which is how the
 # workflow transports it to a script checked out from an older source ref.
 $repo = New-FakeRepo -Name "envvar"

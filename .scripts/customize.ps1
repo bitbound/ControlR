@@ -439,7 +439,9 @@ if ($ControlrServerUrl) {
     throw "Could not find the ControlrServerUrl declaration in $brandingFile. The source ref predates server URL branding."
   }
 
-  $escapedServerUrl = $ControlrServerUrl -replace '\\', '\\' -replace '"', '\"'
+  # Use .NET string.Replace rather than -replace. The replacement operand of -replace
+  # interprets $-substitutions ($&, $`, $'), which would corrupt a URL containing them.
+  $escapedServerUrl = $ControlrServerUrl.Replace('\', '\\').Replace('"', '\"')
   $content = $content.Replace(
     $urlDeclaration,
     "public static Uri? ControlrServerUrl { get; } = ParseControlrServerUrl(`"$escapedServerUrl`");")
