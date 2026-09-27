@@ -249,7 +249,7 @@ public partial class PersonalAccessTokens
   {
     var confirmed = await DialogService.ShowMessageBoxAsync(
       "Confirm Revoke",
-      $"Revoke the personal access token '{personalAccessToken.Name}'? Any request using it will be rejected immediately.",
+      $"Revoke the personal access token '{personalAccessToken.Name}'?",
       yesText: "Revoke",
       cancelText: "Cancel");
 
