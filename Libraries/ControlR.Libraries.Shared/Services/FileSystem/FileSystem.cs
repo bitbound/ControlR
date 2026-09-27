@@ -44,6 +44,13 @@ public interface IFileSystem
   /// </summary>
   /// <param name="fileName">The name of the file to resolve. Cannot be null or empty.</param>
   Task<Result<string>> ResolveFilePath(string fileName);
+  /// <summary>
+  /// Resolves the target of a symbolic link. Returns null when the path is not a link.
+  /// Implementations throw when the path does not exist.
+  /// </summary>
+  /// <param name="filePath">The path of the link to resolve.</param>
+  /// <param name="returnFinalTarget">True to follow links to the final target; false to return the immediate next link.</param>
+  IFileSystemItemInfo? ResolveLinkTarget(string filePath, bool returnFinalTarget);
   [SupportedOSPlatform("linux")]
   [SupportedOSPlatform("macos")]
   void SetUnixFileMode(string filePath, UnixFileMode fileMode);
@@ -321,6 +328,12 @@ public class FileSystem(ILogger<FileSystem> logger) : IFileSystem
         .Fail<string>(ex, $"Failed to resolve file path for file name '{fileName}'.")
         .Log(_logger);
     }
+  }
+
+  public IFileSystemItemInfo? ResolveLinkTarget(string filePath, bool returnFinalTarget)
+  {
+    var target = File.ResolveLinkTarget(filePath, returnFinalTarget);
+    return target is null ? null : new FileSystemItemInfo(target);
   }
 
   [SupportedOSPlatform("linux")]

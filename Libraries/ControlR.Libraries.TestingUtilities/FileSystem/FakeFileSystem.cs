@@ -14,6 +14,7 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
 	private readonly Dictionary<string, FakeDirectoryEntry> _directories = new(GetComparer(isCaseSensitive));
 	private readonly Dictionary<string, FakeDriveEntry> _drives = new(GetComparer(isCaseSensitive));
 	private readonly Dictionary<string, FakeFileEntry> _files = new(GetComparer(isCaseSensitive));
+	private readonly Dictionary<string, string> _linkTargets = new(GetComparer(isCaseSensitive));
 	private readonly Dictionary<string, List<FakeFileHandle>> _openHandles = new(GetComparer(isCaseSensitive));
 	private readonly Dictionary<string, string> _resolvedFilePaths = new(GetComparer(isCaseSensitive));
 	private readonly Lock _syncRoot = new();
@@ -84,6 +85,20 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
 		DateTime? lastWriteTime = null)
 	{
 		AddFile(filePath, Encoding.UTF8.GetBytes(content), attributes, lastWriteTime);
+	}
+
+	/// <summary>
+	/// Registers a symbolic link so <see cref="ResolveLinkTarget"/> can follow it.
+	/// </summary>
+	public void AddSymbolicLink(string linkPath, string pathToTarget)
+	{
+		lock (_syncRoot)
+		{
+			var normalizedPath = NormalizePath(linkPath);
+			EnsureParentDirectoryExists(normalizedPath, createIfMissing: true);
+			_linkTargets[normalizedPath] = NormalizePath(pathToTarget);
+			TouchParent(normalizedPath);
+		}
 	}
 
 	public Task AppendAllLinesAsync(string path, IEnumerable<string> lines)
@@ -616,6 +631,44 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
     }
   }
 
+  public IFileSystemItemInfo? ResolveLinkTarget(string filePath, bool returnFinalTarget)
+  {
+    lock (_syncRoot)
+    {
+      var normalizedPath = NormalizePath(filePath);
+      if (!_linkTargets.TryGetValue(normalizedPath, out var target))
+      {
+        if (!_files.ContainsKey(normalizedPath) && !_directories.ContainsKey(normalizedPath))
+        {
+          throw new FileNotFoundException($"Could not find file '{filePath}'.", filePath);
+        }
+
+        return null;
+      }
+
+      if (returnFinalTarget)
+      {
+        var visitCount = 0;
+        while (_linkTargets.TryGetValue(target, out var nextTarget))
+        {
+          if (++visitCount > 40)
+          {
+            throw new IOException($"Too many levels of symbolic links: '{filePath}'.");
+          }
+
+          target = nextTarget;
+        }
+      }
+
+      var exists = _files.ContainsKey(target) || _directories.ContainsKey(target);
+      return new FakeFileSystemItemInfo(target)
+      {
+        Attributes = _directories.ContainsKey(target) ? FileAttributes.Directory : FileAttributes.Normal,
+        Exists = exists
+      };
+    }
+  }
+
   public void Set(string filePath, WellKnownSidType sid)
   {
     lock (_syncRoot)
@@ -1055,6 +1108,14 @@ public class FakeFileSystem(char directorySeparator = '/', bool isCaseSensitive 
 		}
 
 		var normalized = path.Replace(directorySeparator == '/' ? '\\' : '/', directorySeparator).Trim();
+
+		// In Unix mode, drop a Windows drive prefix so a host-produced absolute path
+		// (e.g. "D:\var\log") matches the same fixture registered without it.
+		if (directorySeparator == '/' && normalized.Length >= 2 && char.IsLetter(normalized[0]) && normalized[1] == ':')
+		{
+			normalized = normalized[2..];
+		}
+
 		var root = NormalizeRoot(normalized);
 		var remainder = normalized[root.Length..];
 		var parts = remainder.Split(directorySeparator, StringSplitOptions.RemoveEmptyEntries);

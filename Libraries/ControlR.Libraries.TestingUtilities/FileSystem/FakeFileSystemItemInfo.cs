@@ -32,6 +32,21 @@ public sealed class FakeFileSystemFileInfo(string fullName) : IFileSystemFile
   public string Name { get; init; } = Path.GetFileName(fullName);
 }
 
+public sealed class FakeFileSystemItemInfo(string fullName) : IFileSystemItemInfo
+{
+  public FileAttributes Attributes { get; init; } = FileAttributes.Normal;
+
+  public DateTime CreationTime { get; init; } = DateTime.UtcNow;
+
+  public bool Exists { get; init; } = true;
+
+  public string FullName { get; init; } = fullName;
+
+  public DateTime LastWriteTime { get; init; } = DateTime.UtcNow;
+
+  public string Name { get; init; } = Path.GetFileName(fullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+}
+
 public sealed class FakeFileSystemDriveInfo(string name, string rootPath) : IFileSystemDrive
 {
   public string DriveFormat { get; init; } = string.Empty;

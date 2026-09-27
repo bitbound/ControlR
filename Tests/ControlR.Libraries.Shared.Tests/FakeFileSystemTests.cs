@@ -289,6 +289,48 @@ public class FakeFileSystemTests
   }
 
   [Fact]
+  public void ResolveLinkTarget_WhenPathDoesNotExist_Throws()
+  {
+    var fileSystem = new FakeFileSystem();
+
+    Assert.Throws<FileNotFoundException>(() => fileSystem.ResolveLinkTarget("/logs/missing.log", returnFinalTarget: true));
+  }
+
+  [Fact]
+  public void ResolveLinkTarget_WhenPathIsNotALink_ReturnsNull()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddFile("/logs/LogFile-1.log", "a");
+
+    Assert.Null(fileSystem.ResolveLinkTarget("/logs/LogFile-1.log", returnFinalTarget: true));
+  }
+
+  [Fact]
+  public void ResolveLinkTarget_WhenRequestingImmediateTarget_ReturnsFirstLink()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddSymbolicLink("/logs/current.log", "/logs/LogFile-1.log");
+    fileSystem.AddSymbolicLink("/logs/LogFile-1.log", "/etc/shadow");
+
+    var target = fileSystem.ResolveLinkTarget("/logs/current.log", returnFinalTarget: false);
+
+    Assert.NotNull(target);
+    Assert.Equal("/logs/LogFile-1.log", target.FullName);
+  }
+
+  [Fact]
+  public void ResolveLinkTarget_WhenTargetLeavesTheRoot_ReturnsOutsideTarget()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddSymbolicLink("/logs/LogFile-1.log", "/etc/shadow");
+
+    var target = fileSystem.ResolveLinkTarget("/logs/LogFile-1.log", returnFinalTarget: true);
+
+    Assert.NotNull(target);
+    Assert.Equal("/etc/shadow", target.FullName);
+  }
+
+  [Fact]
   public void WindowsPaths_AreNormalizedCaseInsensitively()
   {
     var fileSystem = new FakeFileSystem('\\');
