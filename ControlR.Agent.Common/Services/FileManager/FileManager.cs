@@ -19,7 +19,6 @@ public interface IFileManager
   Task<PathSegmentsResponseDto> GetPathSegments(string targetPath);
   Task<FileSystemEntryDto[]> GetRootDrives();
   Task<FileSystemEntryDto[]> GetSubdirectories(string directoryPath);
-  bool IsPathWithinLogRoots(string filePath);
   FileReferenceResult ResolveLogFile(LogKind kind, string fileName, string? username);
   Task<FileReferenceResult> ResolveTargetFilePath(string targetPath);
   Task<FileReferenceResult> SaveUploadedFile(string targetDirectoryPath, string fileName, Stream fileStream, bool overwrite = false);

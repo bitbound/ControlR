@@ -17066,7 +17066,12 @@
         ]
       },
       "LogKind": {
-        "type": "integer"
+        "enum": [
+          "Agent",
+          "Installer",
+          "DesktopClient",
+          null
+        ]
       },
       "LogonTokenResponseDto": {
         "required": [
