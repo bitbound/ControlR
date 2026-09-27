@@ -125,7 +125,7 @@ jobs:
 
       - name: Set up QEMU
         if: steps.platform.outputs.platform == 'linux/arm64'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Validate local storage configuration
         uses: ./.github/actions/validate-local-storage
