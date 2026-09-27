@@ -2,13 +2,16 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
+using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Services.Encryption;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Connections.Client;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ControlR.Agent.LoadTester.Helpers;
 
@@ -83,6 +86,21 @@ public static class ConnectionHelper
     );
 
     return device.AsTaskResult();
+  }
+
+  /// <summary>
+  /// Generates an Ed25519 identity for a simulated agent and signs its device update. The
+  /// server only accepts signed updates.
+  /// </summary>
+  public static SignedDto<DeviceUpdateRequestDto> CreateSignedDeviceUpdate(DeviceUpdateRequestDto deviceDto)
+  {
+    var timeProvider = TimeProvider.System;
+    var keyProvider = new Ed25519KeyProvider(timeProvider, NullLogger<Ed25519KeyProvider>.Instance);
+
+    var keyPair = keyProvider.GenerateKeyPair();
+    var publicKeyBase64 = Convert.ToBase64String(keyPair.PublicKey);
+
+    return keyProvider.Sign(deviceDto, keyPair.PrivateKey, publicKeyBase64);
   }
 
   public static HttpMessageInvoker GetMessageInvoker(int agentNum)
