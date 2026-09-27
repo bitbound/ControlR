@@ -479,28 +479,37 @@ internal class FileManager(
 
     // A path can sit inside a log root and still stream a file outside it when
     // the local user owns that root and planted a symlink (or pointed an
-    // intermediate directory at one). The agent typically runs elevated on
-    // Linux and macOS, so following such a link exposes files the user cannot
-    // read directly. Require the fully-resolved target to also be within roots;
-    // an unresolved path is left to the caller's existence check.
-    try
+    // intermediate directory at one). ResolveLinkTarget only inspects the final
+    // component, so walk every prefix and refuse as soon as one leaves the
+    // roots. The agent typically runs elevated on Linux and macOS, so following
+    // such a link exposes files the user cannot read directly.
+    foreach (var prefix in EnumerateAncestors(fullPath))
     {
-      var finalTarget = _fileSystem.ResolveLinkTarget(fullPath, returnFinalTarget: true);
-      if (finalTarget is null)
+      try
       {
-        return true;
-      }
+        var target = _fileSystem.ResolveLinkTarget(prefix, returnFinalTarget: true);
+        if (target is null)
+        {
+          continue;
+        }
 
-      return roots.Any(root => IsWithinDirectory(Path.GetFullPath(finalTarget.FullName), root));
+        if (!roots.Any(root => IsWithinDirectory(Path.GetFullPath(target.FullName), root)))
+        {
+          return false;
+        }
+      }
+      catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+      {
+        // A prefix that does not exist on disk is not a link. Existence is the
+        // caller's concern.
+      }
+      catch
+      {
+        return false;
+      }
     }
-    catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
-    {
-      return true;
-    }
-    catch
-    {
-      return false;
-    }
+
+    return true;
   }
 
   public async Task<FileReferenceResult> ResolveTargetFilePath(string filePath)
@@ -622,6 +631,17 @@ internal class FileManager(
     {
       _logger.LogError(ex, "Error validating file path: {FileName} in {DirectoryPath}", fileName, directoryPath);
       return Task.FromResult(new ValidateFilePathResponseDto(false, $"Error validating path: {ex.Message}"));
+    }
+  }
+
+  private static IEnumerable<string> EnumerateAncestors(string fullPath)
+  {
+    var current = fullPath;
+    while (!string.IsNullOrEmpty(current)
+      && !string.Equals(current, Path.GetPathRoot(current), StringComparison.Ordinal))
+    {
+      yield return current;
+      current = Path.GetDirectoryName(current);
     }
   }
 

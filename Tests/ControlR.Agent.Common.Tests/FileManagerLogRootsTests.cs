@@ -29,6 +29,28 @@ public class FileManagerLogRootsTests
   private static string RootDesktopClientLogs => Join("root", ".local", "share", "controlr", "logs");
   private static string WindowsDesktopClientLogs => Join("ProgramData", "ControlR", "Logs");
 
+  [Fact]
+  public void IsPathWithinLogRoots_WhenIntermediateDirectoryIsSymlinkLeavingRoot_ReturnsFalse()
+  {
+    // The final component is an ordinary file, so a check that only resolves the
+    // last link would pass this and then follow the directory link on open.
+    var fileSystem = CreateLinuxFileSystem();
+    var linkedDirectory = Join(AgentLogs, "linked-private");
+    fileSystem.AddSymbolicLink(linkedDirectory, Join("etc"));
+
+    Assert.False(CreateLinuxManager(fileSystem).IsPathWithinLogRoots(Join(linkedDirectory, "shadow")));
+  }
+
+  [Fact]
+  public void IsPathWithinLogRoots_WhenIntermediateDirectoryIsSymlinkStayingInside_ReturnsTrue()
+  {
+    var fileSystem = CreateLinuxFileSystem();
+    var linkedDirectory = Join(AgentLogs, "current");
+    fileSystem.AddSymbolicLink(linkedDirectory, Join(AgentLogs));
+
+    Assert.True(CreateLinuxManager(fileSystem).IsPathWithinLogRoots(Join(linkedDirectory, SampleLogFile)));
+  }
+
   [Theory]
   [InlineData("etc", "shadow")]
   [InlineData("home", "alice", ".ssh", "id_rsa")]
