@@ -119,6 +119,40 @@ public class PersonalAccessTokenAuthenticationHandlerTests(ITestOutputHelper tes
   }
 
   [Fact]
+  public async Task HandleAuthenticateAsync_RevokedToken_ReturnsFailure()
+  {
+    // A revoked token must not authenticate, even though its row is retained for audit.
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id);
+    var patManager = services.GetRequiredService<IPersonalAccessTokenManager>();
+
+    var createRequest = new InternalDtos.CreatePersonalAccessTokenRequestDto("Revoke Test Key", PersonalAccessTokenPermissionMode.InheritOwner);
+    var createResult = await patManager.CreateToken(createRequest, user.Id, new PrincipalDescriptor(PrincipalType.User, user.Id, user.TenantId, "test"));
+    var plainTextToken = createResult.Value!.PlainTextToken;
+
+    // Sanity check: the token authenticates while active.
+    var activeHandler = await CreateHandler(services, CreateHttpContext(plainTextToken));
+    var activeResult = await activeHandler.AuthenticateAsync();
+    Assert.True(activeResult.Succeeded);
+
+    var revokeResult = await patManager.Revoke(createResult.Value.PersonalAccessToken.Id, user.Id);
+    Assert.True(revokeResult.IsSuccess);
+
+    // Act
+    var handler = await CreateHandler(services, CreateHttpContext(plainTextToken));
+    var result = await handler.AuthenticateAsync();
+
+    // Assert
+    Assert.False(result.Succeeded);
+    Assert.NotNull(result.Failure);
+    Assert.Equal("Invalid personal access token", result.Failure.Message);
+  }
+
+  [Fact]
   public async Task HandleAuthenticateAsync_ShouldCreateCorrectIdentity()
   {
     // Arrange
