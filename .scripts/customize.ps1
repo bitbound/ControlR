@@ -60,6 +60,9 @@ param(
   [Parameter(HelpMessage = "Raw CSS text that fully replaces wwwroot/static/custom.css in the built server")]
   [string] $CustomCss = "",
 
+  [Parameter(HelpMessage = "Absolute http/https URL of the ControlR server to bake into the build (empty for none)")]
+  [string] $ControlrServerUrl = "",
+
   [Parameter(HelpMessage = "Build version (defaults to latest tag)")]
   [string] $Version = "",
 
@@ -370,6 +373,16 @@ if ($Publisher -notmatch "^[A-Za-z][A-Za-z0-9_ \-\.]*$") {
   throw "Publisher must start with a letter and contain only alphanumeric characters, underscores, hyphens, periods, and spaces."
 }
 
+if ($ControlrServerUrl) {
+  $parsedServerUrl = $null
+  if (-not [uri]::TryCreate($ControlrServerUrl, [System.UriKind]::Absolute, [ref] $parsedServerUrl) `
+    -or ($parsedServerUrl.Scheme -ne 'http' -and $parsedServerUrl.Scheme -ne 'https')) {
+    throw "ControlrServerUrl must be an absolute http or https URL. Got: '$ControlrServerUrl'."
+  }
+
+  $ControlrServerUrl = $parsedServerUrl.ToString()
+}
+
 #endregion
 
 Write-Host ""
@@ -416,6 +429,20 @@ $colorFields = @(
 foreach ($field in $colorFields) {
   $value = $colorParams[$field]
   $content = $content -replace "(public const string $field)(\s*=\s*)`"[0-9A-Fa-f]+`"", "`$1`$2`"$value`""
+}
+
+if ($ControlrServerUrl) {
+  Write-Host "Baking ControlR server URL: $ControlrServerUrl" -ForegroundColor Yellow
+
+  $urlDeclaration = 'public static Uri? ControlrServerUrl { get; } = ParseControlrServerUrl(null);'
+  if (-not $content.Contains($urlDeclaration)) {
+    throw "Could not find the ControlrServerUrl declaration in $brandingFile. The source ref predates server URL branding."
+  }
+
+  $escapedServerUrl = $ControlrServerUrl -replace '\\', '\\' -replace '"', '\"'
+  $content = $content.Replace(
+    $urlDeclaration,
+    "public static Uri? ControlrServerUrl { get; } = ParseControlrServerUrl(`"$escapedServerUrl`");")
 }
 
 if ($content -ne $original) {

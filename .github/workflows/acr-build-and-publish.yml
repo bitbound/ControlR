@@ -8,6 +8,11 @@ on:
         description: "URL to JSON customization config"
         required: true
         type: string
+      controlr_server_url:
+        description: "Absolute http/https URL of the ControlR server to bake into the build (empty for none)"
+        required: false
+        default: ""
+        type: string
       version:
         description: "Version/ref to build"
         required: true
@@ -99,6 +104,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       customization_config_url: ${{ inputs.customization_config_url }}
+      controlr_server_url: ${{ inputs.controlr_server_url }}
       version: ${{ inputs.version }}
       ref: ${{ inputs.source_ref }}
       server_runtime: ${{ inputs.server_runtime }}

@@ -170,6 +170,7 @@ internal abstract class AgentInstallerBase(
     var currentOptions = AppOptions.CurrentValue;
 
     var updatedServerUri =
+      BrandingConstants.ControlrServerUrl ??
       serverUri ??
       currentOptions.ServerUri ??
       AppConstants.ServerUri;

@@ -7,7 +7,13 @@ param(
   [string] $ConfigUrl = "",
 
   [Parameter()]
-  [string] $ConfigPath = ""
+  [string] $ConfigPath = "",
+
+  # Read from the environment rather than only from a parameter. The workflow file comes
+  # from the dispatched ref while the scripts come from the built source ref, so an older
+  # source ref would fail parameter binding on a newly added parameter.
+  [Parameter()]
+  [string] $ControlrServerUrl = $env:CONTROLR_SERVER_URL
 )
 
 $ErrorActionPreference = "Stop"
@@ -99,6 +105,10 @@ if ($ConfigPath -or $ConfigUrl) {
   $customCssProp = $config.PSObject.Properties['customCss']
   if ($customCssProp -and $customCssProp.Value) {
     $customizeParams.CustomCss = [string]$customCssProp.Value
+  }
+
+  if ($ControlrServerUrl) {
+    $customizeParams.ControlrServerUrl = $ControlrServerUrl
   }
 
   Write-Host "Applying customization for brand: $brandName"

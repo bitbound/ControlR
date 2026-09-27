@@ -90,11 +90,12 @@ internal static class HostApplicationBuilderExtensions
     services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
     services.AddControlrApiClient(options =>
     {
-      if (appOptions.ServerUri is null)
+      var baseUrl = BrandingConstants.ControlrServerUrl ?? appOptions.ServerUri;
+      if (baseUrl is null)
       {
         throw new ArgumentException("ServerUri must be provided in configuration or app settings.");
       }
-      options.BaseUrl = appOptions.ServerUri;
+      options.BaseUrl = baseUrl;
     });
 
     builder.Services.AddStarRedactor();

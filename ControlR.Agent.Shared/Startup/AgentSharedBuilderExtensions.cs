@@ -3,6 +3,7 @@ using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Shared.Services.Linux;
 using ControlR.Agent.Shared.Services.Mac;
 using ControlR.Agent.Shared.Services.Windows;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.FileSystem;
@@ -89,7 +90,7 @@ public static class AgentSharedBuilderExtensions
       .Get<AgentAppOptions>()?
       .ServerUri;
 
-    var apiBaseUri = serverUri ?? configuredServerUri ?? throw new InvalidOperationException("Server URI must be provided either through parameters or configuration.");
+    var apiBaseUri = BrandingConstants.ControlrServerUrl ?? serverUri ?? configuredServerUri ?? throw new InvalidOperationException("Server URI must be provided either through parameters or configuration.");
 
     builder.Services.AddControlrApiClient(options => options.BaseUrl = apiBaseUri);
     builder.Services.AddHttpClient<IDownloadsApi, DownloadsApi>((_, client) => client.BaseAddress = apiBaseUri);

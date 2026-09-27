@@ -73,6 +73,12 @@ public class BrandingConstantsTests
   }
 
   [Fact]
+  public void ControlrServerUrl_DefaultBuild_IsNull()
+  {
+    Assert.Null(BrandingConstants.ControlrServerUrl);
+  }
+
+  [Fact]
   public void DesktopClientBaseName_UsesBrandKey()
   {
     Assert.Equal("ControlR.DesktopClient", BrandingConstants.DesktopClientBaseName);

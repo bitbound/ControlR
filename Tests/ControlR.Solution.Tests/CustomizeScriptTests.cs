@@ -60,6 +60,38 @@ public class CustomizeScriptTests
   }
 
   [Fact]
+  public async Task ControlrServerUrl_InvalidUrl_Fails()
+  {
+    var result = await RunScript("-ControlrServerUrl", "not a url", "-WhatIf");
+    Assert.NotEqual(0, result.ExitCode);
+    Assert.Contains("must be an absolute http or https URL", result.StandardError);
+  }
+
+  [Fact]
+  public async Task ControlrServerUrl_NonHttpScheme_Fails()
+  {
+    var result = await RunScript("-ControlrServerUrl", "ftp://example.com", "-WhatIf");
+    Assert.NotEqual(0, result.ExitCode);
+    Assert.Contains("must be an absolute http or https URL", result.StandardError);
+  }
+
+  [Fact]
+  public async Task ControlrServerUrl_NotProvided_LeavesDefaultDeclaration()
+  {
+    var result = await RunScript("-BrandName", "NoUrlTest", "-WhatIf");
+    Assert.Equal(0, result.ExitCode);
+    Assert.DoesNotContain("ParseControlrServerUrl(\"", result.StandardOutput);
+  }
+
+  [Fact]
+  public async Task ControlrServerUrl_ValidUrl_BakedIntoBrandingConstants()
+  {
+    var result = await RunScript("-ControlrServerUrl", "https://controlr.example.com", "-WhatIf");
+    Assert.Equal(0, result.ExitCode);
+    AssertContainsLine(result, "ParseControlrServerUrl(\"https://controlr.example.com/\")");
+  }
+
+  [Fact]
   public async Task DefaultBrandName_NoChangesDetected()
   {
     var result = await RunScript("-WhatIf");
