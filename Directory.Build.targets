@@ -20,6 +20,12 @@
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64'">osx-x64</RuntimeIdentifier>
   </PropertyGroup>
 
+  <Target Name="TrimSymbolsFromPublish" AfterTargets="ComputeFilesToPublish" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="OverrideMacTestRunCommand"
     AfterTargets="_PrepareRunDesktop"
     BeforeTargets="Run"

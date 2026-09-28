@@ -3,6 +3,7 @@
 		<UserSecretsId>aspnet-ControlR.Web-5aea8da1-1536-4f6c-b6d7-c7c0db228eca</UserSecretsId>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
 	</PropertyGroup>
 	<PropertyGroup>
 		<OpenApiDocumentsDirectory>.</OpenApiDocumentsDirectory>

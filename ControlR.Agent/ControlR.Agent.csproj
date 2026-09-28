@@ -5,6 +5,7 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <UserSecretsId>a11d53e3-322a-427d-a035-74dd588427a9</UserSecretsId>
     <EnableWindowsBundleSigning>true</EnableWindowsBundleSigning>
+    <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="appsettings.Development.json" />
