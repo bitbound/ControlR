@@ -18,7 +18,8 @@ internal static class LogonTokenCreationRequestExtensions
       SessionCorrelationId: request.SessionCorrelationId,
       ExpirationMinutes: request.ExpirationMinutes,
       Scopes: ToDeviceScopes(request.Permissions, request.DeviceId),
-      AllowedDesktopSessionIds: NormalizeDesktopSessionIds(request.AllowedDesktopSessionIds));
+      AllowedDesktopSessionIds: NormalizeDesktopSessionIds(request.AllowedDesktopSessionIds),
+      SessionExpirationMinutes: request.SessionExpirationMinutes);
   }
 
   public static LogonTokenCreationRequest ToCreationRequest(this V1Dtos.CreateLogonTokenForUserRequestDto request)

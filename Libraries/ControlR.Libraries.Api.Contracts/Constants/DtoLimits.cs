@@ -15,6 +15,9 @@ public static class DtoLimits
   public const int ServiceAccountNameMaxLength = 100;
   public const int ServiceAccountNameMinLength = 1;
   public const int SessionCorrelationIdMaxLength = 128;
+  public const int SessionExpirationMinutesDefault = 480;
+  public const int SessionExpirationMinutesMax = 1_440;
+  public const int SessionExpirationMinutesMin = 5;
   public const int TenantNameMaxLength = 100;
   public const int UserCorrelationIdMaxLength = 252;
   public const int UserDisplayNameMaxLength = 50;

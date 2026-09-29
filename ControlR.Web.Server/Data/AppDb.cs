@@ -322,6 +322,11 @@ public class AppDb : IdentityUserContext<AppUser, Guid>, IDataProtectionKeyConte
   {
     builder
       .Entity<LogonToken>()
+      .Property(x => x.SessionExpirationMinutes)
+      .HasDefaultValue(DtoLimits.SessionExpirationMinutesDefault);
+
+    builder
+      .Entity<LogonToken>()
       .Property(x => x.AllowedDesktopSessionIds)
       .HasColumnType("jsonb")
       .HasConversion(new ValueConverter<IReadOnlyList<int>?, string?>(

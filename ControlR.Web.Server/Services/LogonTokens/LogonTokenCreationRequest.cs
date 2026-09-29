@@ -9,7 +9,8 @@ public sealed record LogonTokenCreationRequest(
   string? SessionCorrelationId,
   int ExpirationMinutes,
   IReadOnlyList<InternalDtos.CredentialScopeDto>? Scopes,
-  IReadOnlyList<int>? AllowedDesktopSessionIds)
+  IReadOnlyList<int>? AllowedDesktopSessionIds,
+  int SessionExpirationMinutes = DtoLimits.SessionExpirationMinutesDefault)
 {
   public const int MaxAllowedDesktopSessionIds = DtoLimits.AllowedDesktopSessionIdsMaxCount;
 }

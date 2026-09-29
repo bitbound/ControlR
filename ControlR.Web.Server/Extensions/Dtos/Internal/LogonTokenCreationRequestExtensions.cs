@@ -21,6 +21,7 @@ internal static class LogonTokenCreationRequestExtensions
       SessionCorrelationId: null,
       ExpirationMinutes: request.ExpirationMinutes,
       Scopes: request.Scopes is { Count: > 0 } ? [.. request.Scopes] : null,
-      AllowedDesktopSessionIds: null);
+      AllowedDesktopSessionIds: null,
+      SessionExpirationMinutes: request.SessionExpirationMinutes);
   }
 }

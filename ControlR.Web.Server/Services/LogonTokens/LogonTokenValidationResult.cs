@@ -11,6 +11,11 @@ public class LogonTokenValidationResult
   [MemberNotNullWhen(true, nameof(UserId), nameof(TenantId), nameof(TokenId), nameof(ExpiresAt))]
   public bool IsValid { get; set; }
   public string? SessionCorrelationId { get; set; }
+
+  /// <summary>
+  /// Absolute cap, in minutes, applied to the cookie session minted on redemption.
+  /// </summary>
+  public int SessionExpirationMinutes { get; set; } = DtoLimits.SessionExpirationMinutesDefault;
   public Guid? TenantId { get; set; }
   public Guid? TokenId { get; set; }
   public Guid? UserId { get; set; }
@@ -30,7 +35,8 @@ public class LogonTokenValidationResult
     Guid tenantId,
     DateTimeOffset expiresAt,
     string? sessionCorrelationId = null,
-    IReadOnlyList<int>? allowedDesktopSessionIds = null)
+    IReadOnlyList<int>? allowedDesktopSessionIds = null,
+    int sessionExpirationMinutes = DtoLimits.SessionExpirationMinutesDefault)
   {
     return new LogonTokenValidationResult
     {
@@ -40,7 +46,8 @@ public class LogonTokenValidationResult
       TenantId = tenantId,
       ExpiresAt = expiresAt,
       SessionCorrelationId = sessionCorrelationId,
-      AllowedDesktopSessionIds = allowedDesktopSessionIds
+      AllowedDesktopSessionIds = allowedDesktopSessionIds,
+      SessionExpirationMinutes = sessionExpirationMinutes
     };
   }
 }

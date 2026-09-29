@@ -100,7 +100,8 @@ public class LogonTokenScopeService(
         sessionCorrelationId: request.SessionCorrelationId,
         writeBaselineGrants: writeBaselineGrants,
         cancellationToken: cancellationToken,
-        allowedDesktopSessionIds: request.AllowedDesktopSessionIds);
+        allowedDesktopSessionIds: request.AllowedDesktopSessionIds,
+        sessionExpirationMinutes: request.SessionExpirationMinutes);
     }
 
     var userId = request.UserId
@@ -114,7 +115,8 @@ public class LogonTokenScopeService(
       sessionCorrelationId: request.SessionCorrelationId,
       writeBaselineGrants: writeBaselineGrants,
       cancellationToken: cancellationToken,
-      allowedDesktopSessionIds: request.AllowedDesktopSessionIds);
+      allowedDesktopSessionIds: request.AllowedDesktopSessionIds,
+      sessionExpirationMinutes: request.SessionExpirationMinutes);
   }
 
   /// <summary>
