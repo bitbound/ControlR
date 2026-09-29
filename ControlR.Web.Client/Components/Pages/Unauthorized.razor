@@ -1,0 +1,17 @@
+@attribute [Route(ClientRoutes.Unauthorized)]
+@attribute [ExcludeFromInteractiveRouting]
+@layout UnauthorizedLayout
+
+<PageTitle>Unauthorized</PageTitle>
+
+<MudPaper Elevation="0" Class="pa-8 text-center" Style="max-width: 560px; width: 100%;">
+  <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Primary" Style="font-size: 84px;" Class="mb-4" />
+
+  <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom>
+    Unauthorized
+  </MudText>
+
+  <MudText Typo="Typo.body1" Color="Color.Secondary">
+    You are not signed in, or your access has expired.
+  </MudText>
+</MudPaper>

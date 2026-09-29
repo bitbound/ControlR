@@ -115,11 +115,11 @@ public class LogonTokenAuthenticationHandler(
     var principal = new ClaimsPrincipal(identity);
     var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
+    // The application cookie's own Lifetime governs the session. Binding it to the token's
+    // ExpiresAt would evict an idle technician mid-session, and consumed tokens cannot renew it.
     var cookieProperties = new AuthenticationProperties
     {
-      ExpiresUtc = tokenValidation.ExpiresAt,
-      IsPersistent = true,
-      AllowRefresh = false
+      IsPersistent = true
     };
     await Context.SignInAsync(IdentityConstants.ApplicationScheme, principal, cookieProperties);
 

@@ -34,6 +34,7 @@ public static class ClientRoutes
   public const string Tags = "/tags";
   public const string TenantServiceAccounts = "/tenant-service-accounts";
   public const string TenantSettings = "/tenant-settings";
+  public const string Unauthorized = "/unauthorized";
   public const string UserGroupDetail = "/user-groups/{Id:guid}";
   public const string UserGroups = "/user-groups";
   public const string Users = "/users";

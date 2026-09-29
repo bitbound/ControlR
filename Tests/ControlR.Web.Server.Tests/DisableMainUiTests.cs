@@ -1,4 +1,5 @@
 using System.Net;
+using ControlR.Web.Client;
 using ControlR.Web.Server.Tests.Helpers;
 
 namespace ControlR.Web.Server.Tests;
@@ -15,6 +16,7 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
   private const string NavChromeMarker = "mud-navmenu";
   private const string NotFoundActionsMarker = "Go Home";
   private const string NotFoundMarker = "Page Not Found";
+  private const string UnauthorizedMarker = "You are not signed in, or your access has expired.";
 
   [Fact]
   public async Task AccountForgotPassword_RendersForm_WhenMainUiIsEnabledByDefault()
@@ -66,6 +68,19 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task DeviceAccess_RedirectsToLogin_WhenMainUiIsEnabledByDefault()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(testOutput);
+    using var client = testServer.Factory.CreateClient(
+      new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+    var response = await client.GetAsync("/device-access", TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+    Assert.Equal("/Account/Login", response.Headers.Location?.AbsolutePath);
+  }
+
+  [Fact]
   public async Task DeviceAccess_RetainsItsChallengeRedirect_WhenMainUiDisabled()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(testOutput, settings: DisabledSettings());
@@ -74,13 +89,9 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
 
     var response = await client.GetAsync("/device-access", TestContext.Current.CancellationToken);
 
-    // Device access keeps its normal unauthenticated behavior instead of being replaced by the
-    // not-found view. Token-bearing callers continue to land on the device access pages.
+    // Identity pages render as not-found when the UI is gated, so the challenge must not point at them.
     Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-    Assert.Equal("/Account/Login", response.Headers.Location?.AbsolutePath);
-    Assert.Contains("device-access", response.Headers.Location?.Query ?? string.Empty, StringComparison.Ordinal);
-    var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-    Assert.DoesNotContain(NotFoundMarker, body, StringComparison.Ordinal);
+    Assert.Equal(ClientRoutes.Unauthorized, response.Headers.Location?.OriginalString);
   }
 
   [Fact]
@@ -106,6 +117,23 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
 
     Assert.Contains(NavChromeMarker, page, StringComparison.Ordinal);
     Assert.DoesNotContain(NotFoundMarker, page, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task UnauthorizedPage_RendersWithoutChrome_RegardlessOfMainUiGate(bool disableMainUi)
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      testOutput,
+      settings: disableMainUi ? DisabledSettings() : null);
+
+    var page = await (await testServer.GetHttpClient())
+      .GetStringAsync(ClientRoutes.Unauthorized, TestContext.Current.CancellationToken);
+
+    Assert.Contains(UnauthorizedMarker, page, StringComparison.Ordinal);
+    Assert.DoesNotContain(NotFoundMarker, page, StringComparison.Ordinal);
+    Assert.DoesNotContain(NavChromeMarker, page, StringComparison.Ordinal);
   }
 
   [Fact]
