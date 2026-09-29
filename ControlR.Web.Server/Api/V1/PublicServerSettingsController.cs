@@ -27,6 +27,7 @@ public class PublicServerSettingsController(
     var settings = await _serverSettings.GetPublicServerSettings();
     return new PublicServerSettingsDto(
       settings.IsPublicRegistrationEnabled,
-      settings.DisableDesktopPreview);
+      settings.DisableDesktopPreview,
+      settings.DisableMainUi);
   }
 }

@@ -20,7 +20,7 @@
                                     Edge="Edge.Start" Class="me-2" />
         }
 
-        @if (_canGoBack)
+        @if (_canGoBack && !IsMainUiDisabled)
         {
           <MudTooltip Text="Back to Dashboard">
 
@@ -51,7 +51,7 @@
       </MudAppBar>
       <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudDrawerHeader Class="pa-4">
-          <MudLink Href="/" Underline="Underline.None" Class="d-flex">
+          <MudLink Href="@(IsMainUiDisabled ? null : "/")" Underline="Underline.None" Class="d-flex">
             <MudImage Src=@Assets["static/appicon-192.png"] Height="30" Class="me-2" />
             <MudText Typo="Typo.h6" Color="Color.Primary">
               @(BrandingConstants.BrandName)

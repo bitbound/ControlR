@@ -22,6 +22,8 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   [Inject]
   public required ILazyInjector<IPersistentStateAccessor> PersistentState { get; set; }
   [Inject]
+  public required IPublicServerSettingsProvider PublicServerSettings { get; set; }
+  [Inject]
   public required ILazyInjector<ISnackbar> Snackbar { get; set; }
   [Inject]
   public required ILazyInjector<IThemeStateProvider> ThemeState { get; set; }
@@ -43,6 +45,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   protected bool IsDarkMode { get; set; } = true;
   [CascadingParameter(Name = "AcceptsInteractiveRouting")]
   protected bool IsInteractiveRoutingPage { get; set; }
+  protected bool IsMainUiDisabled { get; private set; }
   protected PersistingComponentStateSubscription PersistingSubscription { get; set; }
   [CascadingParameter(Name = "DefaultThemeMode")]
   protected ThemeMode ServerDefaultThemeMode { get; set; }
@@ -94,6 +97,10 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
 
     var authState = await AuthState.GetAuthenticationStateAsync();
     IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+    // The provider resolves to the options-backed implementation during prerender and to the
+    // HTTP-backed one after WASM activation, so the same read works on both sides.
+    IsMainUiDisabled = (await PublicServerSettings.GetPublicServerSettings()).DisableMainUi;
 
     // Load the user's stored theme preference in both SSR and WASM paths.
     if (IsAuthenticated)

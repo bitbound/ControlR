@@ -24,14 +24,16 @@ internal class PublicServerSettingsProviderServer(
 
       return new PublicServerSettings(
         IsPublicRegistrationEnabled: registrationEnabled,
-        DisableDesktopPreview: appOpts.DisableDesktopPreview);
+        DisableDesktopPreview: appOpts.DisableDesktopPreview,
+        DisableMainUi: appOpts.DisableMainUi);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting public server settings.");
       return new PublicServerSettings(
         IsPublicRegistrationEnabled: false,
-        DisableDesktopPreview: _appOptions.CurrentValue.DisableDesktopPreview);
+        DisableDesktopPreview: _appOptions.CurrentValue.DisableDesktopPreview,
+        DisableMainUi: _appOptions.CurrentValue.DisableMainUi);
     }
   }
 }

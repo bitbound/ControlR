@@ -17364,7 +17364,8 @@
       "PublicServerSettingsDto": {
         "required": [
           "isPublicRegistrationEnabled",
-          "disableDesktopPreview"
+          "disableDesktopPreview",
+          "disableMainUi"
         ],
         "type": "object",
         "properties": {
@@ -17372,6 +17373,9 @@
             "type": "boolean"
           },
           "disableDesktopPreview": {
+            "type": "boolean"
+          },
+          "disableMainUi": {
             "type": "boolean"
           }
         }

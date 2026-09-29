@@ -11,4 +11,5 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 /// </remarks>
 public record PublicServerSettings(
   bool IsPublicRegistrationEnabled,
-  bool DisableDesktopPreview);
+  bool DisableDesktopPreview,
+  bool DisableMainUi);

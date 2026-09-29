@@ -243,6 +243,10 @@ services:
       # and the desktop preview endpoint refuses to serve requests.
       ControlR_AppOptions__DisableDesktopPreview: false
 
+      # When enabled, only the device access pages remain visible. All other UI routes,
+      # including the Identity account pages, render a not-found view. API endpoints are unaffected.
+      ControlR_AppOptions__DisableMainUi: false
+
       # SMTP settings are used for sending account-related emails, such as
       # account confirmation and password reset emails.  As of this writing,
       # emails are only used for Microsoft's Identity system.
