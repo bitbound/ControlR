@@ -12,7 +12,7 @@ public class JsInteropableComponent : ViewportAwareComponent
   private string _jsPath = string.Empty;
 
   [Inject]
-  public required IAppEnvironment AppEnvironment { get; init; }
+  public required ILazyInjector<IAppEnvironment> AppEnvironment { get; init; }
   [Inject]
   public required IJSRuntime JsRuntime { get; init; }
 
@@ -27,6 +27,11 @@ public class JsInteropableComponent : ViewportAwareComponent
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     await base.OnAfterRenderAsync(firstRender);
+
+    if (!AppEnvironment.Exists)
+    {
+      return;
+    }
 
     if (firstRender)
     {
@@ -55,7 +60,7 @@ public class JsInteropableComponent : ViewportAwareComponent
 
     // In Development, use a unique Guid to bust cache on every refresh.
     // In Production, use the stable Assembly Version.
-    return AppEnvironment.IsDevelopment()
+    return AppEnvironment.Maybe!.IsDevelopment()
         ? Guid.NewGuid().ToString("N")
         : appVersion;
   }

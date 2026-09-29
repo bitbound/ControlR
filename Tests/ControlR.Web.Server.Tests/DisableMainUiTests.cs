@@ -19,6 +19,7 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
   private const string ForgotPasswordMarker = "Forgot your password?";
   private const string LoginPageMarker = "Use a local account to log in.";
   private const string NavChromeMarker = "mud-navmenu";
+  private const string NotFoundActionsMarker = "Go Home";
   private const string NotFoundMarker = "Page Not Found";
 
   [Fact]
@@ -67,6 +68,7 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
 
     Assert.Contains(NotFoundMarker, page, StringComparison.Ordinal);
     Assert.DoesNotContain(LoginPageMarker, page, StringComparison.Ordinal);
+    Assert.DoesNotContain(NotFoundActionsMarker, page, StringComparison.Ordinal);
   }
 
   [Fact]
@@ -110,6 +112,7 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
 
     Assert.Contains(NotFoundMarker, page, StringComparison.Ordinal);
     Assert.DoesNotContain(NavChromeMarker, page, StringComparison.Ordinal);
+    Assert.DoesNotContain(NotFoundActionsMarker, page, StringComparison.Ordinal);
   }
 
   [Fact]
