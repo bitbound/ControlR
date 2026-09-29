@@ -2,7 +2,6 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace ControlR.Web.Server.Tests;
 
