@@ -161,6 +161,7 @@ jobs:
       actions: write
     outputs:
       version: ${{ steps.setver.outputs.version }}
+      prerelease: ${{ steps.setver.outputs.prerelease }}
     env:
       GH_TOKEN: ${{ secrets.GH_VARIABLES_PAT }}
     steps:
@@ -188,26 +189,44 @@ jobs:
           }
 
           Write-Host "Using source version: $env:VERSION"
+
+          # A build target may carry a SemVer prerelease suffix (e.g. '0.28.3.0-dev'). .NET
+          # versions are strictly numeric, so strip the suffix to get the assembly/file version
+          # core and remember that the build was a prerelease.
+          $sourceVersion = "$env:VERSION".Trim()
+          $suffixIndex = $sourceVersion.IndexOfAny([char[]]@('-', '+'))
+          $prereleaseFromVersion = $false
+          if ($suffixIndex -ge 0) {
+            $prereleaseFromVersion = $sourceVersion[$suffixIndex] -eq '-'
+            $sourceVersion = $sourceVersion.Substring(0, $suffixIndex)
+          }
+
           try {
-            $CurrentVersion = [System.Version]::Parse("$env:VERSION")
+            $CurrentVersion = [System.Version]::Parse($sourceVersion)
           }
           catch {
-            Write-Error "VERSION '$env:VERSION' is invalid. Expected numeric format like 1.2.3 or 1.2.3.0."
+            Write-Error "VERSION '$env:VERSION' is invalid. Expected a numeric version like 1.2.3 or 1.2.3.0, optionally with a prerelease suffix."
             exit 1
           }
 
           if ($CurrentVersion.Revision -eq -1) { 
             $CurrentVersion = [System.Version]::new($CurrentVersion.Major, $CurrentVersion.Minor, $CurrentVersion.Build, 0)
           }
-            
-          Write-Host "Resolved current version: $CurrentVersion"
+
+          # Prerelease when the version suffix said so, or when the input flag was set.
+          $PrereleaseFlag = if ($prereleaseFromVersion -or ("${{ inputs.prerelease }}" -eq "true")) { 'true' } else { 'false' }
+
+          Write-Host "Resolved numeric version: $CurrentVersion"
+          Write-Host "Pre-release: $PrereleaseFlag"
 
           if ("${{ inputs.skip_version_increment }}" -eq "true") {
             Write-Host "skip_version_increment is set. Using version as-is without bumping CURRENT_VERSION."
-            $NextVersion = $null
           }
           else {
-            $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1).0"
+            # Auto-increment the revision, not the build. Real releases never occupy the revision
+            # slot, so an auto-incremented version is self-identifying.
+            $revision = if ($CurrentVersion.Revision -lt 0) { 0 } else { $CurrentVersion.Revision }
+            $NextVersion = [System.Version]::new($CurrentVersion.Major, $CurrentVersion.Minor, $CurrentVersion.Build, $revision + 1).ToString(4)
             Write-Host "Next version will be: $NextVersion"
             # Persist next version to GH Variables for future runs
             if ($IsLinux) {
@@ -222,6 +241,7 @@ jobs:
           }
           # Expose the current version as a step output for this run
           echo "version=$CurrentVersion" >> $env:GITHUB_OUTPUT
+          echo "prerelease=$PrereleaseFlag" >> $env:GITHUB_OUTPUT
 
   download-customization:
     name: Download Customization Config
@@ -283,7 +303,7 @@ jobs:
     with:
       version: ${{ needs.set-version.outputs.version }}
       retention-days: ${{ fromJson(inputs.retention_days_artifacts) }}
-      prerelease: ${{ inputs.prerelease }}
+      prerelease: ${{ needs.set-version.outputs.prerelease }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
       use_local_storage: ${{ inputs.use_local_storage }}
     secrets: inherit
@@ -1038,7 +1058,7 @@ jobs:
       - name: Write Build Metadata
         shell: pwsh
         env:
-          PRERELEASE: ${{ inputs.prerelease }}
+          PRERELEASE: ${{ needs.set-version.outputs.prerelease }}
           SERVER_RIDS: ${{ steps.runtimes.outputs.rids }}
         run: |
           $PrereleaseValue = "$env:PRERELEASE".Trim().ToLowerInvariant()
@@ -1092,7 +1112,7 @@ jobs:
           USE_SELF_HOSTED_RUNNERS: ${{ inputs.use_self_hosted_runners }}
           USE_LOCAL_STORAGE: ${{ inputs.use_local_storage }}
           CUSTOMIZATION_CONFIG_URL: ${{ inputs.customization_config_url }}
-          PRERELEASE: ${{ inputs.prerelease }}
+          PRERELEASE: ${{ needs.set-version.outputs.prerelease }}
         run: |
           $Summary = @(
             "## Build Summary",

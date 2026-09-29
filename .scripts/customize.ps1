@@ -329,16 +329,29 @@ else {
     throw "Failed to get latest git tag for version. Please specify a version using the -Version parameter (e.g. '1.2.3.4')."
   }
   
-  $trimmedVersion = $latestTag.TrimStart('v')
+  $trimmedVersion = $latestTag.Trim() -replace '^v', ''
+  # A release tag may carry a SemVer prerelease suffix (e.g. 'v0.28.3.0-dev'). .NET versions
+  # are numeric, so drop the suffix before parsing.
+  $suffixIndex = $trimmedVersion.IndexOfAny([char[]]@('-', '+'))
+  if ($suffixIndex -ge 0) {
+    $trimmedVersion = $trimmedVersion.Substring(0, $suffixIndex)
+  }
+
   $parsedVersion = $null
   $versionIsValid = [System.Version]::TryParse($trimmedVersion, [ref] $parsedVersion)
   if (-not $versionIsValid) {
     throw "Latest git tag '$latestTag' is not a valid version format. Please specify a version using the -Version parameter (e.g. '1.2.3.4')."
   }
 
+  if ($parsedVersion.Build -lt 0) {
+    throw "Latest git tag '$latestTag' has no build component, so its revision cannot be incremented."
+  }
+
+  # Auto-increment the revision, not the build. Real releases never occupy the revision slot,
+  # so an auto-incremented version is self-identifying.
   $revision = if ($parsedVersion.Revision -ge 0) { $parsedVersion.Revision } else { 0 }
-  $Version = [System.Version]::new($parsedVersion.Major, $parsedVersion.Minor, $parsedVersion.Build + 1, $revision).ToString()
-  Write-Host "Using latest git tag for version with Build + 1: $Version" -ForegroundColor Green
+  $Version = [System.Version]::new($parsedVersion.Major, $parsedVersion.Minor, $parsedVersion.Build, $revision + 1).ToString(4)
+  Write-Host "Using latest git tag for version with Revision + 1: $Version" -ForegroundColor Green
 }
 
 $hexPattern = "^[0-9A-Fa-f]{6}$"
