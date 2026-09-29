@@ -15,7 +15,6 @@ namespace ControlR.Web.Server.Tests;
 /// <remarks>
 /// <see cref="IUserCreator"/> only needs a confirmation link for a brand-new tenant that is not being
 /// started by the first user, so the test creates one user first to leave that path.
-/// Ref: https://github.com/bitbound/ControlR/issues/175
 /// </remarks>
 public class UserCreatorConfirmationEmailTests(ITestOutputHelper testOutput)
 {

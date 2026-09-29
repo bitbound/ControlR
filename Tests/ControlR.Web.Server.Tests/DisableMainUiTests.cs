@@ -10,9 +10,6 @@ namespace ControlR.Web.Server.Tests;
 /// visible, every other UI route (including the Identity account pages) renders the not-found view,
 /// and the API surface is untouched.
 /// </summary>
-/// <remarks>
-/// Ref: https://github.com/bitbound/ControlR-dev/issues/195
-/// </remarks>
 public class DisableMainUiTests(ITestOutputHelper testOutput)
 {
   private const string ForgotPasswordMarker = "Forgot your password?";
