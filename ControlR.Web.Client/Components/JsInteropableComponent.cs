@@ -55,12 +55,17 @@ public class JsInteropableComponent : ViewportAwareComponent
 
   private string GetCacheBuster()
   {
+    if (!AppEnvironment.Exists)
+    {
+      return string.Empty;
+    }
+
     // Get the version of the main assembly (e.g., "1.0.0.12345")
     var appVersion = typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0";
 
     // In Development, use a unique Guid to bust cache on every refresh.
     // In Production, use the stable Assembly Version.
-    return AppEnvironment.Maybe!.IsDevelopment()
+    return AppEnvironment.Value.IsDevelopment()
         ? Guid.NewGuid().ToString("N")
         : appVersion;
   }
