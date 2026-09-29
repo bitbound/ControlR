@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -87,6 +88,19 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task HomePage_PersistsMainUiDisabledForWasmActivation()
+  {
+    using var disabledServer = await TestWebServerBuilder.CreateTestServer(testOutput, settings: DisabledSettings());
+    using var defaultServer = await TestWebServerBuilder.CreateTestServer(testOutput);
+
+    // WASM seeds the gate from persisted component state before its first render, so a gated page is
+    // never instantiated after activation. Without the persisted value the client would have to fetch
+    // it, and would render the gated page body while that fetch was in flight.
+    Assert.True(await GetPersistedMainUiDisabledAsync(disabledServer));
+    Assert.False(await GetPersistedMainUiDisabledAsync(defaultServer));
+  }
+
+  [Fact]
   public async Task HomePage_RendersNotFound_WhenMainUiDisabled()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(testOutput, settings: DisabledSettings());
@@ -108,23 +122,6 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
 
     Assert.Contains(NavChromeMarker, page, StringComparison.Ordinal);
     Assert.DoesNotContain(NotFoundMarker, page, StringComparison.Ordinal);
-  }
-
-  [Fact]
-  public async Task PublicServerSettings_ExposesDisableMainUi_AsConfigured()
-  {
-    using var disabledServer = await TestWebServerBuilder.CreateTestServer(testOutput, settings: DisabledSettings());
-    using var defaultServer = await TestWebServerBuilder.CreateTestServer(testOutput);
-
-    Assert.True(
-      await GetDisableMainUiAsync(disabledServer, "/api/v1/public-server-settings"),
-      "V1 public server settings should report disableMainUi as true.");
-    Assert.True(
-      await GetDisableMainUiAsync(disabledServer, "/api/public-server-settings"),
-      "Internal public server settings should report disableMainUi as true.");
-    Assert.False(
-      await GetDisableMainUiAsync(defaultServer, "/api/v1/public-server-settings"),
-      "V1 public server settings should default disableMainUi to false.");
   }
 
   [Fact]
@@ -150,11 +147,20 @@ public class DisableMainUiTests(ITestOutputHelper testOutput)
     ["AppOptions:DisableMainUi"] = "true"
   };
 
-  private static async Task<bool> GetDisableMainUiAsync(TestWebServer testServer, string path)
+  private static async Task<bool> GetPersistedMainUiDisabledAsync(TestWebServer testServer)
   {
-    var json = await (await testServer.GetHttpClient())
-      .GetStringAsync(path, TestContext.Current.CancellationToken);
-    using var document = JsonDocument.Parse(json);
-    return document.RootElement.GetProperty("disableMainUi").GetBoolean();
+    const string stateMarker = "Blazor-WebAssembly-Component-State:";
+    using var client = await testServer.GetHttpClient();
+    client.DefaultRequestHeaders.Accept.ParseAdd("text/html");
+
+    var page = await client.GetStringAsync("/", TestContext.Current.CancellationToken);
+    var stateStart = page.IndexOf(stateMarker, StringComparison.Ordinal) + stateMarker.Length;
+    var stateEnd = page.IndexOf("-->", stateStart, StringComparison.Ordinal);
+    var stateJson = Encoding.UTF8.GetString(Convert.FromBase64String(page[stateStart..stateEnd]));
+
+    using var state = JsonDocument.Parse(stateJson);
+    var encodedValue = state.RootElement.GetProperty("MainUiDisabled").GetString();
+    using var decodedValue = JsonDocument.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(encodedValue!)));
+    return decodedValue.RootElement.GetBoolean();
   }
 }

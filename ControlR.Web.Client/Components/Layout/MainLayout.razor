@@ -105,6 +105,11 @@
   {
     await base.OnInitializedAsync();
 
+    if (IsMainUiDisabled)
+    {
+      return;
+    }
+
     if (RendererInfo.IsInteractive)
     {
       AuthState.AuthenticationStateChanged += HandleAuthenticationStateChanged;

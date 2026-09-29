@@ -7,6 +7,7 @@ public interface IPersistentStateAccessor
   ThemeMode DefaultThemeMode { get; }
   bool IsDarkMode { get; }
   bool IsDecommissioned { get; }
+  bool MainUiDisabled { get; }
   UserInfo? UserInfo { get; }
 }
 
@@ -15,6 +16,7 @@ public sealed class PersistentStateAccessor : IPersistentStateAccessor, IDisposa
   private const string DarkModeKey = PersistentStateKeys.IsDarkMode;
   private const string DecommissionStateKey = PersistentStateKeys.ServerDecommissioned;
   private const string DefaultThemeModeKey = PersistentStateKeys.DefaultThemeMode;
+  private const string MainUiDisabledKey = PersistentStateKeys.MainUiDisabled;
   private const string UserInfoKey = PersistentStateKeys.UserInfo;
 
   private readonly ILogger<PersistentStateAccessor> _logger;
@@ -49,6 +51,15 @@ public sealed class PersistentStateAccessor : IPersistentStateAccessor, IDisposa
       IsDecommissioned = isDecommissioned;
     }
 
+    // Consumed by BaseLayout to seed IsMainUiDisabled synchronously before its first await in
+    // OnInitializedAsync, so a gated page is never instantiated during SSR to WASM hydration.
+    // DO NOT REMOVE. See the early seed in BaseLayout.OnInitializedAsync.
+    if (state.TryTakeFromJson<bool>(MainUiDisabledKey, out var mainUiDisabled))
+    {
+      _logger.LogDebug("Loaded persisted main UI disabled state: {MainUiDisabled}.", mainUiDisabled);
+      MainUiDisabled = mainUiDisabled;
+    }
+
     if (state.TryTakeFromJson<UserInfo>(UserInfoKey, out var userInfo) && userInfo is not null)
     {
       _logger.LogDebug("Loaded persisted user info for: {Email}.", userInfo.Email);
@@ -66,6 +77,7 @@ public sealed class PersistentStateAccessor : IPersistentStateAccessor, IDisposa
   public ThemeMode DefaultThemeMode { get; private set; }
   public bool IsDarkMode { get; private set; }
   public bool IsDecommissioned { get; private set; }
+  public bool MainUiDisabled { get; private set; }
   public UserInfo? UserInfo { get; private set; }
 
   public void Dispose()

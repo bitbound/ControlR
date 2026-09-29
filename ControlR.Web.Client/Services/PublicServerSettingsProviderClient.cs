@@ -32,7 +32,6 @@ internal class PublicServerSettingsProviderClient(
 
     return new InternalDtos.PublicServerSettings(
       IsPublicRegistrationEnabled: false,
-      DisableDesktopPreview: false,
-      DisableMainUi: false);
+      DisableDesktopPreview: false);
   }
 }

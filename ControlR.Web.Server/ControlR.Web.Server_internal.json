@@ -8149,8 +8149,7 @@
       "PublicServerSettings": {
         "required": [
           "isPublicRegistrationEnabled",
-          "disableDesktopPreview",
-          "disableMainUi"
+          "disableDesktopPreview"
         ],
         "type": "object",
         "properties": {
@@ -8158,9 +8157,6 @@
             "type": "boolean"
           },
           "disableDesktopPreview": {
-            "type": "boolean"
-          },
-          "disableMainUi": {
             "type": "boolean"
           }
         }
