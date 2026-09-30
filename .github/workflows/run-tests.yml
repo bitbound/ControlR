@@ -193,6 +193,9 @@ jobs:
           fetch-depth: 0
           clean: true
 
+      - name: Select Xcode matching the pinned workload band
+        run: ./.scripts/Select-MacOSXcode.ps1
+
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
