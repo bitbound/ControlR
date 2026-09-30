@@ -80,7 +80,7 @@ jobs:
             }
           }
 
-      - name: Fail if the committed documents are stale
+      - name: Fail if the committed OpenAPI docs are stale
         run: |
           $documents = @(
             "ControlR.Web.Server/ControlR.Web.Server_internal.json",
