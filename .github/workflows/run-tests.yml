@@ -42,12 +42,6 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      - name: Install macOS workload
-        run: dotnet workload install macos
-
-      - name: Restore
-        run: dotnet restore
-
       # The committed documents are removed before the build, so a build that stops generating them fails the
       # freshness step below instead of comparing the committed files against themselves.
       - name: Remove committed OpenAPI documents
@@ -145,9 +139,6 @@ jobs:
 
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
-
-      - name: Install macOS workload
-        run: dotnet workload install macos
 
       - name: Build Desktop Tests
         run: |
