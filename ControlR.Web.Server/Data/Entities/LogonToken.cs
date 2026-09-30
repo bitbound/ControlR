@@ -18,8 +18,8 @@ public class LogonToken : TenantEntityBase
   public string? SessionCorrelationId { get; set; }
 
   /// <summary>
-  /// Absolute cap on the cookie session minted when the token is redeemed. Sliding renewal
-  /// applies within this window.
+  /// Fixed duration, in minutes, of the cookie session minted when the token is redeemed.
+  /// The session is not activity-refreshed, so it ends this long after redemption.
   /// </summary>
   public int SessionExpirationMinutes { get; set; } = DtoLimits.SessionExpirationMinutesDefault;
 

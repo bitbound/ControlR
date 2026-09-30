@@ -3,7 +3,7 @@ using ControlR.Web.Server.Services.LogonTokens;
 namespace ControlR.Web.Server.Extensions.Dtos.V1;
 
 /// <summary>
-/// Maps the V1 logon token request DTOs to <see cref="LogonTokenCreationRequest"/>.
+/// Extension methods for converting V1 DTOs to internal business models.
 /// </summary>
 internal static class LogonTokenCreationRequestExtensions
 {
@@ -33,7 +33,8 @@ internal static class LogonTokenCreationRequestExtensions
       SessionCorrelationId: request.SessionCorrelationId,
       ExpirationMinutes: request.ExpirationMinutes,
       Scopes: ToDeviceScopes(request.Permissions, request.DeviceId),
-      AllowedDesktopSessionIds: NormalizeDesktopSessionIds(request.AllowedDesktopSessionIds));
+      AllowedDesktopSessionIds: NormalizeDesktopSessionIds(request.AllowedDesktopSessionIds),
+      SessionExpirationMinutes: request.SessionExpirationMinutes);
   }
 
   private static IReadOnlyList<int>? NormalizeDesktopSessionIds(IReadOnlyList<int>? sessionIds)

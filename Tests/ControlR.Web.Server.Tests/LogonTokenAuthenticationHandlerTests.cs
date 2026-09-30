@@ -4,6 +4,7 @@ using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -104,6 +105,57 @@ public class LogonTokenAuthenticationHandlerTests(ITestOutputHelper testOutput)
     var principalTypeClaim = result.Principal.FindFirst(PrincipalClaimTypes.PrincipalType);
     Assert.NotNull(principalTypeClaim);
     Assert.Equal(PrincipalClaimValues.User, principalTypeClaim.Value);
+  }
+
+  [Fact]
+  public async Task HandleAuthenticateAsync_ValidToken_SignsInCookieBoundedBySessionExpiration()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutputHelper);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var tenant = await services.CreateTestTenant();
+    var user = await services.CreateTestUser(tenant.Id);
+    var device = await services.CreateTestDevice(tenant.Id);
+
+    var logonTokenProvider = services.GetRequiredService<ILogonTokenProvider>();
+    var tokenResult = await logonTokenProvider.CreateToken(
+      device.Id, tenant.Id, user.Id,
+      sessionExpirationMinutes: 25,
+      cancellationToken: TestContext.Current.CancellationToken);
+    Assert.True(tokenResult.IsSuccess);
+
+    var context = CreateHttpContext(services, tokenResult.Value!.Token, device.Id);
+    var handler = await CreateHandler(services, context);
+
+    var result = await handler.AuthenticateAsync();
+
+    Assert.True(result.Succeeded);
+
+    // Redemption must mint the application cookie directly from token claims: the requested
+    // session duration as a fixed deadline, with refresh off so sliding renewal cannot
+    // extend it.
+    var setCookie = Assert.Single(context.Response.Headers["Set-Cookie"].ToArray());
+    Assert.NotNull(setCookie);
+    var cookieOptions = services.GetRequiredService<IOptionsMonitor<CookieAuthenticationOptions>>()
+      .Get(IdentityConstants.ApplicationScheme);
+    var cookiePairs = setCookie!.Split(';')
+      .Select(pair => pair.Trim())
+      .Select(pair => pair.Split('=', 2))
+      .Where(parts => parts.Length == 2)
+      .ToDictionary(parts => parts[0], parts => parts[1], StringComparer.OrdinalIgnoreCase);
+
+    Assert.Equal(cookieOptions.Cookie!.Name!, cookiePairs.Keys.First());
+    var cookieValue = cookiePairs.Values.First();
+
+    var ticket = cookieOptions.TicketDataFormat.Unprotect(cookieValue);
+    Assert.NotNull(ticket);
+    Assert.True(ticket.Properties.IsPersistent);
+    Assert.False(ticket.Properties.AllowRefresh);
+    // The ticket serializer truncates sub-second ticks, so compare at second precision.
+    Assert.Equal(
+      testApp.TimeProvider.GetUtcNow().AddMinutes(25).ToUnixTimeSeconds(),
+      ticket.Properties.ExpiresUtc?.ToUnixTimeSeconds());
   }
 
   private static DefaultHttpContext CreateHttpContext(IServiceProvider services, string token, Guid deviceId)
