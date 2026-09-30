@@ -223,10 +223,7 @@ jobs:
             Write-Host "skip_version_increment is set. Using version as-is without bumping CURRENT_VERSION."
           }
           else {
-            # Auto-increment the revision, not the build. Real releases never occupy the revision
-            # slot, so an auto-incremented version is self-identifying.
-            $revision = if ($CurrentVersion.Revision -lt 0) { 0 } else { $CurrentVersion.Revision }
-            $NextVersion = [System.Version]::new($CurrentVersion.Major, $CurrentVersion.Minor, $CurrentVersion.Build, $revision + 1).ToString(4)
+            $NextVersion = "$($CurrentVersion.Major).$($CurrentVersion.Minor).$($CurrentVersion.Build + 1).0"
             Write-Host "Next version will be: $NextVersion"
             # Persist next version to GH Variables for future runs
             if ($IsLinux) {
