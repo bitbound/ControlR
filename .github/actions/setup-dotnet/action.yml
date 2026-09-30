@@ -10,3 +10,4 @@ runs:
         dotnet-version: |
           9.x
           10.x
+        global-json-file: global.json

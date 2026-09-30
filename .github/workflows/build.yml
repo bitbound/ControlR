@@ -326,18 +326,21 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.ref || '' }}
 
-      - name: Setup Xcode
-        if: inputs.use_self_hosted_runners == false
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '26.6'
+      - name: Select band-26.0 Xcode
+        run: |
+          xc=$(ls -d /Applications/Xcode_26.0*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$xc" ]; then
+            ls -d /Applications/Xcode* 2>/dev/null || true
+            echo "ERROR: the .NET macOS workload band 26.0 requires an Xcode 26.0.x bundle; none found."
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=$xc/Contents/Developer" >> "$GITHUB_ENV"
+          "$xc/Contents/Developer/usr/bin/xcodebuild" -version
 
       - name: Setup .NET
-        if: inputs.use_self_hosted_runners == false
         uses: ./.github/actions/setup-dotnet
 
       - name: Install macOS workload
-        if: inputs.use_self_hosted_runners == false
         run: dotnet workload install macos
 
       - name: Setup Code Signing Keychain
