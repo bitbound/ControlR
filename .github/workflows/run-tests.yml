@@ -42,12 +42,6 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      - name: Install macOS workload
-        run: dotnet workload install macos
-
-      - name: Restore
-        run: dotnet restore
-
       # The committed documents are removed before the build, so a build that stops generating them fails the
       # freshness step below instead of comparing the committed files against themselves.
       - name: Remove committed OpenAPI documents
@@ -80,7 +74,7 @@ jobs:
             }
           }
 
-      - name: Fail if the committed documents are stale
+      - name: Fail if the committed OpenAPI docs are stale
         run: |
           $documents = @(
             "ControlR.Web.Server/ControlR.Web.Server_internal.json",
@@ -146,9 +140,6 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      - name: Install macOS workload
-        run: dotnet workload install macos
-
       - name: Build Desktop Tests
         run: |
           $testProjects = @(
@@ -192,6 +183,9 @@ jobs:
         with:
           fetch-depth: 0
           clean: true
+
+      - name: Select Xcode matching the pinned workload band
+        run: ./.scripts/Select-MacOSXcode.ps1
 
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet

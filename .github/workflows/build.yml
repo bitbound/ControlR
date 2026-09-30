@@ -328,42 +328,7 @@ jobs:
 
       - name: Select Xcode matching the pinned workload band
         shell: pwsh
-        run: |
-          [xml]$props = Get-Content -Raw Directory.Build.props
-          $band = $props.SelectSingleNode("//MacTargetPlatformVersion")?.InnerText?.Trim()
-          if ([string]::IsNullOrWhiteSpace($band)) {
-            Write-Error "Could not read MacTargetPlatformVersion from Directory.Build.props."
-            exit 1
-          }
-
-          # Bundle names differ by installer (Xcode_26.0.1.app on hosted images,
-          # Xcode-26.0.1.app from xcodes), so match the version a bundle reports,
-          # not its name. Highest patch within the band wins.
-          $bandMatches = @()
-          $found = @()
-          foreach ($app in @(Get-ChildItem -LiteralPath '/Applications' -Directory -Filter 'Xcode*.app' -ErrorAction SilentlyContinue)) {
-            $xcodebuild = Join-Path $app.FullName 'Contents/Developer/usr/bin/xcodebuild'
-            if (-not (Test-Path -LiteralPath $xcodebuild)) { continue }
-            $report = & $xcodebuild -version 2>$null | Out-String
-            if ($report -notmatch 'Xcode\s+([\d.]+)') { continue }
-            $version = $Matches[1]
-            $found += "$($app.FullName) -> Xcode $version"
-            $majorMinor = ($version.TrimEnd('.') -split '\.')[0..1] -join '.'
-            if ($majorMinor -eq $band) {
-              $bandMatches += [pscustomobject]@{ Version = $version; Path = $app.FullName }
-            }
-          }
-
-          if ($bandMatches.Count -eq 0) {
-            Write-Host ($found -join [Environment]::NewLine)
-            Get-ChildItem -LiteralPath '/Applications' -Filter 'Xcode*' -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name }
-            Write-Error "No installed Xcode reports version $band.x."
-            exit 1
-          }
-
-          $xc = ($bandMatches | Sort-Object { [version]$_.Version } | Select-Object -Last 1).Path
-          "DEVELOPER_DIR=$xc/Contents/Developer" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          & (Join-Path $xc 'Contents/Developer/usr/bin/xcodebuild') -version
+        run: ./.scripts/Select-MacOSXcode.ps1
 
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
