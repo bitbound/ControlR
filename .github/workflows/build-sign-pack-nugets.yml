@@ -47,21 +47,17 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      - name: Install macOS workload
-        if: inputs.use_self_hosted_runners == false
-        run: dotnet workload install macos
-
-      - name: Restore Solution
+      - name: Restore Package Projects
         shell: pwsh
         run: |
-          dotnet restore
+          dotnet restore Build/ControlR.Packages.slnf
 
-      - name: Build Solution
+      - name: Build Package Projects
         shell: pwsh
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          dotnet build -c Release --no-restore -p:FileVersion="$env:VERSION" -p:AssemblyVersion="$env:VERSION"
+          dotnet build Build/ControlR.Packages.slnf -c Release --no-restore -p:FileVersion="$env:VERSION" -p:AssemblyVersion="$env:VERSION"
 
       - name: Azure Login
         uses: azure/login@v3
@@ -90,29 +86,23 @@ jobs:
           AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
           AZURE_KEY_VAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
         run: |
-          $projects = @(
-            @{ path = "ControlR.ApiClient/ControlR.ApiClient.csproj"; name = "ApiClientNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.Branding/ControlR.Libraries.Branding.csproj"; name = "BrandingNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.DataRedaction/ControlR.Libraries.DataRedaction.csproj"; name = "DataRedactionNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.Api.Contracts/ControlR.Libraries.Api.Contracts.csproj"; name = "ApiContractsNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.Shared/ControlR.Libraries.Shared.csproj"; name = "LibrariesSharedNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.Signalr.Client/ControlR.Libraries.Signalr.Client.csproj"; name = "SignalrClientNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.WebSocketRelay.Client/ControlR.Libraries.WebSocketRelay.Client.csproj"; name = "WebSocketRelayClientNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.Messenger.Extensions/ControlR.Libraries.Messenger.Extensions.csproj"; name = "MessengerExtensionsNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.Viewer.Common/ControlR.Libraries.Viewer.Common.csproj"; name = "ViewerCommonNuGet" },
-            @{ path = "Libraries/ControlR.Libraries.Avalonia/ControlR.Libraries.Avalonia.csproj"; name = "LibrariesAvaloniaNuGet" },
-            @{ path = "ControlR.Viewer.Avalonia/ControlR.Viewer.Avalonia.csproj"; name = "ViewerAvaloniaNuGet" }
-          )
+          $packagesFilter = Get-Content -Raw 'Build/ControlR.Packages.slnf' | ConvertFrom-Json
+          $projectPaths = @($packagesFilter.solution.projects)
+
+          if ($projectPaths.Count -eq 0) {
+            Write-Error "No projects found in Build/ControlR.Packages.slnf"
+            exit 1
+          }
 
           # Create a single flat output directory for all packages
-          $flatOutputDir = ".\nuget-packages"
+          $flatOutputDir = Join-Path (Get-Location) 'nuget-packages'
           New-Item -Path $flatOutputDir -ItemType Directory -Force | Out-Null
 
-          foreach ($project in $projects) {
-            $projectFullPath = Resolve-Path $project.path
+          foreach ($projectPath in $projectPaths) {
+            $projectFullPath = (Resolve-Path $projectPath.Replace('\', '/')).Path
             $projectDir = Split-Path -Parent $projectFullPath
             $projectName = [System.IO.Path]::GetFileNameWithoutExtension($projectFullPath)
-            $packageOutputDir = Join-Path $projectDir "bin\Release\packages"
+            $packageOutputDir = Join-Path (Join-Path (Join-Path $projectDir 'bin') 'Release') 'packages'
 
             # Determine package version
             $PackageVersion = $env:VERSION
@@ -123,7 +113,7 @@ jobs:
             Write-Host "Processing $projectName..."
 
             # Sign the DLL
-            $signPattern = "$projectDir\bin\Release\**\$projectName.dll"
+            $signPattern = Join-Path (Join-Path (Join-Path (Join-Path $projectDir 'bin') 'Release') '**') "$projectName.dll"
             dnx azuresigntool --yes sign `
               --du="$env:SIGNING_DESCRIPTION_URL" `
               --fd=sha256 `
@@ -156,10 +146,10 @@ jobs:
             }
 
             # Copy packages to flat output directory
-            Copy-Item -Path "$packageOutputDir\*.nupkg" -Destination $flatOutputDir -Force
-            Copy-Item -Path "$packageOutputDir\*.snupkg" -Destination $flatOutputDir -Force
+            Copy-Item -Path (Join-Path $packageOutputDir '*.nupkg') -Destination $flatOutputDir -Force
+            Copy-Item -Path (Join-Path $packageOutputDir '*.snupkg') -Destination $flatOutputDir -Force
 
-            Write-Host "Copied $project.name packages to flat output directory"
+            Write-Host "Copied $projectName packages to flat output directory"
           }
 
       - name: Upload NuGet Packages

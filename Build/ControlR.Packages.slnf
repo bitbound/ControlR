@@ -1,0 +1,18 @@
+{
+  "solution": {
+    "path": "..\\ControlR.slnx",
+    "projects": [
+      "ControlR.ApiClient\\ControlR.ApiClient.csproj",
+      "ControlR.Viewer.Avalonia\\ControlR.Viewer.Avalonia.csproj",
+      "Libraries\\ControlR.Libraries.Api.Contracts\\ControlR.Libraries.Api.Contracts.csproj",
+      "Libraries\\ControlR.Libraries.Avalonia\\ControlR.Libraries.Avalonia.csproj",
+      "Libraries\\ControlR.Libraries.Branding\\ControlR.Libraries.Branding.csproj",
+      "Libraries\\ControlR.Libraries.DataRedaction\\ControlR.Libraries.DataRedaction.csproj",
+      "Libraries\\ControlR.Libraries.Messenger.Extensions\\ControlR.Libraries.Messenger.Extensions.csproj",
+      "Libraries\\ControlR.Libraries.Shared\\ControlR.Libraries.Shared.csproj",
+      "Libraries\\ControlR.Libraries.Signalr.Client\\ControlR.Libraries.Signalr.Client.csproj",
+      "Libraries\\ControlR.Libraries.Viewer.Common\\ControlR.Libraries.Viewer.Common.csproj",
+      "Libraries\\ControlR.Libraries.WebSocketRelay.Client\\ControlR.Libraries.WebSocketRelay.Client.csproj"
+    ]
+  }
+}
