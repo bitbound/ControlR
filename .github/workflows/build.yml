@@ -326,12 +326,17 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.ref || '' }}
 
-      - name: Select band-26.0 Xcode
+      - name: Select Xcode matching the pinned workload band
         run: |
-          xc=$(ls -d /Applications/Xcode_26.0*.app 2>/dev/null | sort -V | tail -1 || true)
+          band=$(sed -n 's:.*<MacTargetPlatformVersion>\(.*\)</MacTargetPlatformVersion>.*:\1:p' Directory.Build.props | tr -d '[:space:]')
+          if [ -z "$band" ]; then
+            echo "ERROR: could not read MacTargetPlatformVersion from Directory.Build.props."
+            exit 1
+          fi
+          xc=$(ls -d /Applications/Xcode_${band}*.app 2>/dev/null | sort -V | tail -1 || true)
           if [ -z "$xc" ]; then
             ls -d /Applications/Xcode* 2>/dev/null || true
-            echo "ERROR: the .NET macOS workload band 26.0 requires an Xcode 26.0.x bundle; none found."
+            echo "ERROR: the .NET macOS workload band $band requires a matching Xcode bundle; none found."
             exit 1
           fi
           echo "DEVELOPER_DIR=$xc/Contents/Developer" >> "$GITHUB_ENV"

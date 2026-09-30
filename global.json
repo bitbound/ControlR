@@ -2,6 +2,6 @@
   "sdk": {
     "version": "10.0.401",
     "rollForward": "latestPatch",
-    "errorMessage": "ControlR builds pin the .NET 10.0.4xx feature band (>= 10.0.401). CI installs it automatically; developers can download it from https://dotnet.microsoft.com/download/dotnet/10.0"
+    "errorMessage": "The .NET SDK pinned in global.json is not installed. CI installs it automatically; developers can get it from https://dotnet.microsoft.com/download/dotnet/10.0"
   }
 }
