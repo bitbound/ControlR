@@ -1,14 +1,14 @@
 # Selects the installed Xcode bundle that matches the pinned macOS workload band.
 #
-# GitHub-hosted images install each major.minor Xcode under a real directory
-# (Xcode_26.0.1.app) plus a name-only symlink (Xcode_26.0.app). The .NET macOS
-# workload resolves actool through that path, and it breaks when the selected
-# Xcode sits behind a symlink. So we always hand back the real path of a real
-# bundle and never a symlink. See dotnet/macios#21762.
+# GitHub-hosted images install each Xcode under a real directory (Xcode_26.0.1.app)
+# plus name-only symlinks (Xcode_26.0.app, Xcode.app). The .NET macOS workload
+# resolves actool through the selected path and breaks when that path runs through
+# a symlink, so the chosen bundle is always resolved to its real path first.
+# See dotnet/macios#21762.
 #
 # Self-hosted Macs install bundles with xcodes naming (Xcode-26.0.1.app). Bundle
-# names differ by installer, so we match the version a bundle reports rather than
-# its name and pick the highest patch inside the band.
+# names differ by installer, so bundles are matched by the version each one reports
+# rather than by name, and the highest patch inside the band wins.
 
 [CmdletBinding()]
 param(
@@ -18,28 +18,32 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Resolve symlinks in a path (all components, not just the leaf) without
-# requiring the path to exist first.
+# Follows a path through symbolic links until it reaches a real file or directory.
+# Returns the input path unchanged when nothing along it is a link. A relative link
+# target is resolved against the link's own directory, which is how the filesystem
+# reads it; resolving it against the process working directory would miss the link
+# and hand back a symlinked path.
 function Resolve-RealPath {
-  param([Parameter(Mandatory)][string]$Path, [switch]$LeafOnly)
+  param([Parameter(Mandatory)][string]$Path)
 
-  $resolved = [System.IO.Path]::GetFullPath($Path)
-  if ($LeafOnly) {
-    $item = Get-Item -LiteralPath $resolved -Force -ErrorAction SilentlyContinue
-    if ($item) { return $item.FullName }
-    return $resolved
+  $current = [System.IO.Path]::GetFullPath($Path)
+  # Bounded so a link cycle cannot spin forever.
+  for ($depth = 0; $depth -lt 32; $depth++) {
+    $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+    if (-not $item) { return $current }
+    if (-not $item.LinkType) { return $item.FullName }
+
+    $target = @($item.Target)[0]
+    if ([string]::IsNullOrWhiteSpace($target)) { return $item.FullName }
+
+    $current = if ([System.IO.Path]::IsPathRooted($target)) {
+      [System.IO.Path]::GetFullPath($target)
+    } else {
+      $parent = [System.IO.Path]::GetDirectoryName($item.FullName)
+      [System.IO.Path]::GetFullPath((Join-Path $parent $target))
+    }
   }
-
-  $item = Get-Item -LiteralPath $resolved -Force -ErrorAction SilentlyContinue
-  if (-not $item) { return $resolved }
-
-  $current = $item
-  while ($current -and $current.PSObject.Properties['LinkType'] -and $current.LinkType) {
-    $current = $current.Target | Select-Object -First 1
-    $current = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
-  }
-  if ($current) { return $current.FullName }
-  return $item.FullName
+  return $current
 }
 
 if (-not (Test-Path -LiteralPath $PropsPath)) {
@@ -54,6 +58,9 @@ if ([string]::IsNullOrWhiteSpace($band)) {
 
 $bandMatches = @()
 $found = @()
+# Real bundle paths already recorded, so several version-named symlinks onto one bundle
+# are collapsed into a single candidate.
+$seenPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($app in @(Get-ChildItem -LiteralPath $ApplicationsPath -Directory -Filter 'Xcode*.app' -ErrorAction SilentlyContinue)) {
   # Resolve the bundle symlink to a real bundle. A bundle that resolves to itself
   # is already real.
@@ -68,9 +75,7 @@ foreach ($app in @(Get-ChildItem -LiteralPath $ApplicationsPath -Directory -Filt
   $version = $Matches[1]
   $found += "$($app.Name) -> Xcode $version ($realApp)"
   $majorMinor = ($version.TrimEnd('.') -split '\.')[0..1] -join '.'
-  # A resolved bundle is used by its real name only once, even though several
-  # version-named symlinks can point at it.
-  if ($majorMinor -eq $band -and $realApp -notin $bandMatches.Path) {
+  if ($majorMinor -eq $band -and $seenPaths.Add($realApp)) {
     $bandMatches += [pscustomobject]@{ Version = $version; Path = $realApp }
   }
 }
@@ -91,14 +96,13 @@ if ($env:GITHUB_ENV) {
 }
 $env:DEVELOPER_DIR = $developerDir
 
-# The runner's active Xcode may itself be a symlink (the hosted image points
-# xcode-select at /Applications/Xcode.app). xcode-select stores whatever path it
-# is given, so xcrun -find would keep resolving through a symlink. Repoint it at
-# the real bundle. A no-op when the active bundle is already real.
+# The runner's active Xcode is a version-named bundle on the hosted image, and that
+# bundle is a symlink. xcode-select stores whatever path it is given, so leaving it
+# pointed at a symlink keeps xcrun -find resolving through it. Repoint it at the real
+# bundle. A no-op when xcode-select already points at the bundle we picked.
 if ($IsMacOS) {
   $activeDir = (& /usr/bin/xcode-select -p 2>$null | Out-String).Trim()
-  $activeBrand = if ($activeDir) { Resolve-RealPath -Path $activeDir -LeafOnly } else { '' }
-  if ($activeBrand -and ($activeBrand -ne $developerDir)) {
+  if ($activeDir -and ($activeDir -ne $developerDir)) {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     & sudo /usr/bin/xcode-select --switch $developerDir *> $null
