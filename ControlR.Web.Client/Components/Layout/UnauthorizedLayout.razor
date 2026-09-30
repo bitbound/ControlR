@@ -1,0 +1,24 @@
+@inherits LayoutComponentBase
+
+<div class="@ThemeClass">
+  <ControlRLayoutProvider CurrentPalette="@CurrentPalette" IsDarkMode="@IsDarkMode" CustomTheme="@_customTheme">
+    <MudMainContent Class="d-flex align-center justify-center pa-4" Style="min-height: 100vh;">
+      @Body
+    </MudMainContent>
+  </ControlRLayoutProvider>
+</div>
+
+@code {
+  private readonly MudTheme _customTheme = new()
+  {
+    PaletteDark = Theme.DarkPalette,
+    PaletteLight = Theme.LightPalette
+  };
+
+  [CascadingParameter(Name = "DefaultThemeMode")]
+  private ThemeMode DefaultThemeMode { get; set; }
+
+  private Palette CurrentPalette => IsDarkMode ? _customTheme.PaletteDark : _customTheme.PaletteLight;
+  private bool IsDarkMode => DefaultThemeMode != ThemeMode.Light;
+  private string ThemeClass => IsDarkMode ? "dark-mode" : "light-mode";
+}

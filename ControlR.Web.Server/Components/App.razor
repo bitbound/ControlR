@@ -24,7 +24,9 @@
 <body>
   <CascadingValue Value="HttpContext.AcceptsInteractiveRouting()" Name="AcceptsInteractiveRouting">
     <CascadingValue Value="_defaultThemeMode" Name="DefaultThemeMode">
-      <Routes @rendermode="PageRenderMode" />
+      <CascadingValue Value="AppOptions.Value.DisableMainUi" Name="MainUiDisabled">
+        <Routes @rendermode="PageRenderMode" />
+      </CascadingValue>
     </CascadingValue>
   </CascadingValue>
   <script src="@Assets["_framework/blazor.web.js"]"></script>

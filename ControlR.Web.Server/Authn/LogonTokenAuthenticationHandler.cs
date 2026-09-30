@@ -115,11 +115,16 @@ public class LogonTokenAuthenticationHandler(
     var principal = new ClaimsPrincipal(identity);
     var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
+    // The session is bounded by the token's SessionExpirationMinutes, measured from redemption.
+    // AllowRefresh is false so the cookie handler's sliding renewal can't extend past the cap:
+    // its refresh logic re-slides the full remaining window, so an absolute deadline is the
+    // only way to enforce it. A technician who needs more time gets a fresh token from the
+    // calling application.
     var cookieProperties = new AuthenticationProperties
     {
-      ExpiresUtc = tokenValidation.ExpiresAt,
-      IsPersistent = true,
-      AllowRefresh = false
+      AllowRefresh = false,
+      ExpiresUtc = _timeProvider.GetUtcNow().AddMinutes(tokenValidation.SessionExpirationMinutes),
+      IsPersistent = true
     };
     await Context.SignInAsync(IdentityConstants.ApplicationScheme, principal, cookieProperties);
 

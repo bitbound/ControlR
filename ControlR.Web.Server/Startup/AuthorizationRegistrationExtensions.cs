@@ -1,3 +1,4 @@
+using ControlR.Web.Client;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Components.Account;
@@ -24,6 +25,17 @@ public static class AuthorizationRegistrationExtensions
         if (context.Request.Path.StartsWithSegments("/api"))
         {
           context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+          return Task.CompletedTask;
+        }
+
+        // The Identity pages render as not-found when the main UI is disabled, so a login
+        // redirect would dead-end. The query string is dropped so a logonToken is never echoed.
+        var disableMainUi = context.HttpContext.RequestServices
+          .GetRequiredService<IOptions<AppOptions>>()
+          .Value.DisableMainUi;
+        if (disableMainUi)
+        {
+          context.Response.Redirect(ClientRoutes.Unauthorized);
           return Task.CompletedTask;
         }
 

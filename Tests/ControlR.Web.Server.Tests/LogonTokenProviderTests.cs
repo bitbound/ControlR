@@ -91,6 +91,49 @@ public class LogonTokenProviderTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task CreateToken_SessionExpirationMinutesDefaultsToDtoLimit()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+
+    var createResult = await logonTokenProvider.CreateToken(deviceId, tenant.Id, user.Id, cancellationToken: TestContext.Current.CancellationToken);
+    Assert.True(createResult.IsSuccess);
+
+    var validateResult = await logonTokenProvider.ValidateToken(createResult.Value.Token, TestContext.Current.CancellationToken);
+
+    Assert.True(validateResult.IsValid);
+    Assert.Equal(DtoLimits.SessionExpirationMinutesDefault, validateResult.SessionExpirationMinutes);
+  }
+
+  [Fact]
+  public async Task CreateToken_SessionExpirationMinutes_RoundTripsThroughValidation()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.App.Services.CreateScope();
+    var logonTokenProvider = scope.ServiceProvider.GetRequiredService<ILogonTokenProvider>();
+
+    var deviceId = Guid.NewGuid();
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+
+    var createResult = await logonTokenProvider.CreateToken(
+      deviceId, tenant.Id, user.Id,
+      sessionExpirationMinutes: 25,
+      cancellationToken: TestContext.Current.CancellationToken);
+    Assert.True(createResult.IsSuccess);
+
+    var validateResult = await logonTokenProvider.ValidateToken(createResult.Value.Token, TestContext.Current.CancellationToken);
+
+    Assert.True(validateResult.IsValid);
+    Assert.Equal(25, validateResult.SessionExpirationMinutes);
+  }
+
+  [Fact]
   public async Task CreateToken_WithInvalidUserId_ReturnsNotFound()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);

@@ -10,7 +10,6 @@ namespace ControlR.Web.Server.Tests;
 /// </summary>
 /// <remarks>
 /// End-to-end forged-header behavior is covered by <c>ForgedForwardedHostTests</c>.
-/// Ref: https://github.com/bitbound/ControlR/issues/175
 /// </remarks>
 public class PublicUrlProviderTests(ITestOutputHelper testOutput)
 {

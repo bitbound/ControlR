@@ -24,9 +24,6 @@ namespace ControlR.Web.Server.Tests;
 /// still present. NetworkTrust clears the trusted lists, which is what makes a Cloudflare-fronted origin
 /// behave the same way in production.
 /// </para>
-/// <para>
-/// Ref: https://github.com/bitbound/ControlR/issues/175
-/// </para>
 /// </remarks>
 public partial class ForgedForwardedHostTests(ITestOutputHelper testOutput)
 {

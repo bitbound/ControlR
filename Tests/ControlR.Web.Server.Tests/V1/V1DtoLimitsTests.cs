@@ -43,6 +43,37 @@ public class V1DtoLimitsTests
   }
 
   [Fact]
+  public void CreateLogonTokenForExternalRequestDto_SessionExpirationAtDefault_IsValid()
+  {
+    var dto = new V1Dtos.CreateLogonTokenForExternalRequestDto(
+      DeviceId: Guid.NewGuid(),
+      TenantId: Guid.NewGuid(),
+      UserCorrelationId: "corr-123");
+
+    var results = new List<ValidationResult>();
+    var isValid = Validator.TryValidateObject(dto, new ValidationContext(dto), results, validateAllProperties: true);
+
+    Assert.True(isValid);
+    Assert.Equal(DtoLimits.SessionExpirationMinutesDefault, dto.SessionExpirationMinutes);
+  }
+
+  [Fact]
+  public void CreateLogonTokenForExternalRequestDto_SessionExpirationOverLimit_IsNotValid()
+  {
+    var dto = new V1Dtos.CreateLogonTokenForExternalRequestDto(
+      DeviceId: Guid.NewGuid(),
+      TenantId: Guid.NewGuid(),
+      UserCorrelationId: "corr-123",
+      SessionExpirationMinutes: DtoLimits.SessionExpirationMinutesMax + 1);
+
+    var results = new List<ValidationResult>();
+    var isValid = Validator.TryValidateObject(dto, new ValidationContext(dto), results, validateAllProperties: true);
+
+    Assert.False(isValid);
+    Assert.Contains(results, r => r.MemberNames.Contains(nameof(V1Dtos.CreateLogonTokenForExternalRequestDto.SessionExpirationMinutes)));
+  }
+
+  [Fact]
   public void CreateLogonTokenForUserRequestDto_PermissionsAtLimit_IsValid()
   {
     var values = Enumerable.Repeat("permission.foo", DtoLimits.PermissionsMaxLength).ToArray();

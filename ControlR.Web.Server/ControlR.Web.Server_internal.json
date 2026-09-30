@@ -8014,6 +8014,14 @@
             "items": {
               "$ref": "#/components/schemas/CredentialScopeDto"
             }
+          },
+          "sessionExpirationMinutes": {
+            "maximum": 1440,
+            "minimum": 5,
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": "integer",
+            "format": "int32",
+            "default": 480
           }
         }
       },

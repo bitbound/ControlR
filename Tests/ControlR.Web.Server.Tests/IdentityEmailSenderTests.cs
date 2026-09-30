@@ -15,7 +15,6 @@ namespace ControlR.Web.Server.Tests;
 /// <c>MapIdentityApi</c> builds its confirmation links from the arriving request's scheme and host, so
 /// this seam is what stops a forged <c>Host</c> from putting a genuine token-bearing link in front of a
 /// victim. End-to-end coverage lives in <c>ForgedForwardedHostTests</c>.
-/// Ref: https://github.com/bitbound/ControlR/issues/175
 /// </remarks>
 public class IdentityEmailSenderTests
 {

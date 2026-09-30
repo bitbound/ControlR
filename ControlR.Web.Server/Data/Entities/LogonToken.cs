@@ -17,6 +17,12 @@ public class LogonToken : TenantEntityBase
   [StringLength(DtoLimits.SessionCorrelationIdMaxLength)]
   public string? SessionCorrelationId { get; set; }
 
+  /// <summary>
+  /// Fixed duration, in minutes, of the cookie session minted when the token is redeemed.
+  /// The session is not activity-refreshed, so it ends this long after redemption.
+  /// </summary>
+  public int SessionExpirationMinutes { get; set; } = DtoLimits.SessionExpirationMinutesDefault;
+
   [StringLength(256)]
   public required string Token { get; set; }
   public AppUser? User { get; set; }

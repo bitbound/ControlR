@@ -20,9 +20,6 @@ namespace ControlR.Web.Server.Components.Account;
 /// Links built by ControlR's own pages already come from <see cref="IPublicUrlProvider"/> and arrive
 /// with the correct origin. Rewriting them is a no-op.
 /// </para>
-/// <para>
-/// Ref: https://github.com/bitbound/ControlR/issues/175
-/// </para>
 /// </remarks>
 internal sealed class IdentityEmailSender(
   IEmailSender emailSender,

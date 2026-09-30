@@ -43,9 +43,12 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   protected bool IsDarkMode { get; set; } = true;
   [CascadingParameter(Name = "AcceptsInteractiveRouting")]
   protected bool IsInteractiveRoutingPage { get; set; }
+  protected bool IsMainUiDisabled { get; private set; }
   protected PersistingComponentStateSubscription PersistingSubscription { get; set; }
   [CascadingParameter(Name = "DefaultThemeMode")]
   protected ThemeMode ServerDefaultThemeMode { get; set; }
+  [CascadingParameter(Name = "MainUiDisabled")]
+  protected bool ServerMainUiDisabled { get; set; }
   protected string ThemeClass => IsDarkMode ? "dark-mode" : "light-mode";
 
   public virtual ValueTask DisposeAsync()
@@ -78,6 +81,14 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
+
+    // Seed the main UI gate synchronously, before any await.  A gated page must never be
+    // instantiated, and a render that happens while this value is still being fetched would
+    // render the page body first.  The value is the server's AppOptions setting either way:
+    // cascaded from App.razor during prerender, persisted for WASM by PersistLayoutState.
+    IsMainUiDisabled = PersistentState.Exists
+        ? PersistentState.Value.MainUiDisabled
+        : ServerMainUiDisabled;
 
     // Set IsDarkMode synchronously before the first await.  Blazor can render between
     // await yield points within OnInitializedAsync.  If IsDarkMode is still the field
@@ -119,7 +130,7 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
     // During SSR, register a callback to persist state before the response is sent.
     if (!PersistentState.Exists)
     {
-      PersistingSubscription = ApplicationState.RegisterOnPersisting(PersistThemeState);
+      PersistingSubscription = ApplicationState.RegisterOnPersisting(PersistLayoutState);
     }
 
     if (RendererInfo.IsInteractive)
@@ -174,10 +185,11 @@ public abstract class BaseLayout : LayoutComponentBase, IAsyncDisposable
   // Persists the SSR-computed IsDarkMode so WASM hydration can seed it before the
   // first await (see the early-set above).  Without this, WASM would flash dark
   // before UpdateIsDarkMode runs.  DO NOT REMOVE.
-  private Task PersistThemeState()
+  private Task PersistLayoutState()
   {
     ApplicationState.PersistAsJson(PersistentStateKeys.IsDarkMode, IsDarkMode);
     ApplicationState.PersistAsJson(PersistentStateKeys.DefaultThemeMode, ServerDefaultThemeMode);
+    ApplicationState.PersistAsJson(PersistentStateKeys.MainUiDisabled, IsMainUiDisabled);
     return Task.CompletedTask;
   }
 

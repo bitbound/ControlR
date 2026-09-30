@@ -14,9 +14,6 @@ namespace ControlR.Web.Server.Tests;
 /// whole list, so raising it project-wide would ban the Internal routes' bare-string error shortcuts
 /// along with it.
 /// </para>
-/// <para>
-/// Ref: https://github.com/bitbound/ControlR/issues/175
-/// </para>
 /// </remarks>
 public class RequestOriginGuardrailTests
 {

@@ -85,6 +85,13 @@ public class AppOptions
   public bool DisableFirstUserSelfRegistration { get; init; }
 
   /// <summary>
+  /// When enabled, only the device access pages remain visible. All other UI routes, including
+  /// the Identity account pages, render a not-found view. API endpoints are unaffected.
+  /// Use this on instances where an external application manages the server through the API.
+  /// </summary>
+  public bool DisableMainUi { get; init; }
+
+  /// <summary>
   /// The Gateway IP address that must match the IP address used by the Docker gateway.
   /// This is used for proper network configuration in Docker environments.
   /// </summary>

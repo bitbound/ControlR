@@ -5,83 +5,89 @@
 <div class="@ThemeClass">
   <ControlRLayoutProvider CurrentPalette="@CurrentPalette" @bind-IsDarkMode="@IsDarkMode" CustomTheme="@CustomTheme">
 
-    <MudLayout>
-      <MudAppBar Elevation="1">
-
-        @if (RendererInfo.IsInteractive)
-        {
-          <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
-                         OnClick="@(_ => ToggleNavDrawer())" />
-        }
-        else
-        {
-          <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
-                                    Edge="Edge.Start" />
-        }
-
-        <MudLink Href="/" Underline="Underline.None" Class="d-flex">
-          <MudImage Src=@Assets["static/appicon-192.png"] Height="30" Class="mx-2" />
-          <MudText Typo="Typo.h6" Color="Color.Primary">
-            @(BrandingConstants.BrandName)
-          </MudText>
-        </MudLink>
-
-        <MudSpacer />
-
-        @if (RendererInfo.IsInteractive)
-        {
-          <ConnectionIndicator THub="@IViewerHub" />
-        }
-
-        @if (RendererInfo.IsInteractive && IsAuthenticated)
-        {
-          <ThemeToggle OnThemeChanged="HandleThemeChanged" />
-        }
-
-        <MudTooltip Text="GitHub">
-          <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-                         Href="https://github.com/bitbound/controlr/" Target="_blank" />
-        </MudTooltip>
-      </MudAppBar>
-      <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
-
-        <NavMenu />
-      </MudDrawer>
-      <MudMainContent Class="mt-16 pa-4">
-        @if (RendererInfo.IsInteractive)
-        {
-          <ServerAlertDisplay Class="mb-4" />
-
-          @if (_isServerDecommissioned)
-          {
-            <MudAlert Severity="Severity.Error" Class="mb-4" Icon="@(Icons.Material.Filled.Dangerous)">
-              <strong>Server Decommission Mode is active.</strong> When agents connect, they will automatically uninstall
-              themselves.
-            </MudAlert>
-          }
-        }
-
-        @if (!RendererInfo.IsInteractive && IsInteractiveRoutingPage)
-        {
-          <div class="w-100 text-center mt-8">
-            <div class="loading-progress-container">
-              <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
-                Loading <span class="loading-progress-text"></span>
-              </MudText>
-              <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
-            </div>
-          </div>
-        }
-        else
-        {
-          @Body
-        }
-      </MudMainContent>
-    </MudLayout>
-
-    @if (RendererInfo.IsInteractive)
+    @if (IsMainUiDisabled)
     {
-      <DeviceContentHarness />
+      <NotFound HideActionButtons="true" />
+    }
+    else
+    {
+      <MudLayout>
+        <MudAppBar Elevation="1">
+
+          @if (RendererInfo.IsInteractive)
+          {
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                           OnClick="@(_ => ToggleNavDrawer())" />
+          }
+          else
+          {
+            <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+                                      Edge="Edge.Start" />
+          }
+
+          <MudLink Href="/" Underline="Underline.None" Class="d-flex">
+            <MudImage Src=@Assets["static/appicon-192.png"] Height="30" Class="mx-2" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">
+              @(BrandingConstants.BrandName)
+            </MudText>
+          </MudLink>
+
+          <MudSpacer />
+
+          @if (RendererInfo.IsInteractive)
+          {
+            <ConnectionIndicator THub="@IViewerHub" />
+          }
+
+          @if (RendererInfo.IsInteractive && IsAuthenticated)
+          {
+            <ThemeToggle OnThemeChanged="HandleThemeChanged" />
+          }
+
+          <MudTooltip Text="GitHub">
+            <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+                           Href="https://github.com/bitbound/controlr/" Target="_blank" />
+          </MudTooltip>
+        </MudAppBar>
+        <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
+          <NavMenu />
+        </MudDrawer>
+        <MudMainContent Class="mt-16 pa-4">
+          @if (RendererInfo.IsInteractive)
+          {
+            <ServerAlertDisplay Class="mb-4" />
+
+            @if (_isServerDecommissioned)
+            {
+              <MudAlert Severity="Severity.Error" Class="mb-4" Icon="@(Icons.Material.Filled.Dangerous)">
+                <strong>Server Decommission Mode is active.</strong> When agents connect, they will automatically uninstall
+                themselves.
+              </MudAlert>
+            }
+          }
+
+          @if (!RendererInfo.IsInteractive && IsInteractiveRoutingPage)
+          {
+            <div class="w-100 text-center mt-8">
+              <div class="loading-progress-container">
+                <MudText Typo="Typo.h4" Color="Color.Info" GutterBottom>
+                  Loading <span class="loading-progress-text"></span>
+                </MudText>
+                <MudProgressCircular Min="0" Max="1" Indeterminate Color="Color.Info" Size="Size.Large" />
+              </div>
+            </div>
+          }
+          else
+          {
+            @Body
+          }
+        </MudMainContent>
+      </MudLayout>
+
+      @if (RendererInfo.IsInteractive)
+      {
+        <DeviceContentHarness />
+      }
     }
   </ControlRLayoutProvider>
 </div>
@@ -98,6 +104,11 @@
   protected override async Task OnInitializedAsync()
   {
     await base.OnInitializedAsync();
+
+    if (IsMainUiDisabled)
+    {
+      return;
+    }
 
     if (RendererInfo.IsInteractive)
     {

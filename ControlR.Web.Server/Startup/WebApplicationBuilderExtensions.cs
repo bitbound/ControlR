@@ -201,8 +201,10 @@ public static class WebApplicationBuilderExtensions
     });
 
     // Add authn/authz services.
-    builder.AddControlrAuthorization();
+    // Authentication must register first. Identity replaces the application cookie's Events,
+    // and the cookie event handlers in AddControlrAuthorization have to be configured after that.
     builder.AddControlrAuthentication(appOptions);
+    builder.AddControlrAuthorization();
 
     // Configure DataProtection.
     builder.AddControlrDataProtection();

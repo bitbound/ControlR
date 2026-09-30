@@ -16,6 +16,7 @@ public interface ILogonTokenProvider
     string? sessionCorrelationId = null,
     bool writeBaselineGrants = true,
     IReadOnlyList<int>? allowedDesktopSessionIds = null,
+    int sessionExpirationMinutes = DtoLimits.SessionExpirationMinutesDefault,
     CancellationToken cancellationToken = default);
 
   Task<HttpResult<LogonTokenResult>> CreateTokenForExternal(
@@ -27,6 +28,7 @@ public interface ILogonTokenProvider
     string? sessionCorrelationId = null,
     bool writeBaselineGrants = true,
     IReadOnlyList<int>? allowedDesktopSessionIds = null,
+    int sessionExpirationMinutes = DtoLimits.SessionExpirationMinutesDefault,
     CancellationToken cancellationToken = default);
 
   Task<LogonTokenValidationResult> ValidateAndConsumeToken(string token, Guid deviceId, CancellationToken cancellationToken = default);
@@ -63,6 +65,7 @@ public class LogonTokenProvider(
     string? sessionCorrelationId = null,
     bool writeBaselineGrants = true,
     IReadOnlyList<int>? allowedDesktopSessionIds = null,
+    int sessionExpirationMinutes = DtoLimits.SessionExpirationMinutesDefault,
     CancellationToken cancellationToken = default)
   {
     await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -92,6 +95,7 @@ public class LogonTokenProvider(
       ExpiresAt = expiresAt,
       UserCorrelationId = userCorrelationId,
       SessionCorrelationId = sessionCorrelationId,
+      SessionExpirationMinutes = sessionExpirationMinutes,
       AllowedDesktopSessionIds = allowedDesktopSessionIds
     };
 
@@ -136,6 +140,7 @@ public class LogonTokenProvider(
     string? sessionCorrelationId = null,
     bool writeBaselineGrants = true,
     IReadOnlyList<int>? allowedDesktopSessionIds = null,
+    int sessionExpirationMinutes = DtoLimits.SessionExpirationMinutesDefault,
     CancellationToken cancellationToken = default)
   {
     using var scope = _scopeFactory.CreateScope();
@@ -204,6 +209,7 @@ public class LogonTokenProvider(
       sessionCorrelationId,
       writeBaselineGrants,
       allowedDesktopSessionIds,
+      sessionExpirationMinutes,
       cancellationToken);
   }
 
@@ -336,7 +342,8 @@ public class LogonTokenProvider(
         logonToken.TenantId,
         logonToken.ExpiresAt,
         logonToken.SessionCorrelationId,
-        logonToken.AllowedDesktopSessionIds);
+        logonToken.AllowedDesktopSessionIds,
+        logonToken.SessionExpirationMinutes);
     }
     catch (Exception ex)
     {
