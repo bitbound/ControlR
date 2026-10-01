@@ -6,7 +6,6 @@ namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
 /// Server-wide alert banner. A singleton resource: read the current alert, or replace it.
-/// Replacing requires server settings write.
 /// </summary>
 [Route(HttpConstants.V1.ServerAlertEndpoint)]
 [ApiController]

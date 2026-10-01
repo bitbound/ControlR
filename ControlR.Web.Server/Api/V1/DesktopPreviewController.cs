@@ -9,8 +9,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Desktop preview for the versioned API. The response is the image the agent captured, and every
-/// failure is a problem document.
+/// Desktop preview: one captured frame from a connected agent.
 /// </summary>
 [Route(HttpConstants.V1.DesktopPreviewEndpoint)]
 [ApiController]

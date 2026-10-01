@@ -6,8 +6,7 @@ namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
 /// Public version discovery: the current agent version, the server version, and the release
-/// notes. Anonymous by design, like the internal surface it supersedes, so a client can learn
-/// the versions before authenticating.
+/// notes. Anonymous by design so a client can read the versions before authenticating.
 /// </summary>
 [Route(HttpConstants.V1.VersionEndpoint)]
 [ApiController]

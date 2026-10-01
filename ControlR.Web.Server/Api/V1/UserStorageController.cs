@@ -6,10 +6,8 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Per-user key-value storage owned by the calling user. Caller-owned like the other
-/// self-service surfaces: tenantId is required on every operation for V1 convention
-/// uniformity, and principals without a user id claim cannot use the surface. Get of an
-/// unset key answers 204. Delete of an unset key answers 404.
+/// Per-user key-value storage owned by the calling user. Every operation requires a tenantId
+/// per the V1 convention.
 /// </summary>
 [Route(HttpConstants.V1.UserStorageEndpoint)]
 [ApiController]

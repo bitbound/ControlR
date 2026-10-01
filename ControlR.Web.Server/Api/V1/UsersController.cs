@@ -10,15 +10,8 @@ using ControlR.Web.Server.Constants;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// User management plus the per-user personal-access-token sub-resource. Tenant scoping is
-/// enforced by the required tenantId query parameter. The caller's tenant claim must match it
-/// (or the caller must be a server principal). Reads keyed by the caller-resolved tenant carry
-/// an explicit TenantId predicate so the boundary survives the unfiltered AppDb context a server
-/// principal runs against. The lookups that run after a create address the user by its globally
-/// unique id, where the id itself is the constraint. Preset assignment keeps its authority gates. Granting the
-/// ServerAdministrator preset requires ServerPermissionsWrite, presets that seed tenant-scope
-/// grants require ServerPermissionsWrite or TenantPermissionsWrite, and TenantAdministrator
-/// additionally requires TenantPermissionsDeny unless the caller has server writes.
+/// User management plus the per-user personal-access-token sub-resource. Every operation is
+/// tenant-scoped by the required tenantId query parameter.
 /// </summary>
 [Route(HttpConstants.V1.UsersEndpoint)]
 [ApiController]

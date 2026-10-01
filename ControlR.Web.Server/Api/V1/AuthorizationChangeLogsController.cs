@@ -8,15 +8,8 @@ using ControlR.Web.Server.Constants;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Authorization change log inspection. The read audience is the union of two disjoint
-/// permissions. Holders of server.authorization-logs.read (server scope) inspect the tenant
-/// named by the required tenantId query parameter, and holders of tenant.authorization-logs.read
-/// (tenant scope) inspect their own tenant. No single authorization policy models that union,
-/// so the audience check runs in the handler (evaluating both permissions, as the superseded
-/// internal endpoint did) rather than as a method-level policy.
-/// Server-scoped entries (OwningTenantId is null) belong to no tenant and are therefore not
-/// reachable through the tenant-addressed list. They are served by the separate, parameterless
-/// GET /server route, which requires server.authorization-logs.read at Server scope.
+/// Authorization change log inspection. The read audience is the union of two permissions, so
+/// the check runs in the handler rather than as a policy.
 /// </summary>
 [Route(HttpConstants.V1.AuthorizationChangeLogsEndpoint)]
 [ApiController]

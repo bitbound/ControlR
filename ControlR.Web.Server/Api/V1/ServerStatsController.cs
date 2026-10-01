@@ -5,8 +5,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerStats;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Server statistics snapshot: tenant, agent, and user counts. A diagnostics probe guarded by
-/// the server telemetry read permission.
+/// Server statistics snapshot: tenant, agent, and user counts.
 /// </summary>
 [Route(HttpConstants.V1.ServerStatsEndpoint)]
 [ApiController]

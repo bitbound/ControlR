@@ -5,8 +5,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.ServerLogs;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Server log surface. Currently the Aspire dashboard link, which is a diagnostics probe
-/// guarded by the server telemetry read permission.
+/// Server log surface. Currently only the Aspire dashboard link.
 /// </summary>
 [Route(HttpConstants.V1.ServerLogsEndpoint)]
 [ApiController]

@@ -8,10 +8,7 @@ namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
 /// Tenant invitation CRUD. The anonymous token-bearing accept flow stays on the internal
-/// surface because its shape (no principal, activation code as the credential) cannot be a
-/// V1 resource. Everything else follows the V1 conventions: required tenantId, 201 +
-/// CreatedAtAction on create, 204 on delete, and an Items envelope on list. The activation
-/// code embedded in <c>InviteUrl</c> is included only for callers holding TenantUsersWrite.
+/// surface.
 /// </summary>
 [Route(HttpConstants.V1.InvitesEndpoint)]
 [ApiController]

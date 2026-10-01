@@ -6,9 +6,8 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.EffectiveUserPreference
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// The calling user's effective preferences: tenant setting overrides beat user preferences.
-/// The caller's user id comes from claims. TenantId is required so the read works for the
-/// same set of principals as the other V1 surfaces.
+/// The calling user's effective preferences, where tenant setting overrides beat user
+/// preferences.
 /// </summary>
 [Route(HttpConstants.V1.EffectiveUserPreferencesEndpoint)]
 [ApiController]

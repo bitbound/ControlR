@@ -8,14 +8,8 @@ using ControlR.Web.Server.Constants;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Permission assignment management. Tenant scoping is enforced by the required tenantId query
-/// parameter. The caller's tenant claim must match it (or the caller must be a server
-/// principal), and the resolved id is passed into every manager call in place of the claims
-/// tenant id the superseded internal endpoint used. The manager's own write-authority and
-/// tenant checks (ValidateWriteAuthority, IsVisibleToTenant, ValidatePermissionScope,
-/// ValidatePrincipalExists) are untouched. Server-scope writes still require the
-/// server.permissions.write grant and tenant-scoped targets are validated against the resolved
-/// tenant.
+/// Permission assignment management. Every operation is tenant-scoped by the required tenantId
+/// query parameter.
 /// </summary>
 [Route(HttpConstants.V1.PermissionAssignmentsEndpoint)]
 [ApiController]

@@ -6,9 +6,8 @@ using ControlR.Web.Server.Constants;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Adding and removing tags on a device. The tenantId query parameter pins the tenant for
-/// resource loading (explicit predicates, meaningful under unfiltered server contexts), and
-/// the mutation itself is gated by the device-scoped tags.write resource policy.
+/// Adding and removing tags on a device. Every operation is tenant-scoped by the required
+/// tenantId query parameter.
 /// </summary>
 [Route(HttpConstants.V1.DeviceTagsEndpoint)]
 [ApiController]

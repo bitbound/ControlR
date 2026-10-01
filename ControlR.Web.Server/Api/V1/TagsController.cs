@@ -7,11 +7,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.Tags;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Tag management. Tenant scoping is enforced by the required tenantId query parameter. The
-/// caller's tenant claim must match it (or the caller must be a server principal), and
-/// every query carries an explicit TenantId predicate so the checks stay meaningful even for
-/// server principals running against an unfiltered AppDb context. Linked device ids are
-/// filtered to the devices the caller can read, preserving the device-scoped read boundary.
+/// Tag management. Every operation is tenant-scoped by the required tenantId query parameter.
 /// </summary>
 [Route(HttpConstants.V1.TagsEndpoint)]
 [ApiController]

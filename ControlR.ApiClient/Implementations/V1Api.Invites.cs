@@ -32,8 +32,11 @@ internal partial class V1Api
   async Task<ApiResult<InvitesResponseDto>> IInvitesApi.GetInvites(Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<InvitesResponseDto>(
-        $"{HttpConstants.V1.InvitesEndpoint}?tenantId={tenantId}",
-        cancellationToken));
+    {
+      using var response = await _client.HttpClient.GetAsync(
+        $"{HttpConstants.V1.InvitesEndpoint}?tenantId={tenantId}", cancellationToken);
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<InvitesResponseDto>(cancellationToken);
+    });
   }
 }

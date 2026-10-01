@@ -10,8 +10,7 @@ using ControlR.Web.Server.Constants;
 namespace ControlR.Web.Server.Api.V1;
 
 /// <summary>
-/// Device file system operations for the versioned API. Each action asks a connected agent over the
-/// hub and returns the V1 shapes.
+/// Device file system operations, relayed to a connected agent over the hub.
 /// </summary>
 [Route(HttpConstants.V1.DeviceFileSystemEndpoint)]
 [ApiController]
