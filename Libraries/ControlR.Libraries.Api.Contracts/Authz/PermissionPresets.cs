@@ -39,12 +39,12 @@ public static class PermissionPresets
         PermissionNames.ServerPermissionsRead,
         PermissionNames.ServerPermissionsWrite,
         PermissionNames.TenantPermissionsRead,
+        PermissionNames.TenantPermissionsDeny,
         PermissionNames.TenantAuthorizationLogsRead,
       ],
 
       [TenantAdministrator] =
       [
-        PermissionNames.TenantRead,
         PermissionNames.TenantSettingsRead,
         PermissionNames.TenantSettingsWrite,
         PermissionNames.TenantUsersRead,
@@ -81,7 +81,6 @@ public static class PermissionPresets
         PermissionNames.DeviceRead,
         PermissionNames.DeviceDelete,
         PermissionNames.DeviceAliasWrite,
-        PermissionNames.DeviceTagsRead,
         PermissionNames.DeviceTagsWrite,
         PermissionNames.DeviceDesktopPreviewRead,
         PermissionNames.DeviceOverviewRead,

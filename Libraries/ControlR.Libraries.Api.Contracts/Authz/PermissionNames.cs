@@ -26,7 +26,6 @@ public static class PermissionNames
   public const string DeviceRemoteControlConnect = "device.remote-control.connect";
   public const string DeviceRemoteControlElevatedDesktop = "device.remote-control.elevated-desktop";
   public const string DeviceRemoteControlInteract = "device.remote-control.interact";
-  public const string DeviceTagsRead = "device.tags.read";
   public const string DeviceTagsWrite = "device.tags.write";
   public const string DeviceTerminalUse = "device.terminal.use";
   public const string DeviceVncRelayConnect = "device.vnc-relay.connect";
@@ -60,7 +59,6 @@ public static class PermissionNames
   public const string TenantPermissionsDeny = "tenant.permissions.deny";
   public const string TenantPermissionsRead = "tenant.permissions.read";
   public const string TenantPermissionsWrite = "tenant.permissions.write";
-  public const string TenantRead = "tenant.read";
   public const string TenantSettingsRead = "tenant.settings.read";
   public const string TenantSettingsWrite = "tenant.settings.write";
   public const string TenantTagsWrite = "tenant.tags.write";

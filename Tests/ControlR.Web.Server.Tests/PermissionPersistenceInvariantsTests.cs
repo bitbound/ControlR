@@ -152,7 +152,7 @@ public class PermissionPersistenceInvariantsTests(ITestOutputHelper testOutput)
 
     // No exception: a tenant-scoped row carries a non-null ScopeId and OwningTenantId.
     await InsertRaw(appDb,
-      permissionName: PermissionNames.TenantRead,
+      permissionName: PermissionNames.TenantSettingsRead,
       scopeKind: PermissionScopeKind.Tenant,
       scopeId: tenant.Id,
       owningTenantId: tenant.Id,
@@ -161,7 +161,7 @@ public class PermissionPersistenceInvariantsTests(ITestOutputHelper testOutput)
     var count = await appDb.PermissionAssignments
       .IgnoreQueryFilters()
       .CountAsync(x => x.ScopeKind == PermissionScopeKind.Tenant &&
-                       x.PermissionName == PermissionNames.TenantRead &&
+                       x.PermissionName == PermissionNames.TenantSettingsRead &&
                        x.ScopeId == tenant.Id && x.OwningTenantId == tenant.Id,
       TestContext.Current.CancellationToken);
     Assert.True(count >= 1);

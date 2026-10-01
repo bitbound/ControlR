@@ -904,6 +904,34 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task Create_ServerScopeDeny_AsServerAdministratorOnly_Succeeds()
+  {
+    // The manager requires tenant.permissions.deny for a deny at any scope, including server scope,
+    // and reads it against the request's tenant resource. A user seeded only through the
+    // ServerAdministrator preset therefore has to hold it in that preset, or no server administrator
+    // can create a deny at all.
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(
+      tenant.Id,
+      $"actor-{Guid.NewGuid():N}@t.local",
+      PermissionPresets.ServerAdministrator);
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.Create(
+      ServerScopeDeviceReadRequest(target.Id) with { Effect = PermissionEffect.Deny },
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.True(result.IsSuccess, $"Expected server-scope deny to succeed: {result.Reason}");
+  }
+
+  [Fact]
   public async Task Create_ServerScoped_ByNonServerAdmin_Forbidden()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
