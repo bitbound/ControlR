@@ -11,8 +11,8 @@ public class PermissionPresetsCoverageTests
     Assert.Equal(
       [
         PermissionNames.AgentInstall,
-        PermissionNames.InstallerKeyRead,
-        PermissionNames.InstallerKeyWrite
+        PermissionNames.InstallerKeySelfRead,
+        PermissionNames.InstallerKeySelfWrite
       ],
       PermissionPresets.GetPermissions(PermissionPresets.AgentInstaller));
   }
@@ -50,6 +50,20 @@ public class PermissionPresetsCoverageTests
     Assert.True(
       unknown.Length == 0,
       $"Preset permissions missing from PermissionCatalog: {string.Join(", ", unknown.Select(x => $"{x.Key}/{x.permission}"))}");
+  }
+
+  [Fact]
+  public void InstallerKeyManager_ExtendsTheInstallerPresetWithOthersPermissions()
+  {
+    Assert.Equal(
+      [
+        PermissionNames.InstallerKeySelfRead,
+        PermissionNames.InstallerKeySelfWrite,
+        PermissionNames.InstallerKeyOthersRead,
+        PermissionNames.InstallerKeyOthersWrite,
+        PermissionNames.AgentInstall
+      ],
+      PermissionPresets.GetPermissions(PermissionPresets.InstallerKeyManager));
   }
 
   [Fact]

@@ -563,7 +563,7 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
     {
       PrincipalKind = PermissionPrincipalKind.User,
       PrincipalId = user.Id,
-      PermissionName = PermissionNames.InstallerKeyRead,
+      PermissionName = PermissionNames.InstallerKeySelfRead,
       Effect = PermissionEffect.Allow,
       ScopeKind = PermissionScopeKind.Device,
       ScopeId = device.Id,
@@ -575,7 +575,7 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
     var principal = CreateUserPrincipal(user.Id, tenant.Id);
     var deviceResource = new ResourceDescriptor(PermissionScopeKind.Device, device.Id, tenant.Id);
 
-    var result = await evaluator.Evaluate(principal, PermissionNames.InstallerKeyRead, deviceResource, TestContext.Current.CancellationToken);
+    var result = await evaluator.Evaluate(principal, PermissionNames.InstallerKeySelfRead, deviceResource, TestContext.Current.CancellationToken);
 
     Assert.False(result.Allowed);
   }

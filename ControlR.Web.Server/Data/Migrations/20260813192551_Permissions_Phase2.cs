@@ -231,12 +231,15 @@ public partial class Permissions_Phase2 : Migration
                   ('Tenant Administrator', '{PermissionNames.ServiceAccountRead}', '{PermissionScopeKind.Tenant}'),
                   ('Tenant Administrator', '{PermissionNames.ServiceAccountWrite}', '{PermissionScopeKind.Tenant}'),
                   ('Tenant Administrator', '{PermissionNames.ServiceAccountRotateCredentials}', '{PermissionScopeKind.Tenant}'),
-                  ('Tenant Administrator', '{PermissionNames.InstallerKeyRead}', '{PermissionScopeKind.Tenant}'),
-                  ('Tenant Administrator', '{PermissionNames.InstallerKeyWrite}', '{PermissionScopeKind.Tenant}'),
-                  ('Tenant Administrator', '{PermissionNames.InstallerKeyManageAll}', '{PermissionScopeKind.Tenant}'),
+                  ('Tenant Administrator', '{PermissionNames.InstallerKeySelfRead}', '{PermissionScopeKind.Tenant}'),
+                  ('Tenant Administrator', '{PermissionNames.InstallerKeySelfWrite}', '{PermissionScopeKind.Tenant}'),
+                  ('Tenant Administrator', '{PermissionNames.InstallerKeyOthersRead}', '{PermissionScopeKind.Tenant}'),
+                  ('Tenant Administrator', '{PermissionNames.InstallerKeyOthersWrite}', '{PermissionScopeKind.Tenant}'),
                   ('Tenant Administrator', '{PermissionNames.AgentInstall}', '{PermissionScopeKind.Tenant}'),
-                  ('Installer Key Manager', '{PermissionNames.InstallerKeyRead}', '{PermissionScopeKind.Tenant}'),
-                  ('Installer Key Manager', '{PermissionNames.InstallerKeyWrite}', '{PermissionScopeKind.Tenant}'),
+                  ('Installer Key Manager', '{PermissionNames.InstallerKeySelfRead}', '{PermissionScopeKind.Tenant}'),
+                  ('Installer Key Manager', '{PermissionNames.InstallerKeySelfWrite}', '{PermissionScopeKind.Tenant}'),
+                  ('Installer Key Manager', '{PermissionNames.InstallerKeyOthersRead}', '{PermissionScopeKind.Tenant}'),
+                  ('Installer Key Manager', '{PermissionNames.InstallerKeyOthersWrite}', '{PermissionScopeKind.Tenant}'),
                   ('Installer Key Manager', '{PermissionNames.AgentInstall}', '{PermissionScopeKind.Tenant}'),
                   ('Device Superuser', '{PermissionNames.DeviceRead}', '{PermissionScopeKind.Tenant}'),
                   ('Device Superuser', '{PermissionNames.DeviceDelete}', '{PermissionScopeKind.Tenant}'),
@@ -265,8 +268,8 @@ public partial class Permissions_Phase2 : Migration
                   ('Device Superuser', '{PermissionNames.DevicePowerManage}', '{PermissionScopeKind.Tenant}'),
                   ('Device Superuser', '{PermissionNames.DeviceAgentUpdate}', '{PermissionScopeKind.Tenant}'),
                   ('Agent Installer', '{PermissionNames.AgentInstall}', '{PermissionScopeKind.Tenant}'),
-                  ('Agent Installer', '{PermissionNames.InstallerKeyRead}', '{PermissionScopeKind.Tenant}'),
-                  ('Agent Installer', '{PermissionNames.InstallerKeyWrite}', '{PermissionScopeKind.Tenant}')
+                  ('Agent Installer', '{PermissionNames.InstallerKeySelfRead}', '{PermissionScopeKind.Tenant}'),
+                  ('Agent Installer', '{PermissionNames.InstallerKeySelfWrite}', '{PermissionScopeKind.Tenant}')
               ) AS rp("RoleName", "PermissionName", "ScopeKind") ON r."Name" = rp."RoleName";
               """;
     migrationBuilder.Sql(backfillSql);

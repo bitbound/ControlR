@@ -225,12 +225,14 @@ public class RoleBackfillMigrationTests(ITestOutputHelper output)
     // Tenant Administrator, and duplicate permissions collapse to one assignment.
     var installerKeyPermissions = await verifyDb.PermissionAssignments
       .Where(x => x.PrincipalId == user.Id &&
-                 (x.PermissionName == PermissionNames.InstallerKeyRead ||
-                  x.PermissionName == PermissionNames.InstallerKeyWrite ||
+                 (x.PermissionName == PermissionNames.InstallerKeySelfRead ||
+                  x.PermissionName == PermissionNames.InstallerKeySelfWrite ||
+                  x.PermissionName == PermissionNames.InstallerKeyOthersRead ||
+                  x.PermissionName == PermissionNames.InstallerKeyOthersWrite ||
                   x.PermissionName == PermissionNames.AgentInstall))
       .ToListAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(3, installerKeyPermissions.Count);
+    Assert.Equal(5, installerKeyPermissions.Count);
     foreach (var permission in installerKeyPermissions)
     {
       Assert.Equal(tenant.Id, permission.ScopeId);

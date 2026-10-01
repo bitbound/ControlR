@@ -32,7 +32,7 @@ public class PermissionPolicyMapTests
       PolicyNames.RequireCustomersRead,
       PolicyNames.RequireCustomersWrite,
       PolicyNames.RequireDeviceGroupsRead,
-      PolicyNames.RequireInstallerKeyRead,
+      PolicyNames.RequireInstallerKeySelfRead,
       PolicyNames.RequirePermissionAssignmentsRead,
       PolicyNames.RequirePermissionAssignmentsWrite,
       PolicyNames.RequireServerAuthorizationLogsRead,

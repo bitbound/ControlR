@@ -144,9 +144,10 @@ public static class PermissionCatalog
     Add(PermissionNames.ServiceAccountWrite, PermissionCategories.ServiceAccounts, "Manage Service Accounts", "Create, update, and delete tenant-scoped service accounts.", tenant);
     Add(PermissionNames.ServiceAccountRotateCredentials, PermissionCategories.ServiceAccounts, "Rotate Service Account Credentials", "Create, revoke, and purge credentials for tenant-scoped service accounts.", tenant);
 
-    Add(PermissionNames.InstallerKeyRead, PermissionCategories.InstallerKeys, "Read Installer Keys", "View the agent installer keys you created.", tenant);
-    Add(PermissionNames.InstallerKeyWrite, PermissionCategories.InstallerKeys, "Manage Installer Keys", "Create, rename, and delete the agent installer keys you created.", tenant);
-    Add(PermissionNames.InstallerKeyManageAll, PermissionCategories.InstallerKeys, "Manage All Installer Keys", "Extends installer key read and write to keys created by any user in the tenant. Grants no access by itself.", tenant);
+    Add(PermissionNames.InstallerKeySelfRead, PermissionCategories.InstallerKeys, "Read Own Installer Keys", "View the agent installer keys you created, and their usages.", tenant);
+    Add(PermissionNames.InstallerKeySelfWrite, PermissionCategories.InstallerKeys, "Manage Own Installer Keys", "Create, rename, and delete the agent installer keys you created.", tenant);
+    Add(PermissionNames.InstallerKeyOthersRead, PermissionCategories.InstallerKeys, "Read All Installer Keys", "View the agent installer keys created by any user in the tenant, and their usages. Extends the self read permission.", tenant);
+    Add(PermissionNames.InstallerKeyOthersWrite, PermissionCategories.InstallerKeys, "Manage All Installer Keys", "Rename and delete the agent installer keys created by any user in the tenant. Extends the self write permission.", tenant);
     Add(PermissionNames.AgentInstall, PermissionCategories.Agents, "Install Agent", "Generate agent installation commands and scripts.", tenant);
 
     Add(PermissionNames.DeviceGroupAssignDevices, PermissionCategories.DeviceGroups, "Assign Devices to Group", "Add and remove devices from a device group.", deviceGroup);

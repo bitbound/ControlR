@@ -30,9 +30,10 @@ public static class PermissionNames
   public const string DeviceTerminalUse = "device.terminal.use";
   public const string DeviceVncRelayConnect = "device.vnc-relay.connect";
   public const string DeviceWakeSend = "device.wake.send";
-  public const string InstallerKeyManageAll = "installer-key.manage-all";
-  public const string InstallerKeyRead = "installer-key.read";
-  public const string InstallerKeyWrite = "installer-key.write";
+  public const string InstallerKeyOthersRead = "installer-key.others.read";
+  public const string InstallerKeyOthersWrite = "installer-key.others.write";
+  public const string InstallerKeySelfRead = "installer-key.self.read";
+  public const string InstallerKeySelfWrite = "installer-key.self.write";
   public const string PersonalAccessTokenOthersRead = "personal-access-token.others.read";
   public const string PersonalAccessTokenOthersWrite = "personal-access-token.others.write";
   public const string PersonalAccessTokenSelfRead = "personal-access-token.self.read";

@@ -1,8 +1,12 @@
+using ControlR.Libraries.Api.Contracts.Authz;
+using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys;
 using ControlR.Web.Server.Api.V1;
+using ControlR.Web.Server.Data;
+using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
-using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests.V1;
 
@@ -15,6 +19,49 @@ namespace ControlR.Web.Server.Tests.V1;
 public class InstallerKeysV1ControllerTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutput = testOutput;
+
+  [Fact]
+  public async Task Delete_WhenCallerHasOthersReadWithoutOthersWrite_ReturnsNotFound()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var (ownerController, tenant, _) = await scope.CreateControllerWithTestData<InstallerKeysController>(
+      "Shared Tenant",
+      "readonlyowner@test.local");
+    var keyId = await CreateKeyAsync(ownerController, tenant.Id);
+
+    var userB = await services.CreateTestUser(tenant.Id, "readonlyother@test.local");
+    await GrantTenantPermissions(services, tenant.Id, userB.Id, PermissionNames.InstallerKeyOthersRead);
+    var controllerB = await scope.CreateControllerWithUser<InstallerKeysController>(userB);
+
+    // Reading every key in the tenant must not carry the ability to rename or delete them.
+    var result = await controllerB.Delete(keyId, tenant.Id, TestContext.Current.CancellationToken);
+
+    Assert.IsType<NotFoundResult>(result);
+  }
+
+  [Fact]
+  public async Task Delete_WhenCallerHasOthersWrite_RemovesAnotherUsersKey()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var (ownerController, tenant, _) = await scope.CreateControllerWithTestData<InstallerKeysController>(
+      "Shared Tenant",
+      "managedowner@test.local");
+    var keyId = await CreateKeyAsync(ownerController, tenant.Id);
+
+    var userB = await services.CreateTestUser(tenant.Id, "manager@test.local");
+    await GrantTenantPermissions(services, tenant.Id, userB.Id, PermissionNames.InstallerKeyOthersWrite);
+    var controllerB = await scope.CreateControllerWithUser<InstallerKeysController>(userB);
+
+    var result = await controllerB.Delete(keyId, tenant.Id, TestContext.Current.CancellationToken);
+
+    Assert.IsType<NoContentResult>(result);
+  }
 
   [Fact]
   public async Task Delete_WhenKeyWasCreatedByAnotherUser_ReturnsNotFound()
@@ -74,7 +121,32 @@ public class InstallerKeysV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task GetAll_WhenCallerLacksManageAll_OnlyReturnsOwnKeys()
+  public async Task GetAll_WhenCallerHasOthersRead_ReturnsAllTenantKeys()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var (controllerA, tenant, _) = await scope.CreateControllerWithTestData<InstallerKeysController>(
+      "Shared Tenant",
+      "listallowner@test.local");
+    await CreateKeyAsync(controllerA, tenant.Id);
+
+    var userB = await services.CreateTestUser(tenant.Id, "listallother@test.local");
+    var controllerB = await scope.CreateControllerWithUser<InstallerKeysController>(userB);
+    await CreateKeyAsync(controllerB, tenant.Id);
+
+    await GrantTenantPermissions(services, tenant.Id, userB.Id, PermissionNames.InstallerKeyOthersRead);
+    var controllerBWithGrant = await scope.CreateControllerWithUser<InstallerKeysController>(userB);
+
+    var result = await controllerBWithGrant.GetAll(tenant.Id, TestContext.Current.CancellationToken);
+
+    var response = Assert.IsType<InstallerKeysResponseDto>(Assert.IsType<OkObjectResult>(result.Result!).Value);
+    Assert.Equal(2, response.Items.Count);
+  }
+
+  [Fact]
+  public async Task GetAll_WhenCallerLacksOthersRead_OnlyReturnsOwnKeys()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -172,5 +244,29 @@ public class InstallerKeysV1ControllerTests(ITestOutputHelper testOutput)
 
     return Assert.IsType<V1Dtos.CreateInstallerKeyResponseDto>(
       Assert.IsType<OkObjectResult>(result.Result!).Value).Id;
+  }
+
+  private static async Task GrantTenantPermissions(
+    IServiceProvider services,
+    Guid tenantId,
+    Guid userId,
+    params string[] permissionNames)
+  {
+    using var grantScope = services.CreateScope();
+    await using var db = grantScope.ServiceProvider.GetRequiredService<AppDb>();
+
+    foreach (var permissionName in permissionNames)
+    {
+      db.PermissionAssignments.Add(PermissionAssignment.CreateGrant(
+        PermissionPrincipalKind.User,
+        userId,
+        permissionName,
+        PermissionScopeKind.Tenant,
+        tenantId,
+        tenantId,
+        createdBy: null));
+    }
+
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
 }

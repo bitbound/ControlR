@@ -23,7 +23,7 @@ public class InstallerKeysController(
   private readonly IResourceDescriptorFactory _resourceFactory = resourceFactory;
 
   [HttpPost]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfWrite)]
   public async Task<ActionResult<V1Dtos.CreateInstallerKeyResponseDto>> Create(
       [FromBody] CreateInstallerKeyRequestDto request)
   {
@@ -52,7 +52,7 @@ public class InstallerKeysController(
   }
 
   [HttpDelete("{keyId:guid}")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfWrite)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -84,7 +84,7 @@ public class InstallerKeysController(
   }
 
   [HttpGet]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfRead)]
   [ProducesResponseType<InstallerKeysResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -102,7 +102,7 @@ public class InstallerKeysController(
       return Unauthorized();
     }
 
-    var isAdmin = await CanManageAllKeysAsync(resolvedTenantId, cancellationToken);
+    var isAdmin = await CanReadAllKeysAsync(resolvedTenantId, cancellationToken);
     var keys = await _installerKeyManager.GetAllKeys(resolvedTenantId, callerPrincipalId, isAdmin);
 
     return Ok(new InstallerKeysResponseDto
@@ -112,7 +112,7 @@ public class InstallerKeysController(
   }
 
   [HttpGet("{keyId:guid}/usages")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfRead)]
   [ProducesResponseType<InstallerKeyUsagesResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -132,7 +132,7 @@ public class InstallerKeysController(
       return Unauthorized();
     }
 
-    var isAdmin = await CanManageAllKeysAsync(resolvedTenantId, cancellationToken);
+    var isAdmin = await CanReadAllKeysAsync(resolvedTenantId, cancellationToken);
     var result = await _installerKeyManager.GetKeyUsages(keyId, callerPrincipalId, resolvedTenantId, isAdmin);
 
     if (!result.IsSuccess)
@@ -147,7 +147,7 @@ public class InstallerKeysController(
   }
 
   [HttpPut("{keyId:guid}")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfWrite)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
@@ -216,11 +216,13 @@ public class InstallerKeysController(
   }
 
   /// <summary>
-  /// Server principals manage all keys by definition of their cross-tenant access mode.
-  /// Tenant principals need InstallerKeyManageAll, evaluated against the resolved tenant so
-  /// the check stays meaningful for callers whose own tenant claim is absent or differs.
+  /// Server principals reach every key by definition of their cross-tenant access mode. Tenant
+  /// principals need the matching others permission, evaluated against the resolved tenant.
   /// </summary>
-  private async Task<bool> CanManageAllKeysAsync(Guid resolvedTenantId, CancellationToken cancellationToken)
+  private async Task<bool> CanAccessAllKeysAsync(
+    string permissionName,
+    Guid resolvedTenantId,
+    CancellationToken cancellationToken)
   {
     if (User.IsServerPrincipal())
     {
@@ -235,10 +237,16 @@ public class InstallerKeysController(
 
     var result = await _permissionEvaluator.Evaluate(
       principal,
-      PermissionNames.InstallerKeyManageAll,
+      permissionName,
       _resourceFactory.CreateTenant(resolvedTenantId),
       cancellationToken);
 
     return result.Allowed;
   }
+
+  private Task<bool> CanManageAllKeysAsync(Guid resolvedTenantId, CancellationToken cancellationToken) =>
+    CanAccessAllKeysAsync(PermissionNames.InstallerKeyOthersWrite, resolvedTenantId, cancellationToken);
+
+  private Task<bool> CanReadAllKeysAsync(Guid resolvedTenantId, CancellationToken cancellationToken) =>
+    CanAccessAllKeysAsync(PermissionNames.InstallerKeyOthersRead, resolvedTenantId, cancellationToken);
 }
