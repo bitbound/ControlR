@@ -71,7 +71,7 @@ public static class AuthorizationRegistrationExtensions
       authorizationBuilder.AddPolicy(policyName, policy => policy
         .AddAuthenticationSchemes(CustomSchemes.Dynamic)
         .RequireAuthenticatedUser()
-        .RequirePermission(definition.PermissionName, definition.ResourceScopeKind));
+        .RequireAnyPermission(definition.PermissionNames, definition.ResourceScopeKind));
     }
 
     foreach (var (policyName, permissionName) in DeviceResourcePolicies.PolicyToPermission)

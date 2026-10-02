@@ -12,8 +12,9 @@ public static class PolicyNames
   public const string RequireDeviceGroupAssignDevices = "RequireDeviceGroupAssignDevices";
   public const string RequireDeviceGroupsRead = "RequireDeviceGroupsRead";
   public const string RequireDeviceGroupsWrite = "RequireDeviceGroupsWrite";
-  public const string RequireInstallerKeySelfRead = "RequireInstallerKeySelfRead";
+  public const string RequireInstallerKeyRead = "RequireInstallerKeyRead";
   public const string RequireInstallerKeySelfWrite = "RequireInstallerKeySelfWrite";
+  public const string RequireInstallerKeyWrite = "RequireInstallerKeyWrite";
   public const string RequirePermissionAssignmentsRead = "RequirePermissionAssignmentsRead";
   public const string RequirePermissionAssignmentsWrite = "RequirePermissionAssignmentsWrite";
   public const string RequirePersonalAccessTokenSelfRead = "RequirePersonalAccessTokenSelfRead";

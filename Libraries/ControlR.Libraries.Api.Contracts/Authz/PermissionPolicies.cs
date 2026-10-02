@@ -46,8 +46,13 @@ public static class PermissionPolicies
       [PolicyNames.RequireDeviceGroupAssignDevices] = new(PermissionNames.DeviceGroupAssignDevices, PermissionScopeKind.DeviceGroup),
       [PolicyNames.RequireDeviceGroupsRead] = new(PermissionNames.TenantDeviceGroupsRead, PermissionScopeKind.Tenant),
       [PolicyNames.RequireDeviceGroupsWrite] = new(PermissionNames.TenantDeviceGroupsWrite, PermissionScopeKind.Tenant),
-      [PolicyNames.RequireInstallerKeySelfRead] = new(PermissionNames.InstallerKeySelfRead, PermissionScopeKind.Tenant),
+      [PolicyNames.RequireInstallerKeyRead] = new(
+        [PermissionNames.InstallerKeySelfRead, PermissionNames.InstallerKeyOthersRead],
+        PermissionScopeKind.Tenant),
       [PolicyNames.RequireInstallerKeySelfWrite] = new(PermissionNames.InstallerKeySelfWrite, PermissionScopeKind.Tenant),
+      [PolicyNames.RequireInstallerKeyWrite] = new(
+        [PermissionNames.InstallerKeySelfWrite, PermissionNames.InstallerKeyOthersWrite],
+        PermissionScopeKind.Tenant),
       [PolicyNames.RequirePermissionAssignmentsRead] = new(PermissionNames.TenantPermissionsRead, PermissionScopeKind.Tenant),
       [PolicyNames.RequirePermissionAssignmentsWrite] = new(PermissionNames.TenantPermissionsWrite, PermissionScopeKind.Tenant),
       [PolicyNames.RequirePersonalAccessTokenSelfRead] = new(PermissionNames.PersonalAccessTokenSelfRead, PermissionScopeKind.Tenant),
@@ -78,6 +83,4 @@ public static class PermissionPolicies
       [PolicyNames.RequireUserGroupsWrite] = new(PermissionNames.TenantUserGroupsWrite, PermissionScopeKind.Tenant),
       [PolicyNames.RequireUsersRead] = new(PermissionNames.TenantUsersRead, PermissionScopeKind.Tenant),
     };
-  public static IReadOnlyDictionary<string, string> PolicyToPermission { get; } =
-    Definitions.ToDictionary(x => x.Key, x => x.Value.PermissionName);
 }

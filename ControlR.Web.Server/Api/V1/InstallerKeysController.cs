@@ -52,7 +52,7 @@ public class InstallerKeysController(
   }
 
   [HttpDelete("{keyId:guid}")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfWrite)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -84,7 +84,7 @@ public class InstallerKeysController(
   }
 
   [HttpGet]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfRead)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
   [ProducesResponseType<InstallerKeysResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -112,7 +112,7 @@ public class InstallerKeysController(
   }
 
   [HttpGet("{keyId:guid}/usages")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfRead)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
   [ProducesResponseType<InstallerKeyUsagesResponseDto>(StatusCodes.Status200OK)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -147,7 +147,7 @@ public class InstallerKeysController(
   }
 
   [HttpPut("{keyId:guid}")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfWrite)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]

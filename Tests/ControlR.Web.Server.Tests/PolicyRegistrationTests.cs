@@ -6,7 +6,7 @@ namespace ControlR.Web.Server.Tests;
 
 /// <summary>
 /// Meta-test: every policy referenced by <c>[Authorize(Policy = ...)]</c> in the server
-/// assembly must be a registered key in <see cref="PermissionPolicies.PolicyToPermission"/>
+/// assembly must be a registered key in <see cref="PermissionPolicies.Definitions"/>
 /// (or, for device-resource policies, <see cref="DeviceResourcePolicies.PolicyToPermission"/>).
 /// A referenced-but-unregistered policy throws at runtime when the endpoint is hit, so a
 /// future contributor adding a policy without registering it is caught here at build time.
@@ -15,7 +15,7 @@ public class PolicyRegistrationTests
 {
   private static HashSet<string> AllRegisteredKeys => [.. PermissionPolicyKeys, .. DeviceResourcePolicyKeys];
   private static HashSet<string> DeviceResourcePolicyKeys { get; } = [.. DeviceResourcePolicies.PolicyToPermission.Keys];
-  private static HashSet<string> PermissionPolicyKeys { get; } = [.. PermissionPolicies.PolicyToPermission.Keys];
+  private static HashSet<string> PermissionPolicyKeys { get; } = [.. PermissionPolicies.Definitions.Keys];
   private static Assembly ServerAssembly { get; } = typeof(DeviceResourcePolicies).Assembly;
 
   [Fact]

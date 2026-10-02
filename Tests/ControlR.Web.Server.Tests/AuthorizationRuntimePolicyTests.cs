@@ -21,7 +21,7 @@ public class AuthorizationRuntimePolicyTests(ITestOutputHelper testOutput)
       var policy = await provider.GetPolicyAsync(policyName);
       Assert.NotNull(policy);
       var requirement = Assert.Single(policy.Requirements.OfType<PermissionRequirement>());
-      Assert.Equal(definition.PermissionName, requirement.PermissionName);
+      Assert.Equal(definition.PermissionNames, requirement.PermissionNames);
       Assert.Equal(definition.ResourceScopeKind, requirement.Resource.Kind);
     }
 
@@ -30,7 +30,7 @@ public class AuthorizationRuntimePolicyTests(ITestOutputHelper testOutput)
       var policy = await provider.GetPolicyAsync(policyName);
       Assert.NotNull(policy);
       var requirement = Assert.Single(policy.Requirements.OfType<PermissionRequirement>());
-      Assert.Equal(permissionName, requirement.PermissionName);
+      Assert.Equal([permissionName], requirement.PermissionNames);
       Assert.Equal(PermissionScopeKind.Device, requirement.Resource.Kind);
     }
   }

@@ -16,7 +16,7 @@
               Icon="@Icons.Material.Filled.RocketLaunch">
     Deploy
   </MudNavLink>
-  <AuthorizeView Policy="@(PolicyNames.RequireInstallerKeySelfRead)">
+  <AuthorizeView Policy="@(PolicyNames.RequireInstallerKeyRead)">
     <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.InstallerKeys)" Match="NavLinkMatch.Prefix"
                 Icon="@Icons.Material.Filled.InstallDesktop">
       Installer Keys
