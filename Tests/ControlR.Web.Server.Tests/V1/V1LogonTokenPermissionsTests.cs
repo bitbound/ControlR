@@ -153,11 +153,11 @@ public class V1LogonTokenPermissionsTests(ITestOutputHelper testOutput)
       .Select(x => x.PermissionName)
       .ToListAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(4, grantNames.Count);
+    Assert.Equal(2, grantNames.Count);
     Assert.Contains(PermissionNames.DeviceRead, grantNames);
     Assert.Contains(PermissionNames.DeviceOverviewRead, grantNames);
-    Assert.Contains(PermissionNames.DeviceRemoteControlConnect, grantNames);
-    Assert.Contains(PermissionNames.DeviceRemoteControlInteract, grantNames);
+    Assert.DoesNotContain(PermissionNames.DeviceRemoteControlConnect, grantNames);
+    Assert.DoesNotContain(PermissionNames.DeviceRemoteControlInteract, grantNames);
   }
 
   [Fact]
@@ -260,11 +260,11 @@ public class V1LogonTokenPermissionsTests(ITestOutputHelper testOutput)
       .Select(x => x.PermissionName)
       .ToListAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(4, grantNames.Count);
+    Assert.Equal(2, grantNames.Count);
     Assert.Contains(PermissionNames.DeviceRead, grantNames);
     Assert.Contains(PermissionNames.DeviceOverviewRead, grantNames);
-    Assert.Contains(PermissionNames.DeviceRemoteControlConnect, grantNames);
-    Assert.Contains(PermissionNames.DeviceRemoteControlInteract, grantNames);
+    Assert.DoesNotContain(PermissionNames.DeviceRemoteControlConnect, grantNames);
+    Assert.DoesNotContain(PermissionNames.DeviceRemoteControlInteract, grantNames);
   }
 
   [Fact]
