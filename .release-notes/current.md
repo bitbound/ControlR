@@ -58,9 +58,5 @@ None.
 
 ## Internal
 
-- `ControlR.ApiClient` now marks the internal installer-key and user logon-token methods
-  `[Obsolete]`, each pointing at its `/api/v1` replacement and the difference the caller has to
-  handle. The UI already uses V1 for both, so nothing in the product calls these anymore.
-- The value-carrying MVC error shortcuts (`BadRequest(value)`, `NotFound(value)`, `Conflict(value)`,
-  `Unauthorized(value)`, `StatusCode(code, value)`) are banned under `Api/V1` by RS0030, so a new V1
-  endpoint cannot reintroduce a bare-string error body. Use `Problem()` instead.
+- `ControlR.ApiClient` now marks the internal installer-key and user logon-token methods `[Obsolete]`, each pointing at its `/api/v1` replacement and the difference the caller has to handle. The UI already uses V1 for both, so nothing in the product calls these anymore.
+- The value-carrying MVC error shortcuts (`BadRequest(value)`, `NotFound(value)`, `Conflict(value)`, `Unauthorized(value)`, `StatusCode(code, value)`) are banned under `Api/V1` by RS0030, so a new V1 endpoint cannot reintroduce a bare-string error body. Use `Problem()` instead.
