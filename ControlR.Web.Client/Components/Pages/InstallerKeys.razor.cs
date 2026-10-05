@@ -4,6 +4,9 @@ namespace ControlR.Web.Client.Components.Pages;
 
 public partial class InstallerKeys
 {
+  private bool _canManageOthers;
+  private Guid? _currentUserId;
+  private bool _hasSelfWrite;
   private IEnumerable<InstallerKeyDto> _keys = [];
   private bool _loading = true;
   private string _searchString = "";
@@ -45,6 +48,15 @@ public partial class InstallerKeys
     try
     {
       await base.OnInitializedAsync();
+
+      var authState = await AuthState.GetAuthenticationStateAsync();
+      if (authState.User.TryGetUserId(out var currentUserId))
+      {
+        _currentUserId = currentUserId;
+      }
+      _hasSelfWrite = authState.User.HasClientPolicy(PolicyNames.RequireInstallerKeySelfWrite);
+      _canManageOthers = authState.User.HasClientPolicy(PolicyNames.RequireInstallerKeyOthersWrite);
+
       if (await AuthState.GetTenantId(Snackbar) is not { } tenantId)
       {
         _loading = false;
@@ -61,6 +73,16 @@ public partial class InstallerKeys
       _loading = false;
       await InvokeAsync(StateHasChanged);
     }
+  }
+
+  private bool CanManageKey(InstallerKeyDto key)
+  {
+    if (_canManageOthers)
+    {
+      return true;
+    }
+
+    return _hasSelfWrite && _currentUserId == key.CreatorId;
   }
 
   private async Task DeleteKey(InstallerKeyDto key)

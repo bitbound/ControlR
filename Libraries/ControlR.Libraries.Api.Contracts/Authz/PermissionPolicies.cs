@@ -46,13 +46,14 @@ public static class PermissionPolicies
       [PolicyNames.RequireDeviceGroupAssignDevices] = new(PermissionNames.DeviceGroupAssignDevices, PermissionScopeKind.DeviceGroup),
       [PolicyNames.RequireDeviceGroupsRead] = new(PermissionNames.TenantDeviceGroupsRead, PermissionScopeKind.Tenant),
       [PolicyNames.RequireDeviceGroupsWrite] = new(PermissionNames.TenantDeviceGroupsWrite, PermissionScopeKind.Tenant),
-      [PolicyNames.RequireInstallerKeyRead] = new(
+      [PolicyNames.RequireInstallerKeyAnyRead] = new(
         [PermissionNames.InstallerKeySelfRead, PermissionNames.InstallerKeyOthersRead],
         PermissionScopeKind.Tenant),
-      [PolicyNames.RequireInstallerKeySelfWrite] = new(PermissionNames.InstallerKeySelfWrite, PermissionScopeKind.Tenant),
-      [PolicyNames.RequireInstallerKeyWrite] = new(
+      [PolicyNames.RequireInstallerKeyAnyWrite] = new(
         [PermissionNames.InstallerKeySelfWrite, PermissionNames.InstallerKeyOthersWrite],
         PermissionScopeKind.Tenant),
+      [PolicyNames.RequireInstallerKeyOthersWrite] = new(PermissionNames.InstallerKeyOthersWrite, PermissionScopeKind.Tenant),
+      [PolicyNames.RequireInstallerKeySelfWrite] = new(PermissionNames.InstallerKeySelfWrite, PermissionScopeKind.Tenant),
       [PolicyNames.RequirePermissionAssignmentsRead] = new(PermissionNames.TenantPermissionsRead, PermissionScopeKind.Tenant),
       [PolicyNames.RequirePermissionAssignmentsWrite] = new(PermissionNames.TenantPermissionsWrite, PermissionScopeKind.Tenant),
       [PolicyNames.RequirePersonalAccessTokenSelfRead] = new(PermissionNames.PersonalAccessTokenSelfRead, PermissionScopeKind.Tenant),

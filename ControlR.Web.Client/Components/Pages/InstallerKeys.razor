@@ -1,6 +1,6 @@
 @using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.InstallerKeys
 @attribute [Route(ClientRoutes.InstallerKeys)]
-@attribute [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
+@attribute [Authorize(Policy = PolicyNames.RequireInstallerKeyAnyRead)]
 
 @using ControlR.Libraries.Api.Contracts.Dtos.ServerApi
 @using ControlR.Web.Client.Authz
@@ -54,13 +54,15 @@
             <CellTemplate>
                 @{ var keyItem = context.Item; }
                 <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Info" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopRight">
-                    <AuthorizeView Policy="@(PolicyNames.RequireInstallerKeyWrite)" Context="writeAccess">
+                    @if (CanManageKey(keyItem))
+                    {
                         <MudMenuItem Icon="@Icons.Material.Filled.Edit" IconColor="Color.Info" OnClick="@(() => RenameKey(keyItem))">Rename</MudMenuItem>
-                    </AuthorizeView>
+                    }
                     <MudMenuItem Icon="@Icons.Material.Filled.Visibility" IconColor="Color.Info" OnClick="@(() => ShowUsages(keyItem))">Show Usages</MudMenuItem>
-                    <AuthorizeView Policy="@(PolicyNames.RequireInstallerKeyWrite)" Context="writeAccess">
+                    @if (CanManageKey(keyItem))
+                    {
                         <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@(() => DeleteKey(keyItem))">Delete</MudMenuItem>
-                    </AuthorizeView>
+                    }
                 </MudMenu>
             </CellTemplate>
         </TemplateColumn>
