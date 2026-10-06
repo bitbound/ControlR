@@ -287,12 +287,12 @@ public sealed class XdgDesktopPortal(
       return true;
     }
 
+    using var timeoutCts = new CancellationTokenSource(_defaultProbeTimeout);
+    using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
     try
     {
       _logger.LogInformation("Starting Wayland restore token probe.");
-
-      using var cts = new CancellationTokenSource(_defaultProbeTimeout);
-      using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
 
       var result = await StartRemoteDesktopSession(
         restoreToken,
@@ -301,7 +301,9 @@ public sealed class XdgDesktopPortal(
 
       if (!result.IsSuccess)
       {
-        _logger.LogWarning("Probe failed: restore token is stale. {Error}", result.Reason);
+        // The portal does not report an unusable restore token. It ignores the token and
+        // prompts instead, so a failure here says nothing about the token's validity.
+        _logger.LogWarning("Probe failed. {Error}", result.Reason);
         return false;
       }
 
@@ -315,7 +317,7 @@ public sealed class XdgDesktopPortal(
     }
     catch (Exception ex)
     {
-      _logger.LogWarning(ex, "Probe failed with exception");
+      _logger.LogWarning(ex, "Probe failed with an exception.");
       return false;
     }
   }
@@ -1023,7 +1025,7 @@ public sealed class XdgDesktopPortal(
       var clipboardProxy = Connection.CreateProxy<IClipboard>(PortalBusName, PortalObjectPath);
       await clipboardProxy.RequestClipboardAsync(
         new ObjectPath(sessionHandle),
-        new Dictionary<string, object>());
+        new Dictionary<string, object>()).WaitAsync(cancellationToken);
       _logger.LogInformation("Requested clipboard access for Wayland desktop portal session.");
     }
     catch (Exception ex)
@@ -1081,13 +1083,12 @@ public sealed class XdgDesktopPortal(
         tcs.TrySetException(ex);
       });
 
-    await trigger();
-
     using var defaultTimeout = new CancellationTokenSource(_userInteractionTimeout);
     using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, defaultTimeout.Token);
     var sw = Stopwatch.StartNew();
     try
     {
+      await trigger().WaitAsync(combinedCts.Token);
       return await tcs.Task.WaitAsync(combinedCts.Token);
     }
     catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)

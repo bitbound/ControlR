@@ -24,6 +24,12 @@ internal class WaylandPermissionProvider(
 {
   private static readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
 
+  // Serializes probes across every host in the process. The restore token is single-use and
+  // the portal rotates it on success, so overlapping probes can invalidate each other. Static
+  // because each remote control session runs its own host with its own provider instance,
+  // while the token file is shared process-wide.
+  private static readonly SemaphoreSlim _probeLock = new(1, 1);
+
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<WaylandPermissionProvider> _logger = logger;
   private readonly IOptionsMonitor<DesktopClientOptions> _options = options;
@@ -63,6 +69,7 @@ internal class WaylandPermissionProvider(
 
   public async Task<bool> IsRemoteControlPermissionGranted()
   {
+    await _probeLock.WaitAsync();
     try
     {
       var timer = Stopwatch.StartNew();
@@ -82,23 +89,19 @@ internal class WaylandPermissionProvider(
 
       _logger.LogInformation("Wayland permission probe starting.");
       using var xdgPortal = _xdgFactory.CreateNew();
-      var isValid = await xdgPortal.ProbeRestoreToken(restoreToken);
+      var isGranted = await xdgPortal.ProbeRestoreToken(restoreToken);
       timer.Stop();
 
       _logger.LogInformation(
         "Wayland permission probe completed in {ElapsedMilliseconds}ms. Granted={Granted}",
         timer.ElapsedMilliseconds,
-        isValid);
+        isGranted);
 
-      UpdateCache(restoreToken, isValid);
-
-      if (!isValid)
-      {
-        _logger.LogWarning("Restore token probe failed, deleting stale token");
-        DeleteRestoreToken();
-      }
-
-      return isValid;
+      // A failed probe is not proof that the token is no longer valid. The portal ignores
+      // an unusable token and prompts instead of reporting an error, so the file stays on
+      // disk and the next granted session overwrites it.
+      UpdateCache(restoreToken, isGranted);
+      return isGranted;
     }
     catch (OperationCanceledException)
     {
@@ -109,6 +112,10 @@ internal class WaylandPermissionProvider(
     {
       _logger.LogError(ex, "Error checking RemoteDesktop permission");
       return false;
+    }
+    finally
+    {
+      _probeLock.Release();
     }
   }
 
