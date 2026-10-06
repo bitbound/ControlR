@@ -481,12 +481,14 @@ public class DeviceFileSystemController(
     return Ok(ToV1Dto(subdirectories));
   }
 
-  // Note: [FromForm] parameters are intentionally omitted, so large files aren't buffered into memory
-  // by model binding before the authorization and size checks run. [MultipartRequestBody] tells the
-  // OpenAPI document the form fields instead.
   /// <summary>
   /// Streams one uploaded file to the device, which writes it into the requested directory.
   /// </summary>
+  /// <remarks>
+  /// Note: [FromForm] parameters are intentionally omitted, so large files aren't buffered into memory
+  /// by model binding before the authorization and size checks run. [MultipartRequestBody] tells the
+  /// OpenAPI document the form fields instead.
+  /// </remarks>
   [HttpPost("upload/{deviceId:guid}")]
   [DisableRequestSizeLimit]
   [DisableRequestTimeout]
@@ -763,15 +765,8 @@ public class DeviceFileSystemController(
   }
 
   /// <summary>
-  /// Translates the reason the agent gave into a status, so a caller learns which condition refused it
-  /// instead of reading a non-standard extension. A refusal the agent did not classify, or one that is a
-  /// conflict with the device's current state, stays a conflict.
+  /// Maps the agent's failure reason to a status.
   /// </summary>
-  /// <remarks>
-  /// A code this server does not recognize answers a conflict rather than throwing. New members are
-  /// inserted into <see cref="OperationFailureCode" /> by design, and an agent newer than the server must
-  /// still get a status and its own text.
-  /// </remarks>
   private ObjectResult MapRemoteFailure(FileSystemOutcome outcome)
   {
     var statusCode = outcome.Code switch
@@ -780,7 +775,10 @@ public class DeviceFileSystemController(
       OperationFailureCode.PermissionDenied => StatusCodes.Status403Forbidden,
       OperationFailureCode.InvalidInput => StatusCodes.Status400BadRequest,
       OperationFailureCode.DeviceFailure => StatusCodes.Status502BadGateway,
-      OperationFailureCode.DeviceBusy => StatusCodes.Status409Conflict,
+      OperationFailureCode.AlreadyExists
+        or OperationFailureCode.DeviceBusy
+        or OperationFailureCode.Unknown
+        or OperationFailureCode.DeviceOffline => StatusCodes.Status409Conflict,
       _ => StatusCodes.Status409Conflict,
     };
 
