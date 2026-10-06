@@ -1,4 +1,4 @@
-using ControlR.Web.Server.Services.Locks;
+using ControlR.Libraries.Shared.Services.Locks;
 
 namespace ControlR.Web.Server.Tests;
 

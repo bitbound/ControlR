@@ -16,7 +16,7 @@ using ControlR.Web.Server.Services.AgentInstaller;
 using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Services.DeviceFileSystem;
 using ControlR.Web.Server.Services.DeviceManagement;
-using ControlR.Web.Server.Services.Locks;
+using ControlR.Libraries.Shared.Services.Locks;
 using System.Globalization;
 using System.Threading.RateLimiting;
 using ControlR.Libraries.Shared.Services.Encryption;
