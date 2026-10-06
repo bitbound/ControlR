@@ -11,7 +11,7 @@ public interface IWaylandPermissionProvider
 {
   void DeleteRestoreToken();
   bool HasRestoreToken();
-  Task<bool> IsRemoteControlPermissionGranted();
+  Task<bool> IsRemoteControlPermissionGranted(CancellationToken cancellationToken = default);
   Task<bool> RequestRemoteControlPermission(bool bypassRestoreToken = false, CancellationToken cancellationToken = default);
 }
 
@@ -67,11 +67,14 @@ internal class WaylandPermissionProvider(
     return _fileSystem.FileExists(tokenPath);
   }
 
-  public async Task<bool> IsRemoteControlPermissionGranted()
+  public async Task<bool> IsRemoteControlPermissionGranted(CancellationToken cancellationToken = default)
   {
-    await _probeLock.WaitAsync();
+    var lockTaken = false;
     try
     {
+      await _probeLock.WaitAsync(cancellationToken);
+      lockTaken = true;
+
       var timer = Stopwatch.StartNew();
       var restoreToken = LoadRestoreToken();
       if (string.IsNullOrEmpty(restoreToken))
@@ -89,7 +92,7 @@ internal class WaylandPermissionProvider(
 
       _logger.LogInformation("Wayland permission probe starting.");
       using var xdgPortal = _xdgFactory.CreateNew();
-      var isGranted = await xdgPortal.ProbeRestoreToken(restoreToken);
+      var isGranted = await xdgPortal.ProbeRestoreToken(restoreToken, cancellationToken);
       timer.Stop();
 
       _logger.LogInformation(
@@ -115,7 +118,10 @@ internal class WaylandPermissionProvider(
     }
     finally
     {
-      _probeLock.Release();
+      if (lockTaken)
+      {
+        _probeLock.Release();
+      }
     }
   }
 

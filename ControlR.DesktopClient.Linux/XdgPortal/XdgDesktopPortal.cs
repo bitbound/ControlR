@@ -1071,23 +1071,28 @@ public sealed class XdgDesktopPortal(
     var tcs = new TaskCompletionSource<(uint, IDictionary<string, object>)>(TaskCreationOptions.RunContinuationsAsynchronously);
     var requestProxy = Connection.CreateProxy<IRequest>(PortalBusName, new ObjectPath(expectedRequestPath));
 
-    using var signalSubscription = await requestProxy.WatchResponseAsync(
-      data =>
-      {
-        _logger.LogDebug("Received Response signal for {Path}: code={Code}", expectedRequestPath, data.response);
-        tcs.TrySetResult((data.response, data.results));
-      },
-      ex =>
-      {
-        _logger.LogError(ex, "Error in Response signal handler for {Path}", expectedRequestPath);
-        tcs.TrySetException(ex);
-      });
-
     using var defaultTimeout = new CancellationTokenSource(_userInteractionTimeout);
     using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, defaultTimeout.Token);
     var sw = Stopwatch.StartNew();
     try
     {
+      // Subscribing is itself a D-Bus round trip, so it shares the timeout that bounds the
+      // rest of the wait. An unresponsive session bus here would otherwise hang the caller,
+      // and a restore token probe holds a process-wide lock while it waits.
+      using var signalSubscription = await requestProxy
+        .WatchResponseAsync(
+          data =>
+          {
+            _logger.LogDebug("Received Response signal for {Path}: code={Code}", expectedRequestPath, data.response);
+            tcs.TrySetResult((data.response, data.results));
+          },
+          ex =>
+          {
+            _logger.LogError(ex, "Error in Response signal handler for {Path}", expectedRequestPath);
+            tcs.TrySetException(ex);
+          })
+        .WaitAsync(combinedCts.Token);
+
       await trigger().WaitAsync(combinedCts.Token);
       return await tcs.Task.WaitAsync(combinedCts.Token);
     }
