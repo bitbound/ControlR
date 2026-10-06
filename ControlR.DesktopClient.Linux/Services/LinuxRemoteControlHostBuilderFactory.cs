@@ -38,8 +38,6 @@ public class LinuxRemoteControlHostBuilderFactory(
           .AddSingleton(_dispatcher)
           .AddSingleton(_userInteractionService)
           .AddSingleton(_ipcClientAccessor)
-          // Shared with the desktop client shell so the restore token gate is one instance
-          // across every host in the process.
           .AddSingleton(_asyncLock);
       },
       options =>
