@@ -26,14 +26,14 @@ public static class PermissionNames
   public const string DeviceRemoteControlConnect = "device.remote-control.connect";
   public const string DeviceRemoteControlElevatedDesktop = "device.remote-control.elevated-desktop";
   public const string DeviceRemoteControlInteract = "device.remote-control.interact";
-  public const string DeviceTagsRead = "device.tags.read";
   public const string DeviceTagsWrite = "device.tags.write";
   public const string DeviceTerminalUse = "device.terminal.use";
   public const string DeviceVncRelayConnect = "device.vnc-relay.connect";
   public const string DeviceWakeSend = "device.wake.send";
-  public const string InstallerKeyManageAll = "installer-key.manage-all";
-  public const string InstallerKeyRead = "installer-key.read";
-  public const string InstallerKeyWrite = "installer-key.write";
+  public const string InstallerKeyOthersRead = "installer-key.others.read";
+  public const string InstallerKeyOthersWrite = "installer-key.others.write";
+  public const string InstallerKeySelfRead = "installer-key.self.read";
+  public const string InstallerKeySelfWrite = "installer-key.self.write";
   public const string PersonalAccessTokenOthersRead = "personal-access-token.others.read";
   public const string PersonalAccessTokenOthersWrite = "personal-access-token.others.write";
   public const string PersonalAccessTokenSelfRead = "personal-access-token.self.read";
@@ -60,7 +60,6 @@ public static class PermissionNames
   public const string TenantPermissionsDeny = "tenant.permissions.deny";
   public const string TenantPermissionsRead = "tenant.permissions.read";
   public const string TenantPermissionsWrite = "tenant.permissions.write";
-  public const string TenantRead = "tenant.read";
   public const string TenantSettingsRead = "tenant.settings.read";
   public const string TenantSettingsWrite = "tenant.settings.write";
   public const string TenantTagsWrite = "tenant.tags.write";

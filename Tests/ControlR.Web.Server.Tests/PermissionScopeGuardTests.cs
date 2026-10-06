@@ -187,7 +187,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
     var response = await client.PutAsJsonAsync(
       PaUrl(tenantId, $"/{assignment.Id}"),
       new UpdatePermissionAssignmentRequestDto(
-        PermissionNames.TenantRead,
+        PermissionNames.TenantSettingsRead,
         PermissionEffect.Allow,
         PermissionScopeKind.Tenant,
         tenantId,
@@ -350,7 +350,7 @@ public class PermissionScopeGuardTests(ITestOutputHelper testOutput)
         userId,
         [
           new CreatePermissionAssignmentRequestDto(
-            PermissionPrincipalKind.User, userId, PermissionNames.TenantRead,
+            PermissionPrincipalKind.User, userId, PermissionNames.TenantSettingsRead,
             PermissionEffect.Allow, PermissionScopeKind.Tenant, tenantId, null)
         ]),
       TestContext.Current.CancellationToken);

@@ -42,12 +42,12 @@ public class LogonTokenProvider(
   IPasswordHasher<string> passwordHasher,
   ILogger<LogonTokenProvider> logger) : ILogonTokenProvider
 {
+  // Remote control is deliberately absent. A token minted with no scopes is a viewer credential,
+  // and controlling a device has to be asked for by name.
   private static readonly string[] _defaultDeviceAccessPermissions =
   [
     PermissionNames.DeviceRead,
-    PermissionNames.DeviceOverviewRead,
-    PermissionNames.DeviceRemoteControlConnect,
-    PermissionNames.DeviceRemoteControlInteract
+    PermissionNames.DeviceOverviewRead
   ];
 
   private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;

@@ -151,7 +151,7 @@ public sealed class PermissionEvaluator(
     CancellationToken cancellationToken)
   {
     var permissionNames = entries
-      .Select(entry => entry.Value.PermissionName)
+      .SelectMany(entry => entry.Value.PermissionNames)
       .Distinct(StringComparer.Ordinal)
       .ToArray();
 
@@ -164,7 +164,8 @@ public sealed class PermissionEvaluator(
 
     foreach (var (policyName, definition) in entries)
     {
-      if (decisions.TryGetValue(definition.PermissionName, out var decision) && decision.Allowed)
+      if (definition.PermissionNames.Any(name =>
+            decisions.TryGetValue(name, out var decision) && decision.Allowed))
       {
         grantedPolicies.Add(policyName);
       }

@@ -19,7 +19,7 @@ public class InstallerKeysController(
   private readonly IResourceDescriptorFactory _resourceFactory = resourceFactory;
 
   [HttpPost]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeySelfWrite)]
   [ApiDeprecated("/api/v1/installer-keys", Note = "The replacement requires TenantId in the request body.")]
   public async Task<ActionResult<InternalDtos.CreateInstallerKeyResponseDto>> Create(
       [FromBody] InternalDtos.CreateInstallerKeyRequestDto request)
@@ -43,7 +43,7 @@ public class InstallerKeysController(
   }
 
   [HttpDelete("{id:guid}")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeyAnyWrite)]
   [ApiDeprecated("/api/v1/installer-keys/{keyId}?tenantId=", Note = "The replacement requires tenantId as a query parameter.")]
   public async Task<IActionResult> Delete([FromRoute] Guid id)
   {
@@ -59,7 +59,7 @@ public class InstallerKeysController(
   }
 
   [HttpGet]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeyAnyRead)]
   [ApiDeprecated("/api/v1/installer-keys?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns an Items envelope.")]
   public async Task<ActionResult<IEnumerable<InternalDtos.AgentInstallerKeyDto>>> GetAll()
   {
@@ -69,13 +69,13 @@ public class InstallerKeysController(
       return BadRequest("User tenant or id not found.");
     }
 
-    var isAdmin = await CanManageAllKeys(HttpContext.RequestAborted);
+    var isAdmin = await CanReadAllKeys(HttpContext.RequestAborted);
     var keys = await _installerKeyManager.GetAllKeys(tenantId, userId, isAdmin);
     return keys.ToList();
   }
 
   [HttpGet("usages/{keyId:guid}")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyRead)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeyAnyRead)]
   [ApiDeprecated("/api/v1/installer-keys/{keyId}/usages?tenantId=", Note = "The replacement requires tenantId as a query parameter and returns an Items envelope.")]
   public async Task<ActionResult<IReadOnlyList<InternalDtos.AgentInstallerKeyUsageDto>>> GetUsages([FromRoute] Guid keyId)
   {
@@ -85,13 +85,13 @@ public class InstallerKeysController(
       return BadRequest("User tenant or id not found.");
     }
 
-    var isAdmin = await CanManageAllKeys(HttpContext.RequestAborted);
+    var isAdmin = await CanReadAllKeys(HttpContext.RequestAborted);
     var result = await _installerKeyManager.GetKeyUsages(keyId, userId, tenantId, isAdmin);
     return result.ToActionResult();
   }
 
   [HttpPut("rename")]
-  [Authorize(Policy = PolicyNames.RequireInstallerKeyWrite)]
+  [Authorize(Policy = PolicyNames.RequireInstallerKeyAnyWrite)]
   [ApiDeprecated("/api/v1/installer-keys/{keyId}?tenantId=", Note = "The replacement takes the key id in the route, tenantId as a query parameter, a body with only friendlyName, and returns 204.")]
   public async Task<IActionResult> Rename(
       [FromBody] InternalDtos.RenameInstallerKeyRequestDto request)
@@ -107,7 +107,7 @@ public class InstallerKeysController(
     return result.ToActionResult();
   }
 
-  private async Task<bool> CanManageAllKeys(CancellationToken cancellationToken)
+  private async Task<bool> CanAccessAllKeys(string permissionName, CancellationToken cancellationToken)
   {
     var principal = User.ToPrincipalDescriptor();
     if (principal is null)
@@ -122,9 +122,15 @@ public class InstallerKeysController(
 
     var result = await _permissionEvaluator.Evaluate(
       principal,
-      PermissionNames.InstallerKeyManageAll,
+      permissionName,
       _resourceFactory.CreateTenant(principal.TenantId.Value),
       cancellationToken);
     return result.Allowed;
   }
+
+  private Task<bool> CanManageAllKeys(CancellationToken cancellationToken) =>
+    CanAccessAllKeys(PermissionNames.InstallerKeyOthersWrite, cancellationToken);
+
+  private Task<bool> CanReadAllKeys(CancellationToken cancellationToken) =>
+    CanAccessAllKeys(PermissionNames.InstallerKeyOthersRead, cancellationToken);
 }

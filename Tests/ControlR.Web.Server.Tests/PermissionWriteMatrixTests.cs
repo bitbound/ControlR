@@ -54,7 +54,7 @@ public class PermissionWriteMatrixTests(ITestOutputHelper testOutput)
     { PrincipalCase.User, PermissionNames.ServerTelemetryRead, PermissionEffect.Deny, PermissionScopeKind.Server, true },
     { PrincipalCase.ServerServiceAccount, PermissionNames.ServerTelemetryRead, PermissionEffect.Allow, PermissionScopeKind.Server, true },
     // Whitelist rejections that predate I1 stay rejected at Server for the right reasons.
-    { PrincipalCase.User, PermissionNames.TenantRead, PermissionEffect.Allow, PermissionScopeKind.Server, false },
+    { PrincipalCase.User, PermissionNames.TenantSettingsRead, PermissionEffect.Allow, PermissionScopeKind.Server, false },
     { PrincipalCase.User, PermissionNames.UserGroupAssignUsers, PermissionEffect.Allow, PermissionScopeKind.Server, false }
   };
 

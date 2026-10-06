@@ -28,7 +28,7 @@ public class PermissionRequirementHandler(
     var principal = context.User.ToPrincipalDescriptor();
     if (principal is null)
     {
-      _logger.LogWarning("Cannot build principal descriptor from claims. Denying {Permission}.", requirement.PermissionName);
+      _logger.LogWarning("Cannot build principal descriptor from claims. Denying {Permissions}.", string.Join(", ", requirement.PermissionNames));
       context.Fail(new AuthorizationFailureReason(this, "Missing required principal claims."));
       return;
     }
@@ -41,24 +41,28 @@ public class PermissionRequirementHandler(
       if (resourceDescriptor is null)
       {
         _logger.LogWarning(
-          "Could not resolve resource for {Permission}. Denying.", requirement.PermissionName);
+          "Could not resolve resource for {Permissions}. Denying.", string.Join(", ", requirement.PermissionNames));
         context.Fail(new AuthorizationFailureReason(this, "Could not resolve the authorization resource."));
         return;
       }
 
-      var result = await _evaluator.Evaluate(
-        principal, requirement.PermissionName, resourceDescriptor, cancellationToken);
+      var decisions = await _evaluator.EvaluateMany(
+        principal, requirement.PermissionNames, resourceDescriptor, cancellationToken);
 
-      if (result.Allowed)
+      if (decisions.Values.Any(x => x.Allowed))
       {
         context.Succeed(requirement);
         return;
       }
 
+      var denialReason = decisions.Values
+        .Select(x => x.DenialReason)
+        .FirstOrDefault(reason => reason is not null) ?? "Permission denied.";
+
       _logger.LogDebug(
-        "Permission denied: {Permission} on {Resource} for principal {PrincipalId}. Reason: {Reason}",
-        requirement.PermissionName, resourceDescriptor, principal.PrincipalId, result.DenialReason);
-      context.Fail(new AuthorizationFailureReason(this, result.DenialReason ?? "Permission denied."));
+        "Permission denied: {Permissions} on {Resource} for principal {PrincipalId}. Reason: {Reason}",
+        string.Join(", ", requirement.PermissionNames), resourceDescriptor, principal.PrincipalId, denialReason);
+      context.Fail(new AuthorizationFailureReason(this, denialReason));
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
@@ -68,7 +72,7 @@ public class PermissionRequirementHandler(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Authorization evaluation failed for {Permission}. Denying.", requirement.PermissionName);
+      _logger.LogError(ex, "Authorization evaluation failed for {Permissions}. Denying.", string.Join(", ", requirement.PermissionNames));
       context.Fail(new AuthorizationFailureReason(this, "Authorization evaluation failed."));
     }
   }

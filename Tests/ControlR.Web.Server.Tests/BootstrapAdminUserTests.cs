@@ -53,7 +53,7 @@ public class BootstrapAdminUserTests(ITestOutputHelper output)
     Assert.Contains(PermissionNames.TenantSettingsWrite, permissions);
     Assert.Contains(PermissionNames.DeviceRead, permissions);
     Assert.Contains(PermissionNames.AgentInstall, permissions);
-    Assert.Contains(PermissionNames.InstallerKeyRead, permissions);
+    Assert.Contains(PermissionNames.InstallerKeySelfRead, permissions);
 
     var claims = await userManager.GetClaimsAsync(user);
     Assert.Contains(claims, c => c.Type == UserClaimTypes.UserId && c.Value == user.Id.ToString());

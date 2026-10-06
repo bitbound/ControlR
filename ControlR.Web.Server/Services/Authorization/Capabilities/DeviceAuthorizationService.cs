@@ -152,8 +152,10 @@ public sealed class DeviceAuthorizationService(
     => await HasDevicePermission(principal, device, PermissionNames.DeviceTagsWrite);
 
   /// <summary>
-  /// Evaluates <see cref="PermissionNames.AgentInstall"/> at device scope so device-scoped
-  /// denies on <paramref name="device"/> are honored regardless of broader tenant rights.
+  /// Evaluates <see cref="PermissionNames.AgentInstall"/> against the target device. Agent
+  /// installation is a provisioning action, so the permission is grantable only at tenant scope.
+  /// The device resource identifies which device the tenant grant is exercised against. It is not a
+  /// per-device override, because scope validation rejects a device-scoped row for this permission.
   /// </summary>
   private async Task<bool> CanInstallAgentOnDevice(PrincipalDescriptor principal, Device device)
     => await HasDevicePermission(principal, device, PermissionNames.AgentInstall);

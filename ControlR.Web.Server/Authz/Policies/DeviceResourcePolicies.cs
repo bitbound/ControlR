@@ -28,7 +28,6 @@ public static class DeviceResourcePolicies
   public const string RemoteControlBlockInput = "DeviceRemoteControlBlockInput";
   public const string RemoteControlConnect = "DeviceRemoteControlConnect";
   public const string RemoteControlInteract = "DeviceRemoteControlInteract";
-  public const string TagsRead = "DeviceTagsRead";
   public const string TagsWrite = "DeviceTagsWrite";
   public const string TerminalUse = "DeviceTerminalUse";
   public const string VncRelayConnect = "DeviceVncRelayConnect";
@@ -54,7 +53,6 @@ public static class DeviceResourcePolicies
       [LogsRead] = PermissionNames.DeviceLogsRead,
       [OverviewRead] = PermissionNames.DeviceOverviewRead,
       [PowerManage] = PermissionNames.DevicePowerManage,
-      [TagsRead] = PermissionNames.DeviceTagsRead,
       [TagsWrite] = PermissionNames.DeviceTagsWrite,
       [FileSystemRead] = PermissionNames.DeviceFileSystemRead,
       [FileSystemWrite] = PermissionNames.DeviceFileSystemWrite,

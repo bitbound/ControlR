@@ -53,7 +53,7 @@ public class FirstUserTests(ITestOutputHelper output)
     Assert.Contains(PermissionNames.TenantSettingsWrite, permissions);
     Assert.Contains(PermissionNames.DeviceRead, permissions);
     Assert.Contains(PermissionNames.AgentInstall, permissions);
-    Assert.Contains(PermissionNames.InstallerKeyRead, permissions);
+    Assert.Contains(PermissionNames.InstallerKeySelfRead, permissions);
   }
 
   [Fact]
@@ -97,6 +97,6 @@ public class FirstUserTests(ITestOutputHelper output)
     Assert.Contains(PermissionNames.TenantSettingsWrite, permissions);
     Assert.Contains(PermissionNames.DeviceRead, permissions);
     Assert.Contains(PermissionNames.AgentInstall, permissions);
-    Assert.Contains(PermissionNames.InstallerKeyRead, permissions);
+    Assert.Contains(PermissionNames.InstallerKeySelfRead, permissions);
   }
 }

@@ -32,7 +32,10 @@ public class PermissionPolicyMapTests
       PolicyNames.RequireCustomersRead,
       PolicyNames.RequireCustomersWrite,
       PolicyNames.RequireDeviceGroupsRead,
-      PolicyNames.RequireInstallerKeyRead,
+      PolicyNames.RequireInstallerKeyAnyRead,
+      PolicyNames.RequireInstallerKeyAnyWrite,
+      PolicyNames.RequireInstallerKeyOthersWrite,
+      PolicyNames.RequireInstallerKeySelfWrite,
       PolicyNames.RequirePermissionAssignmentsRead,
       PolicyNames.RequirePermissionAssignmentsWrite,
       PolicyNames.RequireServerAuthorizationLogsRead,
@@ -69,9 +72,7 @@ public class PermissionPolicyMapTests
         PermissionPolicies.Definitions.TryGetValue(policyName, out var fullDefinition),
         $"Client policy '{policyName}' is missing from Definitions.");
 
-      Assert.Equal(
-        fullDefinition.PermissionName,
-        definition.PermissionName);
+      Assert.Equal(fullDefinition, definition);
     }
   }
 
@@ -146,7 +147,7 @@ public class PermissionPolicyMapTests
   {
     var policyNames = GetPublicStringConstants(typeof(PolicyNames))
       .ToHashSet(StringComparer.Ordinal);
-    var unmapped = PermissionPolicies.PolicyToPermission.Keys
+    var unmapped = PermissionPolicies.Definitions.Keys
       .Where(policyName => !policyNames.Contains(policyName))
       .ToArray();
 
@@ -160,22 +161,29 @@ public class PermissionPolicyMapTests
   {
     var policyNames = GetPublicStringConstants(typeof(PolicyNames));
     var missing = policyNames
-      .Where(policyName => !PermissionPolicies.PolicyToPermission.ContainsKey(policyName))
+      .Where(policyName => !PermissionPolicies.Definitions.ContainsKey(policyName))
       .ToArray();
 
     Assert.True(
       missing.Length == 0,
-      $"PolicyNames constants missing from PermissionPolicies.PolicyToPermission: {string.Join(", ", missing)}");
+      $"PolicyNames constants missing from PermissionPolicies.Definitions: {string.Join(", ", missing)}");
   }
 
   [Fact]
   public void PolicyToPermission_Values_AreKnownCatalogPermissions()
   {
-    foreach (var (policyName, permissionName) in PermissionPolicies.PolicyToPermission)
+    foreach (var (policyName, definition) in PermissionPolicies.Definitions)
     {
-      Assert.True(
-        PermissionCatalog.Exists(permissionName),
-        $"Policy '{policyName}' maps to permission '{permissionName}', which is not in the PermissionCatalog.");
+      foreach (var permissionName in definition.PermissionNames)
+      {
+        var metadata = PermissionCatalog.Get(permissionName);
+        Assert.NotNull(metadata);
+        Assert.True(
+          metadata.AllowedScopeKinds.Contains(definition.ResourceScopeKind),
+          $"Policy '{policyName}' evaluates permission '{permissionName}' at scope kind " +
+          $"'{definition.ResourceScopeKind}', which the permission cannot be granted at. " +
+          "That member would never match and the union hides it.");
+      }
     }
 
     foreach (var (policyName, permissionName) in DeviceResourcePolicies.PolicyToPermission)

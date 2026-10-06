@@ -86,14 +86,13 @@ public static class PermissionCatalog
     Add(PermissionNames.ServerTenantsWrite, PermissionCategories.Servers, "Manage Server Tenants", "Create and update tenants on the server.", server);
     Add(PermissionNames.ServerTelemetryRead, PermissionCategories.Servers, "Read Server Telemetry", "View server telemetry (logs and metrics).", server);
     Add(PermissionNames.ServerServiceAccountsRead, PermissionCategories.Servers, "Read Server Service Accounts", "View server-scoped service accounts and credentials.", server);
-    Add(PermissionNames.ServerServiceAccountsWrite, PermissionCategories.Servers, "Manage Server Service Accounts", "Create and delete server-scoped service accounts.", server);
-    Add(PermissionNames.ServerServiceAccountsRotateCredentials, PermissionCategories.Servers, "Rotate Server Service Account Credentials", "Create and revoke credentials for server-scoped service accounts.", server);
+    Add(PermissionNames.ServerServiceAccountsWrite, PermissionCategories.Servers, "Manage Server Service Accounts", "Create, update, and delete server-scoped service accounts.", server);
+    Add(PermissionNames.ServerServiceAccountsRotateCredentials, PermissionCategories.Servers, "Rotate Server Service Account Credentials", "Create, revoke, and purge credentials for server-scoped service accounts.", server);
 
-    Add(PermissionNames.TenantRead, PermissionCategories.Tenants, "Read Tenant", "View tenant details and settings.", tenant);
     Add(PermissionNames.TenantSettingsRead, PermissionCategories.Tenants, "Read Tenant Settings", "View tenant configuration.", tenant);
     Add(PermissionNames.TenantSettingsWrite, PermissionCategories.Tenants, "Manage Tenant Settings", "Modify tenant configuration.", tenant);
     Add(PermissionNames.TenantUsersRead, PermissionCategories.Tenants, "Read Tenant Users", "View users within the tenant.", tenant);
-    Add(PermissionNames.TenantUsersWrite, PermissionCategories.Tenants, "Manage Tenant Users", "Create and update users within the tenant.", tenant);
+    Add(PermissionNames.TenantUsersWrite, PermissionCategories.Tenants, "Manage Tenant Users", "Create and update users within the tenant, manage user invitations, and reset user passwords.", tenant);
     Add(PermissionNames.TenantUsersDelete, PermissionCategories.Tenants, "Delete Tenant Users", "Remove users from the tenant.", tenant);
     Add(PermissionNames.TenantUserGroupsRead, PermissionCategories.Tenants, "Read User Groups", "View user groups within the tenant.", tenant);
     Add(PermissionNames.TenantUserGroupsWrite, PermissionCategories.Tenants, "Manage User Groups", "Create, update, and delete user groups within the tenant.", tenant);
@@ -110,7 +109,6 @@ public static class PermissionCatalog
     Add(PermissionNames.DeviceRead, PermissionCategories.Devices, "Read Device", "View device details and status.", deviceResources);
     Add(PermissionNames.DeviceDelete, PermissionCategories.Devices, "Delete Device", "Remove a device from the system.", deviceResources);
     Add(PermissionNames.DeviceAliasWrite, PermissionCategories.Devices, "Update Device Alias", "Change the display alias for a device.", deviceResources);
-    Add(PermissionNames.DeviceTagsRead, PermissionCategories.Devices, "Read Device Tags", "View tags assigned to a device.", deviceResources);
     Add(PermissionNames.DeviceTagsWrite, PermissionCategories.Devices, "Manage Device Tags", "Add and remove tags on a device.", deviceResources);
     Add(PermissionNames.DeviceDesktopPreviewRead, PermissionCategories.Devices, "View Desktop Preview", "View the desktop preview thumbnail for a device.", deviceResources);
     Add(PermissionNames.DeviceLogsRead, PermissionCategories.Devices, "Read Device Logs", "View remote log files from a device.", deviceResources);
@@ -133,22 +131,23 @@ public static class PermissionCatalog
     Add(PermissionNames.DeviceFileSystemTransferDownload, PermissionCategories.Devices, "Download Files from Device", "Download files from a remote device.", deviceResources);
 
     Add(PermissionNames.DeviceTerminalUse, PermissionCategories.Devices, "Use Remote Terminal", "Open a terminal session and execute commands on a remote device.", deviceResources);
-    Add(PermissionNames.DeviceLogonTokenCreate, PermissionCategories.Devices, "Create Logon Token", "Create a single-use logon token for a device.", deviceResources);
+    Add(PermissionNames.DeviceLogonTokenCreate, PermissionCategories.Devices, "Create Logon Token", "Create a single-use logon token for a device. A token created without explicit scopes can only view that device.", deviceResources);
     Add(PermissionNames.DeviceWakeSend, PermissionCategories.Devices, "Send Wake Command", "Send a wake-on-LAN command to a device.", deviceResources);
     Add(PermissionNames.DevicePowerManage, PermissionCategories.Devices, "Manage Device Power", "Shutdown or restart a remote device.", deviceResources);
     Add(PermissionNames.DeviceAgentUpdate, PermissionCategories.Devices, "Update Device Agent", "Trigger an agent update on a remote device.", deviceResources);
 
     Add(PermissionNames.PersonalAccessTokenSelfRead, PermissionCategories.PersonalAccessTokens, "Read Own PATs", "View your own personal access tokens.", tenant);
-    Add(PermissionNames.PersonalAccessTokenSelfWrite, PermissionCategories.PersonalAccessTokens, "Manage Own PATs", "Create and delete your own personal access tokens.", tenant);
+    Add(PermissionNames.PersonalAccessTokenSelfWrite, PermissionCategories.PersonalAccessTokens, "Manage Own PATs", "Create, rename, revoke, and delete your own personal access tokens.", tenant);
     Add(PermissionNames.PersonalAccessTokenOthersRead, PermissionCategories.PersonalAccessTokens, "Read Others' PATs", "View personal access tokens belonging to other users in the tenant.", tenant);
-    Add(PermissionNames.PersonalAccessTokenOthersWrite, PermissionCategories.PersonalAccessTokens, "Manage Others' PATs", "Create and delete personal access tokens for other users in the tenant.", tenant);
+    Add(PermissionNames.PersonalAccessTokenOthersWrite, PermissionCategories.PersonalAccessTokens, "Manage Others' PATs", "Create, rename, revoke, and delete personal access tokens for other users in the tenant.", tenant);
     Add(PermissionNames.ServiceAccountRead, PermissionCategories.ServiceAccounts, "Read Service Accounts", "View tenant-scoped service accounts and credentials.", tenant);
-    Add(PermissionNames.ServiceAccountWrite, PermissionCategories.ServiceAccounts, "Manage Service Accounts", "Create and delete tenant-scoped service accounts.", tenant);
-    Add(PermissionNames.ServiceAccountRotateCredentials, PermissionCategories.ServiceAccounts, "Rotate Service Account Credentials", "Create and revoke credentials for tenant-scoped service accounts.", tenant);
+    Add(PermissionNames.ServiceAccountWrite, PermissionCategories.ServiceAccounts, "Manage Service Accounts", "Create, update, and delete tenant-scoped service accounts.", tenant);
+    Add(PermissionNames.ServiceAccountRotateCredentials, PermissionCategories.ServiceAccounts, "Rotate Service Account Credentials", "Create, revoke, and purge credentials for tenant-scoped service accounts.", tenant);
 
-    Add(PermissionNames.InstallerKeyRead, PermissionCategories.InstallerKeys, "Read Installer Keys", "View agent installer keys.", tenant);
-    Add(PermissionNames.InstallerKeyWrite, PermissionCategories.InstallerKeys, "Manage Installer Keys", "Create and delete agent installer keys.", tenant);
-    Add(PermissionNames.InstallerKeyManageAll, PermissionCategories.InstallerKeys, "Manage All Installer Keys", "View and manage installer keys created by any user in the tenant.", tenant);
+    Add(PermissionNames.InstallerKeySelfRead, PermissionCategories.InstallerKeys, "Read Own Installer Keys", "View the agent installer keys you created, and their usages.", tenant);
+    Add(PermissionNames.InstallerKeySelfWrite, PermissionCategories.InstallerKeys, "Manage Own Installer Keys", "Create, rename, and delete the agent installer keys you created.", tenant);
+    Add(PermissionNames.InstallerKeyOthersRead, PermissionCategories.InstallerKeys, "Read All Installer Keys", "View the agent installer keys created by any user in the tenant, including your own, and their usages.", tenant);
+    Add(PermissionNames.InstallerKeyOthersWrite, PermissionCategories.InstallerKeys, "Manage All Installer Keys", "Rename and delete the agent installer keys created by any user in the tenant, including your own. Cannot create keys. A read permission is still needed to view the keys.", tenant);
     Add(PermissionNames.AgentInstall, PermissionCategories.Agents, "Install Agent", "Generate agent installation commands and scripts.", tenant);
 
     Add(PermissionNames.DeviceGroupAssignDevices, PermissionCategories.DeviceGroups, "Assign Devices to Group", "Add and remove devices from a device group.", deviceGroup);

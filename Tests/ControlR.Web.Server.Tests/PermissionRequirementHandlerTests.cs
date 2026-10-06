@@ -18,9 +18,9 @@ public class PermissionRequirementHandlerTests
     var principalId = Guid.NewGuid();
     var evaluator = new Mock<IPermissionEvaluator>();
     evaluator
-      .Setup(x => x.Evaluate(
+      .Setup(x => x.EvaluateMany(
         It.IsAny<PrincipalDescriptor>(),
-        It.IsAny<string>(),
+        It.IsAny<IReadOnlyCollection<string>>(),
         It.IsAny<ResourceDescriptor>(),
         It.IsAny<CancellationToken>()))
       .ThrowsAsync(new InvalidOperationException("boom"));
@@ -58,12 +58,15 @@ public class PermissionRequirementHandlerTests
     var groupResource = new ResourceDescriptor(scopeKind, Guid.NewGuid(), tenantId);
     var evaluator = new Mock<IPermissionEvaluator>();
     evaluator
-      .Setup(x => x.Evaluate(
+      .Setup(x => x.EvaluateMany(
         It.IsAny<PrincipalDescriptor>(),
-        permissionName,
+        It.Is<IReadOnlyCollection<string>>(names => names.SequenceEqual(new[] { permissionName })),
         groupResource,
         It.IsAny<CancellationToken>()))
-      .ReturnsAsync(PermissionEvaluationResult.Allow("test", scopeKind.ToString()));
+      .ReturnsAsync(new Dictionary<string, PermissionEvaluationResult>
+      {
+        [permissionName] = PermissionEvaluationResult.Allow("test", scopeKind.ToString())
+      });
     var handler = new PermissionRequirementHandler(
       evaluator.Object,
       Mock.Of<IResourceDescriptorFactory>(),
@@ -113,7 +116,7 @@ public class PermissionRequirementHandlerTests
     Assert.NotEmpty(context.PendingRequirements);
     // The handler must fail closed before ever consulting the evaluator.
     evaluator.Verify(
-      x => x.Evaluate(It.IsAny<PrincipalDescriptor>(), It.IsAny<string>(), It.IsAny<ResourceDescriptor>(), It.IsAny<CancellationToken>()),
+      x => x.EvaluateMany(It.IsAny<PrincipalDescriptor>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<ResourceDescriptor>(), It.IsAny<CancellationToken>()),
       Times.Never);
   }
 
@@ -149,8 +152,90 @@ public class PermissionRequirementHandlerTests
 
     Assert.True(context.HasFailed);
     evaluator.Verify(
-      x => x.Evaluate(It.IsAny<PrincipalDescriptor>(), It.IsAny<string>(), It.IsAny<ResourceDescriptor>(), It.IsAny<CancellationToken>()),
+      x => x.EvaluateMany(It.IsAny<PrincipalDescriptor>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<ResourceDescriptor>(), It.IsAny<CancellationToken>()),
       Times.Never);
+  }
+
+  [Fact]
+  public async Task HandleRequirementAsync_UnionRequirement_AllPermissionsDenied_Fails()
+  {
+    var tenantId = Guid.NewGuid();
+    var principalId = Guid.NewGuid();
+    var tenantResource = new ResourceDescriptor(PermissionScopeKind.Tenant, tenantId, tenantId);
+    var evaluator = new Mock<IPermissionEvaluator>();
+    evaluator
+      .Setup(x => x.EvaluateMany(
+        It.IsAny<PrincipalDescriptor>(),
+        It.Is<IReadOnlyCollection<string>>(names =>
+          names.SequenceEqual(new[] { PermissionNames.InstallerKeySelfWrite, PermissionNames.InstallerKeyOthersWrite })),
+        It.IsAny<ResourceDescriptor>(),
+        It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new Dictionary<string, PermissionEvaluationResult>
+      {
+        [PermissionNames.InstallerKeySelfWrite] = PermissionEvaluationResult.Deny("no grant"),
+        [PermissionNames.InstallerKeyOthersWrite] = PermissionEvaluationResult.Deny("no grant")
+      });
+    var handler = new PermissionRequirementHandler(
+      evaluator.Object,
+      Mock.Of<IResourceDescriptorFactory>(),
+      Mock.Of<IHttpContextAccessor>(),
+      NullLogger<PermissionRequirementHandler>.Instance);
+    var principal = new ClaimsPrincipal(new ClaimsIdentity(
+    [
+      new Claim(PrincipalClaimTypes.PrincipalType, PrincipalClaimValues.User),
+      new Claim(PrincipalClaimTypes.PrincipalId, principalId.ToString()),
+      new Claim(UserClaimTypes.TenantId, tenantId.ToString())
+    ], "TestAuth"));
+    var requirement = new PermissionRequirement(
+      [PermissionNames.InstallerKeySelfWrite, PermissionNames.InstallerKeyOthersWrite],
+      tenantResource);
+    var context = new AuthorizationHandlerContext([requirement], principal, resource: requirement);
+
+    await handler.HandleAsync(context);
+
+    Assert.True(context.HasFailed);
+    // Fail() marks the context failed without draining pending requirements.
+    Assert.NotEmpty(context.PendingRequirements);
+  }
+
+  [Fact]
+  public async Task HandleRequirementAsync_UnionRequirement_EitherPermissionAllowed_Succeeds()
+  {
+    var tenantId = Guid.NewGuid();
+    var principalId = Guid.NewGuid();
+    var tenantResource = new ResourceDescriptor(PermissionScopeKind.Tenant, tenantId, tenantId);
+    var evaluator = new Mock<IPermissionEvaluator>();
+    evaluator
+      .Setup(x => x.EvaluateMany(
+        It.IsAny<PrincipalDescriptor>(),
+        It.Is<IReadOnlyCollection<string>>(names =>
+          names.SequenceEqual(new[] { PermissionNames.InstallerKeySelfRead, PermissionNames.InstallerKeyOthersRead })),
+        It.IsAny<ResourceDescriptor>(),
+        It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new Dictionary<string, PermissionEvaluationResult>
+      {
+        [PermissionNames.InstallerKeySelfRead] = PermissionEvaluationResult.Deny("no grant"),
+        [PermissionNames.InstallerKeyOthersRead] = PermissionEvaluationResult.Allow("test", "Tenant")
+      });
+    var handler = new PermissionRequirementHandler(
+      evaluator.Object,
+      Mock.Of<IResourceDescriptorFactory>(),
+      Mock.Of<IHttpContextAccessor>(),
+      NullLogger<PermissionRequirementHandler>.Instance);
+    var principal = new ClaimsPrincipal(new ClaimsIdentity(
+    [
+      new Claim(PrincipalClaimTypes.PrincipalType, PrincipalClaimValues.User),
+      new Claim(PrincipalClaimTypes.PrincipalId, principalId.ToString()),
+      new Claim(UserClaimTypes.TenantId, tenantId.ToString())
+    ], "TestAuth"));
+    var requirement = new PermissionRequirement(
+      [PermissionNames.InstallerKeySelfRead, PermissionNames.InstallerKeyOthersRead],
+      tenantResource);
+    var context = new AuthorizationHandlerContext([requirement], principal, resource: requirement);
+
+    await handler.HandleAsync(context);
+
+    Assert.True(context.HasSucceeded);
   }
 
   [Fact]
@@ -187,7 +272,7 @@ public class PermissionRequirementHandlerTests
 
     Assert.True(context.HasFailed);
     evaluator.Verify(
-      x => x.Evaluate(It.IsAny<PrincipalDescriptor>(), It.IsAny<string>(), It.IsAny<ResourceDescriptor>(), It.IsAny<CancellationToken>()),
+      x => x.EvaluateMany(It.IsAny<PrincipalDescriptor>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<ResourceDescriptor>(), It.IsAny<CancellationToken>()),
       Times.Never);
   }
 }
