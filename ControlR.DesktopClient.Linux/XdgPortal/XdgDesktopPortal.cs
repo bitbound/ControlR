@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Services.Locks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.Threading;
@@ -25,7 +26,7 @@ public interface IXdgDesktopPortal : IDisposable
   Task NotifyPointerButton(string sessionHandle, int button, bool pressed);
   Task NotifyPointerMotion(string sessionHandle, double dx, double dy);
   Task NotifyPointerMotionAbsolute(string sessionHandle, uint stream, double x, double y);
-  Task<bool> ProbeRestoreToken(string restoreToken, CancellationToken cancellationToken = default);
+  Task<bool> ProbeRestoreToken(CancellationToken cancellationToken = default);
   Task<bool> RequestRemoteDesktopPermission(bool bypassRestoreToken = false, CancellationToken cancellationToken = default);
   Task SetClipboardText(string text, CancellationToken cancellationToken);
 }
@@ -33,6 +34,7 @@ public interface IXdgDesktopPortal : IDisposable
 public sealed class XdgDesktopPortal(
   IFileSystem fileSystem,
   IFileAccessPermissions fileAccessPermissions,
+  IAsyncLock asyncLock,
   IOptionsMonitor<DesktopClientOptions> options,
   ILogger<XdgDesktopPortal> logger) : IXdgDesktopPortal, IDisposable
 {
@@ -42,6 +44,7 @@ public sealed class XdgDesktopPortal(
   private static readonly string[] _clipboardMimeTypes = ["text/plain;charset=utf-8"];
   private static readonly TimeSpan _defaultProbeTimeout = Debugger.IsAttached ? TimeSpan.FromSeconds(120) : TimeSpan.FromSeconds(5);
 
+  private readonly IAsyncLock _asyncLock = asyncLock;
   private readonly IFileAccessPermissions _fileAccessPermissions = fileAccessPermissions;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -279,7 +282,7 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  public async Task<bool> ProbeRestoreToken(string restoreToken, CancellationToken cancellationToken = default)
+  public async Task<bool> ProbeRestoreToken(CancellationToken cancellationToken = default)
   {
     if (_initialized)
     {
@@ -295,7 +298,7 @@ public sealed class XdgDesktopPortal(
       _logger.LogInformation("Starting Wayland restore token probe.");
 
       var result = await StartRemoteDesktopSession(
-        restoreToken,
+        bypassRestoreToken: false,
         openPipeWireRemote: false,
         cancellationToken: combinedCts.Token);
 
@@ -330,9 +333,8 @@ public sealed class XdgDesktopPortal(
         "Requesting Wayland remote desktop permission. BypassRestoreToken={BypassRestoreToken}",
         bypassRestoreToken);
 
-      var restoreToken = GetRestoreTokenForSession(bypassRestoreToken);
       var result = await StartRemoteDesktopSession(
-        restoreToken,
+        bypassRestoreToken,
         openPipeWireRemote: false,
         cancellationToken: cancellationToken);
 
@@ -527,9 +529,8 @@ public sealed class XdgDesktopPortal(
         "Initializing Wayland desktop portal. BypassRestoreToken={BypassRestoreToken}",
         bypassRestoreToken);
 
-      var restoreToken = GetRestoreTokenForSession(bypassRestoreToken);
       var result = await StartRemoteDesktopSession(
-        restoreToken,
+        bypassRestoreToken,
         openPipeWireRemote: true,
         cancellationToken: cancellationToken);
 
@@ -972,11 +973,20 @@ public sealed class XdgDesktopPortal(
   }
 
   private async Task<Result<PortalSessionState>> StartRemoteDesktopSession(
-    string? restoreToken,
+    bool bypassRestoreToken,
     bool openPipeWireRemote,
     CancellationToken cancellationToken = default)
   {
     await ConnectAsync(cancellationToken);
+
+    // The restore token is single-use and the portal rotates it on success, so reading it,
+    // starting the session, and saving the rotated value must be atomic. The lock is keyed by
+    // the token path, which is the identity of the shared resource, and the same lock is
+    // injected into every desktop client host and used by WaylandPermissionProvider.
+    var tokenPath = PathConstants.GetWaylandRemoteDesktopRestoreTokenPath(_options.CurrentValue.InstanceId);
+    await using var tokenLock = await _asyncLock.AcquireAsync(tokenPath, cancellationToken);
+
+    var restoreToken = GetRestoreTokenForSession(bypassRestoreToken);
 
     var sessionResult = await CreateRemoteDesktopSession(cancellationToken);
     if (!sessionResult.IsSuccess || sessionResult.Value is null)

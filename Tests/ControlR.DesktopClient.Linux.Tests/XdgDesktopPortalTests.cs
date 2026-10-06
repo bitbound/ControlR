@@ -5,6 +5,7 @@ using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Services.Locks;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Diagnostics;
 
@@ -33,7 +34,7 @@ public class XdgDesktopPortalTests : IDisposable
     _fileAccessPermissions = new FileAccessPermissions();
     _options = new OptionsMonitorWrapper<DesktopClientOptions>(new DesktopClientOptions());
     _options.CurrentValue.InstanceId = "test";
-    _desktopPortal = new XdgDesktopPortal(_realFileSystem, _fileAccessPermissions, _options, _logger);
+    _desktopPortal = new XdgDesktopPortal(_realFileSystem, _fileAccessPermissions, new KeyedLock(), _options, _logger);
     _testCancellationToken = TestContext.Current.CancellationToken;
   }
 

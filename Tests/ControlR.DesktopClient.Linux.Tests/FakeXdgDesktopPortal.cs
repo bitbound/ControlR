@@ -87,7 +87,7 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
     return Task.CompletedTask;
   }
 
-  public Task<bool> ProbeRestoreToken(string restoreToken, CancellationToken cancellationToken = default)
+  public Task<bool> ProbeRestoreToken(CancellationToken cancellationToken = default)
   {
     return Task.FromResult(ProbeResult);
   }

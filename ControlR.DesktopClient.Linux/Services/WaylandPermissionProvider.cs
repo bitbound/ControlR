@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Services.Locks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -19,17 +20,13 @@ internal class WaylandPermissionProvider(
   TimeProvider timeProvider,
   IFileSystem fileSystem,
   IXdgDesktopPortalFactory xdgFactory,
+  IAsyncLock asyncLock,
   IOptionsMonitor<DesktopClientOptions> options,
   ILogger<WaylandPermissionProvider> logger) : IWaylandPermissionProvider
 {
   private static readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
 
-  // Serializes probes across every host in the process. The restore token is single-use and
-  // the portal rotates it on success, so overlapping probes can invalidate each other. Static
-  // because each remote control session runs its own host with its own provider instance,
-  // while the token file is shared process-wide.
-  private static readonly SemaphoreSlim _probeLock = new(1, 1);
-
+  private readonly IAsyncLock _asyncLock = asyncLock;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<WaylandPermissionProvider> _logger = logger;
   private readonly IOptionsMonitor<DesktopClientOptions> _options = options;
@@ -69,30 +66,35 @@ internal class WaylandPermissionProvider(
 
   public async Task<bool> IsRemoteControlPermissionGranted(CancellationToken cancellationToken = default)
   {
-    var lockTaken = false;
     try
     {
-      await _probeLock.WaitAsync(cancellationToken);
-      lockTaken = true;
-
       var timer = Stopwatch.StartNew();
-      var restoreToken = LoadRestoreToken();
-      if (string.IsNullOrEmpty(restoreToken))
-      {
-        _logger.LogInformation("Wayland permission check found no restore token.");
-        InvalidateCache();
-        return false;
-      }
+      string? restoreToken;
 
-      if (IsCacheValid(restoreToken))
+      // The read is serialized with the portal's read-modify-write of the same file using the
+      // same lock key, so a probe never sees a partially written token. The probe itself runs
+      // outside this lock because the portal acquires the same key while starting a session.
+      var tokenPath = PathConstants.GetWaylandRemoteDesktopRestoreTokenPath(_options.CurrentValue.InstanceId);
+      await using (var tokenLock = await _asyncLock.AcquireAsync(tokenPath, cancellationToken))
       {
-        _logger.LogInformation("Wayland permission check used cached restore token result: Granted={Granted}", _cachedProbeResult);
-        return _cachedProbeResult;
+        restoreToken = LoadRestoreToken();
+        if (string.IsNullOrEmpty(restoreToken))
+        {
+          _logger.LogInformation("Wayland permission check found no restore token.");
+          InvalidateCache();
+          return false;
+        }
+
+        if (IsCacheValid(restoreToken))
+        {
+          _logger.LogInformation("Wayland permission check used cached restore token result: Granted={Granted}", _cachedProbeResult);
+          return _cachedProbeResult;
+        }
       }
 
       _logger.LogInformation("Wayland permission probe starting.");
       using var xdgPortal = _xdgFactory.CreateNew();
-      var isGranted = await xdgPortal.ProbeRestoreToken(restoreToken, cancellationToken);
+      var isGranted = await xdgPortal.ProbeRestoreToken(cancellationToken);
       timer.Stop();
 
       _logger.LogInformation(
@@ -115,13 +117,6 @@ internal class WaylandPermissionProvider(
     {
       _logger.LogError(ex, "Error checking RemoteDesktop permission");
       return false;
-    }
-    finally
-    {
-      if (lockTaken)
-      {
-        _probeLock.Release();
-      }
     }
   }
 
