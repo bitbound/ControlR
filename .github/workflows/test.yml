@@ -25,6 +25,10 @@ on:
       - "README.md"
       - ".github/**"
 
+concurrency:
+  group: controlr-tests-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
   DOTNET_NOLOGO: true
