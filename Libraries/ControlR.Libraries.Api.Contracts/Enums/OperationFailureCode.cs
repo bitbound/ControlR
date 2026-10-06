@@ -48,4 +48,16 @@ public enum OperationFailureCode
   /// </summary>
   [JsonStringEnumMemberName("device-failure")]
   DeviceFailure = 50,
+  /// <summary>
+  /// The device holds the target and will not release it, such as a file opened by another process. The
+  /// operation would succeed if retried after the lock is let go.
+  /// </summary>
+  [JsonStringEnumMemberName("device-busy")]
+  DeviceBusy = 55,
+  /// <summary>
+  /// The device is not connected, so nobody could carry out the operation. The server supplies this for
+  /// its own hub results; an agent cannot report its own disconnection.
+  /// </summary>
+  [JsonStringEnumMemberName("device-offline")]
+  DeviceOffline = 60,
 }

@@ -737,12 +737,12 @@ public class DeviceFileSystemController(
       FileSystemFailure.DeviceOffline => Problem(
         detail: "Device is currently offline.",
         statusCode: StatusCodes.Status409Conflict,
-        title: V1ProblemTitles.Conflict),
-      FileSystemFailure.RemoteFailure => Problem(
-        detail: outcome.Reason,
-        statusCode: StatusCodes.Status409Conflict,
         title: V1ProblemTitles.Conflict,
-        extensions: new Dictionary<string, object?> { ["failureCode"] = outcome.Code }),
+        extensions: new Dictionary<string, object?>
+        {
+          ["failureCode"] = OperationFailureCode.DeviceOffline,
+        }),
+      FileSystemFailure.RemoteFailure => MapRemoteFailure(outcome),
       FileSystemFailure.NoResponse => Problem(
         detail: "The device did not return a result.",
         statusCode: StatusCodes.Status502BadGateway,
@@ -760,6 +760,35 @@ public class DeviceFileSystemController(
         outcome.Failure,
         "Unrecognized device file system failure condition."),
     };
+  }
+
+  /// <summary>
+  /// Translates the reason the agent gave into a status, so a caller learns which condition refused it
+  /// instead of reading a non-standard extension. A refusal the agent did not classify, or one that is a
+  /// conflict with the device's current state, stays a conflict.
+  /// </summary>
+  /// <remarks>
+  /// A code this server does not recognize answers a conflict rather than throwing. New members are
+  /// inserted into <see cref="OperationFailureCode" /> by design, and an agent newer than the server must
+  /// still get a status and its own text.
+  /// </remarks>
+  private ObjectResult MapRemoteFailure(FileSystemOutcome outcome)
+  {
+    var statusCode = outcome.Code switch
+    {
+      OperationFailureCode.NotFound => StatusCodes.Status404NotFound,
+      OperationFailureCode.PermissionDenied => StatusCodes.Status403Forbidden,
+      OperationFailureCode.InvalidInput => StatusCodes.Status400BadRequest,
+      OperationFailureCode.DeviceFailure => StatusCodes.Status502BadGateway,
+      OperationFailureCode.DeviceBusy => StatusCodes.Status409Conflict,
+      _ => StatusCodes.Status409Conflict,
+    };
+
+    return Problem(
+      detail: outcome.Reason,
+      statusCode: statusCode,
+      title: V1ProblemTitles.ForStatusCode(statusCode),
+      extensions: new Dictionary<string, object?> { ["failureCode"] = outcome.Code });
   }
 
   /// <summary>

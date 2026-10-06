@@ -1,6 +1,7 @@
 using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.UserStorage;
@@ -94,9 +95,11 @@ public class UserStorageV1ControllerTests(ITestOutputHelper testOutput)
       new UserStorageRequestDto("ack-version", "1.2.3"),
       CancellationToken.None);
 
-    var setOk = Assert.IsType<OkObjectResult>(setResult.Result);
-    var setDto = Assert.IsType<UserStorageResponseDto>(setOk.Value);
+    var created = Assert.IsType<CreatedAtActionResult>(setResult.Result);
+    Assert.Equal(StatusCodes.Status201Created, created.StatusCode);
+    var setDto = Assert.IsType<UserStorageResponseDto>(created.Value);
     Assert.Equal("1.2.3", setDto.Value);
+    Assert.Equal(nameof(UserStorageController.GetItem), created.ActionName);
 
     var getResult = await controller.GetItem(manager, "ack-version", tenant.Id, CancellationToken.None);
     var getOk = Assert.IsType<OkObjectResult>(getResult.Result);

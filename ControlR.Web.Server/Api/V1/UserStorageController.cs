@@ -71,7 +71,7 @@ public class UserStorageController : ControllerBase
   }
 
   [HttpPost]
-  [ProducesResponseType<UserStorageResponseDto>(StatusCodes.Status200OK)]
+  [ProducesResponseType<UserStorageResponseDto>(StatusCodes.Status201Created)]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized, "application/problem+json")]
   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -92,7 +92,8 @@ public class UserStorageController : ControllerBase
     }
 
     var result = await userStorageManager.Set(request.Key, request.Value, userId, cancellationToken);
-    return Ok(ToV1Dto(result));
+    var dto = ToV1Dto(result);
+    return CreatedAtAction(nameof(GetItem), new { key = dto.Key, tenantId }, dto);
   }
 
   private static UserStorageResponseDto ToV1Dto(InternalDtos.UserStorageResponseDto item)
