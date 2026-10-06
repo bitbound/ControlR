@@ -1,6 +1,6 @@
 using ControlR.Libraries.Shared.Services.Locks;
 
-namespace ControlR.Web.Server.Tests;
+namespace ControlR.Libraries.Shared.Tests;
 
 public class KeyedLockTests
 {
