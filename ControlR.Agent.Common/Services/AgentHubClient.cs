@@ -319,7 +319,7 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Unable to overwrite file downloaded from viewer: {FileName} to {Directory}",
         dto.FileName, dto.TargetDirectoryPath);
-      return HubResult.Fail("File is in use. Unable to overwrite.", OperationFailureCode.DeviceFailure);
+      return HubResult.Fail("File is in use. Unable to overwrite.", OperationFailureCode.DeviceBusy);
     }
     catch (HubException ex) when (ex.Message.Contains("canceled by client"))
     {

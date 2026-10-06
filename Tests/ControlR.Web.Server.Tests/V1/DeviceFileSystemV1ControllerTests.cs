@@ -1,6 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.V1.DeviceFileSystem;
-using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Api.V1;
 using ControlR.Web.Server.Authn;
@@ -125,6 +124,68 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       Assert.Equal("Invalid request.", problem?.Title);
       Assert.Equal("tenantId must be a non-empty GUID.", problem?.Detail);
     }
+  }
+
+  /// <summary>
+  /// The agent names why it refused, so the status has to say which condition it was rather than
+  /// flattening every refusal into a conflict. Only the unclassified refusal keeps 409.
+  /// </summary>
+  [Theory]
+  [InlineData(OperationFailureCode.NotFound, StatusCodes.Status404NotFound)]
+  [InlineData(OperationFailureCode.PermissionDenied, StatusCodes.Status403Forbidden)]
+  [InlineData(OperationFailureCode.InvalidInput, StatusCodes.Status400BadRequest)]
+  [InlineData(OperationFailureCode.AlreadyExists, StatusCodes.Status409Conflict)]
+  [InlineData(OperationFailureCode.DeviceFailure, StatusCodes.Status502BadGateway)]
+  [InlineData(OperationFailureCode.DeviceBusy, StatusCodes.Status409Conflict)]
+  [InlineData(OperationFailureCode.Unknown, StatusCodes.Status409Conflict)]
+  public async Task CreateDirectory_WhenAgentRefusesWithACode_ReturnsThatCodesStatus(
+    OperationFailureCode code,
+    int expectedStatus)
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-create-coded-refusal@test.local");
+    harness.AgentClient
+      .Setup(x => x.CreateDirectory(It.IsAny<CreateDirectoryHubDto>()))
+      .ReturnsAsync(HubResult.Fail("the agent's own reason", code));
+
+    var result = await harness.Controller.CreateDirectory(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
+      TestContext.Current.CancellationToken);
+
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(expectedStatus, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal(expectedStatus, problem.Status);
+    Assert.Equal(ExpectedTitle(expectedStatus), problem.Title);
+    Assert.Equal("the agent's own reason", problem.Detail);
+    Assert.Equal(code, problem.Extensions["failureCode"]);
+  }
+
+  /// <summary>
+  /// Agents are deployed independently and can be newer than the server, so a code that did not exist when
+  /// this server was built must still answer a status and carry the agent's text rather than throw.
+  /// </summary>
+  [Fact]
+  public async Task CreateDirectory_WhenAgentRefusesWithAnUnknownCode_ReturnsConflictWithTheAgentsReason()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-create-future-code@test.local");
+    harness.AgentClient
+      .Setup(x => x.CreateDirectory(It.IsAny<CreateDirectoryHubDto>()))
+      .ReturnsAsync(HubResult.Fail("a reason from a newer agent", (OperationFailureCode)999_999));
+
+    var result = await harness.Controller.CreateDirectory(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertDeviceRefusal(result);
+    Assert.Equal("a reason from a newer agent", problem.Detail);
   }
 
   [Fact]
@@ -302,7 +363,10 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new DeleteDevicePathRequestDto("/parent/file.txt"),
       TestContext.Current.CancellationToken);
 
-    var problem = AssertDeviceRefusal(result);
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(StatusCodes.Status404NotFound, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal("Target path does not exist", problem.Detail);
     Assert.Equal(OperationFailureCode.NotFound, problem.Extensions["failureCode"]);
   }
 
@@ -2408,6 +2472,7 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
     Assert.Equal(StatusCodes.Status409Conflict, problem.Status);
     Assert.Equal(DeviceOfflineMessage, problem.Detail);
+    Assert.Equal(OperationFailureCode.DeviceOffline, problem.Extensions["failureCode"]);
     return problem;
   }
 
@@ -2510,6 +2575,22 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       CanRead: true,
       CanWrite: true,
       HasSubfolders: isDirectory);
+
+  /// <summary>
+  /// The title each of these statuses carries, taken from the shared table.
+  /// </summary>
+  private static string ExpectedTitle(int statusCode)
+  {
+    return statusCode switch
+    {
+      StatusCodes.Status400BadRequest => "Invalid request.",
+      StatusCodes.Status403Forbidden => "Forbidden.",
+      StatusCodes.Status404NotFound => "Not found.",
+      StatusCodes.Status409Conflict => "Conflict.",
+      StatusCodes.Status502BadGateway => "Bad gateway.",
+      _ => throw new ArgumentOutOfRangeException(nameof(statusCode), statusCode, null),
+    };
+  }
 
   /// <summary>
   /// Gives the controller the multipart request the pipeline would hand it, so the action's own form

@@ -832,7 +832,7 @@ public class ViewerHub(
 
       if (string.IsNullOrWhiteSpace(target.PublicIpV4))
       {
-        return HubResult.Ok<string>("The target device has no known public IP, so no network neighbors could be found to broadcast the magic packet.");
+        return HubResult.Ok("The target device has no known public IP, so no network neighbors could be found to broadcast the magic packet.");
       }
 
       var connectionIds = await _appDb.Devices
@@ -847,7 +847,7 @@ public class ViewerHub(
 
       if (connectionIds.Count == 0)
       {
-        return HubResult.Ok<string>($"No online devices sharing public IP {target.PublicIpV4} were found. The target may need an online agent on the same network to be woken.");
+        return HubResult.Ok($"No online devices sharing public IP {target.PublicIpV4} were found. The target may need an online agent on the same network to be woken.");
       }
 
       var dto = new WakeDeviceDto([.. request.MacAddresses]);
@@ -855,7 +855,7 @@ public class ViewerHub(
         .Clients(connectionIds)
         .InvokeWakeDevice(dto);
 
-      return HubResult.Ok<string>($"Magic packet broadcast by {connectionIds.Count} devic{(connectionIds.Count == 1 ? "e" : "es")} with public IP {target.PublicIpV4}.");
+      return HubResult.Ok($"Magic packet broadcast by {connectionIds.Count} devic{(connectionIds.Count == 1 ? "e" : "es")} with public IP {target.PublicIpV4}.");
     }
     catch (Exception ex)
     {
@@ -1078,10 +1078,10 @@ public class ViewerHub(
       }
 
       var device = authResult.Value;
-      if (string.IsNullOrWhiteSpace(device.ConnectionId))
+      if (!device.IsOnline)
       {
-        _logger.LogWarning("Device {DeviceId} is not connected (no ConnectionId).", deviceId);
-        return HubResult.Fail("Device is not currently connected.");
+        _logger.LogWarning("Device {DeviceId} is not online.", deviceId);
+        return HubResult.Fail("Device is not currently online.", OperationFailureCode.DeviceOffline);
       }
 
       var streamId = Guid.NewGuid();

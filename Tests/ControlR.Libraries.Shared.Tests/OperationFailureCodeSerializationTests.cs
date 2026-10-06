@@ -27,6 +27,8 @@ public class OperationFailureCodeSerializationTests
   [InlineData("\"permission-denied\"", OperationFailureCode.PermissionDenied)]
   [InlineData("\"invalid-input\"", OperationFailureCode.InvalidInput)]
   [InlineData("\"device-failure\"", OperationFailureCode.DeviceFailure)]
+  [InlineData("\"device-busy\"", OperationFailureCode.DeviceBusy)]
+  [InlineData("\"device-offline\"", OperationFailureCode.DeviceOffline)]
   public void Enum_DeserializesFromItsKebabWireName(string json, OperationFailureCode expected)
   {
     Assert.Equal(expected, JsonSerializer.Deserialize<OperationFailureCode>(json));
@@ -45,6 +47,8 @@ public class OperationFailureCodeSerializationTests
   [InlineData(OperationFailureCode.PermissionDenied, "permission-denied")]
   [InlineData(OperationFailureCode.InvalidInput, "invalid-input")]
   [InlineData(OperationFailureCode.DeviceFailure, "device-failure")]
+  [InlineData(OperationFailureCode.DeviceBusy, "device-busy")]
+  [InlineData(OperationFailureCode.DeviceOffline, "device-offline")]
   public void Enum_SerializesAsItsKebabWireName(OperationFailureCode code, string wireName)
   {
     Assert.Equal($"\"{wireName}\"", JsonSerializer.Serialize(code));
