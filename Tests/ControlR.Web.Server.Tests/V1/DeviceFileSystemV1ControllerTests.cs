@@ -126,10 +126,6 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     }
   }
 
-  /// <summary>
-  /// The agent names why it refused, so the status has to say which condition it was rather than
-  /// flattening every refusal into a conflict. Only the unclassified refusal keeps 409.
-  /// </summary>
   [Theory]
   [InlineData(OperationFailureCode.NotFound, StatusCodes.Status404NotFound)]
   [InlineData(OperationFailureCode.PermissionDenied, StatusCodes.Status403Forbidden)]
@@ -138,13 +134,13 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
   [InlineData(OperationFailureCode.DeviceFailure, StatusCodes.Status502BadGateway)]
   [InlineData(OperationFailureCode.DeviceBusy, StatusCodes.Status409Conflict)]
   [InlineData(OperationFailureCode.Unknown, StatusCodes.Status409Conflict)]
-  public async Task CreateDirectory_WhenAgentRefusesWithACode_ReturnsThatCodesStatus(
+  public async Task CreateDirectory_WhenAgentReportsAFailureCode_ReturnsThatCodesStatus(
     OperationFailureCode code,
     int expectedStatus)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
-    var harness = await Harness.CreateAsync(scope, "v1-dfs-create-coded-refusal@test.local");
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-create-coded-failure@test.local");
     harness.AgentClient
       .Setup(x => x.CreateDirectory(It.IsAny<CreateDirectoryHubDto>()))
       .ReturnsAsync(HubResult.Fail("the agent's own reason", code));
@@ -164,12 +160,8 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     Assert.Equal(code, problem.Extensions["failureCode"]);
   }
 
-  /// <summary>
-  /// Agents are deployed independently and can be newer than the server, so a code that did not exist when
-  /// this server was built must still answer a status and carry the agent's text rather than throw.
-  /// </summary>
   [Fact]
-  public async Task CreateDirectory_WhenAgentRefusesWithAnUnknownCode_ReturnsConflictWithTheAgentsReason()
+  public async Task CreateDirectory_WhenAgentReportsAnUnknownFailureCode_ReturnsConflictWithTheAgentsReason()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     using var scope = testApp.CreateScope();
@@ -184,7 +176,10 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
       new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
       TestContext.Current.CancellationToken);
 
-    var problem = AssertDeviceRefusal(result);
+    var objectResult = Assert.IsType<ObjectResult>(result);
+    Assert.Equal(StatusCodes.Status409Conflict, objectResult.StatusCode);
+    var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
+    Assert.Equal("Conflict.", problem.Title);
     Assert.Equal("a reason from a newer agent", problem.Detail);
   }
 

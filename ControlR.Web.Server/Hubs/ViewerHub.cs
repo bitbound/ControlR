@@ -1078,7 +1078,7 @@ public class ViewerHub(
       }
 
       var device = authResult.Value;
-      if (!device.IsOnline)
+      if (!device.IsOnline || string.IsNullOrWhiteSpace(device.ConnectionId))
       {
         _logger.LogWarning("Device {DeviceId} is not online.", deviceId);
         return HubResult.Fail("Device is not currently online.", OperationFailureCode.DeviceOffline);
