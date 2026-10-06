@@ -17231,7 +17231,10 @@
         }
       },
       "PermissionEffect": {
-        "type": "integer"
+        "enum": [
+          "Allow",
+          "Deny"
+        ]
       },
       "PermissionPresetDto": {
         "required": [
@@ -17263,10 +17266,24 @@
         }
       },
       "PermissionPrincipalKind": {
-        "type": "integer"
+        "enum": [
+          "User",
+          "UserGroup",
+          "ServiceAccount",
+          "PersonalAccessToken",
+          "LogonToken"
+        ]
       },
       "PermissionScopeKind": {
-        "type": "integer"
+        "enum": [
+          "Unknown",
+          "Server",
+          "Tenant",
+          "CustomerTenant",
+          "DeviceGroup",
+          "Device",
+          "UserGroup"
+        ]
       },
       "PersonalAccessTokenPermissionMode": {
         "enum": [
