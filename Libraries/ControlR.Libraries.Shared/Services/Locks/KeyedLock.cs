@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace ControlR.Web.Server.Services.Locks;
+namespace ControlR.Libraries.Shared.Services.Locks;
 
 /// <summary>
 /// In-process keyed lock backed by a per-key semaphore. Idle entries are evicted as soon as

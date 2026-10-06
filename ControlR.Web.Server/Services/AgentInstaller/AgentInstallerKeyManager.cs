@@ -1,7 +1,7 @@
 using ControlR.Libraries.Shared.Helpers;
+using ControlR.Libraries.Shared.Services.Locks;
 using ControlR.Web.Server.Extensions.Dtos.Internal;
 using ControlR.Web.Server.Primitives;
-using ControlR.Web.Server.Services.Locks;
 
 namespace ControlR.Web.Server.Services.AgentInstaller;
 

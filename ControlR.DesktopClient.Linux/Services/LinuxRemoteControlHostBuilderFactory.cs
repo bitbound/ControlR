@@ -4,6 +4,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Avalonia.Services;
+using ControlR.Libraries.Shared.Services.Locks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -14,9 +15,11 @@ public class LinuxRemoteControlHostBuilderFactory(
   IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
   IUserInteractionService userInteractionService,
   IIpcClientAccessor ipcClientAccessor,
+  IAsyncLock asyncLock,
   IToaster toaster,
   IUiDispatcher dispatcher) : IRemoteControlHostBuilderFactory
 {
+  private readonly IAsyncLock _asyncLock = asyncLock;
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IUiDispatcher _dispatcher = dispatcher;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
@@ -34,7 +37,8 @@ public class LinuxRemoteControlHostBuilderFactory(
           .AddSingleton(_toaster)
           .AddSingleton(_dispatcher)
           .AddSingleton(_userInteractionService)
-          .AddSingleton(_ipcClientAccessor);
+          .AddSingleton(_ipcClientAccessor)
+          .AddSingleton(_asyncLock);
       },
       options =>
       {

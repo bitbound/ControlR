@@ -8,6 +8,7 @@ using ControlR.Libraries.NativeInterop.Linux;
 using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Services.Locks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,7 @@ public static class ServiceRegistrationExtensions
     services
       .AddSharedPlatformServices()
       .AddSingleton<INavigationItemProvider, LinuxNavigationItemProvider>()
+      .AddSingleton<IAsyncLock, KeyedLock>()
       .AddSingleton<IRemoteControlHostBuilderFactory, LinuxRemoteControlHostBuilderFactory>();
 
     return GetDesktopEnvironmentDetector().GetDesktopEnvironment() switch

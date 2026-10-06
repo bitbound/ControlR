@@ -1,4 +1,4 @@
-namespace ControlR.Web.Server.Services.Locks;
+namespace ControlR.Libraries.Shared.Services.Locks;
 
 /// <summary>
 /// Serializes access to a named critical section. Implementations may be in-process

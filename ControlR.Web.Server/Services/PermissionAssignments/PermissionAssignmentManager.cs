@@ -1,8 +1,8 @@
+using ControlR.Libraries.Shared.Services.Locks;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Primitives;
 using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Services.Authorization.PermissionRules;
-using ControlR.Web.Server.Services.Locks;
 
 namespace ControlR.Web.Server.Services.PermissionAssignments;
 

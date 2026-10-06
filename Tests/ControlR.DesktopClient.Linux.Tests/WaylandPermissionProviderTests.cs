@@ -2,6 +2,7 @@ using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Linux.Services;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.Shared.Services.Locks;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -30,6 +31,7 @@ public class WaylandPermissionProviderTests
       timeProvider,
       fileSystem.Object,
       Mock.Of<IXdgDesktopPortalFactory>(),
+      new KeyedLock(),
       options.Object,
       NullLogger<WaylandPermissionProvider>.Instance);
 
@@ -55,6 +57,7 @@ public class WaylandPermissionProviderTests
       timeProvider,
       fileSystem.Object,
       Mock.Of<IXdgDesktopPortalFactory>(),
+      new KeyedLock(),
       options.Object,
       NullLogger<WaylandPermissionProvider>.Instance);
 
@@ -96,6 +99,7 @@ public class WaylandPermissionProviderTests
       timeProvider,
       fileSystem.Object,
       portalFactory.Object,
+      new KeyedLock(),
       options.Object,
       NullLogger<WaylandPermissionProvider>.Instance);
 

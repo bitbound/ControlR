@@ -28,7 +28,7 @@ internal class DesktopClientPermissionServiceLinux(
     }
 
     var waylandPermissions = _serviceProvider.GetRequiredService<IWaylandPermissionProvider>();
-    var isWaylandRemoteControlGranted = await waylandPermissions.IsRemoteControlPermissionGranted();
+    var isWaylandRemoteControlGranted = await waylandPermissions.IsRemoteControlPermissionGranted(cancellationToken);
 
     _logger.LogInformation(
       "Wayland desktop client permission state: RemoteControl={RemoteControl}",
