@@ -126,6 +126,26 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     }
   }
 
+  [Fact]
+  public async Task CreateDirectory_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    using var scope = testApp.CreateScope();
+    var harness = await Harness.CreateAsync(scope, "v1-dfs-create-refused@test.local");
+    harness.AgentClient
+      .Setup(x => x.CreateDirectory(It.IsAny<CreateDirectoryHubDto>()))
+      .ReturnsAsync(HubResult.Fail("the parent path is read-only"));
+
+    var result = await harness.Controller.CreateDirectory(
+      harness.Device.Id,
+      harness.Tenant.Id,
+      new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
+      TestContext.Current.CancellationToken);
+
+    var problem = AssertDeviceRefusal(result);
+    Assert.Equal("the parent path is read-only", problem.Detail);
+  }
+
   [Theory]
   [InlineData(OperationFailureCode.NotFound, StatusCodes.Status404NotFound)]
   [InlineData(OperationFailureCode.PermissionDenied, StatusCodes.Status403Forbidden)]
@@ -181,26 +201,6 @@ public class DeviceFileSystemV1ControllerTests(ITestOutputHelper testOutput)
     var problem = Assert.IsType<ProblemDetails>(objectResult.Value);
     Assert.Equal("Conflict.", problem.Title);
     Assert.Equal("a reason from a newer agent", problem.Detail);
-  }
-
-  [Fact]
-  public async Task CreateDirectory_WhenAgentRefuses_ReturnsConflictWithTheAgentsReason()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    using var scope = testApp.CreateScope();
-    var harness = await Harness.CreateAsync(scope, "v1-dfs-create-refused@test.local");
-    harness.AgentClient
-      .Setup(x => x.CreateDirectory(It.IsAny<CreateDirectoryHubDto>()))
-      .ReturnsAsync(HubResult.Fail("the parent path is read-only"));
-
-    var result = await harness.Controller.CreateDirectory(
-      harness.Device.Id,
-      harness.Tenant.Id,
-      new CreateDeviceDirectoryRequestDto("/parent", "new-dir"),
-      TestContext.Current.CancellationToken);
-
-    var problem = AssertDeviceRefusal(result);
-    Assert.Equal("the parent path is read-only", problem.Detail);
   }
 
   /// <summary>
