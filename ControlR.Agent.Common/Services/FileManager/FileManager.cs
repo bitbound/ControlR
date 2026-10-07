@@ -479,39 +479,26 @@ internal class FileManager(
       return false;
     }
 
-    // A path can sit inside a log root and still stream a file outside it when
-    // the local user owns that root and planted a symlink (or pointed an
-    // intermediate directory at one). ResolveLinkTarget only inspects the final
-    // component, so walk every prefix and refuse as soon as one leaves the
-    // roots. The agent typically runs elevated on Linux and macOS, so following
-    // such a link exposes files the user cannot read directly.
-    foreach (var prefix in EnumerateAncestors(fullPath))
-    {
-      try
-      {
-        var target = _fileSystem.ResolveLinkTarget(prefix, returnFinalTarget: true);
-        if (target is null)
-        {
-          continue;
-        }
+    // Compare in resolved space. The roots and the candidate can disagree above
+    // the root when the OS ships a link there (macOS /var -> /private/var), and a
+    // path can sit inside a root and still stream a file outside it when the local
+    // user planted a symlink inside that root. Resolving both sides keeps the
+    // platform link working while a link that leaves the roots still lands outside
+    // them and is refused. The agent typically runs elevated on Linux and macOS,
+    // so following such a link exposes files the user cannot read directly.
+    var resolvedRoots = roots
+      .Select(ResolveRealPath)
+      .Where(root => root is not null)
+      .Cast<string>()
+      .ToList();
 
-        if (!roots.Any(root => IsWithinDirectory(Path.GetFullPath(target.FullName), root)))
-        {
-          return false;
-        }
-      }
-      catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
-      {
-        // A prefix that does not exist on disk is not a link. Existence is the
-        // caller's concern.
-      }
-      catch
-      {
-        return false;
-      }
+    var resolvedPath = ResolveRealPath(fullPath);
+    if (resolvedPath is null)
+    {
+      return false;
     }
 
-    return true;
+    return resolvedRoots.Any(root => IsWithinDirectory(resolvedPath, root));
   }
 
   public FileReferenceResult ResolveLogFile(LogKind kind, string fileName, string? username)
@@ -696,17 +683,6 @@ internal class FileManager(
     {
       _logger.LogError(ex, "Error validating file path: {FileName} in {DirectoryPath}", fileName, directoryPath);
       return Task.FromResult(new ValidateFilePathResponseDto(false, $"Error validating path: {ex.Message}"));
-    }
-  }
-
-  private static IEnumerable<string> EnumerateAncestors(string fullPath)
-  {
-    var current = fullPath;
-    while (!string.IsNullOrEmpty(current)
-      && !string.Equals(current, Path.GetPathRoot(current), StringComparison.Ordinal))
-    {
-      yield return current;
-      current = Path.GetDirectoryName(current);
     }
   }
 
@@ -1031,6 +1007,50 @@ internal class FileManager(
     }
 
     return fullPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison);
+  }
+
+  // Resolves every link along a path the way the OS does on open, so two paths
+  // that reach the same file compare equal. ResolveLinkTarget inspects only the
+  // final component, so each segment is resolved in turn. Returns null when a
+  // component cannot be inspected, which the caller treats as a refusal.
+  private string? ResolveRealPath(string fullPath)
+  {
+    var pathRoot = Path.GetPathRoot(fullPath);
+    if (string.IsNullOrEmpty(pathRoot))
+    {
+      return null;
+    }
+
+    var resolved = pathRoot;
+    foreach (var segment in fullPath[pathRoot.Length..]
+      .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
+    {
+      resolved = Path.Join(resolved, segment);
+
+      IFileSystemItemInfo? target;
+      try
+      {
+        target = _fileSystem.ResolveLinkTarget(resolved, returnFinalTarget: true);
+      }
+      catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+      {
+        // A component that is not on disk is not a link. Existence is not this
+        // method's concern.
+        continue;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogDebug(ex, "Could not resolve link target for {Path}", resolved);
+        return null;
+      }
+
+      if (target is not null)
+      {
+        resolved = Path.GetFullPath(target.FullName);
+      }
+    }
+
+    return resolved;
   }
 }
 
