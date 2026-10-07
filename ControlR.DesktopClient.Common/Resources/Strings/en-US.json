@@ -78,6 +78,7 @@
   "AboutThirdPartyLicensesLabel": "Third-Party Licenses",
   "AboutThirdPartyLicensesDescription": "ControlR uses the following open-source software and libraries.",
   "AboutLibraryAvaloniaUi": "Avalonia UI",
+  "AboutLibraryControlR": "ControlR",
   "AboutLibrarySerilog": "Serilog",
   "AboutLibraryTmdsDbus": "Tmds.DBus",
   "AboutLibraryMicrosoftLibraries": "Microsoft Libraries",

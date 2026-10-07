@@ -45,10 +45,13 @@
           View on GitHub
         </MudButton>
 
-        <MudButton Href="https://github.com/sponsors/bitbound" Target="_blank" Variant="Variant.Text"
-          StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Error" Class="external-link">
-          Sponsor Project
-        </MudButton>
+        @if (!BrandingConstants.HideSponsorshipInfo)
+        {
+          <MudButton Href="https://github.com/sponsors/bitbound" Target="_blank" Variant="Variant.Text"
+            StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Error" Class="external-link">
+            Sponsor Project
+          </MudButton>
+        }
       </div>
     </div>
   </div>

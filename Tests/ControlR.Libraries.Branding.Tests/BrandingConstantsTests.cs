@@ -91,6 +91,12 @@ public class BrandingConstantsTests
   }
 
   [Fact]
+  public void HideSponsorshipInfo_DefaultBuild_IsFalse()
+  {
+    Assert.False(BrandingConstants.HideSponsorshipInfo);
+  }
+
+  [Fact]
   public void InstallerBaseName_UsesBrandKey()
   {
     Assert.Equal("ControlR.Agent.Installer", BrandingConstants.InstallerBaseName);

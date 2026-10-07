@@ -121,6 +121,22 @@ public class CustomizeScriptTests
     AssertContainsLine(result, "SecondaryColorDark = \"334455\"");
   }
 
+  [Fact]
+  public async Task HideSponsorshipInfo_NotProvided_LeavesConstantFalse()
+  {
+    var result = await RunScript("-BrandName", "NoSponsorshipTest", "-WhatIf");
+    Assert.Equal(0, result.ExitCode);
+    Assert.DoesNotContain("public static bool HideSponsorshipInfo { get; } = true;", result.StandardOutput);
+  }
+
+  [Fact]
+  public async Task HideSponsorshipInfo_Provided_SetsConstantTrue()
+  {
+    var result = await RunScript("-HideSponsorshipInfo", "-WhatIf");
+    Assert.Equal(0, result.ExitCode);
+    AssertContainsLine(result, "public static bool HideSponsorshipInfo { get; } = true;");
+  }
+
   [Theory]
   [InlineData("GGGGGG")]
   [InlineData("ZZZZZZ")]

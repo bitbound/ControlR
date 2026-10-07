@@ -39,29 +39,29 @@
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
 
-				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold">
+				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding ShowSponsorshipInfo}">
 					<Run Text="{x:Static common:Localization.AboutProjectLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0"
+				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding ShowSponsorshipInfo}"
 												 Content="https://github.com/bitbound/controlr"
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://github.com/bitbound/controlr" />
 
-				<TextBlock Grid.Row="4" Grid.Column="0" FontWeight="SemiBold">
+				<TextBlock Grid.Row="4" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding ShowSponsorshipInfo}">
 					<Run Text="{x:Static common:Localization.AboutWebsiteLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<HyperlinkButton Grid.Row="4" Grid.Column="1" Margin="0" Padding="0"
+				<HyperlinkButton Grid.Row="4" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding ShowSponsorshipInfo}"
 												 Content="https://controlr.app"
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://controlr.app" />
 
-				<TextBlock Grid.Row="5" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top">
+				<TextBlock Grid.Row="5" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top" IsVisible="{Binding ShowSponsorshipInfo}">
 					<Run Text="{x:Static common:Localization.AboutSponsorLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<StackPanel Grid.Row="5" Grid.Column="1" Spacing="8">
+				<StackPanel Grid.Row="5" Grid.Column="1" Spacing="8" IsVisible="{Binding ShowSponsorshipInfo}">
 					<TextBlock Text="{x:Static common:Localization.AboutSponsorDescription}" TextWrapping="Wrap" />
 					<controls:ThemeButton Content="{x:Static common:Localization.AboutSponsorButton}"
 																Color="Error"
@@ -79,7 +79,7 @@
 			</TextBlock>
 			<TextBlock Text="{x:Static common:Localization.AboutThirdPartyLicensesDescription}" TextWrapping="Wrap" />
 
-			<Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="8">
+			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="8">
 
 				<TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static common:Localization.AboutLibraryAvaloniaUi}" VerticalAlignment="Center" />
 				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -117,6 +117,16 @@
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://github.com/microsoft"
 												 VerticalAlignment="Center" />
+
+				<TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static common:Localization.AboutLibraryControlR}" IsVisible="{Binding HideSponsorshipInfo}" VerticalAlignment="Center" />
+				<StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding HideSponsorshipInfo}" VerticalAlignment="Center">
+					<HyperlinkButton Content="{x:Static common:Localization.AboutSourceText}"
+											 Command="{Binding OpenUrlCommand}"
+											 CommandParameter="https://github.com/bitbound/ControlR" />
+					<HyperlinkButton Content="{x:Static common:Localization.LinkLicenseText}"
+											 Command="{Binding OpenUrlCommand}"
+											 CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
+				</StackPanel>
 
 			</Grid>
 		</StackPanel>

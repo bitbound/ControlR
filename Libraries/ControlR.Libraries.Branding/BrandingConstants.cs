@@ -56,6 +56,11 @@ public static partial class BrandingConstants
   /// </summary>
   public static Uri? ControlrServerUrl { get; } = ParseControlrServerUrl(null);
 
+  /// <summary>
+  /// Hides the Project, Website, and Sponsor links in the built app UI. False in the default build.
+  /// </summary>
+  public static bool HideSponsorshipInfo { get; } = false;
+
   public static string AuthenticatorIssuerName => BrandName;
 
   public static string WindowsInstallDirectoryName => BrandKey;

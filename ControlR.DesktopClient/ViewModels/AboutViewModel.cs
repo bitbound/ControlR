@@ -1,5 +1,6 @@
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ViewModels;
+using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.ViewModels;
@@ -7,8 +8,10 @@ namespace ControlR.DesktopClient.ViewModels;
 public interface IAboutViewModel : IViewModelBase
 {
   string? AppVersion { get; }
+  bool HideSponsorshipInfo { get; }
   string InstanceId { get; }
   IRelayCommand<string> OpenUrlCommand { get; }
+  bool ShowSponsorshipInfo { get; }
 }
 
 public partial class AboutViewModel(
@@ -21,9 +24,13 @@ public partial class AboutViewModel(
   [ObservableProperty]
   private string? _appVersion;
 
-  public string InstanceId => string.IsNullOrWhiteSpace(_options.CurrentValue.InstanceId) 
-    ? $"({Localization.None.ToLower()})" 
+  public bool HideSponsorshipInfo => BrandingConstants.HideSponsorshipInfo;
+
+  public string InstanceId => string.IsNullOrWhiteSpace(_options.CurrentValue.InstanceId)
+    ? $"({Localization.None.ToLower()})"
     : _options.CurrentValue.InstanceId;
+
+  public bool ShowSponsorshipInfo => !BrandingConstants.HideSponsorshipInfo;
 
   protected override async Task OnInitializeAsync()
   {
