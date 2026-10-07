@@ -63,6 +63,9 @@ param(
   [Parameter(HelpMessage = "Absolute http/https URL of the ControlR server to bake into the build (empty for none)")]
   [string] $ControlrServerUrl = "",
 
+  [Parameter(HelpMessage = "Hide the Project, Website, and Sponsor links in the app UI and add a ControlR entry to the third-party licenses")]
+  [switch] $HideSponsorshipInfo,
+
   [Parameter(HelpMessage = "Build version (defaults to latest tag)")]
   [string] $Version = "",
 
@@ -443,6 +446,13 @@ foreach ($field in $colorFields) {
   $value = $colorParams[$field]
   $content = $content -replace "(public const string $field)(\s*=\s*)`"[0-9A-Fa-f]+`"", "`$1`$2`"$value`""
 }
+
+$hideSponsorshipValue = if ($HideSponsorshipInfo) { "true" } else { "false" }
+$hideSponsorshipPattern = 'public static bool HideSponsorshipInfo \{ get; \} = (true|false);'
+if ($HideSponsorshipInfo -and $content -notmatch $hideSponsorshipPattern) {
+  throw "Could not find the HideSponsorshipInfo declaration in $brandingFile. The source ref predates the sponsorship flag."
+}
+$content = $content -replace $hideSponsorshipPattern, "public static bool HideSponsorshipInfo { get; } = $hideSponsorshipValue;"
 
 if ($ControlrServerUrl) {
   Write-Host "Baking ControlR server URL: $ControlrServerUrl" -ForegroundColor Yellow

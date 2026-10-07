@@ -38,42 +38,45 @@
     </MudLink>
   </div>
 
-  <div>
-    <MudText Color="Color.Primary">
-      Project:
-    </MudText>
-  </div>
-  <div>
-    <MudLink Color="Color.Info" Href="https://github.com/bitbound/controlr" Target="_blank">
-      https://github.com/bitbound/controlr
-    </MudLink>
-  </div>
+  @if (!BrandingConstants.HideSponsorshipInfo)
+  {
+    <div>
+      <MudText Color="Color.Primary">
+        Project:
+      </MudText>
+    </div>
+    <div>
+      <MudLink Color="Color.Info" Href="https://github.com/bitbound/controlr" Target="_blank">
+        https://github.com/bitbound/controlr
+      </MudLink>
+    </div>
 
-  <div>
-    <MudText Color="Color.Primary">
-      Website:
-    </MudText>
-  </div>
-  <div>
-    <MudLink Color="Color.Info" Href="https://controlr.app" Target="_blank">
-      https://controlr.app
-    </MudLink>
-  </div>
+    <div>
+      <MudText Color="Color.Primary">
+        Website:
+      </MudText>
+    </div>
+    <div>
+      <MudLink Color="Color.Info" Href="https://controlr.app" Target="_blank">
+        https://controlr.app
+      </MudLink>
+    </div>
 
-  <div>
-    <MudText Color="Color.Primary">
-      Sponsor:
-    </MudText>
-  </div>
-  <div>
-    <MudText Class="mb-2">
-      @(BrandingConstants.BrandName) is free, open-source, self-hostable, and powered by donations.
-    </MudText>
-    <MudButton Href="https://github.com/sponsors/bitbound" Target="_blank" Variant="Variant.Text"
-               StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Error" Class="external-link">
-      Sponsor Project
-    </MudButton>
-  </div>
+    <div>
+      <MudText Color="Color.Primary">
+        Sponsor:
+      </MudText>
+    </div>
+    <div>
+      <MudText Class="mb-2">
+        @(BrandingConstants.BrandName) is free, open-source, self-hostable, and powered by donations.
+      </MudText>
+      <MudButton Href="https://github.com/sponsors/bitbound" Target="_blank" Variant="Variant.Text"
+                 StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Error" Class="external-link">
+        Sponsor Project
+      </MudButton>
+    </div>
+  }
 
 
   <div>
@@ -139,6 +142,15 @@
         <div>
           <MudLink Color="Color.Info" Href="https://github.com/microsoft">source</MudLink>
         </div>
+
+        @if (BrandingConstants.HideSponsorshipInfo)
+        {
+          <MudText>ControlR</MudText>
+          <div>
+            <MudLink Color="Color.Info" Class="me-1" Href="https://github.com/bitbound/ControlR">source</MudLink>
+            <MudLink Color="Color.Info" Href="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt">license</MudLink>
+          </div>
+        }
       </div>
     </div>
 

@@ -19,6 +19,7 @@ public static class Localization
 
   public static string About => GetString();
   public static string AboutLibraryAvaloniaUi => GetString();
+  public static string AboutLibraryControlR => GetString();
   public static string AboutLibraryMicrosoftLibraries => GetString();
   public static string AboutLibrarySerilog => GetString();
   public static string AboutLibraryTmdsDbus => GetString();

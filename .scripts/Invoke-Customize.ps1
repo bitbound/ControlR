@@ -108,6 +108,13 @@ if ($ConfigPath -or $ConfigUrl) {
     $customizeParams.ControlrServerUrl = [string]$serverUrlProp.Value
   }
 
+  # Same PSObject property check as customCss, for payloads produced before the
+  # sponsorship flag existed.
+  $hideSponsorshipProp = $config.PSObject.Properties['hideSponsorshipInfo']
+  if ($hideSponsorshipProp -and $hideSponsorshipProp.Value) {
+    $customizeParams.HideSponsorshipInfo = $true
+  }
+
   Write-Host "Applying customization for brand: $brandName"
   Write-Host "  BrandKey: $brandKey"
   Write-Host "  UnixBrandKey: $unixBrandKey"

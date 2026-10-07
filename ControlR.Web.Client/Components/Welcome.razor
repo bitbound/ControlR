@@ -21,7 +21,7 @@
 
     <div class="action-buttons">
       <MudButton Color="Color.Primary" Size="Size.Large" Href="/Account/Login" Variant="Variant.Outlined"
-        Class="action-button">
+                 Class="action-button">
         <MudIcon Icon="@Icons.Material.Filled.Login" Class="me-2" />
         Login
       </MudButton>
@@ -29,28 +29,31 @@
       @if (_isPublicRegistrationEnabled)
       {
         <MudButton Color="Color.Secondary" Size="Size.Large" Href="/Account/Register" Variant="Variant.Outlined"
-          Class="action-button">
+                   Class="action-button">
           <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="me-2" />
           Register
         </MudButton>
       }
     </div>
 
-    <MudDivider Class="my-6" />
+    @if (!BrandingConstants.HideSponsorshipInfo)
+    {
+      <MudDivider Class="my-6" />
 
-    <div class="links-section">
-      <div class="external-links">
-        <MudButton Href="https://github.com/bitbound/controlr" Target="_blank" Variant="Variant.Text"
-          StartIcon="@Icons.Custom.Brands.GitHub" Color="Color.Default" Class="external-link">
-          View on GitHub
-        </MudButton>
+      <div class="links-section">
+        <div class="external-links">
+          <MudButton Href="https://github.com/bitbound/controlr" Target="_blank" Variant="Variant.Text"
+                     StartIcon="@Icons.Custom.Brands.GitHub" Color="Color.Default" Class="external-link">
+            View on GitHub
+          </MudButton>
 
-        <MudButton Href="https://github.com/sponsors/bitbound" Target="_blank" Variant="Variant.Text"
-          StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Error" Class="external-link">
-          Sponsor Project
-        </MudButton>
+          <MudButton Href="https://github.com/sponsors/bitbound" Target="_blank" Variant="Variant.Text"
+                     StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Error" Class="external-link">
+            Sponsor Project
+          </MudButton>
+        </div>
       </div>
-    </div>
+    }
   </div>
 </div>
 

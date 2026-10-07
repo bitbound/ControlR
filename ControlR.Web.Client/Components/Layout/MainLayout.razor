@@ -44,10 +44,13 @@
             <ThemeToggle OnThemeChanged="HandleThemeChanged" />
           }
 
-          <MudTooltip Text="GitHub">
-            <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
-                           Href="https://github.com/bitbound/controlr/" Target="_blank" />
-          </MudTooltip>
+          @if (!BrandingConstants.HideSponsorshipInfo)
+          {
+            <MudTooltip Text="GitHub">
+              <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit"
+                            Href="https://github.com/bitbound/controlr/" Target="_blank" />
+            </MudTooltip>
+          }
         </MudAppBar>
         <MudDrawer @bind-Open="DrawerOpen" id="nav-drawer" ClipMode="DrawerClipMode.Always" Elevation="2">
           <NavMenu />
