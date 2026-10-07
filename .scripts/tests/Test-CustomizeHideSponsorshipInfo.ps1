@@ -22,7 +22,7 @@ function Assert-True {
 }
 
 function New-FakeRepo {
-  param([string] $Name)
+  param([string] $Name, [switch] $OmitDeclaration)
   $root = Join-Path ([IO.Path]::GetTempPath()) ("customize-sponsorship-test-" + $Name)
   if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }
 
@@ -32,16 +32,16 @@ function New-FakeRepo {
   Set-Content -Path (Join-Path $root "Directory.Build.props") -Value '<Project><PropertyGroup><BrandPrefix>ControlR</BrandPrefix></PropertyGroup></Project>' -Encoding UTF8
 
   New-Item -ItemType Directory -Path (Join-Path $root "Libraries/ControlR.Libraries.Branding") -Force | Out-Null
-  $brandingContent = @'
+  $declaration = if ($OmitDeclaration) { "" } else { "  public static bool HideSponsorshipInfo { get; } = false;`n" }
+  $brandingContent = @"
 namespace ControlR.Libraries.Branding;
 
 public static class BrandingConstants
 {
   public const string BrandName = "ControlR";
   public const string Publisher = "Bitbound";
-  public static bool HideSponsorshipInfo { get; } = false;
-}
-'@
+$declaration}
+"@
   Set-Content -Path (Join-Path $root "Libraries/ControlR.Libraries.Branding/BrandingConstants.cs") -Value $brandingContent -Encoding UTF8
 
   return $root
@@ -87,6 +87,17 @@ function Invoke-CustomizeFromConfig {
   }
 }
 
+function Test-Throws {
+  param([scriptblock] $Action)
+  try {
+    & $Action
+    return $false
+  }
+  catch {
+    return $true
+  }
+}
+
 # customize.ps1 without the switch leaves the constant false.
 $repo = New-FakeRepo -Name "absent"
 Invoke-CustomizeScript -Root $repo
@@ -115,6 +126,16 @@ $repo = New-FakeRepo -Name "legacy"
 $configPath = New-ConfigPayload -Root $repo -OmitHideSponsorshipInfo
 Invoke-CustomizeFromConfig -Root $repo -ConfigPath $configPath
 Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains($falseDeclaration)) -TestName "Invoke-Customize.ps1 without the payload flag leaves the constant false"
+
+# customize.ps1 fails loudly when -HideSponsorshipInfo is requested but the declaration is
+# missing, so a reformatted source cannot silently ship the sponsorship links.
+$repo = New-FakeRepo -Name "nodeclaration" -OmitDeclaration
+Assert-True -Condition (Test-Throws { Invoke-CustomizeScript -Root $repo -ExtraParams @{ HideSponsorshipInfo = $true } }) -TestName "customize.ps1 -HideSponsorshipInfo fails when the declaration is missing"
+
+# Without the switch a missing declaration is not an error, because nothing was asked of it.
+$repo = New-FakeRepo -Name "nodeclarationdefault" -OmitDeclaration
+Invoke-CustomizeScript -Root $repo
+Assert-True -Condition ((Get-BrandingConstantsContent -Root $repo).Contains("public const string BrandName")) -TestName "customize.ps1 without -HideSponsorshipInfo tolerates a missing declaration"
 
 if ($failures.Count -gt 0) {
   Write-Host ""

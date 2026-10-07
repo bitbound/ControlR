@@ -11,7 +11,6 @@ public interface IAboutViewModel : IViewModelBase
   bool HideSponsorshipInfo { get; }
   string InstanceId { get; }
   IRelayCommand<string> OpenUrlCommand { get; }
-  bool ShowSponsorshipInfo { get; }
 }
 
 public partial class AboutViewModel(
@@ -29,8 +28,6 @@ public partial class AboutViewModel(
   public string InstanceId => string.IsNullOrWhiteSpace(_options.CurrentValue.InstanceId)
     ? $"({Localization.None.ToLower()})"
     : _options.CurrentValue.InstanceId;
-
-  public bool ShowSponsorshipInfo => !BrandingConstants.HideSponsorshipInfo;
 
   protected override async Task OnInitializeAsync()
   {

@@ -39,29 +39,29 @@
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
 
-				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding ShowSponsorshipInfo}">
+				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding !HideSponsorshipInfo}">
 					<Run Text="{x:Static common:Localization.AboutProjectLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding ShowSponsorshipInfo}"
+				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding !HideSponsorshipInfo}"
 												 Content="https://github.com/bitbound/controlr"
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://github.com/bitbound/controlr" />
 
-				<TextBlock Grid.Row="4" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding ShowSponsorshipInfo}">
+				<TextBlock Grid.Row="4" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding !HideSponsorshipInfo}">
 					<Run Text="{x:Static common:Localization.AboutWebsiteLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<HyperlinkButton Grid.Row="4" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding ShowSponsorshipInfo}"
+				<HyperlinkButton Grid.Row="4" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding !HideSponsorshipInfo}"
 												 Content="https://controlr.app"
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://controlr.app" />
 
-				<TextBlock Grid.Row="5" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top" IsVisible="{Binding ShowSponsorshipInfo}">
+				<TextBlock Grid.Row="5" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top" IsVisible="{Binding !HideSponsorshipInfo}">
 					<Run Text="{x:Static common:Localization.AboutSponsorLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<StackPanel Grid.Row="5" Grid.Column="1" Spacing="8" IsVisible="{Binding ShowSponsorshipInfo}">
+				<StackPanel Grid.Row="5" Grid.Column="1" Spacing="8" IsVisible="{Binding !HideSponsorshipInfo}">
 					<TextBlock Text="{x:Static common:Localization.AboutSponsorDescription}" TextWrapping="Wrap" />
 					<controls:ThemeButton Content="{x:Static common:Localization.AboutSponsorButton}"
 																Color="Error"

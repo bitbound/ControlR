@@ -448,7 +448,11 @@ foreach ($field in $colorFields) {
 }
 
 $hideSponsorshipValue = if ($HideSponsorshipInfo) { "true" } else { "false" }
-$content = $content -replace 'public static bool HideSponsorshipInfo \{ get; \} = (true|false);', "public static bool HideSponsorshipInfo { get; } = $hideSponsorshipValue;"
+$hideSponsorshipPattern = 'public static bool HideSponsorshipInfo \{ get; \} = (true|false);'
+if ($HideSponsorshipInfo -and $content -notmatch $hideSponsorshipPattern) {
+  throw "Could not find the HideSponsorshipInfo declaration in $brandingFile. The source ref predates the sponsorship flag."
+}
+$content = $content -replace $hideSponsorshipPattern, "public static bool HideSponsorshipInfo { get; } = $hideSponsorshipValue;"
 
 if ($ControlrServerUrl) {
   Write-Host "Baking ControlR server URL: $ControlrServerUrl" -ForegroundColor Yellow
