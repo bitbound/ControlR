@@ -77,6 +77,12 @@ public interface IFileSystemPathProvider
   /// </summary>
   string GetServiceFilePath();
   /// <summary>
+  /// Returns the settings directory that <paramref name="brandName"/> and <paramref name="instanceId"/>
+  /// would use on this machine, which is where a rebrand migration reads appsettings.json from.
+  /// Unlike the other members, this describes a brand other than the one compiled into this build.
+  /// </summary>
+  string GetSettingsDirectoryFor(string brandName, string? instanceId);
+  /// <summary>
   /// Returns the path to the agent executable inside a macOS app bundle (for copying out during install).
   /// </summary>
   string GetSourceAgentPath(string appBundlePath);
@@ -274,6 +280,42 @@ public class FileSystemPathProvider(
     };
   }
 
+  public string GetSettingsDirectoryFor(string brandName, string? instanceId)
+  {
+    if (string.IsNullOrWhiteSpace(brandName))
+    {
+      throw new ArgumentException("Brand name is required.", nameof(brandName));
+    }
+
+    var brandKey = BrandingConstants.SanitizeBrandKey(brandName);
+    var unixBrandKey = brandKey.ToLowerInvariant();
+    var resolvedInstanceId = string.IsNullOrWhiteSpace(instanceId)
+      ? AppConstants.DefaultInstanceId
+      : instanceId.SanitizeForFileSystem();
+
+    if (_systemEnvironment.IsWindows())
+    {
+      var rootDir = _fileSystem.JoinPaths(
+        GetPathSeparator(),
+        _systemEnvironment.GetCommonApplicationDataDirectory(),
+        brandKey);
+
+      return AppendSubDirectories(rootDir, resolvedInstanceId);
+    }
+
+    // ReSharper disable once InvertIf
+    if (_systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS())
+    {
+      var rootDir = _elevationChecker.IsElevated()
+        ? $"/etc/{unixBrandKey}"
+        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), $".{unixBrandKey}");
+
+      return AppendSubDirectories(rootDir, resolvedInstanceId);
+    }
+
+    throw new PlatformNotSupportedException();
+  }
+
   public string GetSourceAgentPath(string appBundlePath)
   {
     return _fileSystem.JoinPaths('/', appBundlePath, "Contents", "Library", "LaunchServices", AppConstants.GetAgentFileName(SystemPlatform.MacOs));
@@ -350,8 +392,11 @@ public class FileSystemPathProvider(
 
   private string AppendSubDirectories(string rootDir)
   {
-    var instanceId = GetEffectiveInstanceId();
+    return AppendSubDirectories(rootDir, GetEffectiveInstanceId());
+  }
 
+  private string AppendSubDirectories(string rootDir, string instanceId)
+  {
     if (_systemEnvironment.IsWindows())
     {
       if (_systemEnvironment.IsDebug)
@@ -396,27 +441,7 @@ public class FileSystemPathProvider(
 
   private string GetSettingsDirectory()
   {
-    if (_systemEnvironment.IsWindows())
-    {
-      var rootDir = _fileSystem.JoinPaths(
-        GetPathSeparator(),
-        _systemEnvironment.GetCommonApplicationDataDirectory(),
-        BrandingConstants.WindowsInstallDirectoryName);
-
-      return AppendSubDirectories(rootDir);
-    }
-
-    // ReSharper disable once InvertIf
-    if (_systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS())
-    {
-      var rootDir = _elevationChecker.IsElevated()
-        ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
-        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), BrandingConstants.UnixHiddenDirectoryName);
-
-      return AppendSubDirectories(rootDir);
-    }
-
-    throw new PlatformNotSupportedException();
+    return GetSettingsDirectoryFor(BrandingConstants.BrandName, GetEffectiveInstanceId());
   }
 
   // macOS exposes /var as a link to /private/var. The log-contents guard refuses

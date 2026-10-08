@@ -226,8 +226,11 @@ internal class AgentInstallerMac(
     }
   }
 
-  public async Task Uninstall()
+  // Installation writes no machine-wide policy on this platform, so preserveMachinePolicy has no effect here.
+  public async Task Uninstall(bool preserveMachinePolicy)
   {
+    _ = preserveMachinePolicy;
+
     if (!await _installLock.WaitAsync(0))
     {
       _logger.LogWarning("Installer lock already acquired.  Aborting.");

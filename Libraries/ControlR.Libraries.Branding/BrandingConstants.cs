@@ -15,6 +15,20 @@ public static partial class BrandingConstants
   [GeneratedRegex(@"[^a-zA-Z0-9]")]
   private static partial Regex BrandNameSanitizer();
 
+  /// <summary>
+  /// Reduces a brand name to the filesystem-safe form used for directory, service, and registry names.
+  /// Two names that share a key address the same install, so compare keys rather than names.
+  /// </summary>
+  public static string SanitizeBrandKey(string brandName)
+  {
+    if (string.IsNullOrWhiteSpace(brandName))
+    {
+      return string.Empty;
+    }
+
+    return BrandNameSanitizer().Replace(brandName, "_");
+  }
+
   public const string PrimaryColorDark = "2196F3";
   public const string SecondaryColorDark = "21f3e9";
   public const string TertiaryColorDark = "7b21f3";
@@ -31,8 +45,8 @@ public static partial class BrandingConstants
   public const string WarningColorLight = "ffc107";
   public const string ErrorColorLight = "dc3545";
 
-  private static string BrandKey => BrandNameSanitizer().Replace(BrandName, "_");
-  private static string UnixBrandKey => BrandKey.ToLowerInvariant();
+  public static string BrandKey => SanitizeBrandKey(BrandName);
+  public static string UnixBrandKey => BrandKey.ToLowerInvariant();
 
   private static Uri? ParseControlrServerUrl(string? value)
   {
@@ -60,6 +74,13 @@ public static partial class BrandingConstants
   /// Hides the Project, Website, and Sponsor links in the built app UI. False in the default build.
   /// </summary>
   public static bool HideSponsorshipInfo { get; } = false;
+
+  /// <summary>
+  /// Brand names whose installed agents this build may migrate. Empty in the default build.
+  /// Published to agents so they will accept this build as a successor, and compared against this
+  /// build's own brand key to decide whether an inbound bundle may replace the running install.
+  /// </summary>
+  public static string[] PredecessorBrandNames { get; } = [];
 
   public static string AuthenticatorIssuerName => BrandName;
 

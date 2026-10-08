@@ -35,18 +35,25 @@ internal static class CommandProvider
   {
     var instanceIdOption = CreateInstanceIdOption();
 
+    var preserveMachinePolicyOption = new Option<bool>("--preserve-machine-policy")
+    {
+      Description = "Leave machine-wide policy values untouched. Used when retiring an install that a newly installed brand has already replaced, because those values are shared and not tracked per install."
+    };
+
     var unInstallCommand = new Command("uninstall", "Uninstall the ControlR service.")
     {
-      instanceIdOption
+      instanceIdOption,
+      preserveMachinePolicyOption
     };
 
     unInstallCommand.SetAction(async parseResult =>
     {
       var instanceId = parseResult.GetValue(instanceIdOption);
+      var preserveMachinePolicy = parseResult.GetValue(preserveMachinePolicyOption);
       using var host = CreateHost(StartupMode.Uninstall, args, instanceId);
       var installer = host.Services.GetRequiredService<IAgentInstaller>();
 
-      await installer.Uninstall();
+      await installer.Uninstall(preserveMachinePolicy);
 
       await WaitForShutdown();
     });

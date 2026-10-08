@@ -6685,6 +6685,15 @@
           "installerSha256": {
             "type": "string"
           },
+          "predecessorBrandNames": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
           "publisher": {
             "type": "string"
           },

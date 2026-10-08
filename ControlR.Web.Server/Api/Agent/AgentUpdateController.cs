@@ -75,6 +75,7 @@ public class AgentUpdateController(
       InstallerSha256 = installerSha256,
       BrandName = BrandingConstants.BrandName,
       Publisher = BrandingConstants.Publisher,
+      PredecessorBrandNames = [.. BrandingConstants.PredecessorBrandNames],
     };
 
     return Ok(metadata);

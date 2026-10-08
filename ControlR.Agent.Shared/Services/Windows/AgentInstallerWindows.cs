@@ -203,7 +203,7 @@ internal class AgentInstallerWindows(
     }
   }
 
-  public async Task Uninstall()
+  public async Task Uninstall(bool preserveMachinePolicy)
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -263,8 +263,13 @@ internal class AgentInstallerWindows(
         }
       }
 
-      // Remove Secure Attention Sequence policy to allow app to simulate Ctrl + Alt + Del.
-      _registryAccessor.SetSoftwareSasGeneration(false);
+      // SoftwareSASGeneration is a single machine-wide value, not one per install. Clearing it here
+      // would switch off Ctrl + Alt + Del simulation for any agent that remains installed, which is
+      // why a cross-brand migration retires the old install with preserveMachinePolicy set.
+      if (!preserveMachinePolicy)
+      {
+        _registryAccessor.SetSoftwareSasGeneration(false);
+      }
 
       GetRegistryBaseKey().DeleteSubKeyTree(GetUninstallKeyPath(), false);
 

@@ -91,19 +91,33 @@ internal class AgentMaintenanceService(
 
       var metadata = metadataResult.Value;
 
-      if (!IsBrandCompatible(metadata, out var brandMismatchReason))
+      var brandMatch = BrandCompatibility.Evaluate(
+        metadata.BrandName,
+        metadata.Publisher,
+        metadata.PredecessorBrandNames);
+
+      if (brandMatch == BrandMatch.Unrelated)
       {
         _logger.LogCritical(
           "Aborting update check. Server bundle is for a different brand than this agent. " +
           "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
-          "Reason: {Reason}. Refusing to overwrite this install with a mismatched bundle. " +
+          "The server does not declare this brand as one it may replace. Refusing to overwrite this install. " +
           "If this server is correct, uninstall this agent and reinstall it from the matching installer.",
           BrandingConstants.BrandName,
           BrandingConstants.Publisher,
           metadata.BrandName,
-          metadata.Publisher,
-          brandMismatchReason);
+          metadata.Publisher);
         return;
+      }
+
+      var isBrandMigration = brandMatch == BrandMatch.DeclaredPredecessor;
+      if (isBrandMigration)
+      {
+        _logger.LogWarning(
+          "Server bundle is brand {ServerBrandName}, which declares this agent's brand {AgentBrandName} as a predecessor. " +
+          "Migrating this install.",
+          metadata.BrandName,
+          BrandingConstants.BrandName);
       }
 
       _logger.LogInformation("Remote bundle hash: {RemoteHash}", metadata.BundleSha256);
@@ -114,7 +128,9 @@ internal class AgentMaintenanceService(
         _logger.LogInformation("Installed bundle hash: {LocalHash}", localHash);
       }
 
-      if (string.Equals(localHash, metadata.BundleSha256, StringComparison.OrdinalIgnoreCase))
+      // A migration always runs the installer, even if the hashes happen to agree, because the
+      // install still has to move onto the new brand's service and directory names.
+      if (!isBrandMigration && string.Equals(localHash, metadata.BundleSha256, StringComparison.OrdinalIgnoreCase))
       {
         _logger.LogInformation("Version is current (hash match).");
         return;
@@ -128,9 +144,14 @@ internal class AgentMaintenanceService(
         return;
       }
 
+      if (isBrandMigration && !CanLaunchCrossBrandInstaller())
+      {
+        return;
+      }
+
       _logger.LogInformation("Launching installer.");
 
-      var installArguments = BuildInstallArguments();
+      var installArguments = BuildInstallArguments(isBrandMigration);
       var installCommand = BuildCommandString(installArguments);
       await LaunchInstaller(installerPath, installCommand, linkedCts.Token);
     }
@@ -169,17 +190,25 @@ internal class AgentMaintenanceService(
 
       var metadata = metadataResult.Value;
 
-      if (!IsBrandCompatible(metadata, out var brandMismatchReason))
+      // Repair rewrites the desktop client payload inside an existing install, so it only makes
+      // sense for the install's own brand. A cross-brand bundle is handled by the update path,
+      // which moves the whole install rather than patching one payload into the wrong brand.
+      var brandMatch = BrandCompatibility.Evaluate(
+        metadata.BrandName,
+        metadata.Publisher,
+        metadata.PredecessorBrandNames);
+
+      if (brandMatch != BrandMatch.SameBrand)
       {
         _logger.LogCritical(
-          "Aborting desktop client repair. Server bundle is for a different brand than this agent. " +
+          "Aborting desktop client repair. Server bundle is not this agent's brand. " +
           "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
-          "Reason: {Reason}. Refusing to overwrite this install with a mismatched bundle.",
+          "Match result: {BrandMatch}. Refusing to write a foreign brand's payload into this install.",
           BrandingConstants.BrandName,
           BrandingConstants.Publisher,
           metadata.BrandName,
           metadata.Publisher,
-          brandMismatchReason);
+          brandMatch);
         return;
       }
 
@@ -273,31 +302,13 @@ internal class AgentMaintenanceService(
     return psi;
   }
 
-  private static bool IsBrandCompatible(BundleMetadataDto metadata, out string reason)
-  {
-    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
-    {
-      reason = "BrandName mismatch.";
-      return false;
-    }
-
-    if (!string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
-    {
-      reason = "Publisher mismatch.";
-      return false;
-    }
-
-    reason = string.Empty;
-    return true;
-  }
-
   private static string QuoteArgument(string value)
   {
     var escapedValue = value.Replace("\"", "\\\"");
     return $"\"{escapedValue}\"";
   }
 
-  private List<string> BuildInstallArguments()
+  private List<string> BuildInstallArguments(bool isBrandMigration = false)
   {
     var arguments = new List<string>
     {
@@ -312,6 +323,17 @@ internal class AgentMaintenanceService(
     {
       arguments.Add("--instance-id");
       arguments.Add(_instanceOptions.Value.InstanceId);
+    }
+
+    if (isBrandMigration)
+    {
+      // The installer inherits install identity from this agent's own settings file, which it locates
+      // from the previous brand name, and retires this service using the executable path.
+      arguments.Add("--previous-brand-name");
+      arguments.Add(BrandingConstants.BrandName);
+
+      arguments.Add("--previous-agent-path");
+      arguments.Add(_fileSystemPathProvider.GetAgentExecutablePath());
     }
 
     return arguments;
@@ -331,6 +353,30 @@ internal class AgentMaintenanceService(
     }
 
     return arguments;
+  }
+
+  /// <summary>
+  /// A cross-brand migration has to tell the new installer which install it is replacing. On macOS the
+  /// installer is launched from a LaunchDaemon plist whose ProgramArguments were written by the install
+  /// that is already on disk, so arguments introduced now cannot reach it. Launching anyway would put
+  /// the new brand alongside this one with this service still running, which is the outcome the brand
+  /// guard exists to prevent, so decline and leave the endpoint untouched.
+  /// </summary>
+  private bool CanLaunchCrossBrandInstaller()
+  {
+    if (_systemEnvironment.Platform != SystemPlatform.MacOs)
+    {
+      return true;
+    }
+
+    _logger.LogCritical(
+      "Refusing to migrate this install to a new brand on macOS. The update installer runs from " +
+      "plist arguments frozen at install time, so this agent cannot pass the new installer the brand " +
+      "and path it is replacing. Finish the rebrand by running the new brand's installer with " +
+      "--previous-brand-name and --previous-agent-path. Agent brand: {AgentBrandName}.",
+      BrandingConstants.BrandName);
+
+    return false;
   }
 
   private async Task<string?> DownloadInstaller(BundleMetadataDto metadata, CancellationToken cancellationToken)
