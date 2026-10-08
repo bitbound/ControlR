@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.1",
   "info": {
-    "title": "ControlR | Internal API",
+    "title": "ControlR API (Internal)",
     "description": "Dynamically-evolving internal API for first-party clients (BFF for UI, agents, etc.)",
     "version": "Dynamic"
   },

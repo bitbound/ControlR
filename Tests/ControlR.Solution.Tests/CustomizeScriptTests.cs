@@ -333,7 +333,7 @@ public class CustomizeScriptTests
     AssertContainsLine(result, $"{brandName} Desktop Client provides");
 
     // OpenAPI
-    AssertContainsLine(result, $"{brandKey}.Web.Server");
+    AssertContainsLine(result, $"\"title\": \"{brandKey}");
 
     // Installer Program.cs
     AssertContainsLine(result, $"{brandName} agent installer");
