@@ -1040,7 +1040,7 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-COPY . /app
+COPY --chown=`$APP_UID:`$APP_UID . /app
 
 ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
 

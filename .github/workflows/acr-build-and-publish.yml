@@ -103,8 +103,8 @@ jobs:
       ref: ${{ inputs.source_ref }}
       server_runtime: ${{ inputs.server_runtime }}
       skip_version_increment: true
-      use_self_hosted_runners: true
-      use_local_storage: true
+      use_self_hosted_runners: false
+      use_local_storage: false
       retention_days_artifacts: 1
       build_nugets: false
       notarize_mac_bundle: true
@@ -128,7 +128,6 @@ jobs:
           SPONSOR_LOGIN: ${{ inputs.sponsor_login }}
           SLOT_NUMBER: ${{ inputs.slot_number }}
           IMAGE_REFERENCE: ${{ inputs.image_reference }}
-          ARTIFACT_BLOB_KEY: ${{ inputs.artifact_blob_key }}
           DELIVERY_FORMAT: ${{ inputs.delivery_format }}
           ENVIRONMENT: ${{ inputs.environment }}
         run: |
@@ -136,7 +135,6 @@ jobs:
           Write-Host "Sponsor Login: $env:SPONSOR_LOGIN"
           Write-Host "Slot Number: $env:SLOT_NUMBER"
           Write-Host "Image Reference: $env:IMAGE_REFERENCE"
-          Write-Host "Artifact Blob Key: $env:ARTIFACT_BLOB_KEY"
           Write-Host "Delivery Format: $env:DELIVERY_FORMAT"
           Write-Host "Environment: $env:ENVIRONMENT"
 
@@ -155,8 +153,8 @@ jobs:
       image_reference: ${{ inputs.image_reference }}
       server_runtime: ${{ inputs.server_runtime }}
       environment: ${{ inputs.environment }}
-      use_local_storage: true
-      use_self_hosted_runners: true
+      use_local_storage: false
+      use_self_hosted_runners: false
     secrets: inherit
 
   publish-zip:
@@ -174,6 +172,6 @@ jobs:
       artifact_blob_key: ${{ inputs.artifact_blob_key }}
       server_runtime: ${{ inputs.server_runtime }}
       environment: ${{ inputs.environment }}
-      use_local_storage: true
-      use_self_hosted_runners: true
+      use_local_storage: false
+      use_self_hosted_runners: false
     secrets: inherit

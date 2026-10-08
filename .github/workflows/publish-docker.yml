@@ -175,7 +175,7 @@ jobs:
 
           # Each runtime is unpacked under its Docker architecture name.
           ARG TARGETARCH
-          COPY ${TARGETARCH}/ /app
+          COPY --chown=$APP_UID:$APP_UID ${TARGETARCH}/ /app
 
           ENTRYPOINT ["dotnet", "ControlR.Web.Server.dll"]
 
