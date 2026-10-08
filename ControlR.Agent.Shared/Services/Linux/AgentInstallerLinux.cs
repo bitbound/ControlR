@@ -131,14 +131,15 @@ internal class AgentInstallerLinux(
 
       _logger.LogInformation("Restarting agent service.");
       psi.Arguments = $"systemctl restart {serviceName}";
-      var startExitCode = await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
-
-      if (startExitCode != 0)
+      try
       {
-        _logger.LogError(
-          "The {BrandName} service did not start. Exit code: {ExitCode}",
-          BrandingConstants.BrandName,
-          startExitCode);
+        // This overload throws on a non-zero exit, which is the only signal that the service did not
+        // come up. The caller uses it to decide whether the install being replaced may be removed.
+        await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "The {BrandName} service did not start.", BrandingConstants.BrandName);
         return Result.Fail("Failed to start the agent service after installation.");
       }
 

@@ -46,7 +46,18 @@ internal static class CommandProvider
       using var host = CreateHost(StartupMode.ServiceControl, args, instanceId);
       var serviceControl = host.Services.GetRequiredService<IServiceControl>();
 
-      await serviceControl.StartAgentService(throwOnFailure: false);
+      try
+      {
+        // The exit code is the only signal a caller gets, so a swallowed failure here would read as
+        // success and a migration could remove an install whose replacement never came up.
+        await serviceControl.StartAgentService(throwOnFailure: true);
+        return 0;
+      }
+      catch (Exception ex)
+      {
+        Console.Error.WriteLine(ex.Message);
+        return 1;
+      }
     });
 
     return startServiceCommand;
@@ -67,7 +78,18 @@ internal static class CommandProvider
       using var host = CreateHost(StartupMode.ServiceControl, args, instanceId);
       var serviceControl = host.Services.GetRequiredService<IServiceControl>();
 
-      await serviceControl.StopAgentService(throwOnFailure: false);
+      try
+      {
+        // A stop that silently failed would leave two agents signing as the same device, so the
+        // caller has to be able to tell.
+        await serviceControl.StopAgentService(throwOnFailure: true);
+        return 0;
+      }
+      catch (Exception ex)
+      {
+        Console.Error.WriteLine(ex.Message);
+        return 1;
+      }
     });
 
     return stopServiceCommand;

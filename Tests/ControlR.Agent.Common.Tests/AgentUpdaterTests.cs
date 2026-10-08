@@ -338,6 +338,53 @@ public class AgentMaintenanceServiceTests
   }
 
   [Fact]
+  public async Task CheckForUpdate_WhenMigrationHasNoSigningKey_DoesNotLaunchInstaller()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+    fixture.FileSystem.AddFile(@"C:\ProgramData\ControlR\instance-1\appsettings.json", "{}");
+
+    fixture.PathProvider
+      .Setup(x => x.GetAgentAppSettingsPath())
+      .Returns(@"C:\ProgramData\ControlR\instance-1\appsettings.json");
+    fixture.PathProvider
+      .Setup(x => x.GetSettingsDirectoryFor("OtherBrand", "instance-1"))
+      .Returns(@"C:\ProgramData\OtherBrand\instance-1");
+
+    // An install with no signing key could never authenticate as this device under a new brand, and the
+    // server keeps trusting the key it already stored, so the record would be unrecoverable.
+    fixture.SettingsProvider
+      .SetupGet(x => x.PrivateKey)
+      .Returns((string?)null);
+
+    fixture.AgentUpdateApi
+      .Setup(x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
+      {
+        BundleDownloadUrl = "/downloads/win-x64/OtherBrand.Agent.bundle.zip",
+        BundleSha256 = "NEW_HASH",
+        InstallerDownloadUrl = "/downloads/win-x64/OtherBrand.Agent.Installer.exe",
+        InstallerSha256 = "ANY",
+        Runtime = RuntimeId.WinX64,
+        Version = Version.Parse("1.2.3"),
+        BrandName = "OtherBrand",
+        Publisher = "OtherPublisher"
+      }));
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
+
+    fixture.DownloadsApi.Verify(
+      x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+      Times.Never);
+    fixture.ProcessManager.Verify(
+      x => x.Start(It.IsAny<string>(), It.IsAny<string>()),
+      Times.Never);
+  }
+
+  [Fact]
   public async Task CheckForUpdate_WhenServerBrandNameDiffers_MigratesAndHandsOffSettings()
   {
     var fixture = new AgentMaintenanceServiceFixture();
@@ -460,6 +507,9 @@ public class AgentMaintenanceServiceTests
       SettingsProvider
         .SetupGet(x => x.DisableAutoUpdate)
         .Returns(false);
+      SettingsProvider
+        .SetupGet(x => x.PrivateKey)
+        .Returns("private-key");
       SettingsProvider
         .SetupGet(x => x.ServerUri)
         .Returns(_serverUri);

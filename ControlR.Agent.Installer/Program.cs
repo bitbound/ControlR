@@ -229,6 +229,9 @@ static async Task<int> RunInstall(
   var tempDir = Path.Combine(Path.GetTempPath(), $"{TempDirectoryPrefix}{Guid.NewGuid():N}");
   var tempBundlePath = Path.Combine(tempDir, TempBundleFileName);
 
+  // Declared out here so the catch can roll the replaced brand back too.
+  string? previousBrand = null;
+
   try
   {
     var api = host.Services.GetRequiredService<IControlrApi>();
@@ -265,7 +268,7 @@ static async Task<int> RunInstall(
     }
 
     // A migration is indicated by the brand being retired, which the resident install passes in.
-    var previousBrand = string.IsNullOrWhiteSpace(previousBrandName) ? null : previousBrandName.Trim();
+    previousBrand = string.IsNullOrWhiteSpace(previousBrandName) ? null : previousBrandName.Trim();
     if (previousBrand is not null && string.Equals(previousBrand, BrandingConstants.BrandName, StringComparison.Ordinal))
     {
       logger.LogWarning(
@@ -280,10 +283,10 @@ static async Task<int> RunInstall(
       // those settings are what carry the device ID and signing key across. Without them this install
       // registers a new device and signs with a key the server has never been told about.
       var optionsAccessor = host.Services.GetRequiredService<IOptionsAccessor>();
-      if (optionsAccessor.DeviceId == Guid.Empty)
+      if (optionsAccessor.DeviceId == Guid.Empty || string.IsNullOrWhiteSpace(optionsAccessor.PrivateKey))
       {
         logger.LogCritical(
-          "Refusing to migrate from brand {PreviousBrandName}: no device ID was carried over in this brand's settings file, " +
+          "Refusing to migrate from brand {PreviousBrandName}: this brand's settings file carries no device ID or no signing key, " +
           "so this install would register a new device and the existing one could never authenticate again. Nothing on this machine was changed.",
           previousBrand);
         return 1;
@@ -316,14 +319,7 @@ static async Task<int> RunInstall(
     if (!installResult.IsSuccess)
     {
       logger.LogError("Installation failed. Reason: {Reason}", installResult.Reason);
-
-      if (previousBrand is not null)
-      {
-        // The install already stopped the brand it replaces, so start it again rather than leave this
-        // machine with no running agent at all.
-        await installer.RestorePreviousBrand(previousBrand);
-      }
-
+      await RecoverFromFailedInstall(host, installer, logger, previousBrand);
       return 1;
     }
 
@@ -341,6 +337,9 @@ static async Task<int> RunInstall(
   catch (Exception ex)
   {
     logger.LogError(ex, "Installation failed.");
+
+    var installer = host.Services.GetRequiredService<IAgentInstaller>();
+    await RecoverFromFailedInstall(host, installer, logger, previousBrand);
     return 1;
   }
   finally
@@ -356,6 +355,34 @@ static async Task<int> RunInstall(
         logger.LogWarning(ex, "Failed to delete temporary directory {TempDir}.", tempDir);
       }
     }
+  }
+}
+
+/// <summary>
+/// Puts a running agent back after a failed install. Every install stops a service before replacing
+/// files, so a failure part-way through could otherwise leave the machine with nothing running and no
+/// way in except a physical visit.
+/// </summary>
+static async Task RecoverFromFailedInstall(
+  IHost host,
+  IAgentInstaller installer,
+  ILogger logger,
+  string? previousBrand)
+{
+  try
+  {
+    if (previousBrand is not null)
+    {
+      await installer.RestorePreviousBrand(previousBrand);
+      return;
+    }
+
+    logger.LogWarning("Install did not complete. Starting this brand's service from what is already on disk.");
+    await host.Services.GetRequiredService<IServiceControl>().StartAgentService(throwOnFailure: false);
+  }
+  catch (Exception ex)
+  {
+    logger.LogError(ex, "Failed to put a running agent back after the failed install.");
   }
 }
 

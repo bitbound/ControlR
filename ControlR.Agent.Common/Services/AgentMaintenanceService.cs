@@ -469,10 +469,13 @@ internal class AgentMaintenanceService(
 
         // The plist was rendered by the install already on disk, so its arguments are frozen and this
         // launch would otherwise carry none of the decisions made above. A migration depends on that,
-        // since the brand being replaced is how the installer knows to retire this install.
-        if (installArguments.Contains("--previous-brand-name", StringComparer.Ordinal))
+        // since the brand being replaced is how the installer knows to retire this install. Launching
+        // from an unmodified plist would install the new brand beside this one with both signing as
+        // the same device, so decline instead.
+        if (installArguments.Contains("--previous-brand-name", StringComparer.Ordinal)
+          && !WriteMacInstallerDaemonArguments(plistPath, [installerPath, .. installArguments]))
         {
-          WriteMacInstallerDaemonArguments(plistPath, [installerPath, .. installArguments]);
+          return;
         }
 
         try
@@ -504,8 +507,17 @@ internal class AgentMaintenanceService(
   /// is replaced rather than appended to, which also refreshes server URI and tenant values that were
   /// frozen at install time.
   /// </summary>
-  private void WriteMacInstallerDaemonArguments(string plistPath, IReadOnlyList<string> programArguments)
+  private bool WriteMacInstallerDaemonArguments(string plistPath, IReadOnlyList<string> programArguments)
   {
+    if (!_fileSystem.FileExists(plistPath))
+    {
+      _logger.LogCritical(
+        "Cannot migrate: the installer LaunchDaemon was not found at {PlistPath}, so the installer cannot be " +
+        "told which brand it replaces. Nothing on this machine was changed.",
+        plistPath);
+      return false;
+    }
+
     var plistContent = _fileSystem.ReadAllText(plistPath);
     var argumentsXml = string.Concat(programArguments.Select(
       argument => $"\n        <string>{SecurityElement.Escape(argument)}</string>"));
@@ -518,12 +530,16 @@ internal class AgentMaintenanceService(
 
     if (string.Equals(updatedContent, plistContent, StringComparison.Ordinal))
     {
-      throw new InvalidOperationException(
-        $"Unable to locate ProgramArguments in the installer LaunchDaemon at {plistPath}.");
+      _logger.LogCritical(
+        "Cannot migrate: could not locate ProgramArguments in the installer LaunchDaemon at {PlistPath}, so the " +
+        "installer cannot be told which brand it replaces. Nothing on this machine was changed.",
+        plistPath);
+      return false;
     }
 
     _fileSystem.WriteAllText(plistPath, updatedContent);
     _logger.LogInformation("Rewrote installer LaunchDaemon arguments at {PlistPath}.", plistPath);
+    return true;
   }
 
   /// <summary>
@@ -540,6 +556,13 @@ internal class AgentMaintenanceService(
       if (!_fileSystem.FileExists(sourcePath))
       {
         _logger.LogError("Cannot migrate: this install's settings file was not found at {SourcePath}.", sourcePath);
+        return false;
+      }
+
+      if (string.IsNullOrWhiteSpace(_optionsAccessor.PrivateKey))
+      {
+        _logger.LogError(
+          "Cannot migrate: this install has no signing key, so the new brand's install could not authenticate as this device.");
         return false;
       }
 

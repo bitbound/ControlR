@@ -63,6 +63,10 @@ internal class AgentInstallerWindows(
 
       if (IsRunningFromAppDir())
       {
+        // Accepted limitation: this relaunch only happens when the installer is started from inside its
+        // own install directory, which the updater never does because it downloads to temp first. The
+        // parent gives up here without waiting for the copy it just started, so a caller that treats a
+        // failure as "put the old agent back" can briefly restart a service the copy is replacing.
         return Result.Fail("The installer was re-launched from a temp copy and will report its own result.");
       }
 
@@ -463,7 +467,27 @@ internal class AgentInstallerWindows(
       return Result.Fail("Failed to start the agent service after installation.");
     }
 
-    return Result.Ok();
+    // GetProcessOutput reports only whether the process launched, so a failed "sc.exe start" is not
+    // visible in its result. The service reaching Running is the real signal, and the caller uses this
+    // result to decide whether the install being replaced may be removed.
+    try
+    {
+      var serviceName = GetServiceName();
+      using var serviceController = new ServiceController(serviceName);
+
+      if (serviceController.Status != ServiceControllerStatus.Running)
+      {
+        serviceController.Start();
+        serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(60));
+      }
+
+      return Result.Ok();
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "The {ServiceName} service did not reach the running state.", GetServiceName());
+      return Result.Fail(ex);
+    }
   }
 
   private Result StopAgentService()
