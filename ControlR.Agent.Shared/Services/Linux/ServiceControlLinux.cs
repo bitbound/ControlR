@@ -27,7 +27,19 @@ internal class ServiceControlLinux(
             var serviceName = GetAgentServiceName();
             _logger.LogInformation("Starting agent service: {ServiceName}", serviceName);
 
-            await _processManager.StartAndWaitForExit("sudo", $"systemctl start {serviceName}", false, _serviceStatusTimeout);
+            var exitCode = await _processManager.StartAndWaitForExit(
+                "sudo",
+                $"systemctl start {serviceName}",
+                false,
+                _serviceStatusTimeout);
+
+            // This overload reports the exit code instead of throwing on it, so a failed start would
+            // otherwise be indistinguishable from a successful one, including to a caller that asked
+            // to be told about failures.
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException($"systemctl start {serviceName} exited with code {exitCode}.");
+            }
 
             _logger.LogInformation("Agent service started successfully.");
         }
@@ -100,7 +112,18 @@ internal class ServiceControlLinux(
             var serviceName = GetAgentServiceName();
             _logger.LogInformation("Stopping agent service: {ServiceName}", serviceName);
 
-            await _processManager.StartAndWaitForExit("sudo", $"systemctl stop {serviceName}", false, _serviceStatusTimeout);
+            var exitCode = await _processManager.StartAndWaitForExit(
+                "sudo",
+                $"systemctl stop {serviceName}",
+                false,
+                _serviceStatusTimeout);
+
+            // Same as the start path: this overload returns the exit code rather than throwing, so a
+            // failed stop would read as success to every caller, including one that asked otherwise.
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException($"systemctl stop {serviceName} exited with code {exitCode}.");
+            }
 
             _logger.LogInformation("Agent service stopped successfully.");
         }

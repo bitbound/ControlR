@@ -457,36 +457,32 @@ internal class AgentInstallerWindows(
     }
   }
 
-  private async Task<Result> StartService()
+  private Task<Result> StartService()
   {
     Logger.LogInformation("Starting service.");
-    var startResult = await _processes.GetProcessOutput("cmd.exe", $"/c sc.exe start \"{GetServiceName()}\"");
-    if (!startResult.IsSuccess)
-    {
-      Logger.LogError("Failed to start service after installation: {msg}", startResult.Reason);
-      return Result.Fail("Failed to start the agent service after installation.");
-    }
 
-    // GetProcessOutput reports only whether the process launched, so a failed "sc.exe start" is not
-    // visible in its result. The service reaching Running is the real signal, and the caller uses this
-    // result to decide whether the install being replaced may be removed.
+    // "sc.exe start" returns as soon as the start is requested, so its result says nothing about
+    // whether the service came up. Waiting for the controller to report Running is the real signal,
+    // and the caller uses it to decide whether the install being replaced may be removed. Starting
+    // through the controller only when the service is stopped avoids a second start request against a
+    // service that is already starting, which the controller rejects.
     try
     {
       var serviceName = GetServiceName();
       using var serviceController = new ServiceController(serviceName);
 
-      if (serviceController.Status != ServiceControllerStatus.Running)
+      if (serviceController.Status == ServiceControllerStatus.Stopped)
       {
         serviceController.Start();
-        serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(60));
       }
 
-      return Result.Ok();
+      serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(60));
+      return Task.FromResult(Result.Ok());
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "The {ServiceName} service did not reach the running state.", GetServiceName());
-      return Result.Fail(ex);
+      return Task.FromResult(Result.Fail(ex));
     }
   }
 
