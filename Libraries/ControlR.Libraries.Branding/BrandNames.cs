@@ -15,8 +15,7 @@ public sealed partial class BrandNames(string brandName)
   public static BrandNames Current { get; } = new(BrandingConstants.BrandName);
 
   public string AgentBaseName => $"{BrandKey}.Agent";
-  public string BrandKey => SanitizeBrandKey(BrandName);
-  public string BrandName { get; } = ResolveBrandName(brandName);
+  public string BrandKey { get; } = ResolveBrandKey(brandName);
   public string BundleHashFileName => $".{UnixBrandKey}-bundle.sha256";
   public string BundleZipBaseName => $"{BrandKey}.Agent.bundle";
   public string DesktopClientBaseName => $"{BrandKey}.DesktopClient";
@@ -39,7 +38,9 @@ public sealed partial class BrandNames(string brandName)
 
   /// <summary>
   /// Reduces a brand name to the filesystem-safe form used for directory, service, and registry names.
-  /// Two names that share a key address the same install, so compare keys rather than names.
+  /// The formula has to stay identical to the one the build script uses to name the files it ships,
+  /// or this build's names refer to files that were never written. Two names that share a key address
+  /// the same install, so compare keys rather than names.
   /// </summary>
   public static string SanitizeBrandKey(string brandName)
   {
@@ -48,20 +49,19 @@ public sealed partial class BrandNames(string brandName)
       return string.Empty;
     }
 
-    // Surrounding whitespace shows up when a brand name is read from a customization config file.
-    return BrandNameSanitizer().Replace(brandName.Trim(), "_");
+    return BrandNameSanitizer().Replace(brandName, "_");
   }
 
   [GeneratedRegex(@"[^a-zA-Z0-9]")]
   private static partial Regex BrandNameSanitizer();
 
-  private static string ResolveBrandName(string brandName)
+  private static string ResolveBrandKey(string brandName)
   {
     if (string.IsNullOrWhiteSpace(brandName))
     {
       throw new ArgumentException("Brand name is required.", nameof(brandName));
     }
 
-    return brandName.Trim();
+    return SanitizeBrandKey(brandName);
   }
 }

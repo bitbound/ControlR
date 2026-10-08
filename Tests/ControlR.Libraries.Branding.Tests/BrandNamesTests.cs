@@ -10,6 +10,14 @@ public class BrandNamesTests
   }
 
   [Fact]
+  public void BrandKey_ForAPaddedBrandName_KeepsThePaddingLikeTheBuildScript()
+  {
+    // customize.ps1 derives the key with the same untrimmed replace, so trimming here would send this
+    // build looking for files named differently than the ones the script shipped.
+    Assert.Equal("Acme_", new BrandNames("Acme ").BrandKey);
+  }
+
+  [Fact]
   public void Current_MatchesTheCompiledInBrand()
   {
     Assert.Equal(BrandingConstants.AgentBaseName, BrandNames.Current.AgentBaseName);

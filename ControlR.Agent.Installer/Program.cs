@@ -267,8 +267,10 @@ static async Task<int> RunInstall(
       return 1;
     }
 
-    // A migration is indicated by the brand being retired, which the resident install passes in.
-    previousBrand = string.IsNullOrWhiteSpace(previousBrandName) ? null : previousBrandName.Trim();
+    // A migration is indicated by the brand being retired, which the resident install passes in. The
+    // name is kept as-is because the key derived from it is what named the install being replaced, and
+    // that key is derived without trimming.
+    previousBrand = string.IsNullOrWhiteSpace(previousBrandName) ? null : previousBrandName;
     if (previousBrand is not null && string.Equals(previousBrand, BrandingConstants.BrandName, StringComparison.Ordinal))
     {
       logger.LogWarning(

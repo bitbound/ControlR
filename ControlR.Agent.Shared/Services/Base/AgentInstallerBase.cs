@@ -181,13 +181,14 @@ internal abstract class AgentInstallerBase(
 
   /// <summary>
   /// Stops the service of the install being replaced, before this install starts its own. Only one
-  /// agent may hold the device's connection on the server, and both would otherwise keep taking it.
+  /// agent may hold the device's connection on the server, and both would otherwise keep taking it, so
+  /// the caller has to be able to refuse to continue when this fails.
   /// </summary>
-  protected async Task StopPreviousBrandService(string? previousBrandName)
+  protected async Task<Result> StopPreviousBrandService(string? previousBrandName)
   {
     if (string.IsNullOrWhiteSpace(previousBrandName))
     {
-      return;
+      return Result.Ok();
     }
 
     using var _ = Logger.BeginMemberScope();
@@ -196,10 +197,13 @@ internal abstract class AgentInstallerBase(
     var result = await RunPreviousBrandAgentCommand(previousBrandName, "stop-service", TimeSpan.FromMinutes(2));
     if (!result.IsSuccess)
     {
-      // Not fatal. This install removes the old one afterwards anyway, and refusing to install here
-      // would leave the endpoint on the old brand.
-      Logger.LogWarning("Could not stop the {PreviousBrandName} service: {Reason}", previousBrandName, result.Reason);
+      Logger.LogError(
+        "Could not stop the {PreviousBrandName} service: {Reason}. Starting this install anyway would leave both signing as the same device.",
+        previousBrandName,
+        result.Reason);
     }
+
+    return result;
   }
 
   protected Result StopProcesses(string targetAgentPath, string? targetDesktopClientPath = null)

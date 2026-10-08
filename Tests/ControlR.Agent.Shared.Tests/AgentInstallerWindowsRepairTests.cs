@@ -15,6 +15,7 @@ using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.TestingUtilities.FileSystem;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -229,6 +230,28 @@ public class AgentInstallerWindowsRepairTests
   }
 
   [WindowsOnlyFact]
+  public async Task StopPreviousBrand_WhenTheReplacedInstallCanBeStopped_ReportsSuccess()
+  {
+    var (sut, previousBrand) = CreateStopPreviousBrandSetup(exitCode: 0);
+
+    var result = await sut.StopPreviousBrand(previousBrand);
+
+    Assert.True(result.IsSuccess);
+  }
+
+  [WindowsOnlyFact]
+  public async Task StopPreviousBrand_WhenTheReplacedInstallCannotBeStopped_ReportsFailure()
+  {
+    var (sut, previousBrand) = CreateStopPreviousBrandSetup(exitCode: 1);
+
+    var result = await sut.StopPreviousBrand(previousBrand);
+
+    // Both installs would keep the device's connection and sign as the same device, so the caller has
+    // to be able to refuse to continue rather than treat this as a warning.
+    Assert.False(result.IsSuccess);
+  }
+
+  [WindowsOnlyFact]
   public async Task Uninstall_DoesNotClearMachineWideSoftwareSasGeneration()
   {
     var installDir = Path.Combine(Path.GetTempPath(), "ControlR", "Install", AppConstants.DefaultInstanceId);
@@ -289,7 +312,37 @@ public class AgentInstallerWindowsRepairTests
     };
   }
 
-  private static AgentInstallerWindows CreateSut(
+  private static (TestableAgentInstallerWindows Sut, string PreviousBrand) CreateStopPreviousBrandSetup(int exitCode)
+  {
+    const string previousBrand = "Acme Remote";
+    var previousInstallDirectory = @"C:\Program Files\Acme_Remote\instance-1";
+    var previousAgentPath = Path.Combine(previousInstallDirectory, "Acme_Remote.Agent.exe");
+    var fileSystem = new FakeFileSystem('\\');
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var systemEnvironment = new Mock<ISystemEnvironment>();
+
+    fileSystem.AddFile(previousAgentPath, []);
+    fileSystem.AddDirectory(Path.GetTempPath());
+
+    systemEnvironment.SetupGet(x => x.Platform).Returns(SystemPlatform.Windows);
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectoryFor(previousBrand, It.IsAny<string?>()))
+      .Returns(previousInstallDirectory);
+
+    processManager
+      .Setup(x => x.StartAndWaitForExit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()))
+      .Returns<string, string, bool, TimeSpan>((fileName, _, _, _) =>
+      {
+        fileSystem.AddFile(fileName, []);
+        return Task.FromResult(exitCode);
+      });
+
+    var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
+    return (sut, previousBrand);
+  }
+
+  private static TestableAgentInstallerWindows CreateSut(
     IFileSystem fileSystem,
     Mock<IProcessManager> processManager,
     Mock<IRetryer> retryer,
@@ -298,7 +351,7 @@ public class AgentInstallerWindowsRepairTests
     Mock<IRegistryAccessor>? registryAccessor = null,
     Mock<IElevationChecker>? elevationChecker = null)
   {
-    return new AgentInstallerWindows(
+    return new TestableAgentInstallerWindows(
       Mock.Of<IHostApplicationLifetime>(),
       processManager.Object,
       systemEnvironment.Object,
@@ -314,5 +367,44 @@ public class AgentInstallerWindowsRepairTests
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
       Mock.Of<IEd25519KeyProvider>(),
       NullLogger<AgentInstallerWindows>.Instance);
+  }
+
+  private sealed class TestableAgentInstallerWindows(
+    IHostApplicationLifetime lifetime,
+    IProcessManager processManager,
+    ISystemEnvironment systemEnvironment,
+    IElevationChecker elevationChecker,
+    IRetryer retryer,
+    IControlrApi controlrApi,
+    IDeviceInfoProvider deviceDataGenerator,
+    IFileSystemPathProvider fileSystemPathProvider,
+    IRegistryAccessor registryAccessor,
+    IOptions<InstanceOptions> instanceOptions,
+    IFileSystem fileSystem,
+    IOptionsAccessor optionsAccessor,
+    IOptionsMonitor<AgentAppOptions> appOptions,
+    IEd25519KeyProvider keyProvider,
+    ILogger<AgentInstallerWindows> logger)
+    : AgentInstallerWindows(
+      lifetime,
+      processManager,
+      systemEnvironment,
+      elevationChecker,
+      retryer,
+      controlrApi,
+      deviceDataGenerator,
+      fileSystemPathProvider,
+      registryAccessor,
+      instanceOptions,
+      fileSystem,
+      optionsAccessor,
+      appOptions,
+      keyProvider,
+      logger)
+  {
+    public Task<Result> StopPreviousBrand(string? previousBrandName)
+    {
+      return StopPreviousBrandService(previousBrandName);
+    }
   }
 }

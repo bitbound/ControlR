@@ -154,6 +154,7 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   }
 
   [Theory]
+  [InlineData(SystemPlatform.Windows, "Acme ", null, false, false, @"C:\ProgramData\Acme_\default")]
   [InlineData(SystemPlatform.Windows, "Acme Remote", null, false, false, @"C:\ProgramData\Acme_Remote\default")]
   [InlineData(SystemPlatform.Windows, "Acme Remote", "inst-1", false, false, @"C:\ProgramData\Acme_Remote\inst-1")]
   [InlineData(SystemPlatform.Windows, "Acme Remote", "inst-1", false, true, @"C:\ProgramData\Acme_Remote\Debug\inst-1")]
