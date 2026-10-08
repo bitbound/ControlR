@@ -56,12 +56,23 @@ public static class AppConstants
 
   public static string GetAgentFileName(SystemPlatform platform)
   {
+    return GetAgentFileName(platform, BrandingConstants.BrandName);
+  }
+
+  /// <summary>
+  /// Gets the agent executable's file name for a given brand. A build needs this when it has to address
+  /// an install of a brand other than its own, whose executable is named for that brand.
+  /// </summary>
+  public static string GetAgentFileName(SystemPlatform platform, string brandName)
+  {
+    var agentBaseName = new BrandNames(brandName).AgentBaseName;
+
     return platform switch
     {
-      SystemPlatform.Windows => $"{BrandingConstants.AgentBaseName}.exe",
-      SystemPlatform.Android => $"{BrandingConstants.AgentBaseName}.exe",
-      SystemPlatform.Linux => BrandingConstants.AgentBaseName,
-      SystemPlatform.MacOs => BrandingConstants.AgentBaseName,
+      SystemPlatform.Windows => $"{agentBaseName}.exe",
+      SystemPlatform.Android => $"{agentBaseName}.exe",
+      SystemPlatform.Linux => agentBaseName,
+      SystemPlatform.MacOs => agentBaseName,
       _ => throw new PlatformNotSupportedException()
     };
   }

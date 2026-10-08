@@ -99,9 +99,11 @@ internal abstract class AgentInstallerBase(
     return Result.Ok();
   }
 
-  protected static string GetAgentPath(string installDirectory, SystemPlatform platform)
+  protected static string GetAgentPath(string installDirectory, SystemPlatform platform, string brandName)
   {
-    return Path.Combine(installDirectory, AppConstants.GetAgentFileName(platform));
+    // The executable is named for its own brand, so addressing an install of another brand means using
+    // that brand's file name rather than this build's.
+    return Path.Combine(installDirectory, AppConstants.GetAgentFileName(platform, brandName));
   }
 
   protected static string GetInstanceInstallDirectory(string rootDirectory, string? instanceId)
@@ -320,7 +322,7 @@ internal abstract class AgentInstallerBase(
   {
     var instanceId = FilesystemPathProvider.GetEffectiveInstanceId();
     var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, instanceId);
-    var agentPath = GetAgentPath(installDirectory, _systemEnvironment.Platform);
+    var agentPath = GetAgentPath(installDirectory, _systemEnvironment.Platform, previousBrandName);
 
     if (!FileSystem.FileExists(agentPath))
     {

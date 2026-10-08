@@ -6,7 +6,6 @@ using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Shared.Services.Windows;
 using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Enums;
-using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
@@ -143,7 +142,8 @@ public class AgentInstallerWindowsRepairTests
   {
     var previousBrand = "Acme Remote";
     var previousInstallDirectory = @"C:\Program Files\Acme_Remote\instance-1";
-    var previousAgentPath = Path.Combine(previousInstallDirectory, $"{BrandingConstants.AgentBaseName}.exe");
+    // The replaced install's executable is named for its own brand, not for this build's.
+    var previousAgentPath = Path.Combine(previousInstallDirectory, "Acme_Remote.Agent.exe");
     var fileSystem = new FakeFileSystem('\\');
     var processManager = new Mock<IProcessManager>();
     var pathProvider = new Mock<IFileSystemPathProvider>();
@@ -180,7 +180,8 @@ public class AgentInstallerWindowsRepairTests
   {
     var previousBrand = "Acme Remote";
     var previousInstallDirectory = @"C:\Program Files\Acme_Remote\instance-1";
-    var previousAgentPath = Path.Combine(previousInstallDirectory, $"{BrandingConstants.AgentBaseName}.exe");
+    // The replaced install's executable is named for its own brand, not for this build's.
+    var previousAgentPath = Path.Combine(previousInstallDirectory, "Acme_Remote.Agent.exe");
     var previousSettingsDirectory = @"C:\ProgramData\Acme_Remote\instance-1";
     var fileSystem = new FakeFileSystem('\\');
     var processManager = new Mock<IProcessManager>();

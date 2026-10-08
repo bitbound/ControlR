@@ -1,34 +1,23 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Text.RegularExpressions;
 
 namespace ControlR.Libraries.Branding;
 
 [SuppressMessage("MemberOrder", "BB0001", Justification = "Constants are grouped by category, not by member type.")]
 /// <summary>
 /// Centralized branding constants. These values are replaced by the build script during customized builds.
+/// The derived names come from <see cref="BrandNames"/>, so a build can also ask for another brand's
+/// names without a second copy of the formulas.
 /// </summary>
-public static partial class BrandingConstants
+public static class BrandingConstants
 {
   public const string BrandName = "ControlR";
   public const string Publisher = "Bitbound";
-
-  [GeneratedRegex(@"[^a-zA-Z0-9]")]
-  private static partial Regex BrandNameSanitizer();
 
   /// <summary>
   /// Reduces a brand name to the filesystem-safe form used for directory, service, and registry names.
   /// Two names that share a key address the same install, so compare keys rather than names.
   /// </summary>
-  public static string SanitizeBrandKey(string brandName)
-  {
-    if (string.IsNullOrWhiteSpace(brandName))
-    {
-      return string.Empty;
-    }
-
-    // Surrounding whitespace shows up when a brand name is read from a customization config file.
-    return BrandNameSanitizer().Replace(brandName.Trim(), "_");
-  }
+  public static string SanitizeBrandKey(string brandName) => BrandNames.SanitizeBrandKey(brandName);
 
   public const string PrimaryColorDark = "2196F3";
   public const string SecondaryColorDark = "21f3e9";
@@ -46,8 +35,8 @@ public static partial class BrandingConstants
   public const string WarningColorLight = "ffc107";
   public const string ErrorColorLight = "dc3545";
 
-  public static string BrandKey => SanitizeBrandKey(BrandName);
-  public static string UnixBrandKey => BrandKey.ToLowerInvariant();
+  public static string BrandKey => BrandNames.Current.BrandKey;
+  public static string UnixBrandKey => BrandNames.Current.UnixBrandKey;
 
   private static Uri? ParseControlrServerUrl(string? value)
   {
@@ -78,35 +67,35 @@ public static partial class BrandingConstants
 
   public static string AuthenticatorIssuerName => BrandName;
 
-  public static string WindowsInstallDirectoryName => BrandKey;
-  public static string LinuxInstallDirectoryName => BrandKey;
-  public static string MacInstallDirectoryName => BrandKey;
+  public static string WindowsInstallDirectoryName => BrandNames.Current.BrandKey;
+  public static string LinuxInstallDirectoryName => BrandNames.Current.BrandKey;
+  public static string MacInstallDirectoryName => BrandNames.Current.BrandKey;
 
-  public static string MacAppBundleBaseName => BrandKey;
-  public static string MacBundleStateDirectoryName => BrandKey;
-  public static string UpdaterTempDirectoryName => $"{BrandKey}_Update";
+  public static string MacAppBundleBaseName => BrandNames.Current.MacAppBundleBaseName;
+  public static string MacBundleStateDirectoryName => BrandNames.Current.MacBundleStateDirectoryName;
+  public static string UpdaterTempDirectoryName => BrandNames.Current.UpdaterTempDirectoryName;
 
-  public static string AgentBaseName => $"{BrandKey}.Agent";
-  public static string DesktopClientBaseName => $"{BrandKey}.DesktopClient";
-  public static string InstallerBaseName => $"{BrandKey}.Agent.Installer";
+  public static string AgentBaseName => BrandNames.Current.AgentBaseName;
+  public static string DesktopClientBaseName => BrandNames.Current.DesktopClientBaseName;
+  public static string InstallerBaseName => BrandNames.Current.InstallerBaseName;
   public static string WebServerAssemblyName => "ControlR.Web.Server";
-  public static string BundleZipBaseName => $"{BrandKey}.Agent.bundle";
+  public static string BundleZipBaseName => BrandNames.Current.BundleZipBaseName;
   public static string DesktopClientDirectoryName => "DesktopClient";
 
-  public static string WindowsLogDirectoryName => BrandKey;
-  public static string UnixLogDirectoryName => UnixBrandKey;
-  public static string UnixConfigDirectoryName => UnixBrandKey;
-  public static string UnixHiddenDirectoryName => $".{UnixBrandKey}";
+  public static string WindowsLogDirectoryName => BrandNames.Current.WindowsLogDirectoryName;
+  public static string UnixLogDirectoryName => BrandNames.Current.UnixLogDirectoryName;
+  public static string UnixConfigDirectoryName => BrandNames.Current.UnixConfigDirectoryName;
+  public static string UnixHiddenDirectoryName => BrandNames.Current.UnixHiddenDirectoryName;
 
-  public static string WindowsServiceBaseName => $"{BrandKey}.Agent";
-  public static string LinuxAgentServiceName => $"{UnixBrandKey}.agent.service";
-  public static string LinuxDesktopServiceName => $"{UnixBrandKey}.desktop.service";
-  public static string MacServicePrefix => $"app.{UnixBrandKey}";
+  public static string WindowsServiceBaseName => BrandNames.Current.WindowsServiceBaseName;
+  public static string LinuxAgentServiceName => BrandNames.Current.LinuxAgentServiceName;
+  public static string LinuxDesktopServiceName => BrandNames.Current.LinuxDesktopServiceName;
+  public static string MacServicePrefix => BrandNames.Current.MacServicePrefix;
 
-  public static string WindowsUninstallRegistryKeyName => BrandKey;
+  public static string WindowsUninstallRegistryKeyName => BrandNames.Current.WindowsUninstallRegistryKeyName;
 
-  public static string BundleHashFileName => $".{UnixBrandKey}-bundle.sha256";
-  public static string RepairStageDirectoryPrefix => $".{UnixBrandKey}-desktop-repair-";
+  public static string BundleHashFileName => BrandNames.Current.BundleHashFileName;
+  public static string RepairStageDirectoryPrefix => BrandNames.Current.RepairStageDirectoryPrefix;
 
-  public static string IpcPipeBaseName => $"{UnixBrandKey}-ipc-server";
+  public static string IpcPipeBaseName => BrandNames.Current.IpcPipeBaseName;
 }

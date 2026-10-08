@@ -522,10 +522,14 @@ internal class AgentMaintenanceService(
     var argumentsXml = string.Concat(programArguments.Select(
       argument => $"\n        <string>{SecurityElement.Escape(argument)}</string>"));
 
+    // "$" in a replacement string is a group reference, so an argument containing one would corrupt the
+    // rewrite. Doubling it escapes it, while the "$1" and "$2" group references below stay intact.
+    var escapedArgumentsXml = argumentsXml.Replace("$", "$$");
+
     var updatedContent = Regex.Replace(
       plistContent,
       @"(<key>ProgramArguments</key>\s*<array>).*?(</array>)",
-      $"$1{argumentsXml}\n    $2",
+      $"$1{escapedArgumentsXml}\n    $2",
       RegexOptions.Singleline);
 
     if (string.Equals(updatedContent, plistContent, StringComparison.Ordinal))
