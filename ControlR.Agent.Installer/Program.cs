@@ -10,6 +10,7 @@ using ControlR.Agent.Shared.Startup;
 using ControlR.ApiClient;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Serilog;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.DataValidation;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
@@ -53,12 +54,8 @@ const string DeviceIdLongAlias = "--device-id";
 const string CustomerIdShortAlias = "-c";
 const string CustomerIdLongAlias = "--customer";
 const string CustomerIdDescription = "An optional customer ID to assign the device to upon installation.";
-const string PreviousBrandNameDescription = "Brand name of the agent install being replaced. Set only during a cross-brand migration. The server must declare this name as a predecessor of the installer's own brand, or the install is refused. When set, the previous install's settings file is adopted so the device ID and signing key survive the rebrand.";
-const string PreviousAgentPathDescription = "Full path to the executable of the agent install being replaced. Used to retire that install once the new brand is installed successfully.";
-const string PreserveMachinePolicyDescription = "Leave machine-wide policy values untouched. Used when another agent install still depends on them, which is the case when retiring an install that a new brand has already replaced.";
+const string PreviousBrandNameDescription = "Brand name of the agent install being replaced. Set only during a cross-brand migration. That install is removed once this brand is installed and running. The server is what authorizes the migration.";
 const string PreviousBrandNameLongAlias = "--previous-brand-name";
-const string PreviousAgentPathLongAlias = "--previous-agent-path";
-const string PreserveMachinePolicyLongAlias = "--preserve-machine-policy";
 const string TempDirectoryPrefix = "controlr-install-";
 const string TempBundleFileName = "ControlR.Agent.bundle.zip";
 
@@ -145,12 +142,6 @@ static Command GetInstallCommand()
     Description = PreviousBrandNameDescription,
   };
 
-  var previousAgentPathOption = new Option<string?>(PreviousAgentPathLongAlias)
-  {
-    Required = false,
-    Description = PreviousAgentPathDescription,
-  };
-
   var installCommand = new Command(InstallCommandName, InstallCommandDescription)
   {
     serverUriOption,
@@ -162,7 +153,6 @@ static Command GetInstallCommand()
     deviceIdOption,
     customerIdOption,
     previousBrandNameOption,
-    previousAgentPathOption,
   };
 
   installCommand.SetAction(async parseResult =>
@@ -182,8 +172,7 @@ static Command GetInstallCommand()
     return await RunInstall(
       installRequest,
       parseResult.GetValue(instanceIdOption),
-      parseResult.GetValue(previousBrandNameOption),
-      parseResult.GetValue(previousAgentPathOption));
+      parseResult.GetValue(previousBrandNameOption));
   });
 
   return installCommand;
@@ -198,20 +187,13 @@ static Command GetUninstallCommand()
 
   instanceIdOption.Validators.Add(ValidateInstanceId);
 
-  var preserveMachinePolicyOption = new Option<bool>(PreserveMachinePolicyLongAlias)
-  {
-    Description = PreserveMachinePolicyDescription,
-  };
-
   var uninstallCommand = new Command(UninstallCommandName, UninstallCommandDescription)
   {
     instanceIdOption,
-    preserveMachinePolicyOption,
   };
 
   uninstallCommand.SetAction(async parseResult => await RunUninstall(
-    parseResult.GetValue(instanceIdOption),
-    parseResult.GetValue(preserveMachinePolicyOption)));
+    parseResult.GetValue(instanceIdOption)));
 
   return uninstallCommand;
 }
@@ -238,13 +220,8 @@ static Command GetRepairDesktopCommand()
 static async Task<int> RunInstall(
   AgentInstallRequest request,
   string? instanceId,
-  string? previousBrandName,
-  string? previousAgentPath)
+  string? previousBrandName)
 {
-  // Adopted before the host is built so that the normal configuration load picks the inherited
-  // values up and AgentAppOptions binds the previous install's device ID and signing key.
-  var (adoptedSettingsPath, adoptionNote) = AdoptPreviousBrandSettings(previousBrandName, instanceId);
-
   using var host = CreateInstallerHost(instanceId, request.ServerUri);
   var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent.Installer");
   using var logScope = logger.BeginScope("RunInstall. InstanceId: {InstanceId}", instanceId);
@@ -269,80 +246,40 @@ static async Task<int> RunInstall(
     if (!metadataResult.IsSuccess || metadataResult.Value is null)
     {
       logger.LogError("Failed to fetch bundle metadata. Reason: {Reason}", metadataResult.Reason);
-      DiscardAdoptedSettings(fileSystem, logger, adoptedSettingsPath);
       return 1;
     }
 
     var metadata = metadataResult.Value;
     logger.LogInformation("Bundle version: {Version}", metadata.Version);
 
-    var brandMatch = BrandCompatibility.Evaluate(
-      metadata.BrandName,
-      metadata.Publisher,
-      metadata.PredecessorBrandNames);
-
-    if (brandMatch == BrandMatch.SameBrand && adoptedSettingsPath is not null)
-    {
-      logger.LogWarning(
-        "A previous brand name was supplied but this bundle is the installer's own brand. " +
-        "Discarding the adopted settings and continuing as an ordinary install.");
-      DiscardAdoptedSettings(fileSystem, logger, adoptedSettingsPath);
-      adoptedSettingsPath = null;
-    }
-
-    if (brandMatch == BrandMatch.DeclaredPredecessor && !IsDeclaredPredecessor(metadata.PredecessorBrandNames, previousBrandName))
+    // The server this install is pointed at is the authority. If its bundle names a different brand,
+    // this installer is not the right binary to be running here.
+    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
     {
       logger.LogCritical(
-        "Refusing to migrate: this server declares brand(s) {DeclaredPredecessors} as predecessors, which does not include '{PreviousBrandName}'. " +
-        "Installer brand: {InstallerBrandName}. Nothing on this machine was changed.",
-        string.Join(", ", metadata.PredecessorBrandNames ?? []),
-        previousBrandName,
-        BrandingConstants.BrandName);
-      DiscardAdoptedSettings(fileSystem, logger, adoptedSettingsPath);
-      return 1;
-    }
-
-    if (brandMatch != BrandMatch.SameBrand && brandMatch != BrandMatch.DeclaredPredecessor)
-    {
-      logger.LogCritical(
-        "Refusing to install: server bundle is for a different brand than this installer, and neither declares the other as a predecessor. " +
-        "Installer brand: {InstallerBrandName}/{InstallerPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
-        "If this server is correct, run the matching installer instead.",
-        BrandingConstants.BrandName,
-        BrandingConstants.Publisher,
+        "Refusing to install: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
+        "Nothing on this machine was changed.",
         metadata.BrandName,
-        metadata.Publisher);
-      DiscardAdoptedSettings(fileSystem, logger, adoptedSettingsPath);
+        BrandingConstants.BrandName);
       return 1;
     }
 
-    var isBrandMigration = brandMatch == BrandMatch.DeclaredPredecessor;
-
-    if (isBrandMigration)
+    // A migration is indicated by the brand being retired, which the resident install passes in.
+    var previousBrand = string.IsNullOrWhiteSpace(previousBrandName) ? null : previousBrandName.Trim();
+    if (previousBrand is not null && string.Equals(previousBrand, BrandingConstants.BrandName, StringComparison.Ordinal))
     {
-      // Without the previous install's settings file there is no device ID and no signing key to carry
-      // over. Proceeding would register the endpoint as a new device and sign it with a key the server
-      // has never been told about, which is unrecoverable without an operator re-enrolling it.
-      if (adoptedSettingsPath is null)
-      {
-        logger.LogCritical(
-          "Refusing to migrate from brand {PreviousBrandName}: {Note}. " +
-          "Migrating without the previous install's settings would lose its device ID and signing key. " +
-          "Nothing on this machine was changed.",
-          previousBrandName,
-          adoptionNote);
-        DiscardAdoptedSettings(fileSystem, logger, adoptedSettingsPath);
-        return 1;
-      }
-
       logger.LogWarning(
-        "Migrating from brand {PreviousBrandName} to {InstallerBrandName}. Device identity and signing key carry over from the previous install.",
-        previousBrandName,
-        BrandingConstants.BrandName);
+        "Ignoring --previous-brand-name '{PreviousBrandName}' because it is this installer's own brand.",
+        previousBrand);
+      previousBrand = null;
     }
-    else if (adoptionNote is not null)
+
+    if (previousBrand is not null)
     {
-      logger.LogWarning("Adopting previous brand settings did not happen. {Note}", adoptionNote);
+      logger.LogWarning(
+        "Migrating install from brand {PreviousBrandName} to {InstallerBrandName}. Device identity and signing key carry over from the settings file already staged for this brand.",
+        previousBrand,
+        BrandingConstants.BrandName);
     }
 
     logger.LogInformation("Downloading bundle to temp file: {TempBundlePath}", tempBundlePath);
@@ -359,17 +296,31 @@ static async Task<int> RunInstall(
       DeviceId = request.DeviceId,
       TagIds = request.TagIds,
       CustomerId = request.CustomerId,
+      PreviousBrandName = previousBrand,
     };
 
-    await installer.Install(installRequest);
+    var installResult = await installer.Install(installRequest);
+    if (!installResult.IsSuccess)
+    {
+      logger.LogError("Installation failed. Reason: {Reason}", installResult.Reason);
+
+      if (previousBrand is not null)
+      {
+        // The install already stopped the brand it replaces, so start it again rather than leave this
+        // machine with no running agent at all.
+        await installer.RestorePreviousBrand(previousBrand);
+      }
+
+      return 1;
+    }
 
     logger.LogInformation("Installation completed successfully.");
 
-    if (isBrandMigration)
+    if (previousBrand is not null)
     {
-      // Best effort. The new install is already working, so a failure here must not report a failed
+      // Best effort. This install is already working, so a failure here must not report a failed
       // install. A leftover old-brand service is recoverable; reporting success as failure is not.
-      await RetirePreviousInstallAsync(host.Services, logger, fileSystem, previousBrandName, previousAgentPath, instanceId);
+      await installer.RetirePreviousBrand(previousBrand);
     }
 
     return 0;
@@ -395,7 +346,7 @@ static async Task<int> RunInstall(
   }
 }
 
-static async Task<int> RunUninstall(string? instanceId, bool preserveMachinePolicy)
+static async Task<int> RunUninstall(string? instanceId)
 {
   using var host = CreateInstallerHost(instanceId, serverUri: null);
   var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent.Installer");
@@ -403,7 +354,7 @@ static async Task<int> RunUninstall(string? instanceId, bool preserveMachinePoli
 
   try
   {
-    await installer.Uninstall(preserveMachinePolicy);
+    await installer.Uninstall();
     logger.LogInformation("Uninstall completed successfully.");
     return 0;
   }
@@ -449,22 +400,13 @@ static async Task<int> RunRepairDesktop(string? instanceId)
     // Repair writes the desktop client payload into an existing install, so it only ever applies to
     // that install's own brand. A cross-brand bundle is served by the install command, which moves
     // the whole install rather than dropping a foreign payload into the wrong directory.
-    var brandMatch = BrandCompatibility.Evaluate(
-      metadata.BrandName,
-      metadata.Publisher,
-      metadata.PredecessorBrandNames);
-
-    if (brandMatch != BrandMatch.SameBrand)
+    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
     {
       logger.LogCritical(
-        "Refusing to repair desktop client: server bundle is not this installer's brand. Match result: {BrandMatch}. " +
-        "Installer brand: {InstallerBrandName}/{InstallerPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
+        "Refusing to repair desktop client: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
         "If this server is correct, run the matching installer instead.",
-        brandMatch,
-        BrandingConstants.BrandName,
-        BrandingConstants.Publisher,
         metadata.BrandName,
-        metadata.Publisher);
+        BrandingConstants.BrandName);
       return 1;
     }
 
@@ -545,163 +487,6 @@ static FileSystemPathProvider CreateStandalonePathProvider(string? instanceId)
     elevationChecker,
     new FileSystem(new SerilogLogger<FileSystem>()),
     new OptionsMonitorWrapper<InstanceOptions>(new InstanceOptions { InstanceId = instanceId }));
-}
-
-/// <summary>
-/// Copies the settings file of the install being replaced onto this brand's settings path so the
-/// ordinary configuration load binds its device ID, tenant, and signing key. Without that file the
-/// new install would mint a fresh device ID and a fresh signing key, and the server only ever trusts
-/// the public key it already stored for a known device, so the endpoint would be unable to
-/// authenticate again. Returns the copied path plus a note explaining why nothing was copied.
-/// </summary>
-static (string? AdoptedPath, string? Note) AdoptPreviousBrandSettings(string? previousBrandName, string? instanceId)
-{
-  if (string.IsNullOrWhiteSpace(previousBrandName))
-  {
-    return (null, null);
-  }
-
-  try
-  {
-    var pathProvider = CreateStandalonePathProvider(instanceId);
-    var sourcePath = Path.Combine(
-      pathProvider.GetSettingsDirectoryFor(previousBrandName, instanceId),
-      "appsettings.json");
-    var destinationPath = pathProvider.GetAgentAppSettingsPath();
-
-    if (string.Equals(sourcePath, destinationPath, StringComparison.OrdinalIgnoreCase))
-    {
-      return (null, null);
-    }
-
-    var fileSystem = new FileSystem(new SerilogLogger<FileSystem>());
-    if (!fileSystem.FileExists(sourcePath))
-    {
-      return (null, $"No settings file found for brand '{previousBrandName}' at {sourcePath}.");
-    }
-
-    var destinationDirectory = Path.GetDirectoryName(destinationPath)
-      ?? throw new InvalidOperationException($"'{destinationPath}' has no parent directory.");
-
-    fileSystem.CreateDirectory(destinationDirectory);
-    fileSystem.CopyFile(sourcePath, destinationPath, true);
-    return (destinationPath, null);
-  }
-  catch (Exception ex)
-  {
-    return (null, $"Failed to copy settings from brand '{previousBrandName}': {ex.Message}");
-  }
-}
-
-static void DiscardAdoptedSettings(IFileSystem fileSystem, ILogger logger, string? adoptedSettingsPath)
-{
-  if (adoptedSettingsPath is null)
-  {
-    return;
-  }
-
-  try
-  {
-    if (fileSystem.FileExists(adoptedSettingsPath))
-    {
-      fileSystem.DeleteFile(adoptedSettingsPath);
-    }
-  }
-  catch (Exception ex)
-  {
-    logger.LogWarning(ex, "Failed to discard adopted settings file {Path}.", adoptedSettingsPath);
-  }
-}
-
-static bool IsDeclaredPredecessor(string[]? declaredPredecessorBrandNames, string? previousBrandName)
-{
-  if (string.IsNullOrWhiteSpace(previousBrandName))
-  {
-    return false;
-  }
-
-  if (declaredPredecessorBrandNames is null || declaredPredecessorBrandNames.Length == 0)
-  {
-    return false;
-  }
-
-  var previousKey = BrandingConstants.SanitizeBrandKey(previousBrandName);
-
-  return declaredPredecessorBrandNames.Any(x =>
-    !string.IsNullOrWhiteSpace(x) &&
-    string.Equals(BrandingConstants.SanitizeBrandKey(x!), previousKey, StringComparison.Ordinal));
-}
-
-/// <summary>
-/// Asks the replaced install to remove itself. Best effort by design: the new install is already
-/// working at this point, and a leftover old-brand service is far cheaper to recover than an install
-/// reported as failed after it succeeded.
-/// </summary>
-static async Task RetirePreviousInstallAsync(
-  IServiceProvider services,
-  ILogger logger,
-  IFileSystem fileSystem,
-  string? previousBrandName,
-  string? previousAgentPath,
-  string? instanceId)
-{
-  if (string.IsNullOrWhiteSpace(previousAgentPath))
-  {
-    logger.LogError(
-      "Migration completed but no previous agent path was supplied, so the {PreviousBrandName} service was left installed. " +
-      "Uninstall it manually.",
-      previousBrandName);
-    return;
-  }
-
-  if (!fileSystem.FileExists(previousAgentPath))
-  {
-    logger.LogError(
-      "Migration completed but the previous agent executable was not found at {Path}. " +
-      "The {PreviousBrandName} service was left installed. Uninstall it manually.",
-      previousAgentPath,
-      previousBrandName);
-    return;
-  }
-
-  try
-  {
-    var processManager = services.GetRequiredService<IProcessManager>();
-
-    // The old install still depends on the machine-wide values it set, and they are shared rather
-    // than per-install, so clearing them would break the install that just replaced it.
-    var arguments = "uninstall --preserve-machine-policy";
-    if (!string.IsNullOrWhiteSpace(instanceId))
-    {
-      arguments += $" \"--instance-id\" \"{instanceId}\"";
-    }
-
-    var exitCode = await processManager.StartAndWaitForExit(
-      previousAgentPath,
-      arguments,
-      false,
-      TimeSpan.FromMinutes(10));
-
-    if (exitCode != 0)
-    {
-      logger.LogError(
-        "Retiring the {PreviousBrandName} install exited with code {ExitCode}. The new install is active; " +
-        "the old service and its files need manual removal.",
-        previousBrandName,
-        exitCode);
-    }
-    else
-    {
-      logger.LogInformation("Retired the {PreviousBrandName} install.", previousBrandName);
-    }
-  }
-  catch (Exception ex)
-  {
-    logger.LogError(
-      ex,
-      "Failed to retire the {PreviousBrandName} install. The new install is active; the old service and its files need manual removal.",
-      previousBrandName);
-  }
 }
 
 static Guid[]? ParseTagIds(string? deviceTags)

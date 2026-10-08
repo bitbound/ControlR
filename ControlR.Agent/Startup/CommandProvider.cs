@@ -31,29 +31,64 @@ internal static class CommandProvider
     return runCommand;
   }
 
+  internal static Command GetStartServiceCommand(string[] args)
+  {
+    var instanceIdOption = CreateInstanceIdOption();
+
+    var startServiceCommand = new Command("start-service", "Start the ControlR service without reinstalling it.")
+    {
+      instanceIdOption
+    };
+
+    startServiceCommand.SetAction(async parseResult =>
+    {
+      var instanceId = parseResult.GetValue(instanceIdOption);
+      using var host = CreateHost(StartupMode.ServiceControl, args, instanceId);
+      var serviceControl = host.Services.GetRequiredService<IServiceControl>();
+
+      await serviceControl.StartAgentService(throwOnFailure: false);
+    });
+
+    return startServiceCommand;
+  }
+
+  internal static Command GetStopServiceCommand(string[] args)
+  {
+    var instanceIdOption = CreateInstanceIdOption();
+
+    var stopServiceCommand = new Command("stop-service", "Stop the ControlR service without removing it.")
+    {
+      instanceIdOption
+    };
+
+    stopServiceCommand.SetAction(async parseResult =>
+    {
+      var instanceId = parseResult.GetValue(instanceIdOption);
+      using var host = CreateHost(StartupMode.ServiceControl, args, instanceId);
+      var serviceControl = host.Services.GetRequiredService<IServiceControl>();
+
+      await serviceControl.StopAgentService(throwOnFailure: false);
+    });
+
+    return stopServiceCommand;
+  }
+
   internal static Command GetUninstallCommand(string[] args)
   {
     var instanceIdOption = CreateInstanceIdOption();
 
-    var preserveMachinePolicyOption = new Option<bool>("--preserve-machine-policy")
-    {
-      Description = "Leave machine-wide policy values untouched. Used when retiring an install that a newly installed brand has already replaced, because those values are shared and not tracked per install."
-    };
-
     var unInstallCommand = new Command("uninstall", "Uninstall the ControlR service.")
     {
-      instanceIdOption,
-      preserveMachinePolicyOption
+      instanceIdOption
     };
 
     unInstallCommand.SetAction(async parseResult =>
     {
       var instanceId = parseResult.GetValue(instanceIdOption);
-      var preserveMachinePolicy = parseResult.GetValue(preserveMachinePolicyOption);
       using var host = CreateHost(StartupMode.Uninstall, args, instanceId);
       var installer = host.Services.GetRequiredService<IAgentInstaller>();
 
-      await installer.Uninstall(preserveMachinePolicy);
+      await installer.Uninstall();
 
       await WaitForShutdown();
     });

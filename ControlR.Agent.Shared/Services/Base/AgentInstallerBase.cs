@@ -32,6 +32,73 @@ internal abstract class AgentInstallerBase(
   protected ILogger<AgentInstallerBase> Logger { get; } = logger;
   protected IProcessManager ProcessManager { get; } = processManager;
 
+  /// <summary>
+  /// Starts the service of the install being replaced. Used to roll back when this install cannot
+  /// start, so a failed migration does not leave the machine with no running agent.
+  /// </summary>
+  public async Task<Result> RestorePreviousBrand(string previousBrandName)
+  {
+    using var _ = Logger.BeginMemberScope();
+
+    Logger.LogInformation("Starting the {PreviousBrandName} service again.", previousBrandName);
+    var result = await RunPreviousBrandAgentCommand(previousBrandName, "start-service", TimeSpan.FromMinutes(2));
+
+    if (result.IsSuccess)
+    {
+      Logger.LogInformation("The {PreviousBrandName} service is running again.", previousBrandName);
+    }
+    else
+    {
+      Logger.LogError(
+        "Failed to start the {PreviousBrandName} service again: {Reason}. This machine may be left with no running agent.",
+        previousBrandName,
+        result.Reason);
+    }
+
+    return result;
+  }
+
+  /// <summary>
+  /// Removes the install being replaced, and the settings directory its uninstall leaves behind.
+  /// </summary>
+  public async Task<Result> RetirePreviousBrand(string previousBrandName)
+  {
+    using var _ = Logger.BeginMemberScope();
+
+    Logger.LogInformation("Removing the {PreviousBrandName} install.", previousBrandName);
+    var result = await RunPreviousBrandAgentCommand(previousBrandName, "uninstall", TimeSpan.FromMinutes(10));
+
+    if (!result.IsSuccess)
+    {
+      Logger.LogError(
+        "Failed to remove the {PreviousBrandName} install: {Reason}. This install is running; the old service and its files need manual removal.",
+        previousBrandName,
+        result.Reason);
+      return result;
+    }
+
+    // Uninstall deliberately keeps the settings directory, and that file holds the device signing key
+    // in plaintext. Remove it so the retired brand does not keep holding it.
+    try
+    {
+      var settingsDirectory = FilesystemPathProvider.GetSettingsDirectoryFor(
+        previousBrandName,
+        FilesystemPathProvider.GetEffectiveInstanceId());
+
+      if (FileSystem.DirectoryExists(settingsDirectory))
+      {
+        FileSystem.DeleteDirectory(settingsDirectory, true);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to delete the retired install's settings directory.");
+    }
+
+    Logger.LogInformation("Removed the {PreviousBrandName} install.", previousBrandName);
+    return Result.Ok();
+  }
+
   protected static string GetAgentPath(string installDirectory, SystemPlatform platform)
   {
     return Path.Combine(installDirectory, AppConstants.GetAgentFileName(platform));
@@ -108,6 +175,29 @@ internal abstract class AgentInstallerBase(
 
     FileSystem.CreateDirectory(installDirectory);
     await FileSystem.ExtractZipArchiveAsync(bundleZipPath, installDirectory, overwriteFiles: true, cancellationToken);
+  }
+
+  /// <summary>
+  /// Stops the service of the install being replaced, before this install starts its own. Only one
+  /// agent may hold the device's connection on the server, and both would otherwise keep taking it.
+  /// </summary>
+  protected async Task StopPreviousBrandService(string? previousBrandName)
+  {
+    if (string.IsNullOrWhiteSpace(previousBrandName))
+    {
+      return;
+    }
+
+    using var _ = Logger.BeginMemberScope();
+    Logger.LogInformation("Stopping the {PreviousBrandName} service before starting this one.", previousBrandName);
+
+    var result = await RunPreviousBrandAgentCommand(previousBrandName, "stop-service", TimeSpan.FromMinutes(2));
+    if (!result.IsSuccess)
+    {
+      // Not fatal. This install removes the old one afterwards anyway, and refusing to install here
+      // would leave the endpoint on the old brand.
+      Logger.LogWarning("Could not stop the {PreviousBrandName} service: {Reason}", previousBrandName, result.Reason);
+    }
   }
 
   protected Result StopProcesses(string targetAgentPath, string? targetDesktopClientPath = null)
@@ -218,6 +308,64 @@ internal abstract class AgentInstallerBase(
     Logger.LogInformation("Writing bundle hash to {BundleHashPath}.", bundleHashPath);
     FileSystem.CreateDirectory(settingsDirectory);
     await FileSystem.WriteAllTextAsync(bundleHashPath, bundleSha256.Trim());
+  }
+
+  /// <summary>
+  /// Runs one of the replaced install's own commands against itself. Staged to a temp copy first,
+  /// because run from its own install directory that agent copies itself elsewhere, re-launches
+  /// detached, and returns before doing anything. Asking it to act on itself is also what keeps
+  /// another brand's service names, unit files, and registry keys out of this code.
+  /// </summary>
+  private async Task<Result> RunPreviousBrandAgentCommand(string previousBrandName, string command, TimeSpan timeout)
+  {
+    var instanceId = FilesystemPathProvider.GetEffectiveInstanceId();
+    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, instanceId);
+    var agentPath = GetAgentPath(installDirectory, _systemEnvironment.Platform);
+
+    if (!FileSystem.FileExists(agentPath))
+    {
+      return Result.Fail($"The {previousBrandName} agent was not found at {agentPath}.");
+    }
+
+    var stagedPath = Path.Combine(
+      Path.GetTempPath(),
+      $"{BrandingConstants.SanitizeBrandKey(previousBrandName)}_{Guid.NewGuid():N}{Path.GetExtension(agentPath)}");
+
+    FileSystem.CopyFile(agentPath, stagedPath, true);
+
+    try
+    {
+      var arguments = command;
+      var configuredInstanceId = _optionsAccessor.InstanceId;
+      if (!string.IsNullOrWhiteSpace(configuredInstanceId))
+      {
+        arguments += $" \"--instance-id\" \"{configuredInstanceId}\"";
+      }
+
+      var exitCode = await ProcessManager.StartAndWaitForExit(stagedPath, arguments, false, timeout);
+
+      return exitCode == 0
+        ? Result.Ok()
+        : Result.Fail($"'{command}' on the {previousBrandName} install exited with code {exitCode}.");
+    }
+    catch (Exception ex)
+    {
+      return Result.Fail(ex);
+    }
+    finally
+    {
+      try
+      {
+        if (FileSystem.FileExists(stagedPath))
+        {
+          FileSystem.DeleteFile(stagedPath);
+        }
+      }
+      catch (Exception ex)
+      {
+        Logger.LogWarning(ex, "Failed to delete staged agent copy {StagedPath}.", stagedPath);
+      }
+    }
   }
 
 }

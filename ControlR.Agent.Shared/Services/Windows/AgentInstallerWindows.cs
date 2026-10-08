@@ -43,12 +43,12 @@ internal class AgentInstallerWindows(
   private readonly IRegistryAccessor _registryAccessor = registryAccessor;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
-  public async Task Install(AgentInstallRequest request)
+  public async Task<Result> Install(AgentInstallRequest request)
   {
     if (!await _installLock.WaitAsync(0))
     {
       Logger.LogWarning("Installer lock already acquired.  Aborting.");
-      return;
+      return Result.Fail("The installer is already running.");
     }
 
     try
@@ -58,15 +58,13 @@ internal class AgentInstallerWindows(
       if (!_systemEnvironment.IsDebug && !_elevationChecker.IsElevated())
       {
         Logger.LogError("Install command must be run as administrator.");
-        return;
+        return Result.Fail("Install command must be run as administrator.");
       }
 
       if (IsRunningFromAppDir())
       {
-        return;
+        return Result.Fail("The installer was re-launched from a temp copy and will report its own result.");
       }
-
-      await using var callback = new CallbackDisposableAsync(StartService);
 
       var installDir = GetInstallDirectory();
       var targetAgentPath = FilesystemPathProvider.GetAgentExecutablePath();
@@ -76,13 +74,13 @@ internal class AgentInstallerWindows(
       if (!stopResult.IsSuccess)
       {
         Logger.LogError("Failed to stop existing agent service. Aborting installation.");
-        return;
+        return Result.Fail("Failed to stop existing agent service.");
       }
       stopResult = StopProcesses(targetAgentPath, targetDesktopClientPath);
       if (!stopResult.IsSuccess)
       {
         Logger.LogError("Failed to stop existing agent processes. Aborting installation.");
-        return;
+        return Result.Fail("Failed to stop existing agent processes.");
       }
 
       try
@@ -105,7 +103,7 @@ internal class AgentInstallerWindows(
       catch (Exception ex)
       {
         Logger.LogError(ex, "Unable to copy app to install directory.  Aborting.");
-        return;
+        return Result.Fail("Unable to copy app to install directory.");
       }
 
       await UpdateAppSettings(request.ServerUri, request.TenantId, request.DeviceId);
@@ -113,7 +111,7 @@ internal class AgentInstallerWindows(
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
       if (!createResult.IsSuccess)
       {
-        return;
+        return createResult;
       }
 
       await WriteBundleHashFile(request.BundleSha256);
@@ -133,7 +131,7 @@ internal class AgentInstallerWindows(
       if (!result.IsSuccess)
       {
         Logger.LogResult(result);
-        return;
+        return Result.Fail("Failed to register the agent service.");
       }
 
       var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
@@ -143,11 +141,24 @@ internal class AgentInstallerWindows(
       Logger.LogInformation("Creating uninstall registry key.");
       CreateUninstallKey();
 
+      // Only one agent may hold the device's connection on the server, so the replaced install stops
+      // before this one starts.
+      await StopPreviousBrandService(request.PreviousBrandName);
+
+      var startResult = await StartService();
+      if (!startResult.IsSuccess)
+      {
+        Logger.LogError("The {BrandName} service did not start.", BrandingConstants.BrandName);
+        return startResult;
+      }
+
       Logger.LogInformation("Install completed.");
+      return Result.Ok();
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
+      return Result.Fail(ex);
     }
     finally
     {
@@ -203,7 +214,7 @@ internal class AgentInstallerWindows(
     }
   }
 
-  public async Task Uninstall(bool preserveMachinePolicy)
+  public async Task Uninstall()
   {
     if (!await _installLock.WaitAsync(0))
     {
@@ -263,14 +274,9 @@ internal class AgentInstallerWindows(
         }
       }
 
-      // SoftwareSASGeneration is a single machine-wide value, not one per install. Clearing it here
-      // would switch off Ctrl + Alt + Del simulation for any agent that remains installed, which is
-      // why a cross-brand migration retires the old install with preserveMachinePolicy set.
-      if (!preserveMachinePolicy)
-      {
-        _registryAccessor.SetSoftwareSasGeneration(false);
-      }
-
+      // SoftwareSASGeneration is a single machine-wide value, not one per install. Clearing it on
+      // uninstall switches off Ctrl + Alt + Del simulation for every other agent still on the
+      // machine, silently, since the failure is swallowed at the point SAS is generated. Leave it.
       GetRegistryBaseKey().DeleteSubKeyTree(GetUninstallKeyPath(), false);
 
       Logger.LogInformation("Uninstall completed.");
@@ -447,14 +453,17 @@ internal class AgentInstallerWindows(
     }
   }
 
-  private async Task StartService()
+  private async Task<Result> StartService()
   {
     Logger.LogInformation("Starting service.");
     var startResult = await _processes.GetProcessOutput("cmd.exe", $"/c sc.exe start \"{GetServiceName()}\"");
     if (!startResult.IsSuccess)
     {
       Logger.LogError("Failed to start service after installation: {msg}", startResult.Reason);
+      return Result.Fail("Failed to start the agent service after installation.");
     }
+
+    return Result.Ok();
   }
 
   private Result StopAgentService()

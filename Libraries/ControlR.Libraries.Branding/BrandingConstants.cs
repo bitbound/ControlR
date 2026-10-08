@@ -26,7 +26,8 @@ public static partial class BrandingConstants
       return string.Empty;
     }
 
-    return BrandNameSanitizer().Replace(brandName, "_");
+    // Surrounding whitespace shows up when a brand name is read from a customization config file.
+    return BrandNameSanitizer().Replace(brandName.Trim(), "_");
   }
 
   public const string PrimaryColorDark = "2196F3";
@@ -74,13 +75,6 @@ public static partial class BrandingConstants
   /// Hides the Project, Website, and Sponsor links in the built app UI. False in the default build.
   /// </summary>
   public static bool HideSponsorshipInfo { get; } = false;
-
-  /// <summary>
-  /// Brand names whose installed agents this build may migrate. Empty in the default build.
-  /// Published to agents so they will accept this build as a successor, and compared against this
-  /// build's own brand key to decide whether an inbound bundle may replace the running install.
-  /// </summary>
-  public static string[] PredecessorBrandNames { get; } = [];
 
   public static string AuthenticatorIssuerName => BrandName;
 

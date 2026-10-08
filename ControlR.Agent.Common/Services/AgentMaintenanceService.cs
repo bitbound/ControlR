@@ -6,7 +6,9 @@ using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using System.Security;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace ControlR.Agent.Common.Services;
 
@@ -91,18 +93,13 @@ internal class AgentMaintenanceService(
 
       var metadata = metadataResult.Value;
 
-      var brandMatch = BrandCompatibility.Evaluate(
-        metadata.BrandName,
-        metadata.Publisher,
-        metadata.PredecessorBrandNames);
+      var isSameBrand = string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal);
 
-      if (brandMatch == BrandMatch.Unrelated)
+      if (isSameBrand && !string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
       {
         _logger.LogCritical(
-          "Aborting update check. Server bundle is for a different brand than this agent. " +
-          "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
-          "The server does not declare this brand as one it may replace. Refusing to overwrite this install. " +
-          "If this server is correct, uninstall this agent and reinstall it from the matching installer.",
+          "Aborting update check. Server bundle carries this agent's brand name but a different publisher. " +
+          "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}.",
           BrandingConstants.BrandName,
           BrandingConstants.Publisher,
           metadata.BrandName,
@@ -110,14 +107,17 @@ internal class AgentMaintenanceService(
         return;
       }
 
-      var isBrandMigration = brandMatch == BrandMatch.DeclaredPredecessor;
+      // The server is authoritative and its URL does not change across a rebrand, so a bundle that
+      // names a different brand is this deployment rebranding itself. Migrate onto it.
+      var isBrandMigration = !isSameBrand;
       if (isBrandMigration)
       {
         _logger.LogWarning(
-          "Server bundle is brand {ServerBrandName}, which declares this agent's brand {AgentBrandName} as a predecessor. " +
-          "Migrating this install.",
+          "Server bundle is brand {ServerBrandName}. This agent is brand {AgentBrandName}. Migrating this install.",
           metadata.BrandName,
           BrandingConstants.BrandName);
+
+        WriteSettingsFileForBrand(metadata.BrandName);
       }
 
       _logger.LogInformation("Remote bundle hash: {RemoteHash}", metadata.BundleSha256);
@@ -144,16 +144,11 @@ internal class AgentMaintenanceService(
         return;
       }
 
-      if (isBrandMigration && !CanLaunchCrossBrandInstaller())
-      {
-        return;
-      }
-
       _logger.LogInformation("Launching installer.");
 
       var installArguments = BuildInstallArguments(isBrandMigration);
       var installCommand = BuildCommandString(installArguments);
-      await LaunchInstaller(installerPath, installCommand, linkedCts.Token);
+      await LaunchInstaller(installerPath, installCommand, installArguments, linkedCts.Token);
     }
     catch (OperationCanceledException ex)
     {
@@ -193,22 +188,16 @@ internal class AgentMaintenanceService(
       // Repair rewrites the desktop client payload inside an existing install, so it only makes
       // sense for the install's own brand. A cross-brand bundle is handled by the update path,
       // which moves the whole install rather than patching one payload into the wrong brand.
-      var brandMatch = BrandCompatibility.Evaluate(
-        metadata.BrandName,
-        metadata.Publisher,
-        metadata.PredecessorBrandNames);
-
-      if (brandMatch != BrandMatch.SameBrand)
+      if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
       {
         _logger.LogCritical(
           "Aborting desktop client repair. Server bundle is not this agent's brand. " +
           "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
-          "Match result: {BrandMatch}. Refusing to write a foreign brand's payload into this install.",
+          "Refusing to write a foreign brand's payload into this install.",
           BrandingConstants.BrandName,
           BrandingConstants.Publisher,
           metadata.BrandName,
-          metadata.Publisher,
-          brandMatch);
+          metadata.Publisher);
         return;
       }
 
@@ -218,8 +207,9 @@ internal class AgentMaintenanceService(
         return;
       }
 
-      var repairCommand = BuildCommandString(BuildRepairDesktopArguments());
-      await LaunchInstaller(installerPath, repairCommand, linkedCts.Token);
+      var repairArguments = BuildRepairDesktopArguments();
+      var repairCommand = BuildCommandString(repairArguments);
+      await LaunchInstaller(installerPath, repairCommand, repairArguments, linkedCts.Token);
     }
     catch (OperationCanceledException ex)
     {
@@ -327,13 +317,10 @@ internal class AgentMaintenanceService(
 
     if (isBrandMigration)
     {
-      // The installer inherits install identity from this agent's own settings file, which it locates
-      // from the previous brand name, and retires this service using the executable path.
+      // The new installer picks the install identity up from the settings file this agent already
+      // wrote into that brand's settings directory, so only the brand being retired has to travel.
       arguments.Add("--previous-brand-name");
       arguments.Add(BrandingConstants.BrandName);
-
-      arguments.Add("--previous-agent-path");
-      arguments.Add(_fileSystemPathProvider.GetAgentExecutablePath());
     }
 
     return arguments;
@@ -353,30 +340,6 @@ internal class AgentMaintenanceService(
     }
 
     return arguments;
-  }
-
-  /// <summary>
-  /// A cross-brand migration has to tell the new installer which install it is replacing. On macOS the
-  /// installer is launched from a LaunchDaemon plist whose ProgramArguments were written by the install
-  /// that is already on disk, so arguments introduced now cannot reach it. Launching anyway would put
-  /// the new brand alongside this one with this service still running, which is the outcome the brand
-  /// guard exists to prevent, so decline and leave the endpoint untouched.
-  /// </summary>
-  private bool CanLaunchCrossBrandInstaller()
-  {
-    if (_systemEnvironment.Platform != SystemPlatform.MacOs)
-    {
-      return true;
-    }
-
-    _logger.LogCritical(
-      "Refusing to migrate this install to a new brand on macOS. The update installer runs from " +
-      "plist arguments frozen at install time, so this agent cannot pass the new installer the brand " +
-      "and path it is replacing. Finish the rebrand by running the new brand's installer with " +
-      "--previous-brand-name and --previous-agent-path. Agent brand: {AgentBrandName}.",
-      BrandingConstants.BrandName);
-
-    return false;
   }
 
   private async Task<string?> DownloadInstaller(BundleMetadataDto metadata, CancellationToken cancellationToken)
@@ -459,6 +422,7 @@ internal class AgentMaintenanceService(
   private async Task LaunchInstaller(
     string installerPath,
     string installCommand,
+    IReadOnlyList<string> installArguments,
     CancellationToken cancellationToken)
   {
     switch (_systemEnvironment.Platform)
@@ -492,6 +456,14 @@ internal class AgentMaintenanceService(
         var launchdJobLabel = GetMacInstallerDaemonJobLabel(_instanceOptions.Value.InstanceId);
         var plistPath = GetMacInstallerDaemonPlistPath(_instanceOptions.Value.InstanceId);
 
+        // The plist was rendered by the install already on disk, so its arguments are frozen and this
+        // launch would otherwise carry none of the decisions made above. A migration depends on that,
+        // since the brand being replaced is how the installer knows to retire this install.
+        if (installArguments.Contains("--previous-brand-name", StringComparer.Ordinal))
+        {
+          WriteMacInstallerDaemonArguments(plistPath, [installerPath, .. installArguments]);
+        }
+
         try
         {
           var bootoutStartInfo = GetMacLaunchctlStartInfo("launchctl", "bootout", $"system/{launchdJobLabel}");
@@ -511,6 +483,72 @@ internal class AgentMaintenanceService(
 
       default:
         throw new PlatformNotSupportedException();
+    }
+  }
+
+  /// <summary>
+  /// Rewrites the installer LaunchDaemon's <c>ProgramArguments</c> so the installer launches with the
+  /// arguments this check decided on. The plist on disk was rendered by the install that is already in
+  /// place, so without this, anything decided now cannot reach the installer on macOS. The whole array
+  /// is replaced rather than appended to, which also refreshes server URI and tenant values that were
+  /// frozen at install time.
+  /// </summary>
+  private void WriteMacInstallerDaemonArguments(string plistPath, IReadOnlyList<string> programArguments)
+  {
+    var plistContent = _fileSystem.ReadAllText(plistPath);
+    var argumentsXml = string.Concat(programArguments.Select(
+      argument => $"\n        <string>{SecurityElement.Escape(argument)}</string>"));
+
+    var updatedContent = Regex.Replace(
+      plistContent,
+      @"(<key>ProgramArguments</key>\s*<array>).*?(</array>)",
+      $"$1{argumentsXml}\n    $2",
+      RegexOptions.Singleline);
+
+    if (string.Equals(updatedContent, plistContent, StringComparison.Ordinal))
+    {
+      throw new InvalidOperationException(
+        $"Unable to locate ProgramArguments in the installer LaunchDaemon at {plistPath}.");
+    }
+
+    _fileSystem.WriteAllText(plistPath, updatedContent);
+    _logger.LogInformation("Rewrote installer LaunchDaemon arguments at {PlistPath}.", plistPath);
+  }
+
+  /// <summary>
+  /// Copies this install's settings file into <paramref name="newBrandName"/>'s settings directory so
+  /// the new brand's installer binds the existing device ID, tenant, and signing key instead of
+  /// minting a new identity. The server only trusts the public key it already stored for a known
+  /// device, so losing the key would leave the endpoint unable to authenticate again.
+  /// </summary>
+  private void WriteSettingsFileForBrand(string newBrandName)
+  {
+    try
+    {
+      var sourcePath = _fileSystemPathProvider.GetAgentAppSettingsPath();
+      if (!_fileSystem.FileExists(sourcePath))
+      {
+        _logger.LogError(
+          "Cannot migrate: this install's settings file was not found at {SourcePath}. " +
+          "The new brand's installer will register a new device identity.",
+          sourcePath);
+        return;
+      }
+
+      var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(newBrandName, _instanceOptions.Value.InstanceId);
+      var destinationPath = Path.Combine(destinationDirectory, "appsettings.json");
+
+      _fileSystem.CreateDirectory(destinationDirectory);
+      _fileSystem.CopyFile(sourcePath, destinationPath, overwrite: true);
+
+      _logger.LogInformation(
+        "Wrote this install's settings to {DestinationPath} for the {NewBrandName} install to pick up.",
+        destinationPath,
+        newBrandName);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to hand the settings file to brand {NewBrandName}.", newBrandName);
     }
   }
 }

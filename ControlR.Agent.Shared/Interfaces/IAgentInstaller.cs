@@ -1,20 +1,31 @@
 using ControlR.Agent.Shared.Models;
+using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.Shared.Interfaces;
 
 public interface IAgentInstaller
 {
-  Task Install(AgentInstallRequest request);
+  /// <summary>
+  /// Installs this build. When <see cref="AgentInstallRequest.PreviousBrandName"/> is set, the install
+  /// being replaced is stopped before this one starts, and the returned result says whether this
+  /// install's own service came up.
+  /// </summary>
+  Task<Result> Install(AgentInstallRequest request);
 
   Task RepairDesktopClient(AgentInstallRequest request);
 
   /// <summary>
+  /// Starts the service of the install being replaced, to roll back a migration that could not start.
+  /// </summary>
+  Task<Result> RestorePreviousBrand(string previousBrandName);
+
+  /// <summary>
+  /// Removes the install being replaced, once this one is running.
+  /// </summary>
+  Task<Result> RetirePreviousBrand(string previousBrandName);
+
+  /// <summary>
   /// Removes this install's service, files, and uninstall registration.
   /// </summary>
-  /// <param name="preserveMachinePolicy">
-  /// When true, machine-wide policy values that this install enabled are left in place. A cross-brand
-  /// migration passes this while retiring the old install, because the newly installed brand still
-  /// depends on the same values and they are not tracked per install.
-  /// </param>
-  Task Uninstall(bool preserveMachinePolicy);
+  Task Uninstall();
 }

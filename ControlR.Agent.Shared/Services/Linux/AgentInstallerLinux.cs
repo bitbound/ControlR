@@ -43,12 +43,12 @@ internal class AgentInstallerLinux(
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly IServiceControl _serviceControl = serviceControl;
 
-  public async Task Install(AgentInstallRequest request)
+  public async Task<Result> Install(AgentInstallRequest request)
   {
     if (!await _installLock.WaitAsync(0))
     {
       _logger.LogWarning("Installer lock already acquired.  Aborting.");
-      return;
+      return Result.Fail("The installer is already running.");
     }
 
     try
@@ -58,7 +58,7 @@ internal class AgentInstallerLinux(
       if (!_elevationChecker.IsElevated())
       {
         _logger.LogError("Install command must be run with sudo.");
-        return;
+        return Result.Fail("Install command must be run with sudo.");
       }
 
       var installDir = GetInstallDirectory();
@@ -101,7 +101,7 @@ internal class AgentInstallerLinux(
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
       if (!createResult.IsSuccess)
       {
-        return;
+        return createResult;
       }
 
       await WriteBundleHashFile(request.BundleSha256);
@@ -125,18 +125,33 @@ internal class AgentInstallerLinux(
       psi.Arguments = $"systemctl --global enable {desktopServiceName}";
       await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
+      // Only one agent may hold the device's connection on the server, so the replaced install stops
+      // before this one starts.
+      await StopPreviousBrandService(request.PreviousBrandName);
+
       _logger.LogInformation("Restarting agent service.");
       psi.Arguments = $"systemctl restart {serviceName}";
-      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+      var startExitCode = await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+
+      if (startExitCode != 0)
+      {
+        _logger.LogError(
+          "The {BrandName} service did not start. Exit code: {ExitCode}",
+          BrandingConstants.BrandName,
+          startExitCode);
+        return Result.Fail("Failed to start the agent service after installation.");
+      }
 
       _logger.LogInformation("Starting desktop user services for logged-in users.");
       await _serviceControl.StartDesktopClientService(throwOnFailure: false);
 
       _logger.LogInformation("Install completed.");
+      return Result.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
+      return Result.Fail(ex);
     }
     finally
     {
@@ -204,11 +219,8 @@ internal class AgentInstallerLinux(
     }
   }
 
-  // Installation writes no machine-wide policy on this platform, so preserveMachinePolicy has no effect here.
-  public async Task Uninstall(bool preserveMachinePolicy)
+  public async Task Uninstall()
   {
-    _ = preserveMachinePolicy;
-
     if (!await _installLock.WaitAsync(0))
     {
       _logger.LogWarning("Installer lock already acquired.  Aborting.");

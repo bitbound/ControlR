@@ -6,7 +6,9 @@ using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Shared.Services.Windows;
 using ControlR.ApiClient;
 using ControlR.Libraries.Api.Contracts.Enums;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Libraries.Shared.Services.FileSystem;
@@ -136,6 +138,144 @@ public class AgentInstallerWindowsRepairTests
     Assert.True(fileSystem.DirectoryExists(Path.Combine(installDir, "DesktopClient")));
   }
 
+  [WindowsOnlyFact]
+  public async Task RestorePreviousBrand_RunsItsStartServiceCommand()
+  {
+    var previousBrand = "Acme Remote";
+    var previousInstallDirectory = @"C:\Program Files\Acme_Remote\instance-1";
+    var previousAgentPath = Path.Combine(previousInstallDirectory, $"{BrandingConstants.AgentBaseName}.exe");
+    var fileSystem = new FakeFileSystem('\\');
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var systemEnvironment = new Mock<ISystemEnvironment>();
+    var stagedCommand = string.Empty;
+
+    fileSystem.AddFile(previousAgentPath, []);
+    fileSystem.AddDirectory(Path.GetTempPath());
+
+    systemEnvironment.SetupGet(x => x.Platform).Returns(SystemPlatform.Windows);
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectoryFor(previousBrand, It.IsAny<string?>()))
+      .Returns(previousInstallDirectory);
+
+    processManager
+      .Setup(x => x.StartAndWaitForExit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()))
+      .Returns<string, string, bool, TimeSpan>((fileName, arguments, _, _) =>
+      {
+        stagedCommand = arguments;
+        fileSystem.AddFile(fileName, []);
+        return Task.FromResult(0);
+      });
+
+    var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
+
+    var result = await sut.RestorePreviousBrand(previousBrand);
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal("start-service", stagedCommand);
+  }
+
+  [WindowsOnlyFact]
+  public async Task RetirePreviousBrand_RunsItsUninstallAndDeletesItsSettingsDirectory()
+  {
+    var previousBrand = "Acme Remote";
+    var previousInstallDirectory = @"C:\Program Files\Acme_Remote\instance-1";
+    var previousAgentPath = Path.Combine(previousInstallDirectory, $"{BrandingConstants.AgentBaseName}.exe");
+    var previousSettingsDirectory = @"C:\ProgramData\Acme_Remote\instance-1";
+    var fileSystem = new FakeFileSystem('\\');
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var systemEnvironment = new Mock<ISystemEnvironment>();
+    var stagedPath = string.Empty;
+    var stagedCommand = string.Empty;
+
+    fileSystem.AddFile(previousAgentPath, []);
+    fileSystem.AddDirectory(previousSettingsDirectory);
+    fileSystem.AddDirectory(Path.GetTempPath());
+
+    systemEnvironment.SetupGet(x => x.Platform).Returns(SystemPlatform.Windows);
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectoryFor(previousBrand, It.IsAny<string?>()))
+      .Returns(previousInstallDirectory);
+    pathProvider
+      .Setup(x => x.GetSettingsDirectoryFor(previousBrand, It.IsAny<string?>()))
+      .Returns(previousSettingsDirectory);
+
+    processManager
+      .Setup(x => x.StartAndWaitForExit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()))
+      .Returns<string, string, bool, TimeSpan>((fileName, arguments, _, _) =>
+      {
+        stagedPath = fileName;
+        stagedCommand = arguments;
+        fileSystem.AddFile(fileName, []);
+        return Task.FromResult(0);
+      });
+
+    var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
+
+    var result = await sut.RetirePreviousBrand(previousBrand);
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal("uninstall", stagedCommand);
+
+    // Run from its own install directory, that agent copies itself elsewhere and returns before doing
+    // anything, so the command has to run against a staged copy instead.
+    Assert.NotEqual(previousAgentPath, stagedPath);
+    Assert.StartsWith(Path.GetTempPath(), stagedPath, StringComparison.OrdinalIgnoreCase);
+
+    // The retired install's uninstall keeps its settings directory, which holds the signing key.
+    Assert.False(fileSystem.DirectoryExists(previousSettingsDirectory));
+  }
+
+  [WindowsOnlyFact]
+  public async Task Uninstall_DoesNotClearMachineWideSoftwareSasGeneration()
+  {
+    var installDir = Path.Combine(Path.GetTempPath(), "ControlR", "Install", AppConstants.DefaultInstanceId);
+    var fileSystem = new FakeFileSystem('\\');
+    var registryAccessor = new Mock<IRegistryAccessor>();
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var systemEnvironment = new Mock<ISystemEnvironment>();
+    var elevationChecker = new Mock<IElevationChecker>();
+
+    fileSystem.AddDirectory(installDir);
+    fileSystem.AddDirectory(Path.Combine(installDir, "DesktopClient"));
+
+    systemEnvironment.SetupGet(x => x.IsDebug).Returns(true);
+    systemEnvironment.SetupGet(x => x.StartupDirectory).Returns(@"C:\somewhere-else");
+    systemEnvironment.SetupGet(x => x.Platform).Returns(SystemPlatform.Windows);
+
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+
+    pathProvider.Setup(x => x.GetAgentInstallDirectory()).Returns(installDir);
+    pathProvider
+      .Setup(x => x.GetUninstallKeyPath())
+      .Returns(@"SOFTWARE\ControlR.Tests.NotFound");
+
+    processManager
+      .Setup(x => x.GetProcessesByName(It.IsAny<string>()))
+      .Returns([]);
+    processManager
+      .Setup(x => x.GetProcessOutput("cmd.exe", It.IsAny<string>()))
+      .ReturnsAsync(Result.Ok(string.Empty));
+
+    var sut = CreateSut(
+      fileSystem,
+      processManager,
+      new Mock<IRetryer>(),
+      pathProvider,
+      systemEnvironment,
+      registryAccessor,
+      elevationChecker);
+
+    await sut.Uninstall();
+
+    // SoftwareSASGeneration is a single machine-wide policy, not one value per install. Clearing it on
+    // one uninstall switches off Ctrl + Alt + Del simulation for every agent still on the machine, and
+    // the failure is swallowed where SAS is generated, so nobody sees why it stopped working.
+    registryAccessor.Verify(x => x.SetSoftwareSasGeneration(It.IsAny<bool>()), Times.Never);
+  }
+
   private static AgentInstallRequest CreateRequest(string bundleZipPath)
   {
     return new AgentInstallRequest
@@ -153,18 +293,20 @@ public class AgentInstallerWindowsRepairTests
     Mock<IProcessManager> processManager,
     Mock<IRetryer> retryer,
     Mock<IFileSystemPathProvider> pathProvider,
-    Mock<ISystemEnvironment> systemEnvironment)
+    Mock<ISystemEnvironment> systemEnvironment,
+    Mock<IRegistryAccessor>? registryAccessor = null,
+    Mock<IElevationChecker>? elevationChecker = null)
   {
     return new AgentInstallerWindows(
       Mock.Of<IHostApplicationLifetime>(),
       processManager.Object,
       systemEnvironment.Object,
-      Mock.Of<IElevationChecker>(),
+      elevationChecker?.Object ?? Mock.Of<IElevationChecker>(),
       retryer.Object,
       Mock.Of<IControlrApi>(),
       Mock.Of<IDeviceInfoProvider>(),
       pathProvider.Object,
-      Mock.Of<IRegistryAccessor>(),
+      registryAccessor?.Object ?? Mock.Of<IRegistryAccessor>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions()),
       fileSystem,
       Mock.Of<IOptionsAccessor>(),

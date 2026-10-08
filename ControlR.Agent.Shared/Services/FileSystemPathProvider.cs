@@ -21,6 +21,12 @@ public interface IFileSystemPathProvider
   /// </summary>
   string GetAgentInstallDirectory();
   /// <summary>
+  /// Returns the install directory that <paramref name="brandName"/> and <paramref name="instanceId"/>
+  /// would use on this machine. Like <see cref="GetSettingsDirectoryFor"/>, this describes a brand
+  /// other than the one compiled into this build.
+  /// </summary>
+  string GetAgentInstallDirectoryFor(string brandName, string? instanceId);
+  /// <summary>
   /// Returns the path to the agent's current log file.
   /// </summary>
   string GetAgentLogFilePath();
@@ -127,18 +133,28 @@ public class FileSystemPathProvider(
 
   public string GetAgentInstallDirectory()
   {
+    return GetAgentInstallDirectoryFor(BrandingConstants.BrandName, GetInstanceId());
+  }
+
+  public string GetAgentInstallDirectoryFor(string brandName, string? instanceId)
+  {
+    var brandKey = ResolveBrandKey(brandName);
+
     var baseDir = _systemEnvironment.IsDebug
-      ? Path.Combine(Path.GetTempPath(), BrandingConstants.WindowsInstallDirectoryName, "Install")
+      ? Path.Combine(Path.GetTempPath(), brandKey, "Install")
       : _systemEnvironment.Platform switch
       {
-        SystemPlatform.Windows => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", BrandingConstants.WindowsInstallDirectoryName),
-        SystemPlatform.Linux => $"/usr/local/bin/{BrandingConstants.LinuxInstallDirectoryName}",
-        SystemPlatform.MacOs => $"/Library/Application Support/{BrandingConstants.MacInstallDirectoryName}",
+        SystemPlatform.Windows => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", brandKey),
+        SystemPlatform.Linux => $"/usr/local/bin/{brandKey}",
+        SystemPlatform.MacOs => $"/Library/Application Support/{brandKey}",
         _ => throw new PlatformNotSupportedException()
       };
 
-    var instanceId = GetInstanceId() ?? AppConstants.DefaultInstanceId;
-    return Path.Combine(baseDir, instanceId);
+    var resolvedInstanceId = string.IsNullOrWhiteSpace(instanceId)
+      ? AppConstants.DefaultInstanceId
+      : instanceId.SanitizeForFileSystem();
+
+    return Path.Combine(baseDir, resolvedInstanceId);
   }
 
   public string GetAgentLogFilePath()
@@ -282,12 +298,7 @@ public class FileSystemPathProvider(
 
   public string GetSettingsDirectoryFor(string brandName, string? instanceId)
   {
-    if (string.IsNullOrWhiteSpace(brandName))
-    {
-      throw new ArgumentException("Brand name is required.", nameof(brandName));
-    }
-
-    var brandKey = BrandingConstants.SanitizeBrandKey(brandName);
+    var brandKey = ResolveBrandKey(brandName);
     var unixBrandKey = brandKey.ToLowerInvariant();
     var resolvedInstanceId = string.IsNullOrWhiteSpace(instanceId)
       ? AppConstants.DefaultInstanceId
@@ -450,6 +461,16 @@ public class FileSystemPathProvider(
   {
     var varLogDirectory = _systemEnvironment.IsMacOS() ? "/private/var/log" : "/var/log";
     return $"{varLogDirectory}/{BrandingConstants.UnixLogDirectoryName}";
+  }
+
+  private string ResolveBrandKey(string brandName)
+  {
+    if (string.IsNullOrWhiteSpace(brandName))
+    {
+      throw new ArgumentException("Brand name is required.", nameof(brandName));
+    }
+
+    return BrandingConstants.SanitizeBrandKey(brandName);
   }
 
 }

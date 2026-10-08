@@ -39,12 +39,12 @@ internal class AgentInstallerMac(
   private readonly ILogger<AgentInstallerMac> _logger = logger;
   private readonly IServiceControl _serviceControl = serviceControl;
 
-  public async Task Install(AgentInstallRequest request)
+  public async Task<Result> Install(AgentInstallRequest request)
   {
     if (!await _installLock.WaitAsync(0))
     {
       _logger.LogWarning("Installer lock already acquired.  Aborting.");
-      return;
+      return Result.Fail("The installer is already running.");
     }
 
     try
@@ -54,7 +54,7 @@ internal class AgentInstallerMac(
       if (Libc.Geteuid() != 0)
       {
         _logger.LogError("Install command must be run with sudo.");
-        return;
+        return Result.Fail("Install command must be run with sudo.");
       }
 
       var appBundleInstallPath = GetInstalledAppBundlePath();
@@ -125,19 +125,34 @@ internal class AgentInstallerMac(
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
       if (!createResult.IsSuccess)
       {
-        return;
+        return createResult;
       }
 
       await WriteBundleHashFile(request.BundleSha256);
 
-      await _serviceControl.StartAgentService(throwOnFailure: false);
+      // Only one agent may hold the device's connection on the server, so the replaced install stops
+      // before this one starts.
+      await StopPreviousBrandService(request.PreviousBrandName);
+
+      try
+      {
+        await _serviceControl.StartAgentService(throwOnFailure: true);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "The {BrandName} service did not start.", BrandingConstants.BrandName);
+        return Result.Fail("Failed to start the agent service after installation.");
+      }
+
       await _serviceControl.StartDesktopClientService(throwOnFailure: false);
 
       _logger.LogInformation("Installer finished.");
+      return Result.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
+      return Result.Fail(ex);
     }
     finally
     {
@@ -226,11 +241,8 @@ internal class AgentInstallerMac(
     }
   }
 
-  // Installation writes no machine-wide policy on this platform, so preserveMachinePolicy has no effect here.
-  public async Task Uninstall(bool preserveMachinePolicy)
+  public async Task Uninstall()
   {
-    _ = preserveMachinePolicy;
-
     if (!await _installLock.WaitAsync(0))
     {
       _logger.LogWarning("Installer lock already acquired.  Aborting.");

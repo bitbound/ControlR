@@ -11,13 +11,6 @@ public class BundleMetadataDto
   public required string BundleSha256 { get; set; }
   public required string InstallerDownloadUrl { get; set; }
   public required string InstallerSha256 { get; set; }
-
-  /// <summary>
-  /// Brand names whose installed agents this bundle is allowed to migrate. Null or empty means the
-  /// bundle may only update its own brand. Agents that predate this field ignore it.
-  /// </summary>
-  public string[]? PredecessorBrandNames { get; set; }
-
   public required string Publisher { get; set; }
   public required RuntimeId Runtime { get; set; }
   public required Version Version { get; set; }

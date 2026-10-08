@@ -105,6 +105,101 @@ public class AgentMaintenanceServiceTests
   }
 
   [Fact]
+  public async Task CheckForUpdate_OnMac_MigratingRewritesInstallerDaemonArguments()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    var plistPath = "/Library/LaunchDaemons/app.controlr.agent.installer.instance-1.plist";
+    var installedSettingsPath = "/etc/controlr/instance-1/appsettings.json";
+
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+    fixture.SystemEnvironment
+      .SetupGet(x => x.Platform)
+      .Returns(SystemPlatform.MacOs);
+    fixture.SystemEnvironment
+      .SetupGet(x => x.Runtime)
+      .Returns(RuntimeId.MacOsArm64);
+
+    // The plist an installed agent leaves behind, with arguments frozen at install time.
+    fixture.FileSystem.AddFile(plistPath, """
+      <plist version="1.0">
+      <dict>
+          <key>Label</key>
+          <string>app.controlr.agent.installer.instance-1</string>
+          <key>ProgramArguments</key>
+          <array>
+              <string>/tmp/ControlR_Update/instance-1/ControlR.Agent.Installer</string>
+              <string>install</string>
+              <string>--server-uri</string>
+              <string>https://old.example/</string>
+              <string>--tenant-id</string>
+              <string>11111111-1111-1111-1111-111111111111</string>
+              <string>--instance-id</string>
+              <string>instance-1</string>
+          </array>
+      </dict>
+      </plist>
+      """);
+
+    fixture.FileSystem.AddFile(installedSettingsPath, "{\"PrivateKey\":\"key\"}");
+    fixture.PathProvider
+      .Setup(x => x.GetAgentAppSettingsPath())
+      .Returns(installedSettingsPath);
+    fixture.PathProvider
+      .Setup(x => x.GetSettingsDirectoryFor("Acme Remote", "instance-1"))
+      .Returns("/etc/acme_remote/instance-1");
+
+    var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
+    var installerSha256 = Convert.ToHexString(SHA256.HashData(installerBytes));
+
+    fixture.AgentUpdateApi
+      .Setup(x => x.GetBundleMetadata(RuntimeId.MacOsArm64, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
+      {
+        BundleDownloadUrl = "/downloads/osx-arm64/Acme.Agent.bundle.zip",
+        BundleSha256 = "NEW_HASH",
+        InstallerDownloadUrl = "/downloads/osx-arm64/Acme.Agent.Installer",
+        InstallerSha256 = installerSha256,
+        Runtime = RuntimeId.MacOsArm64,
+        Version = Version.Parse("1.2.3"),
+        BrandName = "Acme Remote",
+        Publisher = "AcmeCorp"
+      }));
+
+    fixture.DownloadsApi
+      .Setup(x => x.DownloadFile(
+        "/downloads/osx-arm64/Acme.Agent.Installer",
+        It.IsAny<string>(),
+        It.IsAny<CancellationToken>()))
+      .Returns<string, string, CancellationToken>((_, destinationPath, _) =>
+      {
+        fixture.FileSystem.AddFile(destinationPath, installerBytes);
+        return Task.FromResult(Result.Ok());
+      });
+
+    var process = new Mock<IProcess>();
+    process
+      .Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>()))
+      .Returns(Task.CompletedTask);
+    fixture.ProcessManager
+      .Setup(x => x.Start(It.IsAny<string>(), It.IsAny<string>()))
+      .Returns(process.Object);
+    fixture.ProcessManager
+      .Setup(x => x.StartAndWaitForExit(It.IsAny<ProcessStartInfo>(), It.IsAny<TimeSpan>()))
+      .Returns(Task.FromResult(0));
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
+
+    // The launchd job can only run the arguments already written into the plist, so a migration has to
+    // rewrite them in place or the installer never learns which brand it is replacing.
+    var plist = fixture.FileSystem.ReadAllText(plistPath);
+    Assert.Contains("--previous-brand-name", plist, StringComparison.Ordinal);
+    Assert.Contains("<string>ControlR</string>", plist, StringComparison.Ordinal);
+    Assert.DoesNotContain("https://old.example/", plist, StringComparison.Ordinal);
+  }
+
+  [Fact]
   public async Task CheckForUpdate_WhenInstalledBundleHashDiffers_DownloadsAndLaunchesInstaller()
   {
     var fixture = new AgentMaintenanceServiceFixture();
@@ -203,10 +298,29 @@ public class AgentMaintenanceServiceTests
   }
 
   [Fact]
-  public async Task CheckForUpdate_WhenServerBrandNameDiffers_AbortsWithoutDownloadingInstaller()
+  public async Task CheckForUpdate_WhenServerBrandNameDiffers_MigratesAndHandsOffSettings()
   {
     var fixture = new AgentMaintenanceServiceFixture();
+    var installedSettingsPath = @"C:\ProgramData\ControlR\instance-1\appsettings.json";
+    var handedOffSettingsPath = @"C:\ProgramData\OtherBrand\instance-1\appsettings.json";
+
     fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+    fixture.FileSystem.AddFile(installedSettingsPath, "{\"PrivateKey\":\"key\"}");
+
+    fixture.PathProvider
+      .Setup(x => x.GetAgentAppSettingsPath())
+      .Returns(installedSettingsPath);
+    fixture.PathProvider
+      .Setup(x => x.GetSettingsDirectoryFor("OtherBrand", "instance-1"))
+      .Returns(@"C:\ProgramData\OtherBrand\instance-1");
+
+    var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
+    var installerSha256 = Convert.ToHexString(SHA256.HashData(installerBytes));
+    var launchedInstallerArguments = string.Empty;
+    var launchedProcess = new Mock<IProcess>();
+    launchedProcess
+      .Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>()))
+      .Returns(Task.CompletedTask);
 
     fixture.AgentUpdateApi
       .Setup(x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()))
@@ -215,23 +329,43 @@ public class AgentMaintenanceServiceTests
         BundleDownloadUrl = "/downloads/win-x64/OtherBrand.Agent.bundle.zip",
         BundleSha256 = "NEW_HASH",
         InstallerDownloadUrl = "/downloads/win-x64/OtherBrand.Agent.Installer.exe",
-        InstallerSha256 = "ANY",
+        InstallerSha256 = installerSha256,
         Runtime = RuntimeId.WinX64,
         Version = Version.Parse("1.2.3"),
         BrandName = "OtherBrand",
-        Publisher = "Bitbound"
+        Publisher = "OtherPublisher"
       }));
+
+    fixture.DownloadsApi
+      .Setup(x => x.DownloadFile(
+        "/downloads/win-x64/OtherBrand.Agent.Installer.exe",
+        It.IsAny<string>(),
+        It.IsAny<CancellationToken>()))
+      .Returns<string, string, CancellationToken>((_, destinationPath, _) =>
+      {
+        fixture.FileSystem.AddFile(destinationPath, installerBytes);
+        return Task.FromResult(Result.Ok());
+      });
+
+    fixture.ProcessManager
+      .Setup(x => x.Start(It.IsAny<string>(), It.IsAny<string>()))
+      .Returns<string, string>((_, arguments) =>
+      {
+        launchedInstallerArguments = arguments;
+        return launchedProcess.Object;
+      });
 
     var updater = fixture.CreateMaintenanceService();
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
-    fixture.DownloadsApi.Verify(
-      x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-      Times.Never);
-    fixture.ProcessManager.Verify(
-      x => x.Start(It.IsAny<string>(), It.IsAny<string>()),
-      Times.Never);
+    // The new brand's installer reads this file before it builds its host, so identity has to arrive
+    // as a file rather than as arguments.
+    Assert.True(fixture.FileSystem.FileExists(handedOffSettingsPath));
+
+    // The install being retired is named so the new installer can remove it.
+    Assert.Contains("--previous-brand-name", launchedInstallerArguments, StringComparison.Ordinal);
+    Assert.Contains("\"ControlR\"", launchedInstallerArguments, StringComparison.Ordinal);
   }
 
   [Fact]
