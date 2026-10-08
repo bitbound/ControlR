@@ -82,6 +82,13 @@ public static class AuthorizationRegistrationExtensions
         .RequirePermission(permissionName, PermissionScopeKind.Device));
     }
 
+    // An installed agent proves itself with a request signature instead of a permission, so this
+    // policy names the agent scheme directly and asks only for authentication. The dynamic scheme
+    // would otherwise forward these requests to the cookie handler.
+    authorizationBuilder.AddPolicy(PolicyNames.RequireInstalledAgent, policy => policy
+      .AddAuthenticationSchemes(AgentSignatureAuthenticationSchemeOptions.DefaultScheme)
+      .RequireAuthenticatedUser());
+
     hostBuilder.Services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
     hostBuilder.Services.AddScoped<IDeviceAccessScopeResolver, DeviceAccessScopeResolver>();
     hostBuilder.Services.AddSingleton<IDesktopSessionAccessAuthorizer, DesktopSessionAccessAuthorizer>();

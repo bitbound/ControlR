@@ -8,6 +8,16 @@ namespace ControlR.Web.Server.Authn;
 /// </summary>
 public static class PrincipalClaimValues
 {
+  /// <summary>
+  /// Principal-type value for an installed agent. Agents carry no permission model, so
+  /// <see cref="Authz.Permissions.PrincipalType"/> has no counterpart and the permission evaluator
+  /// cannot build a descriptor for this principal.
+  /// </summary>
+  public const string Agent = "agent";
+
+  /// <summary>Authentication method value for an agent's signed request.</summary>
+  public const string AgentSignatureMethod = "agent-signature";
+
   /// <summary>Credential-type value for a logon token.</summary>
   public const string LogonTokenCredentialType = "LogonToken";
 

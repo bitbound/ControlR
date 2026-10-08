@@ -69,6 +69,12 @@ public static class AuthenticationRegistrationExtensions
             return ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme;
           }
 
+          // If the request carries a device-signed agent payload, authenticate as that device.
+          if (context.Request.Headers.ContainsKey(AgentSignatureAuthenticationSchemeOptions.DefaultHeaderName))
+          {
+            return AgentSignatureAuthenticationSchemeOptions.DefaultScheme;
+          }
+
           // Otherwise, use Identity cookies for web UI
           return IdentityConstants.ApplicationScheme;
         };
@@ -107,6 +113,11 @@ public static class AuthenticationRegistrationExtensions
     // Add service account credential authentication (x-api-key).
     authBuilder.AddScheme<ServiceAccountCredentialAuthenticationSchemeOptions, ServiceAccountCredentialAuthenticationHandler>(
       ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme,
+      _ => { });
+
+    // Add installed-agent signature authentication (x-agent-signature).
+    authBuilder.AddScheme<AgentSignatureAuthenticationSchemeOptions, AgentSignatureAuthenticationHandler>(
+      AgentSignatureAuthenticationSchemeOptions.DefaultScheme,
       _ => { });
 
     hostBuilder.Services
