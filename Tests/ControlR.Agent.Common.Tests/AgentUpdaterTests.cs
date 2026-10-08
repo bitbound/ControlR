@@ -298,6 +298,46 @@ public class AgentMaintenanceServiceTests
   }
 
   [Fact]
+  public async Task CheckForUpdate_WhenMigrationCannotHandOffSettings_DoesNotLaunchInstaller()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+
+    // Configured to a settings file that is not actually there, so the hand-off cannot happen.
+    fixture.PathProvider
+      .Setup(x => x.GetAgentAppSettingsPath())
+      .Returns(@"C:\ProgramData\ControlR\instance-1\appsettings.json");
+
+    fixture.AgentUpdateApi
+      .Setup(x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
+      {
+        BundleDownloadUrl = "/downloads/win-x64/OtherBrand.Agent.bundle.zip",
+        BundleSha256 = "NEW_HASH",
+        InstallerDownloadUrl = "/downloads/win-x64/OtherBrand.Agent.Installer.exe",
+        InstallerSha256 = "ANY",
+        Runtime = RuntimeId.WinX64,
+        Version = Version.Parse("1.2.3"),
+        BrandName = "OtherBrand",
+        Publisher = "OtherPublisher"
+      }));
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
+
+    // Migrating without the settings file would register a new device while the server keeps trusting
+    // the old key, so the device could never authenticate again. Refuse instead.
+    fixture.DownloadsApi.Verify(
+      x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+      Times.Never);
+    fixture.ProcessManager.Verify(
+      x => x.Start(It.IsAny<string>(), It.IsAny<string>()),
+      Times.Never);
+  }
+
+  [Fact]
   public async Task CheckForUpdate_WhenServerBrandNameDiffers_MigratesAndHandsOffSettings()
   {
     var fixture = new AgentMaintenanceServiceFixture();

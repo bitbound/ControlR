@@ -276,6 +276,19 @@ static async Task<int> RunInstall(
 
     if (previousBrand is not null)
     {
+      // The replacing install writes its settings into this brand's directory before this runs, and
+      // those settings are what carry the device ID and signing key across. Without them this install
+      // registers a new device and signs with a key the server has never been told about.
+      var optionsAccessor = host.Services.GetRequiredService<IOptionsAccessor>();
+      if (optionsAccessor.DeviceId == Guid.Empty)
+      {
+        logger.LogCritical(
+          "Refusing to migrate from brand {PreviousBrandName}: no device ID was carried over in this brand's settings file, " +
+          "so this install would register a new device and the existing one could never authenticate again. Nothing on this machine was changed.",
+          previousBrand);
+        return 1;
+      }
+
       logger.LogWarning(
         "Migrating install from brand {PreviousBrandName} to {InstallerBrandName}. Device identity and signing key carry over from the settings file already staged for this brand.",
         previousBrand,

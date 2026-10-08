@@ -117,7 +117,18 @@ internal class AgentMaintenanceService(
           metadata.BrandName,
           BrandingConstants.BrandName);
 
-        WriteSettingsFileForBrand(metadata.BrandName);
+        // The device identity has to be in place before the new installer reads its own settings.
+        // Without it that install registers a fresh device and signs with a key the server has never
+        // been told about, and the existing device record can never authenticate again, so refuse
+        // rather than try.
+        if (!WriteSettingsFileForBrand(metadata.BrandName))
+        {
+          _logger.LogCritical(
+            "Refusing to migrate. The settings file for brand {ServerBrandName} could not be prepared, " +
+            "so this device's signing key would not carry over. Nothing on this machine was changed.",
+            metadata.BrandName);
+          return;
+        }
       }
 
       _logger.LogInformation("Remote bundle hash: {RemoteHash}", metadata.BundleSha256);
@@ -521,18 +532,15 @@ internal class AgentMaintenanceService(
   /// minting a new identity. The server only trusts the public key it already stored for a known
   /// device, so losing the key would leave the endpoint unable to authenticate again.
   /// </summary>
-  private void WriteSettingsFileForBrand(string newBrandName)
+  private bool WriteSettingsFileForBrand(string newBrandName)
   {
     try
     {
       var sourcePath = _fileSystemPathProvider.GetAgentAppSettingsPath();
       if (!_fileSystem.FileExists(sourcePath))
       {
-        _logger.LogError(
-          "Cannot migrate: this install's settings file was not found at {SourcePath}. " +
-          "The new brand's installer will register a new device identity.",
-          sourcePath);
-        return;
+        _logger.LogError("Cannot migrate: this install's settings file was not found at {SourcePath}.", sourcePath);
+        return false;
       }
 
       var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(newBrandName, _instanceOptions.Value.InstanceId);
@@ -541,14 +549,21 @@ internal class AgentMaintenanceService(
       _fileSystem.CreateDirectory(destinationDirectory);
       _fileSystem.CopyFile(sourcePath, destinationPath, overwrite: true);
 
+      // This file holds the device signing key, so it gets the same restrictions as this install's
+      // own settings file rather than whatever the copy inherited.
+      _optionsAccessor.RestrictAccess(destinationPath);
+
       _logger.LogInformation(
         "Wrote this install's settings to {DestinationPath} for the {NewBrandName} install to pick up.",
         destinationPath,
         newBrandName);
+
+      return true;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Failed to hand the settings file to brand {NewBrandName}.", newBrandName);
+      return false;
     }
   }
 }
