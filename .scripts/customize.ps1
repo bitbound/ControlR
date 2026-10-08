@@ -736,12 +736,16 @@ if (Test-Path -LiteralPath $desktopServiceTemplate) {
   Update-FileContent -FilePath $desktopServiceTemplate -Replacements $templateReplacements
 }
 
-$openApiFile = Join-Path $repoRoot "ControlR.Web.Server/ControlR.Web.Server.json"
-if (Test-Path -LiteralPath $openApiFile) {
-  $openApiReplacements = @{
-    "ControlR.Web.Server" = "$brandKey.Web.Server"
+foreach ($relativePath in @(
+  "ControlR.Web.Server/ControlR.Web.Server_v1.json"
+  "ControlR.Web.Server/ControlR.Web.Server_internal.json"
+)) {
+  $openApiDoc = Join-Path $repoRoot $relativePath
+  if (Test-Path -LiteralPath $openApiDoc) {
+    Update-FileContent -FilePath $openApiDoc -Replacements @{
+      "`"title`": `"ControlR" = "`"title`": `"$brandKey"
+    }
   }
-  Update-FileContent -FilePath $openApiFile -Replacements $openApiReplacements
 }
 
 $installerProgramFile = Join-Path $repoRoot "ControlR.Agent.Installer/Program.cs"
