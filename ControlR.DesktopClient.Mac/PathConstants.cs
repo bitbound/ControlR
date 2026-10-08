@@ -9,8 +9,10 @@ public static class PathConstants
   public static string GetLogsPath(string? instanceId)
   {
     var isRoot = Libc.Geteuid() == 0;
+    // /var is a link to /private/var on macOS, and the remote-log guard refuses a
+    // link anywhere along a log path, so the root path names the real location.
     var rootDir = isRoot
-       ? $"/var/log/{BrandingConstants.UnixLogDirectoryName}"
+       ? $"/private/var/log/{BrandingConstants.UnixLogDirectoryName}"
        : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/{BrandingConstants.UnixHiddenDirectoryName}";
 
     rootDir = AppendInstanceId(rootDir, instanceId);

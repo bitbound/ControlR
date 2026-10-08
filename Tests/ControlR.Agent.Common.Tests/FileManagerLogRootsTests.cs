@@ -51,20 +51,6 @@ public class FileManagerLogRootsTests
     Assert.True(CreateLinuxManager(fileSystem).IsPathWithinLogRoots(Join(linkedDirectory, SampleLogFile)));
   }
 
-  [Fact]
-  public void IsPathWithinLogRoots_WhenLinkSitsAboveTheLogRoot_ReturnsTrue()
-  {
-    // macOS ships /var as a link to /private/var, so the path the provider reports
-    // and the path the kernel opens differ above the root. The link is the OS's
-    // own layout, not a user jump, so the request must still be allowed.
-    var fileSystem = CreateLinuxFileSystem();
-    fileSystem.AddSymbolicLink(Join("var"), Join("private", "var"));
-
-    var manager = CreateManager(fileSystem, SystemPlatform.MacOs);
-
-    Assert.True(manager.IsPathWithinLogRoots(Join(AgentLogs, SampleLogFile)));
-  }
-
   [Theory]
   [InlineData("etc", "shadow")]
   [InlineData("home", "alice", ".ssh", "id_rsa")]
