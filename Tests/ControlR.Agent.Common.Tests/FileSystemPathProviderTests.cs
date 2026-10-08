@@ -48,6 +48,7 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.controlr/default/logs/ControlR.Agent/LogFile.log")]
   [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/controlr/controlr.test.com/ControlR.Agent/LogFile.log")]
   [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.controlr/localhost/logs/ControlR.Agent/LogFile.log")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/controlr/controlr.test.com/ControlR.Agent/LogFile.log")]
   public void GetAgentLogFilePath_AppendsLogFileName(
     SystemPlatform platform,
     string? instanceId,
@@ -68,6 +69,7 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.controlr/default/logs/ControlR.Agent")]
   [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/controlr/controlr.test.com/ControlR.Agent")]
   [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.controlr/localhost/logs/ControlR.Agent")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/controlr/controlr.test.com/ControlR.Agent")]
   public void GetAgentLogsDirectoryPath_ReturnsCorrectStructure(
     SystemPlatform platform,
     string? instanceId,
@@ -136,6 +138,7 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.controlr/default/logs/ControlR.Agent.Installer/LogFile.log")]
   [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/controlr/controlr.test.com/ControlR.Agent.Installer/LogFile.log")]
   [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.controlr/localhost/logs/ControlR.Agent.Installer/LogFile.log")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/controlr/controlr.test.com/ControlR.Agent.Installer/LogFile.log")]
   public void GetInstallerLogFilePath_AppendsLogFileName(
     SystemPlatform platform,
     string? instanceId,
@@ -153,7 +156,7 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   [Theory]
   [InlineData(SystemPlatform.Linux, null, "/var/log/controlr/default/ControlR.DesktopClient")]
   [InlineData(SystemPlatform.Linux, "localhost", "/var/log/controlr/localhost/ControlR.DesktopClient")]
-  [InlineData(SystemPlatform.MacOs, "controlr.test.com", "/var/log/controlr/controlr.test.com/ControlR.DesktopClient")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", "/private/var/log/controlr/controlr.test.com/ControlR.DesktopClient")]
   public void GetUnixDesktopClientLogsDirectoryForRoot_ReturnsCorrectStructure(
     SystemPlatform platform,
     string? instanceId,

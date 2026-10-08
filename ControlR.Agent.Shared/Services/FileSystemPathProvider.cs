@@ -156,7 +156,7 @@ public class FileSystemPathProvider(
     {
       var isElevated = _elevationChecker.IsElevated();
       var rootDir = isElevated
-        ? $"/var/log/{BrandingConstants.UnixLogDirectoryName}"
+        ? GetUnixLogDirectoryRoot()
         : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), BrandingConstants.UnixHiddenDirectoryName);
 
       rootDir = AppendSubDirectories(rootDir);
@@ -243,7 +243,7 @@ public class FileSystemPathProvider(
     {
       var isElevated = _elevationChecker.IsElevated();
       var rootDir = isElevated
-        ? $"/var/log/{BrandingConstants.UnixLogDirectoryName}"
+        ? GetUnixLogDirectoryRoot()
         : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), BrandingConstants.UnixHiddenDirectoryName);
 
       rootDir = AppendSubDirectories(rootDir);
@@ -317,7 +317,7 @@ public class FileSystemPathProvider(
     }
 
     var instanceId = GetEffectiveInstanceId();
-    var logsDir = $"/var/log/{BrandingConstants.UnixLogDirectoryName}";
+    var logsDir = GetUnixLogDirectoryRoot();
 
     logsDir = _fileSystem.JoinPaths(GetPathSeparator(), logsDir, instanceId);
 
@@ -417,6 +417,14 @@ public class FileSystemPathProvider(
     }
 
     throw new PlatformNotSupportedException();
+  }
+
+  // macOS exposes /var as a link to /private/var. The log-contents guard refuses
+  // a link anywhere along a log path, so the elevated roots name the real path.
+  private string GetUnixLogDirectoryRoot()
+  {
+    var varLogDirectory = _systemEnvironment.IsMacOS() ? "/private/var/log" : "/var/log";
+    return $"{varLogDirectory}/{BrandingConstants.UnixLogDirectoryName}";
   }
 
 }
