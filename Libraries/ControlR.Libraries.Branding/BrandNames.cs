@@ -15,7 +15,7 @@ public sealed partial class BrandNames(string brandName)
   public static BrandNames Current { get; } = new(BrandingConstants.BrandName);
 
   public string AgentBaseName => $"{BrandKey}.Agent";
-  public string BrandKey { get; } = ResolveBrandKey(brandName);
+  public string BrandKey => SanitizeBrandKey(BrandName);
   public string BrandName { get; } = ResolveBrandName(brandName);
   public string BundleHashFileName => $".{UnixBrandKey}-bundle.sha256";
   public string BundleZipBaseName => $"{BrandKey}.Agent.bundle";
@@ -54,16 +54,6 @@ public sealed partial class BrandNames(string brandName)
 
   [GeneratedRegex(@"[^a-zA-Z0-9]")]
   private static partial Regex BrandNameSanitizer();
-
-  private static string ResolveBrandKey(string brandName)
-  {
-    if (string.IsNullOrWhiteSpace(brandName))
-    {
-      throw new ArgumentException("Brand name is required.", nameof(brandName));
-    }
-
-    return SanitizeBrandKey(brandName);
-  }
 
   private static string ResolveBrandName(string brandName)
   {
