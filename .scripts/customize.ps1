@@ -627,12 +627,24 @@ if (Test-Path -LiteralPath $infoPlistFile) {
 
 Write-Host "Updating config files" -ForegroundColor Yellow
 
+# Source scans stay out of dot-directories at the repo root (e.g. .worktrees). Those hold
+# git worktrees and tool state, and rewriting them would edit a different checkout.
+$sourceRoots = @(
+  Get-ChildItem -LiteralPath $repoRoot -Directory |
+    Where-Object { -not $_.Name.StartsWith('.') } |
+    ForEach-Object { $_.FullName }
+)
+
 Write-Host "Updating InternalsVisibleTo in AssemblyInfo.cs files" -ForegroundColor Yellow
 
-$assemblyInfoFiles = Get-ChildItem -LiteralPath $repoRoot -Recurse -Filter "AssemblyInfo.cs"
+# A grant may only be rebranded when Directory.Build.props actually renames the referenced
+# assembly. ControlR.Web.* projects keep their assembly names, so a grant that targets one stays
+# as-is. Renaming it would leave the attribute pointing at an assembly that does not exist and
+# silently hide the internals it was meant to expose.
+$assemblyInfoFiles = Get-ChildItem -LiteralPath $sourceRoots -Recurse -Filter "AssemblyInfo.cs"
 foreach ($aiFile in $assemblyInfoFiles) {
   $aiContent = Get-Content -LiteralPath $aiFile.FullName -Raw -Encoding UTF8
-  $aiNew = $aiContent -replace '(InternalsVisibleTo\(")ControlR', "`${1}$brandKey"
+  $aiNew = $aiContent -replace '(InternalsVisibleTo\(")ControlR(?!\.Web\.)(?=\.[^"]*")', "`${1}$brandKey"
   if ($aiNew -ne $aiContent) {
     Write-WhatIfDiff -OldContent $aiContent -NewContent $aiNew -FilePath $aiFile.FullName
     Write-FileContent -Path $aiFile.FullName -Content $aiNew
@@ -641,7 +653,7 @@ foreach ($aiFile in $assemblyInfoFiles) {
 
 Write-Host "Updating avares:// URIs in AXAML files" -ForegroundColor Yellow
 
-$axamlFiles = Get-ChildItem -LiteralPath $repoRoot -Recurse -Filter "*.axaml"
+$axamlFiles = Get-ChildItem -LiteralPath $sourceRoots -Recurse -Filter "*.axaml"
 foreach ($axamlFile in $axamlFiles) {
   $axamlContent = Get-Content -LiteralPath $axamlFile.FullName -Raw -Encoding UTF8
   $axamlNew = $axamlContent -replace 'avares://ControlR\.', "avares://$brandKey."
