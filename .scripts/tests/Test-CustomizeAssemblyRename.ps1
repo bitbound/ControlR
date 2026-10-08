@@ -62,8 +62,8 @@ function New-FakeRepo {
   Set-Content -Path (Join-Path $root "ControlR.DesktopClient/App.axaml") -Value '<ResourceInclude Source="avares://ControlR.Libraries.Avalonia/Resources/Theme.axaml" />' -Encoding UTF8
 
   # Worktrees under root dot-directories must not be rewritten.
-  New-Item -ItemType Directory -Path (Join-Path $root ".qwen/worktrees/other/Properties") -Force | Out-Null
-  Set-Content -Path (Join-Path $root ".qwen/worktrees/other/Properties/AssemblyInfo.cs") -Value '[assembly: InternalsVisibleTo("ControlR.Web.Client.Tests")]' -Encoding UTF8
+  New-Item -ItemType Directory -Path (Join-Path $root ".copilot/worktrees/other/Properties") -Force | Out-Null
+  Set-Content -Path (Join-Path $root ".copilot/worktrees/other/Properties/AssemblyInfo.cs") -Value '[assembly: InternalsVisibleTo("ControlR.Web.Client.Tests")]' -Encoding UTF8
   New-Item -ItemType Directory -Path (Join-Path $root ".worktrees/other") -Force | Out-Null
   Set-Content -Path (Join-Path $root ".worktrees/other/App.axaml") -Value '<ResourceInclude Source="avares://ControlR.Libraries.Avalonia/Resources/Theme.axaml" />' -Encoding UTF8
 
@@ -99,9 +99,9 @@ $axaml = Get-FileContent -Root $repo -RelativePath "ControlR.DesktopClient/App.a
 Assert-Contains -Content $axaml -Expected 'avares://Remote_Support.Libraries.Avalonia/' -TestName "An avares URI is rebranded"
 
 # Root dot-directories are skipped entirely.
-$worktreeInfo = Get-FileContent -Root $repo -RelativePath ".qwen/worktrees/other/Properties/AssemblyInfo.cs"
+$worktreeInfo = Get-FileContent -Root $repo -RelativePath ".copilot/worktrees/other/Properties/AssemblyInfo.cs"
 Assert-Contains -Content $worktreeInfo -Expected 'InternalsVisibleTo("ControlR.Web.Client.Tests")' -TestName "An AssemblyInfo under a dot-directory is untouched"
-$worktreeAxaml = Get-FileContent -Root $repo -RelativePath ".worktrees/other/App.axaml"
+$worktreeAxaml = Get-FileContent -Root $repo -RelativePath ".copilot/worktrees/other/App.axaml"
 Assert-Contains -Content $worktreeAxaml -Expected 'avares://ControlR.Libraries.Avalonia/' -TestName "An axaml under a dot-directory is untouched"
 
 if ($failures.Count -gt 0) {
