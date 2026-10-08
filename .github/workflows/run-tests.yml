@@ -173,6 +173,9 @@ jobs:
   run-macos-desktop-tests:
     name: macOS Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-26"]') }}
+    env:
+      # Orphaned MSBuild worker nodes linger on the macOS runners and kill parallel builds (MSB4166).
+      MSBUILDDISABLENODEREUSE: "1"
     defaults:
       run:
         shell: pwsh

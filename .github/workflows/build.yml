@@ -313,6 +313,8 @@ jobs:
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-26"]') }}
     needs: [set-version, download-customization]
     env:
+      # Orphaned MSBuild worker nodes linger on the macOS runners and kill parallel builds (MSB4166).
+      MSBUILDDISABLENODEREUSE: "1"
       VERSION: ${{ needs.set-version.outputs.version }}
     strategy:
       matrix:
