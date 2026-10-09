@@ -22,7 +22,7 @@ using Microsoft.Extensions.Logging;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 
-const string RootDescription = $"${BrandingConstants.BrandName} agent installer.";
+const string RootDescription = $"{BrandingConstants.BrandName} agent installer.";
 const string InstallCommandName = "install";
 const string RepairDesktopCommandName = "repair-desktop";
 const string UninstallCommandName = "uninstall";

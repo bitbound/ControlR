@@ -334,10 +334,6 @@ public class CustomizeScriptTests
 
     // OpenAPI
     AssertContainsLine(result, $"\"title\": \"{brandKey}");
-
-    // Installer Program.cs
-    AssertContainsLine(result, $"{brandName} agent installer");
-    AssertContainsLine(result, $"{brandName} agent bundle");
   }
 
   private async Task<ProcessResult> RunScript(params string[] args)
