@@ -28,12 +28,17 @@ public static class ServiceCollectionExtensions
   /// <param name="configureOptions">
   ///   The action used to configure the <see cref="ControlrApiClientOptions"/>.
   /// </param>
+  /// <param name="configureClient">
+  ///   An optional action that adds message handlers to the typed client, for callers that have to
+  ///   attach a credential the library does not know about.
+  /// </param>
   /// <returns>
   ///   The <see cref="IServiceCollection"/> to allow for chaining further calls.
   /// </returns>
   public static IServiceCollection AddControlrApiClient(
     this IServiceCollection services,
-    Action<ControlrApiClientOptions> configureOptions)
+    Action<ControlrApiClientOptions> configureOptions,
+    Action<IHttpClientBuilder>? configureClient = null)
   {
     services.TryAddSingleton(TimeProvider.System);
 
@@ -62,7 +67,7 @@ public static class ServiceCollectionExtensions
         client.BaseAddress = options.BaseUrl;
       });
 
-    services
+    var typedClientBuilder = services
       .AddHttpClient<ControlrApi>(
       (sp, client) =>
       {
@@ -70,6 +75,9 @@ public static class ServiceCollectionExtensions
         client.BaseAddress = options.BaseUrl;
       })
       .AddHttpMessageHandler<ControlrApiAuthHeaderHandler>();
+
+    configureClient?.Invoke(typedClientBuilder);
+
     services.TryAddTransient<IControlrApi>(sp => sp.GetRequiredService<ControlrApi>());
     services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().Internal);
     services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().V1);

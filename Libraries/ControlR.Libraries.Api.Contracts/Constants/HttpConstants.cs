@@ -4,6 +4,7 @@ public static class HttpConstants
 {
   public static class Agent
   {
+    public const string DeploymentOptionsEndpoint = "/api/agent/deployment-options";
     public const string DevicesEndpoint = "/api/agent/devices";
     public const string LegacyDevicesEndpoint = "/api/devices";
     public const string LegacyUpdatesEndpoint = "/api/agent-update";

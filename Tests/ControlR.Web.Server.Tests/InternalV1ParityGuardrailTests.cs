@@ -50,6 +50,7 @@ public partial class InternalV1ParityGuardrailTests
     // Agent-facing registration and update negotiation - consumed by the installed agent,
     // versioned by agent-server compatibility rather than API version.
     ["POST /api/agent/devices"] = "Agent-facing device registration.",
+    ["GET /api/agent/deployment-options"] = "Agent-facing deployment negotiation, scoped to the signing device's tenant.",
     ["POST /api/devices"] = "Legacy agent-registration alias for POST /api/agent/devices.",
     ["GET /api/agent/updates/get-bundle-metadata/{}"] = "Agent update-bundle negotiation.",
     ["GET /api/agent-update/get-bundle-metadata/{}"] = "Legacy agent update-bundle negotiation alias.",

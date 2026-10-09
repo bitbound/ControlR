@@ -5602,6 +5602,66 @@
         "x-replacement-route": "/api/v1/version/server"
       }
     },
+    "/api/agent/deployment-options": {
+      "get": {
+        "tags": [
+          "AgentDeployment"
+        ],
+        "parameters": [
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The requested API version",
+            "schema": {
+              "enum": [
+                "1.0"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDeploymentOptionsDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDeploymentOptionsDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDeploymentOptionsDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Cookie": [ ]
+          },
+          {
+            "PersonalAccessToken": [ ]
+          }
+        ]
+      }
+    },
     "/api/agent/updates/get-bundle-metadata/{runtime}": {
       "get": {
         "tags": [
@@ -6562,6 +6622,20 @@
         "properties": {
           "temporaryPassword": {
             "type": "string"
+          }
+        }
+      },
+      "AgentDeploymentOptionsDto": {
+        "required": [
+          "instanceId"
+        ],
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8965,6 +9039,9 @@
     },
     {
       "name": "Version"
+    },
+    {
+      "name": "AgentDeployment"
     },
     {
       "name": "AgentUpdate"

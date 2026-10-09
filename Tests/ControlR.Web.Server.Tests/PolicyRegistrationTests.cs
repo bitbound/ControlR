@@ -1,26 +1,40 @@
 using System.Reflection;
 using ControlR.Web.Server.Authz.Policies;
+using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests;
 
 /// <summary>
 /// Meta-test: every policy referenced by <c>[Authorize(Policy = ...)]</c> in the server
-/// assembly must be a registered key in <see cref="PermissionPolicies.Definitions"/>
-/// (or, for device-resource policies, <see cref="DeviceResourcePolicies.PolicyToPermission"/>).
-/// A referenced-but-unregistered policy throws at runtime when the endpoint is hit, so a
-/// future contributor adding a policy without registering it is caught here at build time.
+/// assembly must resolve from the authorization policy provider. A referenced-but-unregistered
+/// policy throws at runtime when the endpoint is hit, so a future contributor adding a policy
+/// without registering it is caught here at build time.
 /// </summary>
-public class PolicyRegistrationTests
+/// <remarks>
+/// The check asks the provider rather than comparing against the permission registries, because
+/// not every policy is a permission policy. An installed agent proves itself with a request
+/// signature and holds no permission, so its policy is registered directly and appears in
+/// neither <see cref="PermissionPolicies.Definitions"/> nor
+/// <see cref="DeviceResourcePolicies.PolicyToPermission"/>.
+/// </remarks>
+public class PolicyRegistrationTests(ITestOutputHelper testOutput)
 {
-  private static HashSet<string> AllRegisteredKeys => [.. PermissionPolicyKeys, .. DeviceResourcePolicyKeys];
-  private static HashSet<string> DeviceResourcePolicyKeys { get; } = [.. DeviceResourcePolicies.PolicyToPermission.Keys];
-  private static HashSet<string> PermissionPolicyKeys { get; } = [.. PermissionPolicies.Definitions.Keys];
+  private readonly ITestOutputHelper _testOutput = testOutput;
+
   private static Assembly ServerAssembly { get; } = typeof(DeviceResourcePolicies).Assembly;
 
   [Fact]
-  public void EveryAuthorizePolicy_IsRegistered()
+  public async Task EveryAuthorizePolicy_IsRegistered()
   {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var provider = testApp.Services.GetRequiredService<IAuthorizationPolicyProvider>();
+
+    // Proves this check is capable of failing: an unregistered name resolves to no policy, so a
+    // referenced-but-missing policy cannot slip through.
+    Assert.Null(await provider.GetPolicyAsync($"unregistered-{Guid.NewGuid():N}"));
+
     var referencedPolicies = ServerAssembly
       .GetTypes()
       .SelectMany(type => GetAuthorizePolicyNames(type))
@@ -28,14 +42,18 @@ public class PolicyRegistrationTests
 
     Assert.NotEmpty(referencedPolicies);
 
-    var missingPolicies = referencedPolicies
-      .Where(policy => !AllRegisteredKeys.Contains(policy!))
-      .OrderBy(policy => policy)
-      .ToList();
+    var missingPolicies = new List<string>();
+    foreach (var policy in referencedPolicies)
+    {
+      if (await provider.GetPolicyAsync(policy!) is null)
+      {
+        missingPolicies.Add(policy!);
+      }
+    }
 
     Assert.True(
       missingPolicies.Count == 0,
-      $"The following [Authorize(Policy=...)] policies are referenced but not registered: {string.Join(", ", missingPolicies)}");
+      $"The following [Authorize(Policy=...)] policies are referenced but not registered: {string.Join(", ", missingPolicies.OrderBy(x => x, StringComparer.Ordinal))}");
   }
 
   [Fact]

@@ -24,6 +24,7 @@ public static class AgentSharedBuilderExtensions
     services.AddSingleton<IOptionsAccessor, OptionsAccessor>();
     services.AddSingleton<IFileSystemPathProvider, FileSystemPathProvider>();
     services.AddSingleton<IEd25519KeyProvider, Ed25519KeyProvider>();
+    services.AddTransient<AgentRequestSigningHandler>();
 
     if (OperatingSystem.IsWindowsVersionAtLeast(8))
     {
