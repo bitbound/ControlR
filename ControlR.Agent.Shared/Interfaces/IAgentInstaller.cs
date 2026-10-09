@@ -1,5 +1,4 @@
 using ControlR.Agent.Shared.Models;
-using ControlR.Libraries.Shared.Primitives;
 
 namespace ControlR.Agent.Shared.Interfaces;
 

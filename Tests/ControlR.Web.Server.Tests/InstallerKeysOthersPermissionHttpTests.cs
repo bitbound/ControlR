@@ -8,7 +8,6 @@ using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.AgentInstaller;
-using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 

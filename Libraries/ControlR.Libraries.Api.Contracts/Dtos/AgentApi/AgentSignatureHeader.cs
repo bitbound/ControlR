@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using MessagePack;
 
 namespace ControlR.Libraries.Api.Contracts.Dtos.AgentApi;
 

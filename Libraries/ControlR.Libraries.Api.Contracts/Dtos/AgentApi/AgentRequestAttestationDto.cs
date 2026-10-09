@@ -1,5 +1,3 @@
-using MessagePack;
-
 namespace ControlR.Libraries.Api.Contracts.Dtos.AgentApi;
 
 /// <summary>
