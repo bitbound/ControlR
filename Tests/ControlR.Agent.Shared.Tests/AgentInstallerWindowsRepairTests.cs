@@ -142,6 +142,7 @@ public class AgentInstallerWindowsRepairTests
   public async Task RestorePreviousBrand_RunsItsStartServiceCommand()
   {
     var previousBrand = "Acme Remote";
+    var previousInstanceId = "instance-1";
     var previousInstallDirectory = @"C:\Program Files\Acme_Remote\instance-1";
     // The replaced install's executable is named for its own brand, not for this build's.
     var previousAgentPath = Path.Combine(previousInstallDirectory, "Acme_Remote.Agent.exe");
@@ -170,16 +171,19 @@ public class AgentInstallerWindowsRepairTests
 
     var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
 
-    var result = await sut.RestorePreviousBrand(previousBrand);
+    var result = await sut.RestorePreviousBrand(previousBrand, previousInstanceId);
 
     Assert.True(result.IsSuccess);
-    Assert.Equal("start-service", stagedCommand);
+    // The replaced install's service and paths are keyed on the instance id it was created with, so
+    // its own commands have to be told that value and not the one this install is moving to.
+    Assert.Equal($"start-service \"--instance-id\" \"{previousInstanceId}\"", stagedCommand);
   }
 
   [WindowsOnlyFact]
   public async Task RetirePreviousBrand_RunsItsUninstallAndDeletesItsSettingsDirectory()
   {
     var previousBrand = "Acme Remote";
+    var previousInstanceId = "instance-1";
     var previousInstallDirectory = @"C:\Program Files\Acme_Remote\instance-1";
     // The replaced install's executable is named for its own brand, not for this build's.
     var previousAgentPath = Path.Combine(previousInstallDirectory, "Acme_Remote.Agent.exe");
@@ -215,10 +219,10 @@ public class AgentInstallerWindowsRepairTests
 
     var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
 
-    var result = await sut.RetirePreviousBrand(previousBrand);
+    var result = await sut.RetirePreviousBrand(previousBrand, previousInstanceId);
 
     Assert.True(result.IsSuccess);
-    Assert.Equal("uninstall", stagedCommand);
+    Assert.Equal($"uninstall \"--instance-id\" \"{previousInstanceId}\"", stagedCommand);
 
     // Run from its own install directory, that agent copies itself elsewhere and returns before doing
     // anything, so the command has to run against a staged copy instead.
@@ -232,9 +236,9 @@ public class AgentInstallerWindowsRepairTests
   [WindowsOnlyFact]
   public async Task StopPreviousBrand_WhenTheReplacedInstallCanBeStopped_ReportsSuccess()
   {
-    var (sut, previousBrand) = CreateStopPreviousBrandSetup(exitCode: 0);
+    var (sut, previousBrand, previousInstanceId) = CreateStopPreviousBrandSetup(exitCode: 0);
 
-    var result = await sut.StopPreviousBrand(previousBrand);
+    var result = await sut.StopPreviousBrand(previousBrand, previousInstanceId);
 
     Assert.True(result.IsSuccess);
   }
@@ -242,9 +246,9 @@ public class AgentInstallerWindowsRepairTests
   [WindowsOnlyFact]
   public async Task StopPreviousBrand_WhenTheReplacedInstallCannotBeStopped_ReportsFailure()
   {
-    var (sut, previousBrand) = CreateStopPreviousBrandSetup(exitCode: 1);
+    var (sut, previousBrand, previousInstanceId) = CreateStopPreviousBrandSetup(exitCode: 1);
 
-    var result = await sut.StopPreviousBrand(previousBrand);
+    var result = await sut.StopPreviousBrand(previousBrand, previousInstanceId);
 
     // Both installs would keep the device's connection and sign as the same device, so the caller has
     // to be able to refuse to continue rather than treat this as a warning.
@@ -312,9 +316,10 @@ public class AgentInstallerWindowsRepairTests
     };
   }
 
-  private static (TestableAgentInstallerWindows Sut, string PreviousBrand) CreateStopPreviousBrandSetup(int exitCode)
+  private static (TestableAgentInstallerWindows Sut, string PreviousBrand, string PreviousInstanceId) CreateStopPreviousBrandSetup(int exitCode)
   {
     const string previousBrand = "Acme Remote";
+    const string previousInstanceId = "instance-1";
     var previousInstallDirectory = @"C:\Program Files\Acme_Remote\instance-1";
     var previousAgentPath = Path.Combine(previousInstallDirectory, "Acme_Remote.Agent.exe");
     var fileSystem = new FakeFileSystem('\\');
@@ -339,7 +344,7 @@ public class AgentInstallerWindowsRepairTests
       });
 
     var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
-    return (sut, previousBrand);
+    return (sut, previousBrand, previousInstanceId);
   }
 
   private static TestableAgentInstallerWindows CreateSut(
@@ -402,9 +407,9 @@ public class AgentInstallerWindowsRepairTests
       keyProvider,
       logger)
   {
-    public Task<Result> StopPreviousBrand(string? previousBrandName)
+    public Task<Result> StopPreviousBrand(string? previousBrandName, string? previousInstanceId)
     {
-      return StopPreviousBrandService(previousBrandName);
+      return StopPreviousBrandService(previousBrandName, previousInstanceId);
     }
   }
 }

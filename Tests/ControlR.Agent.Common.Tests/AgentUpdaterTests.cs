@@ -4,6 +4,7 @@ using ControlR.Agent.Common.Services;
 using ControlR.ApiClient;
 using ControlR.ApiClient.Interfaces.Agent;
 using ControlR.Libraries.Api.Contracts.Dtos;
+using ControlR.Libraries.Api.Contracts.Dtos.AgentApi;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Primitives;
@@ -456,6 +457,88 @@ public class AgentMaintenanceServiceTests
   }
 
   [Fact]
+  public async Task CheckForUpdate_WhenServerHasNoInstanceIdOpinion_UpdatesWithoutMigrating()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+
+    // A tenant whose instance ids are switched off reports none. That is not a request to drop the id
+    // this install already has, so the install stays where it is.
+    fixture.DeploymentApi
+      .Setup(x => x.GetDeploymentOptions(It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Ok(new AgentDeploymentOptionsDto(null)));
+
+    fixture.ServeWindowsBundle("NEW_HASH");
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Contains("\"--instance-id\" \"instance-1\"", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+    Assert.DoesNotContain("--previous-brand-name", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+    Assert.DoesNotContain("--previous-instance-id", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task CheckForUpdate_WhenServerInstanceIdDiffers_MigratesTheInstall()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    var installedSettingsPath = @"C:\ProgramData\ControlR\instance-1\appsettings.json";
+    var handedOffSettingsPath = @"C:\ProgramData\ControlR\other\appsettings.json";
+
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+    fixture.FileSystem.AddFile(installedSettingsPath, "{\"PrivateKey\":\"key\"}");
+
+    fixture.PathProvider
+      .Setup(x => x.GetAgentAppSettingsPath())
+      .Returns(installedSettingsPath);
+    fixture.PathProvider
+      .Setup(x => x.GetSettingsDirectoryFor("ControlR", "other"))
+      .Returns(@"C:\ProgramData\ControlR\other");
+
+    // The tenant moved this deployment to a different instance id. The brand did not change, so only
+    // the instance id can be what makes this a migration.
+    fixture.DeploymentApi
+      .Setup(x => x.GetDeploymentOptions(It.IsAny<CancellationToken>()))
+      .ReturnsAsync(ApiResult.Ok(new AgentDeploymentOptionsDto("other")));
+
+    fixture.ServeWindowsBundle("NEW_HASH");
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
+
+    // Identity has to arrive at the directory the new install reads its own settings from, which moves
+    // with the instance id.
+    Assert.True(fixture.FileSystem.FileExists(handedOffSettingsPath));
+
+    // The install is created at the instance id the server named, and the one left behind is named so
+    // the new installer removes that one rather than the directory it is itself going to.
+    Assert.Contains("\"--instance-id\" \"other\"", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+    Assert.Contains("--previous-instance-id", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+    Assert.Contains("\"instance-1\"", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task CheckForUpdate_WhenServerInstanceIdMatches_UpdatesWithoutMigrating()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+
+    // The hash moved, so an update runs, but the instance id the server reports is the one this
+    // install already uses, so nothing here is a migration.
+    fixture.ServeWindowsBundle("NEW_HASH");
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Contains("\"--instance-id\" \"instance-1\"", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+    Assert.DoesNotContain("--previous-brand-name", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+    Assert.DoesNotContain("--previous-instance-id", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+  }
+
+  [Fact]
   public async Task CheckForUpdate_WhenServerPublisherDiffers_AbortsWithoutDownloadingInstaller()
   {
     var fixture = new AgentMaintenanceServiceFixture();
@@ -495,10 +578,19 @@ public class AgentMaintenanceServiceTests
       mockAgentApi
         .SetupGet(x => x.Updates)
         .Returns(AgentUpdateApi.Object);
+      mockAgentApi
+        .SetupGet(x => x.Deployment)
+        .Returns(DeploymentApi.Object);
 
       ControlrApi
         .SetupGet(x => x.Agent)
         .Returns(mockAgentApi.Object);
+
+      // Matching this install's own instance id, so a test that does not care about the instance id
+      // sees no reason to migrate on that axis.
+      DeploymentApi
+        .Setup(x => x.GetDeploymentOptions(It.IsAny<CancellationToken>()))
+        .ReturnsAsync(ApiResult.Ok(new AgentDeploymentOptionsDto("instance-1")));
 
       HostApplicationLifetime
         .SetupGet(x => x.ApplicationStopping)
@@ -532,9 +624,11 @@ public class AgentMaintenanceServiceTests
     public Mock<IAgentUpdateApi> AgentUpdateApi { get; } = new();
     public string BundleHashPath { get; } = @"C:\ControlR\.controlr-bundle.sha256";
     public Mock<IControlrApi> ControlrApi { get; } = new();
+    public Mock<IAgentDeploymentApi> DeploymentApi { get; } = new();
     public Mock<IDownloadsApi> DownloadsApi { get; } = new();
     public FakeFileSystem FileSystem { get; } = new('\\');
     public Mock<IHostApplicationLifetime> HostApplicationLifetime { get; } = new();
+    public string LaunchedInstallerArguments { get; private set; } = string.Empty;
     public Mock<IFileSystemPathProvider> PathProvider { get; } = new();
     public Mock<IProcessManager> ProcessManager { get; } = new();
     public Mock<IOptionsAccessor> SettingsProvider { get; } = new();
@@ -554,6 +648,53 @@ public class AgentMaintenanceServiceTests
         HostApplicationLifetime.Object,
         Options.Create(new InstanceOptions { InstanceId = "instance-1" }),
         NullLogger<AgentMaintenanceService>.Instance);
+    }
+
+    /// <summary>
+    /// Serves a Windows bundle whose hash differs from the installed one, so an update runs, and
+    /// records the arguments the installer was launched with.
+    /// </summary>
+    public void ServeWindowsBundle(string bundleSha256, string brandName = "ControlR", string publisher = "Bitbound")
+    {
+      var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
+      var installerSha256 = Convert.ToHexString(SHA256.HashData(installerBytes));
+      var launchedProcess = new Mock<IProcess>();
+      launchedProcess
+        .Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>()))
+        .Returns(Task.CompletedTask);
+
+      AgentUpdateApi
+        .Setup(x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()))
+        .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
+        {
+          BundleDownloadUrl = "/downloads/win-x64/ControlR.Agent.bundle.zip",
+          BundleSha256 = bundleSha256,
+          InstallerDownloadUrl = "/downloads/win-x64/ControlR.Agent.Installer.exe",
+          InstallerSha256 = installerSha256,
+          Runtime = RuntimeId.WinX64,
+          Version = Version.Parse("1.2.3"),
+          BrandName = brandName,
+          Publisher = publisher
+        }));
+
+      DownloadsApi
+        .Setup(x => x.DownloadFile(
+          It.IsAny<string>(),
+          It.IsAny<string>(),
+          It.IsAny<CancellationToken>()))
+        .Returns<string, string, CancellationToken>((_, destinationPath, _) =>
+        {
+          FileSystem.AddFile(destinationPath, installerBytes);
+          return Task.FromResult(Result.Ok());
+        });
+
+      ProcessManager
+        .Setup(x => x.Start(It.IsAny<string>(), It.IsAny<string>()))
+        .Returns<string, string>((_, arguments) =>
+        {
+          LaunchedInstallerArguments = arguments;
+          return launchedProcess.Object;
+        });
     }
 
     private sealed class NoopDisposable : IDisposable

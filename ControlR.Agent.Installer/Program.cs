@@ -56,6 +56,8 @@ const string CustomerIdLongAlias = "--customer";
 const string CustomerIdDescription = "An optional customer ID to assign the device to upon installation.";
 const string PreviousBrandNameDescription = "Brand name of the agent install being replaced. Set only during a cross-brand migration. That install is removed once this brand is installed and running. The server is what authorizes the migration.";
 const string PreviousBrandNameLongAlias = "--previous-brand-name";
+const string PreviousInstanceIdDescription = "Instance ID of the agent install being replaced, set only during a migration. Omit when that install used the default instance ID. That install is removed once this brand is installed and running.";
+const string PreviousInstanceIdLongAlias = "--previous-instance-id";
 const string TempDirectoryPrefix = "controlr-install-";
 const string TempBundleFileName = "ControlR.Agent.bundle.zip";
 
@@ -142,6 +144,12 @@ static Command GetInstallCommand()
     Description = PreviousBrandNameDescription,
   };
 
+  var previousInstanceIdOption = new Option<string?>(PreviousInstanceIdLongAlias)
+  {
+    Required = false,
+    Description = PreviousInstanceIdDescription,
+  };
+
   var installCommand = new Command(InstallCommandName, InstallCommandDescription)
   {
     serverUriOption,
@@ -153,6 +161,7 @@ static Command GetInstallCommand()
     deviceIdOption,
     customerIdOption,
     previousBrandNameOption,
+    previousInstanceIdOption,
   };
 
   installCommand.SetAction(async parseResult =>
@@ -172,7 +181,8 @@ static Command GetInstallCommand()
     return await RunInstall(
       installRequest,
       parseResult.GetValue(instanceIdOption),
-      parseResult.GetValue(previousBrandNameOption));
+      parseResult.GetValue(previousBrandNameOption),
+      parseResult.GetValue(previousInstanceIdOption));
   });
 
   return installCommand;
@@ -220,7 +230,8 @@ static Command GetRepairDesktopCommand()
 static async Task<int> RunInstall(
   AgentInstallRequest request,
   string? instanceId,
-  string? previousBrandName)
+  string? previousBrandArg,
+  string? previousInstanceIdArg)
 {
   using var host = CreateInstallerHost(instanceId, request.ServerUri);
   var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent.Installer");
@@ -229,8 +240,9 @@ static async Task<int> RunInstall(
   var tempDir = Path.Combine(Path.GetTempPath(), $"{TempDirectoryPrefix}{Guid.NewGuid():N}");
   var tempBundlePath = Path.Combine(tempDir, TempBundleFileName);
 
-  // Declared out here so the catch can roll the replaced brand back too.
+  // Declared out here so the catch can roll the replaced install back too.
   string? previousBrand = null;
+  string? previousInstanceId = null;
 
   try
   {
@@ -267,16 +279,35 @@ static async Task<int> RunInstall(
       return 1;
     }
 
-    // A migration is indicated by the brand being retired, which the resident install passes in. The
-    // name is kept as-is because the key derived from it is what named the install being replaced, and
-    // that key is derived without trimming.
-    previousBrand = string.IsNullOrWhiteSpace(previousBrandName) ? null : previousBrandName;
-    if (previousBrand is not null && string.Equals(previousBrand, BrandingConstants.BrandName, StringComparison.Ordinal))
+    // A migration is indicated by the install being replaced, which the resident install passes in.
+    // Names are kept as-is because the key derived from a brand name is what named the install being
+    // replaced, and that key is derived without trimming.
+    var suppliedPreviousBrand = string.IsNullOrWhiteSpace(previousBrandArg) ? null : previousBrandArg;
+    var suppliedPreviousInstanceId = string.IsNullOrWhiteSpace(previousInstanceIdArg) ? null : previousInstanceIdArg;
+
+    if (suppliedPreviousBrand is not null || suppliedPreviousInstanceId is not null)
     {
-      logger.LogWarning(
-        "Ignoring --previous-brand-name '{PreviousBrandName}' because it is this installer's own brand.",
-        previousBrand);
-      previousBrand = null;
+      // Either the brand or the instance id may be the only thing that changed, so whichever was not
+      // supplied describes an install identical to this one on that axis.
+      var resolvedPreviousBrand = suppliedPreviousBrand ?? BrandingConstants.BrandName;
+      var resolvedPreviousInstanceId = suppliedPreviousInstanceId ?? instanceId;
+
+      var isThisSameInstall =
+        string.Equals(resolvedPreviousBrand, BrandingConstants.BrandName, StringComparison.Ordinal) &&
+        string.Equals(
+          GetEffectiveInstanceId(resolvedPreviousInstanceId),
+          GetEffectiveInstanceId(instanceId),
+          StringComparison.Ordinal);
+
+      if (isThisSameInstall)
+      {
+        logger.LogWarning("Ignoring the previous-install arguments because they describe this same install.");
+      }
+      else
+      {
+        previousBrand = resolvedPreviousBrand;
+        previousInstanceId = resolvedPreviousInstanceId;
+      }
     }
 
     if (previousBrand is not null)
@@ -295,9 +326,11 @@ static async Task<int> RunInstall(
       }
 
       logger.LogWarning(
-        "Migrating install from brand {PreviousBrandName} to {InstallerBrandName}. Device identity and signing key carry over from the settings file already staged for this brand.",
+        "Migrating install from brand {PreviousBrandName} (instance id {PreviousInstanceId}) to {InstallerBrandName} (instance id {InstallerInstanceId}). Device identity and signing key carry over from the settings file already staged for this brand.",
         previousBrand,
-        BrandingConstants.BrandName);
+        previousInstanceId,
+        BrandingConstants.BrandName,
+        GetEffectiveInstanceId(instanceId));
     }
 
     logger.LogInformation("Downloading bundle to temp file: {TempBundlePath}", tempBundlePath);
@@ -315,13 +348,14 @@ static async Task<int> RunInstall(
       TagIds = request.TagIds,
       CustomerId = request.CustomerId,
       PreviousBrandName = previousBrand,
+      PreviousInstanceId = previousInstanceId,
     };
 
     var installResult = await installer.Install(installRequest);
     if (!installResult.IsSuccess)
     {
       logger.LogError("Installation failed. Reason: {Reason}", installResult.Reason);
-      await RecoverFromFailedInstall(host, installer, logger, previousBrand);
+      await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
       return 1;
     }
 
@@ -331,7 +365,7 @@ static async Task<int> RunInstall(
     {
       // Best effort. This install is already working, so a failure here must not report a failed
       // install. A leftover old-brand service is recoverable; reporting success as failure is not.
-      await installer.RetirePreviousBrand(previousBrand);
+      await installer.RetirePreviousBrand(previousBrand, previousInstanceId);
     }
 
     return 0;
@@ -341,7 +375,7 @@ static async Task<int> RunInstall(
     logger.LogError(ex, "Installation failed.");
 
     var installer = host.Services.GetRequiredService<IAgentInstaller>();
-    await RecoverFromFailedInstall(host, installer, logger, previousBrand);
+    await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
     return 1;
   }
   finally
@@ -369,13 +403,14 @@ static async Task RecoverFromFailedInstall(
   IHost host,
   IAgentInstaller installer,
   ILogger logger,
-  string? previousBrand)
+  string? previousBrand,
+  string? previousInstanceId)
 {
   try
   {
     if (previousBrand is not null)
     {
-      await installer.RestorePreviousBrand(previousBrand);
+      await installer.RestorePreviousBrand(previousBrand, previousInstanceId);
       return;
     }
 
@@ -529,6 +564,11 @@ static FileSystemPathProvider CreateStandalonePathProvider(string? instanceId)
     elevationChecker,
     new FileSystem(new SerilogLogger<FileSystem>()),
     new OptionsMonitorWrapper<InstanceOptions>(new InstanceOptions { InstanceId = instanceId }));
+}
+
+static string GetEffectiveInstanceId(string? instanceId)
+{
+  return string.IsNullOrWhiteSpace(instanceId) ? AppConstants.DefaultInstanceId : instanceId;
 }
 
 static Guid[]? ParseTagIds(string? deviceTags)

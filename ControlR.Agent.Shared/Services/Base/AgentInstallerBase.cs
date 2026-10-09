@@ -36,12 +36,20 @@ internal abstract class AgentInstallerBase(
   /// Starts the service of the install being replaced. Used to roll back when this install cannot
   /// start, so a failed migration does not leave the machine with no running agent.
   /// </summary>
-  public async Task<Result> RestorePreviousBrand(string previousBrandName)
+  public async Task<Result> RestorePreviousBrand(string previousBrandName, string? previousInstanceId)
   {
     using var _ = Logger.BeginMemberScope();
 
-    Logger.LogInformation("Starting the {PreviousBrandName} service again.", previousBrandName);
-    var result = await RunPreviousBrandAgentCommand(previousBrandName, "start-service", TimeSpan.FromMinutes(2));
+    Logger.LogInformation(
+      "Starting the {PreviousBrandName} service again. Instance id: {PreviousInstanceId}",
+      previousBrandName,
+      previousInstanceId);
+
+    var result = await RunPreviousBrandAgentCommand(
+      previousBrandName,
+      previousInstanceId,
+      "start-service",
+      TimeSpan.FromMinutes(2));
 
     if (result.IsSuccess)
     {
@@ -61,12 +69,20 @@ internal abstract class AgentInstallerBase(
   /// <summary>
   /// Removes the install being replaced, and the settings directory its uninstall leaves behind.
   /// </summary>
-  public async Task<Result> RetirePreviousBrand(string previousBrandName)
+  public async Task<Result> RetirePreviousBrand(string previousBrandName, string? previousInstanceId)
   {
     using var _ = Logger.BeginMemberScope();
 
-    Logger.LogInformation("Removing the {PreviousBrandName} install.", previousBrandName);
-    var result = await RunPreviousBrandAgentCommand(previousBrandName, "uninstall", TimeSpan.FromMinutes(10));
+    Logger.LogInformation(
+      "Removing the {PreviousBrandName} install. Instance id: {PreviousInstanceId}",
+      previousBrandName,
+      previousInstanceId);
+
+    var result = await RunPreviousBrandAgentCommand(
+      previousBrandName,
+      previousInstanceId,
+      "uninstall",
+      TimeSpan.FromMinutes(10));
 
     if (!result.IsSuccess)
     {
@@ -81,9 +97,7 @@ internal abstract class AgentInstallerBase(
     // in plaintext. Remove it so the retired brand does not keep holding it.
     try
     {
-      var settingsDirectory = FilesystemPathProvider.GetSettingsDirectoryFor(
-        previousBrandName,
-        FilesystemPathProvider.GetEffectiveInstanceId());
+      var settingsDirectory = FilesystemPathProvider.GetSettingsDirectoryFor(previousBrandName, previousInstanceId);
 
       if (FileSystem.DirectoryExists(settingsDirectory))
       {
@@ -184,7 +198,7 @@ internal abstract class AgentInstallerBase(
   /// agent may hold the device's connection on the server, and both would otherwise keep taking it, so
   /// the caller has to be able to refuse to continue when this fails.
   /// </summary>
-  protected async Task<Result> StopPreviousBrandService(string? previousBrandName)
+  protected async Task<Result> StopPreviousBrandService(string? previousBrandName, string? previousInstanceId)
   {
     if (string.IsNullOrWhiteSpace(previousBrandName))
     {
@@ -192,9 +206,17 @@ internal abstract class AgentInstallerBase(
     }
 
     using var _ = Logger.BeginMemberScope();
-    Logger.LogInformation("Stopping the {PreviousBrandName} service before starting this one.", previousBrandName);
+    Logger.LogInformation(
+      "Stopping the {PreviousBrandName} service before starting this one. Instance id: {PreviousInstanceId}",
+      previousBrandName,
+      previousInstanceId);
 
-    var result = await RunPreviousBrandAgentCommand(previousBrandName, "stop-service", TimeSpan.FromMinutes(2));
+    var result = await RunPreviousBrandAgentCommand(
+      previousBrandName,
+      previousInstanceId,
+      "stop-service",
+      TimeSpan.FromMinutes(2));
+
     if (!result.IsSuccess)
     {
       Logger.LogError(
@@ -317,15 +339,20 @@ internal abstract class AgentInstallerBase(
   }
 
   /// <summary>
-  /// Runs one of the replaced install's own commands against itself. Staged to a temp copy first,
-  /// because run from its own install directory that agent copies itself elsewhere, re-launches
-  /// detached, and returns before doing anything. Asking it to act on itself is also what keeps
-  /// another brand's service names, unit files, and registry keys out of this code.
+  /// Runs one of the replaced install's own commands against itself. The install is addressed by the
+  /// brand and instance id it was created with, which is not always this install's, because a
+  /// migration can move either. Staged to a temp copy first, because run from its own install
+  /// directory that agent copies itself elsewhere, re-launches detached, and returns before doing
+  /// anything. Asking it to act on itself is also what keeps another brand's service names, unit
+  /// files, and registry keys out of this code.
   /// </summary>
-  private async Task<Result> RunPreviousBrandAgentCommand(string previousBrandName, string command, TimeSpan timeout)
+  private async Task<Result> RunPreviousBrandAgentCommand(
+    string previousBrandName,
+    string? previousInstanceId,
+    string command,
+    TimeSpan timeout)
   {
-    var instanceId = FilesystemPathProvider.GetEffectiveInstanceId();
-    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, instanceId);
+    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, previousInstanceId);
     var agentPath = GetAgentPath(installDirectory, _systemEnvironment.Platform, previousBrandName);
 
     if (!FileSystem.FileExists(agentPath))
@@ -342,10 +369,11 @@ internal abstract class AgentInstallerBase(
     try
     {
       var arguments = command;
-      var configuredInstanceId = _optionsAccessor.InstanceId;
-      if (!string.IsNullOrWhiteSpace(configuredInstanceId))
+      if (!string.IsNullOrWhiteSpace(previousInstanceId))
       {
-        arguments += $" \"--instance-id\" \"{configuredInstanceId}\"";
+        // The replaced install's own service and paths are keyed on the instance id it was created
+        // with, so that install's commands have to be told the same value.
+        arguments += $" \"--instance-id\" \"{previousInstanceId}\"";
       }
 
       var exitCode = await ProcessManager.StartAndWaitForExit(stagedPath, arguments, false, timeout);

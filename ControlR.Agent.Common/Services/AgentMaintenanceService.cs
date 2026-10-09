@@ -107,26 +107,41 @@ internal class AgentMaintenanceService(
         return;
       }
 
-      // The server is authoritative and its URL does not change across a rebrand, so a bundle that
-      // names a different brand is this deployment rebranding itself. Migrate onto it.
-      var isBrandMigration = !isSameBrand;
-      if (isBrandMigration)
+      // The server is authoritative, so an install has to follow it onto the brand and the instance id
+      // it names. The brand arrives with the bundle, but the instance id is a tenant setting that the
+      // anonymous bundle endpoint cannot answer, so it comes from the endpoint this device signs for.
+      var currentInstanceId = _instanceOptions.Value.InstanceId;
+      var serverInstanceId = await GetServerInstanceId(linkedCts.Token);
+      var targetInstanceId = string.IsNullOrWhiteSpace(serverInstanceId) ? currentInstanceId : serverInstanceId;
+
+      var isInstanceMigration = !string.Equals(
+        GetEffectiveInstanceId(targetInstanceId),
+        GetEffectiveInstanceId(currentInstanceId),
+        StringComparison.Ordinal);
+
+      var isMigration = !isSameBrand || isInstanceMigration;
+
+      if (isMigration)
       {
         _logger.LogWarning(
-          "Server bundle is brand {ServerBrandName}. This agent is brand {AgentBrandName}. Migrating this install.",
+          "Migrating this install. Server: brand {ServerBrandName}, instance id {ServerInstanceId}. " +
+          "This install: brand {AgentBrandName}, instance id {AgentInstanceId}.",
           metadata.BrandName,
-          BrandingConstants.BrandName);
+          GetEffectiveInstanceId(targetInstanceId),
+          BrandingConstants.BrandName,
+          GetEffectiveInstanceId(currentInstanceId));
 
         // The device identity has to be in place before the new installer reads its own settings.
         // Without it that install registers a fresh device and signs with a key the server has never
         // been told about, and the existing device record can never authenticate again, so refuse
         // rather than try.
-        if (!WriteSettingsFileForBrand(metadata.BrandName))
+        if (!WriteSettingsFileForBrand(metadata.BrandName, targetInstanceId))
         {
           _logger.LogCritical(
-            "Refusing to migrate. The settings file for brand {ServerBrandName} could not be prepared, " +
-            "so this device's signing key would not carry over. Nothing on this machine was changed.",
-            metadata.BrandName);
+            "Refusing to migrate. The settings file for brand {ServerBrandName} and instance id {TargetInstanceId} " +
+            "could not be prepared, so this device's signing key would not carry over. Nothing on this machine was changed.",
+            metadata.BrandName,
+            GetEffectiveInstanceId(targetInstanceId));
           return;
         }
       }
@@ -140,8 +155,8 @@ internal class AgentMaintenanceService(
       }
 
       // A migration always runs the installer, even if the hashes happen to agree, because the
-      // install still has to move onto the new brand's service and directory names.
-      if (!isBrandMigration && string.Equals(localHash, metadata.BundleSha256, StringComparison.OrdinalIgnoreCase))
+      // install still has to move onto the brand and instance id the server names.
+      if (!isMigration && string.Equals(localHash, metadata.BundleSha256, StringComparison.OrdinalIgnoreCase))
       {
         _logger.LogInformation("Version is current (hash match).");
         return;
@@ -157,7 +172,7 @@ internal class AgentMaintenanceService(
 
       _logger.LogInformation("Launching installer.");
 
-      var installArguments = BuildInstallArguments(isBrandMigration);
+      var installArguments = BuildInstallArguments(isMigration, targetInstanceId, currentInstanceId);
       var installCommand = BuildCommandString(installArguments);
       await LaunchInstaller(installerPath, installCommand, installArguments, linkedCts.Token);
     }
@@ -255,6 +270,11 @@ internal class AgentMaintenanceService(
     return string.Join(" ", arguments.Select(QuoteArgument));
   }
 
+  private static string GetEffectiveInstanceId(string? instanceId)
+  {
+    return string.IsNullOrWhiteSpace(instanceId) ? AppConstants.DefaultInstanceId : instanceId;
+  }
+
   private static string GetInstallerFileName(string downloadPath)
   {
     if (Uri.TryCreate(downloadPath, UriKind.RelativeOrAbsolute, out var uri))
@@ -309,7 +329,7 @@ internal class AgentMaintenanceService(
     return $"\"{escapedValue}\"";
   }
 
-  private List<string> BuildInstallArguments(bool isBrandMigration = false)
+  private List<string> BuildInstallArguments(bool isMigration, string? targetInstanceId, string? currentInstanceId)
   {
     var arguments = new List<string>
     {
@@ -320,18 +340,26 @@ internal class AgentMaintenanceService(
       _optionsAccessor.GetRequiredTenantId().ToString()
     };
 
-    if (!string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    if (!string.IsNullOrWhiteSpace(targetInstanceId))
     {
       arguments.Add("--instance-id");
-      arguments.Add(_instanceOptions.Value.InstanceId);
+      arguments.Add(targetInstanceId);
     }
 
-    if (isBrandMigration)
+    if (isMigration)
     {
-      // The new installer picks the install identity up from the settings file this agent already
-      // wrote into that brand's settings directory, so only the brand being retired has to travel.
+      // The replacing install picks its identity up from the settings file this agent already staged
+      // for it, so what has to travel is which install to stop and remove. Both values are sent,
+      // because either the brand or the instance id may be the only one that changed, and the
+      // installer has to be told a migration is happening in both cases.
       arguments.Add("--previous-brand-name");
       arguments.Add(BrandingConstants.BrandName);
+
+      if (!string.IsNullOrWhiteSpace(currentInstanceId))
+      {
+        arguments.Add("--previous-instance-id");
+        arguments.Add(currentInstanceId);
+      }
     }
 
     return arguments;
@@ -428,6 +456,27 @@ internal class AgentMaintenanceService(
       BrandingConstants.UpdaterTempDirectoryName,
       instanceSegment,
       AppConstants.GetInstallerFileName(SystemPlatform.MacOs));
+  }
+
+  /// <summary>
+  /// Asks the server which instance id this device's tenant wants. The answer is scoped to this
+  /// device's tenant, which is why it cannot ride on the anonymous bundle metadata. A null answer
+  /// means the tenant has no instance id configured, which is not a request for the default one.
+  /// </summary>
+  private async Task<string?> GetServerInstanceId(CancellationToken cancellationToken)
+  {
+    var result = await _controlrApi.Agent.Deployment.GetDeploymentOptions(cancellationToken);
+    if (!result.IsSuccess || result.Value is null)
+    {
+      _logger.LogWarning(
+        "Could not retrieve the server's instance id. Reason: {Reason}, StatusCode: {StatusCode}. " +
+        "Continuing with the brand decision only.",
+        result.Reason,
+        result.StatusCode);
+      return null;
+    }
+
+    return result.Value.InstanceId;
   }
 
   private async Task LaunchInstaller(
@@ -547,12 +596,12 @@ internal class AgentMaintenanceService(
   }
 
   /// <summary>
-  /// Copies this install's settings file into <paramref name="newBrandName"/>'s settings directory so
-  /// the new brand's installer binds the existing device ID, tenant, and signing key instead of
-  /// minting a new identity. The server only trusts the public key it already stored for a known
-  /// device, so losing the key would leave the endpoint unable to authenticate again.
+  /// Copies this install's settings file into the settings directory the replacing install will read,
+  /// so it binds the existing device ID, tenant, and signing key instead of minting a new identity.
+  /// The server only trusts the public key it already stored for a known device, so losing the key
+  /// would leave the endpoint unable to authenticate again.
   /// </summary>
-  private bool WriteSettingsFileForBrand(string newBrandName)
+  private bool WriteSettingsFileForBrand(string newBrandName, string? newInstanceId)
   {
     try
     {
@@ -570,7 +619,7 @@ internal class AgentMaintenanceService(
         return false;
       }
 
-      var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(newBrandName, _instanceOptions.Value.InstanceId);
+      var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(newBrandName, newInstanceId);
       var destinationPath = Path.Combine(destinationDirectory, "appsettings.json");
 
       _fileSystem.CreateDirectory(destinationDirectory);
@@ -581,9 +630,10 @@ internal class AgentMaintenanceService(
       _optionsAccessor.RestrictAccess(destinationPath);
 
       _logger.LogInformation(
-        "Wrote this install's settings to {DestinationPath} for the {NewBrandName} install to pick up.",
+        "Wrote this install's settings to {DestinationPath} for the {NewBrandName} install at instance id {NewInstanceId} to pick up.",
         destinationPath,
-        newBrandName);
+        newBrandName,
+        GetEffectiveInstanceId(newInstanceId));
 
       return true;
     }

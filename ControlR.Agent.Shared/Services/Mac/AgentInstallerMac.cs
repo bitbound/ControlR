@@ -133,7 +133,7 @@ internal class AgentInstallerMac(
       // Only one agent may hold the device's connection on the server, so the replaced install stops
       // before this one starts. Starting beside an install that could not be stopped would leave both
       // signing as the same device, so fail and let the caller put the replaced install back.
-      var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName);
+      var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName, request.PreviousInstanceId);
       if (!stopPreviousBrandResult.IsSuccess)
       {
         return Result.Fail($"Failed to stop the {request.PreviousBrandName} install being replaced.");
