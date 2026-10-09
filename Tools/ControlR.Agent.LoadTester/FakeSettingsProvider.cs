@@ -27,6 +27,10 @@ internal class FakeSettingsProvider(Guid deviceId, Uri serverUri) : IOptionsAcce
     return TenantId;
   }
 
+  public void RestrictAccess(string path)
+  {
+  }
+
   public Task UpdateAppOptions(AgentAppOptions options)
   {
     return Task.CompletedTask;

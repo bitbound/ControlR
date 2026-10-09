@@ -6,7 +6,9 @@ using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using System.Security;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace ControlR.Agent.Common.Services;
 
@@ -91,19 +93,45 @@ internal class AgentMaintenanceService(
 
       var metadata = metadataResult.Value;
 
-      if (!IsBrandCompatible(metadata, out var brandMismatchReason))
+      var isSameBrand = BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName);
+
+      // The server is authoritative, so an install has to follow it onto the brand and the instance id
+      // it names. The brand arrives with the bundle, but the instance id is a tenant setting that the
+      // anonymous bundle endpoint cannot answer, so it comes from the endpoint this device signs for.
+      var currentInstanceId = _instanceOptions.Value.InstanceId;
+      var serverInstanceId = await GetServerInstanceId(linkedCts.Token);
+      var targetInstanceId = string.IsNullOrWhiteSpace(serverInstanceId) ? currentInstanceId : serverInstanceId;
+
+      var isInstanceMigration = !string.Equals(
+        GetEffectiveInstanceId(targetInstanceId),
+        GetEffectiveInstanceId(currentInstanceId),
+        StringComparison.Ordinal);
+
+      var isMigration = !isSameBrand || isInstanceMigration;
+
+      if (isMigration)
       {
-        _logger.LogCritical(
-          "Aborting update check. Server bundle is for a different brand than this agent. " +
-          "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
-          "Reason: {Reason}. Refusing to overwrite this install with a mismatched bundle. " +
-          "If this server is correct, uninstall this agent and reinstall it from the matching installer.",
-          BrandingConstants.BrandName,
-          BrandingConstants.Publisher,
+        _logger.LogWarning(
+          "Migrating this install. Server: brand {ServerBrandName}, instance id {ServerInstanceId}. " +
+          "This install: brand {AgentBrandName}, instance id {AgentInstanceId}.",
           metadata.BrandName,
-          metadata.Publisher,
-          brandMismatchReason);
-        return;
+          GetEffectiveInstanceId(targetInstanceId),
+          BrandingConstants.BrandName,
+          GetEffectiveInstanceId(currentInstanceId));
+
+        // The device identity has to be in place before the new installer reads its own settings.
+        // Without it that install registers a fresh device and signs with a key the server has never
+        // been told about, and the existing device record can never authenticate again, so refuse
+        // rather than try.
+        if (!WriteSettingsFileForBrand(metadata.BrandName, targetInstanceId))
+        {
+          _logger.LogCritical(
+            "Refusing to migrate. The settings file for brand {ServerBrandName} and instance id {TargetInstanceId} " +
+            "could not be prepared, so this device's signing key would not carry over. Nothing on this machine was changed.",
+            metadata.BrandName,
+            GetEffectiveInstanceId(targetInstanceId));
+          return;
+        }
       }
 
       _logger.LogInformation("Remote bundle hash: {RemoteHash}", metadata.BundleSha256);
@@ -114,7 +142,9 @@ internal class AgentMaintenanceService(
         _logger.LogInformation("Installed bundle hash: {LocalHash}", localHash);
       }
 
-      if (string.Equals(localHash, metadata.BundleSha256, StringComparison.OrdinalIgnoreCase))
+      // A migration always runs the installer, even if the hashes happen to agree, because the
+      // install still has to move onto the brand and instance id the server names.
+      if (!isMigration && string.Equals(localHash, metadata.BundleSha256, StringComparison.OrdinalIgnoreCase))
       {
         _logger.LogInformation("Version is current (hash match).");
         return;
@@ -130,9 +160,9 @@ internal class AgentMaintenanceService(
 
       _logger.LogInformation("Launching installer.");
 
-      var installArguments = BuildInstallArguments();
+      var installArguments = BuildInstallArguments(isMigration, targetInstanceId, currentInstanceId);
       var installCommand = BuildCommandString(installArguments);
-      await LaunchInstaller(installerPath, installCommand, linkedCts.Token);
+      await LaunchInstaller(installerPath, installCommand, installArguments, linkedCts.Token);
     }
     catch (OperationCanceledException ex)
     {
@@ -169,17 +199,19 @@ internal class AgentMaintenanceService(
 
       var metadata = metadataResult.Value;
 
-      if (!IsBrandCompatible(metadata, out var brandMismatchReason))
+      // Repair rewrites the desktop client payload inside an existing install, so it only makes
+      // sense for the install's own brand. A cross-brand bundle is handled by the update path,
+      // which moves the whole install rather than patching one payload into the wrong brand.
+      if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName))
       {
         _logger.LogCritical(
-          "Aborting desktop client repair. Server bundle is for a different brand than this agent. " +
+          "Aborting desktop client repair. Server bundle is not this agent's brand. " +
           "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
-          "Reason: {Reason}. Refusing to overwrite this install with a mismatched bundle.",
+          "Refusing to write a foreign brand's payload into this install.",
           BrandingConstants.BrandName,
           BrandingConstants.Publisher,
           metadata.BrandName,
-          metadata.Publisher,
-          brandMismatchReason);
+          metadata.Publisher);
         return;
       }
 
@@ -189,8 +221,9 @@ internal class AgentMaintenanceService(
         return;
       }
 
-      var repairCommand = BuildCommandString(BuildRepairDesktopArguments());
-      await LaunchInstaller(installerPath, repairCommand, linkedCts.Token);
+      var repairArguments = BuildRepairDesktopArguments();
+      var repairCommand = BuildCommandString(repairArguments);
+      await LaunchInstaller(installerPath, repairCommand, repairArguments, linkedCts.Token);
     }
     catch (OperationCanceledException ex)
     {
@@ -223,6 +256,11 @@ internal class AgentMaintenanceService(
   private static string BuildCommandString(IEnumerable<string> arguments)
   {
     return string.Join(" ", arguments.Select(QuoteArgument));
+  }
+
+  private static string GetEffectiveInstanceId(string? instanceId)
+  {
+    return string.IsNullOrWhiteSpace(instanceId) ? AppConstants.DefaultInstanceId : instanceId;
   }
 
   private static string GetInstallerFileName(string downloadPath)
@@ -273,31 +311,13 @@ internal class AgentMaintenanceService(
     return psi;
   }
 
-  private static bool IsBrandCompatible(BundleMetadataDto metadata, out string reason)
-  {
-    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
-    {
-      reason = "BrandName mismatch.";
-      return false;
-    }
-
-    if (!string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
-    {
-      reason = "Publisher mismatch.";
-      return false;
-    }
-
-    reason = string.Empty;
-    return true;
-  }
-
   private static string QuoteArgument(string value)
   {
     var escapedValue = value.Replace("\"", "\\\"");
     return $"\"{escapedValue}\"";
   }
 
-  private List<string> BuildInstallArguments()
+  private List<string> BuildInstallArguments(bool isMigration, string? targetInstanceId, string? currentInstanceId)
   {
     var arguments = new List<string>
     {
@@ -308,10 +328,26 @@ internal class AgentMaintenanceService(
       _optionsAccessor.GetRequiredTenantId().ToString()
     };
 
-    if (!string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    if (!string.IsNullOrWhiteSpace(targetInstanceId))
     {
       arguments.Add("--instance-id");
-      arguments.Add(_instanceOptions.Value.InstanceId);
+      arguments.Add(targetInstanceId);
+    }
+
+    if (isMigration)
+    {
+      // The replacing install picks its identity up from the settings file this agent already staged
+      // for it, so what has to travel is which install to stop and remove. Both values are sent,
+      // because either the brand or the instance id may be the only one that changed, and the
+      // installer has to be told a migration is happening in both cases.
+      arguments.Add("--previous-brand-name");
+      arguments.Add(BrandingConstants.BrandName);
+
+      if (!string.IsNullOrWhiteSpace(currentInstanceId))
+      {
+        arguments.Add("--previous-instance-id");
+        arguments.Add(currentInstanceId);
+      }
     }
 
     return arguments;
@@ -410,9 +446,31 @@ internal class AgentMaintenanceService(
       AppConstants.GetInstallerFileName(SystemPlatform.MacOs));
   }
 
+  /// <summary>
+  /// Asks the server which instance id this device's tenant wants. The answer is scoped to this
+  /// device's tenant, which is why it cannot ride on the anonymous bundle metadata. A null answer
+  /// means the tenant has no instance id configured, which is not a request for the default one.
+  /// </summary>
+  private async Task<string?> GetServerInstanceId(CancellationToken cancellationToken)
+  {
+    var result = await _controlrApi.Agent.Deployment.GetDeploymentOptions(cancellationToken);
+    if (!result.IsSuccess || result.Value is null)
+    {
+      _logger.LogWarning(
+        "Could not retrieve the server's instance id. Reason: {Reason}, StatusCode: {StatusCode}. " +
+        "Continuing with the brand decision only.",
+        result.Reason,
+        result.StatusCode);
+      return null;
+    }
+
+    return result.Value.InstanceId;
+  }
+
   private async Task LaunchInstaller(
     string installerPath,
     string installCommand,
+    IReadOnlyList<string> installArguments,
     CancellationToken cancellationToken)
   {
     switch (_systemEnvironment.Platform)
@@ -446,6 +504,17 @@ internal class AgentMaintenanceService(
         var launchdJobLabel = GetMacInstallerDaemonJobLabel(_instanceOptions.Value.InstanceId);
         var plistPath = GetMacInstallerDaemonPlistPath(_instanceOptions.Value.InstanceId);
 
+        // The plist was rendered by the install already on disk, so its arguments are frozen and this
+        // launch would otherwise carry none of the decisions made above. A migration depends on that,
+        // since the brand being replaced is how the installer knows to retire this install. Launching
+        // from an unmodified plist would install the new brand beside this one with both signing as
+        // the same device, so decline instead.
+        if (installArguments.Contains("--previous-brand-name", StringComparer.Ordinal)
+          && !WriteMacInstallerDaemonArguments(plistPath, [installerPath, .. installArguments]))
+        {
+          return;
+        }
+
         try
         {
           var bootoutStartInfo = GetMacLaunchctlStartInfo("launchctl", "bootout", $"system/{launchdJobLabel}");
@@ -465,6 +534,101 @@ internal class AgentMaintenanceService(
 
       default:
         throw new PlatformNotSupportedException();
+    }
+  }
+
+  /// <summary>
+  /// Rewrites the installer LaunchDaemon's <c>ProgramArguments</c> so the installer launches with the
+  /// arguments this check decided on. The plist on disk was rendered by the install that is already in
+  /// place, so without this, anything decided now cannot reach the installer on macOS. The whole array
+  /// is replaced rather than appended to, which also refreshes server URI and tenant values that were
+  /// frozen at install time.
+  /// </summary>
+  private bool WriteMacInstallerDaemonArguments(string plistPath, IReadOnlyList<string> programArguments)
+  {
+    if (!_fileSystem.FileExists(plistPath))
+    {
+      _logger.LogCritical(
+        "Cannot migrate: the installer LaunchDaemon was not found at {PlistPath}, so the installer cannot be " +
+        "told which brand it replaces. Nothing on this machine was changed.",
+        plistPath);
+      return false;
+    }
+
+    var plistContent = _fileSystem.ReadAllText(plistPath);
+    var argumentsXml = string.Concat(programArguments.Select(
+      argument => $"\n        <string>{SecurityElement.Escape(argument)}</string>"));
+
+    // "$" in a replacement string is a group reference, so an argument containing one would corrupt the
+    // rewrite. Doubling it escapes it, while the "$1" and "$2" group references below stay intact.
+    var escapedArgumentsXml = argumentsXml.Replace("$", "$$");
+
+    var updatedContent = Regex.Replace(
+      plistContent,
+      @"(<key>ProgramArguments</key>\s*<array>).*?(</array>)",
+      $"$1{escapedArgumentsXml}\n    $2",
+      RegexOptions.Singleline);
+
+    if (string.Equals(updatedContent, plistContent, StringComparison.Ordinal))
+    {
+      _logger.LogCritical(
+        "Cannot migrate: could not locate ProgramArguments in the installer LaunchDaemon at {PlistPath}, so the " +
+        "installer cannot be told which brand it replaces. Nothing on this machine was changed.",
+        plistPath);
+      return false;
+    }
+
+    _fileSystem.WriteAllText(plistPath, updatedContent);
+    _logger.LogInformation("Rewrote installer LaunchDaemon arguments at {PlistPath}.", plistPath);
+    return true;
+  }
+
+  /// <summary>
+  /// Copies this install's settings file into the settings directory the replacing install will read,
+  /// so it binds the existing device ID, tenant, and signing key instead of minting a new identity.
+  /// The server only trusts the public key it already stored for a known device, so losing the key
+  /// would leave the endpoint unable to authenticate again.
+  /// </summary>
+  private bool WriteSettingsFileForBrand(string newBrandName, string? newInstanceId)
+  {
+    try
+    {
+      var sourcePath = _fileSystemPathProvider.GetAgentAppSettingsPath();
+      if (!_fileSystem.FileExists(sourcePath))
+      {
+        _logger.LogError("Cannot migrate: this install's settings file was not found at {SourcePath}.", sourcePath);
+        return false;
+      }
+
+      if (string.IsNullOrWhiteSpace(_optionsAccessor.PrivateKey))
+      {
+        _logger.LogError(
+          "Cannot migrate: this install has no signing key, so the new brand's install could not authenticate as this device.");
+        return false;
+      }
+
+      var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(newBrandName, newInstanceId);
+      var destinationPath = Path.Combine(destinationDirectory, "appsettings.json");
+
+      _fileSystem.CreateDirectory(destinationDirectory);
+      _fileSystem.CopyFile(sourcePath, destinationPath, overwrite: true);
+
+      // This file holds the device signing key, so it gets the same restrictions as this install's
+      // own settings file rather than whatever the copy inherited.
+      _optionsAccessor.RestrictAccess(destinationPath);
+
+      _logger.LogInformation(
+        "Wrote this install's settings to {DestinationPath} for the {NewBrandName} install at instance id {NewInstanceId} to pick up.",
+        destinationPath,
+        newBrandName,
+        GetEffectiveInstanceId(newInstanceId));
+
+      return true;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to hand the settings file to brand {NewBrandName}.", newBrandName);
+      return false;
     }
   }
 }

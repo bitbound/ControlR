@@ -4,7 +4,6 @@ using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Tests.Helpers;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

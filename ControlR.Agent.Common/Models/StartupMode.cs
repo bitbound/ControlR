@@ -3,5 +3,6 @@ internal enum StartupMode
 {
   None,
   Run,
+  ServiceControl,
   Uninstall,
 }

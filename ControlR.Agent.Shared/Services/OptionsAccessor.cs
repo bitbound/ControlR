@@ -18,6 +18,13 @@ public interface IOptionsAccessor
   Guid TenantId { get; }
   string GetAppSettingsPath();
   Guid GetRequiredTenantId();
+
+  /// <summary>
+  /// Applies this install's settings-file access restrictions to another file that holds the same
+  /// secrets, which is what a hand-off to a replacing brand writes.
+  /// </summary>
+  void RestrictAccess(string path);
+
   Task UpdateAppOptions(AgentAppOptions options);
   Task UpdateId(Guid uid);
   Task UpdatePrivateKey(string privateKeyBase64);
@@ -67,6 +74,33 @@ internal class OptionsAccessor(
     : _appOptions.CurrentValue.TenantId;
   }
 
+  public void RestrictAccess(string path)
+  {
+    if (!_elevationChecker.IsElevated())
+    {
+      _logger.LogWarning("Agent is not running with elevated privileges. Skipping file permission changes for {Path}.", path);
+      return;
+    }
+    if (OperatingSystem.IsWindows())
+    {
+      _fileAccessPermissions.Set(
+        filePath: path,
+        includeCurrentUser: true,
+        isProtected: true,
+        preserveInheritance: false,
+        owner: WellKnownSidType.BuiltinAdministratorsSid,
+        allowedSids: [WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid]);
+    }
+    else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+    {
+      _fileAccessPermissions.Set(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+    }
+    else
+    {
+      throw new PlatformNotSupportedException("Unsupported operating system for setting file permissions.");
+    }
+  }
+
   public async Task UpdateAppOptions(AgentAppOptions options)
   {
     using var guard = await _updateLock.AcquireLockAsync(CancellationToken.None);
@@ -99,32 +133,5 @@ internal class OptionsAccessor(
   {
     _appOptions.CurrentValue.PrivateKey = privateKeyBase64;
     await UpdateAppOptions(_appOptions.CurrentValue);
-  }
-
-  private void RestrictAccess(string path)
-  {
-    if (!_elevationChecker.IsElevated())
-    {
-      _logger.LogWarning("Agent is not running with elevated privileges. Skipping file permission changes for {Path}.", path);
-      return;
-    }
-    if (OperatingSystem.IsWindows())
-    {
-      _fileAccessPermissions.Set(
-        filePath: path,
-        includeCurrentUser: true,
-        isProtected: true,
-        preserveInheritance: false,
-        owner: WellKnownSidType.BuiltinAdministratorsSid,
-        allowedSids: [WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid]);
-    }
-    else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-    {
-      _fileAccessPermissions.Set(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-    }
-    else
-    {
-      throw new PlatformNotSupportedException("Unsupported operating system for setting file permissions.");
-    }
   }
 }

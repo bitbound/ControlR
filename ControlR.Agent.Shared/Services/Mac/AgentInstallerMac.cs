@@ -39,12 +39,12 @@ internal class AgentInstallerMac(
   private readonly ILogger<AgentInstallerMac> _logger = logger;
   private readonly IServiceControl _serviceControl = serviceControl;
 
-  public async Task Install(AgentInstallRequest request)
+  public async Task<Result<AgentInstallOutcome>> Install(AgentInstallRequest request)
   {
     if (!await _installLock.WaitAsync(0))
     {
       _logger.LogWarning("Installer lock already acquired.  Aborting.");
-      return;
+      return Result.Fail<AgentInstallOutcome>("The installer is already running.");
     }
 
     try
@@ -54,7 +54,7 @@ internal class AgentInstallerMac(
       if (Libc.Geteuid() != 0)
       {
         _logger.LogError("Install command must be run with sudo.");
-        return;
+        return Result.Fail<AgentInstallOutcome>("Install command must be run with sudo.");
       }
 
       var appBundleInstallPath = GetInstalledAppBundlePath();
@@ -125,19 +125,39 @@ internal class AgentInstallerMac(
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
       if (!createResult.IsSuccess)
       {
-        return;
+        return createResult.ToResult(AgentInstallOutcome.Installed);
       }
 
       await WriteBundleHashFile(request.BundleSha256);
 
-      await _serviceControl.StartAgentService(throwOnFailure: false);
+      // Only one agent may hold the device's connection on the server, so the replaced install stops
+      // before this one starts. Starting beside an install that could not be stopped would leave both
+      // signing as the same device, so fail and let the caller put the replaced install back.
+      var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName, request.PreviousInstanceId);
+      if (!stopPreviousBrandResult.IsSuccess)
+      {
+        return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
+      }
+
+      try
+      {
+        await _serviceControl.StartAgentService(throwOnFailure: true);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "The {BrandName} service did not start.", BrandingConstants.BrandName);
+        return Result.Fail<AgentInstallOutcome>("Failed to start the agent service after installation.");
+      }
+
       await _serviceControl.StartDesktopClientService(throwOnFailure: false);
 
       _logger.LogInformation("Installer finished.");
+      return Result.Ok(AgentInstallOutcome.Installed);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
+      return Result.Fail<AgentInstallOutcome>(ex);
     }
     finally
     {

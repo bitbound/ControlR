@@ -27,7 +27,21 @@ internal class ServiceControlLinux(
             var serviceName = GetAgentServiceName();
             _logger.LogInformation("Starting agent service: {ServiceName}", serviceName);
 
-            await _processManager.StartAndWaitForExit("sudo", $"systemctl start {serviceName}", false, _serviceStatusTimeout);
+            var exitCode = await _processManager.StartAndWaitForExit(
+                "sudo",
+                $"systemctl start {serviceName}",
+                false,
+                _serviceStatusTimeout);
+
+            // This overload reports the exit code instead of throwing on it, so a failed start would
+            // otherwise be indistinguishable from a successful one, including to a caller that asked
+            // to be told about failures.
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException($"systemctl start {serviceName} exited with code {exitCode}.");
+            }
+
+            await ConfirmAgentServiceActive(serviceName);
 
             _logger.LogInformation("Agent service started successfully.");
         }
@@ -100,7 +114,18 @@ internal class ServiceControlLinux(
             var serviceName = GetAgentServiceName();
             _logger.LogInformation("Stopping agent service: {ServiceName}", serviceName);
 
-            await _processManager.StartAndWaitForExit("sudo", $"systemctl stop {serviceName}", false, _serviceStatusTimeout);
+            var exitCode = await _processManager.StartAndWaitForExit(
+                "sudo",
+                $"systemctl stop {serviceName}",
+                false,
+                _serviceStatusTimeout);
+
+            // Same as the start path: this overload returns the exit code rather than throwing, so a
+            // failed stop would read as success to every caller, including one that asked otherwise.
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException($"systemctl stop {serviceName} exited with code {exitCode}.");
+            }
 
             _logger.LogInformation("Agent service stopped successfully.");
         }
@@ -165,6 +190,37 @@ internal class ServiceControlLinux(
                 _logger.LogInformation(ex, "Failed to stop desktop client service.");
             }
         }
+    }
+
+    private async Task ConfirmAgentServiceActive(string serviceName)
+    {
+        // A zero exit from "systemctl start" only means systemd accepted the start job, and these
+        // units are Type=simple, so the process can exit right after the fork and the job still
+        // reports success. The caller removes the install being replaced once this returns, so
+        // confirm the unit reports active first. A Type=simple unit is active as soon as it is
+        // forked, so this retries rather than trusting a single reading.
+        const int maxAttempts = 3;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var exitCode = await _processManager.StartAndWaitForExit(
+                "sudo",
+                $"systemctl is-active --quiet {serviceName}",
+                false,
+                _serviceStatusTimeout);
+
+            if (exitCode == 0)
+            {
+                return;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+        }
+
+        throw new InvalidOperationException($"{serviceName} did not report active after starting.");
     }
 
     private string GetAgentServiceName()

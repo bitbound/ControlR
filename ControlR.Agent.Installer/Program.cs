@@ -10,6 +10,7 @@ using ControlR.Agent.Shared.Startup;
 using ControlR.ApiClient;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Serilog;
+using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.DataValidation;
 using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.Shared.Services;
@@ -21,13 +22,13 @@ using Microsoft.Extensions.Logging;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 
-const string RootDescription = "ControlR agent installer.";
+const string RootDescription = $"{BrandingConstants.BrandName} agent installer.";
 const string InstallCommandName = "install";
 const string RepairDesktopCommandName = "repair-desktop";
 const string UninstallCommandName = "uninstall";
-const string InstallCommandDescription = "Install the ControlR agent bundle.";
+const string InstallCommandDescription = $"Install the {BrandingConstants.BrandName} agent bundle.";
 const string RepairDesktopCommandDescription = "Repair the installed desktop client payload without modifying the agent service.";
-const string UninstallCommandDescription = "Uninstall the ControlR agent bundle.";
+const string UninstallCommandDescription = $"Uninstall the {BrandingConstants.BrandName} agent bundle.";
 const string ServerUriDescription = "The fully-qualified server URI to which the agent will connect (e.g. 'https://my.example.com' or 'https://my.example.com:8080').";
 const string InstanceIdDescription = "An instance ID for this agent installation, which allows multiple agent installations.  This is typically the server origin (e.g. 'example.controlr.app').";
 const string DeviceTagsDescription = "An optional, comma-separated list of tags to which the agent will be assigned.";
@@ -52,6 +53,10 @@ const string DeviceIdLongAlias = "--device-id";
 const string CustomerIdShortAlias = "-c";
 const string CustomerIdLongAlias = "--customer";
 const string CustomerIdDescription = "An optional customer ID to assign the device to upon installation.";
+const string PreviousBrandNameDescription = "Brand name of the agent install being replaced. Set only during a cross-brand migration. That install is removed once this brand is installed and running. The server is what authorizes the migration.";
+const string PreviousBrandNameLongAlias = "--previous-brand-name";
+const string PreviousInstanceIdDescription = "Instance ID of the agent install being replaced, set only during a migration. Omit when that install used the default instance ID. That install is removed once this brand is installed and running.";
+const string PreviousInstanceIdLongAlias = "--previous-instance-id";
 const string TempDirectoryPrefix = "controlr-install-";
 const string TempBundleFileName = "ControlR.Agent.bundle.zip";
 
@@ -132,6 +137,18 @@ static Command GetInstallCommand()
     Description = CustomerIdDescription
   };
 
+  var previousBrandNameOption = new Option<string?>(PreviousBrandNameLongAlias)
+  {
+    Required = false,
+    Description = PreviousBrandNameDescription,
+  };
+
+  var previousInstanceIdOption = new Option<string?>(PreviousInstanceIdLongAlias)
+  {
+    Required = false,
+    Description = PreviousInstanceIdDescription,
+  };
+
   var installCommand = new Command(InstallCommandName, InstallCommandDescription)
   {
     serverUriOption,
@@ -142,6 +159,8 @@ static Command GetInstallCommand()
     installerKeyIdOption,
     deviceIdOption,
     customerIdOption,
+    previousBrandNameOption,
+    previousInstanceIdOption,
   };
 
   installCommand.SetAction(async parseResult =>
@@ -158,7 +177,11 @@ static Command GetInstallCommand()
       CustomerId = parseResult.GetValue(customerIdOption),
     };
 
-    return await RunInstall(installRequest, parseResult.GetValue(instanceIdOption));
+    return await RunInstall(
+      installRequest,
+      parseResult.GetValue(instanceIdOption),
+      parseResult.GetValue(previousBrandNameOption),
+      parseResult.GetValue(previousInstanceIdOption));
   });
 
   return installCommand;
@@ -178,7 +201,8 @@ static Command GetUninstallCommand()
     instanceIdOption,
   };
 
-  uninstallCommand.SetAction(async parseResult => await RunUninstall(parseResult.GetValue(instanceIdOption)));
+  uninstallCommand.SetAction(async parseResult => await RunUninstall(
+    parseResult.GetValue(instanceIdOption)));
 
   return uninstallCommand;
 }
@@ -202,7 +226,11 @@ static Command GetRepairDesktopCommand()
   return repairCommand;
 }
 
-static async Task<int> RunInstall(AgentInstallRequest request, string? instanceId)
+static async Task<int> RunInstall(
+  AgentInstallRequest request,
+  string? instanceId,
+  string? previousBrandArg,
+  string? previousInstanceIdArg)
 {
   using var host = CreateInstallerHost(instanceId, request.ServerUri);
   var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent.Installer");
@@ -210,6 +238,10 @@ static async Task<int> RunInstall(AgentInstallRequest request, string? instanceI
   var fileSystem = host.Services.GetRequiredService<IFileSystem>();
   var tempDir = Path.Combine(Path.GetTempPath(), $"{TempDirectoryPrefix}{Guid.NewGuid():N}");
   var tempBundlePath = Path.Combine(tempDir, TempBundleFileName);
+
+  // Declared out here so the catch can roll the replaced install back too.
+  string? previousBrand = null;
+  string? previousInstanceId = null;
 
   try
   {
@@ -234,18 +266,61 @@ static async Task<int> RunInstall(AgentInstallRequest request, string? instanceI
     var metadata = metadataResult.Value;
     logger.LogInformation("Bundle version: {Version}", metadata.Version);
 
-    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal) ||
-        !string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
+    // The server this install is pointed at is the authority. If its bundle names a different brand,
+    // this installer is not the right binary to be running here. Brands are compared by the key that
+    // names every directory, service, and registry key, so two names that reduce to the same key are
+    // the same install and this installer is still the right binary.
+    if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName))
     {
       logger.LogCritical(
-        "Refusing to install: server bundle is for a different brand than this installer. " +
-        "Installer brand: {InstallerBrandName}/{InstallerPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
-        "If this server is correct, run the matching installer instead.",
-        BrandingConstants.BrandName,
-        BrandingConstants.Publisher,
+        "Refusing to install: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
+        "Nothing on this machine was changed.",
         metadata.BrandName,
-        metadata.Publisher);
+        BrandingConstants.BrandName);
       return 1;
+    }
+
+    // A migration is indicated by the install being replaced, which the resident install passes in.
+    var previousInstall = PreviousInstall.Resolve(
+      previousBrandArg,
+      previousInstanceIdArg,
+      BrandingConstants.BrandName,
+      instanceId);
+
+    if (previousInstall is null)
+    {
+      if (!string.IsNullOrWhiteSpace(previousBrandArg) || !string.IsNullOrWhiteSpace(previousInstanceIdArg))
+      {
+        logger.LogWarning("Ignoring the previous-install arguments because they describe this same install.");
+      }
+    }
+    else
+    {
+      previousBrand = previousInstall.BrandName;
+      previousInstanceId = previousInstall.InstanceId;
+    }
+
+    if (previousBrand is not null)
+    {
+      // The replacing install writes its settings into this brand's directory before this runs, and
+      // those settings are what carry the device ID and signing key across. Without them this install
+      // registers a new device and signs with a key the server has never been told about.
+      var optionsAccessor = host.Services.GetRequiredService<IOptionsAccessor>();
+      if (optionsAccessor.DeviceId == Guid.Empty || string.IsNullOrWhiteSpace(optionsAccessor.PrivateKey))
+      {
+        logger.LogCritical(
+          "Refusing to migrate from brand {PreviousBrandName}: this brand's settings file carries no device ID or no signing key, " +
+          "so this install would register a new device and the existing one could never authenticate again. Nothing on this machine was changed.",
+          previousBrand);
+        return 1;
+      }
+
+      logger.LogWarning(
+        "Migrating install from brand {PreviousBrandName} (instance id {PreviousInstanceId}) to {InstallerBrandName} (instance id {InstallerInstanceId}). Device identity and signing key carry over from the settings file already staged for this brand.",
+        previousBrand,
+        previousInstanceId,
+        BrandingConstants.BrandName,
+        GetEffectiveInstanceId(instanceId));
     }
 
     logger.LogInformation("Downloading bundle to temp file: {TempBundlePath}", tempBundlePath);
@@ -262,16 +337,44 @@ static async Task<int> RunInstall(AgentInstallRequest request, string? instanceI
       DeviceId = request.DeviceId,
       TagIds = request.TagIds,
       CustomerId = request.CustomerId,
+      PreviousBrandName = previousBrand,
+      PreviousInstanceId = previousInstanceId,
     };
 
-    await installer.Install(installRequest);
+    var installResult = await installer.Install(installRequest);
+    if (!installResult.IsSuccess)
+    {
+      logger.LogError("Installation failed. Reason: {Reason}", installResult.Reason);
+      await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
+      return 1;
+    }
+
+    if (installResult.Value == AgentInstallOutcome.HandedOff)
+    {
+      // This process copied itself to a temp directory and started that copy, which owns the result.
+      // Rolling back here would put the replaced install back while the copy is still replacing it,
+      // and retiring here would remove the install that copy is still working from.
+      logger.LogInformation("This process handed the install to a temp copy, which will report its own result.");
+      return 0;
+    }
 
     logger.LogInformation("Installation completed successfully.");
+
+    if (previousBrand is not null)
+    {
+      // Best effort. This install is already working, so a failure here must not report a failed
+      // install. A leftover old-brand service is recoverable; reporting success as failure is not.
+      await installer.RetirePreviousBrand(previousBrand, previousInstanceId);
+    }
+
     return 0;
   }
   catch (Exception ex)
   {
     logger.LogError(ex, "Installation failed.");
+
+    var installer = host.Services.GetRequiredService<IAgentInstaller>();
+    await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
     return 1;
   }
   finally
@@ -287,6 +390,35 @@ static async Task<int> RunInstall(AgentInstallRequest request, string? instanceI
         logger.LogWarning(ex, "Failed to delete temporary directory {TempDir}.", tempDir);
       }
     }
+  }
+}
+
+/// <summary>
+/// Puts a running agent back after a failed install. Every install stops a service before replacing
+/// files, so a failure part-way through could otherwise leave the machine with nothing running and no
+/// way in except a physical visit.
+/// </summary>
+static async Task RecoverFromFailedInstall(
+  IHost host,
+  IAgentInstaller installer,
+  ILogger logger,
+  string? previousBrand,
+  string? previousInstanceId)
+{
+  try
+  {
+    if (previousBrand is not null)
+    {
+      await installer.RestorePreviousBrand(previousBrand, previousInstanceId);
+      return;
+    }
+
+    logger.LogWarning("Install did not complete. Starting this brand's service from what is already on disk.");
+    await host.Services.GetRequiredService<IServiceControl>().StartAgentService(throwOnFailure: false);
+  }
+  catch (Exception ex)
+  {
+    logger.LogError(ex, "Failed to put a running agent back after the failed install.");
   }
 }
 
@@ -341,17 +473,16 @@ static async Task<int> RunRepairDesktop(string? instanceId)
     var metadata = metadataResult.Value;
     logger.LogInformation("Bundle version: {Version}", metadata.Version);
 
-    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal) ||
-        !string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
+    // Repair writes the desktop client payload into an existing install, so it only ever applies to
+    // that install's own brand. A cross-brand bundle is served by the install command, which moves
+    // the whole install rather than dropping a foreign payload into the wrong directory.
+    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
     {
       logger.LogCritical(
-        "Refusing to repair desktop client: server bundle is for a different brand than this installer. " +
-        "Installer brand: {InstallerBrandName}/{InstallerPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
+        "Refusing to repair desktop client: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
         "If this server is correct, run the matching installer instead.",
-        BrandingConstants.BrandName,
-        BrandingConstants.Publisher,
         metadata.BrandName,
-        metadata.Publisher);
+        BrandingConstants.BrandName);
       return 1;
     }
 
@@ -409,6 +540,15 @@ static FileSystemPathProvider GetTempPathProvider(HostApplicationBuilder builder
     .GetSection(InstanceOptions.SectionKey)
     .Get<InstanceOptions>() ?? new InstanceOptions();
 
+  return CreateStandalonePathProvider(instanceOptions.InstanceId);
+}
+
+/// <summary>
+/// Builds a path provider without a service container, for the steps that must run before the host
+/// exists or that need to address a brand other than the one compiled into this executable.
+/// </summary>
+static FileSystemPathProvider CreateStandalonePathProvider(string? instanceId)
+{
   IElevationChecker elevationChecker =
     SystemEnvironment.Instance.IsWindows()
       ? new ElevationCheckerWin()
@@ -422,7 +562,12 @@ static FileSystemPathProvider GetTempPathProvider(HostApplicationBuilder builder
     SystemEnvironment.Instance,
     elevationChecker,
     new FileSystem(new SerilogLogger<FileSystem>()),
-    new OptionsMonitorWrapper<InstanceOptions>(instanceOptions));
+    new OptionsMonitorWrapper<InstanceOptions>(new InstanceOptions { InstanceId = instanceId }));
+}
+
+static string GetEffectiveInstanceId(string? instanceId)
+{
+  return string.IsNullOrWhiteSpace(instanceId) ? AppConstants.DefaultInstanceId : instanceId;
 }
 
 static Guid[]? ParseTagIds(string? deviceTags)

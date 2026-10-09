@@ -154,6 +154,43 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   }
 
   [Theory]
+  [InlineData(SystemPlatform.Windows, "Acme ", null, false, false, @"C:\ProgramData\Acme_\default")]
+  [InlineData(SystemPlatform.Windows, "Acme Remote", null, false, false, @"C:\ProgramData\Acme_Remote\default")]
+  [InlineData(SystemPlatform.Windows, "Acme Remote", "inst-1", false, false, @"C:\ProgramData\Acme_Remote\inst-1")]
+  [InlineData(SystemPlatform.Windows, "Acme Remote", "inst-1", false, true, @"C:\ProgramData\Acme_Remote\Debug\inst-1")]
+  [InlineData(SystemPlatform.Linux, "Acme Remote", "inst-1", true, false, "/etc/acme_remote/inst-1")]
+  [InlineData(SystemPlatform.Linux, "Acme Remote", "inst-1", false, false, "/home/testuser/.acme_remote/inst-1")]
+  [InlineData(SystemPlatform.MacOs, "Acme Remote", "inst-1", true, false, "/etc/acme_remote/inst-1")]
+  [InlineData(SystemPlatform.MacOs, "Acme Remote", "inst-1", false, false, "/Users/testuser/.acme_remote/inst-1")]
+  [InlineData(SystemPlatform.Linux, "Acme_Remote", "inst-1", true, false, "/etc/acme_remote/inst-1")]
+  public void GetSettingsDirectoryFor_ForeignBrand_ReturnsThatBrandsInstallDirectory(
+    SystemPlatform platform,
+    string brandName,
+    string? instanceId,
+    bool isElevated,
+    bool isDebug,
+    string expectedPath)
+  {
+    Setup(platform, instanceId, isElevated, isDebug);
+
+    var result = _pathProvider.GetSettingsDirectoryFor(brandName, instanceId);
+
+    Assert.Equal(expectedPath, result);
+  }
+
+  [Theory]
+  [InlineData(null)]
+  [InlineData("")]
+  [InlineData("   ")]
+  public void GetSettingsDirectoryFor_MissingBrandName_Throws(string? brandName)
+  {
+    Setup(SystemPlatform.Windows, null);
+
+    Assert.Throws<ArgumentException>(() =>
+      _pathProvider.GetSettingsDirectoryFor(brandName!, "inst-1"));
+  }
+
+  [Theory]
   [InlineData(SystemPlatform.Linux, null, "/var/log/controlr/default/ControlR.DesktopClient")]
   [InlineData(SystemPlatform.Linux, "localhost", "/var/log/controlr/localhost/ControlR.DesktopClient")]
   [InlineData(SystemPlatform.MacOs, "controlr.test.com", "/private/var/log/controlr/controlr.test.com/ControlR.DesktopClient")]

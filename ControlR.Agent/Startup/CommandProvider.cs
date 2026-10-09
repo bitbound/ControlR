@@ -4,6 +4,7 @@ using System.Diagnostics;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Startup;
 using ControlR.Agent.Shared.Interfaces;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.DataValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,7 +17,7 @@ internal static class CommandProvider
   {
     var instanceIdOption = CreateInstanceIdOption();
 
-    var runCommand = new Command("run", "Run the ControlR service.")
+    var runCommand = new Command("run", $"Run the {BrandingConstants.BrandName} service.")
     {
       instanceIdOption
     };
@@ -31,11 +32,75 @@ internal static class CommandProvider
     return runCommand;
   }
 
+  internal static Command GetStartServiceCommand(string[] args)
+  {
+    var instanceIdOption = CreateInstanceIdOption();
+
+    var startServiceCommand = new Command("start-service", $"Start the {BrandingConstants.BrandName} service without reinstalling it.")
+    {
+      instanceIdOption
+    };
+
+    startServiceCommand.SetAction(async parseResult =>
+    {
+      var instanceId = parseResult.GetValue(instanceIdOption);
+      using var host = CreateHost(StartupMode.ServiceControl, args, instanceId);
+      var serviceControl = host.Services.GetRequiredService<IServiceControl>();
+
+      try
+      {
+        // The exit code is the only signal a caller gets, so a swallowed failure here would read as
+        // success and a migration could remove an install whose replacement never came up.
+        await serviceControl.StartAgentService(throwOnFailure: true);
+        return 0;
+      }
+      catch (Exception ex)
+      {
+        Console.Error.WriteLine(ex.Message);
+        return 1;
+      }
+    });
+
+    return startServiceCommand;
+  }
+
+  internal static Command GetStopServiceCommand(string[] args)
+  {
+    var instanceIdOption = CreateInstanceIdOption();
+
+    var stopServiceCommand = new Command("stop-service", $"Stop the {BrandingConstants.BrandName} service without removing it.")
+    {
+      instanceIdOption
+    };
+
+    stopServiceCommand.SetAction(async parseResult =>
+    {
+      var instanceId = parseResult.GetValue(instanceIdOption);
+      using var host = CreateHost(StartupMode.ServiceControl, args, instanceId);
+      var serviceControl = host.Services.GetRequiredService<IServiceControl>();
+
+      try
+      {
+        // A stop that silently failed would leave two agents signing as the same device, so the
+        // caller has to be able to tell.
+        await serviceControl.StopAgentService(throwOnFailure: true);
+        return 0;
+      }
+      catch (Exception ex)
+      {
+        Console.Error.WriteLine(ex.Message);
+        return 1;
+      }
+    });
+
+    return stopServiceCommand;
+  }
+
   internal static Command GetUninstallCommand(string[] args)
   {
     var instanceIdOption = CreateInstanceIdOption();
 
-    var unInstallCommand = new Command("uninstall", "Uninstall the ControlR service.")
+    var unInstallCommand = new Command("uninstall", $"Uninstall the {BrandingConstants.BrandName} service.")
     {
       instanceIdOption
     };

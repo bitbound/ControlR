@@ -39,10 +39,18 @@ internal class ServiceControlMac(
 
       _logger.LogInformation("Agent service started successfully.");
     }
-    catch (OperationCanceledException)
+    catch (OperationCanceledException ex)
     {
-      _logger.LogWarning("Timed out while waiting for agent to start.");
-      return;
+      // A start that never completed is the signal a caller uses to decide whether the install being
+      // replaced may be removed, so a caller that asked to be told about failures has to hear this one
+      // too. Swallowing it here would report a service as running that may not be.
+      if (throwOnFailure)
+      {
+        _logger.LogError(ex, "Timed out while waiting for the agent service to start.");
+        throw;
+      }
+
+      _logger.LogWarning(ex, "Timed out while waiting for agent to start.");
     }
     catch (Exception ex)
     {

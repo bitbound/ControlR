@@ -94,7 +94,9 @@ internal static class HostApplicationBuilderExtensions
     }
 
     services.AddHttpClient<IDownloadsApi, DownloadsApi>(ConfigureHttpClient);
-    services.AddControlrApiClient(options => options.BaseUrl = apiBaseUrl);
+    services.AddControlrApiClient(
+      options => options.BaseUrl = apiBaseUrl,
+      client => client.AddHttpMessageHandler<AgentRequestSigningHandler>());
 
     builder.Services.AddStarRedactor();
     services.AddAgentSharedServices();

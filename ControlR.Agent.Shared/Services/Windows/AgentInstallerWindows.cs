@@ -43,12 +43,12 @@ internal class AgentInstallerWindows(
   private readonly IRegistryAccessor _registryAccessor = registryAccessor;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
-  public async Task Install(AgentInstallRequest request)
+  public async Task<Result<AgentInstallOutcome>> Install(AgentInstallRequest request)
   {
     if (!await _installLock.WaitAsync(0))
     {
       Logger.LogWarning("Installer lock already acquired.  Aborting.");
-      return;
+      return Result.Fail<AgentInstallOutcome>("The installer is already running.");
     }
 
     try
@@ -58,15 +58,18 @@ internal class AgentInstallerWindows(
       if (!_systemEnvironment.IsDebug && !_elevationChecker.IsElevated())
       {
         Logger.LogError("Install command must be run as administrator.");
-        return;
+        return Result.Fail<AgentInstallOutcome>("Install command must be run as administrator.");
       }
 
       if (IsRunningFromAppDir())
       {
-        return;
+        // Reached only when the installer is started from inside its own install directory, which the
+        // updater never does because it downloads to temp first. Control passes to the copy this just
+        // started, and that copy owns the result, so this is a handoff rather than a failure. A caller
+        // that read it as a failure would put the old install back while the copy is still replacing
+        // it, and both would briefly run.
+        return Result.Ok(AgentInstallOutcome.HandedOff);
       }
-
-      await using var callback = new CallbackDisposableAsync(StartService);
 
       var installDir = GetInstallDirectory();
       var targetAgentPath = FilesystemPathProvider.GetAgentExecutablePath();
@@ -76,13 +79,13 @@ internal class AgentInstallerWindows(
       if (!stopResult.IsSuccess)
       {
         Logger.LogError("Failed to stop existing agent service. Aborting installation.");
-        return;
+        return Result.Fail<AgentInstallOutcome>("Failed to stop existing agent service.");
       }
       stopResult = StopProcesses(targetAgentPath, targetDesktopClientPath);
       if (!stopResult.IsSuccess)
       {
         Logger.LogError("Failed to stop existing agent processes. Aborting installation.");
-        return;
+        return Result.Fail<AgentInstallOutcome>("Failed to stop existing agent processes.");
       }
 
       try
@@ -105,7 +108,7 @@ internal class AgentInstallerWindows(
       catch (Exception ex)
       {
         Logger.LogError(ex, "Unable to copy app to install directory.  Aborting.");
-        return;
+        return Result.Fail<AgentInstallOutcome>("Unable to copy app to install directory.");
       }
 
       await UpdateAppSettings(request.ServerUri, request.TenantId, request.DeviceId);
@@ -113,7 +116,7 @@ internal class AgentInstallerWindows(
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
       if (!createResult.IsSuccess)
       {
-        return;
+        return createResult.ToResult(AgentInstallOutcome.Installed);
       }
 
       await WriteBundleHashFile(request.BundleSha256);
@@ -133,7 +136,7 @@ internal class AgentInstallerWindows(
       if (!result.IsSuccess)
       {
         Logger.LogResult(result);
-        return;
+        return Result.Fail<AgentInstallOutcome>("Failed to register the agent service.");
       }
 
       var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
@@ -143,11 +146,29 @@ internal class AgentInstallerWindows(
       Logger.LogInformation("Creating uninstall registry key.");
       CreateUninstallKey();
 
+      // Only one agent may hold the device's connection on the server, so the replaced install stops
+      // before this one starts. Starting beside an install that could not be stopped would leave both
+      // signing as the same device, so fail and let the caller put the replaced install back.
+      var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName, request.PreviousInstanceId);
+      if (!stopPreviousBrandResult.IsSuccess)
+      {
+        return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
+      }
+
+      var startResult = await StartService();
+      if (!startResult.IsSuccess)
+      {
+        Logger.LogError("The {BrandName} service did not start.", BrandingConstants.BrandName);
+        return startResult.ToResult(AgentInstallOutcome.Installed);
+      }
+
       Logger.LogInformation("Install completed.");
+      return Result.Ok(AgentInstallOutcome.Installed);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
+      return Result.Fail<AgentInstallOutcome>(ex);
     }
     finally
     {
@@ -263,9 +284,9 @@ internal class AgentInstallerWindows(
         }
       }
 
-      // Remove Secure Attention Sequence policy to allow app to simulate Ctrl + Alt + Del.
-      _registryAccessor.SetSoftwareSasGeneration(false);
-
+      // SoftwareSASGeneration is a single machine-wide value, not one per install. Clearing it on
+      // uninstall switches off Ctrl + Alt + Del simulation for every other agent still on the
+      // machine, silently, since the failure is swallowed at the point SAS is generated. Leave it.
       GetRegistryBaseKey().DeleteSubKeyTree(GetUninstallKeyPath(), false);
 
       Logger.LogInformation("Uninstall completed.");
@@ -442,13 +463,32 @@ internal class AgentInstallerWindows(
     }
   }
 
-  private async Task StartService()
+  private Task<Result> StartService()
   {
     Logger.LogInformation("Starting service.");
-    var startResult = await _processes.GetProcessOutput("cmd.exe", $"/c sc.exe start \"{GetServiceName()}\"");
-    if (!startResult.IsSuccess)
+
+    // "sc.exe start" returns as soon as the start is requested, so its result says nothing about
+    // whether the service came up. Waiting for the controller to report Running is the real signal,
+    // and the caller uses it to decide whether the install being replaced may be removed. Starting
+    // through the controller only when the service is stopped avoids a second start request against a
+    // service that is already starting, which the controller rejects.
+    try
     {
-      Logger.LogError("Failed to start service after installation: {msg}", startResult.Reason);
+      var serviceName = GetServiceName();
+      using var serviceController = new ServiceController(serviceName);
+
+      if (serviceController.Status == ServiceControllerStatus.Stopped)
+      {
+        serviceController.Start();
+      }
+
+      serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(60));
+      return Task.FromResult(Result.Ok());
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "The {ServiceName} service did not reach the running state.", GetServiceName());
+      return Task.FromResult(Result.Fail(ex));
     }
   }
 

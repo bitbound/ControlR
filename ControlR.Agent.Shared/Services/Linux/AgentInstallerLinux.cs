@@ -43,12 +43,12 @@ internal class AgentInstallerLinux(
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly IServiceControl _serviceControl = serviceControl;
 
-  public async Task Install(AgentInstallRequest request)
+  public async Task<Result<AgentInstallOutcome>> Install(AgentInstallRequest request)
   {
     if (!await _installLock.WaitAsync(0))
     {
       _logger.LogWarning("Installer lock already acquired.  Aborting.");
-      return;
+      return Result.Fail<AgentInstallOutcome>("The installer is already running.");
     }
 
     try
@@ -58,7 +58,7 @@ internal class AgentInstallerLinux(
       if (!_elevationChecker.IsElevated())
       {
         _logger.LogError("Install command must be run with sudo.");
-        return;
+        return Result.Fail<AgentInstallOutcome>("Install command must be run with sudo.");
       }
 
       var installDir = GetInstallDirectory();
@@ -101,7 +101,7 @@ internal class AgentInstallerLinux(
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
       if (!createResult.IsSuccess)
       {
-        return;
+        return createResult.ToResult(AgentInstallOutcome.Installed);
       }
 
       await WriteBundleHashFile(request.BundleSha256);
@@ -125,18 +125,40 @@ internal class AgentInstallerLinux(
       psi.Arguments = $"systemctl --global enable {desktopServiceName}";
       await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
-      _logger.LogInformation("Restarting agent service.");
-      psi.Arguments = $"systemctl restart {serviceName}";
-      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+      // Only one agent may hold the device's connection on the server, so the replaced install stops
+      // before this one starts. Starting beside an install that could not be stopped would leave both
+      // signing as the same device, so fail and let the caller put the replaced install back.
+      var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName, request.PreviousInstanceId);
+      if (!stopPreviousBrandResult.IsSuccess)
+      {
+        return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
+      }
+
+      _logger.LogInformation("Starting agent service.");
+      try
+      {
+        // The service control owns the start, because it also confirms the unit reports active rather
+        // than trusting that systemd accepted the start job. A Type=simple unit is active as soon as
+        // it is forked, so a process that dies immediately still leaves a zero exit behind. The
+        // caller uses this verdict to decide whether the install being replaced may be removed.
+        await _serviceControl.StartAgentService(throwOnFailure: true);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "The {BrandName} service did not start.", BrandingConstants.BrandName);
+        return Result.Fail<AgentInstallOutcome>("Failed to start the agent service after installation.");
+      }
 
       _logger.LogInformation("Starting desktop user services for logged-in users.");
       await _serviceControl.StartDesktopClientService(throwOnFailure: false);
 
       _logger.LogInformation("Install completed.");
+      return Result.Ok(AgentInstallOutcome.Installed);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
+      return Result.Fail<AgentInstallOutcome>(ex);
     }
     finally
     {

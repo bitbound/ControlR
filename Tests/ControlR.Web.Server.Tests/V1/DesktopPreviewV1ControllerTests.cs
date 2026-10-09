@@ -1,7 +1,6 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Api.V1;
-using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;

@@ -5,7 +5,6 @@ using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 

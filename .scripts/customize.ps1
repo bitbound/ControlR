@@ -754,9 +754,6 @@ if (Test-Path -LiteralPath $installerProgramFile) {
   $installerOriginal = $installerProgramContent
 
   $installerProgramContent = $installerProgramContent `
-    -Replace ('const string RootDescription = ".*?"', "const string RootDescription = `"$BrandName agent installer.`"") `
-    -Replace ('const string InstallCommandDescription = ".*?"', "const string InstallCommandDescription = `"Install the $BrandName agent bundle.`"") `
-    -Replace ('const string UninstallCommandDescription = ".*?"', "const string UninstallCommandDescription = `"Uninstall the $BrandName agent bundle.`"") `
     -Replace ('const string TempDirectoryPrefix = ".*?"', "const string TempDirectoryPrefix = `"$unixBrandKey-install-`"") `
     -Replace ('const string TempBundleFileName = ".*?"', "const string TempBundleFileName = `"$brandKey.Agent.bundle.zip`"") `
     -Replace ('example\.\w+\.app', "example.$unixBrandKey.app")

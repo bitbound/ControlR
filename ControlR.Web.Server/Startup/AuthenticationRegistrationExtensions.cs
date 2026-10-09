@@ -69,7 +69,9 @@ public static class AuthenticationRegistrationExtensions
             return ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme;
           }
 
-          // Otherwise, use Identity cookies for web UI
+          // Device-signed agent requests are deliberately absent here. This scheme is reached only by
+          // a policy that names it, so a device cannot authenticate to a bare [Authorize] endpoint
+          // whose default policy asks only for an authenticated user.
           return IdentityConstants.ApplicationScheme;
         };
       });
@@ -107,6 +109,11 @@ public static class AuthenticationRegistrationExtensions
     // Add service account credential authentication (x-api-key).
     authBuilder.AddScheme<ServiceAccountCredentialAuthenticationSchemeOptions, ServiceAccountCredentialAuthenticationHandler>(
       ServiceAccountCredentialAuthenticationSchemeOptions.DefaultScheme,
+      _ => { });
+
+    // Add installed-agent signature authentication (x-agent-signature).
+    authBuilder.AddScheme<AgentSignatureAuthenticationSchemeOptions, AgentSignatureAuthenticationHandler>(
+      AgentSignatureAuthenticationSchemeOptions.DefaultScheme,
       _ => { });
 
     hostBuilder.Services
