@@ -281,36 +281,23 @@ static async Task<int> RunInstall(
     }
 
     // A migration is indicated by the install being replaced, which the resident install passes in.
-    // Names are kept as-is because the key derived from a brand name is what named the install being
-    // replaced, and that key is derived without trimming.
-    var suppliedPreviousBrand = string.IsNullOrWhiteSpace(previousBrandArg) ? null : previousBrandArg;
-    var suppliedPreviousInstanceId = string.IsNullOrWhiteSpace(previousInstanceIdArg) ? null : previousInstanceIdArg;
+    var previousInstall = PreviousInstall.Resolve(
+      previousBrandArg,
+      previousInstanceIdArg,
+      BrandingConstants.BrandName,
+      instanceId);
 
-    if (suppliedPreviousBrand is not null || suppliedPreviousInstanceId is not null)
+    if (previousInstall is null)
     {
-      // Either the brand or the instance id may be the only thing that changed. The instance id is
-      // deliberately not defaulted to this install's, because the agent omits --previous-instance-id
-      // exactly when the install being replaced used the default instance id, so defaulting here
-      // would send the stop and retire at this install's own directory instead of that one.
-      var resolvedPreviousBrand = suppliedPreviousBrand ?? BrandingConstants.BrandName;
-      var resolvedPreviousInstanceId = suppliedPreviousInstanceId;
-
-      var isThisSameInstall =
-        BrandNames.AreSameInstall(resolvedPreviousBrand, BrandingConstants.BrandName) &&
-        string.Equals(
-          GetEffectiveInstanceId(resolvedPreviousInstanceId),
-          GetEffectiveInstanceId(instanceId),
-          StringComparison.Ordinal);
-
-      if (isThisSameInstall)
+      if (!string.IsNullOrWhiteSpace(previousBrandArg) || !string.IsNullOrWhiteSpace(previousInstanceIdArg))
       {
         logger.LogWarning("Ignoring the previous-install arguments because they describe this same install.");
       }
-      else
-      {
-        previousBrand = resolvedPreviousBrand;
-        previousInstanceId = resolvedPreviousInstanceId;
-      }
+    }
+    else
+    {
+      previousBrand = previousInstall.BrandName;
+      previousInstanceId = previousInstall.InstanceId;
     }
 
     if (previousBrand is not null)
