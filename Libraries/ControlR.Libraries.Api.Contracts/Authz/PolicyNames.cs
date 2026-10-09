@@ -1,7 +1,7 @@
 namespace ControlR.Libraries.Api.Contracts.Authz;
 
 /// <summary>
-/// Names of the authorization policies.
+/// Names of the permission-based authorization policies.
 /// </summary>
 public static class PolicyNames
 {
@@ -12,7 +12,6 @@ public static class PolicyNames
   public const string RequireDeviceGroupAssignDevices = "RequireDeviceGroupAssignDevices";
   public const string RequireDeviceGroupsRead = "RequireDeviceGroupsRead";
   public const string RequireDeviceGroupsWrite = "RequireDeviceGroupsWrite";
-  public const string RequireInstalledAgent = "RequireInstalledAgent";
   public const string RequireInstallerKeyAnyRead = "RequireInstallerKeyAnyRead";
   public const string RequireInstallerKeyAnyWrite = "RequireInstallerKeyAnyWrite";
   public const string RequireInstallerKeyOthersWrite = "RequireInstallerKeyOthersWrite";
