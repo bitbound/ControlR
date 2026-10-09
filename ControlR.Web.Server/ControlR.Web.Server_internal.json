@@ -5654,10 +5654,7 @@
         },
         "security": [
           {
-            "Cookie": [ ]
-          },
-          {
-            "PersonalAccessToken": [ ]
+            "AgentSignature": [ ]
           }
         ]
       }
@@ -8953,6 +8950,12 @@
       }
     },
     "securitySchemes": {
+      "AgentSignature": {
+        "type": "apiKey",
+        "description": "Device-signed agent request",
+        "name": "x-agent-signature",
+        "in": "header"
+      },
       "Cookie": {
         "type": "apiKey",
         "description": "Interactive browser session cookie",

@@ -131,6 +131,24 @@ public class AgentDeploymentOptionsEndpointTests(ITestOutputHelper testOutput)
     Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
   }
 
+  [Fact]
+  public async Task SignedDeviceRequest_ToABareAuthorizeEndpoint_IsRejected()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);
+    var (client, tenantId, deviceId, keyProvider, keyPair) = await SetupTenantAndDevice(testServer);
+
+    // This endpoint carries a bare [Authorize], so its policy asks only for an authenticated user and
+    // names no scheme. A device signature must not satisfy that, or any enrolled device could read
+    // endpoints built for interactive users, and this principal has no user id claim, so the tenant
+    // filters would not narrow what it reads.
+    const string path = "/api/user-server-settings/file-upload-max-size";
+    using var request = CreateSignedRequestForKeyProvider(keyProvider, keyPair, deviceId, path);
+
+    var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+  }
+
   private static HttpRequestMessage CreateSignedRequest(
     IEd25519KeyProvider keyProvider,
     Ed25519KeyPair keyPair,
@@ -139,6 +157,15 @@ public class AgentDeploymentOptionsEndpointTests(ITestOutputHelper testOutput)
   {
     // The marker keeps each signed payload distinct, so no two cases share a signature.
     var pathAndQuery = $"{HttpConstants.Agent.DeploymentOptionsEndpoint}?case={marker}";
+    return CreateSignedRequestForKeyProvider(keyProvider, keyPair, deviceId, pathAndQuery);
+  }
+
+  private static HttpRequestMessage CreateSignedRequestForKeyProvider(
+    IEd25519KeyProvider keyProvider,
+    Ed25519KeyPair keyPair,
+    Guid deviceId,
+    string pathAndQuery)
+  {
     var attestation = new AgentRequestAttestationDto(deviceId, HttpMethod.Get.Method, pathAndQuery);
     var signedDto = keyProvider.Sign(attestation, keyPair.PrivateKey, Convert.ToBase64String(keyPair.PublicKey));
 
