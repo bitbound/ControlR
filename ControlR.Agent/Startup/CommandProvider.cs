@@ -4,6 +4,7 @@ using System.Diagnostics;
 using ControlR.Agent.Common.Models;
 using ControlR.Agent.Common.Startup;
 using ControlR.Agent.Shared.Interfaces;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.DataValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,7 +17,7 @@ internal static class CommandProvider
   {
     var instanceIdOption = CreateInstanceIdOption();
 
-    var runCommand = new Command("run", "Run the ControlR service.")
+    var runCommand = new Command("run", $"Run the {BrandingConstants.BrandName} service.")
     {
       instanceIdOption
     };
@@ -35,7 +36,7 @@ internal static class CommandProvider
   {
     var instanceIdOption = CreateInstanceIdOption();
 
-    var startServiceCommand = new Command("start-service", "Start the ControlR service without reinstalling it.")
+    var startServiceCommand = new Command("start-service", $"Start the {BrandingConstants.BrandName} service without reinstalling it.")
     {
       instanceIdOption
     };
@@ -67,7 +68,7 @@ internal static class CommandProvider
   {
     var instanceIdOption = CreateInstanceIdOption();
 
-    var stopServiceCommand = new Command("stop-service", "Stop the ControlR service without removing it.")
+    var stopServiceCommand = new Command("stop-service", $"Stop the {BrandingConstants.BrandName} service without removing it.")
     {
       instanceIdOption
     };
@@ -99,7 +100,7 @@ internal static class CommandProvider
   {
     var instanceIdOption = CreateInstanceIdOption();
 
-    var unInstallCommand = new Command("uninstall", "Uninstall the ControlR service.")
+    var unInstallCommand = new Command("uninstall", $"Uninstall the {BrandingConstants.BrandName} service.")
     {
       instanceIdOption
     };
