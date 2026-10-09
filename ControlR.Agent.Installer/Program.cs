@@ -22,13 +22,13 @@ using Microsoft.Extensions.Logging;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 
-const string RootDescription = "ControlR agent installer.";
+const string RootDescription = $"${BrandingConstants.BrandName} agent installer.";
 const string InstallCommandName = "install";
 const string RepairDesktopCommandName = "repair-desktop";
 const string UninstallCommandName = "uninstall";
-const string InstallCommandDescription = "Install the ControlR agent bundle.";
+const string InstallCommandDescription = $"Install the {BrandingConstants.BrandName} agent bundle.";
 const string RepairDesktopCommandDescription = "Repair the installed desktop client payload without modifying the agent service.";
-const string UninstallCommandDescription = "Uninstall the ControlR agent bundle.";
+const string UninstallCommandDescription = $"Uninstall the {BrandingConstants.BrandName} agent bundle.";
 const string ServerUriDescription = "The fully-qualified server URI to which the agent will connect (e.g. 'https://my.example.com' or 'https://my.example.com:8080').";
 const string InstanceIdDescription = "An instance ID for this agent installation, which allows multiple agent installations.  This is typically the server origin (e.g. 'example.controlr.app').";
 const string DeviceTagsDescription = "An optional, comma-separated list of tags to which the agent will be assigned.";
