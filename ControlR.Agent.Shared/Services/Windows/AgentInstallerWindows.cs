@@ -43,12 +43,12 @@ internal class AgentInstallerWindows(
   private readonly IRegistryAccessor _registryAccessor = registryAccessor;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
-  public async Task<Result> Install(AgentInstallRequest request)
+  public async Task<Result<AgentInstallOutcome>> Install(AgentInstallRequest request)
   {
     if (!await _installLock.WaitAsync(0))
     {
       Logger.LogWarning("Installer lock already acquired.  Aborting.");
-      return Result.Fail("The installer is already running.");
+      return Result.Fail<AgentInstallOutcome>("The installer is already running.");
     }
 
     try
@@ -58,16 +58,17 @@ internal class AgentInstallerWindows(
       if (!_systemEnvironment.IsDebug && !_elevationChecker.IsElevated())
       {
         Logger.LogError("Install command must be run as administrator.");
-        return Result.Fail("Install command must be run as administrator.");
+        return Result.Fail<AgentInstallOutcome>("Install command must be run as administrator.");
       }
 
       if (IsRunningFromAppDir())
       {
-        // Accepted limitation: this relaunch only happens when the installer is started from inside its
-        // own install directory, which the updater never does because it downloads to temp first. The
-        // parent gives up here without waiting for the copy it just started, so a caller that treats a
-        // failure as "put the old agent back" can briefly restart a service the copy is replacing.
-        return Result.Fail("The installer was re-launched from a temp copy and will report its own result.");
+        // Reached only when the installer is started from inside its own install directory, which the
+        // updater never does because it downloads to temp first. Control passes to the copy this just
+        // started, and that copy owns the result, so this is a handoff rather than a failure. A caller
+        // that read it as a failure would put the old install back while the copy is still replacing
+        // it, and both would briefly run.
+        return Result.Ok(AgentInstallOutcome.HandedOff);
       }
 
       var installDir = GetInstallDirectory();
@@ -78,13 +79,13 @@ internal class AgentInstallerWindows(
       if (!stopResult.IsSuccess)
       {
         Logger.LogError("Failed to stop existing agent service. Aborting installation.");
-        return Result.Fail("Failed to stop existing agent service.");
+        return Result.Fail<AgentInstallOutcome>("Failed to stop existing agent service.");
       }
       stopResult = StopProcesses(targetAgentPath, targetDesktopClientPath);
       if (!stopResult.IsSuccess)
       {
         Logger.LogError("Failed to stop existing agent processes. Aborting installation.");
-        return Result.Fail("Failed to stop existing agent processes.");
+        return Result.Fail<AgentInstallOutcome>("Failed to stop existing agent processes.");
       }
 
       try
@@ -107,7 +108,7 @@ internal class AgentInstallerWindows(
       catch (Exception ex)
       {
         Logger.LogError(ex, "Unable to copy app to install directory.  Aborting.");
-        return Result.Fail("Unable to copy app to install directory.");
+        return Result.Fail<AgentInstallOutcome>("Unable to copy app to install directory.");
       }
 
       await UpdateAppSettings(request.ServerUri, request.TenantId, request.DeviceId);
@@ -115,7 +116,7 @@ internal class AgentInstallerWindows(
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
       if (!createResult.IsSuccess)
       {
-        return createResult;
+        return createResult.ToResult(AgentInstallOutcome.Installed);
       }
 
       await WriteBundleHashFile(request.BundleSha256);
@@ -135,7 +136,7 @@ internal class AgentInstallerWindows(
       if (!result.IsSuccess)
       {
         Logger.LogResult(result);
-        return Result.Fail("Failed to register the agent service.");
+        return Result.Fail<AgentInstallOutcome>("Failed to register the agent service.");
       }
 
       var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
@@ -151,23 +152,23 @@ internal class AgentInstallerWindows(
       var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName, request.PreviousInstanceId);
       if (!stopPreviousBrandResult.IsSuccess)
       {
-        return Result.Fail($"Failed to stop the {request.PreviousBrandName} install being replaced.");
+        return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
       }
 
       var startResult = await StartService();
       if (!startResult.IsSuccess)
       {
         Logger.LogError("The {BrandName} service did not start.", BrandingConstants.BrandName);
-        return startResult;
+        return startResult.ToResult(AgentInstallOutcome.Installed);
       }
 
       Logger.LogInformation("Install completed.");
-      return Result.Ok();
+      return Result.Ok(AgentInstallOutcome.Installed);
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
-      return Result.Fail(ex);
+      return Result.Fail<AgentInstallOutcome>(ex);
     }
     finally
     {

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Agent.Shared.Interfaces;
 using ControlR.Agent.Shared.Models;
@@ -25,6 +26,46 @@ namespace ControlR.Agent.Shared.Tests;
 [SupportedOSPlatform("windows8.0")]
 public class AgentInstallerWindowsRepairTests
 {
+  [WindowsOnlyFact]
+  public async Task Install_WhenStartedFromItsOwnInstallDirectory_ReportsAHandoffRatherThanAFailure()
+  {
+    var installDir = @"C:\Program Files\ControlR\instance-1";
+    var installerExePath = @"C:\Program Files\ControlR\instance-1\ControlR.Agent.Installer.exe";
+    var fileSystem = new FakeFileSystem('\\');
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var systemEnvironment = new Mock<ISystemEnvironment>();
+    var relaunchStarted = false;
+
+    fileSystem.AddFile(installerExePath, []);
+    fileSystem.AddDirectory(Path.GetTempPath());
+
+    systemEnvironment.SetupGet(x => x.IsDebug).Returns(true);
+    systemEnvironment.SetupGet(x => x.StartupExePath).Returns(installerExePath);
+    // Running from its own install directory is the only case that copies itself to temp and hands off.
+    systemEnvironment.SetupGet(x => x.StartupDirectory).Returns(installDir);
+
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectory())
+      .Returns(installDir);
+
+    processManager
+      .Setup(x => x.Start(It.IsAny<ProcessStartInfo>()))
+      .Callback(() => relaunchStarted = true)
+      .Returns(Mock.Of<IProcess>());
+
+    var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
+
+    var result = await sut.Install(CreateRequest(@"C:\temp\bundle.zip"));
+
+    Assert.True(relaunchStarted);
+
+    // The copy that was just started owns the result. A caller that read this as a failure would put
+    // the replaced install back while that copy is still replacing it, and both would briefly run.
+    Assert.True(result.IsSuccess);
+    Assert.Equal(AgentInstallOutcome.HandedOff, result.Value);
+  }
+
   [WindowsOnlyFact]
   public async Task RepairDesktopClient_WaitsForExitedProcessBeforeReplacingDirectory()
   {

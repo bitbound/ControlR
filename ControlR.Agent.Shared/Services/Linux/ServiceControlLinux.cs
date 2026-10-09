@@ -41,6 +41,8 @@ internal class ServiceControlLinux(
                 throw new InvalidOperationException($"systemctl start {serviceName} exited with code {exitCode}.");
             }
 
+            await ConfirmAgentServiceActive(serviceName);
+
             _logger.LogInformation("Agent service started successfully.");
         }
         catch (Exception ex)
@@ -188,6 +190,37 @@ internal class ServiceControlLinux(
                 _logger.LogInformation(ex, "Failed to stop desktop client service.");
             }
         }
+    }
+
+    private async Task ConfirmAgentServiceActive(string serviceName)
+    {
+        // A zero exit from "systemctl start" only means systemd accepted the start job, and these
+        // units are Type=simple, so the process can exit right after the fork and the job still
+        // reports success. The caller removes the install being replaced once this returns, so
+        // confirm the unit reports active first. A Type=simple unit is active as soon as it is
+        // forked, so this retries rather than trusting a single reading.
+        const int maxAttempts = 3;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var exitCode = await _processManager.StartAndWaitForExit(
+                "sudo",
+                $"systemctl is-active --quiet {serviceName}",
+                false,
+                _serviceStatusTimeout);
+
+            if (exitCode == 0)
+            {
+                return;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+        }
+
+        throw new InvalidOperationException($"{serviceName} did not report active after starting.");
     }
 
     private string GetAgentServiceName()

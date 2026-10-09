@@ -267,8 +267,10 @@ static async Task<int> RunInstall(
     logger.LogInformation("Bundle version: {Version}", metadata.Version);
 
     // The server this install is pointed at is the authority. If its bundle names a different brand,
-    // this installer is not the right binary to be running here.
-    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
+    // this installer is not the right binary to be running here. Brands are compared by the key that
+    // names every directory, service, and registry key, so two names that reduce to the same key are
+    // the same install and this installer is still the right binary.
+    if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName))
     {
       logger.LogCritical(
         "Refusing to install: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
@@ -286,13 +288,15 @@ static async Task<int> RunInstall(
 
     if (suppliedPreviousBrand is not null || suppliedPreviousInstanceId is not null)
     {
-      // Either the brand or the instance id may be the only thing that changed, so whichever was not
-      // supplied describes an install identical to this one on that axis.
+      // Either the brand or the instance id may be the only thing that changed. The instance id is
+      // deliberately not defaulted to this install's, because the agent omits --previous-instance-id
+      // exactly when the install being replaced used the default instance id, so defaulting here
+      // would send the stop and retire at this install's own directory instead of that one.
       var resolvedPreviousBrand = suppliedPreviousBrand ?? BrandingConstants.BrandName;
-      var resolvedPreviousInstanceId = suppliedPreviousInstanceId ?? instanceId;
+      var resolvedPreviousInstanceId = suppliedPreviousInstanceId;
 
       var isThisSameInstall =
-        string.Equals(resolvedPreviousBrand, BrandingConstants.BrandName, StringComparison.Ordinal) &&
+        BrandNames.AreSameInstall(resolvedPreviousBrand, BrandingConstants.BrandName) &&
         string.Equals(
           GetEffectiveInstanceId(resolvedPreviousInstanceId),
           GetEffectiveInstanceId(instanceId),
@@ -356,6 +360,15 @@ static async Task<int> RunInstall(
       logger.LogError("Installation failed. Reason: {Reason}", installResult.Reason);
       await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
       return 1;
+    }
+
+    if (installResult.Value == AgentInstallOutcome.HandedOff)
+    {
+      // This process copied itself to a temp directory and started that copy, which owns the result.
+      // Rolling back here would put the replaced install back while the copy is still replacing it,
+      // and retiring here would remove the install that copy is still working from.
+      logger.LogInformation("This process handed the install to a temp copy, which will report its own result.");
+      return 0;
     }
 
     logger.LogInformation("Installation completed successfully.");

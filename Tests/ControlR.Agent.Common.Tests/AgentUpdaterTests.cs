@@ -539,24 +539,14 @@ public class AgentMaintenanceServiceTests
   }
 
   [Fact]
-  public async Task CheckForUpdate_WhenServerPublisherDiffers_AbortsWithoutDownloadingInstaller()
+  public async Task CheckForUpdate_WhenServerPublisherDiffers_StillDownloadsInstaller()
   {
     var fixture = new AgentMaintenanceServiceFixture();
     fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
 
-    fixture.AgentUpdateApi
-      .Setup(x => x.GetBundleMetadata(RuntimeId.WinX64, It.IsAny<CancellationToken>()))
-      .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
-      {
-        BundleDownloadUrl = "/downloads/win-x64/ControlR.Agent.bundle.zip",
-        BundleSha256 = "NEW_HASH",
-        InstallerDownloadUrl = "/downloads/win-x64/ControlR.Agent.Installer.exe",
-        InstallerSha256 = "ANY",
-        Runtime = RuntimeId.WinX64,
-        Version = Version.Parse("1.2.3"),
-        BrandName = "ControlR",
-        Publisher = "WrongPublisher"
-      }));
+    // The publisher is not a gate. The brand and the instance id decide whether this is a migration,
+    // and a same-brand bundle from a different publisher is still this install's brand.
+    fixture.ServeWindowsBundle("NEW_HASH", publisher: "WrongPublisher");
 
     var updater = fixture.CreateMaintenanceService();
 
@@ -564,10 +554,10 @@ public class AgentMaintenanceServiceTests
 
     fixture.DownloadsApi.Verify(
       x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-      Times.Never);
+      Times.Once);
     fixture.ProcessManager.Verify(
       x => x.Start(It.IsAny<string>(), It.IsAny<string>()),
-      Times.Never);
+      Times.Once);
   }
 
   private sealed class AgentMaintenanceServiceFixture

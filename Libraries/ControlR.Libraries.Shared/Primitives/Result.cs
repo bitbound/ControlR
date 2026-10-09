@@ -105,6 +105,20 @@ public class Result
     logger.LogResult(this);
     return this;
   }
+
+  /// <summary>
+  /// Carries this result's outcome into a typed result, so a caller can return a failure unchanged or
+  /// attach the value that describes a success.
+  /// </summary>
+  public Result<TNewValue> ToResult<TNewValue>(TNewValue value)
+  {
+    if (IsSuccess)
+    {
+      return Result.Ok(value);
+    }
+
+    return Result.Fail<TNewValue>(Exception ?? new InvalidOperationException(Reason), Reason);
+  }
 }
 
 /// <summary>

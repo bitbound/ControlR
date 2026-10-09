@@ -10,6 +10,21 @@ public class BrandNamesTests
   }
 
   [Fact]
+  public void AreSameInstall_ForDifferentNames_ReturnsFalse()
+  {
+    Assert.False(BrandNames.AreSameInstall("Acme Remote", "Acme"));
+  }
+
+  [Fact]
+  public void AreSameInstall_ForNamesThatDifferOnlyByPunctuation_ReturnsTrue()
+  {
+    // The key names every directory, service, and registry entry, so these describe one install. A
+    // raw-name comparison would call it a migration, and the retire step would then delete the
+    // install that had just been written.
+    Assert.True(BrandNames.AreSameInstall("Acme Remote", "Acme-Remote"));
+  }
+
+  [Fact]
   public void BrandKey_ForAPaddedBrandName_KeepsThePaddingLikeTheBuildScript()
   {
     // customize.ps1 derives the key with the same untrimmed replace, so trimming here would send this

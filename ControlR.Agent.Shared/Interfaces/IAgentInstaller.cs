@@ -6,10 +6,10 @@ public interface IAgentInstaller
 {
   /// <summary>
   /// Installs this build. When <see cref="AgentInstallRequest.PreviousBrandName"/> is set, the install
-  /// being replaced is stopped before this one starts, and the returned result says whether this
-  /// install's own service came up.
+  /// being replaced is stopped before this one starts. The outcome says whether this process did the
+  /// work or handed it to a copy of itself, and the caller has to treat those differently.
   /// </summary>
-  Task<Result> Install(AgentInstallRequest request);
+  Task<Result<AgentInstallOutcome>> Install(AgentInstallRequest request);
 
   Task RepairDesktopClient(AgentInstallRequest request);
 

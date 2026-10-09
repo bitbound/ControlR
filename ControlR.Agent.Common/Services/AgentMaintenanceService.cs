@@ -93,19 +93,7 @@ internal class AgentMaintenanceService(
 
       var metadata = metadataResult.Value;
 
-      var isSameBrand = string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal);
-
-      if (isSameBrand && !string.Equals(metadata.Publisher, BrandingConstants.Publisher, StringComparison.Ordinal))
-      {
-        _logger.LogCritical(
-          "Aborting update check. Server bundle carries this agent's brand name but a different publisher. " +
-          "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}.",
-          BrandingConstants.BrandName,
-          BrandingConstants.Publisher,
-          metadata.BrandName,
-          metadata.Publisher);
-        return;
-      }
+      var isSameBrand = BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName);
 
       // The server is authoritative, so an install has to follow it onto the brand and the instance id
       // it names. The brand arrives with the bundle, but the instance id is a tenant setting that the
@@ -214,7 +202,7 @@ internal class AgentMaintenanceService(
       // Repair rewrites the desktop client payload inside an existing install, so it only makes
       // sense for the install's own brand. A cross-brand bundle is handled by the update path,
       // which moves the whole install rather than patching one payload into the wrong brand.
-      if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
+      if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName))
       {
         _logger.LogCritical(
           "Aborting desktop client repair. Server bundle is not this agent's brand. " +

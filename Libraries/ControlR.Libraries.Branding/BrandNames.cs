@@ -37,6 +37,21 @@ public sealed partial class BrandNames(string brandName)
   public string WindowsUninstallRegistryKeyName => BrandKey;
 
   /// <summary>
+  /// Whether two brand names address the same install. Every directory, service, and registry name
+  /// derives from the key rather than the raw name, so a rebrand that only changes punctuation, such
+  /// as "Acme Remote" to "Acme-Remote", still describes one install. Code that decides whether an
+  /// install has to move has to compare this way, or it will move an install onto itself and then
+  /// remove what it wrote.
+  /// </summary>
+  public static bool AreSameInstall(string? firstBrandName, string? secondBrandName)
+  {
+    return string.Equals(
+      SanitizeBrandKey(firstBrandName ?? string.Empty),
+      SanitizeBrandKey(secondBrandName ?? string.Empty),
+      StringComparison.Ordinal);
+  }
+
+  /// <summary>
   /// Reduces a brand name to the filesystem-safe form used for directory, service, and registry names.
   /// The formula has to stay identical to the one the build script uses to name the files it ships,
   /// or this build's names refer to files that were never written. Two names that share a key address
