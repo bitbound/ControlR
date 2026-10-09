@@ -134,13 +134,14 @@ internal class AgentInstallerLinux(
         return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
       }
 
-      _logger.LogInformation("Restarting agent service.");
-      psi.Arguments = $"systemctl restart {serviceName}";
+      _logger.LogInformation("Starting agent service.");
       try
       {
-        // This overload throws on a non-zero exit, which is the only signal that the service did not
-        // come up. The caller uses it to decide whether the install being replaced may be removed.
-        await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
+        // The service control owns the start, because it also confirms the unit reports active rather
+        // than trusting that systemd accepted the start job. A Type=simple unit is active as soon as
+        // it is forked, so a process that dies immediately still leaves a zero exit behind. The
+        // caller uses this verdict to decide whether the install being replaced may be removed.
+        await _serviceControl.StartAgentService(throwOnFailure: true);
       }
       catch (Exception ex)
       {
