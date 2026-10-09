@@ -1,6 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Dtos.AgentApi;
 using ControlR.Web.Server.Authn;
-using ControlR.Web.Server.Extensions;
 using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,7 +12,7 @@ namespace ControlR.Web.Server.Api.Agent;
 /// </summary>
 [Route(HttpConstants.Agent.DeploymentOptionsEndpoint)]
 [ApiController]
-[Authorize(Policy = AgentSignatureAuthenticationSchemeOptions.DefaultPolicy)]
+[AgentSignatureAuthorize]
 [EndpointGroupName(OpenApiConstants.InternalGroupName)]
 public class AgentDeploymentController(
   ITenantSettingsManager tenantSettingsManager,
