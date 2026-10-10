@@ -18,11 +18,9 @@
 			<StackPanel Spacing="12">
 
 				<!--
-					Two grids inside a Spacing-12 container instead of one grid, so the conditionally-shown
-					group can hide as a whole. A Grid row whose children are all hidden still contributes
-					its RowSpacing, which left an empty band on branded builds. A hidden StackPanel child
-					reserves no spacing, and the container gap equals the original single-grid RowSpacing,
-					so the unbranded build lays out exactly as it did before the split.
+					Group the two grids in a Spacing-12 container so the conditionally-shown grid can hide
+					as a whole. Keep that grid a single StackPanel child. A hidden child contributes no
+					spacing, and the container spacing keeps the gap between the two grids as intended.
 				-->
 				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12">
 
