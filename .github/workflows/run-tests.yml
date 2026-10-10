@@ -144,7 +144,9 @@ jobs:
         run: |
           $testProjects = @(
             "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
-            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj"
+            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj",
+            "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
+            "Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj"
           )
 
           foreach ($project in $testProjects) {
@@ -159,7 +161,9 @@ jobs:
         run: |
           $testProjects = @(
             "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
-            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj"
+            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj",
+            "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
+            "Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj"
           )
 
           foreach ($project in $testProjects) {
@@ -221,6 +225,39 @@ jobs:
           foreach ($project in $testProjects) {
             Write-Host "Running $project on macOS (osx-arm64)..."
             dotnet run --project $project -c Release -r osx-arm64 --self-contained --no-build --no-restore
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test execution failed for $project."
+            }
+          }
+
+      # The agent test projects are platform-agnostic, so they build and run portable here. The RID flags in the
+      # desktop steps above are per command, not job-wide. Forcing osx-arm64 here would pull PowerShell SDK and
+      # PerformanceCounter into the mac RID graph without adding coverage.
+      - name: Build Agent Tests
+        run: |
+          $testProjects = @(
+            "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
+            "Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj"
+          )
+
+          foreach ($project in $testProjects) {
+            Write-Host "Building $project..."
+            dotnet build $project -c Release
+            if ($LASTEXITCODE -ne 0) {
+              throw "Build failed for $project."
+            }
+          }
+
+      - name: Run Agent Tests
+        run: |
+          $testProjects = @(
+            "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
+            "Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj"
+          )
+
+          foreach ($project in $testProjects) {
+            Write-Host "Running $project on macOS..."
+            dotnet run --project $project -c Release --no-build --no-restore
             if ($LASTEXITCODE -ne 0) {
               throw "Test execution failed for $project."
             }
