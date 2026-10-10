@@ -1,6 +1,7 @@
 namespace ControlR.Libraries.Viewer.Common.Models.Messages;
 public class ChatMessage
 {
+  public bool IsFromDesktop => !IsFromViewer && !IsSystemMessage;
   public bool IsFromViewer { get; set; }
   public bool IsSystemMessage => Kind != ChatMessageKind.TextSend;
   public ChatMessageKind Kind { get; set; } = ChatMessageKind.TextSend;

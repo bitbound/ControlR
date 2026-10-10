@@ -34,7 +34,6 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
-    <!-- A system line still carries ChatViewer, so these two must stay declared after the two above. -->
     <Style Selector="Border.ChatSystem">
       <Setter Property="Padding" Value="8" />
       <Setter Property="CornerRadius" Value="4" />
@@ -178,7 +177,7 @@
                 <DataTemplate DataType="models:ChatMessage">
                   <Border Margin="0, 4"
                           Classes.ChatUser="{Binding IsFromViewer}"
-                          Classes.ChatViewer="{Binding !IsFromViewer}"
+                          Classes.ChatViewer="{Binding IsFromDesktop}"
                           Classes.ChatSystem="{Binding IsSystemMessage}">
                     <StackPanel Spacing="4">
                       <!-- Sender + timestamp header -->

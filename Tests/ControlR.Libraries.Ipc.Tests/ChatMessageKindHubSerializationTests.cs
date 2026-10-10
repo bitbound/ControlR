@@ -37,6 +37,36 @@ public class ChatMessageKindHubSerializationTests
     Assert.Equal("an old viewer message", restored.Message);
   }
 
+  /// <summary>
+  /// The reverse direction: the sender writes a Kind key holding a window close, and the receiving peer's shape
+  /// predates the enum, so that key is foreign to it. The foreign key is dropped and the peer's own keys still
+  /// decode, which is what keeps an old viewer reading the body of such a payload.
+  /// </summary>
+  [Fact]
+  public void ChatMessageHubDto_KindWindowClose_LegacyViewerReadsItsOwnKeysAndDropsKind()
+  {
+    var original = new ChatMessageHubDto(
+      Guid.NewGuid(),
+      Guid.NewGuid(),
+      "User closed the chat window.",
+      "jared",
+      "jared@example.com",
+      1,
+      42,
+      DateTimeOffset.Now,
+      "conn1",
+      ChatMessageKind.WindowClose);
+
+    var bytes = MessagePackSerializer.Serialize(original, cancellationToken: TestContext.Current.CancellationToken);
+
+    var legacyRead = MessagePackSerializer.Deserialize<LegacyChatMessageHubPayload>(
+      bytes,
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal("User closed the chat window.", legacyRead.Message);
+    Assert.Equal(original.SessionId, legacyRead.SessionId);
+  }
+
   [Fact]
   public void ChatMessageHubDto_TextSend_RoundTripsWithItsKind()
   {
@@ -80,6 +110,32 @@ public class ChatMessageKindHubSerializationTests
 
     Assert.Equal(ChatMessageKind.TextSend, restored.Kind);
     Assert.Equal("an old desktop reply", restored.Message);
+  }
+
+  /// <summary>
+  /// The reverse direction on the path a window close actually travels: the close reaches a viewer whose shape has no
+  /// Kind member, so the payload must still decode and its text must still arrive.
+  /// </summary>
+  [Fact]
+  public void ChatResponseHubDto_KindWindowClose_LegacyViewerReadsItsOwnKeysAndDropsKind()
+  {
+    var original = new ChatResponseHubDto(
+      Guid.NewGuid(),
+      42,
+      "User closed the chat window.",
+      "DESKTOP-ABC",
+      "conn1",
+      DateTimeOffset.Now,
+      ChatMessageKind.WindowClose);
+
+    var bytes = MessagePackSerializer.Serialize(original, cancellationToken: TestContext.Current.CancellationToken);
+
+    var legacyRead = MessagePackSerializer.Deserialize<LegacyChatResponseHubPayload>(
+      bytes,
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal("User closed the chat window.", legacyRead.Message);
+    Assert.Equal(original.SessionId, legacyRead.SessionId);
   }
 
   [Fact]

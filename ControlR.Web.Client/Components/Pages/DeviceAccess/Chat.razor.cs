@@ -237,7 +237,8 @@ public partial class Chat : ComponentBase, IDisposable
         Message = newMessage,
         SenderName = "You",
         Timestamp = DateTimeOffset.Now,
-        IsFromViewer = true
+        IsFromViewer = true,
+        Kind = ChatMessageKind.TextSend
       };
 
       ChatState.ChatMessages.Add(chatMessage);

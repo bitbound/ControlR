@@ -365,7 +365,8 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
       IsFromViewer = true,
       Message = message,
       SenderName = Resources.Chat_You,
-      Timestamp = DateTimeOffset.Now
+      Timestamp = DateTimeOffset.Now,
+      Kind = ChatMessageKind.TextSend
     };
 
     try
