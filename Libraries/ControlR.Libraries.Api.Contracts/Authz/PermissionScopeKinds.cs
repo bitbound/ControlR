@@ -3,6 +3,29 @@ namespace ControlR.Libraries.Api.Contracts.Authz;
 public static class PermissionScopeKinds
 {
   /// <summary>
+  /// The breadth rank of a scope kind, where lower is narrower. Single source of this ordering in
+  /// the codebase: used to pick the default scope for presets and the UI, and to break ties among
+  /// rules that match one resource so the narrower rule wins.
+  /// <see cref="PermissionScopeKind.UserGroup"/> ties with <see cref="PermissionScopeKind.DeviceGroup"/>
+  /// because the two are orthogonal and never compete for one resource.
+  /// </summary>
+  /// <exception cref="ArgumentOutOfRangeException">
+  /// Thrown for <see cref="PermissionScopeKind.Unknown"/> and any other value outside the six
+  /// resource scope kinds. No catalog permission allows those, so legal grants never reach it.
+  /// </exception>
+  public static int GetBreadth(PermissionScopeKind scopeKind) => scopeKind switch
+  {
+    PermissionScopeKind.Device => 0,
+    PermissionScopeKind.DeviceGroup => 1,
+    PermissionScopeKind.UserGroup => 1,
+    PermissionScopeKind.CustomerTenant => 2,
+    PermissionScopeKind.Tenant => 3,
+    PermissionScopeKind.Server => 4,
+    _ => throw new ArgumentOutOfRangeException(
+      nameof(scopeKind), scopeKind, "Not a legal resource scope kind.")
+  };
+
+  /// <summary>
   /// Returns the broadest scope kind from the set, or <see langword="null"/> when empty.
   /// </summary>
   public static PermissionScopeKind? GetBroadestLegalScope(
@@ -36,16 +59,4 @@ public static class PermissionScopeKinds
 
     return tenantKinds.MaxBy(GetBreadth);
   }
-
-  private static int GetBreadth(PermissionScopeKind scopeKind) => scopeKind switch
-  {
-    PermissionScopeKind.Device => 0,
-    PermissionScopeKind.DeviceGroup => 1,
-    PermissionScopeKind.UserGroup => 1,
-    PermissionScopeKind.CustomerTenant => 2,
-    PermissionScopeKind.Tenant => 3,
-    PermissionScopeKind.Server => 4,
-    _ => throw new ArgumentOutOfRangeException(
-      nameof(scopeKind), scopeKind, "Not a legal resource scope kind.")
-  };
 }
