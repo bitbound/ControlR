@@ -230,9 +230,9 @@ jobs:
             }
           }
 
-      # The agent test projects are platform-agnostic, so they build and run portable here. The RID flags in the
-      # desktop steps above are per command, not job-wide. Forcing osx-arm64 here would pull PowerShell SDK and
-      # PerformanceCounter into the mac RID graph without adding coverage.
+      # The agent test projects are platform-agnostic with no RID-specific assets, so they build and run portable
+      # here. The RID and self-contained flags belong only to the desktop steps above, which stay untouched so their
+      # builds behave as before.
       - name: Build Agent Tests
         run: |
           $testProjects = @(
