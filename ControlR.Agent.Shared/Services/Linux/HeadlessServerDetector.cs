@@ -40,7 +40,7 @@ internal class HeadlessServerDetector(
             }
 
             // Check if DISPLAY environment variable is set in any running process
-            var displayResult = await _processManager.GetProcessOutput("bash", "-c \"ps -eo env | grep -q DISPLAY && echo 'found'\"", 3000);
+            var displayResult = await _processManager.GetProcessOutput("bash", "-c \"grep -qz '^DISPLAY=' /proc/[0-9]*/environ 2>/dev/null && echo 'found'\"", 3000);
             if (displayResult.IsSuccess && !string.IsNullOrWhiteSpace(displayResult.Value) && displayResult.Value.Contains("found"))
             {
                 _logger.LogDebugDeduped("DISPLAY environment variable found - not headless.");
