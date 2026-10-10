@@ -11,7 +11,9 @@ public static class PermissionScopeKinds
   /// </summary>
   /// <exception cref="ArgumentOutOfRangeException">
   /// Thrown for <see cref="PermissionScopeKind.Unknown"/> and any other value outside the six
-  /// resource scope kinds. No catalog permission allows those, so legal grants never reach it.
+  /// resource scope kinds. No legal rule reaches it. The scope matcher returns no match for a
+  /// non-resource scope kind, and the assignment write path rejects such a kind before a rule can
+  /// be stored.
   /// </exception>
   public static int GetBreadth(PermissionScopeKind scopeKind) => scopeKind switch
   {
