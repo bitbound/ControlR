@@ -381,7 +381,8 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
         string.Empty,
         _chatState.CurrentSession.SystemSessionId,
         _chatState.CurrentSession.ProcessId,
-        DateTimeOffset.Now);
+        DateTimeOffset.Now,
+        Kind: ChatMessageKind.TextSend);
 
       var sendResult = await _viewerHub.Server.SendChatMessage2(dto);
       if (!sendResult.IsSuccess)

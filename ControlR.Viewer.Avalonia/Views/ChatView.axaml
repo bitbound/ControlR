@@ -34,6 +34,20 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
+    <!-- A system line still carries ChatViewer, so these two must stay declared after the two above. -->
+    <Style Selector="Border.ChatSystem">
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="{DynamicResource BackgroundGrayBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Border.ChatSystem TextBlock">
+      <Setter Property="FontStyle" Value="Italic" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="TextAlignment" Value="Center" />
+    </Style>
   </UserControl.Styles>
 
   <Design.DataContext>
@@ -162,9 +176,10 @@
             <ItemsControl ItemsSource="{Binding ChatMessages}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="models:ChatMessage">
-                  <Border Margin="0, 4" 
+                  <Border Margin="0, 4"
                           Classes.ChatUser="{Binding IsFromViewer}"
-                          Classes.ChatViewer="{Binding !IsFromViewer}">
+                          Classes.ChatViewer="{Binding !IsFromViewer}"
+                          Classes.ChatSystem="{Binding IsSystemMessage}">
                     <StackPanel Spacing="4">
                       <!-- Sender + timestamp header -->
                       <Grid ColumnDefinitions="Auto,Auto,*">

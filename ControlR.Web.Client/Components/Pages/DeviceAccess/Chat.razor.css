@@ -89,6 +89,14 @@
   margin-right: 20%;
 }
 
+.system-message {
+  background-color: var(--mud-palette-background-gray);
+  border: 1px dashed var(--mud-palette-divider);
+  color: var(--mud-palette-text-secondary);
+  font-style: italic;
+  text-align: center;
+}
+
 .message-content {
   white-space: pre-wrap;
   word-wrap: break-word;

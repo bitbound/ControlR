@@ -124,7 +124,10 @@
               {
                 @foreach (var message in ChatState.ChatMessages)
                 {
-                  <div class="chat-message @(message.IsFromViewer ? "viewer-message" : "desktop-message")">
+                  var messageClass = message.IsSystemMessage
+                    ? "system-message"
+                    : message.IsFromViewer ? "viewer-message" : "desktop-message";
+                  <div class="chat-message @messageClass">
                     <div class="message-header">
                       <MudText Typo="Typo.caption" Color="Color.Secondary">
                         @(message.SenderName) - @(message.Timestamp)
