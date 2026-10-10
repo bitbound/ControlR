@@ -176,7 +176,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="models:ChatMessage">
                   <Border Margin="0, 4"
-                          Classes.ChatUser="{Binding IsFromViewer}"
+                          Classes.ChatUser="{Binding IsUserMessage}"
                           Classes.ChatViewer="{Binding IsFromDesktop}"
                           Classes.ChatSystem="{Binding IsSystemMessage}">
                     <StackPanel Spacing="4">
