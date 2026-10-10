@@ -18,6 +18,7 @@
     <PackageVersion Include="Bitbound.Analyzers.MemberOrder" Version="1.0.52" />
     <PackageVersion Include="Bitbound.SimpleMessenger" Version="2.6.31" />
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
+    <PackageVersion Include="bunit" Version="2.11.3" />
     <PackageVersion Include="CommunityToolkit.Diagnostics" Version="8.4.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="System.Reactive" Version="7.0.0" />
