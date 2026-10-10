@@ -17,6 +17,8 @@ public partial class VncRelay
   [Inject]
   public required NavigationManager NavManager { get; init; }
   [Inject]
+  public required IPublicServerSettingsProvider PublicServerSettings { get; init; }
+  [Inject]
   public required ISnackbar Snackbar { get; init; }
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
@@ -61,6 +63,9 @@ public partial class VncRelay
 
       var serverUri = new Uri(NavManager.BaseUri);
 
+      // serverUri stays on the browser origin: the Requester socket and the NoVNC page below are both
+      // opened by this browser, which already reached the server on its own address. Only the device
+      // half moves, through deviceServerUri.
       var viewerRelayUri = RelayUriBuilder.Build(
           baseUri: serverUri.ToWebsocketUri(),
           path: AppConstants.WebSocketRelayPath,
@@ -79,8 +84,11 @@ public partial class VncRelay
 
       var notifyUserPreference = await EffectiveUserPreferences.GetNotifyUserOnSessionStart();
 
+      var serverSettings = await PublicServerSettings.GetPublicServerSettings();
+      var deviceServerUri = DeviceRelayUri.ResolveBaseUri(serverSettings.PublicBaseUrl, NavManager.BaseUri);
+
       var deviceRelayUri = RelayUriBuilder.Build(
-          baseUri: serverUri.ToWebsocketUri(),
+          baseUri: deviceServerUri.ToWebsocketUri(),
           path: AppConstants.WebSocketRelayPath,
           sessionId: sessionId,
           accessToken: accessToken,

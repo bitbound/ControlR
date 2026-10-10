@@ -15,6 +15,7 @@ public partial class RemoteControl : ViewportAwareComponent
   private bool _isReconnecting;
   private string? _loadingMessage = "Connecting";
   private Guid _previousDeviceId;
+  private string? _publicBaseUrl;
   private IReadOnlyList<DesktopSession>? _systemSessions;
 
   [SupplyParameterFromQuery]
@@ -118,6 +119,7 @@ public partial class RemoteControl : ViewportAwareComponent
 
       var serverSettings = await PublicServerSettings.GetPublicServerSettings();
       _isDesktopPreviewDisabled = serverSettings.DisableDesktopPreview;
+      _publicBaseUrl = serverSettings.PublicBaseUrl;
 
       if (WebAssemblyEnv.IsDevelopment())
       {
@@ -438,8 +440,12 @@ public partial class RemoteControl : ViewportAwareComponent
       var accessToken = RandomGenerator.CreateAccessToken();
 
       var serverUri = new Uri(NavManager.BaseUri).ToWebsocketUri();
+      // The device dialing this half usually cannot reach the browser's address, so only the
+      // Responder URL moves to the server's public origin. The Requester URL below stays on
+      // serverUri because the browser opened that socket itself.
+      var deviceServerUri = DeviceRelayUri.ResolveBaseUri(_publicBaseUrl, NavManager.BaseUri).ToWebsocketUri();
       var desktopRelayUri = RelayUriBuilder.Build(
-        serverUri,
+        deviceServerUri,
         AppConstants.WebSocketRelayPath,
         session.SessionId,
         accessToken,

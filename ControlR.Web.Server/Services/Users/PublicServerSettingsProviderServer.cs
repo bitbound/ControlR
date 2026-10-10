@@ -6,11 +6,13 @@ namespace ControlR.Web.Server.Services.Users;
 internal class PublicServerSettingsProviderServer(
   IDbContextFactory<AppDb> dbFactory,
   IOptionsMonitor<AppOptions> appOptions,
-  ILogger<PublicServerSettingsProviderServer> logger) : IPublicServerSettingsProvider
+  ILogger<PublicServerSettingsProviderServer> logger,
+  IPublicUrlProvider publicUrlProvider) : IPublicServerSettingsProvider
 {
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly IDbContextFactory<AppDb> _dbFactory = dbFactory;
   private readonly ILogger<PublicServerSettingsProviderServer> _logger = logger;
+  private readonly IPublicUrlProvider _publicUrlProvider = publicUrlProvider;
 
   public async Task<PublicServerSettings> GetPublicServerSettings()
   {
@@ -24,14 +26,16 @@ internal class PublicServerSettingsProviderServer(
 
       return new PublicServerSettings(
         IsPublicRegistrationEnabled: registrationEnabled,
-        DisableDesktopPreview: appOpts.DisableDesktopPreview);
+        DisableDesktopPreview: appOpts.DisableDesktopPreview,
+        PublicBaseUrl: _publicUrlProvider.TryGetBaseUrl());
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while getting public server settings.");
       return new PublicServerSettings(
         IsPublicRegistrationEnabled: false,
-        DisableDesktopPreview: _appOptions.CurrentValue.DisableDesktopPreview);
+        DisableDesktopPreview: _appOptions.CurrentValue.DisableDesktopPreview,
+        PublicBaseUrl: _publicUrlProvider.TryGetBaseUrl());
     }
   }
 }
