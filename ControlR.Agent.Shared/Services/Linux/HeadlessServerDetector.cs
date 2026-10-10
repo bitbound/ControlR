@@ -16,6 +16,21 @@ internal class HeadlessServerDetector(
     IProcessManager processManager,
     ILogger<HeadlessServerDetector> logger) : IHeadlessServerDetector
 {
+    // Markers the DISPLAY probe prints to stdout to self-report its outcome. GetProcessOutput
+    // ignores the child's exit code, so without a positive "ran and found nothing" statement a
+    // probe that could not run would read as a clean negative. The marker literals in
+    // HeadlessServerDetectorTests pin this wire contract.
+    private const string DisplayFoundMarker = "cr-display-found";
+    private const string DisplayNoneMarker = "cr-display-none";
+    private const string DisplayProbeErrorMarker = "cr-display-error";
+
+    // grep's exit status decides the marker: 0 = DISPLAY found, 1 = genuinely absent from every
+    // readable environ, anything else = the probe could not run. The group-level stderr redirect
+    // keeps error text ("command not found", "No such file or directory") out of the agent log;
+    // GetProcessOutput leaves the child's stderr inherited.
+    private static readonly string DisplayProbeArguments =
+        $"-c \"{{ grep -qz '^DISPLAY=' /proc/[0-9]*/environ; case $? in 0) echo {DisplayFoundMarker};; 1) echo {DisplayNoneMarker};; *) echo {DisplayProbeErrorMarker};; esac; }} 2>/dev/null\"";
+
     private readonly ILogger<HeadlessServerDetector> _logger = logger;
     private readonly IProcessManager _processManager = processManager;
 
@@ -39,12 +54,29 @@ internal class HeadlessServerDetector(
                 return false;
             }
 
-            // Check if DISPLAY environment variable is set in any running process
-            var displayResult = await _processManager.GetProcessOutput("bash", "-c \"grep -qz '^DISPLAY=' /proc/[0-9]*/environ 2>/dev/null && echo 'found'\"", 3000);
-            if (displayResult.IsSuccess && !string.IsNullOrWhiteSpace(displayResult.Value) && displayResult.Value.Contains("found"))
+            // Check if DISPLAY environment variable is set in any running process. The probe
+            // self-reports, so anything other than the found or none marker means it could not
+            // run and its output carries no information about the display state.
+            var displayResult = await _processManager.GetProcessOutput("bash", DisplayProbeArguments, 3000);
+            if (!displayResult.IsSuccess)
+            {
+                _logger.LogWarningDeduped("DISPLAY environment probe could not run. Assuming headless environment.");
+                return true;
+            }
+
+            var displayProbeMarker = displayResult.Value?.Trim();
+            if (displayProbeMarker == DisplayFoundMarker)
             {
                 _logger.LogDebugDeduped("DISPLAY environment variable found - not headless.");
                 return false;
+            }
+
+            if (displayProbeMarker != DisplayNoneMarker)
+            {
+                // Missing grep, stripped /proc, or a non-GNU grep rejecting -z land here. Fail
+                // closed instead of reading a broken probe as a confirmed negative.
+                _logger.LogWarningDeduped("DISPLAY environment probe returned no known marker. Assuming headless environment.");
+                return true;
             }
 
             // Check if we're running on Ubuntu Server (which typically doesn't have GUI packages)
