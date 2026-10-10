@@ -15,7 +15,12 @@
 
 			<TextBlock Text="{x:Static common:Localization.About}" Classes="h1 Primary" />
 
-			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12">
+			<!--
+				Rows are split into two grids so the conditionally-shown group can hide as a whole.
+				A Grid row whose children are all hidden still contributes its RowSpacing, which left
+				an empty band on branded builds. A hidden child of the parent StackPanel reserves nothing.
+			-->
+			<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12">
 
 				<TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold">
 					<Run Text="{x:Static common:Localization.Version}" />
@@ -29,39 +34,48 @@
 				</TextBlock>
 				<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding InstanceId}" />
 
-				<TextBlock Grid.Row="2" Grid.Column="0" FontWeight="SemiBold">
+			</Grid>
+
+			<!--
+				Hidden entirely on branded builds. The License row is safe to hide there because the
+				Third-Party Licenses section shows the ControlR row, linking the same LICENSE.txt, exactly
+				when this flag is set.
+			-->
+			<Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12"
+						IsVisible="{Binding !HideSponsorshipInfo}">
+
+				<TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold">
 					<Run Text="{x:Static common:Localization.AboutLicenseLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-
-				<HyperlinkButton Grid.Row="2" Grid.Column="1" Margin="0" Padding="0"
+				<HyperlinkButton Grid.Row="0" Grid.Column="1" Margin="0" Padding="0"
 												 Content="{x:Static common:Localization.AboutLicenseLabel}"
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
 
-				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding !HideSponsorshipInfo}">
+				<TextBlock Grid.Row="1" Grid.Column="0" FontWeight="SemiBold">
 					<Run Text="{x:Static common:Localization.AboutProjectLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding !HideSponsorshipInfo}"
+				<HyperlinkButton Grid.Row="1" Grid.Column="1" Margin="0" Padding="0"
 												 Content="https://github.com/bitbound/controlr"
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://github.com/bitbound/controlr" />
 
-				<TextBlock Grid.Row="4" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding !HideSponsorshipInfo}">
+				<TextBlock Grid.Row="2" Grid.Column="0" FontWeight="SemiBold">
 					<Run Text="{x:Static common:Localization.AboutWebsiteLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<HyperlinkButton Grid.Row="4" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding !HideSponsorshipInfo}"
+				<HyperlinkButton Grid.Row="2" Grid.Column="1" Margin="0" Padding="0"
 												 Content="https://controlr.app"
 												 Command="{Binding OpenUrlCommand}"
 												 CommandParameter="https://controlr.app" />
 
-				<TextBlock Grid.Row="5" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top" IsVisible="{Binding !HideSponsorshipInfo}">
+				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top">
 					<Run Text="{x:Static common:Localization.AboutSponsorLabel}" />
 					<Run Text=":" />
 				</TextBlock>
-				<StackPanel Grid.Row="5" Grid.Column="1" Spacing="8" IsVisible="{Binding !HideSponsorshipInfo}">
+				<StackPanel Grid.Row="3" Grid.Column="1" Spacing="8">
 					<TextBlock Text="{x:Static common:Localization.AboutSponsorDescription}" TextWrapping="Wrap" />
 					<controls:ThemeButton Content="{x:Static common:Localization.AboutSponsorButton}"
 																Color="Error"
@@ -69,6 +83,7 @@
 																Command="{Binding OpenUrlCommand}"
 																CommandParameter="https://github.com/sponsors/bitbound" />
 				</StackPanel>
+
 			</Grid>
 
 			<Rectangle Height="1" Fill="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" />
