@@ -44,6 +44,7 @@
       <CellTemplate>
         <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Info" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopRight">
           <MudMenuItem Icon="@Icons.Material.Filled.Group" IconColor="Color.Info" OnClick="@(() => ViewGroup(context.Item))">View Members</MudMenuItem>
+          <MudMenuItem Icon="@Icons.Material.Filled.Edit" IconColor="Color.Info" OnClick="@(() => EditGroup(context.Item))">Edit</MudMenuItem>
           <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@(() => DeleteGroup(context.Item))">Delete</MudMenuItem>
         </MudMenu>
       </CellTemplate>

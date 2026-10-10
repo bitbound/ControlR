@@ -105,6 +105,33 @@ public partial class DeviceGroups : ComponentBase
     await Refresh();
   }
 
+  private async Task EditGroup(DeviceGroupDto group)
+  {
+    var editResult = await DialogService.ShowEditGroupDialogAsync(
+      "Edit Device Group",
+      group.Name,
+      group.Description);
+
+    if (editResult is null)
+    {
+      return;
+    }
+
+    var updateResult = await ControlrApi.V1.DeviceGroups.UpdateDeviceGroup(
+      group.Id,
+      _tenantId,
+      new UpdateDeviceGroupRequestDto(editResult.Name, editResult.Description));
+
+    if (!updateResult.IsSuccess)
+    {
+      Snackbar.Add(updateResult.Reason, Severity.Error);
+      return;
+    }
+
+    Snackbar.Add("Device group updated", Severity.Success);
+    await Refresh();
+  }
+
   private async Task Refresh()
   {
     _loading = true;

@@ -88,17 +88,12 @@ public partial class DeviceGroupDetail : ComponentBase
       return;
     }
 
-    var parameters = new DialogParameters<EditGroupDialog>
-    {
-      { x => x.Name, _group.Name },
-      { x => x.Description, _group.Description }
-    };
+    var editResult = await DialogService.ShowEditGroupDialogAsync(
+      "Edit Device Group",
+      _group.Name,
+      _group.Description);
 
-    var options = new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small };
-    var dialog = await DialogService.ShowAsync<EditGroupDialog>("Edit Device Group", parameters, options);
-    var result = await dialog.Result;
-
-    if (result is null || result.Canceled || result.Data is not EditGroupDialogResult editResult)
+    if (editResult is null)
     {
       return;
     }

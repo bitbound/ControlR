@@ -29,6 +29,34 @@ public static class DialogServiceExtensions
     
     return result is not null && !result.Canceled && result.Data is bool confirmed && confirmed;
   }
+  public static async Task<EditGroupDialogResult?> ShowEditGroupDialogAsync(
+    this IDialogService dialogService,
+    string title,
+    string name,
+    string? description)
+  {
+    var dialogOptions = new DialogOptions
+    {
+      FullWidth = true,
+      MaxWidth = MaxWidth.Small
+    };
+
+    var parameters = new DialogParameters<EditGroupDialog>
+    {
+      { x => x.Name, name },
+      { x => x.Description, description }
+    };
+
+    var dialogRef = await dialogService.ShowAsync<EditGroupDialog>(title, parameters, dialogOptions);
+    var result = await dialogRef.Result;
+
+    if (result is null || result.Canceled || result.Data is not EditGroupDialogResult editResult)
+    {
+      return null;
+    }
+
+    return editResult;
+  }
   public static async Task<string?> ShowPrompt(
     this IDialogService dialogService,
     string title,
