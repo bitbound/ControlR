@@ -30,9 +30,15 @@
     <LinuxTargetFramework>net10.0</LinuxTargetFramework>
   </PropertyGroup>
 
+  <!--
+    S125: Allow commented code.  Useful for TODOs and examples.
+    AV0029: Allow multiple calls to `AddOpenApi`.  Needed because different overloads expose different configuration options.
+    BB0001: Custom Bitbound analyzer.  Only warn about member ordering.
+    NU1901-NU1904: NuGet warnings should not completely break the build.
+   -->
   <PropertyGroup>
     <NoWarn>$(NoWarn);S125;AV0029;</NoWarn>
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001;NU1903;</WarningsNotAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001;NU1901;NU1902;NU1903;NU1904;</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup
