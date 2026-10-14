@@ -25,21 +25,22 @@ internal class HeadlessServerDetector(
     private const string DisplayProbeErrorMarker = "cr-display-error";
 
     // grep's exit status decides the marker: 0 = DISPLAY found, 1 = genuinely absent from every
-    // readable environ. grep also returns 2 for reasons that are not the probe failing outright:
-    // an individual /proc/[pid]/environ is unreadable (a peer owned by another user, or a PID that
-    // vanished before grep reached it). On a busy host that makes the raw status-2 branch the norm,
-    // so status 2 (or any value that is neither 0 nor 1) must be disambiguated before calling it an
-    // error: if at least one environ is readable the probe did run and found nothing, so report the
-    // none marker; only when no environ file is readable at all is the probe genuinely unable to
-    // answer, so report the error marker. The readability loop uses only bash builtins (glob, test,
-    // break) so disambiguating costs no extra process. Single quotes protect the grep pattern; the
-    // $f/$r references stay unquoted because the whole script is wrapped in double quotes for the
-    // ProcessStartInfo argument, and an inner double quote would terminate that argument early.
-    // The group-level stderr redirect keeps error text ("command not found", "No such file or
-    // directory", grep's per-file "Permission denied") out of the agent log; GetProcessOutput
-    // leaves the child's stderr inherited.
+    // readable environ. Status 2 is ambiguous: grep reports it both for per-file read errors (an
+    // environ owned by another user, or a PID that vanished mid-scan; routine on a busy host) and
+    // for a fatal misuse such as a non-GNU grep rejecting -z. Disambiguate: when no environ is
+    // readable the probe cannot answer; when one is readable, re-test -z support against
+    // /dev/null and report the clean negative only if the option is accepted. Every other status
+    // (126/127 = grep could not execute, 128+ = killed by a signal) means the scan never
+    // happened, so report the error marker without consulting readability. The readability loop
+    // uses only bash builtins; the capability re-test is the single extra process and runs only
+    // on the status-2 path. Single quotes protect the grep pattern; $f/$r stay unquoted because
+    // the whole script is wrapped in double quotes for the ProcessStartInfo argument, and an
+    // inner double quote would terminate that argument early. The group-level stderr redirect
+    // keeps error text ("command not found", grep's per-file "Permission denied", usage output
+    // from a rejected option) out of the agent log; GetProcessOutput leaves the child's stderr
+    // inherited.
     private static readonly string DisplayProbeArguments =
-        $"-c \"{{ grep -qz '^DISPLAY=' /proc/[0-9]*/environ; case $? in 0) echo {DisplayFoundMarker};; 1) echo {DisplayNoneMarker};; *) r=0; for f in /proc/[0-9]*/environ; do if [ -r $f ]; then r=1; break; fi; done; if [ $r = 1 ]; then echo {DisplayNoneMarker}; else echo {DisplayProbeErrorMarker}; fi;; esac; }} 2>/dev/null\"";
+        $"-c \"{{ grep -qz '^DISPLAY=' /proc/[0-9]*/environ; case $? in 0) echo {DisplayFoundMarker};; 1) echo {DisplayNoneMarker};; 2) r=0; for f in /proc/[0-9]*/environ; do if [ -r $f ]; then r=1; break; fi; done; if [ $r = 0 ]; then echo {DisplayProbeErrorMarker}; else grep -zq x /dev/null; case $? in 0|1) echo {DisplayNoneMarker};; *) echo {DisplayProbeErrorMarker};; esac; fi;; *) echo {DisplayProbeErrorMarker};; esac; }} 2>/dev/null\"";
 
     private readonly ILogger<HeadlessServerDetector> _logger = logger;
     private readonly IProcessManager _processManager = processManager;
@@ -89,15 +90,6 @@ internal class HeadlessServerDetector(
                 return true;
             }
 
-            // Check if we're running on Ubuntu Server (which typically doesn't have GUI packages)
-            var ubuntuServerResult = await _processManager.GetProcessOutput("dpkg", "-l ubuntu-server", 3000);
-            if (ubuntuServerResult.IsSuccess)
-            {
-                _logger.LogInformationDeduped("Ubuntu Server package detected - assuming headless environment.");
-                return true;
-            }
-
-            // If we can't find any display server or GUI indicators, assume headless
             _logger.LogInformationDeduped("No display server detected - assuming headless environment.");
             return true;
         }

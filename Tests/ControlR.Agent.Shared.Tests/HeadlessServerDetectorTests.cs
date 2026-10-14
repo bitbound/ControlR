@@ -11,7 +11,7 @@ using Moq;
 namespace ControlR.Agent.Shared.Tests;
 
 /// <summary>
-/// Pins the DISPLAY probe in headless detection (#318). The old <c>ps -eo env</c> scrape was
+/// Pins the DISPLAY probe in headless detection. The old <c>ps -eo env</c> scrape was
 /// rejected by procps ("env" is not a format specifier), and because GetProcessOutput leaves the
 /// child's stderr inherited, the usage text landed in the agent log untagged. The replacement
 /// greps DISPLAY from /proc/[0-9]*/environ and prints a self-reporting marker, so a probe that
@@ -24,25 +24,48 @@ public class HeadlessServerDetectorTests
 {
   // Pins the grep-status-to-marker wiring of the real probe script. The shell roundtrip below only
   // proves *some* known marker comes back, so it still passes if the probe degenerates to always
-  // emitting cr-display-error (which grep exit 2 makes common on a busy host, since an unreadable or
-  // vanished /proc/[pid]/environ also returns 2). Here grep is shadowed with a PATH stub that exits
-  // with a chosen status, so each branch is driven to its required marker without depending on this
-  // machine's display state. Markers are asserted by exact equality, never as membership in a set.
+  // emitting cr-display-error. Here grep is shadowed with a PATH stub that keys off its target: a
+  // /dev/null argument is the probe's grep -z capability check and exits with capabilityExitStatus,
+  // the environ scan exits with grepExitStatus. Each branch is driven to its required marker
+  // without depending on this machine's display state. Markers are asserted by exact equality,
+  // never as membership in a set.
   [LinuxOnlyTheory]
-  [InlineData("0", false, "cr-display-found")]
-  [InlineData("1", false, "cr-display-none")]
-  [InlineData("2", false, "cr-display-none")]
-  [InlineData("3", false, "cr-display-none")]
-  [InlineData("2", true, "cr-display-error")]
+  // grep matched DISPLAY.
+  [InlineData("0", "1", false, "cr-display-found")]
+  // grep ran and DISPLAY is genuinely absent.
+  [InlineData("1", "1", false, "cr-display-none")]
+  // Exit 2 from an unreadable or vanished environ while -z works: benign, clean negative.
+  [InlineData("2", "1", false, "cr-display-none")]
+  // Exit 2 because grep rejects -z (the capability check also exits 2): the scan never ran.
+  [InlineData("2", "2", false, "cr-display-error")]
+  // Any other status means grep could not answer.
+  [InlineData("3", "1", false, "cr-display-error")]
+  // Launch failures: grep not executable (126) or missing from PATH (127).
+  [InlineData("126", "1", false, "cr-display-error")]
+  [InlineData("127", "1", false, "cr-display-error")]
+  // Exit 2 with no readable environ at all (stripped /proc): the probe cannot answer.
+  [InlineData("2", "1", true, "cr-display-error")]
   [SupportedOSPlatform("linux")]
   public async Task DisplayProbe_KnownGrepStatus_EmitsRequiredMarker(
     string grepExitStatus,
+    string capabilityExitStatus,
     bool forceNoReadableEnviron,
     string expectedMarker)
   {
-    var marker = await RunProbeWithStubbedGrep(grepExitStatus, forceNoReadableEnviron);
+    var marker = await RunProbeWithStubbedGrep(grepExitStatus, capabilityExitStatus, forceNoReadableEnviron);
 
     Assert.Equal(expectedMarker, marker);
+  }
+
+  [LinuxOnlyFact]
+  [SupportedOSPlatform("linux")]
+  public async Task DisplayProbe_WhenGrepIsMissingFromPath_EmitsErrorMarker()
+  {
+    // No stub, no system grep: bash reports 127 and the probe must declare itself broken instead
+    // of resolving to a confident negative.
+    var marker = await RunProbeWithGrepMissing();
+
+    Assert.Equal("cr-display-error", marker);
   }
 
   [LinuxOnlyFact]
@@ -59,24 +82,13 @@ public class HeadlessServerDetectorTests
       RedirectStandardOutput = true,
       RedirectStandardError = true
     };
-    using var process = Process.Start(psi) ?? throw new InvalidOperationException("bash failed to start.");
-    var stdoutTask = process.StandardOutput.ReadToEndAsync();
-    var stderrTask = process.StandardError.ReadToEndAsync();
-    using var cts = new CancellationTokenSource(10_000);
-    await process.WaitForExitAsync(cts.Token);
-    var stdout = await stdoutTask;
-    var stderr = await stderrTask;
-
-    // GetProcessOutput inherits the child's stderr into the agent's own output, so anything
-    // written here is the untagged-log-spam symptom of the original defect. Whether the probe
-    // finds a display depends on this machine; silence on stderr is unconditional.
-    Assert.Equal(string.Empty, stderr.Trim());
+    var stdout = await RunAndCapture(psi);
 
     // The probe must self-report. Empty stdout is indistinguishable from a clean negative to
     // GetProcessOutput, which ignores the child's exit code, so a marker is the only evidence
     // the probe actually ran.
     Assert.Contains(
-      stdout.Trim(),
+      stdout,
       new[] { "cr-display-found", "cr-display-none", "cr-display-error" });
   }
 
@@ -105,47 +117,44 @@ public class HeadlessServerDetectorTests
   }
 
   [Fact]
-  public async Task IsHeadlessServer_WhenProbeEmitsErrorMarker_FailsClosedBeforeFallbackChecks()
+  public async Task IsHeadlessServer_WhenProbeEmitsErrorMarker_FailsClosed()
   {
     // grep missing or /proc stripped: the probe says it could not run. That is not a negative
     // observation, so the detector must report headless without treating the broken probe as
     // evidence and without continuing as if the probe had answered "none".
-    var (detector, processManager) = CreateDetectorWithProbeResult(Result.Ok("cr-display-error"));
+    var (detector, _) = CreateDetectorWithProbeResult(Result.Ok("cr-display-error"));
 
     var isHeadless = await detector.IsHeadlessServer();
 
     Assert.True(isHeadless);
-    processManager
-      .Verify(x => x.GetProcessOutput("dpkg", It.IsAny<string>(), It.IsAny<int>()), Times.Never);
   }
 
   [Fact]
-  public async Task IsHeadlessServer_WhenProbeEmitsNoneMarker_ContinuesToFallbackChecks()
+  public async Task IsHeadlessServer_WhenProbeEmitsNoneMarker_ReturnsHeadless()
   {
-    // The clean negative: the probe ran and found no DISPLAY anywhere. Detection must proceed
-    // to the remaining signals instead of short-circuiting like a broken probe.
+    // The clean negative: the probe ran and found no DISPLAY anywhere, so the host is headless.
+    // The former ubuntu-server dpkg fallback could not change that outcome (every path past the
+    // none marker returned headless) and its IsSuccess check was exit-code blind, so it is gone;
+    // dpkg must not be invoked at all.
     var (detector, processManager) = CreateDetectorWithProbeResult(Result.Ok("cr-display-none"));
 
     var isHeadless = await detector.IsHeadlessServer();
 
     Assert.True(isHeadless);
     processManager
-      .Verify(x => x.GetProcessOutput("dpkg", It.IsAny<string>(), It.IsAny<int>()), Times.Once);
+      .Verify(x => x.GetProcessOutput("dpkg", It.IsAny<string>(), It.IsAny<int>()), Times.Never);
   }
 
   [Fact]
-  public async Task IsHeadlessServer_WhenProbeEmitsNothingOnStdout_FailsClosedBeforeFallbackChecks()
+  public async Task IsHeadlessServer_WhenProbeEmitsNothingOnStdout_FailsClosed()
   {
-    // Non-GNU grep rejecting -z, a script killed early, or bash writing its markers nowhere:
-    // no known marker means the probe result carries no information, so it must not be read
-    // as a clean negative.
-    var (detector, processManager) = CreateDetectorWithProbeResult(Result.Ok(string.Empty));
+    // A script killed early, or bash writing its markers nowhere: no known marker means the probe
+    // result carries no information, so it must not be read as a clean negative.
+    var (detector, _) = CreateDetectorWithProbeResult(Result.Ok(string.Empty));
 
     var isHeadless = await detector.IsHeadlessServer();
 
     Assert.True(isHeadless);
-    processManager
-      .Verify(x => x.GetProcessOutput("dpkg", It.IsAny<string>(), It.IsAny<int>()), Times.Never);
   }
 
   private static async Task<string> CaptureDisplayProbeArguments()
@@ -169,8 +178,8 @@ public class HeadlessServerDetectorTests
   }
 
   /// <summary>
-  /// Detector whose pgrep probes return no processes and whose dpkg fallback fails, so the only
-  /// signal available is the mocked DISPLAY probe result.
+  /// Detector whose pgrep probes return no processes, so the only signal available is the mocked
+  /// DISPLAY probe result.
   /// </summary>
   private static (HeadlessServerDetector Detector, Mock<IProcessManager> ProcessManager) CreateDetectorWithProbeResult(
     Result<string> bashProbeResult)
@@ -179,9 +188,6 @@ public class HeadlessServerDetectorTests
     processManager
       .Setup(x => x.GetProcessOutput(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
       .ReturnsAsync(Result.Ok(string.Empty));
-    processManager
-      .Setup(x => x.GetProcessOutput("dpkg", It.IsAny<string>(), It.IsAny<int>()))
-      .ReturnsAsync(Result.Fail<string>("Simulated host without dpkg evidence."));
     processManager
       .Setup(x => x.GetProcessOutput("bash", It.IsAny<string>(), It.IsAny<int>()))
       .ReturnsAsync(bashProbeResult);
@@ -194,15 +200,20 @@ public class HeadlessServerDetectorTests
   }
 
   /// <summary>
-  /// Runs the exact probe arguments the detector builds, but shadows <c>grep</c> with a PATH stub that
-  /// always exits with <paramref name="grepExitStatus"/>. That forces the status-to-marker wiring
-  /// without depending on this machine's display state. The readability loop still runs against real
-  /// /proc, so any status other than 0/1 resolves to cr-display-none when an environ is readable.
-  /// Pass <paramref name="forceNoReadableEnviron"/> to source GLOBIGNORE (via BASH_ENV) so the
-  /// environ glob matches nothing, simulating a probe with zero readable environ files.
+  /// Runs the exact probe arguments the detector builds, but shadows <c>grep</c> with a PATH stub.
+  /// The stub exits with <paramref name="grepExitStatus"/> for the environ scan and with
+  /// <paramref name="capabilityExitStatus"/> when it sees a <c>/dev/null</c> argument, which is the
+  /// probe's grep -z capability check. That forces the status-to-marker wiring without depending
+  /// on this machine's display state; the readability loop still runs against real /proc. Pass
+  /// <paramref name="forceNoReadableEnviron"/> to source GLOBIGNORE (via BASH_ENV) so bash
+  /// suppresses every match of the environ glob and leaves the pattern as a literal, nonexistent
+  /// path: the stripped-/proc case where no environ file is readable.
   /// </summary>
   [SupportedOSPlatform("linux")]
-  private static async Task<string> RunProbeWithStubbedGrep(string grepExitStatus, bool forceNoReadableEnviron)
+  private static async Task<string> RunProbeWithStubbedGrep(
+    string grepExitStatus,
+    string capabilityExitStatus,
+    bool forceNoReadableEnviron)
   {
     var bashArguments = await CaptureDisplayProbeArguments();
     var stubDirectory = Path.Combine(Path.GetTempPath(), $"headless-probe-{Guid.NewGuid():N}");
@@ -211,7 +222,9 @@ public class HeadlessServerDetectorTests
     try
     {
       var grepStubPath = Path.Combine(stubDirectory, "grep");
-      await File.WriteAllTextAsync(grepStubPath, $"#!/bin/sh\nexit {grepExitStatus}\n");
+      await File.WriteAllTextAsync(
+        grepStubPath,
+        $"#!/bin/sh\nfor a in \"$@\"; do if [ \"$a\" = /dev/null ]; then exit {capabilityExitStatus}; fi; done\nexit {grepExitStatus}\n");
       File.SetUnixFileMode(
         grepStubPath,
         UnixFileMode.UserRead
@@ -236,8 +249,7 @@ public class HeadlessServerDetectorTests
       if (forceNoReadableEnviron)
       {
         // GLOBIGNORE set as a plain env var is not consulted by bash -c; it must be a shell variable,
-        // so source it through BASH_ENV. '*' makes /proc/[0-9]*/environ match nothing, leaving the
-        // loop with zero readable environ files.
+        // so source it through BASH_ENV.
         var bashEnvPath = Path.Combine(stubDirectory, "globignore.sh");
         await File.WriteAllTextAsync(bashEnvPath, "GLOBIGNORE='*'\n");
         psi.Environment.Remove("GLOBIGNORE");
@@ -252,20 +264,61 @@ public class HeadlessServerDetectorTests
         psi.Environment.Remove("GLOBIGNORE");
       }
 
-      using var process = Process.Start(psi) ?? throw new InvalidOperationException("bash failed to start.");
-      var stdoutTask = process.StandardOutput.ReadToEndAsync();
-      var stderrTask = process.StandardError.ReadToEndAsync();
-      using var cts = new CancellationTokenSource(10_000);
-      await process.WaitForExitAsync(cts.Token);
-      var stdout = await stdoutTask;
-      var stderr = await stderrTask;
-
-      Assert.Equal(string.Empty, stderr.Trim());
-      return stdout.Trim();
+      return await RunAndCapture(psi);
     }
     finally
     {
       Directory.Delete(stubDirectory, recursive: true);
     }
+  }
+
+  /// <summary>
+  /// Runs the exact probe arguments with a PATH that contains no grep. An unset PATH is not
+  /// enough: bash falls back to its default search path, which does contain grep.
+  /// </summary>
+  [SupportedOSPlatform("linux")]
+  private static async Task<string> RunProbeWithGrepMissing()
+  {
+    var bashArguments = await CaptureDisplayProbeArguments();
+    var emptyDirectory = Path.Combine(Path.GetTempPath(), $"headless-probe-empty-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(emptyDirectory);
+
+    try
+    {
+      var psi = new ProcessStartInfo("bash", bashArguments)
+      {
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true
+      };
+      psi.Environment["PATH"] = emptyDirectory;
+      psi.Environment.Remove("BASH_ENV");
+      psi.Environment.Remove("GLOBIGNORE");
+
+      return await RunAndCapture(psi);
+    }
+    finally
+    {
+      Directory.Delete(emptyDirectory, recursive: true);
+    }
+  }
+
+  /// <summary>
+  /// Starts bash, waits for it under a timeout, and returns trimmed stdout. GetProcessOutput
+  /// inherits the child's stderr into the agent's own output, so anything on stderr is the
+  /// untagged-log-spam symptom of the original defect: silence there is asserted unconditionally.
+  /// </summary>
+  private static async Task<string> RunAndCapture(ProcessStartInfo psi)
+  {
+    using var process = Process.Start(psi) ?? throw new InvalidOperationException("bash failed to start.");
+    var stdoutTask = process.StandardOutput.ReadToEndAsync();
+    var stderrTask = process.StandardError.ReadToEndAsync();
+    using var cts = new CancellationTokenSource(10_000);
+    await process.WaitForExitAsync(cts.Token);
+    var stdout = await stdoutTask;
+    var stderr = await stderrTask;
+
+    Assert.Equal(string.Empty, stderr.Trim());
+    return stdout.Trim();
   }
 }
