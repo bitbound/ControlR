@@ -91,10 +91,10 @@
 
 			<Rectangle Height="1" Fill="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" />
 
-			<TextBlock FontWeight="SemiBold">
-				<Run Text="{x:Static common:Localization.AboutThirdPartyLicensesLabel}" />
-				<Run Text=":" />
-			</TextBlock>
+			<TextBlock FontWeight="SemiBold"
+                 FontSize="16"
+                 Text="{x:Static common:Localization.AboutThirdPartyLicensesLabel}" />
+
 			<TextBlock Text="{x:Static common:Localization.AboutThirdPartyLicensesDescription}" TextWrapping="Wrap" />
 
 			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="8">
