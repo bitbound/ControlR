@@ -32,7 +32,7 @@
 
   <PropertyGroup>
     <NoWarn>$(NoWarn);S125;AV0029;</NoWarn>
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001;</WarningsNotAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);BB0001;NU1903;</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup
