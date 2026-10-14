@@ -109,7 +109,7 @@ jobs:
       server_runtime: ${{ inputs.server_runtime }}
       skip_version_increment: true
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
-      use_local_storage: ${{ inputs.environment == 'dev' }}
+      use_local_storage: ${{ inputs.environment == 'dev' && inputs.use_self_hosted_runners }}
       retention_days_artifacts: 1
       build_nugets: false
       notarize_mac_bundle: true
@@ -158,7 +158,7 @@ jobs:
       image_reference: ${{ inputs.image_reference }}
       server_runtime: ${{ inputs.server_runtime }}
       environment: ${{ inputs.environment }}
-      use_local_storage: ${{ inputs.environment == 'dev' }}
+      use_local_storage: ${{ inputs.environment == 'dev' && inputs.use_self_hosted_runners }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     secrets: inherit
 
@@ -177,6 +177,6 @@ jobs:
       artifact_blob_key: ${{ inputs.artifact_blob_key }}
       server_runtime: ${{ inputs.server_runtime }}
       environment: ${{ inputs.environment }}
-      use_local_storage: ${{ inputs.environment == 'dev' }}
+      use_local_storage: ${{ inputs.environment == 'dev' && inputs.use_self_hosted_runners }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     secrets: inherit
