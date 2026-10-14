@@ -1,5 +1,4 @@
 using System.Net;
-using ControlR.ApiClient.Internal;
 using ControlR.ApiClient.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -62,8 +61,11 @@ public sealed class UserStorageNoContentTests
 
   private static IControlrApi CreateClient(Func<HttpRequestMessage, HttpResponseMessage> responder)
   {
-    var options = new ControlrApiClientFactoryOptions { MaxIdleClientLifetime = null };
-    options.HttpMessageHandlerFactory = () => new RecordingHttpMessageHandler(responder);
+    var options = new ControlrApiClientFactoryOptions
+    {
+      MaxIdleClientLifetime = null,
+      HttpMessageHandlerFactory = () => new RecordingHttpMessageHandler(responder)
+    };
 
     var factory = new ControlrApiClientFactory(options, TimeProvider.System, NullLoggerFactory.Instance);
     return factory.GetOrCreateClient(Guid.NewGuid().ToString("n"), o => o.BaseUrl = _server);

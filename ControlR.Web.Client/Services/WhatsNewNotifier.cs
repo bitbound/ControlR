@@ -14,7 +14,7 @@ public class WhatsNewNotifier(
     IDialogService dialogService,
     ILogger<WhatsNewNotifier> logger) : IWhatsNewNotifier
 {
-  private const int AcknowledgementWriteTimeoutSeconds = 10;
+  private static readonly TimeSpan _acknowledgementWriteTimeout = TimeSpan.FromSeconds(10);
 
   private readonly IDialogService _dialogService = dialogService;
   private readonly ILogger<WhatsNewNotifier> _logger = logger;
@@ -89,9 +89,7 @@ public class WhatsNewNotifier(
 
     if (result is { Canceled: false, Data: true })
     {
-      // Callers start their token before the dialog opens, so a reader who takes longer than that
-      // deadline would have the dismissal cancelled before it was recorded.
-      using var writeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(AcknowledgementWriteTimeoutSeconds));
+      using var writeTimeout = new CancellationTokenSource(_acknowledgementWriteTimeout);
       await _userStorage.SetItem(UserStorageKeys.AcknowledgedNewVersion, currentVersion, writeTimeout.Token);
     }
   }
