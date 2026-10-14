@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using ControlR.ApiClient.Interfaces.V1;
 using ControlR.Libraries.Api.Contracts.Constants;
@@ -21,9 +22,19 @@ internal partial class V1Api
   async Task<ApiResult<UserStorageResponseDto>> IUserStorageApi.GetUserStorageItem(string key, Guid tenantId, CancellationToken cancellationToken)
   {
     return await _client.ExecuteApiCall(async () =>
-      await _client.HttpClient.GetFromJsonAsync<UserStorageResponseDto>(
-        $"{HttpConstants.V1.UserStorageEndpoint}/{key}?tenantId={tenantId}",
-        cancellationToken));
+    {
+      using var response = await _client.HttpClient.GetAsync(
+        $"{HttpConstants.V1.UserStorageEndpoint}/{key}?tenantId={tenantId}", cancellationToken);
+
+      if (response.StatusCode == HttpStatusCode.NoContent)
+      {
+        return new UserStorageResponseDto(key, null);
+      }
+
+      await response.EnsureSuccessStatusCodeWithDetails();
+      return await response.Content.ReadFromJsonAsync<UserStorageResponseDto>(cancellationToken)
+        ?? throw new HttpRequestException("The server response was empty.", null, response.StatusCode);
+    });
   }
 
   async Task<ApiResult<UserStorageResponseDto>> IUserStorageApi.SetUserStorageItem(Guid tenantId, UserStorageRequestDto request, CancellationToken cancellationToken)
