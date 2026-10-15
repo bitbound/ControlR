@@ -304,8 +304,8 @@ internal class FileManager(
 
       if (_systemEnvironment.IsWindows())
       {
-        var desktopLogs = GetWindowsDesktopClientLogs();
-        logGroups.Add(desktopLogs);
+        var desktopLogGroups = GetWindowsDesktopClientLogs();
+        logGroups.AddRange(desktopLogGroups);
       }
       else if (_systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS())
       {
@@ -533,8 +533,8 @@ internal class FileManager(
       {
         LogKind.Agent when username is null => _fileSystemPathProvider.GetAgentLogsDirectoryPath(),
         LogKind.Installer when username is null => _fileSystemPathProvider.GetInstallerLogsDirectoryPath(),
-        LogKind.DesktopClient when _systemEnvironment.IsWindows() && username is null =>
-          _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory(),
+        LogKind.DesktopClient when _systemEnvironment.IsWindows() && username is not null =>
+          _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory(username),
         LogKind.DesktopClient when _systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS() =>
           username is null
             ? _fileSystemPathProvider.GetUnixDesktopClientLogsDirectoryForRoot()
@@ -887,7 +887,7 @@ internal class FileManager(
 
     if (_systemEnvironment.IsWindows())
     {
-      TryAddLogRoot(roots, () => _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory());
+      TryAddWindowsDesktopClientLogRoots(roots);
       return roots;
     }
 
@@ -972,16 +972,35 @@ internal class FileManager(
     return logGroups;
   }
 
-  private LogFileGroupDto GetWindowsDesktopClientLogs()
+  private List<LogFileGroupDto> GetWindowsDesktopClientLogs()
   {
-    var logFiles = new List<LogFileEntryDto>();
+    var logGroups = new List<LogFileGroupDto>();
 
     try
     {
-      var logsDir = _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory();
-      if (_fileSystem.DirectoryExists(logsDir))
+      var usersDir = _fileSystemPathProvider.GetWindowsDesktopClientUsersDirectory();
+      if (!_fileSystem.DirectoryExists(usersDir))
       {
-        logFiles.AddRange(GetLogFilesFromDirectory(logsDir));
+        return logGroups;
+      }
+
+      foreach (var userDir in _fileSystem.GetDirectories(usersDir))
+      {
+        try
+        {
+          var username = _fileSystem.GetDirectoryInfo(userDir).Name;
+          var userLogsPath = _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory(username);
+
+          if (_fileSystem.DirectoryExists(userLogsPath))
+          {
+            var userLogs = GetLogFilesFromDirectory(userLogsPath);
+            logGroups.Add(new LogFileGroupDto($"DesktopClient Logs ({username})", LogKind.DesktopClient, username, userLogs));
+          }
+        }
+        catch (Exception ex)
+        {
+          _logger.LogError(ex, "Error getting desktop logs for Windows user directory: {UserDir}", userDir);
+        }
       }
     }
     catch (Exception ex)
@@ -989,7 +1008,7 @@ internal class FileManager(
       _logger.LogError(ex, "Error getting Windows desktop client logs");
     }
 
-    return new LogFileGroupDto("DesktopClient Logs", LogKind.DesktopClient, null, logFiles);
+    return logGroups;
   }
 
   private bool HasSubdirectories(string directoryPath)
@@ -1031,6 +1050,41 @@ internal class FileManager(
     }
 
     return fullPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, comparison);
+  }
+
+  // Each user that has run the desktop client owns a subdirectory of the instance directory, so the
+  // per-user log directories have to be enumerated rather than assumed.
+  private void TryAddWindowsDesktopClientLogRoots(ICollection<string> roots)
+  {
+    string[] userDirectories;
+    try
+    {
+      var usersDir = _fileSystemPathProvider.GetWindowsDesktopClientUsersDirectory();
+      if (!_fileSystem.DirectoryExists(usersDir))
+      {
+        return;
+      }
+
+      userDirectories = _fileSystem.GetDirectories(usersDir);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogDebug(ex, "Could not enumerate Windows desktop client user directories.");
+      return;
+    }
+
+    foreach (var userDir in userDirectories)
+    {
+      try
+      {
+        var username = _fileSystem.GetDirectoryInfo(userDir).Name;
+        TryAddLogRoot(roots, () => _fileSystemPathProvider.GetWindowsDesktopClientLogsDirectory(username));
+      }
+      catch (Exception ex)
+      {
+        _logger.LogDebug(ex, "Skipping Windows desktop client log root for {UserDir}", userDir);
+      }
+    }
   }
 }
 

@@ -11,7 +11,18 @@ public class PathConstantsTests
   {
     var result = PathConstants.GetLogsPath(instanceId: null);
 
-    Assert.Contains(@"\ControlR\", result, StringComparison.OrdinalIgnoreCase);
-    Assert.EndsWith(@"default\Logs\ControlR.DesktopClient\LogFile.log", result, StringComparison.OrdinalIgnoreCase);
+    Assert.Contains(@"\ControlR\default\", result, StringComparison.OrdinalIgnoreCase);
+    Assert.EndsWith(@"\DesktopClient\Logs\LogFile.log", result, StringComparison.OrdinalIgnoreCase);
+    // The signed-in user's directory sits between the instance id and the client directory.
+    Assert.DoesNotContain(@"default\DesktopClient", result, StringComparison.OrdinalIgnoreCase);
+  }
+
+  [WindowsOnlyFact]
+  public void GetSettingsPath_WhenInstanceIdIsNotAValidDirectoryName_KeepsItAsWritten()
+  {
+    var result = PathConstants.GetSettingsPath("inst:1");
+
+    Assert.Contains(@"\inst:1\", result, StringComparison.Ordinal);
+    Assert.EndsWith(@"\DesktopClient\settings.json", result, StringComparison.OrdinalIgnoreCase);
   }
 }

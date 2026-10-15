@@ -20,6 +20,15 @@ public static class PathConstants
     return Path.Combine(logsDir, BrandingConstants.DesktopClientBaseName, "LogFile.log");
   }
 
+  public static string GetSettingsPath(string? instanceId)
+  {
+    var rootDir = Libc.Geteuid() == 0
+      ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
+      : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/{BrandingConstants.UnixHiddenDirectoryName}";
+
+    return Path.Combine(AppendInstanceId(rootDir, instanceId), "settings.json");
+  }
+
   private static string AppendInstanceId(string rootDir, string? instanceId)
   {
     return Path.Combine(rootDir, GetEffectiveInstanceId(instanceId));

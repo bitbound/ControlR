@@ -1,4 +1,6 @@
-﻿using ControlR.Libraries.Branding;
+﻿using System.Diagnostics;
+using ControlR.Libraries.Branding;
+using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services;
 
@@ -6,13 +8,17 @@ namespace ControlR.DesktopClient.Windows;
 
 public static class PathConstants
 {
+  private const string SystemUsername = "System";
+
   public static string GetLogsPath(string? instanceId)
   {
-    var logsDir = Path.Combine(
-          Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-          BrandingConstants.WindowsInstallDirectoryName);
-    logsDir = AppendSubDirectories(logsDir, instanceId);
-    return Path.Combine(logsDir, "Logs", BrandingConstants.DesktopClientBaseName, "LogFile.log");
+    var logsDir = Path.Combine(GetDesktopClientDirectory(instanceId), "Logs");
+    return Path.Combine(logsDir, "LogFile.log");
+  }
+
+  public static string GetSettingsPath(string? instanceId)
+  {
+    return Path.Combine(GetDesktopClientDirectory(instanceId), "settings.json");
   }
 
   private static string AppendSubDirectories(string rootDir, string? instanceId)
@@ -22,7 +28,18 @@ public static class PathConstants
       rootDir = Path.Combine(rootDir, "Debug");
     }
 
-    return  Path.Combine(rootDir, GetEffectiveInstanceId(instanceId));
+    return Path.Combine(rootDir, GetEffectiveInstanceId(instanceId));
+  }
+
+  private static string GetDesktopClientDirectory(string? instanceId)
+  {
+    var rootDir = Path.Combine(
+      Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+      BrandingConstants.WindowsInstallDirectoryName);
+
+    var sessionDir = AppendSubDirectories(rootDir, instanceId);
+
+    return Path.Combine(sessionDir, GetUsername(), BrandingConstants.DesktopClientDirectoryName);
   }
 
   private static string GetEffectiveInstanceId(string? instanceId)
@@ -30,5 +47,13 @@ public static class PathConstants
     return string.IsNullOrWhiteSpace(instanceId)
       ? AppConstants.DefaultInstanceId
       : instanceId;
+  }
+
+  private static string GetUsername()
+  {
+    var sessionId = (uint)Process.GetCurrentProcess().SessionId;
+    var username = Win32Interop.GetUsernameFromSession(sessionId);
+
+    return string.IsNullOrEmpty(username) ? SystemUsername : username;
   }
 }

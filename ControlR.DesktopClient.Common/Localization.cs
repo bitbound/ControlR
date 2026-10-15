@@ -1,11 +1,16 @@
 ﻿using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using ControlR.Libraries.Branding;
 
 namespace ControlR.DesktopClient.Common;
 
 public static class Localization
 {
+  private const string BrandNameToken = "{brand_name}";
+  private const string DefaultCulture = "en-US";
+  private const string LanguageDisplayNameKey = nameof(LanguageDisplayName);
+  private const string StringsSuffix = ".json";
 
   private static readonly JsonSerializerOptions _jsonOptions = new()
   {
@@ -14,8 +19,11 @@ public static class Localization
     ReadCommentHandling = JsonCommentHandling.Skip
   };
 
+  private static readonly string _resourcePrefix =
+    $"{typeof(Localization).Assembly.GetName().Name}.Resources.Strings.";
+
   private static string _currentCulture = CultureInfo.CurrentCulture.Name;
-  private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings();
+  private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings(_currentCulture);
 
   public static string About => GetString();
   public static string AboutLibraryAvaloniaUi => GetString();
@@ -66,6 +74,9 @@ public static class Localization
   public static string GrantPermission => GetString();
   public static string InstanceId => GetString();
   public static string InvalidViewModelTypeMessage => GetString();
+  public static string Language => GetString();
+  public static string LanguageDisplayName => GetString();
+  public static string LanguageRestartNote => GetString();
   public static string LearnMore => GetString();
   public static string Light => GetString();
   public static string LinkLicenseText => GetString();
@@ -96,6 +107,7 @@ public static class Localization
   public static string RemoteControlSessionEndToastMessage => GetString();
   public static string RemoteControlSessionStartToastMessage => GetString();
   public static string RemoteControlSessionToastTitle => GetString();
+  public static string Restart => GetString();
   public static string ScreenCapturePermissionDescription => GetString();
   public static string ScreenCastPermission => GetString();
   public static string ScreenCastPermissionDescription => GetString();
@@ -116,20 +128,36 @@ public static class Localization
   public static string YesText => GetString();
   public static string You => GetString();
 
+  /// <summary>
+  /// The embedded cultures, each labeled in its own language.
+  /// </summary>
+  public static IReadOnlyList<LocalizationLanguage> GetAvailableLanguages()
+  {
+    var assembly = typeof(Localization).Assembly;
+
+    return assembly
+      .GetManifestResourceNames()
+      .Where(x => x.StartsWith(_resourcePrefix) && x.EndsWith(StringsSuffix))
+      .Select(x => x[_resourcePrefix.Length..^StringsSuffix.Length])
+      .Select(culture => new LocalizationLanguage(culture, GetLocalizationStrings(culture)[LanguageDisplayNameKey]))
+      .OrderBy(x => x.DisplayName)
+      .ToList();
+  }
+
   public static void SetCulture(string culture)
   {
     _currentCulture = culture;
-    _localizationStrings = GetLocalizationStrings();
+    _localizationStrings = GetLocalizationStrings(_currentCulture);
   }
 
-  private static Dictionary<string, string> GetLocalizationStrings()
+  private static Dictionary<string, string> GetLocalizationStrings(string culture)
   {
     var assembly = typeof(Localization).Assembly;
     var resourceNames = assembly.GetManifestResourceNames();
 
-    if (resourceNames.FirstOrDefault(x => x.EndsWith($"{_currentCulture}.json")) is not { } fileName)
+    if (resourceNames.FirstOrDefault(x => x.EndsWith($"{culture}{StringsSuffix}")) is not { } fileName)
     {
-      fileName = $"{assembly.GetName().Name}.Resources.Strings.en-US.json";
+      fileName = $"{_resourcePrefix}{DefaultCulture}{StringsSuffix}";
     }
 
     using var resourceStream = assembly.GetManifestResourceStream(fileName)
@@ -137,8 +165,10 @@ public static class Localization
 
     using var reader = new StreamReader(resourceStream);
     var content = reader.ReadToEnd();
-    return JsonSerializer.Deserialize<Dictionary<string, string>>(content, _jsonOptions)
-           ?? throw new InvalidOperationException("Unable to deserialize localization file.");
+    var strings = JsonSerializer.Deserialize<Dictionary<string, string>>(content, _jsonOptions)
+                  ?? throw new InvalidOperationException("Unable to deserialize localization file.");
+
+    return strings.ToDictionary(x => x.Key, x => x.Value.Replace(BrandNameToken, BrandingConstants.BrandName));
   }
 
   private static string GetString([CallerMemberName] string key = "")
@@ -151,3 +181,5 @@ public static class Localization
     return $"Localization key '{key}' not found.";
   }
 }
+
+public record LocalizationLanguage(string Culture, string DisplayName);

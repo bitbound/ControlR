@@ -17,6 +17,12 @@ public static class PathConstants
     var logsDir = isRoot ? rootDir : Path.Combine(rootDir, "logs");
     return Path.Combine(logsDir, BrandingConstants.DesktopClientBaseName, "LogFile.log");
   }
+
+  public static string GetSettingsPath(string? instanceId)
+  {
+    return Path.Combine(GetSettingsDirectory(instanceId), "settings.json");
+  }
+
   public static string GetWaylandRemoteDesktopRestoreTokenPath(string? instanceId)
   {
     var dir = GetSettingsDirectory(instanceId);

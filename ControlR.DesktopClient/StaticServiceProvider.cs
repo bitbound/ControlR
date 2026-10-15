@@ -33,7 +33,20 @@ internal static class StaticServiceProvider
     _provider = services.BuildServiceProvider();
   }
 
-  internal static ImmutableList<ServiceDescriptor> GetServiceDescriptors() => 
+  internal static string GetDesktopSettingsPath(string? instanceId)
+  {
+#if IS_WINDOWS
+    return ControlR.DesktopClient.Windows.PathConstants.GetSettingsPath(instanceId);
+#elif IS_MACOS
+    return ControlR.DesktopClient.Mac.PathConstants.GetSettingsPath(instanceId);
+#elif IS_LINUX
+    return ControlR.DesktopClient.Linux.PathConstants.GetSettingsPath(instanceId);
+#else
+    throw new PlatformNotSupportedException();
+#endif
+  }
+
+  internal static ImmutableList<ServiceDescriptor> GetServiceDescriptors() =>
     _serviceDescriptors ?? throw new InvalidOperationException("Service provider has not been built yet.");
 
   private static IServiceCollection AddControlrDesktop(

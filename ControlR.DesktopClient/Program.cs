@@ -1,5 +1,9 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using ControlR.DesktopClient.Common.Startup;
+using ControlR.DesktopClient.Services;
+using ControlR.Libraries.Shared.Services.FileSystem;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ControlR.DesktopClient;
 
@@ -35,6 +39,7 @@ internal sealed class Program
   [STAThread]
   public static void Main(string[] args)
   {
+    UsePersistedCulture();
     UseLinuxDisplayGuard();
 
     while (true)
@@ -98,5 +103,23 @@ internal sealed class Program
     Console.WriteLine("No X11 or Wayland display detected. Exiting.");
     Thread.Sleep(30_000);
     Environment.Exit(1);
+  }
+
+  /// <summary>
+  ///   Applies the saved language before Avalonia loads any XAML, since localized text binds once at load.
+  /// </summary>
+  private static void UsePersistedCulture()
+  {
+    var instanceId = ArgsParser.GetArgValue<string?>("instance-id", defaultValue: string.Empty);
+    var fileSystem = new FileSystem(NullLogger<FileSystem>.Instance);
+    var settingsPath = StaticServiceProvider.GetDesktopSettingsPath(instanceId);
+    var language = new DesktopSettingsStore(settingsPath, fileSystem).Current.Language;
+
+    if (string.IsNullOrWhiteSpace(language))
+    {
+      return;
+    }
+
+    Localization.SetCulture(language);
   }
 }

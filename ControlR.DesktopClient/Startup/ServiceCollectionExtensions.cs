@@ -35,6 +35,9 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<INavigationProvider, NavigationProvider>()
       .AddSingleton<IMainWindowProvider, MainWindowProvider>()
+      .AddSingleton<IDesktopSettingsStore>(sp => new DesktopSettingsStore(
+        StaticServiceProvider.GetDesktopSettingsPath(instanceId),
+        sp.GetRequiredService<IFileSystem>()))
       .AddSingleton<IThemeProvider, ThemeProvider>()
       .AddSingleton<IAppViewModel, AppViewModel>()
       .AddSingleton<IMainWindowViewModel, MainWindowViewModel>()
