@@ -70,9 +70,8 @@ public partial class SettingsViewModel(
   [RelayCommand]
   private void RestartClient()
   {
-    // The agent's desktop-client watcher relaunches the client on all three platforms, so a plain
-    // exit is the restart. Spawning a replacement here would leave a second client, since
-    // AbandonProcessGroup on macOS and KillMode=process on Linux let a child outlive the shutdown.
+    // The agent's desktop-client watcher relaunches the client on all three platforms, 
+    // so a plain exit is the restart.
     _applicationLifetime.StopApplication();
   }
 }

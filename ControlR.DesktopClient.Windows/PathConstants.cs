@@ -6,6 +6,15 @@ using ControlR.Libraries.Shared.Services;
 
 namespace ControlR.DesktopClient.Windows;
 
+/// <summary>
+/// <para>
+/// File system path constants used by DesktopClient.
+/// </para>
+/// <para>
+/// NOTE: Each platform has one of these files and is accessed behind preprocessor directives.
+/// Displayed references might be incorrect.
+/// </para>
+/// </summary>
 public static class PathConstants
 {
   private const string SystemUsername = "System";
