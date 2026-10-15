@@ -12,9 +12,10 @@ public interface IThemeProvider
   void ToggleTheme();
 }
 
-public class ThemeProvider : IThemeProvider
+public class ThemeProvider(IDesktopSettingsStore settingsStore) : IThemeProvider
 {
-  private AvaloniaThemeMode _currentThemeMode = AvaloniaThemeMode.Dark;
+  private readonly IDesktopSettingsStore _settingsStore = settingsStore;
+  private AvaloniaThemeMode _currentThemeMode = settingsStore.Current.Theme;
 
   public event EventHandler? ThemeChanged;
 
@@ -34,6 +35,7 @@ public class ThemeProvider : IThemeProvider
       if (_currentThemeMode != value)
       {
         _currentThemeMode = value;
+        _settingsStore.SetTheme(value);
         ApplyTheme();
         ThemeChanged?.Invoke(this, EventArgs.Empty);
       }

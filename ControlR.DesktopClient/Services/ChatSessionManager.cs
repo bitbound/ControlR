@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Avalonia.Controls;
 using ControlR.DesktopClient.Models;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Enums;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Logging;
 
@@ -86,7 +87,7 @@ internal class ChatSessionManager(
   {
     return _sessions.ContainsKey(sessionId);
   }
-  public async Task<bool> SendResponse(Guid sessionId, string message)
+  public async Task<bool> SendResponse(Guid sessionId, string message, ChatMessageKind kind)
   {
     if (!_sessions.TryGetValue(sessionId, out var session))
     {
@@ -120,7 +121,8 @@ internal class ChatSessionManager(
         message,
         currentUser,
         session.ViewerConnectionId,
-        DateTimeOffset.Now);
+        DateTimeOffset.Now,
+        kind);
 
       // Send back to Agent via IPC
       var success = await connection.Server.SendChatResponse(response);

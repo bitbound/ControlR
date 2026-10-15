@@ -28,6 +28,7 @@
       Include="..\Libraries\ControlR.Libraries.Messenger.Extensions\ControlR.Libraries.Messenger.Extensions.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Resources\Strings\cs-CZ.json" />
     <EmbeddedResource Include="Resources\Strings\en-US.json" />
   </ItemGroup>
   <ItemGroup>

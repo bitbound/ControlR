@@ -17,7 +17,8 @@ public class AgentRpcService(IHubConnection<IAgentHub> hubConnection, ILogger<Ag
                 dto.Message,
                 dto.SenderUsername,
                 dto.ViewerConnectionId,
-                dto.Timestamp);
+                dto.Timestamp,
+                dto.Kind);
 
             _logger.LogInformation(
                 "Sending chat response for session {SessionId} from {Username}",

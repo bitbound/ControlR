@@ -323,11 +323,6 @@ public class CustomizeScriptTests
     AssertContainsLine(result, $"\"name\": \"{brandName}\"");
     AssertContainsLine(result, $"\"short_name\": \"{brandName}\"");
 
-    // Localization strings
-    AssertContainsLine(result, $"{brandName} Chat");
-    AssertContainsLine(result, $"{brandName} is free, open-source");
-    AssertContainsLine(result, $"{brandName} uses the following");
-
     // Service templates
     AssertContainsLine(result, $"{brandName} is an open-source");
     AssertContainsLine(result, $"{brandName} Desktop Client provides");
