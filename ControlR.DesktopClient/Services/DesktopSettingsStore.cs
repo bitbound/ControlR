@@ -14,14 +14,26 @@ public interface IDesktopSettingsStore
 /// <summary>
 /// Theme and language choices, persisted to the settings file.
 /// </summary>
-public class DesktopSettingsStore(
-  string settingsFilePath,
-  IFileSystem fileSystem,
-  ILogger<DesktopSettingsStore> logger) : IDesktopSettingsStore
+public class DesktopSettingsStore : IDesktopSettingsStore
 {
   private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-  public DesktopSettings Current { get; private set; } = Read(settingsFilePath, fileSystem, logger);
+  private readonly IFileSystem _fileSystem;
+  private readonly ILogger<DesktopSettingsStore> _logger;
+  private readonly string _settingsFilePath;
+
+  public DesktopSettingsStore(
+    IDesktopPathProvider pathProvider,
+    IFileSystem fileSystem,
+    ILogger<DesktopSettingsStore> logger)
+  {
+    _settingsFilePath = pathProvider.GetSettingsPath();
+    _fileSystem = fileSystem;
+    _logger = logger;
+    Current = Read(_settingsFilePath, fileSystem, logger);
+  }
+
+  public DesktopSettings Current { get; private set; }
 
   public void SetLanguage(string language)
   {
@@ -62,15 +74,15 @@ public class DesktopSettingsStore(
   {
     try
     {
-      fileSystem.CreateDirectory(Path.GetDirectoryName(settingsFilePath)!);
+      _fileSystem.CreateDirectory(Path.GetDirectoryName(_settingsFilePath)!);
 
-      var tempFilePath = $"{settingsFilePath}.tmp";
-      fileSystem.WriteAllText(tempFilePath, JsonSerializer.Serialize(Current, _jsonOptions));
-      fileSystem.MoveFile(tempFilePath, settingsFilePath, overwrite: true);
+      var tempFilePath = $"{_settingsFilePath}.tmp";
+      _fileSystem.WriteAllText(tempFilePath, JsonSerializer.Serialize(Current, _jsonOptions));
+      _fileSystem.MoveFile(tempFilePath, _settingsFilePath, overwrite: true);
     }
     catch (Exception ex)
     {
-      logger.LogError(ex, "Unable to save settings to {SettingsPath}", settingsFilePath);
+      _logger.LogError(ex, "Unable to save settings to {SettingsPath}", _settingsFilePath);
     }
   }
 }

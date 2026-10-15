@@ -2,8 +2,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Startup;
 using ControlR.DesktopClient.Services;
-using ControlR.Libraries.Shared.Services.FileSystem;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ControlR.DesktopClient;
 
@@ -113,23 +111,19 @@ internal sealed class Program
     try
     {
       var instanceId = ArgsParser.GetArgValue<string?>("instance-id", defaultValue: string.Empty);
-      var fileSystem = new FileSystem(NullLogger<FileSystem>.Instance);
-      var settingsPath = StaticServiceProvider.GetDesktopSettingsPath(instanceId);
-      var store = new DesktopSettingsStore(
-        settingsPath,
-        fileSystem,
-        NullLogger<DesktopSettingsStore>.Instance);
+      using var provider = StaticServiceProvider.CreateTemporaryProvider(instanceId);
+      var language = provider.GetRequiredService<IDesktopSettingsStore>().Current.Language;
 
-      if (string.IsNullOrWhiteSpace(store.Current.Language))
+      if (string.IsNullOrWhiteSpace(language))
       {
         return;
       }
 
-      Localization.SetCulture(store.Current.Language);
+      Localization.SetCulture(language);
     }
     catch (Exception ex)
     {
-      // Runs before Avalonia, DI, and Serilog exist. Starting in the system language is better
+      // Runs before Avalonia and Serilog exist. Starting in the system language is better
       // than not starting, and the store reads the same file again once it can log.
       Console.WriteLine($"Unable to apply the saved language: {ex}");
     }

@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Startup;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using ControlR.Libraries.Serilog;
 using ControlR.Libraries.Shared.Services;
 using System.Collections.Immutable;
@@ -33,17 +32,11 @@ internal static class StaticServiceProvider
     _provider = services.BuildServiceProvider();
   }
 
-  internal static string GetDesktopSettingsPath(string? instanceId)
+  internal static ServiceProvider CreateTemporaryProvider(string? instanceId)
   {
-#if IS_WINDOWS
-    return ControlR.DesktopClient.Windows.PathConstants.GetSettingsPath(instanceId);
-#elif IS_MACOS
-    return ControlR.DesktopClient.Mac.PathConstants.GetSettingsPath(instanceId);
-#elif IS_LINUX
-    return ControlR.DesktopClient.Linux.PathConstants.GetSettingsPath(instanceId);
-#else
-    throw new PlatformNotSupportedException();
-#endif
+    var services = new ServiceCollection();
+    services.AddControlrDesktopSettings(instanceId);
+    return services.BuildServiceProvider();
   }
 
   internal static ImmutableList<ServiceDescriptor> GetServiceDescriptors() =>
@@ -59,12 +52,9 @@ internal static class StaticServiceProvider
 
     services.AddSingleton<IConfiguration>(configuration);
 
-    services.AddLogging(builder =>
-    {
-      builder
-        .AddConsole()
-        .AddDebug();
-    });
+    // Must come before BootstrapSerilog. Both register a logger, and the order decides
+    // which one the app gets.
+    services.AddControlrDesktopSettings(instanceId);
 
     if (!Design.IsDesignMode)
     {
@@ -82,7 +72,7 @@ internal static class StaticServiceProvider
     }
 
     services
-      .AddDesktopShellServices(instanceId)
+      .AddDesktopShellServices()
       .AddDesktopAppPlatformServices();
 
     return services;

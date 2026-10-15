@@ -15,31 +15,45 @@ namespace ControlR.DesktopClient.Startup;
 
 internal static class ServiceCollectionExtensions
 {
-  public static IServiceCollection AddDesktopShellServices(
+  /// <summary>
+  /// Registers the settings the client reads before Avalonia exists, so
+  /// <see cref="StaticServiceProvider.CreateTemporaryProvider"/> and the real provider stay in sync.
+  /// </summary>
+  public static IServiceCollection AddControlrDesktopSettings(
     this IServiceCollection services,
     string? instanceId)
   {
-    services.AddOptions();
+    services.AddLogging(builder =>
+    {
+      builder
+        .AddConsole()
+        .AddDebug();
+    });
 
     services.Configure<DesktopClientOptions>(options =>
     {
       options.InstanceId = instanceId;
     });
 
+    return services
+      .AddSingleton<IFileSystem, FileSystem>()
+      .AddSingleton<IDesktopPathProvider, DesktopPathProvider>()
+      .AddSingleton<IDesktopSettingsStore, DesktopSettingsStore>();
+  }
+
+  public static IServiceCollection AddDesktopShellServices(this IServiceCollection services)
+  {
+    services.AddOptions();
+
     services
       .AddControlrIpcClient<DesktopClientRpcService>()
       .AddSingleton(TimeProvider.System)
       .AddSingleton<IMessenger>(new WeakReferenceMessenger())
       .AddSingleton<IProcessManager, ProcessManager>()
-      .AddSingleton<IFileSystem, FileSystem>()
       .AddSingleton<IFileAccessPermissions, FileAccessPermissions>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<INavigationProvider, NavigationProvider>()
       .AddSingleton<IMainWindowProvider, MainWindowProvider>()
-      .AddSingleton<IDesktopSettingsStore>(sp => new DesktopSettingsStore(
-        StaticServiceProvider.GetDesktopSettingsPath(instanceId),
-        sp.GetRequiredService<IFileSystem>(),
-        sp.GetRequiredService<ILogger<DesktopSettingsStore>>()))
       .AddSingleton<IThemeProvider, ThemeProvider>()
       .AddSingleton<IAppViewModel, AppViewModel>()
       .AddSingleton<IMainWindowViewModel, MainWindowViewModel>()

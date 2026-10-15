@@ -3,6 +3,7 @@ using ControlR.Libraries.Avalonia.Theming;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.TestingUtilities.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace ControlR.DesktopClient.Tests;
 
@@ -80,8 +81,11 @@ public class DesktopSettingsStoreTests
 
   private static DesktopSettingsStore CreateStore(IFileSystem fileSystem)
   {
+    var paths = new Mock<IDesktopPathProvider>();
+    paths.Setup(x => x.GetSettingsPath()).Returns(SettingsPath);
+
     return new DesktopSettingsStore(
-      SettingsPath,
+      paths.Object,
       fileSystem,
       NullLogger<DesktopSettingsStore>.Instance);
   }
