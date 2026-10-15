@@ -37,6 +37,21 @@ public class LocalizationTests
     Assert.Empty(czech.Except(english));
   }
 
+  // A saved or system culture can name a language that has no strings file. Starting in English is
+  // the only option left, so this must not throw.
+  [Fact]
+  public void SetCulture_WhenNoStringsFileExists_FallsBackToEnglish()
+  {
+    Localization.SetCulture("en-US");
+    var englishTitle = Localization.ChatWindowDefaultTitle;
+
+    Localization.SetCulture("de-DE");
+
+    Assert.Equal(englishTitle, Localization.ChatWindowDefaultTitle);
+
+    Localization.SetCulture("en-US");
+  }
+
   private static HashSet<string> ReadKeys(string culture)
   {
     var assembly = typeof(Localization).Assembly;
