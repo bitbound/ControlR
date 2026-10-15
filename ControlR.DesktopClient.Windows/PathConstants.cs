@@ -3,6 +3,7 @@ using ControlR.Libraries.Branding;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services;
+using Serilog;
 
 namespace ControlR.DesktopClient.Windows;
 
@@ -70,8 +71,8 @@ public static class PathConstants
     catch (Exception ex)
     {
       // This path names the log file Serilog opens, so failing here would stop the client before
-      // anything can be logged. Same fallback as a machine sitting at the sign-in screen.
-      Debug.WriteLine(ex);
+      // the real log exists. Same fallback as a machine sitting at the sign-in screen.
+      Log.Warning(ex, "Unable to resolve the username for the current session. Falling back to \"{Username}\".", SystemUsername);
       return SystemUsername;
     }
   }

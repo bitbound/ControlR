@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Startup;
 using ControlR.DesktopClient.Services;
+using ControlR.Libraries.Branding;
+using Serilog;
 
 namespace ControlR.DesktopClient;
 
@@ -37,6 +39,7 @@ internal sealed class Program
   [STAThread]
   public static void Main(string[] args)
   {
+    UseBootstrapLogger();
     UsePersistedCulture();
     UseLinuxDisplayGuard();
 
@@ -56,26 +59,38 @@ internal sealed class Program
         }
         else
         {
-          Console.WriteLine("Unexpected initialization state.");
+          Log.Error("Unexpected initialization state.");
         }
       }
       catch (InvalidOperationException ex) when (ex.Message.Contains("RenderTimer"))
       {
-        Console.WriteLine(
-          "An error occurred internally within Avalonia while activating the RenderTimer. " +
-          "This can occur sometimes when the device is in a low-power mode. " +
-          $"Error: {ex.Message}");
+        Log.Warning(ex, "Avalonia failed to activate the RenderTimer, which can happen while the device is in a low-power mode. Retrying in 5 seconds.");
 
         Thread.Sleep(5_000);
         continue;
       }
       catch (Exception ex)
       {
-        Console.WriteLine($"A fatal error occurred: {ex}");
+        Log.Fatal(ex, "A fatal error occurred.");
         throw;
       }
       break;
     }
+  }
+
+  /// <summary>
+  ///   Points Serilog at a brand-named file under the temp directory until the real log path is
+  ///   known. The real path depends on the session username, so it cannot be resolved before the
+  ///   username lookup whose failures this logger records.
+  /// </summary>
+  private static void UseBootstrapLogger()
+  {
+    Log.Logger = new LoggerConfiguration()
+      .WriteTo.File(
+        Path.Combine(Path.GetTempPath(), BrandingConstants.BrandKey, "Bootstrap.log"),
+        rollingInterval: RollingInterval.Day,
+        shared: true)
+      .CreateBootstrapLogger();
   }
 
   /// <summary>
@@ -98,7 +113,7 @@ internal sealed class Program
       return;
     }
 
-    Console.WriteLine("No X11 or Wayland display detected. Exiting.");
+    Log.Warning("No X11 or Wayland display detected. Exiting.");
     Thread.Sleep(30_000);
     Environment.Exit(1);
   }
@@ -123,9 +138,9 @@ internal sealed class Program
     }
     catch (Exception ex)
     {
-      // Runs before Avalonia and Serilog exist. Starting in the system language is better
-      // than not starting, and the store reads the same file again once it can log.
-      Console.WriteLine($"Unable to apply the saved language: {ex}");
+      // Runs before Avalonia and before the real log path is known. Starting in the system language
+      // is better than not starting, and the store reads the same file again once the real log exists.
+      Log.Warning(ex, "Unable to apply the saved language.");
     }
   }
 }

@@ -1,12 +1,14 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ControlR.Libraries.Shared.Primitives;
 
 public sealed class DisposableValue<T>(
   T value,
-  Action<T>? disposeCallback = null) : IDisposable
+  Action<T>? disposeCallback = null,
+  ILogger? logger = null) : IDisposable
 {
   private readonly Action<T>? _disposeCallback = disposeCallback;
+  private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
   public T Value { get; } = value;
 
@@ -18,9 +20,7 @@ public sealed class DisposableValue<T>(
     }
     catch (Exception ex)
     {
-      Debug.WriteLine
-      ($"Error while invoking callback in {nameof(DisposableValue<T>)}.  " +
-       $"Exception: {ex}");
+      _logger.LogError(ex, "Error while invoking the dispose callback for {ValueType}.", typeof(T).Name);
     }
   }
 }
