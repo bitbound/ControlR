@@ -256,7 +256,7 @@ internal sealed class ScreenGrabberWindows : IScreenGrabber
       using var bitmap = new Bitmap(captureArea.Width, captureArea.Height);
       using var graphics = Graphics.FromImage(bitmap);
 
-      using (var targetDc = graphics.GetDisposableHdc())
+      using (var targetDc = graphics.GetDisposableHdc(_logger))
       {
         var bitBltResult = PInvoke.BitBlt(new HDC(targetDc.Value), 0, 0, captureArea.Width, captureArea.Height,
           screenDc, captureArea.X, captureArea.Y, ROP_CODE.SRCCOPY);

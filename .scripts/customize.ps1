@@ -710,16 +710,6 @@ if (Test-Path -LiteralPath $manifestFile) {
   }
 }
 
-$localizationFile = Join-Path $repoRoot "ControlR.DesktopClient.Common/Resources/Strings/en-US.json"
-if (Test-Path -LiteralPath $localizationFile) {
-  $locReplacements = @{
-    '"ControlR Chat"'                                                           = "`"$BrandName Chat`""
-    '"ControlR is free, open-source, self-hostable, and powered by donations."' = "`"$BrandName is free, open-source, self-hostable, and powered by donations.`""
-    '"ControlR uses the following open-source software and libraries."'         = "`"$BrandName uses the following open-source software and libraries.`""
-  }
-  Update-FileContent -FilePath $localizationFile -Replacements $locReplacements
-}
-
 $agentServiceTemplate = Join-Path $repoRoot "ControlR.Agent.Shared/Resources/controlr.agent.service"
 if (Test-Path -LiteralPath $agentServiceTemplate) {
   $templateReplacements = @{
