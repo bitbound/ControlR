@@ -873,12 +873,12 @@ internal class FileManager(
       _logger.LogDebug(ex, "Error reading log files from directory: {DirectoryPath}", directoryPath);
     }
 
-    return logFiles.OrderByDescending(x => x.LastModified).ToList();
+    return [.. logFiles.OrderByDescending(x => x.LastModified)];
   }
 
   // The same roots GetLogFiles enumerates. The log-contents stream is constrained to these so a
   // principal with log-read on one device cannot point the agent at an arbitrary file it can open.
-  private IEnumerable<string> GetLogRootDirectories()
+  private List<string> GetLogRootDirectories()
   {
     var roots = new List<string>();
 
