@@ -30,7 +30,7 @@
   "NewChatMessageToastMessage": "Máte novou zprávu od {0}.",
   "ChatWindowTitle": "Chat s {0}",
   "ChatWindowDefaultTitle": "Chat {brand_name}",
-  "ChatWindowClosedSystemMessage": "Systémová zpráva: Uživatel zavřel okno chatu.",
+  "ChatWindowClosedSystemMessage": "Uživatel zavřel okno chatu.",
   "SendMessageText": "Odeslat",
   "EnterMessagePlaceholder": "Napište zprávu…",
   "NoMessagesText": "Zatím žádné zprávy. Konverzaci zahájíte odesláním zprávy.",

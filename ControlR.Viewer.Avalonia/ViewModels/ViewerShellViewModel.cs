@@ -263,7 +263,8 @@ public partial class ViewerShellViewModel : ViewModelBase<ViewerShell>, IViewerS
       Message = response.Message,
       SenderName = response.SenderUsername,
       Timestamp = response.Timestamp,
-      IsFromViewer = false
+      IsFromViewer = false,
+      Kind = response.Kind
     };
 
     _chatState.ChatMessages.Add(chatMessage);

@@ -10,4 +10,5 @@ public record ChatMessageHubDto(
   int TargetSystemSession,
   int TargetProcessId,
   DateTimeOffset Timestamp,
-  string ViewerConnectionId = "");
+  string ViewerConnectionId = "",
+  ChatMessageKind Kind = ChatMessageKind.TextSend);

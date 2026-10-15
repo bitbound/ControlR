@@ -9,4 +9,5 @@ public record ChatMessageIpcDto(
   int TargetSystemSession,
   int TargetProcessId,
   string ViewerConnectionId,
-  DateTimeOffset Timestamp);
+  DateTimeOffset Timestamp,
+  ChatMessageKind Kind = ChatMessageKind.TextSend);

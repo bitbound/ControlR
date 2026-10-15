@@ -365,7 +365,8 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
       IsFromViewer = true,
       Message = message,
       SenderName = Resources.Chat_You,
-      Timestamp = DateTimeOffset.Now
+      Timestamp = DateTimeOffset.Now,
+      Kind = ChatMessageKind.TextSend
     };
 
     try
@@ -381,7 +382,8 @@ public partial class ChatViewModel : ViewModelBase<ChatView>, IChatViewModel
         string.Empty,
         _chatState.CurrentSession.SystemSessionId,
         _chatState.CurrentSession.ProcessId,
-        DateTimeOffset.Now);
+        DateTimeOffset.Now,
+        Kind: ChatMessageKind.TextSend);
 
       var sendResult = await _viewerHub.Server.SendChatMessage2(dto);
       if (!sendResult.IsSuccess)
