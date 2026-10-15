@@ -89,11 +89,23 @@
   margin-right: 20%;
 }
 
-.system-message {
-  background-color: var(--mud-palette-background-gray);
-  border: 1px dashed var(--mud-palette-divider);
-  color: var(--mud-palette-text-secondary);
-  font-style: italic;
+.system-event {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px auto;
+  max-width: 80%;
+}
+
+.system-event-rule {
+  flex: 1 1 auto;
+  height: 1px;
+  background-color: var(--mud-palette-divider);
+}
+
+.system-event-text {
+  flex: 0 1 auto;
+  letter-spacing: 0.02em;
   text-align: center;
 }
 

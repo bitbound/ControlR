@@ -34,18 +34,10 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
-    <Style Selector="Border.ChatSystem">
-      <Setter Property="Padding" Value="8" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Background" Value="{DynamicResource BackgroundGrayBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-    </Style>
-    <Style Selector="Border.ChatSystem TextBlock">
-      <Setter Property="FontStyle" Value="Italic" />
-      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-      <Setter Property="TextAlignment" Value="Center" />
+    <Style Selector="Border.SystemEventRule">
+      <Setter Property="Height" Value="1" />
+      <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
   </UserControl.Styles>
 
@@ -175,27 +167,43 @@
             <ItemsControl ItemsSource="{Binding ChatMessages}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="models:ChatMessage">
-                  <Border Margin="0, 4"
-                          Classes.ChatUser="{Binding IsUserMessage}"
-                          Classes.ChatViewer="{Binding IsFromDesktop}"
-                          Classes.ChatSystem="{Binding IsSystemMessage}">
-                    <StackPanel Spacing="4">
-                      <!-- Sender + timestamp header -->
-                      <Grid ColumnDefinitions="Auto,Auto,*">
-                        <TextBlock Text="{Binding SenderName}"
-                                   FontSize="12" Classes="Info" />
-                        <TextBlock Text=" - "
-                                   FontSize="12" Classes="Info"
-                                   Grid.Column="1" />
-                        <TextBlock Text="{Binding Timestamp}"
-                                   FontSize="10" Classes="Info"
-                                   Grid.Column="2" />
-                      </Grid>
-                      <!-- Message body -->
-                      <TextBlock Text="{Binding Message}"
-                                 TextWrapping="Wrap" />
-                    </StackPanel>
-                  </Border>
+                  <Panel>
+                    <!-- System event: muted inline text between hairline rules -->
+                    <Grid Margin="0, 8" ColumnDefinitions="1*,Auto,1*" ColumnSpacing="12"
+                          IsVisible="{Binding IsSystemMessage}">
+                      <Border Classes="SystemEventRule" Grid.Column="0" />
+                      <TextBlock Grid.Column="1" FontSize="11"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 TextWrapping="Wrap" TextAlignment="Center">
+                        <Run Text="{Binding Message}" />
+                        <Run Text=" · " />
+                        <Run Text="{Binding Timestamp, StringFormat='{}{0:h:mm tt}'}" />
+                      </TextBlock>
+                      <Border Classes="SystemEventRule" Grid.Column="2" />
+                    </Grid>
+                    <!-- Message bubble -->
+                    <Border Margin="0, 4"
+                            IsVisible="{Binding !IsSystemMessage}"
+                            Classes.ChatUser="{Binding IsUserMessage}"
+                            Classes.ChatViewer="{Binding IsFromDesktop}">
+                      <StackPanel Spacing="4">
+                        <!-- Sender + timestamp header -->
+                        <Grid ColumnDefinitions="Auto,Auto,*">
+                          <TextBlock Text="{Binding SenderName}"
+                                     FontSize="12" Classes="Info" />
+                          <TextBlock Text=" - "
+                                     FontSize="12" Classes="Info"
+                                     Grid.Column="1" />
+                          <TextBlock Text="{Binding Timestamp}"
+                                     FontSize="10" Classes="Info"
+                                     Grid.Column="2" />
+                        </Grid>
+                        <!-- Message body -->
+                        <TextBlock Text="{Binding Message}"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                  </Panel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
