@@ -10,6 +10,7 @@ public static class Localization
   private const string BrandNameToken = "{brand_name}";
   private const string DefaultCulture = "en-US";
   private const string LanguageDisplayNameKey = nameof(LanguageDisplayName);
+  private const string StringsResourceMarker = ".Resources.Strings.";
   private const string StringsSuffix = ".json";
 
   private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -18,9 +19,6 @@ public static class Localization
     PropertyNameCaseInsensitive = true,
     ReadCommentHandling = JsonCommentHandling.Skip
   };
-
-  private static readonly string _resourcePrefix =
-    $"{typeof(Localization).Assembly.GetName().Name}.Resources.Strings.";
 
   private static string _currentCulture = CultureInfo.CurrentCulture.Name;
   private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings(_currentCulture);
@@ -135,10 +133,7 @@ public static class Localization
   {
     var assembly = typeof(Localization).Assembly;
 
-    return assembly
-      .GetManifestResourceNames()
-      .Where(x => x.StartsWith(_resourcePrefix) && x.EndsWith(StringsSuffix))
-      .Select(x => x[_resourcePrefix.Length..^StringsSuffix.Length])
+    return GetCultures(assembly.GetManifestResourceNames())
       .Select(culture => new LocalizationLanguage(culture, GetLocalizationStrings(culture)[LanguageDisplayNameKey]))
       .OrderBy(x => x.DisplayName)
       .ToList();
@@ -150,15 +145,41 @@ public static class Localization
     _localizationStrings = GetLocalizationStrings(_currentCulture);
   }
 
+  // Manifest names come from RootNamespace, which stays the project name in a white-label build even
+  // though the assembly is renamed. Only the tail after the strings directory is dependable.
+  internal static List<string> GetCultures(IEnumerable<string> resourcePaths)
+  {
+    return resourcePaths
+      .Select(path => (path, markerIndex: path.IndexOf(StringsResourceMarker, StringComparison.Ordinal)))
+      .Where(x => x.markerIndex >= 0 && x.path.EndsWith(StringsSuffix, StringComparison.Ordinal))
+      .Select(x => x.path[(x.markerIndex + StringsResourceMarker.Length)..^StringsSuffix.Length])
+      .Where(culture => culture.Length > 0)
+      .ToList();
+  }
+
+  private static string? FindResourcePath(IEnumerable<string> resourcePaths, string culture)
+  {
+    // An empty culture name would match every strings file, so require an exact one.
+    if (string.IsNullOrEmpty(culture))
+    {
+      return null;
+    }
+
+    var suffix = $"{culture}{StringsSuffix}";
+
+    return resourcePaths.FirstOrDefault(x =>
+      x.EndsWith(suffix, StringComparison.Ordinal) &&
+      x.Contains(StringsResourceMarker, StringComparison.Ordinal));
+  }
+
   private static Dictionary<string, string> GetLocalizationStrings(string culture)
   {
     var assembly = typeof(Localization).Assembly;
-    var resourceNames = assembly.GetManifestResourceNames();
-
-    if (resourceNames.FirstOrDefault(x => x.EndsWith($"{culture}{StringsSuffix}")) is not { } fileName)
-    {
-      fileName = $"{_resourcePrefix}{DefaultCulture}{StringsSuffix}";
-    }
+    var resourcePaths = assembly.GetManifestResourceNames();
+    var fileName =
+      FindResourcePath(resourcePaths, culture)
+      ?? FindResourcePath(resourcePaths, DefaultCulture)
+      ?? throw new InvalidOperationException("Unable to find localization file.");
 
     using var resourceStream = assembly.GetManifestResourceStream(fileName)
                                ?? throw new InvalidOperationException("Unable to find localization file.");

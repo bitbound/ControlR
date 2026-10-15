@@ -40,15 +40,19 @@ public class LocalizationTests
   private static HashSet<string> ReadKeys(string culture)
   {
     var assembly = typeof(Localization).Assembly;
-    var resourceName = $"{assembly.GetName().Name}.Resources.Strings.{culture}.json";
-    using var stream = assembly.GetManifestResourceStream(resourceName)
-                       ?? throw new InvalidOperationException($"Missing {resourceName}.");
+    var resourcePath = assembly
+      .GetManifestResourceNames()
+      .Single(x => x.EndsWith($"{culture}.json", StringComparison.Ordinal)
+                   && x.Contains(".Resources.Strings.", StringComparison.Ordinal));
+
+    using var stream = assembly.GetManifestResourceStream(resourcePath)
+                       ?? throw new InvalidOperationException($"Missing {resourcePath}.");
     using var reader = new StreamReader(stream);
 
     var strings = JsonSerializer.Deserialize<Dictionary<string, string>>(reader.ReadToEnd());
 
     return strings is null
-      ? throw new InvalidOperationException($"Unable to read {resourceName}.")
+      ? throw new InvalidOperationException($"Unable to read {resourcePath}.")
       : [.. strings.Keys];
   }
 }

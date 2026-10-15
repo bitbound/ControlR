@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Services;
+using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -21,12 +22,14 @@ public partial class SettingsViewModel(
   IDesktopSettingsStore settingsStore,
   IProcessManager processManager,
   IHostApplicationLifetime applicationLifetime,
+  ISystemEnvironment systemEnvironment,
   ILogger<SettingsViewModel> logger) : ViewModelBase<SettingsView>, ISettingsViewModel
 {
   private readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;
   private readonly ILogger<SettingsViewModel> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
   private readonly IDesktopSettingsStore _settingsStore = settingsStore;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IThemeProvider _themeProvider = themeProvider;
 
   public IReadOnlyList<LocalizationLanguage> AvailableLanguages { get; } = Localization.GetAvailableLanguages();
@@ -77,6 +80,16 @@ public partial class SettingsViewModel(
   [RelayCommand]
   private void RestartClient()
   {
+    // The agent's desktop-client watcher relaunches the client on all three platforms, so a normal
+    // exit comes back on its own. Spawning here as well would leave a second client, since
+    // AbandonProcessGroup on macOS and KillMode=process on Linux let a child outlive the shutdown.
+    // The watcher skips its loop in Debug, which is the only case that needs its own replacement.
+    if (!_systemEnvironment.IsDebug)
+    {
+      _applicationLifetime.StopApplication();
+      return;
+    }
+
     var commandLineArgs = Environment.GetCommandLineArgs();
     var startInfo = new ProcessStartInfo(commandLineArgs[0]);
 
