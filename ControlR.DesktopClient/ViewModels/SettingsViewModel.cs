@@ -3,6 +3,7 @@ using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Services;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.ViewModels;
 
@@ -19,9 +20,11 @@ public partial class SettingsViewModel(
   IThemeProvider themeProvider,
   IDesktopSettingsStore settingsStore,
   IProcessManager processManager,
-  IHostApplicationLifetime applicationLifetime) : ViewModelBase<SettingsView>, ISettingsViewModel
+  IHostApplicationLifetime applicationLifetime,
+  ILogger<SettingsViewModel> logger) : ViewModelBase<SettingsView>, ISettingsViewModel
 {
   private readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;
+  private readonly ILogger<SettingsViewModel> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
   private readonly IDesktopSettingsStore _settingsStore = settingsStore;
   private readonly IThemeProvider _themeProvider = themeProvider;
@@ -82,7 +85,21 @@ public partial class SettingsViewModel(
       startInfo.ArgumentList.Add(arg);
     }
 
-    _processManager.Start(startInfo);
+    try
+    {
+      // Only exit once something is coming back to replace this instance.
+      if (_processManager.Start(startInfo) is null)
+      {
+        _logger.LogError("Restarting the desktop client started no process.");
+        return;
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Unable to restart the desktop client.");
+      return;
+    }
+
     _applicationLifetime.StopApplication();
   }
 }

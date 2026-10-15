@@ -9,6 +9,7 @@ using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Startup;
 
@@ -37,7 +38,8 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<IMainWindowProvider, MainWindowProvider>()
       .AddSingleton<IDesktopSettingsStore>(sp => new DesktopSettingsStore(
         StaticServiceProvider.GetDesktopSettingsPath(instanceId),
-        sp.GetRequiredService<IFileSystem>()))
+        sp.GetRequiredService<IFileSystem>(),
+        sp.GetRequiredService<ILogger<DesktopSettingsStore>>()))
       .AddSingleton<IThemeProvider, ThemeProvider>()
       .AddSingleton<IAppViewModel, AppViewModel>()
       .AddSingleton<IMainWindowViewModel, MainWindowViewModel>()

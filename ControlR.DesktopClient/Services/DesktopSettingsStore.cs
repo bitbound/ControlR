@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;
 
@@ -13,11 +14,14 @@ public interface IDesktopSettingsStore
 /// <summary>
 /// Theme and language choices, persisted to the settings file.
 /// </summary>
-public class DesktopSettingsStore(string settingsFilePath, IFileSystem fileSystem) : IDesktopSettingsStore
+public class DesktopSettingsStore(
+  string settingsFilePath,
+  IFileSystem fileSystem,
+  ILogger<DesktopSettingsStore> logger) : IDesktopSettingsStore
 {
   private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-  public DesktopSettings Current { get; private set; } = Read(settingsFilePath, fileSystem);
+  public DesktopSettings Current { get; private set; } = Read(settingsFilePath, fileSystem, logger);
 
   public void SetLanguage(string language)
   {
@@ -31,21 +35,43 @@ public class DesktopSettingsStore(string settingsFilePath, IFileSystem fileSyste
     Save();
   }
 
-  private static DesktopSettings Read(string settingsFilePath, IFileSystem fileSystem)
+  // A file left half-written by an interrupted save, or edited by hand, must not keep the client
+  // from starting. Theme and language both have other ways to be chosen, so start with defaults.
+  private static DesktopSettings Read(string settingsFilePath, IFileSystem fileSystem, ILogger logger)
   {
-    if (!fileSystem.FileExists(settingsFilePath))
+    try
     {
+      if (!fileSystem.FileExists(settingsFilePath))
+      {
+        return new DesktopSettings();
+      }
+
+      return JsonSerializer.Deserialize<DesktopSettings>(fileSystem.ReadAllText(settingsFilePath))
+             ?? new DesktopSettings();
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Ignoring unusable settings file {SettingsPath}", settingsFilePath);
       return new DesktopSettings();
     }
-
-    return JsonSerializer.Deserialize<DesktopSettings>(fileSystem.ReadAllText(settingsFilePath))
-           ?? new DesktopSettings();
   }
 
+  // Written through a temporary file so a failure part-way through leaves the previous
+  // settings readable.
   private void Save()
   {
-    fileSystem.CreateDirectory(Path.GetDirectoryName(settingsFilePath)!);
-    fileSystem.WriteAllText(settingsFilePath, JsonSerializer.Serialize(Current, _jsonOptions));
+    try
+    {
+      fileSystem.CreateDirectory(Path.GetDirectoryName(settingsFilePath)!);
+
+      var tempFilePath = $"{settingsFilePath}.tmp";
+      fileSystem.WriteAllText(tempFilePath, JsonSerializer.Serialize(Current, _jsonOptions));
+      fileSystem.MoveFile(tempFilePath, settingsFilePath, overwrite: true);
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Unable to save settings to {SettingsPath}", settingsFilePath);
+    }
   }
 }
 

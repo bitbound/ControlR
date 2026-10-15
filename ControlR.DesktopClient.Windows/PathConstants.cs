@@ -51,9 +51,19 @@ public static class PathConstants
 
   private static string GetUsername()
   {
-    var sessionId = (uint)Process.GetCurrentProcess().SessionId;
-    var username = Win32Interop.GetUsernameFromSession(sessionId);
+    try
+    {
+      var sessionId = (uint)Process.GetCurrentProcess().SessionId;
+      var username = Win32Interop.GetUsernameFromSession(sessionId);
 
-    return string.IsNullOrEmpty(username) ? SystemUsername : username;
+      return string.IsNullOrEmpty(username) ? SystemUsername : username;
+    }
+    catch (Exception ex)
+    {
+      // This path names the log file Serilog opens, so failing here would stop the client before
+      // anything can be logged. Same fallback as a machine sitting at the sign-in screen.
+      Debug.WriteLine(ex);
+      return SystemUsername;
+    }
   }
 }

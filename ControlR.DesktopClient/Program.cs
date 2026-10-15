@@ -110,16 +110,28 @@ internal sealed class Program
   /// </summary>
   private static void UsePersistedCulture()
   {
-    var instanceId = ArgsParser.GetArgValue<string?>("instance-id", defaultValue: string.Empty);
-    var fileSystem = new FileSystem(NullLogger<FileSystem>.Instance);
-    var settingsPath = StaticServiceProvider.GetDesktopSettingsPath(instanceId);
-    var language = new DesktopSettingsStore(settingsPath, fileSystem).Current.Language;
-
-    if (string.IsNullOrWhiteSpace(language))
+    try
     {
-      return;
-    }
+      var instanceId = ArgsParser.GetArgValue<string?>("instance-id", defaultValue: string.Empty);
+      var fileSystem = new FileSystem(NullLogger<FileSystem>.Instance);
+      var settingsPath = StaticServiceProvider.GetDesktopSettingsPath(instanceId);
+      var store = new DesktopSettingsStore(
+        settingsPath,
+        fileSystem,
+        NullLogger<DesktopSettingsStore>.Instance);
 
-    Localization.SetCulture(language);
+      if (string.IsNullOrWhiteSpace(store.Current.Language))
+      {
+        return;
+      }
+
+      Localization.SetCulture(store.Current.Language);
+    }
+    catch (Exception ex)
+    {
+      // Runs before Avalonia, DI, and Serilog exist. Starting in the system language is better
+      // than not starting, and the store reads the same file again once it can log.
+      Console.WriteLine($"Unable to apply the saved language: {ex}");
+    }
   }
 }
