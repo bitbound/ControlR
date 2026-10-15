@@ -4,6 +4,15 @@ using ControlR.Libraries.NativeInterop.Unix;
 
 namespace ControlR.DesktopClient.Linux;
 
+/// <summary>
+/// <para>
+/// File system path constants used by DesktopClient.
+/// </para>
+/// <para>
+/// NOTE: Each platform has one of these files and is accessed behind preprocessor directives.
+/// Displayed references might be incorrect.
+/// </para>
+/// </summary>
 public static class PathConstants
 {
   public static string GetLogsPath(string? instanceId)
@@ -17,6 +26,12 @@ public static class PathConstants
     var logsDir = isRoot ? rootDir : Path.Combine(rootDir, "logs");
     return Path.Combine(logsDir, BrandingConstants.DesktopClientBaseName, "LogFile.log");
   }
+
+  public static string GetSettingsPath(string? instanceId)
+  {
+    return Path.Combine(GetSettingsDirectory(instanceId), "settings.json");
+  }
+
   public static string GetWaylandRemoteDesktopRestoreTokenPath(string? instanceId)
   {
     var dir = GetSettingsDirectory(instanceId);
