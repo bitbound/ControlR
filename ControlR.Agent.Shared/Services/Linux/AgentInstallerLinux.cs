@@ -42,6 +42,7 @@ internal class AgentInstallerLinux(
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly IServiceControl _serviceControl = serviceControl;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
   public async Task<Result<AgentInstallOutcome>> Install(AgentInstallRequest request)
   {
@@ -60,6 +61,11 @@ internal class AgentInstallerLinux(
         _logger.LogError("Install command must be run with sudo.");
         return Result.Fail<AgentInstallOutcome>("Install command must be run with sudo.");
       }
+
+      // The install is usually handed off from the running agent's own service directory, so this
+      // process can start with the install directory as its working directory. Deleting it makes
+      // getcwd() fail, and every later relative file name (including "sudo") then throws.
+      _systemEnvironment.SetWorkingDirectory(Path.GetTempPath());
 
       var installDir = GetInstallDirectory();
 

@@ -29,6 +29,8 @@ public interface ISystemEnvironment
 
   [SupportedOSPlatformGuard("windows")]
   bool IsWindows();
+
+  void SetWorkingDirectory(string directoryPath);
 }
 
 public class SystemEnvironment : ISystemEnvironment
@@ -132,4 +134,9 @@ public class SystemEnvironment : ISystemEnvironment
 
   [SupportedOSPlatformGuard("windows")]
   public bool IsWindows() => OperatingSystem.IsWindows();
+
+  public void SetWorkingDirectory(string directoryPath)
+  {
+    Directory.SetCurrentDirectory(directoryPath);
+  }
 }
