@@ -4,7 +4,7 @@
   "libraries": [
     {
       "provider": "unpkg",
-      "library": "monaco-editor@0.55.1",
+      "library": "monaco-editor@0.57.0",
       "destination": "wwwroot/lib/monaco-editor/",
       "files": [
         "min/**"
