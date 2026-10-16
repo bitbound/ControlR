@@ -5,7 +5,7 @@ namespace ControlR.Web.Client.Services;
 public interface IWhatsNewNotifier
 {
   Task CheckAndShowIfNeeded(bool requireExplicitDismissal, CancellationToken cancellationToken);
-  Task ShowWhatsNew(bool requireExplicitDismissal, CancellationToken cancellationToken);
+  Task ShowWhatsNew(bool requireExplicitDismissal);
 }
 
 public class WhatsNewNotifier(
@@ -14,6 +14,8 @@ public class WhatsNewNotifier(
     IDialogService dialogService,
     ILogger<WhatsNewNotifier> logger) : IWhatsNewNotifier
 {
+  private static readonly TimeSpan _acknowledgementWriteTimeout = TimeSpan.FromSeconds(10);
+
   private readonly IDialogService _dialogService = dialogService;
   private readonly ILogger<WhatsNewNotifier> _logger = logger;
   private readonly ISnackbar _snackbar = snackbar;
@@ -42,7 +44,7 @@ public class WhatsNewNotifier(
       if (acknowledged == currentVersion)
         return;
 
-      await ShowWhatsNew(currentVersion, requireExplicitDismissal, cancellationToken);
+      await ShowWhatsNew(currentVersion, requireExplicitDismissal);
     }
     finally
     {
@@ -50,7 +52,7 @@ public class WhatsNewNotifier(
     }
   }
 
-  public async Task ShowWhatsNew(bool requireExplicitDismissal, CancellationToken cancellationToken)
+  public async Task ShowWhatsNew(bool requireExplicitDismissal)
   {
     var currentVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
     if (string.IsNullOrWhiteSpace(currentVersion))
@@ -60,10 +62,10 @@ public class WhatsNewNotifier(
       return;
     }
 
-    await ShowWhatsNew(currentVersion, requireExplicitDismissal, cancellationToken);
+    await ShowWhatsNew(currentVersion, requireExplicitDismissal);
   }
 
-  private async Task ShowWhatsNew(string currentVersion, bool requireExplicitDismissal, CancellationToken cancellationToken)
+  private async Task ShowWhatsNew(string currentVersion, bool requireExplicitDismissal)
   {
     var options = new DialogOptions
     {
@@ -87,7 +89,8 @@ public class WhatsNewNotifier(
 
     if (result is { Canceled: false, Data: true })
     {
-      await _userStorage.SetItem(UserStorageKeys.AcknowledgedNewVersion, currentVersion, cancellationToken);
+      using var writeTimeout = new CancellationTokenSource(_acknowledgementWriteTimeout);
+      await _userStorage.SetItem(UserStorageKeys.AcknowledgedNewVersion, currentVersion, writeTimeout.Token);
     }
   }
 }

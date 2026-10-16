@@ -15,68 +15,86 @@
 
 			<TextBlock Text="{x:Static common:Localization.About}" Classes="h1 Primary" />
 
-			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12">
+			<StackPanel Spacing="12">
 
-				<TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold">
-					<Run Text="{x:Static common:Localization.Version}" />
-					<Run Text=":" />
-				</TextBlock>
-				<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" />
+				<!--
+					Group the two grids in a Spacing-12 container so the conditionally-shown grid can hide
+					as a whole. Keep that grid a single StackPanel child. A hidden child contributes no
+					spacing, and the container spacing keeps the gap between the two grids as intended.
+				-->
+				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12">
 
-				<TextBlock Grid.Row="1" Grid.Column="0" FontWeight="SemiBold">
-					<Run Text="{x:Static common:Localization.InstanceId}" />
-					<Run Text=":" />
-				</TextBlock>
-				<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding InstanceId}" />
+					<TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold">
+						<Run Text="{x:Static common:Localization.Version}" />
+						<Run Text=":" />
+					</TextBlock>
+					<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" />
 
-				<TextBlock Grid.Row="2" Grid.Column="0" FontWeight="SemiBold">
-					<Run Text="{x:Static common:Localization.AboutLicenseLabel}" />
-					<Run Text=":" />
-				</TextBlock>
+					<TextBlock Grid.Row="1" Grid.Column="0" FontWeight="SemiBold">
+						<Run Text="{x:Static common:Localization.InstanceId}" />
+						<Run Text=":" />
+					</TextBlock>
+					<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding InstanceId}" />
 
-				<HyperlinkButton Grid.Row="2" Grid.Column="1" Margin="0" Padding="0"
-												 Content="{x:Static common:Localization.AboutLicenseLabel}"
-												 Command="{Binding OpenUrlCommand}"
-												 CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
+				</Grid>
 
-				<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding !HideSponsorshipInfo}">
-					<Run Text="{x:Static common:Localization.AboutProjectLabel}" />
-					<Run Text=":" />
-				</TextBlock>
-				<HyperlinkButton Grid.Row="3" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding !HideSponsorshipInfo}"
-												 Content="https://github.com/bitbound/controlr"
-												 Command="{Binding OpenUrlCommand}"
-												 CommandParameter="https://github.com/bitbound/controlr" />
+				<!--
+					Hidden entirely on branded builds. The License row is safe to hide there because the
+					Third-Party Licenses section shows the ControlR row, linking the same LICENSE.txt, exactly
+					when this flag is set.
+				-->
+				<Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12"
+							IsVisible="{Binding !HideSponsorshipInfo}">
 
-				<TextBlock Grid.Row="4" Grid.Column="0" FontWeight="SemiBold" IsVisible="{Binding !HideSponsorshipInfo}">
-					<Run Text="{x:Static common:Localization.AboutWebsiteLabel}" />
-					<Run Text=":" />
-				</TextBlock>
-				<HyperlinkButton Grid.Row="4" Grid.Column="1" Margin="0" Padding="0" IsVisible="{Binding !HideSponsorshipInfo}"
-												 Content="https://controlr.app"
-												 Command="{Binding OpenUrlCommand}"
-												 CommandParameter="https://controlr.app" />
+					<TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold">
+						<Run Text="{x:Static common:Localization.AboutLicenseLabel}" />
+						<Run Text=":" />
+					</TextBlock>
+					<HyperlinkButton Grid.Row="0" Grid.Column="1" Margin="0" Padding="0"
+													 Content="{x:Static common:Localization.AboutLicenseLabel}"
+													 Command="{Binding OpenUrlCommand}"
+													 CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
 
-				<TextBlock Grid.Row="5" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top" IsVisible="{Binding !HideSponsorshipInfo}">
-					<Run Text="{x:Static common:Localization.AboutSponsorLabel}" />
-					<Run Text=":" />
-				</TextBlock>
-				<StackPanel Grid.Row="5" Grid.Column="1" Spacing="8" IsVisible="{Binding !HideSponsorshipInfo}">
-					<TextBlock Text="{x:Static common:Localization.AboutSponsorDescription}" TextWrapping="Wrap" />
-					<controls:ThemeButton Content="{x:Static common:Localization.AboutSponsorButton}"
-																Color="Error"
-																Variant="Outlined"
-																Command="{Binding OpenUrlCommand}"
-																CommandParameter="https://github.com/sponsors/bitbound" />
-				</StackPanel>
-			</Grid>
+					<TextBlock Grid.Row="1" Grid.Column="0" FontWeight="SemiBold">
+						<Run Text="{x:Static common:Localization.AboutProjectLabel}" />
+						<Run Text=":" />
+					</TextBlock>
+					<HyperlinkButton Grid.Row="1" Grid.Column="1" Margin="0" Padding="0"
+													 Content="https://github.com/bitbound/controlr"
+													 Command="{Binding OpenUrlCommand}"
+													 CommandParameter="https://github.com/bitbound/controlr" />
+
+					<TextBlock Grid.Row="2" Grid.Column="0" FontWeight="SemiBold">
+						<Run Text="{x:Static common:Localization.AboutWebsiteLabel}" />
+						<Run Text=":" />
+					</TextBlock>
+					<HyperlinkButton Grid.Row="2" Grid.Column="1" Margin="0" Padding="0"
+													 Content="https://controlr.app"
+													 Command="{Binding OpenUrlCommand}"
+													 CommandParameter="https://controlr.app" />
+
+					<TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top">
+						<Run Text="{x:Static common:Localization.AboutSponsorLabel}" />
+						<Run Text=":" />
+					</TextBlock>
+					<StackPanel Grid.Row="3" Grid.Column="1" Spacing="8">
+						<TextBlock Text="{x:Static common:Localization.AboutSponsorDescription}" TextWrapping="Wrap" />
+						<controls:ThemeButton Content="{x:Static common:Localization.AboutSponsorButton}"
+																	Color="Error"
+																	Variant="Outlined"
+																	Command="{Binding OpenUrlCommand}"
+																	CommandParameter="https://github.com/sponsors/bitbound" />
+					</StackPanel>
+
+				</Grid>
+			</StackPanel>
 
 			<Rectangle Height="1" Fill="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" />
 
-			<TextBlock FontWeight="SemiBold">
-				<Run Text="{x:Static common:Localization.AboutThirdPartyLicensesLabel}" />
-				<Run Text=":" />
-			</TextBlock>
+			<TextBlock FontWeight="SemiBold"
+                 FontSize="16"
+                 Text="{x:Static common:Localization.AboutThirdPartyLicensesLabel}" />
+
 			<TextBlock Text="{x:Static common:Localization.AboutThirdPartyLicensesDescription}" TextWrapping="Wrap" />
 
 			<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="8">

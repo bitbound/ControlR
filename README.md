@@ -184,8 +184,9 @@ Under normal user circumstances, the main agent will run in Release mode as SYST
 
 **Desktop Client**
 - **Windows**
-  - Release: `C:\ProgramData\ControlR\{hostname}\Logs\ControlR.DesktopClient\LogFile{date}.log`
-  - Debug: `C:\ProgramData\ControlR\Debug\{hostname}\Logs\ControlR.DesktopClient\LogFile{date}.log`
+  - Release: `C:\ProgramData\ControlR\{instance}\{username}\DesktopClient\Logs\LogFile{date}.log`
+  - Debug: `C:\ProgramData\ControlR\Debug\{instance}\{username}\DesktopClient\Logs\LogFile{date}.log`
+  - `{username}` is the user signed in to the desktop session. It reads `System` while the machine is at the sign-in screen.
 - **macOS / Linux**
   - Running as root: `/var/log/controlr/{hostname}/ControlR.DesktopClient/LogFile{date}.log`
   - Running as user: `~/.controlr/logs/{hostname}/ControlR.DesktopClient/LogFile{date}.log`

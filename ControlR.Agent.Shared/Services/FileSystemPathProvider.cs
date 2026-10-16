@@ -105,9 +105,14 @@ public interface IFileSystemPathProvider
   /// </summary>
   string GetUnixDesktopClientLogsDirectoryForRoot();
   /// <summary>
-  /// Returns the log directory for the desktop client on Windows, under CommonApplicationData with debug and instance subdirectories.
+  /// Returns the log directory for the desktop client running under the specified user on Windows,
+  /// under CommonApplicationData with debug and instance subdirectories.
   /// </summary>
-  string GetWindowsDesktopClientLogsDirectory();
+  string GetWindowsDesktopClientLogsDirectory(string username);
+  /// <summary>
+  /// Returns the directory whose subdirectories are the Windows users that have run the desktop client.
+  /// </summary>
+  string GetWindowsDesktopClientUsersDirectory();
 }
 public class FileSystemPathProvider(
   ISystemEnvironment systemEnvironment,
@@ -377,28 +382,45 @@ public class FileSystemPathProvider(
     return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, BrandingConstants.DesktopClientBaseName);
   }
 
-  public string GetWindowsDesktopClientLogsDirectory()
+  public string GetWindowsDesktopClientLogsDirectory(string username)
   {
     if (!_systemEnvironment.IsWindows())
     {
       throw new PlatformNotSupportedException();
     }
 
-    var isDebug = _systemEnvironment.IsDebug;
+    if (string.IsNullOrWhiteSpace(username))
+    {
+      throw new ArgumentException("Username must be provided for the desktop client log directory.", nameof(username));
+    }
 
-    var logsDir = _fileSystem.JoinPaths(GetPathSeparator(),
+    var usersDir = GetWindowsDesktopClientUsersDirectory();
+
+    return _fileSystem.JoinPaths(
+      GetPathSeparator(),
+      usersDir,
+      username,
+      BrandingConstants.DesktopClientDirectoryName,
+      "Logs");
+  }
+
+  public string GetWindowsDesktopClientUsersDirectory()
+  {
+    if (!_systemEnvironment.IsWindows())
+    {
+      throw new PlatformNotSupportedException();
+    }
+
+    var rootDir = _fileSystem.JoinPaths(GetPathSeparator(),
          _systemEnvironment.GetCommonApplicationDataDirectory(),
          BrandingConstants.WindowsLogDirectoryName);
 
-    if (isDebug)
+    if (_systemEnvironment.IsDebug)
     {
-      logsDir = _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Debug");
+      rootDir = _fileSystem.JoinPaths(GetPathSeparator(), rootDir, "Debug");
     }
 
-    logsDir = _fileSystem.JoinPaths(GetPathSeparator(), logsDir, GetEffectiveInstanceId());
-
-    return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", BrandingConstants.DesktopClientBaseName);
-
+    return _fileSystem.JoinPaths(GetPathSeparator(), rootDir, GetEffectiveInstanceId());
   }
 
   private string AppendSubDirectories(string rootDir)

@@ -104,6 +104,33 @@ public partial class UserGroups : ComponentBase
     await Refresh();
   }
 
+  private async Task EditGroup(UserGroupDto group)
+  {
+    var editResult = await DialogService.ShowEditGroupDialogAsync(
+      "Edit User Group",
+      group.Name,
+      group.Description);
+
+    if (editResult is null)
+    {
+      return;
+    }
+
+    var updateResult = await ControlrApi.V1.UserGroups.UpdateUserGroup(
+      group.Id,
+      _tenantId,
+      new UpdateUserGroupRequestDto(editResult.Name, editResult.Description));
+
+    if (!updateResult.IsSuccess)
+    {
+      Snackbar.Add(updateResult.Reason, Severity.Error);
+      return;
+    }
+
+    Snackbar.Add("User group updated", Severity.Success);
+    await Refresh();
+  }
+
   private async Task EditPermissions(UserGroupDto group)
   {
     var parameters = new DialogParameters<PermissionAssignmentPanelDialog>

@@ -264,7 +264,8 @@ public partial class DeviceAccessLayout
       Message = response.Message,
       SenderName = response.SenderUsername,
       Timestamp = response.Timestamp,
-      IsFromViewer = false
+      IsFromViewer = false,
+      Kind = response.Kind
     };
 
     ChatState.Value.ChatMessages.Add(chatMessage);

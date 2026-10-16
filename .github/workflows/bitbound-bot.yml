@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ fromJson('["self-hosted","Linux"]') }}
     if: |
       github.repository == 'bitbound/ControlR-dev' &&
-      github.actor == 'bitbound' &&
+      (github.actor == 'bitbound' || github.actor == 'bitbound-bot') &&
       (
         (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) ||
         (github.event_name == 'issue_comment' &&

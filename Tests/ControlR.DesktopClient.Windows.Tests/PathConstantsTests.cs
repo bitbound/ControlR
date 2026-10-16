@@ -7,11 +7,25 @@ namespace ControlR.DesktopClient.Windows.Tests;
 public class PathConstantsTests
 {
   [WindowsOnlyFact]
-  public void GetLogsPath_WhenInstanceIdMissing_UsesDefaultDirectory()
+  public void GetLogsPath_WhenInstanceIdMissing_UsesDefaultInstanceDirectory()
   {
+    // A Debug build inserts a Debug segment before the instance directory, so nothing here pins
+    // what comes before it.
     var result = PathConstants.GetLogsPath(instanceId: null);
 
-    Assert.Contains(@"\ControlR\", result, StringComparison.OrdinalIgnoreCase);
-    Assert.EndsWith(@"default\Logs\ControlR.DesktopClient\LogFile.log", result, StringComparison.OrdinalIgnoreCase);
+    Assert.Contains(@"\default\", result, StringComparison.OrdinalIgnoreCase);
+    Assert.EndsWith(@"\DesktopClient\Logs\LogFile.log", result, StringComparison.OrdinalIgnoreCase);
+
+    // The signed-in user's directory sits between the instance id and the client directory.
+    Assert.DoesNotContain(@"default\DesktopClient", result, StringComparison.OrdinalIgnoreCase);
+  }
+
+  [WindowsOnlyFact]
+  public void GetSettingsPath_WhenInstanceIdIsNotAValidDirectoryName_KeepsItAsWritten()
+  {
+    var result = PathConstants.GetSettingsPath("inst:1");
+
+    Assert.Contains(@"\inst:1\", result, StringComparison.Ordinal);
+    Assert.EndsWith(@"\DesktopClient\settings.json", result, StringComparison.OrdinalIgnoreCase);
   }
 }

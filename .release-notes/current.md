@@ -4,7 +4,8 @@ None.
 
 ## Enhancements
 
-None.
+- DesktopClient now persists user-specific settings.
+- DesktopClient now supports language selection.
 
 ## Fixes
 
