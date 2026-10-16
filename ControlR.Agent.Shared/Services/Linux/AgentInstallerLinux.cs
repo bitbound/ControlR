@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Agent.Shared.Models;
 using ControlR.Agent.Shared.Options;
-using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
@@ -42,6 +41,7 @@ internal class AgentInstallerLinux(
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly IServiceControl _serviceControl = serviceControl;
+  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
   public async Task<Result<AgentInstallOutcome>> Install(AgentInstallRequest request)
   {
@@ -60,6 +60,11 @@ internal class AgentInstallerLinux(
         _logger.LogError("Install command must be run with sudo.");
         return Result.Fail<AgentInstallOutcome>("Install command must be run with sudo.");
       }
+
+      // The install is usually handed off from the running agent's own service directory, so this
+      // process can start with the install directory as its working directory. Deleting it makes
+      // getcwd() fail, and every later relative file name (including "sudo") then throws.
+      _systemEnvironment.SetWorkingDirectory(Path.GetTempPath());
 
       var installDir = GetInstallDirectory();
 
@@ -109,7 +114,6 @@ internal class AgentInstallerLinux(
       var psi = new ProcessStartInfo
       {
         FileName = "sudo",
-        WorkingDirectory = "/tmp",
         UseShellExecute = true
       };
 
@@ -199,7 +203,6 @@ internal class AgentInstallerLinux(
       var psi = new ProcessStartInfo
       {
         FileName = "sudo",
-        WorkingDirectory = "/tmp",
         UseShellExecute = true
       };
 
@@ -238,9 +241,10 @@ internal class AgentInstallerLinux(
     {
       _logger.LogInformation("Uninstall started.");
 
-      if (Libc.Geteuid() != 0)
+      if (!_elevationChecker.IsElevated())
       {
         _logger.LogError("Uninstall command must be run with sudo.");
+        return;
       }
 
       var serviceName = GetServiceName();

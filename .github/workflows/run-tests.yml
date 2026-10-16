@@ -14,6 +14,57 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
+  # Failing job, green run: the sweep exits non-zero when a library is behind, so the pull request gets its
+  # own attention line without blocking an unrelated change. Needs no token scope, so read-only permissions hold.
+  check-libman-library-updates:
+    name: libman library updates
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    continue-on-error: true
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Sweep libman libraries
+        working-directory: ControlR.Web.Server
+        run: |
+          dotnet tool restore
+
+          $libraries = (Get-Content libman.json -Raw | ConvertFrom-Json).libraries |
+            ForEach-Object { $_.library.Split('@')[0] } |
+            Select-Object -Unique
+
+          $behind = @()
+          foreach ($library in $libraries) {
+            $output = (dotnet libman update $library --whatif 2>&1 | Out-String) -replace '\s+', ' '
+            $message = if ($LASTEXITCODE -ne 0) {
+              "libman could not check $library (exit $LASTEXITCODE): $($output.Trim())"
+            } elseif ($output -notmatch 'already up to date') {
+              $output.Trim()
+            }
+            if ($message) {
+              $behind += $message
+            }
+          }
+
+          if ($behind.Count -eq 0) {
+            Write-Host "All libman libraries are at their latest release."
+            exit 0
+          }
+
+          Write-Host "$($behind.Count) of $($libraries.Count) libman libraries need attention:"
+          $behind | ForEach-Object { Write-Host "  - $_" }
+          Write-Host ""
+          Write-Host "From ControlR.Web.Server, after 'dotnet tool restore':"
+          Write-Host "  dotnet libman update <library>"
+          exit 1
+
   run-linux-tests:
     name: Linux Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
@@ -144,7 +195,9 @@ jobs:
         run: |
           $testProjects = @(
             "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
-            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj"
+            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj",
+            "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
+            "Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj"
           )
 
           foreach ($project in $testProjects) {
@@ -159,7 +212,9 @@ jobs:
         run: |
           $testProjects = @(
             "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
-            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj"
+            "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj",
+            "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
+            "Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj"
           )
 
           foreach ($project in $testProjects) {
@@ -221,6 +276,39 @@ jobs:
           foreach ($project in $testProjects) {
             Write-Host "Running $project on macOS (osx-arm64)..."
             dotnet run --project $project -c Release -r osx-arm64 --self-contained --no-build --no-restore
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test execution failed for $project."
+            }
+          }
+
+      # The agent test projects are platform-agnostic with no RID-specific assets, so they build and run portable
+      # here. The RID and self-contained flags belong only to the desktop steps above, which stay untouched so their
+      # builds behave as before.
+      - name: Build Agent Tests
+        run: |
+          $testProjects = @(
+            "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
+            "Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj"
+          )
+
+          foreach ($project in $testProjects) {
+            Write-Host "Building $project..."
+            dotnet build $project -c Release
+            if ($LASTEXITCODE -ne 0) {
+              throw "Build failed for $project."
+            }
+          }
+
+      - name: Run Agent Tests
+        run: |
+          $testProjects = @(
+            "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
+            "Tests/ControlR.Agent.Shared.Tests/ControlR.Agent.Shared.Tests.csproj"
+          )
+
+          foreach ($project in $testProjects) {
+            Write-Host "Running $project on macOS..."
+            dotnet run --project $project -c Release --no-build --no-restore
             if ($LASTEXITCODE -ne 0) {
               throw "Test execution failed for $project."
             }

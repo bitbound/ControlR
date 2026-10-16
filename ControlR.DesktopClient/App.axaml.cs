@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Avalonia;
@@ -11,6 +10,7 @@ using ControlR.DesktopClient.Services;
 using ControlR.Libraries.Shared.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace ControlR.DesktopClient;
 
@@ -115,7 +115,7 @@ public partial class App : Application
     }
     catch (Exception ex)
     {
-      Debug.WriteLine($"Error reporting assembly version: {ex.Message}");
+      Log.Warning(ex, "Error while reporting the assembly version.");
     }
   }
 
@@ -140,7 +140,7 @@ public partial class App : Application
     }
     catch (Exception ex)
     {
-      Debug.WriteLine($"Error cancelling app lifetime token: {ex.Message}");
+      Log.Warning(ex, "Error while cancelling the app lifetime token.");
     }
 
     try
@@ -152,7 +152,7 @@ public partial class App : Application
     }
     catch (Exception ex)
     {
-      Debug.WriteLine($"Error during shutdown: {ex.Message}");
+      Log.Error(ex, "Error while stopping the hosted services during shutdown.");
       Environment.Exit(1);
     }
     finally
@@ -163,6 +163,7 @@ public partial class App : Application
 
   private async Task StartHostedServices()
   {
+    var logger = StaticServiceProvider.Instance.GetRequiredService<ILogger<App>>();
     var hostedServices = StaticServiceProvider.Instance.GetServices<IHostedService>();
     foreach (var hostedService in hostedServices)
     {
@@ -172,7 +173,7 @@ public partial class App : Application
       }
       catch (Exception ex)
       {
-        Debug.WriteLine($"Error starting hosted service {hostedService.GetType().Name}: {ex.Message}");
+        logger.LogError(ex, "Error starting hosted service {HostedService}.", hostedService.GetType().Name);
       }
     }
   }

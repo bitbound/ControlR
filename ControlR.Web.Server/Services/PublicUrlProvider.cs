@@ -51,10 +51,7 @@ public interface IPublicUrlProvider
   string? TryGetBaseUrl();
 }
 
-/// <summary>
-/// Default <see cref="IPublicUrlProvider"/>. Singleton so that it serves scoped Razor components, MVC
-/// controllers, and the singleton email sender alike.
-/// </summary>
+/// <inheritdoc />
 public sealed class PublicUrlProvider(
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<PublicUrlProvider> logger) : IPublicUrlProvider

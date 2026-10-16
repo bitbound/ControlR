@@ -4,7 +4,8 @@ None.
 
 ## Enhancements
 
-None.
+- DesktopClient now persists user-specific settings.
+- DesktopClient now supports language selection.
 
 ## Fixes
 
@@ -16,4 +17,4 @@ None.
 
 ## Internal
 
-None.
+- Test runs now flag a libman browser library that is behind its latest release.

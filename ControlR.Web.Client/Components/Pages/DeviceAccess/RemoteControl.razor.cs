@@ -38,6 +38,8 @@ public partial class RemoteControl : ViewportAwareComponent
   [Inject]
   public required IScreenWake ScreenWake { get; init; }
   [Inject]
+  public required IServerUriResolver ServerUriResolver { get; init; }
+  [Inject]
   public required ISnackbar Snackbar { get; init; }
   [Inject]
   public required IUserPreferencesProvider UserPreferences { get; init; }
@@ -438,8 +440,12 @@ public partial class RemoteControl : ViewportAwareComponent
       var accessToken = RandomGenerator.CreateAccessToken();
 
       var serverUri = new Uri(NavManager.BaseUri).ToWebsocketUri();
+      // The device dialing this half usually cannot reach the browser's address, so only the
+      // Responder URL moves to the server's public origin. The Requester URL below stays on
+      // serverUri because the browser opened that socket itself.
+      var deviceServerUri = (await ServerUriResolver.ResolveBaseUriAsync()).ToWebsocketUri();
       var desktopRelayUri = RelayUriBuilder.Build(
-        serverUri,
+        deviceServerUri,
         AppConstants.WebSocketRelayPath,
         session.SessionId,
         accessToken,

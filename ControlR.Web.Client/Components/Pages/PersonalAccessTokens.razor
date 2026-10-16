@@ -79,12 +79,16 @@
           </MudChip>
         </CellTemplate>
       </TemplateColumn>
-      <PropertyColumn Property="x => x.CreatedAt" Title="Created" />
+      <PropertyColumn Property="x => x.CreatedAt" Title="Created">
+        <CellTemplate>
+          @context.Item.CreatedAt.ToLocalTime()
+        </CellTemplate>
+      </PropertyColumn>
       <PropertyColumn Property="x => x.LastUsed" Title="Last Used">
         <CellTemplate>
           @if (context.Item.LastUsed.HasValue)
           {
-            @context.Item.LastUsed.Value
+            @context.Item.LastUsed.Value.ToLocalTime()
           }
           else
           {

@@ -124,18 +124,32 @@
               {
                 @foreach (var message in ChatState.ChatMessages)
                 {
-                  <div class="chat-message @(message.IsFromViewer ? "viewer-message" : "desktop-message")">
-                    <div class="message-header">
-                      <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @(message.SenderName) - @(message.Timestamp)
+                  if (message.IsSystemMessage)
+                  {
+                    <div class="system-event">
+                      <span class="system-event-rule"></span>
+                      <MudText Typo="Typo.caption" Color="Color.Secondary" Class="system-event-text">
+                        @message.Message · @message.Timestamp.ToString("h:mm tt")
                       </MudText>
+                      <span class="system-event-rule"></span>
                     </div>
-                    <div class="message-content">
-                      <MudText Typo="Typo.body1">
-                        @(message.Message)
-                      </MudText>
+                  }
+                  else
+                  {
+                    var messageClass = message.IsFromViewer ? "viewer-message" : "desktop-message";
+                    <div class="chat-message @messageClass">
+                      <div class="message-header">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                          @(message.SenderName) - @(message.Timestamp)
+                        </MudText>
+                      </div>
+                      <div class="message-content">
+                        <MudText Typo="Typo.body1">
+                          @(message.Message)
+                        </MudText>
+                      </div>
                     </div>
-                  </div>
+                  }
                 }
               }
             </div>

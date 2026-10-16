@@ -16,7 +16,7 @@
                 <PropertyColumn Property="@(x => x.RemoteIpAddress)" Title="Remote IP" />
                 <PropertyColumn Property="@(x => x.Timestamp)" Title="Timestamp">
                     <CellTemplate>
-                        @context.Item.Timestamp.LocalDateTime
+                        @context.Item.Timestamp.ToLocalTime()
                     </CellTemplate>
                 </PropertyColumn>
             </Columns>

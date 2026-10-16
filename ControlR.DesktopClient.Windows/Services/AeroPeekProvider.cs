@@ -69,22 +69,24 @@ internal unsafe class AeroPeekProvider(ILogger<AeroPeekProvider> logger) : IAero
         userToken,
         TOKEN_INFORMATION_CLASS.TokenUser,
         null,
+        0,
         out var tokenInfoLength);
 
       var tokenInfoBuffer = new byte[tokenInfoLength];
 
-      if (!PInvoke.GetTokenInformation(
-            userToken,
-            TOKEN_INFORMATION_CLASS.TokenUser,
-            tokenInfoBuffer,
-            out _))
-      {
-        _logger.LogError("Failed to get token user information");
-        return false;
-      }
-
       fixed (byte* pTokenInfo = tokenInfoBuffer)
       {
+        if (!PInvoke.GetTokenInformation(
+              userToken,
+              TOKEN_INFORMATION_CLASS.TokenUser,
+              pTokenInfo,
+              (uint)tokenInfoBuffer.Length,
+              out _))
+        {
+          _logger.LogError("Failed to get token user information");
+          return false;
+        }
+
         var tokenUser = (TOKEN_USER*)pTokenInfo;
         if (!PInvoke.ConvertSidToStringSid(tokenUser->User.Sid, out var sidString))
         {
