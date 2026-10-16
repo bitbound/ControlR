@@ -16,8 +16,9 @@ internal sealed class Program
   // Avalonia configuration. Don't remove. Also used by visual designer.
   // The Wayland backend is deliberately not enabled. xdg-shell gives a client no way to place its
   // own toplevel, so windows that position themselves (e.g. custom toast notification) would stay
-  // center-screen on Wayland.  We can add `UseWaylandWithFallback` later once we switch to
-  // native notification APIs and remove self-positioning windows.
+  // center-screen on Wayland. Once the self-positioning toast is replaced by a persistent
+  // connection window, no window needs a chosen screen corner, and `UseWaylandWithFallback` can
+  // be re-enabled.
   public static AppBuilder BuildAvaloniaApp()
       => AppBuilder.Configure<App>()
           .UsePlatformDetect()
