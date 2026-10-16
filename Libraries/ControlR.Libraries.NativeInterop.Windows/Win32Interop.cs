@@ -112,6 +112,22 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
   private ushort _privacyWindowClassAtom;
   private WNDPROC? _privacyWindowProc;
 
+  /// <summary>
+  /// Returns the username for the session, or an empty string when no user is signed in.
+  /// </summary>
+  public static string GetUsernameFromSession(uint sessionId)
+  {
+    var result = PInvoke.WTSQuerySessionInformation(HANDLE.Null, sessionId, WTS_INFO_CLASS.WTSUserName,
+      out var username, out var bytesReturned);
+
+    if (result && bytesReturned > 1)
+    {
+      return username.ToString();
+    }
+
+    return string.Empty;
+  }
+
   public bool CreateInteractiveSystemProcess(
     string commandLine,
     int targetSessionId,
@@ -612,15 +628,7 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
 
   public string GetUsernameFromSessionId(uint sessionId)
   {
-    var result = PInvoke.WTSQuerySessionInformation(HANDLE.Null, sessionId, WTS_INFO_CLASS.WTSUserName,
-      out var username, out var bytesReturned);
-
-    if (result && bytesReturned > 1)
-    {
-      return username.ToString();
-    }
-
-    return string.Empty;
+    return GetUsernameFromSession(sessionId);
   }
 
   public List<WindowInfo> GetVisibleWindows()
@@ -929,23 +937,27 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     {
       Span<byte> buffer = stackalloc byte[sizeof(uint)];
 
-      if (!PInvoke.GetTokenInformation(
-            token,
-            TOKEN_INFORMATION_CLASS.TokenUIAccess,
-            buffer,
-            out var returnLength))
+      fixed (byte* bufferPtr = buffer)
       {
-        _logger.LogWarning(
-          "GetTokenInformation(TokenUIAccess) failed. Last Win32 Error: {Error} {Message}",
-          Marshal.GetLastPInvokeError(),
-          Marshal.GetLastPInvokeErrorMessage());
-        return false;
-      }
+        if (!PInvoke.GetTokenInformation(
+              token,
+              TOKEN_INFORMATION_CLASS.TokenUIAccess,
+              bufferPtr,
+              (uint)buffer.Length,
+              out var returnLength))
+        {
+          _logger.LogWarning(
+            "GetTokenInformation(TokenUIAccess) failed. Last Win32 Error: {Error} {Message}",
+            Marshal.GetLastPInvokeError(),
+            Marshal.GetLastPInvokeErrorMessage());
+          return false;
+        }
 
-      if (returnLength < sizeof(uint))
-      {
-        _logger.LogWarning("GetTokenInformation(TokenUIAccess) returned unexpected length: {ReturnLength}", returnLength);
-        return false;
+        if (returnLength < sizeof(uint))
+        {
+          _logger.LogWarning("GetTokenInformation(TokenUIAccess) returned unexpected length: {ReturnLength}", returnLength);
+          return false;
+        }
       }
 
       var uiAccess = MemoryMarshal.Read<uint>(buffer);

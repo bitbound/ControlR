@@ -26,6 +26,28 @@
 
     </StackPanel>
 
+    <StackPanel Spacing="8">
+      <TextBlock Text="{x:Static common:Localization.Language}" FontWeight="SemiBold" />
+
+      <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                SelectedItem="{Binding SelectedLanguage}"
+                HorizontalAlignment="Left"
+                MinWidth="200">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="common:LocalizationLanguage">
+            <TextBlock Text="{Binding DisplayName}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+
+      <TextBlock Text="{x:Static common:Localization.LanguageRestartNote}" TextWrapping="Wrap" />
+
+      <Button Content="{x:Static common:Localization.Restart}"
+              Command="{Binding RestartClientCommand}"
+              HorizontalAlignment="Left" />
+
+    </StackPanel>
+
   </StackPanel>
 
 </UserControl>

@@ -43,7 +43,11 @@
         </MudStack>
       </CellTemplate>
     </TemplateColumn>
-    <PropertyColumn Property="x => x.CreatedAt" Title="Created" />
+    <PropertyColumn Property="x => x.CreatedAt" Title="Created">
+      <CellTemplate>
+        @context.Item.CreatedAt.ToLocalTime()
+      </CellTemplate>
+    </PropertyColumn>
     @if (_canWrite)
     {
       <TemplateColumn Title="Actions" Sortable="false" Filterable="false">

@@ -663,7 +663,8 @@ internal class AgentHubClient(
         dto.TargetSystemSession,
         dto.TargetProcessId,
         dto.ViewerConnectionId,
-        dto.Timestamp);
+        dto.Timestamp,
+        dto.Kind);
 
       await ipcServer.Server.Client.ReceiveChatMessage(ipcDto);
       _logger.LogInformation(

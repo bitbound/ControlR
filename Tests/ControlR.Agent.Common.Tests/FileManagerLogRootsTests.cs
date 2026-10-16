@@ -27,7 +27,7 @@ public class FileManagerLogRootsTests
   private static string AliceHome => Join("home", "alice");
   private static string InstallerLogs => Join("var", "log", "controlr-installer");
   private static string RootDesktopClientLogs => Join("root", ".local", "share", "controlr", "logs");
-  private static string WindowsDesktopClientLogs => Join("ProgramData", "ControlR", "Logs");
+  private static string WindowsDesktopClientUsersDir => Join("ProgramData", "ControlR", "default");
 
   [Fact]
   public void IsPathWithinLogRoots_WhenIntermediateDirectoryIsSymlinkLeavingRoot_ReturnsFalse()
@@ -124,11 +124,14 @@ public class FileManagerLogRootsTests
   public void IsPathWithinLogRoots_WhenWindowsPathDiffersOnlyByCase_ReturnsTrue()
   {
     var fileSystem = new FakeFileSystem('\\');
-    fileSystem.AddFile(Join(WindowsDesktopClientLogs, SampleLogFile), "log");
+    fileSystem.AddDirectory(WindowsDesktopClientLogs("testuser"));
+    fileSystem.AddFile(Join(WindowsDesktopClientLogs("testuser"), SampleLogFile), "log");
 
     var manager = CreateManager(fileSystem, SystemPlatform.Windows);
 
-    Assert.True(manager.IsPathWithinLogRoots(Join(WindowsDesktopClientLogs, SampleLogFile).ToUpperInvariant()));
+    var upperCased = Join(WindowsDesktopClientLogs("testuser"), SampleLogFile).ToUpperInvariant();
+
+    Assert.True(manager.IsPathWithinLogRoots(upperCased));
   }
 
   [Fact]
@@ -234,7 +237,9 @@ public class FileManagerLogRootsTests
     var provider = new Mock<IFileSystemPathProvider>();
     provider.Setup(x => x.GetAgentLogsDirectoryPath()).Returns(AgentLogs);
     provider.Setup(x => x.GetInstallerLogsDirectoryPath()).Returns(InstallerLogs);
-    provider.Setup(x => x.GetWindowsDesktopClientLogsDirectory()).Returns(WindowsDesktopClientLogs);
+    provider.Setup(x => x.GetWindowsDesktopClientUsersDirectory()).Returns(WindowsDesktopClientUsersDir);
+    provider.Setup(x => x.GetWindowsDesktopClientLogsDirectory(It.IsAny<string>()))
+      .Returns((string username) => WindowsDesktopClientLogs(username));
     provider.Setup(x => x.GetUnixDesktopClientLogsDirectoryForRoot()).Returns(RootDesktopClientLogs);
     provider.Setup(x => x.GetUnixDesktopClientLogsDirectory(It.IsAny<string>()))
       .Returns((string username) => Join(
@@ -265,5 +270,10 @@ public class FileManagerLogRootsTests
     return combined[0] == separator
       ? combined
       : separator + combined;
+  }
+
+  private static string WindowsDesktopClientLogs(string username)
+  {
+    return Join(WindowsDesktopClientUsersDir, username, "DesktopClient", "Logs");
   }
 }
