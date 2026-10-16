@@ -718,6 +718,55 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task EvaluateRules_SamePriorityDenyRules_NonResourceScopeRanksBroadestAndNeverWins()
+  {
+    // A rule row can carry a non-resource ScopeKind when it bypassed write validation via direct
+    // SQL. The breadth ordering must rank such a kind broader than Server rather than throw, so it
+    // loses any tie against a legal scope. A Device rule cannot co-match an Unknown descriptor, so
+    // the legal counterpart here is a Tenant deny, matched through the descriptor's tenant id. If
+    // the breadth function regressed to throwing on the unknown kind, the ordering would throw and
+    // this test would fail.
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+    var poisonScopeId = Guid.NewGuid();
+
+    await SeedAssignment(testApp, new PermissionAssignment
+    {
+      PrincipalKind = PermissionPrincipalKind.User,
+      PrincipalId = user.Id,
+      PermissionName = PermissionNames.DeviceRead,
+      Effect = PermissionEffect.Deny,
+      ScopeKind = PermissionScopeKind.Unknown,
+      ScopeId = poisonScopeId,
+      OwningTenantId = tenant.Id,
+      IsEnabled = true
+    });
+
+    await SeedAssignment(testApp, new PermissionAssignment
+    {
+      PrincipalKind = PermissionPrincipalKind.User,
+      PrincipalId = user.Id,
+      PermissionName = PermissionNames.DeviceRead,
+      Effect = PermissionEffect.Deny,
+      ScopeKind = PermissionScopeKind.Tenant,
+      ScopeId = tenant.Id,
+      OwningTenantId = tenant.Id,
+      IsEnabled = true
+    });
+
+    var evaluator = GetEvaluator(testApp);
+    var principal = CreateUserPrincipal(user.Id, tenant.Id);
+    var resource = new ResourceDescriptor(PermissionScopeKind.Unknown, poisonScopeId, tenant.Id);
+
+    var result = await evaluator.Evaluate(principal, PermissionNames.DeviceRead, resource, TestContext.Current.CancellationToken);
+
+    Assert.False(result.Allowed);
+    Assert.Contains("Explicit deny", result.DenialReason);
+    Assert.Contains("at scope Tenant.", result.DenialReason);
+  }
+
+  [Fact]
   public async Task Evaluate_UnknownPermissionWithStaleAllow_Denies()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
