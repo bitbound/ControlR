@@ -29,7 +29,11 @@
         @context.Item.Permissions.Count
       </CellTemplate>
     </TemplateColumn>
-    <PropertyColumn Property="x => x.CreatedAt" Title="Created" />
+    <PropertyColumn Property="x => x.CreatedAt" Title="Created">
+      <CellTemplate>
+        @context.Item.CreatedAt.ToLocalTime()
+      </CellTemplate>
+    </PropertyColumn>
     <TemplateColumn Title="ID" Sortable="false" Filterable="false">
       <CellTemplate>
         <MudStack Row="true" Spacing="0" AlignItems="AlignItems.Center">
