@@ -124,8 +124,7 @@
               <PropertyColumn Property="x => x.Name" Title="Name" />
               <PropertyColumn Property="x => x.FormattedSize" Title="Size" Sortable="false" />
               @* The value carries the agent machine's offset, so a raw DateTimeOffset shows the
-                 file's timestamp in the agent's local time. Convert to the viewer's zone.
-                 Keep Property so sorting still uses the underlying value. *@
+                 file's timestamp in the agent's local time. Convert to the viewer's zone. *@
               <PropertyColumn Property="x => x.LastModified" Title="Modified">
                 <CellTemplate>
                   @context.Item.LastModified.ToLocalTime()
