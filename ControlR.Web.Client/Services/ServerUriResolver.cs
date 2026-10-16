@@ -1,15 +1,14 @@
 namespace ControlR.Web.Client.Services;
 
 /// <summary>
-/// Resolves the origin the device (Responder) half of a relay session dials back to.
+/// Resolves the origin clients should use to reach this server.
 /// </summary>
 /// <remarks>
-/// A device is usually reachable from neither the browser's address-bar origin nor the reverse proxy
-/// the browser happened to use, so the server's configured public origin is preferred. It is used
-/// only when the server publishes one. Without one, this falls back to the browser origin, which is
-/// what device-side relay URLs were built from before.
+/// A device or another client is often unable to reach the address this app was loaded from, so the
+/// server's configured public origin is preferred. It is used only when the server publishes one.
+/// Without one, this falls back to the browser origin, which is what callers used before.
 /// </remarks>
-public interface IDeviceRelayUriResolver
+public interface IServerUriResolver
 {
   /// <summary>
   /// The server's public origin when it publishes one, otherwise the browser's own address.
@@ -17,9 +16,9 @@ public interface IDeviceRelayUriResolver
   Task<Uri> ResolveBaseUriAsync();
 }
 
-internal class DeviceRelayUriResolver(
+internal class ServerUriResolver(
   IPublicServerSettingsProvider publicServerSettings,
-  NavigationManager navManager) : IDeviceRelayUriResolver
+  NavigationManager navManager) : IServerUriResolver
 {
   private readonly NavigationManager _navManager = navManager;
   private readonly IPublicServerSettingsProvider _publicServerSettings = publicServerSettings;

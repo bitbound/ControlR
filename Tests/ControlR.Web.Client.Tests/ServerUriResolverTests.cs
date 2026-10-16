@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Components;
 namespace ControlR.Web.Client.Tests;
 
 /// <summary>
-/// Pins the device-half origin rule: the server's public base URL when the server publishes one,
+/// Pins the server origin rule: the server's public base URL when the server publishes one,
 /// otherwise the browser's own address.
 /// </summary>
-public class DeviceRelayUriResolverTests
+public class ServerUriResolverTests
 {
   private const string BrowserHttpsOrigin = "https://192.168.1.50:5000/";
   private const string BrowserOrigin = "http://192.168.1.50:5000/";
@@ -59,11 +59,11 @@ public class DeviceRelayUriResolverTests
     Assert.Equal("192.168.1.50:5000", relayBaseUri.Authority);
   }
 
-  private static DeviceRelayUriResolver CreateResolver(
+  private static ServerUriResolver CreateResolver(
     string? publicBaseUrl,
     string browserOrigin = BrowserOrigin)
   {
-    return new DeviceRelayUriResolver(
+    return new ServerUriResolver(
       new StubPublicServerSettingsProvider(publicBaseUrl),
       new FakeNavigationManager(browserOrigin));
   }
