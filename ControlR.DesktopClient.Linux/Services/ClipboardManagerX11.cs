@@ -28,10 +28,11 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
   private nint _utf8StringAtom;
   private nint _window;
 
+  // GetText and SetText both open the display on first use, so the constructor stays free of it.
+  // Connecting here would mean a service registration cannot be resolved without a live X server.
   public ClipboardManagerX11(ILogger<ClipboardManagerX11> logger)
   {
     _logger = logger;
-    Initialize();
   }
 
   public void Dispose()

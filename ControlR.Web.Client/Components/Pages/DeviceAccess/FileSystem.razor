@@ -123,7 +123,13 @@
               </PropertyColumn>
               <PropertyColumn Property="x => x.Name" Title="Name" />
               <PropertyColumn Property="x => x.FormattedSize" Title="Size" Sortable="false" />
-              <PropertyColumn Property="x => x.LastModified" Title="Modified" />
+              @* The value carries the agent machine's offset, so a raw DateTimeOffset shows the
+                 file's timestamp in the agent's local time. Convert to the viewer's zone. *@
+              <PropertyColumn Property="x => x.LastModified" Title="Modified">
+                <CellTemplate>
+                  @context.Item.LastModified.ToLocalTime()
+                </CellTemplate>
+              </PropertyColumn>
             </Columns>
             <PagerContent>
               <MudDataGridPager T="FileSystemEntryViewModel" />

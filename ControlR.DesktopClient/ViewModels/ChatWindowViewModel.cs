@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Windows.Input;
 using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Models;
+using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.ViewModels;
@@ -89,7 +90,10 @@ public class ChatWindowViewModel(
 
     // Send a system message to notify the viewer that the chat window was closed
     var systemMessage = Localization.ChatWindowClosedSystemMessage;
-    var success = await _chatSessionManager.SendResponse(Session.SessionId, systemMessage);
+    var success = await _chatSessionManager.SendResponse(
+      Session.SessionId,
+      systemMessage,
+      ChatMessageKind.WindowClose);
 
     await _chatSessionManager.CloseChatSession(Session.SessionId, false);
 
@@ -113,7 +117,10 @@ public class ChatWindowViewModel(
     var message = NewMessage.Trim();
 
     // Send the response via the chat session manager
-    var success = await _chatSessionManager.SendResponse(Session.SessionId, message);
+    var success = await _chatSessionManager.SendResponse(
+      Session.SessionId,
+      message,
+      ChatMessageKind.TextSend);
 
     if (success)
     {

@@ -4,6 +4,15 @@ using ControlR.Libraries.NativeInterop.Unix;
 
 namespace ControlR.DesktopClient.Mac;
 
+/// <summary>
+/// <para>
+/// File system path constants used by DesktopClient.
+/// </para>
+/// <para>
+/// NOTE: Each platform has one of these files and is accessed behind preprocessor directives.
+/// Displayed references might be incorrect.
+/// </para>
+/// </summary>
 public static class PathConstants
 {
   public static string GetLogsPath(string? instanceId)
@@ -18,6 +27,15 @@ public static class PathConstants
     rootDir = AppendInstanceId(rootDir, instanceId);
     var logsDir = isRoot ? rootDir : Path.Combine(rootDir, "logs");
     return Path.Combine(logsDir, BrandingConstants.DesktopClientBaseName, "LogFile.log");
+  }
+
+  public static string GetSettingsPath(string? instanceId)
+  {
+    var rootDir = Libc.Geteuid() == 0
+      ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
+      : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/{BrandingConstants.UnixHiddenDirectoryName}";
+
+    return Path.Combine(AppendInstanceId(rootDir, instanceId), "settings.json");
   }
 
   private static string AppendInstanceId(string rootDir, string? instanceId)
