@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.Versioning;
 using ControlR.Agent.Shared.Services.Linux;
 using ControlR.Libraries.Shared.Primitives;
@@ -24,35 +23,28 @@ public class HeadlessServerDetectorTests
 {
   // Pins the grep-status-to-marker wiring of the real probe script. The shell roundtrip below only
   // proves *some* known marker comes back, so it still passes if the probe degenerates to always
-  // emitting cr-display-error. Here grep is shadowed with a PATH stub that keys off its target: a
-  // /dev/null argument is the probe's grep -z capability check and exits with capabilityExitStatus,
-  // the environ scan exits with grepExitStatus. Each branch is driven to its required marker
-  // without depending on this machine's display state. Markers are asserted by exact equality,
-  // never as membership in a set.
+  // emitting cr-display-error. Here grep is shadowed with a PATH stub that exits with the status
+  // under test, driving each branch to its required marker without depending on this machine's
+  // display state. Markers are asserted by exact equality, never as membership in a set.
   [LinuxOnlyTheory]
   // grep matched DISPLAY.
-  [InlineData("0", "1", false, "cr-display-found")]
-  // grep ran and DISPLAY is genuinely absent.
-  [InlineData("1", "1", false, "cr-display-none")]
-  // Exit 2 from an unreadable or vanished environ while -z works: benign, clean negative.
-  [InlineData("2", "1", false, "cr-display-none")]
-  // Exit 2 because grep rejects -z (the capability check also exits 2): the scan never ran.
-  [InlineData("2", "2", false, "cr-display-error")]
+  [InlineData("0", "cr-display-found")]
+  // grep ran and DISPLAY is absent from every environ it could read.
+  [InlineData("1", "cr-display-none")]
+  // A partial scan (an environ owned by another user, or a PID that vanished): the unreadable
+  // files are where another user's DISPLAY would be, so no negative can be claimed from it.
+  [InlineData("2", "cr-display-error")]
   // Any other status means grep could not answer.
-  [InlineData("3", "1", false, "cr-display-error")]
+  [InlineData("3", "cr-display-error")]
   // Launch failures: grep not executable (126) or missing from PATH (127).
-  [InlineData("126", "1", false, "cr-display-error")]
-  [InlineData("127", "1", false, "cr-display-error")]
-  // Exit 2 with no readable environ at all (stripped /proc): the probe cannot answer.
-  [InlineData("2", "1", true, "cr-display-error")]
+  [InlineData("126", "cr-display-error")]
+  [InlineData("127", "cr-display-error")]
   [SupportedOSPlatform("linux")]
   public async Task DisplayProbe_KnownGrepStatus_EmitsRequiredMarker(
     string grepExitStatus,
-    string capabilityExitStatus,
-    bool forceNoReadableEnviron,
     string expectedMarker)
   {
-    var marker = await RunProbeWithStubbedGrep(grepExitStatus, capabilityExitStatus, forceNoReadableEnviron);
+    var marker = await RunProbeWithStubbedGrep(grepExitStatus);
 
     Assert.Equal(expectedMarker, marker);
   }
@@ -200,76 +192,22 @@ public class HeadlessServerDetectorTests
   }
 
   /// <summary>
-  /// Runs the exact probe arguments the detector builds, but shadows <c>grep</c> with a PATH stub.
-  /// The stub exits with <paramref name="grepExitStatus"/> for the environ scan and with
-  /// <paramref name="capabilityExitStatus"/> when it sees a <c>/dev/null</c> argument, which is the
-  /// probe's grep -z capability check. That forces the status-to-marker wiring without depending
-  /// on this machine's display state; the readability loop still runs against real /proc. Pass
-  /// <paramref name="forceNoReadableEnviron"/> to source GLOBIGNORE (via BASH_ENV) so bash
-  /// suppresses every match of the environ glob and leaves the pattern as a literal, nonexistent
-  /// path: the stripped-/proc case where no environ file is readable.
+  /// Starts bash, waits for it under a timeout, and returns trimmed stdout. GetProcessOutput
+  /// inherits the child's stderr into the agent's own output, so anything on stderr is the
+  /// untagged-log-spam symptom of the original defect: silence there is asserted unconditionally.
   /// </summary>
-  [SupportedOSPlatform("linux")]
-  private static async Task<string> RunProbeWithStubbedGrep(
-    string grepExitStatus,
-    string capabilityExitStatus,
-    bool forceNoReadableEnviron)
+  private static async Task<string> RunAndCapture(ProcessStartInfo psi)
   {
-    var bashArguments = await CaptureDisplayProbeArguments();
-    var stubDirectory = Path.Combine(Path.GetTempPath(), $"headless-probe-{Guid.NewGuid():N}");
-    Directory.CreateDirectory(stubDirectory);
+    using var process = Process.Start(psi) ?? throw new InvalidOperationException("bash failed to start.");
+    var stdoutTask = process.StandardOutput.ReadToEndAsync();
+    var stderrTask = process.StandardError.ReadToEndAsync();
+    using var cts = new CancellationTokenSource(10_000);
+    await process.WaitForExitAsync(cts.Token);
+    var stdout = await stdoutTask;
+    var stderr = await stderrTask;
 
-    try
-    {
-      var grepStubPath = Path.Combine(stubDirectory, "grep");
-      await File.WriteAllTextAsync(
-        grepStubPath,
-        $"#!/bin/sh\nfor a in \"$@\"; do if [ \"$a\" = /dev/null ]; then exit {capabilityExitStatus}; fi; done\nexit {grepExitStatus}\n");
-      File.SetUnixFileMode(
-        grepStubPath,
-        UnixFileMode.UserRead
-        | UnixFileMode.UserWrite
-        | UnixFileMode.UserExecute
-        | UnixFileMode.GroupRead
-        | UnixFileMode.GroupExecute
-        | UnixFileMode.OtherRead
-        | UnixFileMode.OtherExecute);
-
-      var psi = new ProcessStartInfo("bash", bashArguments)
-      {
-        UseShellExecute = false,
-        RedirectStandardOutput = true,
-        RedirectStandardError = true
-      };
-
-      // Prepend the stub so the bare `grep` the probe invokes resolves to it, not the system grep.
-      var path = Environment.GetEnvironmentVariable("PATH") ?? "/usr/bin:/bin";
-      psi.Environment["PATH"] = $"{stubDirectory}:{path}";
-
-      if (forceNoReadableEnviron)
-      {
-        // GLOBIGNORE set as a plain env var is not consulted by bash -c; it must be a shell variable,
-        // so source it through BASH_ENV.
-        var bashEnvPath = Path.Combine(stubDirectory, "globignore.sh");
-        await File.WriteAllTextAsync(bashEnvPath, "GLOBIGNORE='*'\n");
-        psi.Environment.Remove("GLOBIGNORE");
-        psi.Environment["BASH_ENV"] = bashEnvPath;
-      }
-      else
-      {
-        // Readable-present path: no shell-level glob suppression. The running process's own environ
-        // (/proc/<pid>/environ, same uid) is always readable, so this is deterministic regardless of
-        // whatever else /proc contains.
-        psi.Environment.Remove("BASH_ENV");
-        psi.Environment.Remove("GLOBIGNORE");
-      }
-
-      return await RunAndCapture(psi);
-    }
-    finally
-    {
-      Directory.Delete(stubDirectory, recursive: true);
-    }
+    Assert.Equal(string.Empty, stderr.Trim());
+    return stdout.Trim();
   }
 
   /// <summary>
@@ -304,21 +242,49 @@ public class HeadlessServerDetectorTests
   }
 
   /// <summary>
-  /// Starts bash, waits for it under a timeout, and returns trimmed stdout. GetProcessOutput
-  /// inherits the child's stderr into the agent's own output, so anything on stderr is the
-  /// untagged-log-spam symptom of the original defect: silence there is asserted unconditionally.
+  /// Runs the exact probe arguments the detector builds, but shadows <c>grep</c> with a PATH stub.
+  /// The stub exits with <paramref name="grepExitStatus"/>, which forces the
+  /// status-to-marker wiring without depending on this machine's display state.
   /// </summary>
-  private static async Task<string> RunAndCapture(ProcessStartInfo psi)
+  [SupportedOSPlatform("linux")]
+  private static async Task<string> RunProbeWithStubbedGrep(string grepExitStatus)
   {
-    using var process = Process.Start(psi) ?? throw new InvalidOperationException("bash failed to start.");
-    var stdoutTask = process.StandardOutput.ReadToEndAsync();
-    var stderrTask = process.StandardError.ReadToEndAsync();
-    using var cts = new CancellationTokenSource(10_000);
-    await process.WaitForExitAsync(cts.Token);
-    var stdout = await stdoutTask;
-    var stderr = await stderrTask;
+    var bashArguments = await CaptureDisplayProbeArguments();
+    var stubDirectory = Path.Combine(Path.GetTempPath(), $"headless-probe-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(stubDirectory);
 
-    Assert.Equal(string.Empty, stderr.Trim());
-    return stdout.Trim();
+    try
+    {
+      var grepStubPath = Path.Combine(stubDirectory, "grep");
+      await File.WriteAllTextAsync(grepStubPath, $"#!/bin/sh\nexit {grepExitStatus}\n");
+      File.SetUnixFileMode(
+        grepStubPath,
+        UnixFileMode.UserRead
+        | UnixFileMode.UserWrite
+        | UnixFileMode.UserExecute
+        | UnixFileMode.GroupRead
+        | UnixFileMode.GroupExecute
+        | UnixFileMode.OtherRead
+        | UnixFileMode.OtherExecute);
+
+      var psi = new ProcessStartInfo("bash", bashArguments)
+      {
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true
+      };
+
+      // Prepend the stub so the bare `grep` the probe invokes resolves to it, not the system grep.
+      var path = Environment.GetEnvironmentVariable("PATH") ?? "/usr/bin:/bin";
+      psi.Environment["PATH"] = $"{stubDirectory}:{path}";
+      psi.Environment.Remove("BASH_ENV");
+      psi.Environment.Remove("GLOBIGNORE");
+
+      return await RunAndCapture(psi);
+    }
+    finally
+    {
+      Directory.Delete(stubDirectory, recursive: true);
+    }
   }
 }
