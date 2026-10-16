@@ -11,13 +11,13 @@ public partial class VncRelay
   [Inject]
   public required IDeviceState DeviceAccessState { get; init; }
   [Inject]
+  public required IDeviceRelayUriResolver DeviceRelayUriResolver { get; init; }
+  [Inject]
   public required IEffectiveUserPreferences EffectiveUserPreferences { get; init; }
   [Inject]
   public required ILogger<VncRelay> Logger { get; init; }
   [Inject]
   public required NavigationManager NavManager { get; init; }
-  [Inject]
-  public required IPublicServerSettingsProvider PublicServerSettings { get; init; }
   [Inject]
   public required ISnackbar Snackbar { get; init; }
   [Inject]
@@ -84,8 +84,7 @@ public partial class VncRelay
 
       var notifyUserPreference = await EffectiveUserPreferences.GetNotifyUserOnSessionStart();
 
-      var serverSettings = await PublicServerSettings.GetPublicServerSettings();
-      var deviceServerUri = DeviceRelayUri.ResolveBaseUri(serverSettings.PublicBaseUrl, NavManager.BaseUri);
+      var deviceServerUri = await DeviceRelayUriResolver.ResolveBaseUriAsync();
 
       var deviceRelayUri = RelayUriBuilder.Build(
           baseUri: deviceServerUri.ToWebsocketUri(),

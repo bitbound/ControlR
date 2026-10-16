@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
     services.AddScoped<IUserPreferencesProvider, UserPreferencesProviderClient>();
     services.AddScoped<IUserStorageClient, UserStorageClient>();
     services.AddScoped<IPublicServerSettingsProvider, PublicServerSettingsProviderClient>();
+    services.AddScoped<IDeviceRelayUriResolver, DeviceRelayUriResolver>();
     services.AddScoped<IMessenger, WeakReferenceMessenger>();
     services.AddScoped<IEffectiveUserPreferences, EffectiveUserPreferences>();
     services.AddScoped<ITenantSettingsProvider, TenantSettingsProvider>();

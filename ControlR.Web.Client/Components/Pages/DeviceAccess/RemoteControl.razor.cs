@@ -20,6 +20,8 @@ public partial class RemoteControl : ViewportAwareComponent
   [SupplyParameterFromQuery]
   public required Guid DeviceId { get; init; }
   [Inject]
+  public required IDeviceRelayUriResolver DeviceRelayUriResolver { get; init; }
+  [Inject]
   public required IDeviceState DeviceState { get; init; }
   [Inject]
   public required IDialogService DialogService { get; init; }
@@ -441,8 +443,7 @@ public partial class RemoteControl : ViewportAwareComponent
       // The device dialing this half usually cannot reach the browser's address, so only the
       // Responder URL moves to the server's public origin. The Requester URL below stays on
       // serverUri because the browser opened that socket itself.
-      var serverSettings = await PublicServerSettings.GetPublicServerSettings();
-      var deviceServerUri = DeviceRelayUri.ResolveBaseUri(serverSettings.PublicBaseUrl, NavManager.BaseUri).ToWebsocketUri();
+      var deviceServerUri = (await DeviceRelayUriResolver.ResolveBaseUriAsync()).ToWebsocketUri();
       var desktopRelayUri = RelayUriBuilder.Build(
         deviceServerUri,
         AppConstants.WebSocketRelayPath,
