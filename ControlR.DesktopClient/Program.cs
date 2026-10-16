@@ -14,15 +14,14 @@ internal sealed class Program
   private static IControlledApplicationLifetime? _lifetime;
 
   // Avalonia configuration, don't remove; also used by visual designer.
+  // The Wayland backend is deliberately not enabled. xdg-shell gives a client no way to place its
+  // own toplevel, so the connection toast loses its bottom-right corner and lands centered. Linux
+  // renders through X11, which reaches XWayland under a Wayland session. Enable it again once no
+  // window needs to sit at a chosen screen corner.
   // ReSharper disable once MemberCanBePrivate.Global
   public static AppBuilder BuildAvaloniaApp()
       => AppBuilder.Configure<App>()
           .UsePlatformDetect()
-#if IS_LINUX
-          // Experimental as of Avalonia 12.1, so UsePlatformDetect() does not pick it up.
-          // Falls back to X11 when no usable Wayland compositor is available.
-          .UseWaylandWithFallback()
-#endif
           .WithInterFont()
 #if DEBUG
           .WithDeveloperTools()
