@@ -243,9 +243,11 @@ public class AppOptions
   /// The public URL of this server, e.g. "https://controlr.example.com".
   /// </summary>
   /// <remarks>
-  /// Used to build links that leave this server. Include the scheme and, if non-standard, the port.
-  /// A trailing slash is optional. Do not include a path, query, or fragment. This is the only origin
-  /// used for emailed links. Without it, those links cannot be built.
+  /// Used to build links that leave this server and to address the device half of a relay session.
+  /// Include the scheme and, if non-standard, the port. A trailing slash is optional. Do not include
+  /// a path, query, or fragment. This is the only origin used for emailed links, and it must also be
+  /// reachable from the devices that relay sessions target. Without it, those links cannot be built
+  /// and relay sessions fall back to the viewing browser's own address.
   /// </remarks>
   public string? PublicBaseUrl { get; init; }
 
