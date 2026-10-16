@@ -14,6 +14,57 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
+  # Failing job, green run: the sweep exits non-zero when a library is behind, so the pull request gets its
+  # own attention line without blocking an unrelated change. Needs no token scope, so read-only permissions hold.
+  check-libman-library-updates:
+    name: libman library updates
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    continue-on-error: true
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Sweep libman libraries
+        working-directory: ControlR.Web.Server
+        run: |
+          dotnet tool restore
+
+          $libraries = (Get-Content libman.json -Raw | ConvertFrom-Json).libraries |
+            ForEach-Object { $_.library.Split('@')[0] } |
+            Select-Object -Unique
+
+          $behind = @()
+          foreach ($library in $libraries) {
+            $output = (dotnet libman update $library --whatif 2>&1 | Out-String) -replace '\s+', ' '
+            $message = if ($LASTEXITCODE -ne 0) {
+              "libman could not check $library (exit $LASTEXITCODE): $($output.Trim())"
+            } elseif ($output -notmatch 'already up to date') {
+              $output.Trim()
+            }
+            if ($message) {
+              $behind += $message
+            }
+          }
+
+          if ($behind.Count -eq 0) {
+            Write-Host "All libman libraries are at their latest release."
+            exit 0
+          }
+
+          Write-Host "$($behind.Count) of $($libraries.Count) libman libraries need attention:"
+          $behind | ForEach-Object { Write-Host "  - $_" }
+          Write-Host ""
+          Write-Host "From ControlR.Web.Server, after 'dotnet tool restore':"
+          Write-Host "  dotnet libman update <library>"
+          exit 1
+
   run-linux-tests:
     name: Linux Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
