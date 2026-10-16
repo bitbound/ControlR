@@ -17,6 +17,10 @@ jobs:
   run-linux-tests:
     name: Linux Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    # Listing any scope sets every other one to none, so contents stays for actions/checkout.
+    permissions:
+      contents: read
+      checks: write
     defaults:
       run:
         shell: pwsh
@@ -42,10 +46,11 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      # libman has no "is an update available" query, and a real update rewrites libman.json and downloads the
-      # whole library. --whatif reports the pending update without either, so this stays a report, not a gate.
       - name: Check for libman library updates
         working-directory: ControlR.Web.Server
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CHECK_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           dotnet tool restore
 
@@ -53,15 +58,44 @@ jobs:
             ForEach-Object { $_.library.Split('@')[0] } |
             Select-Object -Unique
 
+          $attention = @()
           foreach ($library in $libraries) {
             $output = (dotnet libman update $library --whatif 2>&1 | Out-String) -replace '\s+', ' '
-            if ($LASTEXITCODE -ne 0) {
-              Write-Host "::warning::libman could not check $library (exit $LASTEXITCODE):$output"
-              continue
+            $message = if ($LASTEXITCODE -ne 0) {
+              "libman could not check $library (exit $LASTEXITCODE): $($output.Trim())"
+            } elseif ($output -notmatch 'already up to date') {
+              $output.Trim()
             }
-            if ($output -notmatch 'already up to date') {
-              Write-Host "::warning::$output"
+            if ($message) {
+              Write-Host "::warning::$message"
+              $attention += $message
             }
+          }
+
+          if ($attention.Count -eq 0) {
+            exit 0
+          }
+
+          # A passing job cannot show a needs-attention status on the pull request, so post a check run for it.
+          # Keyed to the head commit rather than the test merge commit so it sits under the reviewed commit.
+          $payload = @{
+            name       = 'libman library updates'
+            head_sha   = $env:CHECK_SHA
+            status     = 'completed'
+            conclusion = 'action_required'
+            output     = @{
+              title   = "$($attention.Count) libman library update(s) available"
+              summary = ($attention -join "`n")
+            }
+          } | ConvertTo-Json -Depth 5
+
+          try {
+            Invoke-RestMethod -Method Post -ContentType 'application/json' -Body $payload -Headers @{
+              Authorization = "Bearer $env:GITHUB_TOKEN"
+              Accept        = 'application/vnd.github+json'
+            } -Uri "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/check-runs" | Out-Null
+          } catch {
+            Write-Host "::warning::check run not created, the token probably lacks checks write - $($_.Exception.Message)"
           }
 
       # The committed documents are removed before the build, so a build that stops generating them fails the
