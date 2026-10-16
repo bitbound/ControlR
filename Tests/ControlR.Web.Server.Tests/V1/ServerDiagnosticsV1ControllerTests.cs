@@ -69,6 +69,22 @@ public class ServerDiagnosticsV1ControllerTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task GetPublicServerSettings_WhenPublicBaseUrlConfigured_PopulatesPublicBaseUrl()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      _testOutput,
+      extraConfiguration: new Dictionary<string, string?> { ["AppOptions:PublicBaseUrl"] = "https://controlr.test" });
+
+    using var scope = testApp.CreateScope();
+    var controller = scope.CreateController<PublicServerSettingsController>();
+
+    var result = await controller.Get();
+
+    var settings = Assert.IsType<PublicServerSettingsDto>(result.Value);
+    Assert.Equal("https://controlr.test", settings.PublicBaseUrl);
+  }
+
+  [Fact]
   public async Task GetServerAlert_WhenAnonymous_ReturnsUnauthorized()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(_testOutput);

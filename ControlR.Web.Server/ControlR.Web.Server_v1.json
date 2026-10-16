@@ -17406,6 +17406,12 @@
           },
           "disableDesktopPreview": {
             "type": "boolean"
+          },
+          "publicBaseUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
