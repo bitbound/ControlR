@@ -937,23 +937,27 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     {
       Span<byte> buffer = stackalloc byte[sizeof(uint)];
 
-      if (!PInvoke.GetTokenInformation(
-            token,
-            TOKEN_INFORMATION_CLASS.TokenUIAccess,
-            buffer,
-            out var returnLength))
+      fixed (byte* bufferPtr = buffer)
       {
-        _logger.LogWarning(
-          "GetTokenInformation(TokenUIAccess) failed. Last Win32 Error: {Error} {Message}",
-          Marshal.GetLastPInvokeError(),
-          Marshal.GetLastPInvokeErrorMessage());
-        return false;
-      }
+        if (!PInvoke.GetTokenInformation(
+              token,
+              TOKEN_INFORMATION_CLASS.TokenUIAccess,
+              bufferPtr,
+              (uint)buffer.Length,
+              out var returnLength))
+        {
+          _logger.LogWarning(
+            "GetTokenInformation(TokenUIAccess) failed. Last Win32 Error: {Error} {Message}",
+            Marshal.GetLastPInvokeError(),
+            Marshal.GetLastPInvokeErrorMessage());
+          return false;
+        }
 
-      if (returnLength < sizeof(uint))
-      {
-        _logger.LogWarning("GetTokenInformation(TokenUIAccess) returned unexpected length: {ReturnLength}", returnLength);
-        return false;
+        if (returnLength < sizeof(uint))
+        {
+          _logger.LogWarning("GetTokenInformation(TokenUIAccess) returned unexpected length: {ReturnLength}", returnLength);
+          return false;
+        }
       }
 
       var uiAccess = MemoryMarshal.Read<uint>(buffer);
