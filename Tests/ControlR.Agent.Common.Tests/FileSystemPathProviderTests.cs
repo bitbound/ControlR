@@ -244,9 +244,9 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   }
 
   [Theory]
-  [InlineData(false, null, @"C:\ProgramData\ControlR\default\Logs\ControlR.DesktopClient")]
-  [InlineData(false, "localhost", @"C:\ProgramData\ControlR\localhost\Logs\ControlR.DesktopClient")]
-  [InlineData(true, "controlr.test.com", @"C:\ProgramData\ControlR\Debug\controlr.test.com\Logs\ControlR.DesktopClient")]
+  [InlineData(false, null, @"C:\ProgramData\ControlR\default\testuser\DesktopClient\Logs")]
+  [InlineData(false, "localhost", @"C:\ProgramData\ControlR\localhost\testuser\DesktopClient\Logs")]
+  [InlineData(true, "controlr.test.com", @"C:\ProgramData\ControlR\Debug\controlr.test.com\testuser\DesktopClient\Logs")]
   public void GetWindowsDesktopClientLogsDirectory_ReturnsCorrectStructure(
     bool isDebug,
     string? instanceId,
@@ -254,9 +254,21 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
   {
     Setup(SystemPlatform.Windows, instanceId, false, isDebug);
 
-    var result = _pathProvider.GetWindowsDesktopClientLogsDirectory();
+    var result = _pathProvider.GetWindowsDesktopClientLogsDirectory("testuser");
 
     Assert.Equal(expectedPath, result);
+  }
+
+  [Theory]
+  [InlineData(null)]
+  [InlineData("")]
+  [InlineData("   ")]
+  public void GetWindowsDesktopClientLogsDirectory_ThrowsOnEmptyUsername(string? username)
+  {
+    Setup(SystemPlatform.Windows, null);
+
+    Assert.Throws<ArgumentException>(() =>
+      _pathProvider.GetWindowsDesktopClientLogsDirectory(username!));
   }
 
   [Fact]
@@ -265,7 +277,32 @@ public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
     Setup(SystemPlatform.Linux, null);
 
     Assert.Throws<PlatformNotSupportedException>(() =>
-      _pathProvider.GetWindowsDesktopClientLogsDirectory());
+      _pathProvider.GetWindowsDesktopClientLogsDirectory("testuser"));
+  }
+
+  [Theory]
+  [InlineData(false, null, @"C:\ProgramData\ControlR\default")]
+  [InlineData(false, "localhost", @"C:\ProgramData\ControlR\localhost")]
+  [InlineData(true, "controlr.test.com", @"C:\ProgramData\ControlR\Debug\controlr.test.com")]
+  public void GetWindowsDesktopClientUsersDirectory_ReturnsCorrectStructure(
+    bool isDebug,
+    string? instanceId,
+    string expectedPath)
+  {
+    Setup(SystemPlatform.Windows, instanceId, false, isDebug);
+
+    var result = _pathProvider.GetWindowsDesktopClientUsersDirectory();
+
+    Assert.Equal(expectedPath, result);
+  }
+
+  [Fact]
+  public void GetWindowsDesktopClientUsersDirectory_ThrowsOnNonWindows()
+  {
+    Setup(SystemPlatform.Linux, null);
+
+    Assert.Throws<PlatformNotSupportedException>(() =>
+      _pathProvider.GetWindowsDesktopClientUsersDirectory());
   }
 
   private void Setup(SystemPlatform platform, string? instanceId, bool isElevated = false, bool isDebug = false)

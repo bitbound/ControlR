@@ -31,7 +31,7 @@ internal sealed class WindowsUrlLauncher(
     return _win32Interop.OpenUrlInActiveSession(target);
   }
 
-  private bool IsRunningAsSystemProcess()
+  private unsafe bool IsRunningAsSystemProcess()
   {
     var processHandle = PInvoke.GetCurrentProcess();
     using var safeProcessHandle = new SafeProcessHandle(processHandle, ownsHandle: false);
@@ -51,6 +51,7 @@ internal sealed class WindowsUrlLauncher(
         token,
         TOKEN_INFORMATION_CLASS.TokenUser,
         null,
+        0,
         out var tokenInfoLength);
 
       if (tokenInfoLength == 0)
@@ -64,23 +65,24 @@ internal sealed class WindowsUrlLauncher(
 
       var tokenInfoBuffer = new byte[tokenInfoLength];
 
-      if (!PInvoke.GetTokenInformation(
-            token,
-            TOKEN_INFORMATION_CLASS.TokenUser,
-            tokenInfoBuffer,
-            out _))
-      {
-        _logger.LogWarning(
-          "GetTokenInformation(TokenUser) failed while checking launcher identity. Error: {Error} {Message}",
-          Marshal.GetLastPInvokeError(),
-          Marshal.GetLastPInvokeErrorMessage());
-        return false;
-      }
-
       unsafe
       {
         fixed (byte* tokenInfoPointer = tokenInfoBuffer)
         {
+          if (!PInvoke.GetTokenInformation(
+                token,
+                TOKEN_INFORMATION_CLASS.TokenUser,
+                tokenInfoPointer,
+                (uint)tokenInfoBuffer.Length,
+                out _))
+          {
+            _logger.LogWarning(
+              "GetTokenInformation(TokenUser) failed while checking launcher identity. Error: {Error} {Message}",
+              Marshal.GetLastPInvokeError(),
+              Marshal.GetLastPInvokeErrorMessage());
+            return false;
+          }
+
           var tokenUser = (TOKEN_USER*)tokenInfoPointer;
           if (!PInvoke.ConvertSidToStringSid(tokenUser->User.Sid, out var sidString))
           {

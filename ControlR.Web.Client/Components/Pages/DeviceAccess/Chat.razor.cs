@@ -228,7 +228,8 @@ public partial class Chat : ComponentBase, IDisposable
         string.Empty, // SenderEmail will be set in the hub
         ChatState.CurrentSession.SystemSessionId,
         ChatState.CurrentSession.ProcessId,
-        DateTimeOffset.Now);
+        DateTimeOffset.Now,
+        Kind: ChatMessageKind.TextSend);
 
       // Add the message to our local chat
       var chatMessage = new ChatMessage
@@ -236,7 +237,8 @@ public partial class Chat : ComponentBase, IDisposable
         Message = newMessage,
         SenderName = "You",
         Timestamp = DateTimeOffset.Now,
-        IsFromViewer = true
+        IsFromViewer = true,
+        Kind = ChatMessageKind.TextSend
       };
 
       ChatState.ChatMessages.Add(chatMessage);
