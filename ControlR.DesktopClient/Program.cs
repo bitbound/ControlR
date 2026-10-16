@@ -107,7 +107,7 @@ internal sealed class Program
     var x11Display = Environment.GetEnvironmentVariable("DISPLAY");
     var waylandDisplay = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
 
-    if (!string.IsNullOrWhiteSpace(x11Display) && !string.IsNullOrWhiteSpace(waylandDisplay))
+    if (!string.IsNullOrWhiteSpace(x11Display) || !string.IsNullOrWhiteSpace(waylandDisplay))
     {
       return;
     }
