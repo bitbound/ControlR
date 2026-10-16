@@ -73,6 +73,37 @@ public class AgentInstallerLinuxTests
     Assert.False(leftDirectory.StartsWith(installDir, StringComparison.Ordinal));
   }
 
+  [Fact]
+  public async Task Uninstall_WhenNotRoot_ChangesNothing()
+  {
+    var installDir = "/usr/local/bin/ControlR/default";
+    var fileSystem = new Mock<IFileSystem>();
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var elevationChecker = new Mock<IElevationChecker>();
+
+    elevationChecker.Setup(x => x.IsElevated()).Returns(false);
+    pathProvider.Setup(x => x.GetAgentInstallDirectory()).Returns(installDir);
+
+    var stopProcess = new Mock<IProcess>();
+    stopProcess.Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+    processManager.Setup(x => x.Start(It.IsAny<string>(), It.IsAny<string>())).Returns(stopProcess.Object);
+
+    var sut = CreateSut(
+      fileSystem.Object,
+      processManager.Object,
+      Mock.Of<ISystemEnvironment>(),
+      pathProvider.Object,
+      elevationChecker.Object);
+
+    await sut.Uninstall();
+
+    // Without root none of the systemctl calls can work, so continuing past this point spends the
+    // rest of the run failing, and ends by deleting the install directory anyway.
+    processManager.Verify(x => x.Start(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    fileSystem.Verify(x => x.DeleteDirectory(installDir, true), Times.Never);
+  }
+
   private static AgentInstallRequest CreateRequest()
   {
     return new AgentInstallRequest

@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Agent.Shared.Models;
 using ControlR.Agent.Shared.Options;
-using ControlR.Libraries.NativeInterop.Unix;
 using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
@@ -115,7 +114,6 @@ internal class AgentInstallerLinux(
       var psi = new ProcessStartInfo
       {
         FileName = "sudo",
-        WorkingDirectory = "/tmp",
         UseShellExecute = true
       };
 
@@ -205,7 +203,6 @@ internal class AgentInstallerLinux(
       var psi = new ProcessStartInfo
       {
         FileName = "sudo",
-        WorkingDirectory = "/tmp",
         UseShellExecute = true
       };
 
@@ -244,9 +241,10 @@ internal class AgentInstallerLinux(
     {
       _logger.LogInformation("Uninstall started.");
 
-      if (Libc.Geteuid() != 0)
+      if (!_elevationChecker.IsElevated())
       {
         _logger.LogError("Uninstall command must be run with sudo.");
+        return;
       }
 
       var serviceName = GetServiceName();
