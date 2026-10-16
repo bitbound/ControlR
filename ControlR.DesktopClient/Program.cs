@@ -93,7 +93,8 @@ internal sealed class Program
   }
 
   /// <summary>
-  ///   On Linux, the desktop client requires either an X11 or Wayland display to be available.
+  ///   On Linux, the desktop client renders through X11 while the native Wayland backend is
+  ///   disabled, so an X11 display is required even under a Wayland session with XWayland.
   ///   This method checks for the presence of a display and exits the application if none is found.
   ///   The delay prevents the agent from restarting the desktop client in a tight loop when no display is available.
   /// </summary>
@@ -105,14 +106,13 @@ internal sealed class Program
     }
 
     var x11Display = Environment.GetEnvironmentVariable("DISPLAY");
-    var waylandDisplay = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
 
-    if (!string.IsNullOrWhiteSpace(x11Display) || !string.IsNullOrWhiteSpace(waylandDisplay))
+    if (!string.IsNullOrWhiteSpace(x11Display))
     {
       return;
     }
 
-    Log.Warning("No X11 or Wayland display detected. Exiting.");
+    Log.Warning("No X11 display detected. Exiting.");
     Thread.Sleep(30_000);
     Environment.Exit(1);
   }
