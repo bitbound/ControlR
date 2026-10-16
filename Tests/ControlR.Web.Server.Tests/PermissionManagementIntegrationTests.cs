@@ -364,6 +364,24 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task EffectivePermission_Query_UnknownScopeKind_ReturnsBadRequest()
+  {
+    var (testServer, client, tenantId, userId) = await CreateAuthenticatedServer();
+    using var _ = testServer;
+
+    // The endpoint resolves the resource descriptor straight from the query scope kind, so a
+    // non-resource kind must be rejected at the boundary rather than handed to the evaluator.
+    var queryResponse = await client.GetAsync(
+      $"{HttpConstants.V1.EffectivePermissionsEndpoint}/{userId}" +
+      $"?tenantId={tenantId}&principalKind={PermissionPrincipalKind.User}" +
+      $"&permissionName={Uri.EscapeDataString(PermissionNames.DeviceRead)}" +
+      $"&scopeKind={PermissionScopeKind.Unknown}&scopeId={tenantId}",
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.BadRequest, queryResponse.StatusCode);
+  }
+
+  [Fact]
   public async Task EffectivePermission_Query_UnsupportedPrincipalKind_ReturnsBadRequest()
   {
     var (testServer, client, tenantId, _) = await CreateAuthenticatedServer();

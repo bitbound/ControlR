@@ -626,6 +626,53 @@ public class PermissionEvaluatorTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task EvaluateRules_SamePriorityAllowRules_UserGroupBeatsTenant()
+  {
+    // Covers the UserGroup breadth rank, which the Device-vs-Tenant tests never exercise. Both
+    // grants apply to one user at equal priority and both match a user-group descriptor (the
+    // Tenant grant via the descriptor's tenant id, the UserGroup grant via scope id equality), so
+    // the narrower UserGroup grant must win the tie-break.
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var user = await testApp.App.Services.CreateTestUser(tenant.Id);
+    var userGroupId = Guid.NewGuid();
+
+    await SeedAssignment(testApp, new PermissionAssignment
+    {
+      PrincipalKind = PermissionPrincipalKind.User,
+      PrincipalId = user.Id,
+      PermissionName = PermissionNames.UserGroupAssignUsers,
+      Effect = PermissionEffect.Allow,
+      ScopeKind = PermissionScopeKind.Tenant,
+      ScopeId = tenant.Id,
+      OwningTenantId = tenant.Id,
+      IsEnabled = true
+    });
+
+    await SeedAssignment(testApp, new PermissionAssignment
+    {
+      PrincipalKind = PermissionPrincipalKind.User,
+      PrincipalId = user.Id,
+      PermissionName = PermissionNames.UserGroupAssignUsers,
+      Effect = PermissionEffect.Allow,
+      ScopeKind = PermissionScopeKind.UserGroup,
+      ScopeId = userGroupId,
+      OwningTenantId = tenant.Id,
+      IsEnabled = true
+    });
+
+    var evaluator = GetEvaluator(testApp);
+    var principal = CreateUserPrincipal(user.Id, tenant.Id);
+    var resource = new ResourceDescriptor(PermissionScopeKind.UserGroup, userGroupId, tenant.Id);
+
+    var result = await evaluator.Evaluate(
+      principal, PermissionNames.UserGroupAssignUsers, resource, TestContext.Current.CancellationToken);
+
+    Assert.True(result.Allowed);
+    Assert.Equal(PermissionScopeKind.UserGroup.ToString(), result.MatchedScope);
+  }
+
+  [Fact]
   public async Task EvaluateRules_SamePriorityDenyRules_NarrowerScopeWins()
   {
     // Same shape as the allow case with denies instead: the device-scoped deny must be the rule

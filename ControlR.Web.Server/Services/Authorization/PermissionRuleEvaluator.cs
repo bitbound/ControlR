@@ -90,7 +90,8 @@ public static class PermissionRuleEvaluator
     }
 
     // Ties on priority break toward the narrower scope. GetBreadth ranks narrowest first, so
-    // this is ascending.
+    // this is ascending. A non-resource ScopeKind (only possible from a rule that bypassed write
+    // validation) ranks last and never wins a tie against a legal scope.
     var denyRule = matchingRules
       .Where(rule => rule.Effect == PermissionEffect.Deny)
       .OrderBy(rule => rule.Priority)

@@ -57,6 +57,14 @@ public class EffectivePermissionsController(
         title: V1ProblemTitles.InvalidRequest);
     }
 
+    if (scopeKind == PermissionScopeKind.Unknown)
+    {
+      return Problem(
+        detail: "A resource scope kind is required.",
+        statusCode: StatusCodes.Status400BadRequest,
+        title: V1ProblemTitles.InvalidRequest);
+    }
+
     // ServiceAccounts has no claims-driven query filter, so this predicate is the only tenant
     // guard for that kind. Server service accounts are excluded (server-level configuration,
     // not tenant business). A principal in another tenant is indistinguishable from one that
