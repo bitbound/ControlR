@@ -89,10 +89,13 @@ public static class PermissionRuleEvaluator
       return PermissionEvaluationResult.Deny("No matching permission assignment found (default deny).");
     }
 
+    // Ties on priority break toward the narrower scope. GetBreadth ranks narrowest first, so
+    // this is ascending. A non-resource ScopeKind (only possible from a rule that bypassed write
+    // validation) ranks last and never wins a tie against a legal scope.
     var denyRule = matchingRules
       .Where(rule => rule.Effect == PermissionEffect.Deny)
       .OrderBy(rule => rule.Priority)
-      .ThenBy(rule => ScopeSpecificity(rule.ScopeKind))
+      .ThenBy(rule => PermissionScopeKinds.GetBreadth(rule.ScopeKind))
       .FirstOrDefault();
 
     if (denyRule is not null)
@@ -104,7 +107,7 @@ public static class PermissionRuleEvaluator
     var allowRule = matchingRules
       .Where(rule => rule.Effect == PermissionEffect.Allow)
       .OrderBy(rule => rule.Priority)
-      .ThenBy(rule => ScopeSpecificity(rule.ScopeKind))
+      .ThenBy(rule => PermissionScopeKinds.GetBreadth(rule.ScopeKind))
       .FirstOrDefault();
 
     return allowRule is null
@@ -112,15 +115,4 @@ public static class PermissionRuleEvaluator
       : PermissionEvaluationResult.Allow(
           allowRule.Source.ToString(), allowRule.ScopeKind.ToString());
   }
-
-  private static int ScopeSpecificity(PermissionScopeKind scopeKind) => scopeKind switch
-  {
-    PermissionScopeKind.Device => 0,
-    PermissionScopeKind.DeviceGroup => 1,
-    PermissionScopeKind.CustomerTenant => 2,
-    PermissionScopeKind.UserGroup => 3,
-    PermissionScopeKind.Tenant => 4,
-    PermissionScopeKind.Server => 5,
-    _ => 6
-  };
 }
