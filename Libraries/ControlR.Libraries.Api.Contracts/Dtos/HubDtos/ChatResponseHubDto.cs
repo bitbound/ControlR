@@ -7,4 +7,5 @@ public record ChatResponseHubDto(
   string Message,
   string SenderUsername,
   string ViewerConnectionId,
-  DateTimeOffset Timestamp);
+  DateTimeOffset Timestamp,
+  ChatMessageKind Kind = ChatMessageKind.TextSend);

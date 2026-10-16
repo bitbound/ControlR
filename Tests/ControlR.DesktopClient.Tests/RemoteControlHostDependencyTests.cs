@@ -78,7 +78,8 @@ public class RemoteControlHostDependencyTests
 
     serviceCollection.AddSingleton(mockLifetime.Object);
     serviceCollection
-      .AddDesktopShellServices(instanceId)
+      .AddControlrDesktopSettings(instanceId)
+      .AddDesktopShellServices()
       .AddDesktopAppPlatformServices();
 
     return serviceCollection.BuildServiceProvider();
