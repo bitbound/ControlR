@@ -13,12 +13,11 @@ internal sealed class Program
   private static AppBuilder? _appBuilder;
   private static IControlledApplicationLifetime? _lifetime;
 
-  // Avalonia configuration, don't remove; also used by visual designer.
+  // Avalonia configuration. Don't remove. Also used by visual designer.
   // The Wayland backend is deliberately not enabled. xdg-shell gives a client no way to place its
-  // own toplevel, so the connection toast loses its bottom-right corner and lands centered. Linux
-  // renders through X11, which reaches XWayland under a Wayland session. Enable it again once no
-  // window needs to sit at a chosen screen corner.
-  // ReSharper disable once MemberCanBePrivate.Global
+  // own toplevel, so windows that position themselves (e.g. custom toast notification) would stay
+  // center-screen on Wayland.  We can add `UseWaylandWithFallback` later once we switch to
+  // native notification APIs and remove self-positioning windows.
   public static AppBuilder BuildAvaloniaApp()
       => AppBuilder.Configure<App>()
           .UsePlatformDetect()
