@@ -78,8 +78,10 @@ services:
 
       # The public URL of this server, e.g. "https://controlr.example.com".  Used to build links
       # that leave this server, such as emailed password reset and confirmation links, device access
-      # URLs, and tenant invites.  Include the scheme and, if non-standard, the port.  No path,
-      # query, or fragment.  While it is unset, the actions that need such a link refuse.
+      # URLs, and tenant invites.  It is also the origin a target device dials for a relay session,
+      # so the devices must be able to reach it too.  Include the scheme and, if non-standard, the
+      # port.  No path, query, or fragment.  While it is unset, the actions that need such a link
+      # refuse and relay sessions fall back to the address the viewing browser used.
       ControlR_AppOptions__PublicBaseUrl: *publicBaseUrl
 
       # The hostnames this server answers to.  Semicolon-separated, without port numbers.  A pinned list
