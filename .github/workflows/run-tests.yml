@@ -42,6 +42,28 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
+      # libman has no "is an update available" query, and a real update rewrites libman.json and downloads the
+      # whole library. --whatif reports the pending update without either, so this stays a report, not a gate.
+      - name: Check for libman library updates
+        working-directory: ControlR.Web.Server
+        run: |
+          dotnet tool restore
+
+          $libraries = (Get-Content libman.json -Raw | ConvertFrom-Json).libraries |
+            ForEach-Object { $_.library.Split('@')[0] } |
+            Select-Object -Unique
+
+          foreach ($library in $libraries) {
+            $output = (dotnet libman update $library --whatif 2>&1 | Out-String) -replace '\s+', ' '
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::warning::libman could not check $library (exit $LASTEXITCODE):$output"
+              continue
+            }
+            if ($output -notmatch 'already up to date') {
+              Write-Host "::warning::$output"
+            }
+          }
+
       # The committed documents are removed before the build, so a build that stops generating them fails the
       # freshness step below instead of comparing the committed files against themselves.
       - name: Remove committed OpenAPI documents
