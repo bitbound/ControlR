@@ -5,6 +5,7 @@ using ControlR.Libraries.TestingUtilities.Extensions;
 using ControlR.Libraries.WebSocketRelay.Client;
 using ControlR.Libraries.WebSocketRelay.Common.Extensions;
 using ControlR.Libraries.WebSocketRelay.Common.Options;
+using ControlR.Libraries.WebSocketRelay.Common.Sessions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -28,6 +29,66 @@ public class RelayTimeoutTests
   {
     await Assert.ThrowsAsync<OptionsValidationException>(
       () => StartRelayAsync(options => options.MaxWaitForPartnerTimeout = TimeSpan.Zero));
+  }
+
+  [Fact]
+  public async Task WaitForPartner_AfterTimeout_EvictsTheSession()
+  {
+    using var app = await StartRelayAsync();
+    var sessionId = Guid.NewGuid();
+    var store = app.Services.GetRequiredService<IRelaySessionStore>();
+
+    var status = await RefusedHandshakeStatusAsync(
+      app.GetTestServer(),
+      RelayUri(sessionId, RelayRole.Requester, 1),
+      waitForPartner: TimeSpan.FromSeconds(1));
+
+    Assert.Equal(StatusCodes.Status408RequestTimeout, status);
+    Assert.Equal(0, store.Count);
+  }
+
+  [Fact]
+  public async Task WaitForPartner_AfterTimeout_FreshTokenPairsOnTheSameSessionId()
+  {
+    using var app = await StartRelayAsync();
+    var server = app.GetTestServer();
+    var sessionId = Guid.NewGuid();
+
+    var status = await RefusedHandshakeStatusAsync(
+      server,
+      RelayUri(sessionId, RelayRole.Requester, 1, "first-token"),
+      waitForPartner: TimeSpan.FromSeconds(1));
+    Assert.Equal(StatusCodes.Status408RequestTimeout, status);
+
+    var (requester, responder) = await PairAsync(
+      server,
+      RelayUri(sessionId, RelayRole.Requester, 30, "second-token"),
+      RelayUri(sessionId, RelayRole.Responder, 30, "second-token"));
+
+    requester.Dispose();
+    responder.Dispose();
+  }
+
+  [Fact]
+  public async Task WaitForPartner_AfterTimeout_RoleSlotIsFreeForTheSameToken()
+  {
+    using var app = await StartRelayAsync();
+    var server = app.GetTestServer();
+    var sessionId = Guid.NewGuid();
+
+    var status = await RefusedHandshakeStatusAsync(
+      server,
+      RelayUri(sessionId, RelayRole.Requester, 1),
+      waitForPartner: TimeSpan.FromSeconds(1));
+    Assert.Equal(StatusCodes.Status408RequestTimeout, status);
+
+    var (requester, responder) = await PairAsync(
+      server,
+      RelayUri(sessionId, RelayRole.Requester, 30),
+      RelayUri(sessionId, RelayRole.Responder, 30));
+
+    requester.Dispose();
+    responder.Dispose();
   }
 
   [Fact]
@@ -128,12 +189,16 @@ public class RelayTimeoutTests
     RelayRole role = RelayRole.Requester) =>
     RelayUri(sessionId ?? Guid.NewGuid(), role, timeoutSeconds);
 
-  private static Uri RelayUri(Guid sessionId, RelayRole role, uint timeoutSeconds) =>
+  private static Uri RelayUri(
+    Guid sessionId,
+    RelayRole role,
+    uint timeoutSeconds,
+    string accessToken = "test-access-token") =>
     RelayUriBuilder.Build(
       new Uri("ws://localhost"),
       "/relay",
       sessionId,
-      "test-access-token",
+      accessToken,
       role,
       timeoutSeconds);
 
@@ -143,6 +208,31 @@ public class RelayTimeoutTests
       $"ws://localhost/relay?sessionId={sessionId ?? Guid.NewGuid()}&" +
       "accessToken=test-access-token&" +
       "role=requester");
+
+  // Both connects have to be in flight before either handshake completes, and a refused one faults
+  // without the other ever finishing, so the pair is raced against the same deadline.
+  private async Task<(WebSocket Requester, WebSocket Responder)> PairAsync(
+    TestServer server,
+    Uri requesterUri,
+    Uri responderUri)
+  {
+    var requester = server
+      .CreateWebSocketClient()
+      .ConnectAsync(requesterUri, TestContext.Current.CancellationToken);
+    var responder = server
+      .CreateWebSocketClient()
+      .ConnectAsync(responderUri, TestContext.Current.CancellationToken);
+    var both = Task.WhenAll(requester, responder);
+
+    var answered = await Task.WhenAny(both, Task.Delay(_handshakeBudget, TestContext.Current.CancellationToken));
+    Assert.True(
+      ReferenceEquals(answered, both),
+      $"The peers did not pair within {_handshakeBudget}.  " +
+      $"Requester: '{requesterUri}'.  Responder: '{responderUri}'.");
+
+    var sockets = await both;
+    return (sockets[0], sockets[1]);
+  }
 
   // The test server reports a refused handshake only through the exception it throws, so the status
   // code has to come out of the message.  Its client also ignores the cancellation token it is
