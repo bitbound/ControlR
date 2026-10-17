@@ -65,6 +65,7 @@
   </ItemGroup>
   <ItemGroup Condition="'$(IsLinux)' == 'true'">
     <ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
+    <PackageReference Include="Avalonia.Wayland" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Assets\appicon.png">

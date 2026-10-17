@@ -14,23 +14,32 @@ internal sealed class Program
   private static IControlledApplicationLifetime? _lifetime;
 
   // Avalonia configuration. Don't remove. Also used by visual designer.
-  // The Wayland backend is deliberately not enabled. xdg-shell gives a client no way to place its
-  // own toplevel, so windows that position themselves (e.g. custom toast notification) would stay
-  // center-screen on Wayland. Once the self-positioning toast is replaced by a persistent
-  // connection window, no window needs a chosen screen corner, and `UseWaylandWithFallback` can
-  // be re-enabled.
-  public static AppBuilder BuildAvaloniaApp()
-      => AppBuilder.Configure<App>()
-          .UsePlatformDetect()
-          .WithInterFont()
-#if DEBUG
-          .WithDeveloperTools()
+  public static AppBuilder BuildAvaloniaApp(bool x11Available)
+  {
+    var appbuilder = AppBuilder
+      .Configure<App>()
+      .UsePlatformDetect();
+
+#if IS_LINUX
+      // Experimental as of Avalonia 12.1, so UsePlatformDetect() does not pick it up.
+      // Falls back to X11 when no usable Wayland compositor is available.
+      if (!x11Available)
+      {
+        appbuilder = appbuilder.UseWaylandWithFallback();
+      }
 #endif
-          .LogToTrace()
-          .With(new MacOSPlatformOptions()
-          {
-            ShowInDock = false
-          });
+
+    return appbuilder
+      .WithInterFont()
+#if DEBUG
+      .WithDeveloperTools()
+#endif
+      .LogToTrace()
+      .With(new MacOSPlatformOptions()
+      {
+        ShowInDock = false
+      });
+  }
 
   // Initialization code. Don't use any Avalonia, third-party APIs or any
   // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
@@ -38,9 +47,11 @@ internal sealed class Program
   [STAThread]
   public static void Main(string[] args)
   {
+    var x11Available = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DISPLAY"));
+    var waylandAvailable = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
     UseBootstrapLogger();
     UsePersistedCulture();
-    UseLinuxDisplayGuard();
+    UseLinuxDisplayGuard(x11Available, waylandAvailable);
 
     while (true)
     {
@@ -49,7 +60,7 @@ internal sealed class Program
         if (_appBuilder is null)
         {
           // AppBuilder has static internal state that will throw if it's configured more than once.
-          _appBuilder = BuildAvaloniaApp();
+          _appBuilder = BuildAvaloniaApp(x11Available);
           _appBuilder.StartWithClassicDesktopLifetime(args, lifetime => { _lifetime = lifetime; });
         }
         else if (_lifetime is ClassicDesktopStyleApplicationLifetime desktop)
@@ -97,17 +108,14 @@ internal sealed class Program
   ///   This method checks for the presence of a display and exits the application if none is found.
   ///   The delay prevents the agent from restarting the desktop client in a tight loop when no display is available.
   /// </summary>
-  private static void UseLinuxDisplayGuard()
+  private static void UseLinuxDisplayGuard(bool x11Available, bool waylandAvailable)
   {
     if (!OperatingSystem.IsLinux())
     {
       return;
     }
 
-    var x11Display = Environment.GetEnvironmentVariable("DISPLAY");
-    var waylandDisplay = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
-
-    if (!string.IsNullOrWhiteSpace(x11Display) || !string.IsNullOrWhiteSpace(waylandDisplay))
+    if (x11Available || waylandAvailable)
     {
       return;
     }
