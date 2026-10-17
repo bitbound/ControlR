@@ -134,7 +134,18 @@ internal class WebSocketRelayMiddleware(
       using var cts = new CancellationTokenSource(waitForPartnerTimeout, timeProvider);
       using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, appLifetime.ApplicationStopping);
 
-      await signaler.WaitForPartner(linkedCts.Token);
+      if (!await signaler.WaitForPartner(linkedCts.Token))
+      {
+        // Evicted on timeout so a later attempt rebuilds the session.  Left in place, the entry keeps
+        // the first presented token and the assigned role slot, so the session id is unusable.
+        _ = streamStore.TryRemove(sessionId, out _);
+
+        logger.LogWarning("Timed out while waiting for partner to connect.  Session ID: {SessionId}", sessionId);
+        context.Response.StatusCode = StatusCodes.Status408RequestTimeout;
+        await context.Response.WriteAsync("Timed out while waiting for partner.");
+        return;
+      }
+
       _ = streamStore.TryRemove(sessionId, out _);
 
       var websocket = await context.WebSockets.AcceptWebSocketAsync();

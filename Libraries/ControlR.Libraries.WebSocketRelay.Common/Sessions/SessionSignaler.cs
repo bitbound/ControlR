@@ -167,8 +167,18 @@ internal class SessionSignaler : IAsyncDisposable
         _accessTokenHash);
   }
 
-  public async Task WaitForPartner(CancellationToken cancellationToken)
+  // A partner that signals as the wait expires still counts, so a cancelled wait reports paired when
+  // both roles made it in.  Only a missing role is a timeout.
+  public async Task<bool> WaitForPartner(CancellationToken cancellationToken)
   {
-    await Task.WhenAll(_signalTasks).WaitAsync(cancellationToken);
+    try
+    {
+      await Task.WhenAll(_signalTasks).WaitAsync(cancellationToken);
+      return true;
+    }
+    catch (OperationCanceledException)
+    {
+      return _signalTasks.All(x => x.IsCompleted);
+    }
   }
 }
