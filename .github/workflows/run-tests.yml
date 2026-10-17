@@ -89,7 +89,7 @@ jobs:
       - name: Remove committed OpenAPI documents
         run: Remove-Item -Path "ControlR.Web.Server/ControlR.Web.Server_*.json" -ErrorAction SilentlyContinue
 
-      - name: Build Server Tests
+      - name: Build Tests
         run: |
           $project = "Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj"
 
@@ -128,7 +128,7 @@ jobs:
             exit 1
           }
 
-      - name: Run Server Tests
+      - name: Run Tests
         run: |
           $project = "Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj"
 
@@ -138,7 +138,7 @@ jobs:
             throw "Test execution failed for $project."
           }
 
-  # Runs every platform-agnostic test project except the server suite, so a new project lands here by default.
+  # Client covers every non-server test project, including the agent tests. A new project lands here by default.
   run-linux-client-tests:
     name: Linux Client Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
@@ -167,7 +167,7 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      - name: Build Test Projects
+      - name: Build Tests
         run: |
           $excludedProjects = @(
             "ControlR.DesktopClient.Tests.csproj",
@@ -215,7 +215,8 @@ jobs:
             }
           }
 
-  run-windows-desktop-tests:
+  # Client covers every non-server test project, including the agent tests.
+  run-windows-client-tests:
     name: Windows Client Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
     defaults:
@@ -232,7 +233,7 @@ jobs:
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
-      - name: Build Desktop Tests
+      - name: Build Tests
         run: |
           $testProjects = @(
             "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
@@ -249,7 +250,7 @@ jobs:
             }
           }
 
-      - name: Run Desktop Tests
+      - name: Run Tests
         run: |
           $testProjects = @(
             "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
@@ -266,8 +267,9 @@ jobs:
             }
           }
 
-  run-macos-desktop-tests:
-    name: Mac Client Tests
+  # Client covers every non-server test project, including the agent tests.
+  run-macos-client-tests:
+    name: macOS Client Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-26"]') }}
     env:
       # Orphaned MSBuild worker nodes linger on the macOS runners and kill parallel builds (MSB4166).
