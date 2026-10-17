@@ -6,18 +6,20 @@ public interface IServerStatsProvider
 }
 
 public class ServerStatsProvider(
-  AppDb appDb,
+  IDbContextFactory<AppDb> dbContextFactory,
   ILogger<ServerStatsProvider> logger) : IServerStatsProvider
 {
-  private readonly AppDb _appDb = appDb;
+  private readonly IDbContextFactory<AppDb> _dbContextFactory = dbContextFactory;
 
   public async Task<Result<InternalDtos.ServerStatsDto>> GetServerStats()
   {
     try
     {
-      var totalTenants = await _appDb.Tenants.CountAsync();
+      await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-      var agents = await _appDb.Devices
+      var totalTenants = await db.Tenants.CountAsync();
+
+      var agents = await db.Devices
         .AsNoTracking()
         .IgnoreQueryFilters()
         .Select(x => new { x.IsOnline })
@@ -26,7 +28,7 @@ public class ServerStatsProvider(
       var totalAgents = agents.Count;
       var onlineAgents = agents.Count(x => x.IsOnline);
 
-      var users = await _appDb.Users
+      var users = await db.Users
         .AsNoTracking()
         .IgnoreQueryFilters()
         .Select(x => new { x.IsOnline })
