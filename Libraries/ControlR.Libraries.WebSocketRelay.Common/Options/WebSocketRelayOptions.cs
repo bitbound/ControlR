@@ -16,6 +16,11 @@ public class WebSocketRelayOptions
   public string? AuthorizationPolicyForResponder { get; set; }
 
   /// <summary>
+  /// Longest a connection may wait for its partner, however long it asks to wait.
+  /// </summary>
+  public TimeSpan MaxWaitForPartnerTimeout { get; set; } = TimeSpan.FromSeconds(120);
+
+  /// <summary>
   /// Whether to require authentication for requester connections.
   /// </summary>
   public bool RequireAuthenticationForRequester { get; set; }

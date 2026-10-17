@@ -16,6 +16,7 @@ internal class WebSocketRelayMiddleware(
     IRelaySessionStore streamStore,
     IServiceProvider serviceProvider,
     IOptions<WebSocketRelayOptions> relayOptions,
+    TimeProvider timeProvider,
     ILogger<WebSocketRelayMiddleware> logger)
 {
   private readonly TimeSpan _defaultWaitForPartnerTimeout =  TimeSpan.FromSeconds(20);
@@ -96,6 +97,13 @@ internal class WebSocketRelayMiddleware(
 
     var peerId = Guid.NewGuid();
 
+    // Resolved before the session exists, so a refused request cannot leave a role assigned and a
+    // store entry behind.
+    if (!TryResolveWaitForPartnerTimeout(context, options, out var waitForPartnerTimeout))
+    {
+      return;
+    }
+
     await using var signaler = streamStore
       .GetOrAdd(sessionId, id => new SessionSignaler(accessToken));
 
@@ -121,27 +129,9 @@ internal class WebSocketRelayMiddleware(
       return;
     }
 
-    var waitForPartnerTimeout = _defaultWaitForPartnerTimeout;
-
-    if (context.Request.Query.TryGetValue("timeout", out var timeoutValue) &&
-        int.TryParse(timeoutValue, out var timeoutSeconds))
-    {
-      if (timeoutSeconds < 0)
-      {
-        SetBadRequest(context, "Timeout cannot be negative.");
-        return;
-      }
-
-      waitForPartnerTimeout = timeoutSeconds switch
-      {
-        0 => Timeout.InfiniteTimeSpan,
-        _ => TimeSpan.FromSeconds(timeoutSeconds),
-      };
-    }
-
     try
     {
-      using var cts = new CancellationTokenSource(waitForPartnerTimeout);
+      using var cts = new CancellationTokenSource(waitForPartnerTimeout, timeProvider);
       using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, appLifetime.ApplicationStopping);
 
       await signaler.WaitForPartner(linkedCts.Token);
@@ -209,5 +199,31 @@ internal class WebSocketRelayMiddleware(
     {
       logger.LogError(ex, "Error while proxying viewer websocket.");
     }
+  }
+
+  // The wait is chosen by the client, so the server caps it.  A longer one holds the session slot and
+  // its store entry open on that client's schedule rather than on the pairing window's.
+  private bool TryResolveWaitForPartnerTimeout(
+    HttpContext context,
+    WebSocketRelayOptions options,
+    out TimeSpan waitForPartnerTimeout)
+  {
+    waitForPartnerTimeout = _defaultWaitForPartnerTimeout;
+
+    if (context.Request.Query.TryGetValue("timeout", out var timeoutValue) &&
+        long.TryParse(timeoutValue, out var timeoutSeconds))
+    {
+      if (timeoutSeconds <= 0)
+      {
+        SetBadRequest(context, "Timeout must be greater than zero.");
+        return false;
+      }
+
+      waitForPartnerTimeout = TimeSpan.FromSeconds(timeoutSeconds);
+    }
+
+    var maxWaitSeconds = options.MaxWaitForPartnerTimeout.TotalSeconds;
+    waitForPartnerTimeout = TimeSpan.FromSeconds(Math.Min(waitForPartnerTimeout.TotalSeconds, maxWaitSeconds));
+    return true;
   }
 }
