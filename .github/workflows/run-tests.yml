@@ -65,8 +65,10 @@ jobs:
           Write-Host "  dotnet libman update <library>"
           exit 1
 
-  run-linux-tests:
-    name: Linux Tests
+  # The server suite is the long pole and the only project that builds the server, so it owns the OpenAPI
+  # freshness gate and runs on its own runner.
+  run-linux-server-tests:
+    name: Linux Server Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
     defaults:
       run:
@@ -79,17 +81,6 @@ jobs:
           fetch-depth: 0
           clean: true
 
-      # customize.ps1 runs in every slot build, so its script tests gate here even though they need no .NET.
-      - name: Run build-script tests
-        run: |
-          foreach ($script in Get-ChildItem -Path ".scripts/tests" -Filter "Test-*.ps1") {
-            Write-Host "Running $($script.FullName)..."
-            pwsh -NoProfile -File $script.FullName
-            if ($LASTEXITCODE -ne 0) {
-              throw "Test execution failed for $($script.FullName)."
-            }
-          }
-
       - name: Setup .NET
         uses: ./.github/actions/setup-dotnet
 
@@ -98,31 +89,15 @@ jobs:
       - name: Remove committed OpenAPI documents
         run: Remove-Item -Path "ControlR.Web.Server/ControlR.Web.Server_*.json" -ErrorAction SilentlyContinue
 
-      - name: Build Test Projects
+      - name: Build Server Tests
         run: |
-          $excludedProjects = @(
-            "ControlR.DesktopClient.Tests.csproj",
-            "ControlR.DesktopClient.Mac.Tests.csproj",
-            "ControlR.DesktopClient.Windows.Tests.csproj",
-            "ControlR.Web.Server.UITests.csproj"
-          )
+          $project = "Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj"
 
-          $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
-            Where-Object { $_.Name -like "*.Tests.csproj" -and $_.Name -notin $excludedProjects } |
-            Sort-Object FullName
-
-          if ($testProjects.Count -eq 0) {
-            throw "No platform-agnostic test projects were found under Tests/."
-          }
-
-          foreach ($project in $testProjects) {
-            Write-Host "Building $($project.FullName)..."
-            # Release builds do not regenerate the OpenAPI documents unless asked, so the server project build
-            # that these test projects pull in is also what refreshes the committed documents.
-            dotnet build $project.FullName -c Release -p:OpenApiGenerateDocumentsOnBuild=true
-            if ($LASTEXITCODE -ne 0) {
-              throw "Build failed for $($project.FullName)."
-            }
+          # Release builds do not regenerate the OpenAPI documents unless asked, so this server project build
+          # is also what refreshes the committed documents.
+          dotnet build $project -c Release -p:OpenApiGenerateDocumentsOnBuild=true
+          if ($LASTEXITCODE -ne 0) {
+            throw "Build failed for $project."
           }
 
       - name: Fail if the committed OpenAPI docs are stale
@@ -153,12 +128,78 @@ jobs:
             exit 1
           }
 
+      - name: Run Server Tests
+        run: |
+          $project = "Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj"
+
+          Write-Host "Running $project..."
+          dotnet run --project $project -c Release --no-build --no-restore
+          if ($LASTEXITCODE -ne 0) {
+            throw "Test execution failed for $project."
+          }
+
+  # Runs every platform-agnostic test project except the server suite, so a new project lands here by default.
+  run-linux-client-tests:
+    name: Linux Client Tests
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          clean: true
+
+      # customize.ps1 runs in every slot build, so its script tests gate here even though they need no .NET.
+      - name: Run build-script tests
+        run: |
+          foreach ($script in Get-ChildItem -Path ".scripts/tests" -Filter "Test-*.ps1") {
+            Write-Host "Running $($script.FullName)..."
+            pwsh -NoProfile -File $script.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test execution failed for $($script.FullName)."
+            }
+          }
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Build Test Projects
+        run: |
+          $excludedProjects = @(
+            "ControlR.DesktopClient.Tests.csproj",
+            "ControlR.DesktopClient.Mac.Tests.csproj",
+            "ControlR.DesktopClient.Windows.Tests.csproj",
+            "ControlR.Web.Server.Tests.csproj",
+            "ControlR.Web.Server.UITests.csproj"
+          )
+
+          $testProjects = Get-ChildItem -Path "Tests" -Recurse -Filter "*.csproj" |
+            Where-Object { $_.Name -like "*.Tests.csproj" -and $_.Name -notin $excludedProjects } |
+            Sort-Object FullName
+
+          if ($testProjects.Count -eq 0) {
+            throw "No platform-agnostic test projects were found under Tests/."
+          }
+
+          foreach ($project in $testProjects) {
+            Write-Host "Building $($project.FullName)..."
+            dotnet build $project.FullName -c Release
+            if ($LASTEXITCODE -ne 0) {
+              throw "Build failed for $($project.FullName)."
+            }
+          }
+
       - name: Run Tests
         run: |
           $excludedProjects = @(
             "ControlR.DesktopClient.Tests.csproj",
             "ControlR.DesktopClient.Mac.Tests.csproj",
             "ControlR.DesktopClient.Windows.Tests.csproj",
+            "ControlR.Web.Server.Tests.csproj",
             "ControlR.Web.Server.UITests.csproj"
           )
 
@@ -175,7 +216,7 @@ jobs:
           }
 
   run-windows-desktop-tests:
-    name: Windows Tests
+    name: Windows Client Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Windows"]') || fromJson('["windows-latest"]') }}
     defaults:
       run:
@@ -226,7 +267,7 @@ jobs:
           }
 
   run-macos-desktop-tests:
-    name: macOS Tests
+    name: Mac Client Tests
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","macOS"]') || fromJson('["macos-26"]') }}
     env:
       # Orphaned MSBuild worker nodes linger on the macOS runners and kill parallel builds (MSB4166).
