@@ -240,7 +240,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddSingleton<IMemoryProvider, MemoryProvider>();
     builder.Services.AddSingleton<IRetryer, Retryer>();
     builder.Services.AddSingleton<IWaiter, Waiter>();
-    builder.Services.AddSingleton<IServerStatsProvider, ServerStatsProvider>();
+    builder.Services.AddScoped<IServerStatsProvider, ServerStatsProvider>();
     builder.Services.AddSingleton<IPublicRegistrationBootstrapGate, PublicRegistrationBootstrapGate>();
     builder.Services.AddSingleton<EmailSender>();
     builder.Services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<EmailSender>());
