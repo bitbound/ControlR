@@ -13,7 +13,7 @@
     <PackageVersion Include="Avalonia.LinuxFramebuffer" Version="12.1.2" />
     <PackageVersion Include="Avalonia.Skia" Version="12.1.4" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.4" />
-    <PackageVersion Include="Avalonia.Wayland" Version="12.1.2" />
+    <PackageVersion Include="Avalonia.Wayland" Version="12.1.4" />
     <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <PackageVersion Include="Bitbound.Analyzers.MemberOrder" Version="1.0.52" />
