@@ -16,6 +16,7 @@ internal class WebSocketRelayMiddleware(
     IRelaySessionStore streamStore,
     IServiceProvider serviceProvider,
     IOptions<WebSocketRelayOptions> relayOptions,
+    TimeProvider timeProvider,
     ILogger<WebSocketRelayMiddleware> logger)
 {
   private readonly TimeSpan _defaultWaitForPartnerTimeout =  TimeSpan.FromSeconds(20);
@@ -140,7 +141,7 @@ internal class WebSocketRelayMiddleware(
 
     try
     {
-      using var cts = new CancellationTokenSource(waitForPartnerTimeout);
+      using var cts = new CancellationTokenSource(waitForPartnerTimeout, timeProvider);
       using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, appLifetime.ApplicationStopping);
 
       await signaler.WaitForPartner(linkedCts.Token);

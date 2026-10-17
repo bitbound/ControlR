@@ -14,6 +14,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.v3.runner.console">
@@ -27,6 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference
+      Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
     <ProjectReference
       Include="..\..\Libraries\ControlR.Libraries.WebSocketRelay.Common\ControlR.Libraries.WebSocketRelay.Common.csproj" />
   </ItemGroup>

@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
   {
     services.AddWebSockets(_ => { });
     services.TryAddSingleton<IRelaySessionStore, RelaySessionStore>();
+    services.TryAddSingleton(TimeProvider.System);
     services.AddOptions();
     services.Configure(configureOptions);
     return services;
