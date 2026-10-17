@@ -10,7 +10,6 @@ using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -279,7 +278,6 @@ public class AgentHubDeviceUpdateSecurityTests(ITestOutputHelper testOutput)
         .Setup(x => x.Group(It.IsAny<string>()))
         .Returns(new Mock<IViewerHubClient>().Object);
       viewerHub.SetupGet(x => x.Clients).Returns(viewerClients.Object);
-      var outputCache = new Mock<IOutputCacheStore>();
       var hubStreamStore = new Mock<IHubStreamStore>();
       var agentVersionProvider = new Mock<IAgentVersionProvider>();
       agentVersionProvider
@@ -291,7 +289,6 @@ public class AgentHubDeviceUpdateSecurityTests(ITestOutputHelper testOutput)
         services.GetRequiredService<TimeProvider>(),
         viewerHub.Object,
         services.GetRequiredService<IDeviceManager>(),
-        outputCache.Object,
         hubStreamStore.Object,
         agentVersionProvider.Object,
         services.GetRequiredService<IOptions<AppOptions>>(),

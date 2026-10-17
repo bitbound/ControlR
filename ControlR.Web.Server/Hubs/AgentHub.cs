@@ -2,7 +2,6 @@ using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
-using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Libraries.Shared.Services.Encryption;
@@ -15,7 +14,6 @@ public class AgentHub(
   TimeProvider timeProvider,
   IHubContext<ViewerHub, IViewerHubClient> viewerHub,
   IDeviceManager deviceManager,
-  IOutputCacheStore outputCacheStore,
   IHubStreamStore hubStreamStore,
   IAgentVersionProvider agentVersionProvider,
   IOptions<AppOptions> appOptions,
@@ -32,7 +30,6 @@ public class AgentHub(
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly IEd25519KeyProvider _keyProvider = keyProvider;
   private readonly ILogger<AgentHub> _logger = logger;
-  private readonly IOutputCacheStore _outputCacheStore = outputCacheStore;
   private readonly IOptions<ServerLifecycleOptions> _serverOptions = serverOptions;
   private readonly TimeProvider _timeProvider = timeProvider;
   private readonly IHubContext<ViewerHub, IViewerHubClient> _viewerHub = viewerHub;
@@ -433,9 +430,6 @@ public class AgentHub(
 
     await _appDb.SaveChangesAsync();
 
-    await _outputCacheStore.InvalidateDeviceCacheAsync(agentDto.Id);
-    _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", agentDto.Id);
-
     return HubResult.Fail<InternalDtos.DeviceResponseDto>("Server is decommissioned.");
   }
 
@@ -479,10 +473,6 @@ public class AgentHub(
     await _viewerHub.Clients
       .Group(HubGroupNames.DeviceHeartbeat(device.Id))
       .ReceiveDeviceUpdate(dto);
-
-    // Invalidate the device grid cache using the extension method.
-    await _outputCacheStore.InvalidateDeviceCacheAsync(device.Id);
-    _logger.LogDebug("Invalidated device grid cache after device update: {DeviceId}", device.Id);
   }
 
   /// <summary>

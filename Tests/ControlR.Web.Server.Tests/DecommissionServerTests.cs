@@ -8,7 +8,6 @@ using ControlR.Web.Server.Services;
 using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -115,7 +114,6 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     // decommission path but are required by the constructor.
     var mockViewerHub = new Mock<IHubContext<ViewerHub, IViewerHubClient>>();
     var mockDeviceManager = new Mock<IDeviceManager>();
-    var mockOutputCache = new Mock<IOutputCacheStore>();
     var mockHubStreamStore = new Mock<IHubStreamStore>();
     var mockAgentVersionProvider = new Mock<IAgentVersionProvider>();
     var mockLogger = new Mock<ILogger<AgentHub>>();
@@ -133,7 +131,6 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       timeProvider,
       mockViewerHub.Object,
       mockDeviceManager.Object,
-      mockOutputCache.Object,
       mockHubStreamStore.Object,
       mockAgentVersionProvider.Object,
       appOptions,
@@ -219,7 +216,6 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
     // Setup mocks.
     var mockViewerHub = new Mock<IHubContext<ViewerHub, IViewerHubClient>>();
     var mockDeviceManager = new Mock<IDeviceManager>();
-    var mockOutputCache = new Mock<IOutputCacheStore>();
     var mockHubStreamStore = new Mock<IHubStreamStore>();
     var mockAgentVersionProvider = new Mock<IAgentVersionProvider>();
     var mockLogger = new Mock<ILogger<AgentHub>>();
@@ -237,7 +233,6 @@ public class DecommissionServerTests(ITestOutputHelper testOutput)
       timeProvider,
       mockViewerHub.Object,
       mockDeviceManager.Object,
-      mockOutputCache.Object,
       mockHubStreamStore.Object,
       mockAgentVersionProvider.Object,
       appOptions,
