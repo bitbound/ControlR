@@ -168,17 +168,17 @@ internal class SessionSignaler : IAsyncDisposable
   }
 
   // A partner that signals as the wait expires still counts, so a cancelled wait reports paired when
-  // both roles made it in.  Only a missing role is a timeout.
+  // both roles made it in.  Disposal sets both signals too, so a disposed session is never paired.
   public async Task<bool> WaitForPartner(CancellationToken cancellationToken)
   {
     try
     {
       await Task.WhenAll(_signalTasks).WaitAsync(cancellationToken);
-      return true;
+      return !_disposedValue;
     }
     catch (OperationCanceledException)
     {
-      return _signalTasks.All(x => x.IsCompleted);
+      return !_disposedValue && _signalTasks.All(x => x.IsCompleted);
     }
   }
 }

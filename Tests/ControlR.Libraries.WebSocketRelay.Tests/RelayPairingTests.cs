@@ -8,6 +8,21 @@ namespace ControlR.Libraries.WebSocketRelay.Tests;
 public class RelayPairingTests
 {
   [Fact]
+  public async Task WaitForPartner_DisposedSignaler_ReportsUnpaired()
+  {
+    var signaler = new SessionSignaler("access-token");
+    signaler.TryAssignRole(Guid.NewGuid(), RelayRole.Requester);
+    signaler.SignalReady(RelayRole.Requester);
+
+    await signaler.DisposeAsync();
+
+    using var cancelled = new CancellationTokenSource();
+    await cancelled.CancelAsync();
+
+    Assert.False(await signaler.WaitForPartner(cancelled.Token));
+  }
+
+  [Fact]
   public async Task WaitForPartner_PartnerArrivesAsTheWaitExpires_ReportsPaired()
   {
     await using var signaler = new SessionSignaler("access-token");
