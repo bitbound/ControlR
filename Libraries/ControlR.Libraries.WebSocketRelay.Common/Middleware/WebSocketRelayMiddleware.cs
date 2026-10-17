@@ -126,17 +126,16 @@ internal class WebSocketRelayMiddleware(
     if (context.Request.Query.TryGetValue("timeout", out var timeoutValue) &&
         int.TryParse(timeoutValue, out var timeoutSeconds))
     {
-      if (timeoutSeconds < 0)
+      if (timeoutSeconds <= 0)
       {
-        SetBadRequest(context, "Timeout cannot be negative.");
+        SetBadRequest(context, "Timeout must be greater than zero.");
         return;
       }
 
-      waitForPartnerTimeout = timeoutSeconds switch
-      {
-        0 => Timeout.InfiniteTimeSpan,
-        _ => TimeSpan.FromSeconds(timeoutSeconds),
-      };
+      // The wait is chosen by the client, so it is capped here.  A longer one holds the session slot
+      // and its store entry open on that client's schedule rather than on the pairing window's.
+      var maxWaitSeconds = options.MaxWaitForPartnerTimeout.TotalSeconds;
+      waitForPartnerTimeout = TimeSpan.FromSeconds(Math.Min(timeoutSeconds, maxWaitSeconds));
     }
 
     try
