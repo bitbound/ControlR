@@ -8,6 +8,23 @@ namespace ControlR.Libraries.WebSocketRelay.Tests;
 public class RelayPairingTests
 {
   [Fact]
+  public async Task WaitForPartner_AfterTimeout_RefusesTheMissingRole()
+  {
+    await using var signaler = new SessionSignaler("access-token");
+    signaler.TryAssignRole(Guid.NewGuid(), RelayRole.Requester);
+    signaler.SignalReady(RelayRole.Requester);
+
+    using var cancelled = new CancellationTokenSource();
+    await cancelled.CancelAsync();
+
+    Assert.False(await signaler.WaitForPartner(cancelled.Token));
+
+    // The waiter is gone and will never set its websocket, so a peer admitted here accepts a socket
+    // and then blocks in SetWebsocket until its own deadline.
+    Assert.False(signaler.SignalReady(RelayRole.Responder));
+  }
+
+  [Fact]
   public async Task WaitForPartner_DisposedSignaler_ReportsUnpaired()
   {
     var signaler = new SessionSignaler("access-token");

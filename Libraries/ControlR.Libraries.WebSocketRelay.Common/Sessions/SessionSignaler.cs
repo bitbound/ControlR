@@ -15,6 +15,7 @@ internal class SessionSignaler : IAsyncDisposable
   private readonly ConcurrentDictionary<RelayRole, Guid> _roleMap = new();
   private readonly Task[] _signalTasks;
 
+  private int _closed;
   private bool _disposedValue;
   private WebSocket? _requesterWebsocket;
   private WebSocket? _responderWebsocket;
@@ -52,6 +53,7 @@ internal class SessionSignaler : IAsyncDisposable
     }
 
     _disposedValue = true;
+    Volatile.Write(ref _closed, 1);
 
     _ = _requesterSignaled.TrySetResult();
     _ = _responderSignaled.TrySetResult();
@@ -141,8 +143,15 @@ internal class SessionSignaler : IAsyncDisposable
         .WaitAsync(linkedCts.Token);
   }
 
+  // Last gate before the wait, so a peer that arrives after the session closed is refused here rather
+  // than admitted to accept a websocket its partner will never set.
   public bool SignalReady(RelayRole role)
   {
+    if (Volatile.Read(ref _closed) == 1)
+    {
+      return false;
+    }
+
     return role switch
     {
       RelayRole.Requester => _requesterSignaled.TrySetResult(),
@@ -168,17 +177,24 @@ internal class SessionSignaler : IAsyncDisposable
   }
 
   // A partner that signals as the wait expires still counts, so a cancelled wait reports paired when
-  // both roles made it in.  Disposal sets both signals too, so a disposed session is never paired.
+  // both roles made it in.  A wait that expires with a role still missing closes the session, and
+  // that is what refuses the partner if it arrives a moment later.
   public async Task<bool> WaitForPartner(CancellationToken cancellationToken)
   {
     try
     {
       await Task.WhenAll(_signalTasks).WaitAsync(cancellationToken);
-      return !_disposedValue;
+      return Volatile.Read(ref _closed) == 0;
     }
     catch (OperationCanceledException)
     {
-      return !_disposedValue && _signalTasks.All(x => x.IsCompleted);
+      if (_signalTasks.All(x => x.IsCompleted))
+      {
+        return Volatile.Read(ref _closed) == 0;
+      }
+
+      Volatile.Write(ref _closed, 1);
+      return false;
     }
   }
 }
