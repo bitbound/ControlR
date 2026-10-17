@@ -29,6 +29,8 @@
 
   <ItemGroup>
     <ProjectReference
+      Include="..\..\Libraries\ControlR.Libraries.WebSocketRelay.Client\ControlR.Libraries.WebSocketRelay.Client.csproj" />
+    <ProjectReference
       Include="..\..\Libraries\ControlR.Libraries.TestingUtilities\ControlR.Libraries.TestingUtilities.csproj" />
     <ProjectReference
       Include="..\..\Libraries\ControlR.Libraries.WebSocketRelay.Common\ControlR.Libraries.WebSocketRelay.Common.csproj" />
