@@ -20,8 +20,12 @@ public static class ServiceCollectionExtensions
     services.AddWebSockets(_ => { });
     services.TryAddSingleton<IRelaySessionStore, RelaySessionStore>();
     services.TryAddSingleton(TimeProvider.System);
-    services.AddOptions();
-    services.Configure(configureOptions);
+    services.AddOptions<WebSocketRelayOptions>()
+      .Configure(configureOptions)
+      .Validate(
+        options => options.MaxWaitForPartnerTimeout > TimeSpan.Zero,
+        "MaxWaitForPartnerTimeout must be a positive duration.")
+      .ValidateOnStart();
     return services;
   }
 

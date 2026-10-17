@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace ControlR.Libraries.WebSocketRelay.Tests;
@@ -21,6 +22,13 @@ public class RelayTimeoutTests
   private static readonly TimeSpan _handshakeBudget = TimeSpan.FromSeconds(10);
 
   private readonly FakeTimeProvider _timeProvider = new(DateTimeOffset.UtcNow);
+
+  [Fact]
+  public async Task MaximumWaitForPartnerTimeout_NonPositive_IsRefusedAtStartup()
+  {
+    await Assert.ThrowsAsync<OptionsValidationException>(
+      () => StartRelayAsync(options => options.MaxWaitForPartnerTimeout = TimeSpan.Zero));
+  }
 
   [Fact]
   public async Task WaitForPartner_BothPeers_PairAndStream()
@@ -66,6 +74,19 @@ public class RelayTimeoutTests
   }
 
   [Fact]
+  public async Task WaitForPartner_TimeoutAboveTheIntegerRange_IsCappedByTheMaximum()
+  {
+    using var app = await StartRelayAsync(options => options.MaxWaitForPartnerTimeout = TimeSpan.FromSeconds(1));
+
+    var status = await RefusedHandshakeStatusAsync(
+      app.GetTestServer(),
+      RelayUri(timeoutSeconds: 4_000_000_000),
+      waitForPartner: TimeSpan.FromSeconds(1));
+
+    Assert.Equal(StatusCodes.Status408RequestTimeout, status);
+  }
+
+  [Fact]
   public async Task WaitForPartner_TimeoutBelowServerMaximum_IsRefusedAtTheRequestedTime()
   {
     using var app = await StartRelayAsync();
@@ -74,6 +95,19 @@ public class RelayTimeoutTests
       app.GetTestServer(),
       RelayUri(timeoutSeconds: 2),
       waitForPartner: TimeSpan.FromSeconds(2));
+
+    Assert.Equal(StatusCodes.Status408RequestTimeout, status);
+  }
+
+  [Fact]
+  public async Task WaitForPartner_TimeoutOmitted_IsCappedByTheMaximum()
+  {
+    using var app = await StartRelayAsync(options => options.MaxWaitForPartnerTimeout = TimeSpan.FromSeconds(1));
+
+    var status = await RefusedHandshakeStatusAsync(
+      app.GetTestServer(),
+      RelayUriWithoutTimeout(),
+      waitForPartner: TimeSpan.FromSeconds(1));
 
     Assert.Equal(StatusCodes.Status408RequestTimeout, status);
   }
@@ -102,6 +136,13 @@ public class RelayTimeoutTests
       "test-access-token",
       role,
       timeoutSeconds);
+
+  // The middleware falls back to a wait that was never asked for, so this omits the value entirely.
+  private static Uri RelayUriWithoutTimeout(Guid? sessionId = null) =>
+    new(
+      $"ws://localhost/relay?sessionId={sessionId ?? Guid.NewGuid()}&" +
+      "accessToken=test-access-token&" +
+      "role=requester");
 
   // The test server reports a refused handshake only through the exception it throws, so the status
   // code has to come out of the message.  Its client also ignores the cancellation token it is

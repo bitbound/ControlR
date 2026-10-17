@@ -97,6 +97,13 @@ internal class WebSocketRelayMiddleware(
 
     var peerId = Guid.NewGuid();
 
+    // Resolved before the session exists, so a refused request cannot leave a role assigned and a
+    // store entry behind.
+    if (!TryResolveWaitForPartnerTimeout(context, options, out var waitForPartnerTimeout))
+    {
+      return;
+    }
+
     await using var signaler = streamStore
       .GetOrAdd(sessionId, id => new SessionSignaler(accessToken));
 
@@ -120,23 +127,6 @@ internal class WebSocketRelayMiddleware(
       logger.LogError("Failed to signal ready.  Session ID: {SessionId}", sessionId);
       SetBadRequest(context, "Failed to signal ready.");
       return;
-    }
-
-    var waitForPartnerTimeout = _defaultWaitForPartnerTimeout;
-
-    if (context.Request.Query.TryGetValue("timeout", out var timeoutValue) &&
-        int.TryParse(timeoutValue, out var timeoutSeconds))
-    {
-      if (timeoutSeconds <= 0)
-      {
-        SetBadRequest(context, "Timeout must be greater than zero.");
-        return;
-      }
-
-      // The wait is chosen by the client, so it is capped here.  A longer one holds the session slot
-      // and its store entry open on that client's schedule rather than on the pairing window's.
-      var maxWaitSeconds = options.MaxWaitForPartnerTimeout.TotalSeconds;
-      waitForPartnerTimeout = TimeSpan.FromSeconds(Math.Min(timeoutSeconds, maxWaitSeconds));
     }
 
     try
@@ -209,5 +199,31 @@ internal class WebSocketRelayMiddleware(
     {
       logger.LogError(ex, "Error while proxying viewer websocket.");
     }
+  }
+
+  // The wait is chosen by the client, so the server caps it.  A longer one holds the session slot and
+  // its store entry open on that client's schedule rather than on the pairing window's.
+  private bool TryResolveWaitForPartnerTimeout(
+    HttpContext context,
+    WebSocketRelayOptions options,
+    out TimeSpan waitForPartnerTimeout)
+  {
+    waitForPartnerTimeout = _defaultWaitForPartnerTimeout;
+
+    if (context.Request.Query.TryGetValue("timeout", out var timeoutValue) &&
+        long.TryParse(timeoutValue, out var timeoutSeconds))
+    {
+      if (timeoutSeconds <= 0)
+      {
+        SetBadRequest(context, "Timeout must be greater than zero.");
+        return false;
+      }
+
+      waitForPartnerTimeout = TimeSpan.FromSeconds(timeoutSeconds);
+    }
+
+    var maxWaitSeconds = options.MaxWaitForPartnerTimeout.TotalSeconds;
+    waitForPartnerTimeout = TimeSpan.FromSeconds(Math.Min(waitForPartnerTimeout.TotalSeconds, maxWaitSeconds));
+    return true;
   }
 }
