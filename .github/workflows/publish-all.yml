@@ -8,8 +8,16 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+      build_workflow:
+        description: "Build workflow the artifacts come from (build-prod.yml forces local storage off)"
+        required: false
+        type: choice
+        options:
+          - build-prod.yml
+          - build.yml
+        default: "build-prod.yml"
       use_local_storage:
-        description: "Use local storage"
+        description: "Use local storage (ignored for build-prod.yml; its artifacts live in GitHub Actions)"
         required: false
         type: boolean
         default: true
@@ -32,6 +40,7 @@ jobs:
       # docker_tag is deliberately omitted: publish-docker derives the tag from the build
       # metadata, so a prerelease build goes to 'dev' and a stable build to 'latest'.
       run_id: ${{ inputs.run_id }}
+      build_workflow: ${{ inputs.build_workflow }}
       use_local_storage: ${{ inputs.use_local_storage }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     permissions:
@@ -45,6 +54,7 @@ jobs:
     secrets: inherit
     with:
       run_id: ${{ inputs.run_id }}
+      build_workflow: ${{ inputs.build_workflow }}
       use_local_storage: ${{ inputs.use_local_storage }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     permissions:
@@ -57,6 +67,7 @@ jobs:
     secrets: inherit
     with:
       run_id: ${{ inputs.run_id }}
+      build_workflow: ${{ inputs.build_workflow }}
       use_local_storage: ${{ inputs.use_local_storage }}
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     permissions:
