@@ -9,12 +9,11 @@ namespace ControlR.Web.Server.Authz.Permissions;
 /// delegates the allow/deny decision to the evaluator.
 /// </summary>
 /// <remarks>
-/// Derives from the single-requirement base on purpose. The two-generic
-/// <c>AuthorizationHandler&lt;TRequirement, TResource&gt;</c> only invokes the requirement when
-/// <c>context.Resource is TResource</c>, and <c>null is object</c> is false, so a policy evaluated
-/// without a resource never reached this class and failed closed. <c>AuthorizeView</c> and
-/// <c>AuthorizeAsync(user, policy)</c> both evaluate without a resource, which is what made every
-/// permission-gated component invisible during server-side rendering.
+/// Derives from <see cref="AuthorizationHandler{TRequirement}"/> so the handler runs when no
+/// resource is supplied. The two-generic
+/// <c>AuthorizationHandler&lt;TRequirement, TResource&gt;</c> only invokes a requirement when
+/// <c>context.Resource is TResource</c>, and <c>null is object</c> is false, so
+/// <c>AuthorizeView</c> and <c>AuthorizeAsync(user, policy)</c> never reach it.
 /// </remarks>
 public class PermissionRequirementHandler(
   IPermissionEvaluator evaluator,
