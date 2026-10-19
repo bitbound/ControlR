@@ -1,4 +1,5 @@
 name: Build Prod
+run-name: Build Prod v${{ inputs.version || vars.CURRENT_VERSION }}
 
 on:
   workflow_dispatch:
