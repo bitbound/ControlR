@@ -48,7 +48,7 @@ on:
       build_nugets:
         description: "Build NuGet packages"
         required: false
-        default: true
+        default: false
         type: boolean
 
       prerelease:
@@ -115,7 +115,7 @@ on:
       build_nugets:
         description: "Build NuGet packages"
         required: false
-        default: true
+        default: false
         type: boolean
 
       prerelease:

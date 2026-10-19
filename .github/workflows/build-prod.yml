@@ -1,0 +1,27 @@
+name: Build Prod
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ vars.CURRENT_VERSION }}
+      server_runtime: linux-multiarch
+      retention_days_artifacts: 3
+      use_self_hosted_runners: false
+      use_local_storage: false
+      customization_config_url: ""
+      notarize_mac_bundle: true
+      build_nugets: true
+      prerelease: false
+      run_tests: false
+      skip_version_increment: false
+    secrets: inherit
