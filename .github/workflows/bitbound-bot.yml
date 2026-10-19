@@ -43,7 +43,7 @@ jobs:
           private-key: ${{ secrets.BBB_PRIVATE_KEY }}
 
       - name: Run OpenCode
-        uses: anomalyco/opencode/github@v2.0.22
+        uses: anomalyco/opencode/github@v2.0.32
         timeout-minutes: 30
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
