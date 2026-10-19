@@ -17,7 +17,7 @@ internal class FakeDesktopCapturerFactory : IDesktopCapturerFactory
     public Task ChangeDisplays(string displayId) => Task.CompletedTask;
     public ValueTask DisposeAsync() => default;
     public string GetCaptureMode() => string.Empty;
-    public async IAsyncEnumerable<DtoWrapper> GetCaptureStream([EnumeratorCancellation] System.Threading.CancellationToken cancellationToken) { yield break; }
+    public async IAsyncEnumerable<RemoteControlDtoWrapper> GetCaptureStream([EnumeratorCancellation] System.Threading.CancellationToken cancellationToken) { yield break; }
     public double GetCurrentFps(System.TimeSpan window) => 0;
     public int GetCurrentQuality() => 0;
     public Task RequestKeyFrame() => Task.CompletedTask;

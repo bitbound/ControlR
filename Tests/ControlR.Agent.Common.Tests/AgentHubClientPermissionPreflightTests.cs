@@ -62,6 +62,50 @@ public class AgentHubClientPermissionPreflightTests
   }
 
   [Fact]
+  public async Task ReceiveRemoteControlDto_ForwardsToDesktopClient()
+  {
+    var targetProcessId = 4244;
+    var sessionId = Guid.NewGuid();
+    var desktopClientRpc = new Mock<IDesktopClientRpcService>();
+    var ipcServer = new Mock<IIpcServer>();
+    ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
+
+    var serverStore = CreateIpcServerStore(targetProcessId, ipcServer.Object);
+    var sut = CreateSut(serverStore.Object);
+    var wrapper = RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText);
+
+    var result = await sut.ReceiveRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
+      Guid.NewGuid(),
+      targetProcessId,
+      sessionId,
+      wrapper));
+
+    Assert.True(result.IsSuccess);
+    desktopClientRpc.Verify(
+      x => x.ReceiveRemoteControlDto(sessionId, wrapper),
+      Times.Once);
+  }
+
+  [Fact]
+  public async Task ReceiveRemoteControlDto_UnknownProcess_ReturnsFailure()
+  {
+    var serverStore = new Mock<IIpcServerStore>();
+    IpcServerRecord? serverRecord = null;
+    serverStore
+      .Setup(x => x.TryGetServer(It.IsAny<int>(), out serverRecord))
+      .Returns(false);
+
+    var sut = CreateSut(serverStore.Object);
+    var result = await sut.ReceiveRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
+      Guid.NewGuid(),
+      TargetProcessId: 4245,
+      SessionId: Guid.NewGuid(),
+      Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText)));
+
+    Assert.False(result.IsSuccess);
+  }
+
+  [Fact]
   public async Task RequestDesktopPreview_FailsBeforeForwarding_WhenPreflightIsDenied()
   {
     var targetProcessId = 4243;

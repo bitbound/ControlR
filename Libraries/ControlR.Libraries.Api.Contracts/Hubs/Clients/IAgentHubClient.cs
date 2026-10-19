@@ -6,7 +6,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 
 namespace ControlR.Libraries.Api.Contracts.Hubs.Clients;
 
-public interface IAgentHubClient : IHubClient
+public interface IAgentHubClient
 {
   Task<HubResult> CloseChatSession(Guid sessionId, int targetProcessId);
   Task CloseTerminalSession(Guid terminalSessionId);
@@ -25,6 +25,7 @@ public interface IAgentHubClient : IHubClient
   Task InvokeWakeDevice(WakeDeviceDto dto);
   Task ReceiveAgentUpdateTrigger();
   Task ReceivePowerStateChange(PowerStateChangeType changeType);
+  Task<HubResult> ReceiveRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request);
   Task<HubResult> ReceiveTerminalInput(TerminalInputDto dto);
   Task RefreshDeviceInfo();
   Task<HubResult> RequestDesktopPreview(DesktopPreviewRequestDto dto);

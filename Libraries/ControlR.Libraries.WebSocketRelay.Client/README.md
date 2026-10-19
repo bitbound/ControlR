@@ -73,9 +73,9 @@ Console.WriteLine($"Latency: {relayStream.CurrentLatency}");
 
 ```csharp
 // Create a DTO wrapper
-var dtoWrapper = new DtoWrapper
+var dtoWrapper = new RemoteControlDtoWrapper
 {
-    DtoType = nameof(RemoteControlFrameDto),
+    RemoteControlDtoType = nameof(RemoteControlFrameDto),
     Data = myFrameDto
 };
 
@@ -89,7 +89,7 @@ await relayStream.Send(dtoWrapper, cancellationToken);
 // Register a message handler
 var subscription = relayStream.RegisterMessageHandler(this, async wrapper =>
 {
-    switch (wrapper.DtoType)
+    switch (wrapper.RemoteControlDtoType)
     {
         case nameof(RemoteControlFrameDto):
             var frame = MessagePackSerializer.Deserialize<RemoteControlFrameDto>(wrapper.Data);

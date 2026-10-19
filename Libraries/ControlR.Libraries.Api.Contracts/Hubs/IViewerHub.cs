@@ -70,12 +70,12 @@ public interface IViewerHub
 
   Task<HubResult> SendChatMessage2(ChatMessageHubDto dto);
 
-  Task<HubResult> SendDtoToAgent(SendDtoToAgentRequestDto request);
-
   [Obsolete("Use SendPowerStateChange2. (deprecated 2026-09-03, v0.28.x)")]
   Task SendPowerStateChange(Guid deviceId, PowerStateChangeType changeType);
 
   Task<HubResult> SendPowerStateChange2(SendPowerStateChangeRequestDto request);
+
+  Task<HubResult> SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request);
 
   [Obsolete("Use SendTerminalInput2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto);

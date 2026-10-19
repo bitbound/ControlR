@@ -1002,54 +1002,54 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     SyncDisplayItems();
   }
 
-  private async Task HandleRemoteControlDtoReceived(DtoWrapper message)
+  private async Task HandleRemoteControlDtoReceived(RemoteControlDtoWrapper message)
   {
     try
     {
       switch (message.DtoType)
       {
-        case DtoType.DisplayData:
+        case RemoteControlDtoType.DisplayData:
           {
             var dto = message.GetPayload<DisplayDataDto>();
             await HandleDisplayDataReceived(dto);
             break;
           }
-        case DtoType.ScreenRegion:
+        case RemoteControlDtoType.ScreenRegion:
           {
             var dto = message.GetPayload<ScreenRegionDto>();
             await DrawRegion(dto);
             break;
           }
-        case DtoType.ScreenRegions:
+        case RemoteControlDtoType.ScreenRegions:
           {
             var dto = message.GetPayload<ScreenRegionsDto>();
             await DrawRegions(dto);
             break;
           }
-        case DtoType.ClipboardText:
+        case RemoteControlDtoType.ClipboardText:
           {
             var dto = message.GetPayload<ClipboardTextDto>();
             await HandleClipboardTextReceived(dto);
             break;
           }
-        case DtoType.CursorChanged:
+        case RemoteControlDtoType.CursorChanged:
           {
             var dto = message.GetPayload<CursorChangedDto>();
             await HandleCursorChanged(dto);
             break;
           }
-        case DtoType.WindowsSessionEnding:
+        case RemoteControlDtoType.WindowsSessionEnding:
           {
             _snackbar.Add(Resources.RemoteControl_WindowsSessionEnding, SnackbarSeverity.Warning);
             await _messenger.SendEvent(EventKinds.RemoteControlDisconnectRequested);
             break;
           }
-        case DtoType.WindowsSessionSwitched:
+        case RemoteControlDtoType.WindowsSessionSwitched:
           {
             _snackbar.Add(Resources.RemoteControl_WindowsSessionSwitched, SnackbarSeverity.Info);
             break;
           }
-        case DtoType.CaptureMetricsChanged:
+        case RemoteControlDtoType.CaptureMetricsChanged:
           {
             var dto = message.GetPayload<CaptureMetricsDto>();
             _metricsState.CurrentMetrics = dto;
@@ -1066,13 +1066,13 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
             OnPropertyChanged(nameof(MetricsExtraData));
             break;
           }
-        case DtoType.ToastNotification:
+        case RemoteControlDtoType.ToastNotification:
           {
             var dto = message.GetPayload<ToastNotificationDto>();
             _snackbar.Add(dto.Message, ToSnackbarSeverity(dto.Severity));
             break;
           }
-        case DtoType.BlockInputResult:
+        case RemoteControlDtoType.BlockInputResult:
           {
             var dto = message.GetPayload<BlockInputResultDto>();
             _remoteControlState.IsBlockUserInputEnabled = dto.FinalState;
@@ -1085,7 +1085,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
               dto.IsSuccess ? SnackbarSeverity.Success : SnackbarSeverity.Error);
             break;
           }
-        case DtoType.PrivacyScreenResult:
+        case RemoteControlDtoType.PrivacyScreenResult:
           {
             var dto = message.GetPayload<PrivacyScreenResultDto>();
             _remoteControlState.IsPrivacyScreenEnabled = dto.FinalState;
@@ -1097,27 +1097,27 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
               dto.IsSuccess ? SnackbarSeverity.Success : SnackbarSeverity.Error);
             break;
           }
-        case DtoType.SessionDisconnectRequested:
+        case RemoteControlDtoType.SessionDisconnectRequested:
           {
             _snackbar.Add(Resources.RemoteControl_RemoteUserRequestedDisconnection, SnackbarSeverity.Info);
             await _messenger.SendEvent(EventKinds.RemoteControlDisconnectRequested);
             break;
           }
-        case DtoType.RemoteControlSessionError:
+        case RemoteControlDtoType.RemoteControlSessionError:
           {
             var dto = message.GetPayload<RemoteControlSessionErrorDto>();
             await HandleRemoteControlSessionError(dto);
             break;
           }
         default:
-          Logger.LogWarning("Received unsupported DTO type: {DtoType}", Enum.GetName(message.DtoType));
+          Logger.LogWarning("Received unsupported DTO type: {RemoteControlDtoType}", Enum.GetName(message.DtoType));
           _snackbar.Add(string.Format(Resources.RemoteControl_UnsupportedDtoType, Enum.GetName(message.DtoType)), SnackbarSeverity.Warning);
           break;
       }
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while handling remote control DTO. Type: {DtoType}", Enum.GetName(message.DtoType));
+      Logger.LogError(ex, "Error while handling remote control DTO. Type: {RemoteControlDtoType}", Enum.GetName(message.DtoType));
     }
   }
 

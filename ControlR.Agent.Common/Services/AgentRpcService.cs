@@ -1,3 +1,4 @@
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Ipc.Interfaces;
 
 namespace ControlR.Agent.Common.Services;
@@ -31,6 +32,18 @@ public class AgentRpcService(IHubConnection<IAgentHub> hubConnection, ILogger<Ag
         {
             _logger.LogError(ex, "Error while handling chat response for session {SessionId}.", dto.SessionId);
             return false;
+        }
+    }
+
+    public async Task SendRemoteControlDto(string viewerConnectionId, RemoteControlDtoWrapper dto)
+    {
+        try
+        {
+            await _hubConnection.Server.SendRemoteControlDtoToViewer(viewerConnectionId, dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while forwarding remote control DTO to the viewer.");
         }
     }
 }

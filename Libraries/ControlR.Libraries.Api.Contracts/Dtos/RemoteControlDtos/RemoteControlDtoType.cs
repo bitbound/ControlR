@@ -1,6 +1,6 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 
-public enum DtoType
+public enum RemoteControlDtoType
 {
   None = 0,
   ChangeDisplays = 17,
@@ -32,4 +32,15 @@ public enum DtoType
   RemoteControlSessionError = 49,
   ScreenRegions = 50,
   UpdateCaptureSettings = 51,
+}
+
+public static class RemoteControlDtoTypeExtensions
+{
+  /// <summary>
+  /// Raw screen captures stay on the WebSocket relay. Everything else travels over the hubs.
+  /// </summary>
+  public static bool IsScreenFrame(this RemoteControlDtoType dtoType) =>
+    dtoType is RemoteControlDtoType.VideoStreamPacket
+      or RemoteControlDtoType.ScreenRegion
+      or RemoteControlDtoType.ScreenRegions;
 }

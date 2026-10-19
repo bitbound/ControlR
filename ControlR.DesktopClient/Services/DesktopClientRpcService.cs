@@ -3,7 +3,9 @@ using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Primitives;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Services;
@@ -142,6 +144,23 @@ public class DesktopClientRpcService(
     {
       _logger.LogError(ex, "Error while handling chat message.");
     }
+  }
+
+  public async Task ReceiveRemoteControlDto(Guid sessionId, RemoteControlDtoWrapper dto)
+  {
+    if (!_remoteControlHostManager.TryGetSession(sessionId, out var session))
+    {
+      _logger.LogWarning("No remote control session found for session ID {SessionId}.", sessionId);
+      return;
+    }
+
+    if (session.Host.Services.GetService<IDesktopRemoteControlStream>() is not { } stream)
+    {
+      _logger.LogWarning("Remote control stream not found for session ID {SessionId}.", sessionId);
+      return;
+    }
+
+    await stream.ReceiveRemoteControlDto(dto);
   }
 
   public async Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)

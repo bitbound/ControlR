@@ -1,5 +1,6 @@
 using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -158,6 +159,57 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     mockClientService.Verify(m => m.ReceiveChatMessage(It.IsAny<ChatMessageIpcDto>()), Times.Once);
 
     // Cleanup
+    cts?.Cancel();
+    cts?.Dispose();
+    server?.Dispose();
+    client?.Dispose();
+    services?.Dispose();
+  }
+
+  [Fact]
+  public async Task ServerCanSendRemoteControlDtoToClient()
+  {
+    var tcs = new TaskCompletionSource<RemoteControlDtoWrapper>();
+    var mockClientService = new Mock<IDesktopClientRpcService>();
+    mockClientService
+      .Setup(m => m.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlDtoWrapper>()))
+      .Returns<Guid, RemoteControlDtoWrapper>((_, dto) =>
+      {
+        tcs.SetResult(dto);
+        return Task.CompletedTask;
+      });
+
+    var serviceCollection = new ServiceCollection();
+    serviceCollection.AddLogging(logBuilder =>
+    {
+      logBuilder.AddProvider(new XunitLoggerProvider(_testOutputHelper));
+    });
+
+    serviceCollection.AddControlrIpcServer(_ => Mock.Of<IAgentRpcService>());
+    serviceCollection.AddControlrIpcClient(_ => mockClientService.Object);
+    var services = serviceCollection.BuildServiceProvider();
+
+    var connectionFactory = services.GetRequiredService<IIpcConnectionFactory>();
+    var pipeName = Guid.NewGuid().ToString();
+    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+    var server = await connectionFactory.CreateServer(pipeName);
+    var client = await connectionFactory.CreateClient(".", pipeName);
+
+    var serverTask = server.WaitForConnection(cts.Token);
+    await client.Connect(cts.Token);
+    await serverTask;
+
+    server.Start();
+    client.Start();
+
+    var wrapper = RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText);
+    await server.Client.ReceiveRemoteControlDto(Guid.NewGuid(), wrapper);
+
+    var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+    Assert.Equal(RemoteControlDtoType.TypeText, received.DtoType);
+    Assert.Equal("hello", received.GetPayload<TypeTextDto>().Text);
+
     cts?.Cancel();
     cts?.Dispose();
     server?.Dispose();

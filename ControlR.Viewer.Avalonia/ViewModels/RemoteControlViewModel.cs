@@ -530,6 +530,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       var authHeaders = await _connectionAuthProvider.GetWebSocketHeaders(cts.Token);
 
       await _remoteControlStream.Connect(
+        session,
         viewerRelayUri,
         wsOptions =>
         {

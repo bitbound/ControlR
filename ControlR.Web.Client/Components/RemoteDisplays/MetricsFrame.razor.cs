@@ -25,11 +25,11 @@ public partial class MetricsFrame : IDisposable
     _messageHandlerRegistration = RemoteControlStream.RegisterMessageHandler(this, HandleRemoteControlDtoReceived);
   }
 
-  private async Task HandleRemoteControlDtoReceived(DtoWrapper wrapper)
+  private async Task HandleRemoteControlDtoReceived(RemoteControlDtoWrapper wrapper)
   {
     try
     {
-      if (wrapper.DtoType == DtoType.CaptureMetricsChanged)
+      if (wrapper.DtoType == RemoteControlDtoType.CaptureMetricsChanged)
       {
         var dto = wrapper.GetPayload<CaptureMetricsDto>();
         MetricsState.CurrentMetrics = dto;

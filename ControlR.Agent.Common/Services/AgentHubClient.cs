@@ -489,15 +489,31 @@ internal class AgentHubClient(
     }
   }
 
-  public Task ReceiveDto(DtoWrapper dto)
-  {
-    _messenger.Send(new DtoReceivedMessage<DtoWrapper>(dto)).Forget();
-    return Task.CompletedTask;
-  }
-
   public async Task ReceivePowerStateChange(PowerStateChangeType changeType)
   {
     await _powerControl.ChangeState(changeType);
+  }
+
+  public async Task<HubResult> ReceiveRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
+  {
+    try
+    {
+      if (!_ipcServerStore.TryGetServer(request.TargetProcessId, out var ipcServer))
+      {
+        _logger.LogWarning(
+          "No IPC server found for process ID {ProcessId}.  Cannot deliver remote control DTO.",
+          request.TargetProcessId);
+        return HubResult.Fail($"Process with ID {request.TargetProcessId} is no longer running.");
+      }
+
+      await ipcServer.Server.Client.ReceiveRemoteControlDto(request.SessionId, request.Wrapper);
+      return HubResult.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while receiving remote control DTO.");
+      return HubResult.Fail("An error occurred while receiving the remote control DTO.");
+    }
   }
 
   public async Task<HubResult> ReceiveTerminalInput(TerminalInputDto dto)

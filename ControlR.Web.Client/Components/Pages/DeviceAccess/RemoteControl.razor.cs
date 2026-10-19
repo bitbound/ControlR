@@ -487,7 +487,7 @@ public partial class RemoteControl : ViewportAwareComponent
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_commandTimeoutSeconds));
       RemoteControlState.ConnectionClosedRegistration?.Dispose();
-      await RemoteControlStream.Connect(viewerRelayUri, cts.Token);
+      await RemoteControlStream.Connect(session, viewerRelayUri, cts.Token);
       RemoteControlState.ConnectionClosedRegistration = RemoteControlStream.OnClosed(HandleStreamingConnectionLost);
       RemoteControlState.CurrentSession = session;
       await SendCaptureSettings();

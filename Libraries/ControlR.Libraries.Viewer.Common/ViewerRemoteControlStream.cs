@@ -7,6 +7,15 @@ namespace ControlR.Libraries.Viewer.Common;
 
 public interface IViewerRemoteControlStream : IManagedRelayStream
 {
+  Task Connect(
+    RemoteControlSession session,
+    Uri websocketUri,
+    Action<ClientWebSocketOptions> configureOptions,
+    CancellationToken cancellationToken);
+  Task Connect(
+    RemoteControlSession session,
+    Uri websocketUri,
+    CancellationToken cancellationToken);
   Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken);
   Task RequestKeyFrame(CancellationToken cancellationToken);
   Task SendCaptureSettings(UpdateCaptureSettingsDto settings, CancellationToken cancellationToken);
@@ -33,17 +42,43 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
     CancellationToken cancellationToken);
 }
 
-public class ViewerRemoteControlStream(
-  TimeProvider timeProvider,
-  IMessenger messenger,
-  IMemoryProvider memoryProvider,
-  IWaiter waiter,
-  IStreamMetrics streamMetrics,
-  ILogger<ViewerRemoteControlStream> logger)
-  : ManagedRelayStream(timeProvider, messenger, memoryProvider, waiter, streamMetrics, logger), IViewerRemoteControlStream
+public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteControlStream
 {
-  private readonly ILogger<ViewerRemoteControlStream> _logger = logger;
-  private readonly IWaiter _waiter = waiter;
+  private readonly ILogger<ViewerRemoteControlStream> _logger;
+  private readonly IHubConnection<IViewerHub> _viewerHub;
+  private RemoteControlSession? _session;
+
+  public ViewerRemoteControlStream(
+    TimeProvider timeProvider,
+    IMessenger messenger,
+    IMemoryProvider memoryProvider,
+    IWaiter waiter,
+    IStreamMetrics streamMetrics,
+    IHubConnection<IViewerHub> viewerHub,
+    ILogger<ViewerRemoteControlStream> logger)
+    : base(timeProvider, messenger, memoryProvider, waiter, streamMetrics, logger)
+  {
+    _logger = logger;
+    _viewerHub = viewerHub;
+
+    messenger.Register<DtoReceivedMessage<RemoteControlDtoWrapper>>(this, HandleRemoteControlDtoReceived);
+  }
+
+  public Task Connect(
+    RemoteControlSession session,
+    Uri websocketUri,
+    CancellationToken cancellationToken) =>
+    Connect(session, websocketUri, _ => { }, cancellationToken);
+
+  public Task Connect(
+    RemoteControlSession session,
+    Uri websocketUri,
+    Action<ClientWebSocketOptions> configureOptions,
+    CancellationToken cancellationToken)
+  {
+    _session = session;
+    return base.Connect(websocketUri, configureOptions, cancellationToken);
+  }
 
   public async Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken)
   {
@@ -51,8 +86,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new RequestClipboardTextDto();
-        var wrapper = DtoWrapper.Create(dto, DtoType.RequestClipboardText);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.RequestClipboardText);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -62,8 +97,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new RequestKeyFrameDto();
-        var wrapper = DtoWrapper.Create(dto, DtoType.RequestKeyFrame);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.RequestKeyFrame);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -72,8 +107,8 @@ public class ViewerRemoteControlStream(
     await TrySend(
       async () =>
       {
-        var wrapper = DtoWrapper.Create(settings, DtoType.UpdateCaptureSettings);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(settings, RemoteControlDtoType.UpdateCaptureSettings);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -83,8 +118,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new ChangeDisplaysDto(displayId);
-        var wrapper = DtoWrapper.Create(dto, DtoType.ChangeDisplays);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ChangeDisplays);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -94,8 +129,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new ClipboardTextDto(text, sessionId);
-        var wrapper = DtoWrapper.Create(dto, DtoType.ClipboardText);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ClipboardText);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -105,8 +140,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new CloseStreamingSessionRequestDto();
-        var wrapper = DtoWrapper.Create(dto, DtoType.CloseRemoteControlSession);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.CloseRemoteControlSession);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -116,8 +151,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new ResetKeyboardStateDto();
-        var wrapper = DtoWrapper.Create(dto, DtoType.ResetKeyboardState);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ResetKeyboardState);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -133,8 +168,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new KeyEventDto(key, code ?? string.Empty, isPressed, inputMode, modifiers);
-        var wrapper = DtoWrapper.Create(dto, DtoType.KeyEvent);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.KeyEvent);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -149,8 +184,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new MouseButtonEventDto(button, isPressed, normalizedX, normalizedY);
-        var wrapper = DtoWrapper.Create(dto, DtoType.MouseButtonEvent);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.MouseButtonEvent);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -161,8 +196,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new MouseClickDto(button, isDoubleClick, normalizedX, normalizedY);
-        var wrapper = DtoWrapper.Create(dto, DtoType.MouseClick);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.MouseClick);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -172,8 +207,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new MovePointerDto(normalizedX, normalizedY);
-        var wrapper = DtoWrapper.Create(dto, DtoType.MovePointer);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.MovePointer);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -183,8 +218,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new ToggleBlockInputDto(isEnabled);
-        var wrapper = DtoWrapper.Create(dto, DtoType.ToggleBlockInput);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ToggleBlockInput);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -194,8 +229,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new TogglePrivacyScreenDto(isEnabled);
-        var wrapper = DtoWrapper.Create(dto, DtoType.TogglePrivacyScreen);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.TogglePrivacyScreen);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -205,8 +240,8 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new TypeTextDto(text);
-        var wrapper = DtoWrapper.Create(dto, DtoType.TypeText);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.TypeText);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
@@ -217,9 +252,26 @@ public class ViewerRemoteControlStream(
       async () =>
       {
         var dto = new WheelScrollDto(normalizedX, normalizedY, scrollY, scrollX);
-        var wrapper = DtoWrapper.Create(dto, DtoType.WheelScroll);
-        await Send(wrapper, cancellationToken);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.WheelScroll);
+        await SendDto(wrapper, cancellationToken);
       });
+  }
+
+  private Task HandleRemoteControlDtoReceived(object subscriber, DtoReceivedMessage<RemoteControlDtoWrapper> message)
+  {
+    return InvokeMessageHandlers(message.Dto);
+  }
+
+  private async Task SendDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
+  {
+    var session = _session ?? throw new InvalidOperationException("Remote control session has not been initialized.");
+
+    await _viewerHub.Server.SendRemoteControlDtoToAgent(
+      new SendRemoteControlDtoToAgentRequestDto(
+        session.Device.Id,
+        session.TargetProcessId,
+        session.SessionId,
+        wrapper));
   }
 
   private async Task TrySend(Func<Task> func, [CallerMemberName] string callerName = "")
@@ -227,28 +279,11 @@ public class ViewerRemoteControlStream(
     try
     {
       using var _ = _logger.BeginScope(callerName);
-      await WaitForConnection();
       await func.Invoke();
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Error while sending message via websocket stream.");
+      _logger.LogError(ex, "Error while sending remote control message.");
     }
-  }
-
-  private async Task WaitForConnection()
-  {
-    if (State == WebSocketState.Open)
-    {
-      return;
-    }
-
-    using var cts = new CancellationTokenSource();
-    cts.CancelAfter(TimeSpan.FromSeconds(30));
-
-    await _waiter.WaitFor(
-      condition: () => State == WebSocketState.Open || IsDisposed,
-      pollingDelay: TimeSpan.FromMilliseconds(100),
-      cancellationToken: cts.Token);
   }
 }

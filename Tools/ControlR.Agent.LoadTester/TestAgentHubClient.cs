@@ -127,16 +127,16 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.CompletedTask;
   }
 
-  public Task ReceiveDto(DtoWrapper dtoWrapper)
-  {
-    Console.WriteLine($"Received DTO of type: {dtoWrapper.DtoType}");
-    return Task.CompletedTask;
-  }
-
   public Task ReceivePowerStateChange(PowerStateChangeType changeType)
   {
     Console.WriteLine($"Received power state change: {changeType}");
     return Task.CompletedTask;
+  }
+
+  public Task<HubResult> ReceiveRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
+  {
+    Console.WriteLine($"Received DTO of type: {request.Wrapper.DtoType}");
+    return Task.FromResult(HubResult.Ok());
   }
 
   public Task<HubResult> ReceiveTerminalInput(TerminalInputDto dto)

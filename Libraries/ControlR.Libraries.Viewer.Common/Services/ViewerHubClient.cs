@@ -29,6 +29,11 @@ public class ViewerHubClient(IMessenger messenger, ILogger<ViewerHubClient> logg
     await _messenger.Send(new DtoReceivedMessage<DeviceResponseDto>(deviceDto));
   }
 
+  public async Task ReceiveRemoteControlDto(RemoteControlDtoWrapper dto)
+  {
+    await _messenger.Send(new DtoReceivedMessage<RemoteControlDtoWrapper>(dto));
+  }
+
   public async Task ReceiveServerStats(ServerStatsDto serverStats)
   {
     var message = new DtoReceivedMessage<ServerStatsDto>(serverStats);
