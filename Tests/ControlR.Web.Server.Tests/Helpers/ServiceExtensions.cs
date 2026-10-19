@@ -19,6 +19,11 @@ namespace ControlR.Web.Server.Tests.Helpers;
 internal static class ServiceExtensions
 {
   /// <summary>
+  /// The password test users are created with, for tests that sign in through the real login form.
+  /// </summary>
+  public const string TestUserPassword = "T3stP@ssw0rd!";
+
+  /// <summary>
   /// Creates an instance of a controller with the necessary services injected from a service scope
   /// </summary>
   /// <typeparam name="T">The controller type to create</typeparam>
@@ -203,7 +208,7 @@ internal static class ServiceExtensions
     using var scope = services.CreateScope();
     var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
 
-    var userResult = await userCreator.CreateUser(email, "T3stP@ssw0rd!", tenantId);
+    var userResult = await userCreator.CreateUser(email, TestUserPassword, tenantId);
     if (!userResult.Succeeded)
     {
       throw new InvalidOperationException($"Failed to create test user: {string.Join(", ", userResult.IdentityResult.Errors.Select(e => e.Description))}");
@@ -239,7 +244,7 @@ internal static class ServiceExtensions
     using var scope = services.CreateScope();
     var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
 
-    var userResult = await userCreator.CreateUser(email, "T3stP@ssw0rd!", returnUrl: null);
+    var userResult = await userCreator.CreateUser(email, TestUserPassword, returnUrl: null);
     if (!userResult.Succeeded)
     {
       throw new InvalidOperationException($"Failed to create test user: {string.Join(", ", userResult.IdentityResult.Errors.Select(e => e.Description))}");
