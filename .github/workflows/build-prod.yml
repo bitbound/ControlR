@@ -2,6 +2,12 @@ name: Build Prod
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (leave empty for auto)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   actions: write
@@ -13,7 +19,7 @@ jobs:
     name: Build
     uses: ./.github/workflows/build.yml
     with:
-      version: ${{ vars.CURRENT_VERSION }}
+      version: ${{ inputs.version || vars.CURRENT_VERSION }}
       server_runtime: linux-multiarch
       retention_days_artifacts: 3
       use_self_hosted_runners: false
