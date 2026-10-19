@@ -160,38 +160,37 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
   {
     var state = await base.GetAuthenticationStateAsync();
 
-    // A tenant is exactly what GetGrantedPolicies needs to evaluate the tenant-scoped half of the
-    // projection, and it always has tenant entries. A server service account principal has none, and
-    // reaches here because the dynamic scheme forwards any request carrying an api-key header.
-    if (state.User.ToPrincipalDescriptor() is not { TenantId: not null } principal)
-    {
-      return state;
-    }
-
-    await using var scope = _scopeFactory.CreateAsyncScope();
-    var evaluator = scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>();
-
-    IReadOnlySet<string> grantedPolicies;
     try
     {
-      grantedPolicies = await evaluator.GetGrantedPolicies(principal, CancellationToken.None);
+      // A tenant is exactly what GetGrantedPolicies needs to evaluate the tenant-scoped half of the
+      // projection, and it always has tenant entries. A server service account principal has none, and
+      // reaches here because the dynamic scheme forwards any request carrying an api-key header.
+      if (state.User.ToPrincipalDescriptor() is not { TenantId: not null } principal)
+      {
+        return state;
+      }
+
+      await using var scope = _scopeFactory.CreateAsyncScope();
+      var evaluator = scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>();
+
+      var grantedPolicies = await evaluator.GetGrantedPolicies(principal, CancellationToken.None);
+
+      // A second identity on a copy of the principal, so HttpContext.User is never mutated. Components
+      // read the grants through ClaimsPrincipal.HasClaim, which scans every identity.
+      var projected = new ClaimsPrincipal(state.User);
+      projected.AddIdentity(new ClaimsIdentity(
+        grantedPolicies.Select(policyName => new Claim(PermissionPolicies.ClientPolicyClaimType, policyName)),
+        state.User.Identity?.AuthenticationType));
+
+      return new AuthenticationState(projected);
     }
     catch (Exception ex)
     {
       // Rendering must survive a failed evaluation. The unprojected state leaves every gate answering
       // false, which is the same fail-closed answer PermissionRequirementHandler returns.
-      _logger.LogError(ex, "Could not project client policies for principal {PrincipalId}.", principal.PrincipalId);
+      _logger.LogError(ex, "Could not project client policies for principal {UserName}.", state.User.Identity?.Name ?? "<unknown>");
       return state;
     }
-
-    // A second identity on a copy of the principal, so HttpContext.User is never mutated. Components
-    // read the grants through ClaimsPrincipal.HasClaim, which scans every identity.
-    var projected = new ClaimsPrincipal(state.User);
-    projected.AddIdentity(new ClaimsIdentity(
-      grantedPolicies.Select(policyName => new Claim(PermissionPolicies.ClientPolicyClaimType, policyName)),
-      state.User.Identity?.AuthenticationType));
-
-    return new AuthenticationState(projected);
   }
 
   private async Task<bool> ValidateSecurityStampAsync(UserManager<AppUser> userManager, ClaimsPrincipal principal)
