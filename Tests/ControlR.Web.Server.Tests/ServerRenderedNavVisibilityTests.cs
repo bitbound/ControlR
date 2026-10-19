@@ -1,7 +1,13 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using ControlR.Libraries.Api.Contracts.Authz;
+using ControlR.Web.Server.Authz.Permissions;
+using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Tests.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Moq;
+using Match = System.Text.RegularExpressions.Match;
 
 namespace ControlR.Web.Server.Tests;
 
@@ -23,7 +29,8 @@ namespace ControlR.Web.Server.Tests;
 public class ServerRenderedNavVisibilityTests(ITestOutputHelper testOutput)
 {
   private const string NavChromeMarker = "mud-navmenu";
-  private const string Password = "T3stP@ssw0rd!";
+  private const string ServerAdminHeading = "Server Admin";
+  private const string ServerServiceAccountsLink = "Server Service Accounts";
   private const string TenantAdminHeading = "Tenant Admin";
   private const string TenantServiceAccountsLink = "Tenant Service Accounts";
 
@@ -51,6 +58,52 @@ public class ServerRenderedNavVisibilityTests(ITestOutputHelper testOutput)
       () => Assert.Contains("Account", page, StringComparison.Ordinal),
       () => Assert.DoesNotContain(TenantAdminHeading, page, StringComparison.Ordinal),
       () => Assert.DoesNotContain(TenantServiceAccountsLink, page, StringComparison.Ordinal));
+  }
+
+  [Fact]
+  public async Task AccountManage_RendersWithoutGrants_WhenPolicyProjectionFails()
+  {
+    var evaluator = new Mock<IPermissionEvaluator>();
+    evaluator
+      .Setup(x => x.GetGrantedPolicies(It.IsAny<PrincipalDescriptor>(), It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new InvalidOperationException("permission store unavailable"));
+
+    using var testServer = await TestWebServerBuilder.CreateTestServer(
+      testOutput,
+      configureServices: services =>
+      {
+        services.RemoveAll<IPermissionEvaluator>();
+        services.AddScoped(_ => evaluator.Object);
+      });
+
+    var tenant = await testServer.Services.CreateTestTenant();
+    var email = $"projection-failure-{Guid.NewGuid():N}@t.local";
+    await testServer.Services.CreateTestUser(tenant.Id, email, PermissionPresets.TenantAdministrator);
+
+    using var client = await SignInAsync(testServer, email);
+    using var response = await client.GetAsync("/Account/Manage", TestContext.Current.CancellationToken);
+    var page = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+    Assert.Multiple(
+      () => Assert.True(response.IsSuccessStatusCode, $"Expected the page to render, got {(int)response.StatusCode}."),
+      () => Assert.Contains(NavChromeMarker, page, StringComparison.Ordinal),
+      () => Assert.DoesNotContain(TenantAdminHeading, page, StringComparison.Ordinal));
+  }
+
+  [Fact]
+  public async Task AccountManage_ShowsServerAdminSection_ForServerAdministrator()
+  {
+    using var testServer = await TestWebServerBuilder.CreateTestServer(testOutput);
+    var tenant = await testServer.Services.CreateTestTenant();
+    var email = $"server-admin-{Guid.NewGuid():N}@t.local";
+    await testServer.Services.CreateTestUser(tenant.Id, email, PermissionPresets.ServerAdministrator);
+
+    using var client = await SignInAsync(testServer, email);
+    var page = await client.GetStringAsync("/Account/Manage", TestContext.Current.CancellationToken);
+
+    Assert.Multiple(
+      () => Assert.Contains(ServerAdminHeading, page, StringComparison.Ordinal),
+      () => Assert.Contains(ServerServiceAccountsLink, page, StringComparison.Ordinal));
   }
 
   [Fact]
@@ -107,7 +160,7 @@ public class ServerRenderedNavVisibilityTests(ITestOutputHelper testOutput)
     var form = new List<KeyValuePair<string, string>>(
     [
       new("Input.Email", email),
-      new("Input.Password", Password),
+      new("Input.Password", ServiceExtensions.TestUserPassword),
     ]);
     form.AddRange(HiddenInputs(loginPage));
 

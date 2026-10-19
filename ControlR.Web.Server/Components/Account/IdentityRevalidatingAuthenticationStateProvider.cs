@@ -170,7 +170,19 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
 
     await using var scope = _scopeFactory.CreateAsyncScope();
     var evaluator = scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>();
-    var grantedPolicies = await evaluator.GetGrantedPolicies(principal, CancellationToken.None);
+
+    IReadOnlySet<string> grantedPolicies;
+    try
+    {
+      grantedPolicies = await evaluator.GetGrantedPolicies(principal, CancellationToken.None);
+    }
+    catch (Exception ex)
+    {
+      // Rendering must survive a failed evaluation. The unprojected state leaves every gate answering
+      // false, which is the same fail-closed answer PermissionRequirementHandler returns.
+      _logger.LogError(ex, "Could not project client policies for principal {PrincipalId}.", principal.PrincipalId);
+      return state;
+    }
 
     // A second identity on a copy of the principal, so HttpContext.User is never mutated. Components
     // read the grants through ClaimsPrincipal.HasClaim, which scans every identity.
