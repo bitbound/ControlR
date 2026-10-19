@@ -1,0 +1,39 @@
+name: Build Prod
+run-name: Build Prod v${{ inputs.version || vars.CURRENT_VERSION }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (leave empty for auto)"
+        required: false
+        default: ""
+        type: string
+      use_self_hosted_runners:
+        description: "Use self-hosted runners instead of GitHub-hosted"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  actions: write
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ inputs.version || vars.CURRENT_VERSION }}
+      server_runtime: linux-multiarch
+      retention_days_artifacts: 3
+      use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
+      use_local_storage: false
+      customization_config_url: ""
+      notarize_mac_bundle: true
+      build_nugets: true
+      prerelease: false
+      run_tests: false
+      skip_version_increment: false
+    secrets: inherit

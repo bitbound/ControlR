@@ -8,12 +8,19 @@ namespace ControlR.Web.Server.Authz.Permissions;
 /// from the authenticated principal's claims, resolves the resource descriptor, and
 /// delegates the allow/deny decision to the evaluator.
 /// </summary>
+/// <remarks>
+/// Derives from <see cref="AuthorizationHandler{TRequirement}"/> so the handler runs when no
+/// resource is supplied. The two-generic
+/// <c>AuthorizationHandler&lt;TRequirement, TResource&gt;</c> only invokes a requirement when
+/// <c>context.Resource is TResource</c>, and <c>null is object</c> is false, so
+/// <c>AuthorizeView</c> and <c>AuthorizeAsync(user, policy)</c> never reach it.
+/// </remarks>
 public class PermissionRequirementHandler(
   IPermissionEvaluator evaluator,
   IResourceDescriptorFactory resourceFactory,
   IHttpContextAccessor httpContextAccessor,
   ILogger<PermissionRequirementHandler> logger)
-  : AuthorizationHandler<PermissionRequirement, object>
+  : AuthorizationHandler<PermissionRequirement>
 {
   private readonly IPermissionEvaluator _evaluator = evaluator;
   private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
@@ -22,8 +29,7 @@ public class PermissionRequirementHandler(
 
   protected override async Task HandleRequirementAsync(
     AuthorizationHandlerContext context,
-    PermissionRequirement requirement,
-    object resource)
+    PermissionRequirement requirement)
   {
     var principal = context.User.ToPrincipalDescriptor();
     if (principal is null)
@@ -37,7 +43,7 @@ public class PermissionRequirementHandler(
 
     try
     {
-      var resourceDescriptor = await ResolveResource(requirement.Resource, resource, principal, cancellationToken);
+      var resourceDescriptor = await ResolveResource(requirement.Resource, context.Resource, principal, cancellationToken);
       if (resourceDescriptor is null)
       {
         _logger.LogWarning(
@@ -79,7 +85,7 @@ public class PermissionRequirementHandler(
 
   private async Task<ResourceDescriptor?> ResolveResource(
     ResourceDescriptor requirementResource,
-    object resource,
+    object? resource,
     PrincipalDescriptor principal,
     CancellationToken cancellationToken)
   {

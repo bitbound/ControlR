@@ -24,6 +24,7 @@ on:
     paths-ignore:
       - "README.md"
       - ".github/**"
+      - ".release-notes/**"
 
 concurrency:
   group: controlr-tests-${{ github.ref }}

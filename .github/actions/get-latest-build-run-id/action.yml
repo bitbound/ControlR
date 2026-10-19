@@ -1,11 +1,20 @@
 name: Get Latest Build Run ID
-description: Gets the latest successful build.yml workflow run ID, or uses provided run_id
+description: Gets the latest successful run ID of the selected build workflow, or uses provided run_id
+
+# A build can be dispatched either directly through build.yml or through build-prod.yml,
+# which calls build.yml as a reusable job. A reusable job shares the caller's run ID, so
+# the run record and its artifacts belong to whichever workflow was dispatched. That makes
+# the entry-point file name the switch that selects a dev build or a production build.
 
 inputs:
   run_id:
     description: 'Build workflow run ID (leave empty to use latest)'
     required: false
     default: ''
+  build_workflow:
+    description: 'Workflow file name to look up the latest successful run for'
+    required: false
+    default: 'build-prod.yml'
   github_token:
     description: 'GitHub token with actions:read permission'
     required: true
@@ -23,6 +32,7 @@ runs:
       shell: pwsh
       env:
         PROVIDED_RUN_ID: ${{ inputs.run_id }}
+        BUILD_WORKFLOW: ${{ inputs.build_workflow }}
         GH_TOKEN: ${{ inputs.github_token }}
       run: |
         $RunId = $env:PROVIDED_RUN_ID
@@ -30,14 +40,15 @@ runs:
           Write-Host "Using provided build run ID: $RunId"
         }
         else {
-          $RunId = gh run list --workflow=build.yml --status=success --limit=1 --json databaseId --jq '.[0].databaseId'
+          Write-Host "Looking up the latest successful '$env:BUILD_WORKFLOW' run."
+          $RunId = gh run list --workflow=$env:BUILD_WORKFLOW --status=success --limit=1 --json databaseId --jq '.[0].databaseId'
           if ($LASTEXITCODE -ne 0) {
             throw "Failed to look up the latest successful build run."
           }
         }
 
         if (-not $RunId -or $RunId -eq 'null') {
-          throw "No successful build.yml run was found. Run the Build workflow first, or pass a run ID explicitly."
+          throw "No successful '$env:BUILD_WORKFLOW' run was found. Run that workflow first, or pass a run ID explicitly."
         }
 
         Add-Content -Path $env:GITHUB_OUTPUT -Value "run_id=$RunId"

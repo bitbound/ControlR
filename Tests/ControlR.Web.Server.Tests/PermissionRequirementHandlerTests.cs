@@ -121,6 +121,48 @@ public class PermissionRequirementHandlerTests
   }
 
   [Fact]
+  public async Task HandleRequirementAsync_NoResourceFromContext_EvaluatesRequirementScope()
+  {
+    // AuthorizeView and AuthorizeAsync(user, policy) evaluate with no resource at all, so the
+    // requirement's own scope is the only thing to authorize against.
+    var tenantId = Guid.NewGuid();
+    var evaluator = new Mock<IPermissionEvaluator>();
+    evaluator
+      .Setup(x => x.EvaluateMany(
+        It.IsAny<PrincipalDescriptor>(),
+        It.Is<IReadOnlyCollection<string>>(names => names.SequenceEqual(new[] { PermissionNames.TenantCustomersRead })),
+        It.IsAny<ResourceDescriptor>(),
+        It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new Dictionary<string, PermissionEvaluationResult>
+      {
+        [PermissionNames.TenantCustomersRead] = PermissionEvaluationResult.Allow("test", "Tenant")
+      });
+    var resourceFactory = new Mock<IResourceDescriptorFactory>();
+    resourceFactory
+      .Setup(x => x.CreateTenant(tenantId))
+      .Returns(new ResourceDescriptor(PermissionScopeKind.Tenant, tenantId, tenantId));
+    var handler = new PermissionRequirementHandler(
+      evaluator.Object,
+      resourceFactory.Object,
+      Mock.Of<IHttpContextAccessor>(),
+      NullLogger<PermissionRequirementHandler>.Instance);
+    var principal = new ClaimsPrincipal(new ClaimsIdentity(
+    [
+      new Claim(PrincipalClaimTypes.PrincipalType, PrincipalClaimValues.User),
+      new Claim(PrincipalClaimTypes.PrincipalId, Guid.NewGuid().ToString()),
+      new Claim(UserClaimTypes.TenantId, tenantId.ToString())
+    ], "TestAuth"));
+    var requirement = new PermissionRequirement(
+      PermissionNames.TenantCustomersRead,
+      new ResourceDescriptor(PermissionScopeKind.Tenant));
+    var context = new AuthorizationHandlerContext([requirement], principal, resource: null);
+
+    await handler.HandleAsync(context);
+
+    Assert.True(context.HasSucceeded);
+  }
+
+  [Fact]
   public async Task HandleRequirementAsync_PartialCanonicalClaims_DeniesWithoutEvaluating()
   {
     // Has a principal type but a malformed/non-Guid principal id -> descriptor is null.
