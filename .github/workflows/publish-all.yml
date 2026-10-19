@@ -54,6 +54,7 @@ jobs:
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     permissions:
       contents: write
+      actions: read
 
   publish-nugets:
     name: Publish NuGet Packages
