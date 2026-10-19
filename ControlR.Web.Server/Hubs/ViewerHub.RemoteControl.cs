@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
@@ -12,6 +13,34 @@ namespace ControlR.Web.Server.Hubs;
 
 public partial class ViewerHub
 {
+  private static readonly string[] RemoteControlPermissionNames =
+  [
+    PermissionNames.DeviceClipboardRead,
+    PermissionNames.DeviceClipboardWrite,
+    PermissionNames.DeviceRemoteControlBlockInput,
+    PermissionNames.DeviceRemoteControlConnect,
+    PermissionNames.DeviceRemoteControlInteract
+  ];
+
+  // Commands arrive at input rate, so the session's permissions are resolved once and reused.
+  private ConcurrentDictionary<Guid, RemoteControlAuthorization> RemoteControlAuthorizations
+  {
+    get
+    {
+      lock (Context.Items)
+      {
+        if (GetItem<ConcurrentDictionary<Guid, RemoteControlAuthorization>?>(null) is { } cached)
+        {
+          return cached;
+        }
+
+        var created = new ConcurrentDictionary<Guid, RemoteControlAuthorization>();
+        SetItem(created);
+        return created;
+      }
+    }
+  }
+
   [Obsolete("Use GetActiveDesktopSessions2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId)
   {
@@ -162,17 +191,27 @@ public partial class ViewerHub
         sessionRequestDto.DeviceId,
         remoteIp);
 
-      if (await TryAuthorizeAgainstDevice(sessionRequestDto.DeviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
-      {
-        return HubResult.Fail("Unauthorized.");
-      }
-
       if (!CanUseDesktopSession(sessionRequestDto.DeviceId, sessionRequestDto.TargetSystemSession))
       {
         return HubResult.Fail("The requested desktop session is not authorized.");
       }
 
-      var device = authResult.Value;
+      var authorization = await TryGetRemoteControlAuthorization(
+        sessionRequestDto.DeviceId,
+        sessionRequestDto.SessionId,
+        Context.ConnectionAborted);
+
+      if (authorization is null ||
+          !authorization.AllowedPermissions.Contains(PermissionNames.DeviceRemoteControlConnect))
+      {
+        _logger.LogCritical(
+          "Unauthorized remote control session attempted by user: {UserName}.  Device: {DeviceId}.",
+          Context.UserIdentifier,
+          sessionRequestDto.DeviceId);
+        return HubResult.Fail("Unauthorized.");
+      }
+
+      var device = authorization.Device;
       var notifyUser = await _effectiveUserPreferencesResolver.GetNotifyUserOnSessionStart(
         device.TenantId,
         userId,
@@ -205,14 +244,27 @@ public partial class ViewerHub
     {
       using var scope = _logger.BeginMemberScope();
 
-      var policy = GetRemoteControlPolicy(request.Wrapper.DtoType);
-      if (await TryAuthorizeAgainstDevice(request.DeviceId, policy) is not { IsSuccess: true } authResult)
+      var authorization = await TryGetRemoteControlAuthorization(
+        request.DeviceId,
+        request.SessionId,
+        Context.ConnectionAborted);
+
+      var permission = GetRemoteControlPermission(request.Wrapper.DtoType);
+      if (authorization is null ||
+          !authorization.AllowedPermissions.Contains(permission))
       {
+        _logger.LogCritical(
+          "Unauthorized remote control action attempted by user: {UserName}.  Device: {DeviceId}.  " +
+          "Session: {SessionId}.  DtoType: {DtoType}.",
+          Context.UserIdentifier,
+          request.DeviceId,
+          request.SessionId,
+          request.Wrapper.DtoType);
         return HubResult.Fail("Unauthorized.");
       }
 
       return await _agentHub.Clients
-        .Client(authResult.Value.ConnectionId)
+        .Client(authorization.Device.ConnectionId)
         .ReceiveRemoteControlDto(request);
     }
     catch (Exception ex)
@@ -222,14 +274,59 @@ public partial class ViewerHub
     }
   }
 
-  private static string GetRemoteControlPolicy(RemoteControlDtoType dtoType) => dtoType switch
+  private static string GetRemoteControlPermission(RemoteControlDtoType dtoType) => dtoType switch
   {
-    RemoteControlDtoType.ClipboardText => DeviceResourcePolicies.ClipboardWrite,
-    RemoteControlDtoType.RequestClipboardText => DeviceResourcePolicies.ClipboardRead,
-    RemoteControlDtoType.ToggleBlockInput => DeviceResourcePolicies.RemoteControlBlockInput,
+    RemoteControlDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
+    RemoteControlDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
+    RemoteControlDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
     RemoteControlDtoType.RequestKeyFrame
       or RemoteControlDtoType.UpdateCaptureSettings
-      or RemoteControlDtoType.CloseRemoteControlSession => DeviceResourcePolicies.RemoteControlConnect,
-    _ => DeviceResourcePolicies.RemoteControlInteract
+      or RemoteControlDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
+    _ => PermissionNames.DeviceRemoteControlInteract
   };
+
+  private async Task<RemoteControlAuthorization?> TryGetRemoteControlAuthorization(
+    Guid deviceId,
+    Guid sessionId,
+    CancellationToken cancellationToken)
+  {
+    var cache = RemoteControlAuthorizations;
+    if (cache.TryGetValue(sessionId, out var cached))
+    {
+      return cached;
+    }
+
+    if (Context.User?.ToPrincipalDescriptor() is not { } principal)
+    {
+      return null;
+    }
+
+    var device = await _appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
+
+    if (device is null)
+    {
+      _logger.LogWarning("Device {DeviceId} not found.", deviceId);
+      return null;
+    }
+
+    var resource = await _resourceFactory.CreateDevice(device, cancellationToken);
+    var decisions = await _permissionEvaluator.EvaluateMany(
+      principal,
+      RemoteControlPermissionNames,
+      resource,
+      cancellationToken);
+
+    var allowedPermissions = decisions
+      .Where(x => x.Value.Allowed)
+      .Select(x => x.Key)
+      .ToHashSet(StringComparer.Ordinal);
+
+    return cache.GetOrAdd(sessionId, new RemoteControlAuthorization(device, allowedPermissions));
+  }
+
+  private sealed record RemoteControlAuthorization(
+    Device Device,
+    IReadOnlySet<string> AllowedPermissions);
 }
