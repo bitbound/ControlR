@@ -23,6 +23,7 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
   private readonly PersistingComponentStateSubscription _subscription;
 
   private Task<AuthenticationState>? _authenticationStateTask;
+  private Task<AuthenticationState>? _projectedStateTask;
 
   public IdentityRevalidatingAuthenticationStateProvider(
     PersistentComponentState persistentComponentState,
@@ -44,6 +45,23 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
   }
 
   protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(30);
+
+  /// <summary>
+  /// Adds the <see cref="PermissionPolicies.ClientPolicyClaimType"/> grants to the cookie principal
+  /// before any component reads it.
+  /// </summary>
+  /// <remarks>
+  /// Those claims are a server-side decision, so they exist nowhere on the cookie principal. Without
+  /// this, a statically rendered page sees a signed-in principal carrying no grants, and every
+  /// <c>HasClientPolicy</c> call in a server-rendered component answers false. Identity pages render
+  /// this way on purpose, which is what hid the tenant and server admin nav sections on them.
+  /// </remarks>
+  public override Task<AuthenticationState> GetAuthenticationStateAsync()
+  {
+    // Memoized for the provider's lifetime, which is one request. No interactive server render mode is
+    // registered, so there is no circuit for a memoized grant set to go stale inside.
+    return _projectedStateTask ??= ProjectClientPoliciesAsync();
+  }
 
   protected override void Dispose(bool disposing)
   {
@@ -136,6 +154,32 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider : Revalida
     }
     _state.PersistAsJson(PersistentStateKeys.UserInfo, userInfo);
     _state.PersistAsJson(PersistentStateKeys.ServerDecommissioned, _serverLifecycleOptions.CurrentValue.DecommissionServer);
+  }
+
+  private async Task<AuthenticationState> ProjectClientPoliciesAsync()
+  {
+    var state = await base.GetAuthenticationStateAsync();
+
+    // A tenant is exactly what GetGrantedPolicies needs to evaluate the tenant-scoped half of the
+    // projection, and it always has tenant entries. A server service account principal has none, and
+    // reaches here because the dynamic scheme forwards any request carrying an api-key header.
+    if (state.User.ToPrincipalDescriptor() is not { TenantId: not null } principal)
+    {
+      return state;
+    }
+
+    await using var scope = _scopeFactory.CreateAsyncScope();
+    var evaluator = scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>();
+    var grantedPolicies = await evaluator.GetGrantedPolicies(principal, CancellationToken.None);
+
+    // A second identity on a copy of the principal, so HttpContext.User is never mutated. Components
+    // read the grants through ClaimsPrincipal.HasClaim, which scans every identity.
+    var projected = new ClaimsPrincipal(state.User);
+    projected.AddIdentity(new ClaimsIdentity(
+      grantedPolicies.Select(policyName => new Claim(PermissionPolicies.ClientPolicyClaimType, policyName)),
+      state.User.Identity?.AuthenticationType));
+
+    return new AuthenticationState(projected);
   }
 
   private async Task<bool> ValidateSecurityStampAsync(UserManager<AppUser> userManager, ClaimsPrincipal principal)
