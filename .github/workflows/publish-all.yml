@@ -16,11 +16,6 @@ on:
           - build-prod.yml
           - build.yml
         default: "build-prod.yml"
-      use_local_storage:
-        description: "Use local storage (ignored for build-prod.yml; its artifacts live in GitHub Actions)"
-        required: false
-        type: boolean
-        default: true
       use_self_hosted_runners:
         description: "Use self-hosted runners"
         required: false
@@ -37,11 +32,11 @@ jobs:
     uses: ./.github/workflows/publish-docker.yml
     secrets: inherit
     with:
-      # docker_tag is deliberately omitted: publish-docker derives the tag from the build
+      # Docker_tag is deliberately omitted. publish-docker derives the tag from the build
       # metadata, so a prerelease build goes to 'dev' and a stable build to 'latest'.
       run_id: ${{ inputs.run_id }}
       build_workflow: ${{ inputs.build_workflow }}
-      use_local_storage: ${{ inputs.use_local_storage }}
+      use_local_storage: false
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     permissions:
       actions: read
@@ -55,7 +50,7 @@ jobs:
     with:
       run_id: ${{ inputs.run_id }}
       build_workflow: ${{ inputs.build_workflow }}
-      use_local_storage: ${{ inputs.use_local_storage }}
+      use_local_storage: false
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     permissions:
       contents: write
@@ -68,7 +63,7 @@ jobs:
     with:
       run_id: ${{ inputs.run_id }}
       build_workflow: ${{ inputs.build_workflow }}
-      use_local_storage: ${{ inputs.use_local_storage }}
+      use_local_storage: false
       use_self_hosted_runners: ${{ inputs.use_self_hosted_runners }}
     permissions:
       actions: read
