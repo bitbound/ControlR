@@ -10,6 +10,7 @@ None.
 - Device groups and user groups can now be renamed or re-described from their list pages.
 - An installed agent can now move to a build with a different product name without re-enrolling the device.
 - System messages in device chat now appear as muted inline text.
+- Admin sections in the nav menu can now be collapsed and expanded.
 
 ## Fixes
 
