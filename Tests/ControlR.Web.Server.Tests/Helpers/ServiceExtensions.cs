@@ -129,6 +129,7 @@ internal static class ServiceExtensions
   /// <param name="services"></param>
   /// <param name="tenantId">The tenant ID for the device</param>
   /// <param name="deviceId">Optional device ID, if not provided a new Guid will be used</param>
+  /// <param name="publicKeyBase64">Optional public key to store on the device</param>
   /// <returns>The created Device entity</returns>
   public static async Task<Device> CreateTestDevice(
     this IServiceProvider services,

@@ -9,10 +9,8 @@ using Moq;
 
 namespace ControlR.Agent.Common.Tests;
 
-public class FileSystemPathProviderTests(ITestOutputHelper testOutputHelper)
+public class FileSystemPathProviderTests
 {
-  private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
-
   private Mock<IElevationChecker> _elevationChecker = null!;
   private FakeFileSystem _fileSystem = null!;
   private FileSystemPathProvider _pathProvider = null!;

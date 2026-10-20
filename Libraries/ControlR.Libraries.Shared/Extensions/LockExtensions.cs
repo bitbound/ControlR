@@ -105,7 +105,7 @@ public static class LockExtensions
   ///   The cancellation token to observe while waiting for the lock.
   /// </param>
   /// <returns>
-  ///   If lock is acquired, returns an <see cref="IDisposable?"/> that releases the lock when disposed.
+  ///   If lock is acquired, returns an <see cref="IDisposable"/> that releases the lock when disposed.
   ///   If <paramref name="throwOnTimeout"/> is false and the operation is canceled, returns null.
   /// </returns>
   /// <exception cref="OperationCanceledException">

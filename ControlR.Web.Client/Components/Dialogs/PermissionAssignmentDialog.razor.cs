@@ -24,7 +24,7 @@ public partial class PermissionAssignmentDialog : ComponentBase
   /// <summary>
   /// When false, the Server scope kind is hidden from the scope dropdown so callers without
   /// <see cref="PermissionNames.ServerPermissionsWrite"/> cannot select it. The server remains
-  /// authoritative — <see cref="PermissionAssignmentManager.ValidateWriteAuthority"/> rejects
+  /// authoritative — <c>PermissionAssignmentManager.ValidateWriteAuthority</c> rejects
   /// Server-scope writes at the API boundary regardless.
   /// </summary>
   [Parameter]

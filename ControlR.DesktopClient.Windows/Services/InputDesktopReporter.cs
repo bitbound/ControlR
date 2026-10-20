@@ -13,7 +13,9 @@ internal class InputDesktopReporter(
 {
   private readonly ILogger<InputDesktopReporter> _logger = logger;
   private readonly TimeProvider _timeProvider = timeProvider;
+#pragma warning disable IDE0052 // Reserved for the poll interval. The loop still uses Task.Delay directly.
   private readonly IWaiter _waiter = waiter;
+#pragma warning restore IDE0052
   private readonly IWin32Interop _win32Interop = win32Interop;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)

@@ -6644,7 +6644,8 @@
               "string"
             ]
           }
-        }
+        },
+        "description": "Deployment values the server wants this device's install to use. A null member means the server\nhas no opinion, so the agent keeps what it has."
       },
       "AgentInstallerKeyDto": {
         "required": [
@@ -7071,7 +7072,8 @@
             ],
             "format": "uuid"
           }
-        }
+        },
+        "description": "A single permission scope granted to a credential (PAT or logon token)."
       },
       "CurrentUserResponseDto": {
         "required": [
@@ -8143,13 +8145,15 @@
           "DeviceGroup",
           "Device",
           "UserGroup"
-        ]
+        ],
+        "description": "The kind of resource a permission assignment is scoped to."
       },
       "PersonalAccessTokenPermissionMode": {
         "enum": [
           "Restricted",
           "InheritOwner"
-        ]
+        ],
+        "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
       },
       "PersonalAccessTokenResponseDto": {
         "required": [
@@ -8262,7 +8266,8 @@
               "string"
             ]
           }
-        }
+        },
+        "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\nso the UI can adapt to server configuration without requiring a login."
       },
       "RefreshRequest": {
         "required": [

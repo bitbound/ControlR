@@ -68,6 +68,7 @@ public static class OpenApiRegistrationExtensions
     options.AddDocumentTransformer<OpenApiSecurityTransformer>();
     options.AddOperationTransformer<OpenApiSecurityTransformer>();
     options.AddOperationTransformer<ApiDeprecatedOperationTransformer>();
+    options.AddDocumentTransformer<EmptyDocumentationTextTransformer>();
     options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
   }
 }

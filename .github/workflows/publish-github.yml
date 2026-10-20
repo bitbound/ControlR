@@ -8,6 +8,14 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+      build_workflow:
+        description: "Build workflow the artifacts come from (build-prod.yml forces local storage off)"
+        required: false
+        type: choice
+        options:
+          - build-prod.yml
+          - build.yml
+        default: "build-prod.yml"
       use_local_storage:
         description: "Use local artifact storage"
         required: false
@@ -24,6 +32,11 @@ on:
         description: "Build workflow run ID (leave empty to use latest)"
         required: false
         type: string
+      build_workflow:
+        description: "Workflow file name to take the latest successful build run from; build-prod.yml also forces local storage off"
+        required: false
+        type: string
+        default: "build-prod.yml"
       use_local_storage:
         description: "Use local artifact storage"
         required: false
@@ -55,17 +68,44 @@ jobs:
           client-id: ${{ secrets.BBB_CLIENT_ID }}
           private-key: ${{ secrets.BBB_PRIVATE_KEY }}
 
+      # build-prod.yml pins use_local_storage to false in its call into build.yml, so a
+      # production build's artifacts exist only in GitHub Actions. Local storage stays off
+      # for that publish even when the box is checked, since an SCP download would target a
+      # run directory that was never written. Resolved once here so every download agrees.
+      - name: Resolve Artifact Storage
+        id: storage
+        shell: pwsh
+        env:
+          USE_LOCAL_STORAGE: ${{ inputs.use_local_storage }}
+          BUILD_WORKFLOW: ${{ inputs.build_workflow }}
+          ARTIFACT_HOST: ${{ vars.ARTIFACT_HOST }}
+          ARTIFACT_BASE_PATH: ${{ vars.ARTIFACT_BASE_PATH }}
+        run: |
+          $Enabled = $env:USE_LOCAL_STORAGE -eq 'true'
+          if ($Enabled -and $env:BUILD_WORKFLOW -eq 'build-prod.yml') {
+            Write-Host 'A build-prod.yml build keeps its artifacts in GitHub Actions, so local storage is forced off.'
+            $Enabled = $false
+          }
+
+          $ArtifactHost = if ($Enabled) { $env:ARTIFACT_HOST } else { '' }
+          $ArtifactBasePath = if ($Enabled) { $env:ARTIFACT_BASE_PATH } else { '' }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "use_local_storage=$($Enabled.ToString().ToLowerInvariant())"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "artifact_host=$ArtifactHost"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "artifact_base_path=$ArtifactBasePath"
+
       - name: Validate local storage configuration
         uses: ./.github/actions/validate-local-storage
         with:
-          use_local_storage: ${{ inputs.use_local_storage }}
-          artifact_host: ${{ vars.ARTIFACT_HOST }}
-          artifact_base_path: ${{ vars.ARTIFACT_BASE_PATH }}
+          use_local_storage: ${{ steps.storage.outputs.use_local_storage }}
+          artifact_host: ${{ steps.storage.outputs.artifact_host }}
+          artifact_base_path: ${{ steps.storage.outputs.artifact_base_path }}
       - name: Get Latest Build Run ID
         id: get-run-id
         uses: ./.github/actions/get-latest-build-run-id
         with:
           run_id: ${{ inputs.run_id }}
+          build_workflow: ${{ inputs.build_workflow }}
           github_token: ${{ github.token }}
 
       - name: Download Server Artifact
@@ -74,8 +114,8 @@ jobs:
           name: Server
           path: ./server-publish
           github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ steps.storage.outputs.artifact_host }}
+          artifact-base-path: ${{ steps.storage.outputs.artifact_base_path }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
       - name: Download docker-compose file
@@ -84,8 +124,8 @@ jobs:
           name: DockerCompose
           path: ./docker-compose-download
           github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ steps.storage.outputs.artifact_host }}
+          artifact-base-path: ${{ steps.storage.outputs.artifact_base_path }}
           run-id: ${{ steps.get-run-id.outputs.run_id }}
 
       - name: Verify Server Payload
@@ -99,8 +139,8 @@ jobs:
         with:
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token: ${{ github.token }}
-          artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
-          artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
+          artifact-host: ${{ steps.storage.outputs.artifact_host }}
+          artifact-base-path: ${{ steps.storage.outputs.artifact_base_path }}
 
       # The build metadata lists the runtimes the build produced, so the archive set is
       # decided by the build rather than by whatever happens to be on disk. Only the
