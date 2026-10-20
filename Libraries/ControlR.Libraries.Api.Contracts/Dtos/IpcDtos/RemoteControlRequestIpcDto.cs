@@ -10,4 +10,5 @@ public record RemoteControlRequestIpcDto(
   bool NotifyUserOnSessionStart,
   bool RequireConsent,
   string? ViewerConnectionId,
-  string? ViewerName);
+  string? ViewerName,
+  bool ViewerSupportsRemoteControlDtoHub);

@@ -191,7 +191,8 @@ internal class AgentHubClient(
         dto.NotifyUserOnSessionStart,
         dto.RequireConsent,
         dto.ViewerConnectionId,
-        dto.ViewerName);
+        dto.ViewerName,
+        dto.ViewerSupportsRemoteControlDtoHub);
 
       var result = await ipcServer.Server.Client.ReceiveRemoteControlRequest(ipcDto);
       _logger.LogInformation(

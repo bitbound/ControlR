@@ -176,17 +176,69 @@ public partial class ViewerHub
     }
   }
 
-  [Obsolete("Use RequestRemoteControlSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> RequestRemoteControlSession(
+  [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-09-03, v0.28.x)")]
+  public Task<HubResult> RequestRemoteControlSession(
     Guid deviceId,
     RemoteControlSessionRequestDto sessionRequestDto)
   {
-    return await RequestRemoteControlSession2(
-      sessionRequestDto with { DeviceId = deviceId });
+    return RequestRemoteControlSessionCore(
+      sessionRequestDto with { DeviceId = deviceId },
+      false);
   }
 
-  public async Task<HubResult> RequestRemoteControlSession2(
-    RemoteControlSessionRequestDto sessionRequestDto)
+  [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-10-20, v0.30.x)")]
+  public Task<HubResult> RequestRemoteControlSession2(RemoteControlSessionRequestDto sessionRequestDto)
+  {
+    return RequestRemoteControlSessionCore(sessionRequestDto, false);
+  }
+
+  public Task<HubResult> RequestRemoteControlSession3(RemoteControlSessionRequestDto sessionRequestDto)
+  {
+    return RequestRemoteControlSessionCore(sessionRequestDto, true);
+  }
+
+  public async Task SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request)
+  {
+    try
+    {
+      using var scope = _logger.BeginMemberScope();
+
+      var authorization = await TryAuthorizeRemoteControlDto(request, Context.ConnectionAborted);
+      if (!authorization.IsSuccess)
+      {
+        _logger.LogWarning(
+          "Remote control DTO {DtoType} for session {SessionId} was not sent to device {DeviceId}.  {Reason}",
+          request.Wrapper.DtoType,
+          request.SessionId,
+          request.DeviceId,
+          authorization.Reason);
+        return;
+      }
+
+      await _agentHub.Clients
+        .Client(authorization.Value)
+        .SendRemoteControlDto(request);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending remote control DTO to agent.");
+    }
+  }
+
+  private static string GetRemoteControlPermission(RemoteControlDtoType dtoType) => dtoType switch
+  {
+    RemoteControlDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
+    RemoteControlDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
+    RemoteControlDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
+    RemoteControlDtoType.RequestKeyFrame
+      or RemoteControlDtoType.UpdateCaptureSettings
+      or RemoteControlDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
+    _ => PermissionNames.DeviceRemoteControlInteract
+  };
+
+  private async Task<HubResult> RequestRemoteControlSessionCore(
+    RemoteControlSessionRequestDto sessionRequestDto,
+    bool viewerSupportsRemoteControlDtoHub)
   {
     try
     {
@@ -262,8 +314,9 @@ public partial class ViewerHub
       sessionRequestDto = sessionRequestDto with
       {
         NotifyUserOnSessionStart = notifyUser,
+        ViewerConnectionId = Context.ConnectionId,
         ViewerName = displayName,
-        ViewerConnectionId = Context.ConnectionId
+        ViewerSupportsRemoteControlDtoHub = viewerSupportsRemoteControlDtoHub
       };
 
       var result = await _agentHub.Clients
@@ -279,45 +332,6 @@ public partial class ViewerHub
       return HubResult.Fail(reason);
     }
   }
-
-  public async Task SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request)
-  {
-    try
-    {
-      using var scope = _logger.BeginMemberScope();
-
-      var authorization = await TryAuthorizeRemoteControlDto(request, Context.ConnectionAborted);
-      if (!authorization.IsSuccess)
-      {
-        _logger.LogWarning(
-          "Remote control DTO {DtoType} for session {SessionId} was not sent to device {DeviceId}.  {Reason}",
-          request.Wrapper.DtoType,
-          request.SessionId,
-          request.DeviceId,
-          authorization.Reason);
-        return;
-      }
-
-      await _agentHub.Clients
-        .Client(authorization.Value)
-        .SendRemoteControlDto(request);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending remote control DTO to agent.");
-    }
-  }
-
-  private static string GetRemoteControlPermission(RemoteControlDtoType dtoType) => dtoType switch
-  {
-    RemoteControlDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
-    RemoteControlDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
-    RemoteControlDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
-    RemoteControlDtoType.RequestKeyFrame
-      or RemoteControlDtoType.UpdateCaptureSettings
-      or RemoteControlDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
-    _ => PermissionNames.DeviceRemoteControlInteract
-  };
 
   private async Task<HubResult<string>> TryAuthorizeRemoteControlDto(
     SendRemoteControlDtoToAgentRequestDto request,

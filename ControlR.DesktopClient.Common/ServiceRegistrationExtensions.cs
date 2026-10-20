@@ -41,6 +41,7 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<IMemoryProvider, MemoryProvider>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<IDesktopRemoteControlStream, DesktopRemoteControlStream>()
+      .AddSingleton<IRemoteControlDtoHandler, RemoteControlDtoHandler>()
       .AddSingleton<IDesktopCapturerFactory, DesktopCapturerFactory>()
       .AddSingleton<IFrameEncoder, SkiaSharpEncoder>()
       .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>()

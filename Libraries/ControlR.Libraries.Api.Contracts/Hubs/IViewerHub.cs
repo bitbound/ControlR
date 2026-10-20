@@ -51,10 +51,13 @@ public interface IViewerHub
   Task<HubResult> RequestRemoteControlPermission(Guid deviceId, int targetProcessId);
   Task<HubResult> RequestRemoteControlPermission2(RequestRemoteControlPermissionRequestDto request);
 
-  [Obsolete("Use RequestRemoteControlSession2. (deprecated 2026-09-03, v0.28.x)")]
+  [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> RequestRemoteControlSession(Guid deviceId, RemoteControlSessionRequestDto sessionRequestDto);
 
+  [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-10-20, v0.30.x)")]
   Task<HubResult> RequestRemoteControlSession2(RemoteControlSessionRequestDto sessionRequestDto);
+
+  Task<HubResult> RequestRemoteControlSession3(RemoteControlSessionRequestDto sessionRequestDto);
 
   [Obsolete("Use RequestVncSession2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> RequestVncSession(Guid deviceId, VncSessionRequestDto sessionRequestDto);

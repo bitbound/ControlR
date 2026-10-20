@@ -12,6 +12,12 @@ public class RemoteControlSessionOptions
   public Guid SessionId { get; set; }
   public string? ViewerConnectionId { get; set; }
   public string? ViewerName { get; set; }
+
+  /// <summary>
+  /// False for a viewer older than v0.30.x, which has no hub method for remote control DTOs and is
+  /// served over the WebSocket relay instead.
+  /// </summary>
+  public bool ViewerSupportsRemoteControlDtoHub { get; set; }
   public Uri WebSocketUri
   {
     get => _webSocketUri ?? throw new InvalidOperationException("WebSocketUri hasn't been set yet.");

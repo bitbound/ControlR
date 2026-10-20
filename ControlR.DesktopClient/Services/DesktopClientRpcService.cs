@@ -153,13 +153,13 @@ public class DesktopClientRpcService(
       return Result.Fail($"No remote control session found for session ID {sessionId}.");
     }
 
-    if (session.Host.Services.GetService<IDesktopRemoteControlStream>() is not { } stream)
+    if (session.Host.Services.GetService<IRemoteControlDtoHandler>() is not { } handler)
     {
-      _logger.LogWarning("Remote control stream not found for session ID {SessionId}.", sessionId);
-      return Result.Fail($"Remote control stream not found for session ID {sessionId}.");
+      _logger.LogWarning("Remote control DTO handler not found for session ID {SessionId}.", sessionId);
+      return Result.Fail($"Remote control DTO handler not found for session ID {sessionId}.");
     }
 
-    return await stream.ReceiveRemoteControlDto(dto);
+    return await handler.Handle(dto);
   }
 
   public async Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
