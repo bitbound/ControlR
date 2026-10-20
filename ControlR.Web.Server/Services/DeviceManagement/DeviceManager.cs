@@ -18,6 +18,7 @@ public interface IDeviceManager
   /// <param name="deviceDto">The data transfer object containing device details.</param>
   /// <param name="context">The context information regarding the device's connection.</param>
   /// <param name="tagIds">Tag ids to set; null = leave unchanged, empty = clear.</param>
+  /// <param name="publicKeyBase64">The agent's public key to store; null = leave unchanged.</param>
   /// <param name="customerId">Customer to assign; null = leave unchanged.</param>
   /// <returns>The added or updated <see cref="Device"/> entity.</returns>
   Task<Device> AddOrUpdate(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, IReadOnlyList<Guid>? tagIds = null, string? publicKeyBase64 = null, Guid? customerId = null);
@@ -39,6 +40,7 @@ public interface IDeviceManager
   /// <param name="deviceDto">The data transfer object containing updated device details.</param>
   /// <param name="context">The context information regarding the device's connection.</param>
   /// <param name="tagIds">Tag ids to set; null = leave unchanged, empty = clear.</param>
+  /// <param name="publicKeyBase64">The agent's public key to store; null = leave unchanged.</param>
   /// <param name="customerId">Customer to assign; null = leave unchanged.</param>
   /// <returns>
   ///   A <see cref="Result{Device}"/> containing the updated device if successful,

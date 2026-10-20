@@ -18,7 +18,7 @@ public interface IScreenGrabber : IAsyncDisposable
   /// <summary>
   ///   Gets a capture of a specific display.
   /// </summary>
-  /// <param name="targetDisplay">The display to capture.  Retrieve current displays from <see cref="GetDisplays" />. </param>
+  /// <param name="targetDisplay">The display to capture.  Retrieve current displays from <see cref="IDisplayManager.GetDisplays" />. </param>
   /// <param name="captureCursor">Whether to include the cursor in the capture.</param>
   /// <param name="forceKeyFrame">Whether to force a full frame capture, even if no changes have occurred since the last capture.</param>
   /// <returns>

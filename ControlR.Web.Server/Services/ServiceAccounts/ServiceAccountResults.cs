@@ -10,11 +10,9 @@ public sealed record ServiceAccountResult(
   string? Description,
   ServiceAccountKind Kind,
   bool IsEnabled,
-  /// <summary>
-  /// The access mode. Always set (non-null) for server-scoped accounts.
-  /// <see cref="ServiceAccountAccessMode.Restricted"/> is the sentinel value used for
-  /// tenant-scoped accounts, which are not governed by the mode and never bypass.
-  /// </summary>
+  // The access mode. Always set (non-null) for server-scoped accounts.
+  // ServiceAccountAccessMode.Restricted is the sentinel value used for
+  // tenant-scoped accounts, which are not governed by the mode and never bypass.
   ServiceAccountAccessMode AccessMode,
   DateTimeOffset CreatedAt,
   IReadOnlyList<ServiceAccountCredentialResult> Credentials);

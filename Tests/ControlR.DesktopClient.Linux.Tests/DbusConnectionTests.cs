@@ -1,5 +1,4 @@
 using ControlR.Libraries.TestingUtilities;
-using Microsoft.Extensions.Logging;
 using Tmds.DBus.Protocol;
 using Xunit;
 
@@ -7,18 +6,11 @@ namespace ControlR.DesktopClient.Linux.Tests;
 
 public class DbusConnectionTests
 {
-  private readonly ILogger _logger;
   private readonly ITestOutputHelper _output;
 
   public DbusConnectionTests(ITestOutputHelper output)
   {
     _output = output;
-    var loggerFactory = LoggerFactory.Create(builder =>
-    {
-      builder.AddProvider(new XunitLoggerProvider(output));
-      builder.SetMinimumLevel(LogLevel.Debug);
-    });
-    _logger = loggerFactory.CreateLogger<DbusConnectionTests>();
   }
 
   [WaylandOnlyFact]

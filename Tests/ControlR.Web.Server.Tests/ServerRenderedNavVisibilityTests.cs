@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.RegularExpressions;
-using ControlR.Libraries.Api.Contracts.Authz;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Tests.Helpers;
@@ -34,10 +33,10 @@ public class ServerRenderedNavVisibilityTests(ITestOutputHelper testOutput)
   private const string TenantAdminHeading = "Tenant Admin";
   private const string TenantServiceAccountsLink = "Tenant Service Accounts";
 
-  private static readonly Regex HiddenTypeRegex = new(@"type\s*=\s*""hidden""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-  private static readonly Regex InputTagRegex = new(@"<input([^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-  private static readonly Regex NameAttributeRegex = new(@"name\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-  private static readonly Regex ValueAttributeRegex = new(@"value\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+  private static readonly Regex _hiddenTypeRegex = new(@"type\s*=\s*""hidden""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+  private static readonly Regex _inputTagRegex = new(@"<input([^>]*)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+  private static readonly Regex _nameAttributeRegex = new(@"name\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+  private static readonly Regex _valueAttributeRegex = new(@"value\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
   [Fact]
   public async Task AccountManage_OmitsTenantAdminSection_ForPlainUser()
@@ -125,21 +124,21 @@ public class ServerRenderedNavVisibilityTests(ITestOutputHelper testOutput)
 
   private static IEnumerable<KeyValuePair<string, string>> HiddenInputs(string html)
   {
-    foreach (Match tag in InputTagRegex.Matches(html))
+    foreach (Match tag in _inputTagRegex.Matches(html))
     {
       var attributes = tag.Groups[1].Value;
-      if (!HiddenTypeRegex.IsMatch(attributes))
+      if (!_hiddenTypeRegex.IsMatch(attributes))
       {
         continue;
       }
 
-      var name = NameAttributeRegex.Match(attributes);
+      var name = _nameAttributeRegex.Match(attributes);
       if (!name.Success)
       {
         continue;
       }
 
-      var value = ValueAttributeRegex.Match(attributes);
+      var value = _valueAttributeRegex.Match(attributes);
       yield return new(name.Groups[1].Value, value.Success ? value.Groups[1].Value : string.Empty);
     }
   }

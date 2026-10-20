@@ -1,6 +1,6 @@
 using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.ViewModels;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.ViewModels.Linux;
 
 namespace ControlR.DesktopClient.Linux.Services;

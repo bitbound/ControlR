@@ -11,10 +11,12 @@
         "tags": [
           "AuthorizationChangeLogs"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -23,6 +25,7 @@
           {
             "name": "ActionType",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -30,6 +33,7 @@
           {
             "name": "ActorType",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -37,6 +41,7 @@
           {
             "name": "From",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -45,6 +50,7 @@
           {
             "name": "Page",
             "in": "query",
+            "description": "",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
@@ -54,6 +60,7 @@
           {
             "name": "PageSize",
             "in": "query",
+            "description": "",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
@@ -63,6 +70,7 @@
           {
             "name": "SearchText",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -70,6 +78,7 @@
           {
             "name": "TargetType",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -77,6 +86,7 @@
           {
             "name": "To",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -174,10 +184,12 @@
         "tags": [
           "AuthorizationChangeLogs"
         ],
+        "summary": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
         "parameters": [
           {
             "name": "ActionType",
             "in": "query",
+            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
             "schema": {
               "type": "string"
             }
@@ -185,6 +197,7 @@
           {
             "name": "ActorType",
             "in": "query",
+            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
             "schema": {
               "type": "string"
             }
@@ -192,6 +205,7 @@
           {
             "name": "From",
             "in": "query",
+            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -200,6 +214,7 @@
           {
             "name": "Page",
             "in": "query",
+            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
@@ -209,6 +224,7 @@
           {
             "name": "PageSize",
             "in": "query",
+            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
@@ -218,6 +234,7 @@
           {
             "name": "SearchText",
             "in": "query",
+            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
             "schema": {
               "type": "string"
             }
@@ -225,6 +242,7 @@
           {
             "name": "TargetType",
             "in": "query",
+            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
             "schema": {
               "type": "string"
             }
@@ -232,6 +250,7 @@
           {
             "name": "To",
             "in": "query",
+            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -329,10 +348,12 @@
         "tags": [
           "Customers"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "customerId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -342,6 +363,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -452,10 +474,12 @@
         "tags": [
           "Customers"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -581,10 +605,12 @@
         "tags": [
           "Customers"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -682,10 +708,12 @@
         "tags": [
           "Customers"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "customerId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -695,6 +723,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -783,10 +812,12 @@
         "tags": [
           "Customers"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "customerId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -796,6 +827,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -901,10 +933,12 @@
         "tags": [
           "Customers"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "customerId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -914,6 +948,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1051,10 +1086,12 @@
         "tags": [
           "DeploymentOptions"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1152,10 +1189,12 @@
         "tags": [
           "DeploymentOptions"
         ],
+        "summary": "Returns whether the current principal may assign tags to a prospective deployment target.\nThe UI uses this to decide whether to offer tag selection. The agent registration endpoint\nremains the final enforcement boundary.",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Returns whether the current principal may assign tags to a prospective deployment target.\nThe UI uses this to decide whether to offer tag selection. The agent registration endpoint\nremains the final enforcement boundary.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1273,10 +1312,12 @@
         "tags": [
           "DesktopPreview"
         ],
+        "summary": "Captures one frame of a process's desktop on the device named by the route. The answer is a\nsingle image, so there is no length to state up front.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Captures one frame of a process's desktop on the device named by the route. The answer is a\nsingle image, so there is no length to state up front.",
             "required": true,
             "schema": {
               "type": "string",
@@ -1286,6 +1327,7 @@
           {
             "name": "targetProcessId",
             "in": "path",
+            "description": "Captures one frame of a process's desktop on the device named by the route. The answer is a\nsingle image, so there is no length to state up front.",
             "required": true,
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -1296,6 +1338,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Captures one frame of a process's desktop on the device named by the route. The answer is a\nsingle image, so there is no length to state up front.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1419,10 +1462,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Creates a directory under deviceId's `ParentPath`. Answers 204 once the\nagent has accepted the request.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Creates a directory under `deviceId`'s `ParentPath`. Answers 204 once the\nagent has accepted the request.",
             "required": true,
             "schema": {
               "type": "string",
@@ -1432,6 +1477,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Creates a directory under `deviceId`'s `ParentPath`. Answers 204 once the\nagent has accepted the request.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1572,10 +1618,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Deletes one path on deviceId. Answers 200 with the path that was deleted.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Deletes one path on `deviceId`. Answers 200 with the path that was deleted.",
             "required": true,
             "schema": {
               "type": "string",
@@ -1585,6 +1633,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Deletes one path on `deviceId`. Answers 200 with the path that was deleted.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1742,10 +1791,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Packs the requested paths into one archive and streams it. The response is the archive itself,\nwith the agent's own display name in the `Content-Disposition` header.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Packs the requested paths into one archive and streams it. The response is the archive itself,\nwith the agent's own display name in the `Content-Disposition` header.",
             "required": true,
             "schema": {
               "type": "string",
@@ -1755,6 +1806,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Packs the requested paths into one archive and streams it. The response is the archive itself,\nwith the agent's own display name in the `Content-Disposition` header.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1908,10 +1960,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Streams one file from the device named by the route. The response is the file itself, with the\nagent's own display name in the `Content-Disposition` header.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Streams one file from the device named by the route. The response is the file itself, with the\nagent's own display name in the `Content-Disposition` header.",
             "required": true,
             "schema": {
               "type": "string",
@@ -1921,6 +1975,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Streams one file from the device named by the route. The response is the file itself, with the\nagent's own display name in the `Content-Disposition` header.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1929,6 +1984,7 @@
           {
             "name": "filePath",
             "in": "query",
+            "description": "Streams one file from the device named by the route. The response is the file itself, with the\nagent's own display name in the `Content-Disposition` header.",
             "schema": {
               "type": "string"
             }
@@ -2061,10 +2117,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Lists the entries of one directory on the device named in the body.",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Lists the entries of one directory on the device named in the body.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2222,10 +2280,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Streams one enumerated log file's contents as text.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Streams one enumerated log file's contents as text.",
             "required": true,
             "schema": {
               "type": "string",
@@ -2235,6 +2295,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Streams one enumerated log file's contents as text.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2243,6 +2304,7 @@
           {
             "name": "kind",
             "in": "query",
+            "description": "Streams one enumerated log file's contents as text.",
             "schema": {
               "$ref": "#/components/schemas/LogKind"
             }
@@ -2250,6 +2312,7 @@
           {
             "name": "fileName",
             "in": "query",
+            "description": "Streams one enumerated log file's contents as text.",
             "schema": {
               "type": "string"
             }
@@ -2257,6 +2320,7 @@
           {
             "name": "username",
             "in": "query",
+            "description": "Streams one enumerated log file's contents as text.",
             "schema": {
               "type": "string"
             }
@@ -2379,10 +2443,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Lists the log files the agent on deviceId has on disk.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Lists the log files the agent on `deviceId` has on disk.",
             "required": true,
             "schema": {
               "type": "string",
@@ -2392,6 +2458,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Lists the log files the agent on `deviceId` has on disk.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2529,10 +2596,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Asks the device named in the body how it would split a path. A device that does not exist is a\n404 here as on every other action, unlike the deprecated endpoint that answered 400.",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Asks the device named in the body how it would split a path. A device that does not exist is a\n404 here as on every other action, unlike the deprecated endpoint that answered 400.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2690,10 +2759,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Lists the file system entries at the roots of the device named in the body.",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Lists the file system entries at the roots of the device named in the body.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2851,10 +2922,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Lists the immediate subdirectories of one directory on the device named in the body.",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Lists the immediate subdirectories of one directory on the device named in the body.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3012,10 +3085,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Streams one uploaded file to the device, which writes it into the requested directory.",
+        "description": "Note: [FromForm] parameters are intentionally omitted, so large files aren't buffered into memory\nby model binding before the authorization and size checks run. [MultipartRequestBody] tells the\nOpenAPI document the form fields instead.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Streams one uploaded file to the device, which writes it into the requested directory.",
             "required": true,
             "schema": {
               "type": "string",
@@ -3025,6 +3101,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Streams one uploaded file to the device, which writes it into the requested directory.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3197,10 +3274,12 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "Asks the device whether a directory and a file name combine into a usable path. An answer that\nthe path is invalid is a 200, because the question was answered.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "Asks the device whether a directory and a file name combine into a usable path. An answer that\nthe path is invalid is a 200, because the question was answered.",
             "required": true,
             "schema": {
               "type": "string",
@@ -3210,6 +3289,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "Asks the device whether a directory and a file name combine into a usable path. An answer that\nthe path is invalid is a 200, because the question was answered.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3367,10 +3447,12 @@
         "tags": [
           "DeviceGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3380,6 +3462,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3488,10 +3571,12 @@
         "tags": [
           "DeviceGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3501,6 +3586,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3611,10 +3697,12 @@
         "tags": [
           "DeviceGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3730,10 +3818,12 @@
         "tags": [
           "DeviceGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3831,10 +3921,12 @@
         "tags": [
           "DeviceGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3844,6 +3936,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3932,10 +4025,12 @@
         "tags": [
           "DeviceGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3945,6 +4040,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -4050,10 +4146,12 @@
         "tags": [
           "DeviceGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4063,6 +4161,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -4190,10 +4289,12 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4253,10 +4354,12 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4335,6 +4438,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -4418,6 +4522,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -4490,10 +4595,12 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4602,6 +4709,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -4674,6 +4782,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -4757,10 +4866,12 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4869,10 +4980,12 @@
         "tags": [
           "DeviceTags"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -4983,10 +5096,12 @@
         "tags": [
           "DeviceTags"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4996,6 +5111,7 @@
           {
             "name": "tagId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5005,6 +5121,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5095,10 +5212,12 @@
         "tags": [
           "EffectivePermissions"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "principalId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5108,6 +5227,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5116,6 +5236,7 @@
           {
             "name": "principalKind",
             "in": "query",
+            "description": "",
             "schema": {
               "$ref": "#/components/schemas/PermissionPrincipalKind"
             }
@@ -5123,6 +5244,7 @@
           {
             "name": "permissionName",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -5130,6 +5252,7 @@
           {
             "name": "scopeKind",
             "in": "query",
+            "description": "",
             "schema": {
               "$ref": "#/components/schemas/PermissionScopeKind"
             }
@@ -5137,6 +5260,7 @@
           {
             "name": "scopeId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5244,10 +5368,12 @@
         "tags": [
           "EffectiveUserPreferences"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5345,6 +5471,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -5426,10 +5553,12 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5527,10 +5656,12 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "keyId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5540,6 +5671,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5628,10 +5760,12 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "keyId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5641,6 +5775,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5751,10 +5886,12 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "keyId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5764,6 +5901,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5871,10 +6009,12 @@
         "tags": [
           "Invites"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6010,10 +6150,12 @@
         "tags": [
           "Invites"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6121,10 +6263,12 @@
         "tags": [
           "Invites"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "inviteId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -6134,6 +6278,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6224,6 +6369,7 @@
         "tags": [
           "LogonTokens"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -6327,6 +6473,7 @@
         "tags": [
           "LogonTokens"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -6430,10 +6577,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6567,10 +6716,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6696,10 +6847,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6708,6 +6861,7 @@
           {
             "name": "principalKind",
             "in": "query",
+            "description": "",
             "schema": {
               "$ref": "#/components/schemas/PermissionPrincipalKind"
             }
@@ -6715,6 +6869,7 @@
           {
             "name": "principalId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6812,10 +6967,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6926,10 +7083,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "assignmentId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -6939,6 +7098,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7027,10 +7187,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "assignmentId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -7040,6 +7202,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7167,10 +7330,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7298,10 +7463,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7399,10 +7566,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7500,10 +7669,12 @@
         "tags": [
           "PermissionAssignments"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7614,10 +7785,12 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7733,10 +7906,12 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7834,10 +8009,12 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -7847,6 +8024,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7925,10 +8103,12 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -7938,6 +8118,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -8055,10 +8236,12 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -8068,6 +8251,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -8165,6 +8349,7 @@
         "tags": [
           "PublicServerSettings"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8217,6 +8402,7 @@
         "tags": [
           "ServerAlert"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8298,6 +8484,7 @@
         "tags": [
           "ServerAlert"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8401,6 +8588,7 @@
         "tags": [
           "ServerLogs"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8484,10 +8672,12 @@
         "tags": [
           "ServerServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -8616,6 +8806,7 @@
         "tags": [
           "ServerServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8737,6 +8928,7 @@
         "tags": [
           "ServerServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8800,10 +8992,12 @@
         "tags": [
           "ServerServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -8883,10 +9077,12 @@
         "tags": [
           "ServerServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -8963,10 +9159,12 @@
         "tags": [
           "ServerServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9085,10 +9283,12 @@
         "tags": [
           "ServerServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9098,6 +9298,7 @@
           {
             "name": "credentialId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9179,10 +9380,12 @@
         "tags": [
           "ServerServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9192,6 +9395,7 @@
           {
             "name": "credentialId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9263,6 +9467,7 @@
         "tags": [
           "ServerStats"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -9346,10 +9551,12 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -9465,10 +9672,12 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -9477,6 +9686,7 @@
           {
             "name": "includeLinkedIds",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "boolean",
               "default": false
@@ -9574,10 +9784,12 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tagId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9587,6 +9799,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -9675,10 +9888,12 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tagId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9688,6 +9903,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -9793,10 +10009,12 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tagId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9806,6 +10024,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -10094,6 +10313,7 @@
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10168,6 +10388,7 @@
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10259,6 +10480,7 @@
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10367,10 +10589,12 @@
         "tags": [
           "TenantServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10380,6 +10604,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10508,10 +10733,12 @@
         "tags": [
           "TenantServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10638,10 +10865,12 @@
         "tags": [
           "TenantServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10730,10 +10959,12 @@
         "tags": [
           "TenantServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10743,6 +10974,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10832,10 +11064,12 @@
         "tags": [
           "TenantServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10845,6 +11079,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10941,10 +11176,12 @@
         "tags": [
           "TenantServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10954,6 +11191,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11082,10 +11320,12 @@
         "tags": [
           "TenantServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11095,6 +11335,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11104,6 +11345,7 @@
           {
             "name": "credentialId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11195,10 +11437,12 @@
         "tags": [
           "TenantServiceAccounts"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11208,6 +11452,7 @@
           {
             "name": "serviceAccountId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11217,6 +11462,7 @@
           {
             "name": "credentialId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11308,10 +11554,12 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "settingName",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -11320,6 +11568,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11408,10 +11657,12 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "settingName",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -11420,6 +11671,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11530,10 +11782,12 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11629,10 +11883,12 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11778,10 +12034,12 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11909,6 +12167,7 @@
         "tags": [
           "TestEmail"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -12005,10 +12264,12 @@
         "tags": [
           "UserGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12018,6 +12279,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12126,10 +12388,12 @@
         "tags": [
           "UserGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12139,6 +12403,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12249,10 +12514,12 @@
         "tags": [
           "UserGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12368,10 +12635,12 @@
         "tags": [
           "UserGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12469,10 +12738,12 @@
         "tags": [
           "UserGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12482,6 +12753,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12570,10 +12842,12 @@
         "tags": [
           "UserGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12583,6 +12857,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12688,10 +12963,12 @@
         "tags": [
           "UserGroups"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12701,6 +12978,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12828,10 +13106,12 @@
         "tags": [
           "UserPreferences"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12927,10 +13207,12 @@
         "tags": [
           "UserPreferences"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13066,10 +13348,12 @@
         "tags": [
           "UserPreferences"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13187,10 +13471,12 @@
         "tags": [
           "UserPreferences"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "name",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -13199,6 +13485,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13309,10 +13596,12 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -13322,6 +13611,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13429,10 +13719,12 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13548,10 +13840,12 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13649,10 +13943,12 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -13662,6 +13958,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13787,10 +14084,12 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -13800,6 +14099,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13907,10 +14207,12 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -13920,6 +14222,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14010,10 +14313,12 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14023,6 +14328,7 @@
           {
             "name": "tokenId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14032,6 +14338,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14120,10 +14427,12 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14133,6 +14442,7 @@
           {
             "name": "tokenId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14142,6 +14452,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14269,6 +14580,7 @@
         "tags": [
           "UserServerSettings"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -14342,6 +14654,7 @@
         "tags": [
           "UserServerSettings"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -14415,10 +14728,12 @@
         "tags": [
           "UserStorage"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "key",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -14427,6 +14742,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14515,10 +14831,12 @@
         "tags": [
           "UserStorage"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "key",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -14527,6 +14845,7 @@
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14627,10 +14946,12 @@
         "tags": [
           "UserStorage"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14748,6 +15069,7 @@
         "tags": [
           "Version"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -14803,6 +15125,7 @@
         "tags": [
           "Version"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -14855,6 +15178,7 @@
         "tags": [
           "Version"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -15140,7 +15464,8 @@
           "directoryName": {
             "type": "string"
           }
-        }
+        },
+        "description": "Creates a directory inside the device's string CreateDeviceDirectoryRequestDto.ParentPath. The target device comes from the\nroute, so the body carries no device id."
       },
       "CreateDeviceGroupRequestDto": {
         "required": [
@@ -15546,7 +15871,8 @@
           "accessMode": {
             "$ref": "#/components/schemas/ServiceAccountAccessMode"
           }
-        }
+        },
+        "description": "Request to create a server-scoped service account. The access mode is required explicitly;\nit is never inferred from assignment rows."
       },
       "CreateServiceAccountCredentialRequestDto": {
         "required": [
@@ -15714,7 +16040,8 @@
             ],
             "format": "uuid"
           }
-        }
+        },
+        "description": "A single permission scope granted to a credential (PAT or logon token)."
       },
       "CustomerDto": {
         "required": [
@@ -15788,7 +16115,8 @@
           "filePath": {
             "type": "string"
           }
-        }
+        },
+        "description": "Deletes one path on the device named by the route. There is deliberately no \"is a directory\" flag:\nthe delete sent to the agent carries only the path, so the flag would describe nothing."
       },
       "DeleteDevicesRequestDto": {
         "required": [
@@ -15907,7 +16235,8 @@
             ],
             "format": "uuid"
           }
-        }
+        },
+        "description": "Requests whether the current principal may assign tags to a prospective deployment target.\nThe target is either a predetermined existing device (by id) or a new device, optionally\nbound to the selected customer. The server evaluates the same device-scoped\n`DeviceTagsWrite` decision used at agent registration so the UI only offers tag\nselection when the eventual install could succeed."
       },
       "DeploymentTagCapabilityResponseDto": {
         "required": [
@@ -15974,7 +16303,8 @@
         "enum": [
           "Console",
           "Rdp"
-        ]
+        ],
+        "description": "REST-facing desktop session type. Kept separate from the hub's\nDesktopSessionType so the REST API can serialize it as\na string while the SignalR hub stays numeric for backwards compatibility."
       },
       "DeviceColumnFilter": {
         "type": "object",
@@ -16032,7 +16362,8 @@
           "directoryPath": {
             "type": "string"
           }
-        }
+        },
+        "description": "Selects the directory whose entries to list. The route carries no device id for this operation,\nso the body names the device."
       },
       "DeviceDirectoryContentsResponseDto": {
         "required": [
@@ -16050,7 +16381,8 @@
           "directoryExists": {
             "type": "boolean"
           }
-        }
+        },
+        "description": "A directory listing. bool DeviceDirectoryContentsResponseDto.DirectoryExists is the agent's own signal, which distinguishes\nan empty directory from a missing one."
       },
       "DeviceFilePathValidationResponseDto": {
         "required": [
@@ -16065,7 +16397,8 @@
             "type": "string",
             "default": ""
           }
-        }
+        },
+        "description": "The device's answer to a path-validation probe. An answer that the path is invalid is still a\nsuccessful response, so bool DeviceFilePathValidationResponseDto.IsValid being false is not an error."
       },
       "DeviceFileSystemEntryDto": {
         "required": [
@@ -16111,7 +16444,8 @@
           "hasSubfolders": {
             "type": "boolean"
           }
-        }
+        },
+        "description": "One file system entry as the remote agent reported it. Shared by the directory-contents,\nroot-drives, and subdirectories responses."
       },
       "DeviceFileUploadResponseDto": {
         "required": [
@@ -16126,7 +16460,8 @@
           "fileName": {
             "type": "string"
           }
-        }
+        },
+        "description": "The upload the device accepted. A named envelope so consumers have a type to depend on."
       },
       "DeviceGroupDetailDto": {
         "required": [
@@ -16262,7 +16597,8 @@
             "type": "string",
             "format": "date-time"
           }
-        }
+        },
+        "description": "A single log file the agent found on disk."
       },
       "DeviceLogFileGroupDto": {
         "required": [
@@ -16291,7 +16627,8 @@
               "$ref": "#/components/schemas/DeviceLogFileEntryDto"
             }
           }
-        }
+        },
+        "description": "The agent's log files under one group name, which is the log source that produced them."
       },
       "DeviceLogFileListResponseDto": {
         "required": [
@@ -16305,7 +16642,8 @@
               "$ref": "#/components/schemas/DeviceLogFileGroupDto"
             }
           }
-        }
+        },
+        "description": "The log files the agent has on disk, grouped by the source that wrote them."
       },
       "DevicePathDeletionResponseDto": {
         "required": [
@@ -16320,7 +16658,8 @@
           "filePath": {
             "type": "string"
           }
-        }
+        },
+        "description": "The deletion the device accepted. A named envelope so consumers have a type to depend on."
       },
       "DevicePathSegmentsRequestDto": {
         "required": [
@@ -16336,7 +16675,8 @@
           "targetPath": {
             "type": "string"
           }
-        }
+        },
+        "description": "Asks the agent how it would split string DevicePathSegmentsRequestDto.TargetPath on its own platform. The route carries\nno device id for this operation, so the body names the device."
       },
       "DevicePathSegmentsResponseDto": {
         "required": [
@@ -16369,7 +16709,8 @@
           "success": {
             "type": "boolean"
           }
-        }
+        },
+        "description": "How the device's agent split the requested path. bool DevicePathSegmentsResponseDto.Success is the agent's verdict and\nstring? DevicePathSegmentsResponseDto.ErrorMessage explains a false one. string DevicePathSegmentsResponseDto.PathSeparator is the device's own\nseparator, which need not match the one the caller sent."
       },
       "DeviceResponseDto": {
         "required": [
@@ -16545,7 +16886,8 @@
             "type": "string",
             "format": "uuid"
           }
-        }
+        },
+        "description": "Asks for the file system entries at the device's roots. The route carries no device id for this\noperation, so the body names the device."
       },
       "DeviceRootDrivesResponseDto": {
         "required": [
@@ -16559,7 +16901,8 @@
               "$ref": "#/components/schemas/DeviceFileSystemEntryDto"
             }
           }
-        }
+        },
+        "description": "The file system entries at the device's roots: drive letters on Windows, a single root on Unix-like\nplatforms."
       },
       "DeviceSearchFilterCountsDto": {
         "type": "object",
@@ -16713,7 +17056,8 @@
           "directoryPath": {
             "type": "string"
           }
-        }
+        },
+        "description": "Selects the directory whose immediate subdirectories to list. The route carries no device id for\nthis operation, so the body names the device."
       },
       "DeviceSubdirectoriesResponseDto": {
         "required": [
@@ -16727,7 +17071,8 @@
               "$ref": "#/components/schemas/DeviceFileSystemEntryDto"
             }
           }
-        }
+        },
+        "description": "The immediate subdirectories of one directory. Unlike the directory-contents response, the agent's\ndirectory-exists signal is discarded here."
       },
       "DeviceSummaryDto": {
         "required": [
@@ -16783,7 +17128,8 @@
               "type": "string"
             }
           }
-        }
+        },
+        "description": "The paths to pack into one archive. The route names the device, so the body does not."
       },
       "Drive": {
         "type": "object",
@@ -16842,7 +17188,8 @@
               "string"
             ]
           }
-        }
+        },
+        "description": "Result of evaluating a single permission for a user."
       },
       "EffectiveUserPreferencesDto": {
         "required": [
@@ -17234,7 +17581,8 @@
         "enum": [
           "Allow",
           "Deny"
-        ]
+        ],
+        "description": "The effect of a permission assignment. Explicit deny overrides allow at any matching scope."
       },
       "PermissionPresetDto": {
         "required": [
@@ -17272,7 +17620,8 @@
           "ServiceAccount",
           "PersonalAccessToken",
           "LogonToken"
-        ]
+        ],
+        "description": "The kind of principal a permission assignment targets."
       },
       "PermissionScopeKind": {
         "enum": [
@@ -17283,13 +17632,15 @@
           "DeviceGroup",
           "Device",
           "UserGroup"
-        ]
+        ],
+        "description": "The kind of resource a permission assignment is scoped to."
       },
       "PersonalAccessTokenPermissionMode": {
         "enum": [
           "Restricted",
           "InheritOwner"
-        ]
+        ],
+        "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
       },
       "PersonalAccessTokenResponseDto": {
         "required": [
@@ -17413,7 +17764,8 @@
               "string"
             ]
           }
-        }
+        },
+        "description": "Server-side settings exposed to any caller, including unauthenticated clients, so a client\ncan adapt to server configuration before authenticating. Never put sensitive or per-tenant\ndata here."
       },
       "RemoveDeviceGroupMembersRequestDto": {
         "required": [
@@ -17457,7 +17809,8 @@
             "minLength": 1,
             "type": "string"
           }
-        }
+        },
+        "description": "Body for `PUT /api/v1/installer-keys/{keyId}`. The key id travels in the route."
       },
       "ReplacePermissionAssignmentsRequestDto": {
         "required": [
@@ -17590,7 +17943,8 @@
               "$ref": "#/components/schemas/ServiceAccountCredentialDto"
             }
           }
-        }
+        },
+        "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred."
       },
       "ServerServiceAccountsResponseDto": {
         "type": "object",
@@ -17644,7 +17998,8 @@
         "enum": [
           "Restricted",
           "Unrestricted"
-        ]
+        ],
+        "description": "Determines how a server service account is evaluated during permission checks.\nPersisted on the account so the mode is never inferred from the presence or absence of assignment rows.\nTenant service accounts are not governed by this mode and never bypass."
       },
       "ServiceAccountCredentialDto": {
         "required": [
@@ -17791,7 +18146,8 @@
               "$ref": "#/components/schemas/ServiceAccountCredentialDto"
             }
           }
-        }
+        },
+        "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode."
       },
       "TenantServiceAccountsResponseDto": {
         "type": "object",
@@ -17817,7 +18173,8 @@
           "value": {
             "type": "string"
           }
-        }
+        },
+        "description": "A single setting write. A null or whitespace `Value` clears the setting."
       },
       "TenantSettingResponseDto": {
         "required": [
@@ -17871,7 +18228,8 @@
               "boolean"
             ]
           }
-        }
+        },
+        "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default."
       },
       "TenantsResponseDto": {
         "type": "object",
@@ -17898,7 +18256,8 @@
           "name": {
             "type": "string"
           }
-        }
+        },
+        "description": "Minimal tenant projection for the collection listing. The full tenant object is\nreturned by `GET /api/v1/tenants/{tenantId}`."
       },
       "ThemeMode": {
         "enum": [
@@ -18463,7 +18822,8 @@
           "fileName": {
             "type": "string"
           }
-        }
+        },
+        "description": "Asks whether string ValidateDeviceFilePathRequestDto.DirectoryPath and string ValidateDeviceFilePathRequestDto.FileName combine into a usable path. The\ndevice comes from the route."
       },
       "ViewMode": {
         "enum": [

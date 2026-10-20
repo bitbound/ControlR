@@ -11,6 +11,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -74,6 +75,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -137,6 +139,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -200,6 +203,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -260,6 +264,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -340,6 +345,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -383,11 +389,13 @@
         "tags": [
           "DesktopPreview"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/desktop-preview/{deviceId}/{targetProcessId}?tenantId={tenantId}` instead. Use GET /api/v1/desktop-preview/{deviceId}/{targetProcessId} with a required tenantId. The response is the same image, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -397,6 +405,7 @@
           {
             "name": "targetProcessId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -448,11 +457,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/create-directory/{deviceId}?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/create-directory/{deviceId} with a required tenantId. The V1 body carries no DeviceId, because the route already names the device. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -523,11 +534,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/delete-path/{deviceId}?tenantId={tenantId}` instead. Use DELETE /api/v1/device-file-system/delete-path/{deviceId} with a required tenantId. The V1 body carries no DeviceId, because the route already names the device. The V1 response is the named DevicePathDeletionResponseDto instead of an ad hoc body whose key order depended on an anonymous type. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -598,11 +611,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/download-archive/{deviceId}?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/download-archive/{deviceId} with a required tenantId. The response is the same octet-stream, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -673,11 +688,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/download/{deviceId}?tenantId={tenantId}` instead. Use GET /api/v1/device-file-system/download/{deviceId} with a required tenantId. The response is the same octet-stream, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -687,6 +704,7 @@
           {
             "name": "filePath",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -735,6 +753,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/contents?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/contents with a required tenantId. The response is the same listing under the V1 type names. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.",
         "parameters": [
           {
@@ -801,11 +820,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/logs/{deviceId}/contents?tenantId={tenantId}` instead. Use GET /api/v1/device-file-system/logs/{deviceId}/contents with a required tenantId. The response is the same text stream, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -815,6 +836,7 @@
           {
             "name": "filePath",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -863,11 +885,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/logs/{deviceId}?tenantId={tenantId}` instead. Use GET /api/v1/device-file-system/logs/{deviceId} with a required tenantId. The response is the same grouping under the V1 type names. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -918,6 +942,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/path-segments?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/path-segments with a required tenantId. The response is the same answer under the V1 type names. V1 answers an unknown device with 404 rather than this endpoint's 400, and answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.",
         "parameters": [
           {
@@ -984,6 +1009,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/root-drives?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/root-drives with a required tenantId. The response is the same listing under the V1 type names. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.",
         "parameters": [
           {
@@ -1050,6 +1076,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/subdirectories?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/subdirectories with a required tenantId. The response is the same listing under the V1 type names, and still carries no directory-exists signal. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.",
         "parameters": [
           {
@@ -1116,11 +1143,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/upload/{deviceId}?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/upload/{deviceId} with a required tenantId. The V1 response is the named DeviceFileUploadResponseDto instead of an ad hoc body, and V1 answers every failure with a ProblemDetails body.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -1196,11 +1225,13 @@
         "tags": [
           "DeviceFileSystem"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-file-system/validate-path/{deviceId}?tenantId={tenantId}` instead. Use POST /api/v1/device-file-system/validate-path/{deviceId} with a required tenantId. The V1 body carries no DeviceId, because the route already names the device. The answer is the same, including an answer that the path is invalid. V1 answers every failure with a ProblemDetails body, where this endpoint answers some of them with bare strings.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -1271,11 +1302,13 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/devices/{deviceId}` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -1324,11 +1357,13 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/devices/{deviceId}` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -1396,6 +1431,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/devices/delete-many` instead. The replacement evaluates tenant access per candidate device instead of pre-filtering by the caller's tenant claim, so server-scoped principals are supported.",
         "parameters": [
           {
@@ -1479,6 +1515,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/devices` instead.",
         "parameters": [
           {
@@ -1549,6 +1586,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -1621,6 +1659,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/devices/summary` instead.",
         "parameters": [
           {
@@ -1693,6 +1732,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/devices/search` instead. The replacement evaluates device access via the caller's access scope without requiring a tenant claim, so server-scoped principals are supported.",
         "parameters": [
           {
@@ -1776,11 +1816,13 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/devices/{deviceId}/alias` instead. The replacement resolves the device across tenants and enforces tenant access before the resource policy.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -1868,6 +1910,7 @@
         "tags": [
           "DeviceTags"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-tags?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
@@ -1934,11 +1977,13 @@
         "tags": [
           "DeviceTags"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/device-tags/{deviceId}/{tagId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -1948,6 +1993,7 @@
           {
             "name": "tagId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -2015,6 +2061,7 @@
         "tags": [
           "EffectiveUserPreferences"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/effective-user-preferences?tenantId={tenantId}` instead. Use GET /api/v1/effective-user-preferences with an explicit tenantId.",
         "parameters": [
           {
@@ -2078,6 +2125,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/installer-keys` instead. The replacement requires TenantId in the request body.",
         "parameters": [
           {
@@ -2159,6 +2207,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/installer-keys?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
@@ -2231,11 +2280,13 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -2286,11 +2337,13 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}/usages?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "keyId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -2367,6 +2420,7 @@
         "tags": [
           "InstallerKeys"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/installer-keys/{keyId}?tenantId=` instead. The replacement takes the key id in the route, tenantId as a query parameter, a body with only friendlyName, and returns 204.",
         "parameters": [
           {
@@ -2433,6 +2487,7 @@
         "tags": [
           "Invites"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -2513,6 +2568,7 @@
         "tags": [
           "Invites"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/invites?tenantId={tenantId}` instead. Use POST /api/v1/invites with an explicit tenantId.",
         "parameters": [
           {
@@ -2594,6 +2650,7 @@
         "tags": [
           "Invites"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/invites?tenantId={tenantId}` instead. Use GET /api/v1/invites with an explicit tenantId.",
         "parameters": [
           {
@@ -2666,11 +2723,13 @@
         "tags": [
           "Invites"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/invites/{inviteId}?tenantId={tenantId}` instead. Use DELETE /api/v1/invites/{inviteId} with an explicit tenantId.",
         "parameters": [
           {
             "name": "inviteId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -2721,6 +2780,7 @@
         "tags": [
           "LogonTokens"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/logon-tokens/user` instead. The replacement requires TenantId in the request body; see also /api/v1/logon-tokens/external for server-scoped callers.",
         "parameters": [
           {
@@ -2837,6 +2897,7 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter, returns 201, and answers delete with 204.",
         "parameters": [
           {
@@ -2918,6 +2979,7 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
@@ -2990,11 +3052,13 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/personal-access-tokens/{id}?tenantId=` instead. The replacement requires tenantId as a query parameter and answers with 204.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3043,11 +3107,13 @@
         "tags": [
           "PersonalAccessTokens"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/personal-access-tokens/{id}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3135,6 +3201,7 @@
         "tags": [
           "PublicServerSettings"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/public-server-settings` instead.",
         "parameters": [
           {
@@ -3190,6 +3257,7 @@
         "tags": [
           "ServerAlert"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/server-alert` instead.",
         "parameters": [
           {
@@ -3251,6 +3319,7 @@
         "tags": [
           "ServerAlert"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/server-alert` instead.",
         "parameters": [
           {
@@ -3334,6 +3403,7 @@
         "tags": [
           "ServerLogs"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/server-logs/get-aspire-url` instead.",
         "parameters": [
           {
@@ -3397,6 +3467,7 @@
         "tags": [
           "ServerStats"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/server-stats` instead.",
         "parameters": [
           {
@@ -3460,6 +3531,7 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tags?tenantId=` instead. The replacement requires tenantId as a query parameter, returns 201, and takes the tenant from the required parameter instead of the caller claim.",
         "parameters": [
           {
@@ -3541,11 +3613,13 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tags?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
             "name": "includeLinkedIds",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "boolean",
               "default": false
@@ -3619,6 +3693,7 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tags/{tagId}?tenantId=` instead. The replacement takes the tag id in the route, tenantId as a query parameter, and a body with only name.",
         "parameters": [
           {
@@ -3702,11 +3777,13 @@
         "tags": [
           "Tags"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tags/{tagId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "tagId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3757,11 +3834,13 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tenant-settings/{name}?tenantId={tenantId}` instead. Use DELETE /api/v1/tenant-settings/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -3809,11 +3888,13 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tenant-settings/{name}?tenantId={tenantId}` instead. Use GET /api/v1/tenant-settings/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -3880,6 +3961,7 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use GET /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
@@ -3941,6 +4023,7 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use POST /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
@@ -4022,6 +4105,7 @@
         "tags": [
           "TenantSettings"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/tenant-settings?tenantId={tenantId}` instead. Use PUT /api/v1/tenant-settings with an explicit tenantId.",
         "parameters": [
           {
@@ -4105,6 +4189,7 @@
         "tags": [
           "TestEmail"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/test-email` instead.",
         "parameters": [
           {
@@ -4151,6 +4236,7 @@
         "tags": [
           "UserPreferences"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use GET /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
@@ -4212,6 +4298,7 @@
         "tags": [
           "UserPreferences"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use POST /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
@@ -4293,6 +4380,7 @@
         "tags": [
           "UserPreferences"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-preferences?tenantId={tenantId}` instead. Use PUT /api/v1/user-preferences with an explicit tenantId.",
         "parameters": [
           {
@@ -4376,11 +4464,13 @@
         "tags": [
           "UserPreferences"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-preferences/{name}?tenantId={tenantId}` instead. Use GET /api/v1/user-preferences/{name} with an explicit tenantId.",
         "parameters": [
           {
             "name": "name",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -4447,11 +4537,13 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/users/{userId}/reset-password?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4519,6 +4611,7 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/users?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
@@ -4600,6 +4693,7 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/users?tenantId=` instead. The replacement requires tenantId as a query parameter and returns an Items envelope.",
         "parameters": [
           {
@@ -4672,11 +4766,13 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter and returns 201.",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4762,11 +4858,13 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4843,11 +4941,13 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/users/{userId}?tenantId=` instead. The replacement requires tenantId as a query parameter instead of deriving it from the caller claim.",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4898,11 +4998,13 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4912,6 +5014,7 @@
           {
             "name": "tokenId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4960,11 +5063,13 @@
         "tags": [
           "Users"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/users/{userId}/personal-access-tokens/{tokenId}?tenantId=` instead. The replacement requires tenantId as a query parameter.",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4974,6 +5079,7 @@
           {
             "name": "tokenId",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5061,6 +5167,7 @@
         "tags": [
           "UserServerSettings"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-server-settings/file-upload-max-size` instead.",
         "parameters": [
           {
@@ -5124,6 +5231,7 @@
         "tags": [
           "UserServerSettings"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-server-settings/decommission-status` instead.",
         "parameters": [
           {
@@ -5187,11 +5295,13 @@
         "tags": [
           "UserStorage"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-storage/{key}?tenantId={tenantId}` instead. Use DELETE /api/v1/user-storage/{key} with an explicit tenantId.",
         "parameters": [
           {
             "name": "key",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -5259,11 +5369,13 @@
         "tags": [
           "UserStorage"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-storage/{key}?tenantId={tenantId}` instead. Use GET /api/v1/user-storage/{key} with an explicit tenantId.",
         "parameters": [
           {
             "name": "key",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -5333,6 +5445,7 @@
         "tags": [
           "UserStorage"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/user-storage?tenantId={tenantId}` instead. Use POST /api/v1/user-storage with an explicit tenantId.",
         "parameters": [
           {
@@ -5436,6 +5549,7 @@
         "tags": [
           "Version"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/version/agent` instead.",
         "parameters": [
           {
@@ -5494,6 +5608,7 @@
         "tags": [
           "Version"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/version/release-notes` instead.",
         "parameters": [
           {
@@ -5549,6 +5664,7 @@
         "tags": [
           "Version"
         ],
+        "summary": "",
         "description": "Deprecated. Use `/api/v1/version/server` instead.",
         "parameters": [
           {
@@ -5607,6 +5723,7 @@
         "tags": [
           "AgentDeployment"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -5664,10 +5781,12 @@
         "tags": [
           "AgentUpdate"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "runtime",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/RuntimeId"
@@ -5714,10 +5833,12 @@
         "tags": [
           "AgentUpdate"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "runtime",
             "in": "path",
+            "description": "",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/RuntimeId"
@@ -5764,6 +5885,7 @@
         "tags": [
           "Devices"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -5836,6 +5958,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "application/json": {
@@ -5881,10 +6004,12 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "useCookies",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "boolean"
             }
@@ -5892,6 +6017,7 @@
           {
             "name": "useSessionCookies",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "boolean"
             }
@@ -5936,6 +6062,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "application/json": {
@@ -5975,11 +6102,13 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "operationId": "MapIdentityApi-/api/auth/confirmEmail",
         "parameters": [
           {
             "name": "userId",
             "in": "query",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -5988,6 +6117,7 @@
           {
             "name": "code",
             "in": "query",
+            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -5996,6 +6126,7 @@
           {
             "name": "changedEmail",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -6023,6 +6154,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "application/json": {
@@ -6065,6 +6197,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "application/json": {
@@ -6107,6 +6240,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "application/json": {
@@ -6149,6 +6283,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "application/json": {
@@ -6209,6 +6344,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "responses": {
           "200": {
             "description": "OK",
@@ -6257,6 +6393,7 @@
         "tags": [
           "Auth"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "application/json": {
@@ -6317,6 +6454,7 @@
         "tags": [
           "Account"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "multipart/form-data": {
@@ -6388,6 +6526,7 @@
         "tags": [
           "Account"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "multipart/form-data": {
@@ -6431,6 +6570,7 @@
         "tags": [
           "Account"
         ],
+        "summary": "",
         "responses": {
           "200": {
             "description": "OK"
@@ -6443,10 +6583,12 @@
         "tags": [
           "Account"
         ],
+        "summary": "",
         "parameters": [
           {
             "name": "username",
             "in": "query",
+            "description": "",
             "schema": {
               "type": "string"
             }
@@ -6464,6 +6606,7 @@
         "tags": [
           "Account"
         ],
+        "summary": "",
         "requestBody": {
           "content": {
             "multipart/form-data": {
@@ -6515,6 +6658,7 @@
         "tags": [
           "Account"
         ],
+        "summary": "",
         "responses": {
           "200": {
             "description": "OK"
@@ -6644,7 +6788,8 @@
               "string"
             ]
           }
-        }
+        },
+        "description": "Deployment values the server wants this device's install to use. A null member means the server\nhas no opinion, so the agent keeps what it has."
       },
       "AgentInstallerKeyDto": {
         "required": [
@@ -7071,7 +7216,8 @@
             ],
             "format": "uuid"
           }
-        }
+        },
+        "description": "A single permission scope granted to a credential (PAT or logon token)."
       },
       "CurrentUserResponseDto": {
         "required": [
@@ -8143,13 +8289,15 @@
           "DeviceGroup",
           "Device",
           "UserGroup"
-        ]
+        ],
+        "description": "The kind of resource a permission assignment is scoped to."
       },
       "PersonalAccessTokenPermissionMode": {
         "enum": [
           "Restricted",
           "InheritOwner"
-        ]
+        ],
+        "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
       },
       "PersonalAccessTokenResponseDto": {
         "required": [
@@ -8262,7 +8410,8 @@
               "string"
             ]
           }
-        }
+        },
+        "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\nso the UI can adapt to server configuration without requiring a login."
       },
       "RefreshRequest": {
         "required": [

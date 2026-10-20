@@ -1,8 +1,8 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Linux.XdgPortal;
 using ControlR.DesktopClient.Linux.Services;
-using ControlR.DesktopClient.ViewModels;
 using ControlR.DesktopClient.ViewModels.Linux;
 using ControlR.Libraries.NativeInterop.Linux;
 using ControlR.Libraries.NativeInterop.Unix;

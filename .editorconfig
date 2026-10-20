@@ -159,3 +159,9 @@ dotnet_diagnostic.RS0030.severity = error
 
 [ControlR.Web.Server/Api/V1/**/*.cs]
 dotnet_diagnostic.RS0030.severity = error
+
+# EF writes these by hand-forced convention: a lowercase timestamped class name and a block-scoped
+# namespace. Both come back on every `dotnet ef migrations add`, so the style rules stay off here.
+[ControlR.Web.Server/Data/Migrations/*.cs]
+dotnet_diagnostic.IDE1006.severity = none
+dotnet_diagnostic.IDE0161.severity = none

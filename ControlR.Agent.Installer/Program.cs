@@ -393,11 +393,9 @@ static async Task<int> RunInstall(
   }
 }
 
-/// <summary>
-/// Puts a running agent back after a failed install. Every install stops a service before replacing
-/// files, so a failure part-way through could otherwise leave the machine with nothing running and no
-/// way in except a physical visit.
-/// </summary>
+// Puts a running agent back after a failed install. Every install stops a service before replacing
+// files, so a failure part-way through could otherwise leave the machine with nothing running and no
+// way in except a physical visit.
 static async Task RecoverFromFailedInstall(
   IHost host,
   IAgentInstaller installer,
@@ -543,10 +541,8 @@ static FileSystemPathProvider GetTempPathProvider(HostApplicationBuilder builder
   return CreateStandalonePathProvider(instanceOptions.InstanceId);
 }
 
-/// <summary>
-/// Builds a path provider without a service container, for the steps that must run before the host
-/// exists or that need to address a brand other than the one compiled into this executable.
-/// </summary>
+// Builds a path provider without a service container, for the steps that must run before the host
+// exists or that need to address a brand other than the one compiled into this executable.
 static FileSystemPathProvider CreateStandalonePathProvider(string? instanceId)
 {
   IElevationChecker elevationChecker =
