@@ -292,9 +292,10 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
 
     await _viewerHub.WaitForConnected(cancellationToken);
 
-    return await _viewerHub.Server.InvokeRemoteControlDtoOnAgent(
-      CreateRequest(session, wrapper),
-      cancellationToken);
+    var request = CreateRequest(session, wrapper);
+    return await _viewerHub.Server
+      .InvokeRemoteControlDtoOnAgent(request)
+      .WaitAsync(cancellationToken);
   }
 
   private async Task SendDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
@@ -304,10 +305,10 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       throw new InvalidOperationException("Remote control session has not been initialized.");
     }
 
-    await _viewerHub.Send(
-      nameof(IViewerHub.SendRemoteControlDtoToAgent),
-      [CreateRequest(session, wrapper)],
-      cancellationToken);
+    var request = CreateRequest(session, wrapper);
+    await _viewerHub.Server
+      .SendRemoteControlDtoToAgent(request)
+      .WaitAsync(cancellationToken);
   }
 
   private async Task<HubResult> TryInvoke(Func<Task<HubResult>> func, [CallerMemberName] string callerName = "")

@@ -126,23 +126,22 @@ public partial class ViewerHub
     }
   }
 
-  public async Task<HubResult> InvokeRemoteControlDtoOnAgent(
-    SendRemoteControlDtoToAgentRequestDto request,
-    CancellationToken cancellationToken = default)
+  public async Task<HubResult> InvokeRemoteControlDtoOnAgent(SendRemoteControlDtoToAgentRequestDto request)
   {
     try
     {
       using var scope = _logger.BeginMemberScope();
 
-      var authorization = await TryAuthorizeRemoteControlDto(request, cancellationToken);
+      var authorization = await TryAuthorizeRemoteControlDto(request, Context.ConnectionAborted);
       if (!authorization.IsSuccess)
       {
-        return HubResult.Fail(authorization.Reason!, authorization.FailureCode);
+        return HubResult.Fail(authorization.Reason, authorization.FailureCode);
       }
 
       return await _agentHub.Clients
-        .Client(authorization.Value!)
-        .InvokeRemoteControlDto(request);
+        .Client(authorization.Value)
+        .InvokeRemoteControlDto(request)
+        .WaitAsync(Context.ConnectionAborted);
     }
     catch (Exception ex)
     {
@@ -300,7 +299,7 @@ public partial class ViewerHub
       }
 
       await _agentHub.Clients
-        .Client(authorization.Value!)
+        .Client(authorization.Value)
         .SendRemoteControlDto(request);
     }
     catch (Exception ex)

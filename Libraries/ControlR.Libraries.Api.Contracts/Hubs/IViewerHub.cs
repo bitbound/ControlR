@@ -41,9 +41,7 @@ public interface IViewerHub
   [Obsolete("Use InvokeCtrlAltDel2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType);
   Task<HubResult> InvokeCtrlAltDel2(InvokeCtrlAltDelViewerRequestDto request);
-  Task<HubResult> InvokeRemoteControlDtoOnAgent(
-    SendRemoteControlDtoToAgentRequestDto request,
-    CancellationToken cancellationToken = default);
+  Task<HubResult> InvokeRemoteControlDtoOnAgent(SendRemoteControlDtoToAgentRequestDto request);
 
   [Obsolete("Use RefreshDeviceInfo2. (deprecated 2026-09-03, v0.28.x)")]
   Task RefreshDeviceInfo(Guid deviceId);
