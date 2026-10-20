@@ -76,7 +76,7 @@ public static class ControlrApiClientBuilder
   /// <remarks>
   /// <para>
   ///   The client is built on a plain, self-contained object graph (no DI container). Its HTTP stack
-  ///   uses a <see cref="System.Net.Sockets.SocketsHttpHandler"/> with a pooled connection lifetime,
+  ///   uses a <see cref="System.Net.Http.SocketsHttpHandler"/> with a pooled connection lifetime,
   ///   so you don't have to worry about socket exhaustion.
   /// </para>
   /// <para>

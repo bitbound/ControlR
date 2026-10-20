@@ -1,6 +1,6 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.Services;
-using ControlR.DesktopClient.ViewModels;
+using ControlR.DesktopClient.Common.ViewModels;
 using ControlR.DesktopClient.Windows.Services;
 using ControlR.Libraries.NativeInterop.Windows;
 using Microsoft.Extensions.DependencyInjection;
