@@ -16,6 +16,7 @@ public partial class ViewerHubTraceFilter : IHubFilter
     nameof(ViewerHub.RequestRemoteControlPermission),
     nameof(ViewerHub.RequestRemoteControlSession),
     nameof(ViewerHub.RequestRemoteControlSession2),
+    nameof(ViewerHub.RequestRemoteControlSession3),
     nameof(ViewerHub.RequestVncSession),
     nameof(ViewerHub.RequestVncSession2),
     nameof(ViewerHub.SendAgentUpdateTrigger),
