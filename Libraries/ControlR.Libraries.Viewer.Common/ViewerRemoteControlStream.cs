@@ -1,5 +1,6 @@
 ﻿using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
+using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.WebSocketRelay.Client;
 
@@ -16,12 +17,14 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
     RemoteControlSession session,
     Uri websocketUri,
     CancellationToken cancellationToken);
-  Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken);
+  new Task Connect(Uri websocketUri, CancellationToken cancellationToken);
+  new Task Connect(Uri websocketUri, Action<ClientWebSocketOptions> configureOptions, CancellationToken cancellationToken);
+  Task<HubResult> RequestClipboardText(Guid sessionId, CancellationToken cancellationToken);
   Task RequestKeyFrame(CancellationToken cancellationToken);
-  Task SendCaptureSettings(UpdateCaptureSettingsDto settings, CancellationToken cancellationToken);
-  Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
-  Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
-  Task SendCloseStreamingSession(CancellationToken cancellationToken);
+  Task<HubResult> SendCaptureSettings(UpdateCaptureSettingsDto settings, CancellationToken cancellationToken);
+  Task<HubResult> SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
+  Task<HubResult> SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
+  Task<HubResult> SendCloseStreamingSession(CancellationToken cancellationToken);
   Task SendKeyboardStateReset(CancellationToken cancellationToken);
   Task SendKeyEvent(
     string key,
@@ -35,8 +38,8 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
   Task SendMouseClick(int button, bool isDoubleClick, double normalizedX, double normalizedY,
     CancellationToken cancellationToken);
   Task SendPointerMove(double normalizedX, double normalizedY, CancellationToken cancellationToken);
-  Task SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken);
-  Task SendTogglePrivacyScreen(bool isEnabled, CancellationToken cancellationToken);
+  Task<HubResult> SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken);
+  Task<HubResult> SendTogglePrivacyScreen(bool isEnabled, CancellationToken cancellationToken);
   Task SendTypeText(string text, CancellationToken cancellationToken);
   Task SendWheelScroll(double normalizedX, double normalizedY, double scrollY, double scrollX,
     CancellationToken cancellationToken);
@@ -80,14 +83,23 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
     return base.Connect(websocketUri, configureOptions, cancellationToken);
   }
 
-  public async Task RequestClipboardText(Guid sessionId, CancellationToken cancellationToken)
+  public new Task Connect(Uri websocketUri, CancellationToken cancellationToken) =>
+    throw new InvalidOperationException("Use the overload that accepts a remote control session.");
+
+  public new Task Connect(
+    Uri websocketUri,
+    Action<ClientWebSocketOptions> configureOptions,
+    CancellationToken cancellationToken) =>
+    throw new InvalidOperationException("Use the overload that accepts a remote control session.");
+
+  public async Task<HubResult> RequestClipboardText(Guid sessionId, CancellationToken cancellationToken)
   {
-    await TrySend(
+    return await TryInvoke(
       async () =>
       {
         var dto = new RequestClipboardTextDto();
         var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.RequestClipboardText);
-        await SendDto(wrapper, cancellationToken);
+        return await InvokeDto(wrapper, cancellationToken);
       });
   }
 
@@ -102,46 +114,46 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       });
   }
 
-  public async Task SendCaptureSettings(UpdateCaptureSettingsDto settings, CancellationToken cancellationToken)
+  public async Task<HubResult> SendCaptureSettings(UpdateCaptureSettingsDto settings, CancellationToken cancellationToken)
   {
-    await TrySend(
+    return await TryInvoke(
       async () =>
       {
         var wrapper = RemoteControlDtoWrapper.Create(settings, RemoteControlDtoType.UpdateCaptureSettings);
-        await SendDto(wrapper, cancellationToken);
+        return await InvokeDto(wrapper, cancellationToken);
       });
   }
 
-  public async Task SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken)
+  public async Task<HubResult> SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken)
   {
-    await TrySend(
+    return await TryInvoke(
       async () =>
       {
         var dto = new ChangeDisplaysDto(displayId);
         var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ChangeDisplays);
-        await SendDto(wrapper, cancellationToken);
+        return await InvokeDto(wrapper, cancellationToken);
       });
   }
 
-  public async Task SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken)
+  public async Task<HubResult> SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken)
   {
-    await TrySend(
+    return await TryInvoke(
       async () =>
       {
         var dto = new ClipboardTextDto(text, sessionId);
         var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ClipboardText);
-        await SendDto(wrapper, cancellationToken);
+        return await InvokeDto(wrapper, cancellationToken);
       });
   }
 
-  public async Task SendCloseStreamingSession(CancellationToken cancellationToken)
+  public async Task<HubResult> SendCloseStreamingSession(CancellationToken cancellationToken)
   {
-    await TrySend(
+    return await TryInvoke(
       async () =>
       {
         var dto = new CloseStreamingSessionRequestDto();
         var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.CloseRemoteControlSession);
-        await SendDto(wrapper, cancellationToken);
+        return await InvokeDto(wrapper, cancellationToken);
       });
   }
 
@@ -212,25 +224,25 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       });
   }
 
-  public async Task SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken)
+  public async Task<HubResult> SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken)
   {
-    await TrySend(
+    return await TryInvoke(
       async () =>
       {
         var dto = new ToggleBlockInputDto(isEnabled);
         var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ToggleBlockInput);
-        await SendDto(wrapper, cancellationToken);
+        return await InvokeDto(wrapper, cancellationToken);
       });
   }
 
-  public async Task SendTogglePrivacyScreen(bool isEnabled, CancellationToken cancellationToken)
+  public async Task<HubResult> SendTogglePrivacyScreen(bool isEnabled, CancellationToken cancellationToken)
   {
-    await TrySend(
+    return await TryInvoke(
       async () =>
       {
         var dto = new TogglePrivacyScreenDto(isEnabled);
         var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.TogglePrivacyScreen);
-        await SendDto(wrapper, cancellationToken);
+        return await InvokeDto(wrapper, cancellationToken);
       });
   }
 
@@ -257,21 +269,61 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       });
   }
 
+  private static SendRemoteControlDtoToAgentRequestDto CreateRequest(
+    RemoteControlSession session,
+    RemoteControlDtoWrapper wrapper) =>
+    new(
+      session.Device.Id,
+      session.TargetProcessId,
+      session.SessionId,
+      wrapper);
+
   private Task HandleRemoteControlDtoReceived(object subscriber, DtoReceivedMessage<RemoteControlDtoWrapper> message)
   {
     return InvokeMessageHandlers(message.Dto);
   }
 
+  private async Task<HubResult> InvokeDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
+  {
+    if (_session is not { } session)
+    {
+      return HubResult.Fail("Remote control session has not been initialized.");
+    }
+
+    await _viewerHub.WaitForConnected(cancellationToken);
+
+    return await _viewerHub.Server.InvokeRemoteControlDtoOnAgent(
+      CreateRequest(session, wrapper),
+      cancellationToken);
+  }
+
   private async Task SendDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
   {
-    var session = _session ?? throw new InvalidOperationException("Remote control session has not been initialized.");
+    if (_session is not { } session)
+    {
+      throw new InvalidOperationException("Remote control session has not been initialized.");
+    }
 
-    await _viewerHub.Server.SendRemoteControlDtoToAgent(
-      new SendRemoteControlDtoToAgentRequestDto(
-        session.Device.Id,
-        session.TargetProcessId,
-        session.SessionId,
-        wrapper));
+    await _viewerHub.Send(
+      nameof(IViewerHub.SendRemoteControlDtoToAgent),
+      [CreateRequest(session, wrapper)],
+      cancellationToken);
+  }
+
+  private async Task<HubResult> TryInvoke(Func<Task<HubResult>> func, [CallerMemberName] string callerName = "")
+  {
+    try
+    {
+      using var _ = _logger.BeginScope(callerName);
+      return await func.Invoke();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while invoking remote control method.");
+      return HubResult.Fail(string.IsNullOrWhiteSpace(ex.Message)
+        ? "An error occurred while sending the remote control command."
+        : ex.Message);
+    }
   }
 
   private async Task TrySend(Func<Task> func, [CallerMemberName] string callerName = "")

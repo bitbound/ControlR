@@ -14,6 +14,7 @@ using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Shared.Services;
+using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -62,11 +63,37 @@ public class AgentHubClientPermissionPreflightTests
   }
 
   [Fact]
-  public async Task ReceiveRemoteControlDto_ForwardsToDesktopClient()
+  public async Task InvokeRemoteControlDto_DesktopFails_ReturnsFailure()
+  {
+    var targetProcessId = 4246;
+    var desktopClientRpc = new Mock<IDesktopClientRpcService>();
+    desktopClientRpc
+      .Setup(x => x.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlDtoWrapper>()))
+      .ReturnsAsync(Result.Fail("No remote control session found."));
+    var ipcServer = new Mock<IIpcServer>();
+    ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
+
+    var serverStore = CreateIpcServerStore(targetProcessId, ipcServer.Object);
+    var sut = CreateSut(serverStore.Object);
+    var result = await sut.InvokeRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
+      Guid.NewGuid(),
+      targetProcessId,
+      Guid.NewGuid(),
+      RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText)));
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("No remote control session found.", result.Reason);
+  }
+
+  [Fact]
+  public async Task InvokeRemoteControlDto_ForwardsToDesktopClient()
   {
     var targetProcessId = 4244;
     var sessionId = Guid.NewGuid();
     var desktopClientRpc = new Mock<IDesktopClientRpcService>();
+    desktopClientRpc
+      .Setup(x => x.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlDtoWrapper>()))
+      .ReturnsAsync(Result.Ok());
     var ipcServer = new Mock<IIpcServer>();
     ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
 
@@ -74,7 +101,7 @@ public class AgentHubClientPermissionPreflightTests
     var sut = CreateSut(serverStore.Object);
     var wrapper = RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText);
 
-    var result = await sut.ReceiveRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
+    var result = await sut.InvokeRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
       Guid.NewGuid(),
       targetProcessId,
       sessionId,
@@ -87,7 +114,7 @@ public class AgentHubClientPermissionPreflightTests
   }
 
   [Fact]
-  public async Task ReceiveRemoteControlDto_UnknownProcess_ReturnsFailure()
+  public async Task InvokeRemoteControlDto_UnknownProcess_ReturnsFailure()
   {
     var serverStore = new Mock<IIpcServerStore>();
     IpcServerRecord? serverRecord = null;
@@ -96,7 +123,7 @@ public class AgentHubClientPermissionPreflightTests
       .Returns(false);
 
     var sut = CreateSut(serverStore.Object);
-    var result = await sut.ReceiveRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
+    var result = await sut.InvokeRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
       Guid.NewGuid(),
       TargetProcessId: 4245,
       SessionId: Guid.NewGuid(),

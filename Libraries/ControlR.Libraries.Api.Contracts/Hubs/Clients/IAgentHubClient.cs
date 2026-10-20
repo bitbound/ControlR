@@ -22,15 +22,16 @@ public interface IAgentHubClient
   Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<HubResult<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
   Task<HubResult> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto requestDto);
+  Task<HubResult> InvokeRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request);
   Task InvokeWakeDevice(WakeDeviceDto dto);
   Task ReceiveAgentUpdateTrigger();
   Task ReceivePowerStateChange(PowerStateChangeType changeType);
-  Task<HubResult> ReceiveRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request);
   Task<HubResult> ReceiveTerminalInput(TerminalInputDto dto);
   Task RefreshDeviceInfo();
   Task<HubResult> RequestDesktopPreview(DesktopPreviewRequestDto dto);
   Task<HubResult> RequestRemoteControlPermission(int targetProcessId);
   Task<HubResult> SendChatMessage(ChatMessageHubDto dto);
+  Task SendRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request);
   Task<HubResult> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto);
   Task<HubResult> StreamFileContents(StreamFileContentsRequestHubDto dto);
   Task<HubResult> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto);

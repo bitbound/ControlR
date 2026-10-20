@@ -41,6 +41,9 @@ public interface IViewerHub
   [Obsolete("Use InvokeCtrlAltDel2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType);
   Task<HubResult> InvokeCtrlAltDel2(InvokeCtrlAltDelViewerRequestDto request);
+  Task<HubResult> InvokeRemoteControlDtoOnAgent(
+    SendRemoteControlDtoToAgentRequestDto request,
+    CancellationToken cancellationToken = default);
 
   [Obsolete("Use RefreshDeviceInfo2. (deprecated 2026-09-03, v0.28.x)")]
   Task RefreshDeviceInfo(Guid deviceId);
@@ -75,7 +78,7 @@ public interface IViewerHub
 
   Task<HubResult> SendPowerStateChange2(SendPowerStateChangeRequestDto request);
 
-  Task<HubResult> SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request);
+  Task SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request);
 
   [Obsolete("Use SendTerminalInput2. (deprecated 2026-09-03, v0.28.x)")]
   Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto);

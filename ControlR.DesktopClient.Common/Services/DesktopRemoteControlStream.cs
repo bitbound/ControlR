@@ -10,6 +10,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.WebSocketRelay.Client;
@@ -21,7 +22,7 @@ namespace ControlR.DesktopClient.Common.Services;
 
 public interface IDesktopRemoteControlStream : IManagedRelayStream
 {
-  Task ReceiveRemoteControlDto(RemoteControlDtoWrapper dto);
+  Task<Result> ReceiveRemoteControlDto(RemoteControlDtoWrapper dto);
   Task RequestDisconnect();
   Task SendCurrentClipboardText();
   Task StreamScreen(CancellationToken cancellationToken);
@@ -65,7 +66,7 @@ internal sealed class DesktopRemoteControlStream(
 
   private bool _isInputBlocked;
 
-  public Task ReceiveRemoteControlDto(RemoteControlDtoWrapper dto)
+  public Task<Result> ReceiveRemoteControlDto(RemoteControlDtoWrapper dto)
   {
     return HandleMessageReceived(dto);
   }
@@ -231,7 +232,7 @@ internal sealed class DesktopRemoteControlStream(
     await SendDisplayData();
   }
 
-  private async Task HandleMessageReceived(RemoteControlDtoWrapper wrapper)
+  private async Task<Result> HandleMessageReceived(RemoteControlDtoWrapper wrapper)
   {
     try
     {
@@ -388,12 +389,15 @@ internal sealed class DesktopRemoteControlStream(
           }
         default:
           _logger.LogWarning("Unhandled DTO type: {type}", wrapper.DtoType);
-          break;
+          return Result.Fail($"Unhandled remote control DTO type: {wrapper.DtoType}");
       }
+
+      return Result.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while handling DTO.");
+      return Result.Fail(ex);
     }
   }
 
@@ -600,11 +604,6 @@ internal sealed class DesktopRemoteControlStream(
   {
     try
     {
-      if (State != WebSocketState.Open)
-      {
-        return;
-      }
-
       var message = ex.GetBaseException().Message;
       if (string.IsNullOrWhiteSpace(message))
       {

@@ -1,6 +1,7 @@
 using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -176,7 +177,7 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
       .Returns<Guid, RemoteControlDtoWrapper>((_, dto) =>
       {
         tcs.SetResult(dto);
-        return Task.CompletedTask;
+        return Task.FromResult(Result.Ok());
       });
 
     var serviceCollection = new ServiceCollection();

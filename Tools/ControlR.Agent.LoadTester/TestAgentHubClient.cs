@@ -115,6 +115,12 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(HubResult.Ok());
   }
 
+  public Task<HubResult> InvokeRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
+  {
+    Console.WriteLine($"Received DTO of type: {request.Wrapper.DtoType}");
+    return Task.FromResult(HubResult.Ok());
+  }
+
   public Task InvokeWakeDevice(WakeDeviceDto dto)
   {
     Console.WriteLine("Received wake device request.");
@@ -131,12 +137,6 @@ public class TestAgentHubClient : IAgentHubClient
   {
     Console.WriteLine($"Received power state change: {changeType}");
     return Task.CompletedTask;
-  }
-
-  public Task<HubResult> ReceiveRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
-  {
-    Console.WriteLine($"Received DTO of type: {request.Wrapper.DtoType}");
-    return Task.FromResult(HubResult.Ok());
   }
 
   public Task<HubResult> ReceiveTerminalInput(TerminalInputDto dto)
@@ -167,6 +167,12 @@ public class TestAgentHubClient : IAgentHubClient
   {
     Console.WriteLine($"Sending chat message from {dto.SenderName} ({dto.SenderEmail}): {dto.Message}");
     return Task.FromResult(HubResult.Ok());
+  }
+
+  public Task SendRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
+  {
+    Console.WriteLine($"Received DTO of type: {request.Wrapper.DtoType}");
+    return Task.CompletedTask;
   }
 
   public Task<HubResult> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)

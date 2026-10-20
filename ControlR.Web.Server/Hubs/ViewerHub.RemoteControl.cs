@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Web.Server.Authz.Permissions;
@@ -19,18 +20,18 @@ public partial class ViewerHub
   ];
 
   // Commands arrive at input rate, so the session's permissions are resolved once and reused.
-  private ConcurrentDictionary<Guid, RemoteControlAuthorization> RemoteControlAuthorizations
+  private ConcurrentDictionary<(Guid DeviceId, Guid SessionId), IReadOnlySet<string>> RemoteControlAuthorizations
   {
     get
     {
       lock (Context.Items)
       {
-        if (GetItem<ConcurrentDictionary<Guid, RemoteControlAuthorization>?>(null) is { } cached)
+        if (GetItem<ConcurrentDictionary<(Guid DeviceId, Guid SessionId), IReadOnlySet<string>>?>(null) is { } cached)
         {
           return cached;
         }
 
-        var created = new ConcurrentDictionary<Guid, RemoteControlAuthorization>();
+        var created = new ConcurrentDictionary<(Guid DeviceId, Guid SessionId), IReadOnlySet<string>>();
         SetItem(created);
         return created;
       }
@@ -125,6 +126,31 @@ public partial class ViewerHub
     }
   }
 
+  public async Task<HubResult> InvokeRemoteControlDtoOnAgent(
+    SendRemoteControlDtoToAgentRequestDto request,
+    CancellationToken cancellationToken = default)
+  {
+    try
+    {
+      using var scope = _logger.BeginMemberScope();
+
+      var authorization = await TryAuthorizeRemoteControlDto(request, cancellationToken);
+      if (!authorization.IsSuccess)
+      {
+        return HubResult.Fail(authorization.Reason!, authorization.FailureCode);
+      }
+
+      return await _agentHub.Clients
+        .Client(authorization.Value!)
+        .InvokeRemoteControlDto(request);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while invoking remote control DTO on agent.");
+      return HubResult.Fail("An error occurred while sending the remote control DTO to the agent.");
+    }
+  }
+
   [Obsolete("Use RequestRemoteControlPermission2. (deprecated 2026-09-03, v0.28.x)")]
   public async Task<HubResult> RequestRemoteControlPermission(Guid deviceId, int targetProcessId)
   {
@@ -192,13 +218,29 @@ public partial class ViewerHub
         return HubResult.Fail("The requested desktop session is not authorized.");
       }
 
-      var authorization = await TryGetRemoteControlAuthorization(
-        sessionRequestDto.DeviceId,
+      var device = await _appDb.Devices
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.Id == sessionRequestDto.DeviceId, Context.ConnectionAborted);
+
+      if (device is null)
+      {
+        _logger.LogWarning("Device {DeviceId} not found.", sessionRequestDto.DeviceId);
+        return HubResult.Fail("Device not found.");
+      }
+
+      if (Context.User is not { } user)
+      {
+        return HubResult.Fail("Unauthorized.");
+      }
+
+      var allowedPermissions = await TryGetRemoteControlPermissions(
+        device,
         sessionRequestDto.SessionId,
+        user,
         Context.ConnectionAborted);
 
-      if (authorization is null ||
-          !authorization.AllowedPermissions.Contains(PermissionNames.DeviceRemoteControlConnect))
+      if (allowedPermissions is null ||
+          !allowedPermissions.Contains(PermissionNames.DeviceRemoteControlConnect))
       {
         _logger.LogCritical(
           "Unauthorized remote control session attempted by user: {UserName}.  Device: {DeviceId}.",
@@ -207,7 +249,12 @@ public partial class ViewerHub
         return HubResult.Fail("Unauthorized.");
       }
 
-      var device = authorization.Device;
+      if (!device.IsOnline || string.IsNullOrWhiteSpace(device.ConnectionId))
+      {
+        _logger.LogWarning("Device {DeviceId} is not online.", sessionRequestDto.DeviceId);
+        return HubResult.Fail("Device is not currently online.", OperationFailureCode.DeviceOffline);
+      }
+
       var notifyUser = await _effectiveUserPreferencesResolver.GetNotifyUserOnSessionStart(
         device.TenantId,
         userId,
@@ -234,39 +281,31 @@ public partial class ViewerHub
     }
   }
 
-  public async Task<HubResult> SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request)
+  public async Task SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request)
   {
     try
     {
       using var scope = _logger.BeginMemberScope();
 
-      var authorization = await TryGetRemoteControlAuthorization(
-        request.DeviceId,
-        request.SessionId,
-        Context.ConnectionAborted);
-
-      var permission = GetRemoteControlPermission(request.Wrapper.DtoType);
-      if (authorization is null ||
-          !authorization.AllowedPermissions.Contains(permission))
+      var authorization = await TryAuthorizeRemoteControlDto(request, Context.ConnectionAborted);
+      if (!authorization.IsSuccess)
       {
-        _logger.LogCritical(
-          "Unauthorized remote control action attempted by user: {UserName}.  Device: {DeviceId}.  " +
-          "Session: {SessionId}.  DtoType: {DtoType}.",
-          Context.UserIdentifier,
-          request.DeviceId,
+        _logger.LogWarning(
+          "Remote control DTO {DtoType} for session {SessionId} was not sent to device {DeviceId}.  {Reason}",
+          request.Wrapper.DtoType,
           request.SessionId,
-          request.Wrapper.DtoType);
-        return HubResult.Fail("Unauthorized.");
+          request.DeviceId,
+          authorization.Reason);
+        return;
       }
 
-      return await _agentHub.Clients
-        .Client(authorization.Device.ConnectionId)
-        .ReceiveRemoteControlDto(request);
+      await _agentHub.Clients
+        .Client(authorization.Value!)
+        .SendRemoteControlDto(request);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending remote control DTO to agent.");
-      return HubResult.Fail("An error occurred while sending the remote control DTO to the agent.");
     }
   }
 
@@ -281,29 +320,69 @@ public partial class ViewerHub
     _ => PermissionNames.DeviceRemoteControlInteract
   };
 
-  private async Task<RemoteControlAuthorization?> TryGetRemoteControlAuthorization(
-    Guid deviceId,
+  private async Task<HubResult<string>> TryAuthorizeRemoteControlDto(
+    SendRemoteControlDtoToAgentRequestDto request,
+    CancellationToken cancellationToken)
+  {
+    if (Context.User is not { } user)
+    {
+      return HubResult.Fail<string>("Unauthorized.");
+    }
+
+    // The connection id is read here rather than cached, so an agent reconnect takes effect immediately.
+    var device = await _appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+
+    if (device is null)
+    {
+      _logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
+      return HubResult.Fail<string>("Device not found.");
+    }
+
+    var permission = GetRemoteControlPermission(request.Wrapper.DtoType);
+    var allowedPermissions = await TryGetRemoteControlPermissions(
+      device,
+      request.SessionId,
+      user,
+      cancellationToken);
+
+    if (allowedPermissions is null || !allowedPermissions.Contains(permission))
+    {
+      _logger.LogCritical(
+        "Unauthorized remote control action attempted by user: {UserName}.  Device: {DeviceId}.  " +
+        "Session: {SessionId}.  DtoType: {DtoType}.",
+        Context.UserIdentifier,
+        request.DeviceId,
+        request.SessionId,
+        request.Wrapper.DtoType);
+      return HubResult.Fail<string>("Unauthorized.");
+    }
+
+    if (!device.IsOnline || string.IsNullOrWhiteSpace(device.ConnectionId))
+    {
+      _logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
+      return HubResult.Fail<string>("Device is not currently online.", OperationFailureCode.DeviceOffline);
+    }
+
+    return HubResult.Ok(device.ConnectionId);
+  }
+
+  private async Task<IReadOnlySet<string>?> TryGetRemoteControlPermissions(
+    Device device,
     Guid sessionId,
+    ClaimsPrincipal user,
     CancellationToken cancellationToken)
   {
     var cache = RemoteControlAuthorizations;
-    if (cache.TryGetValue(sessionId, out var cached))
+    var key = (device.Id, sessionId);
+    if (cache.TryGetValue(key, out var cached))
     {
       return cached;
     }
 
-    if (Context.User?.ToPrincipalDescriptor() is not { } principal)
+    if (user.ToPrincipalDescriptor() is not { } principal)
     {
-      return null;
-    }
-
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == deviceId, cancellationToken);
-
-    if (device is null)
-    {
-      _logger.LogWarning("Device {DeviceId} not found.", deviceId);
       return null;
     }
 
@@ -319,10 +398,6 @@ public partial class ViewerHub
       .Select(x => x.Key)
       .ToHashSet(StringComparer.Ordinal);
 
-    return cache.GetOrAdd(sessionId, new RemoteControlAuthorization(device, allowedPermissions));
+    return cache.GetOrAdd(key, allowedPermissions);
   }
-
-  private sealed record RemoteControlAuthorization(
-    Device Device,
-    IReadOnlySet<string> AllowedPermissions);
 }

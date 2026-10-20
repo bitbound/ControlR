@@ -465,6 +465,28 @@ internal class AgentHubClient(
     }
   }
 
+  public async Task<HubResult> InvokeRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
+  {
+    try
+    {
+      if (!_ipcServerStore.TryGetServer(request.TargetProcessId, out var ipcServer))
+      {
+        _logger.LogWarning(
+          "No IPC server found for process ID {ProcessId}.  Cannot deliver remote control DTO.",
+          request.TargetProcessId);
+        return HubResult.Fail($"Process with ID {request.TargetProcessId} is no longer running.");
+      }
+
+      var result = await ipcServer.Server.Client.ReceiveRemoteControlDto(request.SessionId, request.Wrapper);
+      return result.ToHubResult();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while invoking remote control DTO on desktop.");
+      return HubResult.Fail("An error occurred while receiving the remote control DTO.");
+    }
+  }
+
   public async Task InvokeWakeDevice(WakeDeviceDto dto)
   {
     try
@@ -492,28 +514,6 @@ internal class AgentHubClient(
   public async Task ReceivePowerStateChange(PowerStateChangeType changeType)
   {
     await _powerControl.ChangeState(changeType);
-  }
-
-  public async Task<HubResult> ReceiveRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
-  {
-    try
-    {
-      if (!_ipcServerStore.TryGetServer(request.TargetProcessId, out var ipcServer))
-      {
-        _logger.LogWarning(
-          "No IPC server found for process ID {ProcessId}.  Cannot deliver remote control DTO.",
-          request.TargetProcessId);
-        return HubResult.Fail($"Process with ID {request.TargetProcessId} is no longer running.");
-      }
-
-      await ipcServer.Server.Client.ReceiveRemoteControlDto(request.SessionId, request.Wrapper);
-      return HubResult.Ok();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while receiving remote control DTO.");
-      return HubResult.Fail("An error occurred while receiving the remote control DTO.");
-    }
   }
 
   public async Task<HubResult> ReceiveTerminalInput(TerminalInputDto dto)
@@ -693,6 +693,33 @@ internal class AgentHubClient(
     {
       _logger.LogError(ex, "Error while sending chat message to IPC server.");
       return HubResult.Fail("An error occurred while sending chat message.");
+    }
+  }
+
+  public async Task SendRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
+  {
+    try
+    {
+      if (!_ipcServerStore.TryGetServer(request.TargetProcessId, out var ipcServer))
+      {
+        _logger.LogWarning(
+          "No IPC server found for process ID {ProcessId}.  Cannot deliver remote control DTO.",
+          request.TargetProcessId);
+        return;
+      }
+
+      var result = await ipcServer.Server.Client.ReceiveRemoteControlDto(request.SessionId, request.Wrapper);
+      if (!result.IsSuccess)
+      {
+        _logger.LogWarning(
+          "Desktop client did not accept remote control DTO {DtoType}.  {Reason}",
+          request.Wrapper.DtoType,
+          result.Reason);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending remote control DTO to desktop.");
     }
   }
 

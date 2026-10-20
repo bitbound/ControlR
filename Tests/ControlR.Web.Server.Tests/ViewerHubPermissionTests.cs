@@ -98,6 +98,58 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task InvokeRemoteControlDtoOnAgent_ClipboardTextUsesWritePermission()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    var request = new SendRemoteControlDtoToAgentRequestDto(
+      device.Id,
+      TargetProcessId: 100,
+      SessionId: Guid.NewGuid(),
+      Wrapper: RemoteControlDtoWrapper.Create(
+        new ClipboardTextDto("secret", Guid.NewGuid()),
+        RemoteControlDtoType.ClipboardText));
+
+    var result = await hub.InvokeRemoteControlDtoOnAgent(request, TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+    agentClient.Verify(
+      client => client.InvokeRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()),
+      Times.Never);
+  }
+
+  [Fact]
+  public async Task InvokeRemoteControlDtoOnAgent_InputWithoutInteractPermission_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    var request = new SendRemoteControlDtoToAgentRequestDto(
+      device.Id,
+      TargetProcessId: 100,
+      SessionId: Guid.NewGuid(),
+      Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText));
+
+    var result = await hub.InvokeRemoteControlDtoOnAgent(request, TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+    agentClient.Verify(
+      client => client.InvokeRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()),
+      Times.Never);
+  }
+
+  [Fact]
   public async Task RequestRemoteControlSession_AllowedDevice_ForwardsDtoDeviceIdentity()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -281,58 +333,6 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
-  public async Task SendRemoteControlDtoToAgent_ClipboardTextUsesWritePermission()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var tenant = await testApp.Services.CreateTestTenant();
-    var user = await testApp.Services.CreateTestUser(tenant.Id);
-    var device = await testApp.Services.CreateTestDevice(tenant.Id);
-    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
-
-    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
-    var request = new SendRemoteControlDtoToAgentRequestDto(
-      device.Id,
-      TargetProcessId: 100,
-      SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlDtoWrapper.Create(
-        new ClipboardTextDto("secret", Guid.NewGuid()),
-        RemoteControlDtoType.ClipboardText));
-
-    var result = await hub.SendRemoteControlDtoToAgent(request);
-
-    Assert.False(result.IsSuccess);
-    Assert.Equal("Unauthorized.", result.Reason);
-    agentClient.Verify(
-      client => client.ReceiveRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()),
-      Times.Never);
-  }
-
-  [Fact]
-  public async Task SendRemoteControlDtoToAgent_InputWithoutInteractPermission_ReturnsFailure()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var tenant = await testApp.Services.CreateTestTenant();
-    var user = await testApp.Services.CreateTestUser(tenant.Id);
-    var device = await testApp.Services.CreateTestDevice(tenant.Id);
-    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
-
-    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
-    var request = new SendRemoteControlDtoToAgentRequestDto(
-      device.Id,
-      TargetProcessId: 100,
-      SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText));
-
-    var result = await hub.SendRemoteControlDtoToAgent(request);
-
-    Assert.False(result.IsSuccess);
-    Assert.Equal("Unauthorized.", result.Reason);
-    agentClient.Verify(
-      client => client.ReceiveRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()),
-      Times.Never);
-  }
-
-  [Fact]
   public async Task SendRemoteControlDtoToAgent_InteractPermission_ForwardsInput()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -342,9 +342,6 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
 
     var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
-    agentClient
-      .Setup(client => client.ReceiveRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()))
-      .ReturnsAsync(HubResult.Ok());
     var sessionId = Guid.NewGuid();
     var request = new SendRemoteControlDtoToAgentRequestDto(
       device.Id,
@@ -352,10 +349,9 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       SessionId: sessionId,
       Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText));
 
-    var result = await hub.SendRemoteControlDtoToAgent(request);
+    await hub.SendRemoteControlDtoToAgent(request);
 
-    Assert.True(result.IsSuccess);
-    agentClient.Verify(client => client.ReceiveRemoteControlDto(It.Is<SendRemoteControlDtoToAgentRequestDto>(
+    agentClient.Verify(client => client.SendRemoteControlDto(It.Is<SendRemoteControlDtoToAgentRequestDto>(
       forwarded =>
         forwarded.DeviceId == device.Id &&
         forwarded.SessionId == sessionId &&
