@@ -58,6 +58,17 @@ internal class HeadlessServerDetector(
                 return false;
             }
 
+            // display-manager.service is only pulled in by graphical.target, so a multi-user
+            // default cannot start a greeter at boot. graphical.target proves nothing, because
+            // hosts keep it with no display manager installed. See #154.
+            var defaultTargetResult = await _processManager.GetProcessOutput("systemctl", "get-default", 3000);
+            if (defaultTargetResult.IsSuccess &&
+                string.Equals(defaultTargetResult.Value?.Trim(), "multi-user.target", StringComparison.Ordinal))
+            {
+                _logger.LogInformationDeduped("Boot default target is multi-user.target. Assuming headless environment.");
+                return true;
+            }
+
             // Check if DISPLAY environment variable is set in any running process. The probe
             // self-reports, so anything other than the found or none marker means it could not
             // run and its output carries no information about the display state.
