@@ -11,6 +11,7 @@ using ControlR.Web.Server.Services.Authorization;
 using System.Diagnostics;
 using System.Security.Claims;
 using ControlR.Web.Server.Services.Authorization.Capabilities;
+using ControlR.Web.Server.Services.DeviceManagement;
 
 namespace ControlR.Web.Server.Hubs;
 
@@ -26,6 +27,7 @@ public partial class ViewerHub(
   IEffectiveUserPreferencesResolver effectiveUserPreferencesResolver,
   IHubStreamStore hubStreamStore,
   IDesktopSessionAccessAuthorizer desktopSessionAccessAuthorizer,
+  IDeviceConnectionRegistry deviceConnectionRegistry,
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<ViewerHub> logger)
   : HubWithItems<IViewerHubClient>, IViewerHub
@@ -37,6 +39,7 @@ public partial class ViewerHub(
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly IAuthorizationService _authorizationService = authorizationService;
   private readonly IDesktopSessionAccessAuthorizer _desktopSessionAccessAuthorizer = desktopSessionAccessAuthorizer;
+  private readonly IDeviceConnectionRegistry _deviceConnectionRegistry = deviceConnectionRegistry;
   private readonly IEffectiveUserPreferencesResolver _effectiveUserPreferencesResolver = effectiveUserPreferencesResolver;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<ViewerHub> _logger = logger;

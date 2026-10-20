@@ -342,23 +342,27 @@ public partial class ViewerHub
       return HubResult.Fail<string>("Unauthorized.");
     }
 
-    // The connection id is read here rather than cached, so an agent reconnect takes effect immediately.
-    var device = await _appDb.Devices
-      .AsNoTracking()
-      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
-
-    if (device is null)
-    {
-      _logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
-      return HubResult.Fail<string>("Device not found.");
-    }
-
     var permission = GetRemoteControlPermission(request.Wrapper.DtoType);
-    var allowedPermissions = await TryGetRemoteControlPermissions(
-      device,
-      request.SessionId,
-      user,
-      cancellationToken);
+    var cache = RemoteControlAuthorizations;
+    var key = (request.DeviceId, request.SessionId);
+    if (!cache.TryGetValue(key, out var allowedPermissions))
+    {
+      var device = await _appDb.Devices
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+
+      if (device is null)
+      {
+        _logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
+        return HubResult.Fail<string>("Device not found.");
+      }
+
+      allowedPermissions = await TryGetRemoteControlPermissions(
+        device,
+        request.SessionId,
+        user,
+        cancellationToken);
+    }
 
     if (allowedPermissions is null || !allowedPermissions.Contains(permission))
     {
@@ -372,13 +376,32 @@ public partial class ViewerHub
       return HubResult.Fail<string>("Unauthorized.");
     }
 
-    if (!device.IsOnline || string.IsNullOrWhiteSpace(device.ConnectionId))
+    // Steady state reads nothing from the database. AgentHub keeps the registry current on connect,
+    // heartbeat, and disconnect; the database read below only covers this server starting up or the
+    // agent being connected by another node.
+    if (_deviceConnectionRegistry.TryGetConnectionId(request.DeviceId, out var agentConnectionId))
+    {
+      return HubResult.Ok(agentConnectionId);
+    }
+
+    var trackedDevice = await _appDb.Devices
+      .AsNoTracking()
+      .FirstOrDefaultAsync(x => x.Id == request.DeviceId, cancellationToken);
+
+    if (trackedDevice is null)
+    {
+      _logger.LogWarning("Device {DeviceId} not found.", request.DeviceId);
+      return HubResult.Fail<string>("Device not found.");
+    }
+
+    if (!trackedDevice.IsOnline || string.IsNullOrWhiteSpace(trackedDevice.ConnectionId))
     {
       _logger.LogWarning("Device {DeviceId} is not online.", request.DeviceId);
       return HubResult.Fail<string>("Device is not currently online.", OperationFailureCode.DeviceOffline);
     }
 
-    return HubResult.Ok(device.ConnectionId);
+    _deviceConnectionRegistry.Set(trackedDevice.Id, trackedDevice.ConnectionId);
+    return HubResult.Ok(trackedDevice.ConnectionId);
   }
 
   private async Task<IReadOnlySet<string>?> TryGetRemoteControlPermissions(
@@ -410,6 +433,11 @@ public partial class ViewerHub
       .Where(x => x.Value.Allowed)
       .Select(x => x.Key)
       .ToHashSet(StringComparer.Ordinal);
+
+    if (device.IsOnline && !string.IsNullOrWhiteSpace(device.ConnectionId))
+    {
+      _deviceConnectionRegistry.Set(device.Id, device.ConnectionId);
+    }
 
     return cache.GetOrAdd(key, allowedPermissions);
   }

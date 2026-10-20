@@ -10,12 +10,14 @@ using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Options;
 using ControlR.Web.Server.Services.Authorization;
+using ControlR.Web.Server.Services.DeviceManagement;
 using ControlR.Web.Server.Services.Settings;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -420,6 +422,41 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task SendRemoteControlDtoToAgent_RegisteredConnection_ForwardsAfterDeviceRowIsRemoved()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    var sessionId = Guid.NewGuid();
+    var request = new SendRemoteControlDtoToAgentRequestDto(
+      device.Id,
+      TargetProcessId: 100,
+      SessionId: sessionId,
+      Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText));
+
+    await hub.SendRemoteControlDtoToAgent(request);
+
+    using (var scope = testApp.Services.CreateScope())
+    {
+      var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+      appDb.Devices.Remove(
+        await appDb.Devices.SingleAsync(x => x.Id == device.Id, TestContext.Current.CancellationToken));
+      await appDb.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    // The device row is gone. This forward can only come from the in-memory permission snapshot
+    // and connection registry, which is the steady-state path for input-rate commands.
+    await hub.SendRemoteControlDtoToAgent(request);
+
+    agentClient.Verify(client => client.SendRemoteControlDto(It.Is<SendRemoteControlDtoToAgentRequestDto>(
+      forwarded => forwarded.DeviceId == device.Id && forwarded.SessionId == sessionId)), Times.Exactly(2));
+  }
+
+  [Fact]
   public async Task SubscribeToDeviceHeartbeats2_OverBatchLimit_ReturnsFailure()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -544,6 +581,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       preferences.Object,
       services.GetRequiredService<IHubStreamStore>(),
       services.GetRequiredService<IDesktopSessionAccessAuthorizer>(),
+      services.GetRequiredService<IDeviceConnectionRegistry>(),
       services.GetRequiredService<IOptionsMonitor<AppOptions>>(),
       services.GetRequiredService<ILogger<ViewerHub>>());
     hub.Context = new TestHubCallerContext(CreatePrincipal(user, tenantId));

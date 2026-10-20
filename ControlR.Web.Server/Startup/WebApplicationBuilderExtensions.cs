@@ -271,6 +271,7 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddScoped<IPasswordManager, PasswordManager>();
     builder.Services.AddScoped<IPersonalAccessTokenManager, PersonalAccessTokenManager>();
     builder.Services.AddScoped<IPasswordHasher<string>, PasswordHasher<string>>();
+    builder.Services.AddSingleton<IDeviceConnectionRegistry, DeviceConnectionRegistry>();
     builder.Services.AddScoped<IDeviceManager, DeviceManager>();
     builder.Services.AddScoped<IDeviceFileSystemService, DeviceFileSystemService>();
     builder.Services.AddScoped<IEffectiveUserPreferencesResolver, EffectiveUserPreferencesResolver>();

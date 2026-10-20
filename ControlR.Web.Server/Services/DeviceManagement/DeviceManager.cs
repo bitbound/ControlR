@@ -51,6 +51,7 @@ public interface IDeviceManager
 
 public class DeviceManager(
   AppDb appDb,
+  IDeviceConnectionRegistry deviceConnectionRegistry,
   ILogger<DeviceManager> logger) : IDeviceManager
 {
   private const BindingFlags PropertiesBindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
@@ -58,6 +59,7 @@ public class DeviceManager(
   private static readonly ConcurrentDictionary<Type, ImmutableDictionary<string, PropertyInfo>> _propertiesCache = [];
 
   private readonly AppDb _appDb = appDb;
+  private readonly IDeviceConnectionRegistry _deviceConnectionRegistry = deviceConnectionRegistry;
   private readonly ILogger<DeviceManager> _logger = logger;
 
   public async Task<Device> AddOrUpdate(DeviceUpdateRequestDto deviceDto, DeviceConnectionContext context, IReadOnlyList<Guid>? tagIds = null, string? publicKeyBase64 = null, Guid? customerId = null)
@@ -90,6 +92,7 @@ public class DeviceManager(
 
     entity.IsOnline = false;
     entity.LastSeen = lastSeen;
+    _deviceConnectionRegistry.Remove(deviceId, entity.ConnectionId);
     entity.ConnectionId = string.Empty; // Clear connection ID when offline
 
     await _appDb.SaveChangesAsync();
@@ -234,6 +237,17 @@ public class DeviceManager(
     entity.ConnectionId = context.ConnectionId;
     entity.IsOnline = context.IsOnline;
     entity.LastSeen = context.LastSeen;
+
+    if (context.IsOnline && !string.IsNullOrWhiteSpace(context.ConnectionId))
+    {
+      _deviceConnectionRegistry.Set(entity.Id, context.ConnectionId);
+    }
+    else if (!context.IsOnline
+      && _deviceConnectionRegistry.TryGetConnectionId(entity.Id, out var trackedConnectionId)
+      && trackedConnectionId == context.ConnectionId)
+    {
+      _deviceConnectionRegistry.Remove(entity.Id, trackedConnectionId);
+    }
 
     if (context.RemoteIpAddress is not null)
     {
