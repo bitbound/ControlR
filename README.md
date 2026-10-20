@@ -252,6 +252,8 @@ Remember that the token is single-use, so the URL can only be accessed once.
 
 Logs, traces, and metrics will be sent to the Aspire Dashboard container. The web interface is exposed on port 18888, and it's secured by the `aspireToken` value.
 
+By default, the dashboard discards its telemetry whenever its container stops.  To keep it across restarts, uncomment the optional persistence settings in the `aspire` service of the docker-compose file.  They use the dashboard's `Resume` mode, which appends to a single database stored in the `aspire-dashboard-data` volume.  The dashboard is meant for development and short-term diagnostics rather than long-term storage, so keep an eye on that volume's size.  See [Aspire dashboard data persistence](https://aspire.dev/dashboard/data-persistence) for the details.
+
 The dashboard also supports OpenIdConnect authentication. See their [readme](https://github.com/dotnet/aspire/tree/main/src/Aspire.Dashboard) for more information.
 
 You can also add a connection string for Azure Monitor to see your data there. This can be used in combination with the Aspire Dashboard (OTLP) or on its own.
