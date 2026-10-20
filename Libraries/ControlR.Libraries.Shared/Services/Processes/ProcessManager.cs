@@ -11,6 +11,7 @@ public interface IProcessManager
   IProcess[] GetProcesses();
   IProcess[] GetProcessesByName(string processName);
   Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000);
+  Task<Result<string>> GetProcessOutputStrict(string command, string arguments, int timeoutMs = 10_000);
   IProcess? LaunchUri(Uri uri);
   IProcess Start(string fileName);
   IProcess Start(string fileName, string arguments);
@@ -52,37 +53,12 @@ public class ProcessManager : IProcessManager
 
   public async Task<Result<string>> GetProcessOutput(string command, string arguments, int timeoutMs = 10_000)
   {
-    try
-    {
-      var psi = new ProcessStartInfo(command, arguments)
-      {
-        WindowStyle = ProcessWindowStyle.Hidden,
-        UseShellExecute = false,
-        RedirectStandardOutput = true
-      };
+    return await GetProcessOutputCore(command, arguments, timeoutMs, requireZeroExitCode: false);
+  }
 
-      var proc = Process.Start(psi);
-
-      if (proc is null)
-      {
-        return Result.Fail<string>("Process failed to start.");
-      }
-
-      using var cts = new CancellationTokenSource(timeoutMs);
-      await proc.WaitForExitAsync(cts.Token);
-
-      var output = await proc.StandardOutput.ReadToEndAsync();
-      return Result.Ok(output);
-    }
-    catch (OperationCanceledException)
-    {
-      return Result.Fail<string>($"Timed out while waiting for command to finish.  " +
-          $"Command: {command}.  Arguments: {arguments}");
-    }
-    catch (Exception ex)
-    {
-      return Result.Fail<string>(ex);
-    }
+  public async Task<Result<string>> GetProcessOutputStrict(string command, string arguments, int timeoutMs = 10_000)
+  {
+    return await GetProcessOutputCore(command, arguments, timeoutMs, requireZeroExitCode: true);
   }
 
   public IProcess? LaunchUri(Uri uri)
@@ -164,5 +140,50 @@ public class ProcessManager : IProcessManager
     Guard.IsNotNull(process);
     await process.WaitForExitAsync(cancellationToken);
     return process.ExitCode;
+  }
+
+  private async Task<Result<string>> GetProcessOutputCore(
+    string command,
+    string arguments,
+    int timeoutMs,
+    bool requireZeroExitCode)
+  {
+    try
+    {
+      var psi = new ProcessStartInfo(command, arguments)
+      {
+        WindowStyle = ProcessWindowStyle.Hidden,
+        UseShellExecute = false,
+        RedirectStandardOutput = true
+      };
+
+      var proc = Process.Start(psi);
+
+      if (proc is null)
+      {
+        return Result.Fail<string>("Process failed to start.");
+      }
+
+      using var cts = new CancellationTokenSource(timeoutMs);
+      await proc.WaitForExitAsync(cts.Token);
+
+      var output = await proc.StandardOutput.ReadToEndAsync();
+
+      if (requireZeroExitCode && proc.ExitCode != 0)
+      {
+        return Result.Fail<string>($"'{command} {arguments}' exited with code {proc.ExitCode}.");
+      }
+
+      return Result.Ok(output);
+    }
+    catch (OperationCanceledException)
+    {
+      return Result.Fail<string>($"Timed out while waiting for command to finish.  " +
+          $"Command: {command}.  Arguments: {arguments}");
+    }
+    catch (Exception ex)
+    {
+      return Result.Fail<string>(ex);
+    }
   }
 }

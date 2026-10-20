@@ -245,7 +245,7 @@ internal class DesktopEnvironmentDetectorAgent(
 
   private async Task<GreeterLookup> GetGreeterSession()
   {
-    var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
+    var sessionsResult = await _processManager.GetProcessOutputStrict("loginctl", "list-sessions --no-legend", 3000);
     if (!sessionsResult.IsSuccess)
     {
       return GreeterLookup.Inconclusive;
@@ -268,7 +268,7 @@ internal class DesktopEnvironmentDetectorAgent(
       var sessionId = parts[0];
 
       // Get detailed session info
-      var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
+      var sessionInfoResult = await _processManager.GetProcessOutputStrict("loginctl", $"show-session {sessionId}", 3000);
       if (!sessionInfoResult.IsSuccess)
       {
         // This session may be the greeter, so "no greeter" would be a guess.
@@ -281,6 +281,13 @@ internal class DesktopEnvironmentDetectorAgent(
       }
 
       var sessionInfo = ParseSessionInfo(sessionInfoResult.Value);
+
+      // loginctl still lists a closing session while its display server is going away.
+      if (sessionInfo.TryGetValue("State", out var sessionState) &&
+          string.Equals(sessionState, "closing", StringComparison.OrdinalIgnoreCase))
+      {
+        continue;
+      }
 
       if (!sessionInfo.TryGetValue("Class", out var sessionClass) ||
           !sessionClass.Equals("greeter", StringComparison.OrdinalIgnoreCase) ||

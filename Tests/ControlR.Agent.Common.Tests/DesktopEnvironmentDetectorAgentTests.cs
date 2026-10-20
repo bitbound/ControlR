@@ -66,6 +66,19 @@ public class DesktopEnvironmentDetectorAgentTests
   }
 
   [Fact]
+  public async Task DetectDisplayEnvironment_WhenGreeterSessionIsClosing_ReturnsNotLoginScreen()
+  {
+    SetupSessions("2");
+    SetupSession("2", Session("120", "x11", "greeter", state: "closing"));
+    var sut = CreateSut();
+
+    var result = await sut.DetectDisplayEnvironment();
+
+    Assert.True(result.IsConclusive);
+    Assert.False(result.IsLoginScreen);
+  }
+
+  [Fact]
   public async Task DetectDisplayEnvironment_WhenLoginctlFails_ReturnsInconclusive()
   {
     SetupSessionsFailure();
@@ -94,6 +107,24 @@ public class DesktopEnvironmentDetectorAgentTests
     _processManager.Verify(
       x => x.GetProcessOutput("systemctl", It.IsAny<string>(), It.IsAny<int>()),
       Times.Never);
+  }
+
+  [Fact]
+  public async Task DetectDisplayEnvironment_WhenSessionDetailFails_ReturnsInconclusive()
+  {
+    SetupSessions("2");
+    _processManager
+      .Setup(x => x.GetProcessOutput("loginctl", "show-session 2", It.IsAny<int>()))
+      .ReturnsAsync(Result.Ok(Session("120", "x11", "greeter")));
+    _processManager
+      .Setup(x => x.GetProcessOutputStrict("loginctl", "show-session 2", It.IsAny<int>()))
+      .ReturnsAsync(Result.Fail<string>("exited with code 1"));
+    var sut = CreateSut();
+
+    var result = await sut.DetectDisplayEnvironment();
+
+    Assert.False(result.IsConclusive);
+    Assert.False(result.IsLoginScreen);
   }
 
   [Fact]
@@ -171,7 +202,7 @@ public class DesktopEnvironmentDetectorAgentTests
   }
 
   [Fact]
-  public async Task DetectDisplayEnvironment_WhenX11Greeter_ReturnsDetectedXAuth()
+  public async Task DetectDisplayEnvironment_WhenX11Greeter_ReturnsDetectedDisplayAndXAuth()
   {
     SetupSessions("2");
     SetupSession("2", Session("120", "x11", "greeter"));
@@ -179,7 +210,8 @@ public class DesktopEnvironmentDetectorAgentTests
       .Setup(x => x.GetProcessOutput("systemctl", "status display-manager --no-pager -l", It.IsAny<int>()))
       .ReturnsAsync(Result.Ok("lightdm.service"));
     _fileSystem.Setup(x => x.FileExists("/run/lightdm/root/:0")).Returns(true);
-    _fileSystem.Setup(x => x.FileExists("/tmp/.X11-unix/X0")).Returns(true);
+    _fileSystem.Setup(x => x.FileExists("/tmp/.X11-unix/X0")).Returns(false);
+    _fileSystem.Setup(x => x.FileExists("/tmp/.X11-unix/X1")).Returns(true);
     var sut = CreateSut();
 
     var result = await sut.DetectDisplayEnvironment();
@@ -188,10 +220,14 @@ public class DesktopEnvironmentDetectorAgentTests
     Assert.False(result.IsWayland);
     Assert.Equal("lightdm", result.DisplayManager);
     Assert.Equal("/run/lightdm/root/:0", result.XAuthPath);
-    Assert.Equal(":0", result.Display);
+    Assert.Equal(":1", result.Display);
   }
 
-  private static string Session(string user, string? sessionType, string sessionClass)
+  private static string Session(
+    string user,
+    string? sessionType,
+    string sessionClass,
+    string state = "active")
   {
     var lines = new List<string>
     {
@@ -205,7 +241,7 @@ public class DesktopEnvironmentDetectorAgentTests
     }
 
     lines.Add($"User={user}");
-    lines.Add("State=active");
+    lines.Add($"State={state}");
     lines.Add("Active=yes");
 
     return string.Join('\n', lines);
@@ -224,19 +260,31 @@ public class DesktopEnvironmentDetectorAgentTests
     _processManager
       .Setup(x => x.GetProcessOutput("loginctl", $"show-session {sessionId}", It.IsAny<int>()))
       .ReturnsAsync(Result.Ok(sessionOutput));
+    _processManager
+      .Setup(x => x.GetProcessOutputStrict("loginctl", $"show-session {sessionId}", It.IsAny<int>()))
+      .ReturnsAsync(Result.Ok(sessionOutput));
   }
 
   private void SetupSessions(params string[] sessionIds)
   {
+    var output = string.Join('\n', sessionIds);
     _processManager
       .Setup(x => x.GetProcessOutput("loginctl", "list-sessions --no-legend", It.IsAny<int>()))
-      .ReturnsAsync(Result.Ok(string.Join('\n', sessionIds)));
+      .ReturnsAsync(Result.Ok(output));
+    _processManager
+      .Setup(x => x.GetProcessOutputStrict("loginctl", "list-sessions --no-legend", It.IsAny<int>()))
+      .ReturnsAsync(Result.Ok(output));
   }
 
   private void SetupSessionsFailure()
   {
+    // loginctl exits 1 with an empty stdout, so the lenient probe sees a successful
+    // empty result while the strict probe reports the failure.
     _processManager
       .Setup(x => x.GetProcessOutput("loginctl", "list-sessions --no-legend", It.IsAny<int>()))
-      .ReturnsAsync(Result.Fail<string>("logind unavailable"));
+      .ReturnsAsync(Result.Ok(""));
+    _processManager
+      .Setup(x => x.GetProcessOutputStrict("loginctl", "list-sessions --no-legend", It.IsAny<int>()))
+      .ReturnsAsync(Result.Fail<string>("loginctl list-sessions --no-legend exited with code 1."));
   }
 }
