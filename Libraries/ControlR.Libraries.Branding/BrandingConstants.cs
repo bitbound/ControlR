@@ -2,12 +2,12 @@
 
 namespace ControlR.Libraries.Branding;
 
-[SuppressMessage("MemberOrder", "BB0001", Justification = "Constants are grouped by category, not by member type.")]
 /// <summary>
 /// Centralized branding constants. These values are replaced by the build script during customized builds.
 /// The derived names come from <see cref="BrandNames"/>, so a build can also ask for another brand's
 /// names without a second copy of the formulas.
 /// </summary>
+[SuppressMessage("MemberOrder", "BB0001", Justification = "Constants are grouped by category, not by member type.")]
 public static class BrandingConstants
 {
   public const string BrandName = "ControlR";

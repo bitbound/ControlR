@@ -15,7 +15,9 @@ public class Vp9Encoder : IStreamEncoder
     private bool _disposed;
     private Process? _ffmpegProcess;
     private Stream? _inputStream;
+#pragma warning disable IDE0052 // The encoder is a stub. Nothing drains the pump task until Dispose learns to wait on it.
     private Task? _readTask;
+#pragma warning restore IDE0052
 
     public CaptureEncoderType Type => CaptureEncoderType.Vpx;
 

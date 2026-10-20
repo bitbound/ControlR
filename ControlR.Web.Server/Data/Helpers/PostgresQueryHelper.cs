@@ -4,7 +4,7 @@ public static class PostgresQueryHelper
 {
   /// <summary>
   /// The escape character <see cref="EscapeLikePattern"/> emits escapes for. Must be passed as the
-  /// <c>escapeChar</c> argument of every <see cref="EF.Functions.ILike(string, string, string)"/>
+  /// <c>escapeChar</c> argument of every <c>EF.Functions.ILike(match, pattern, escapeChar)</c>
   /// call whose pattern was produced by <see cref="EscapeLikePattern"/>.
   /// </summary>
   /// <remarks>

@@ -9,7 +9,7 @@ namespace ControlR.Web.Server.Constants;
 /// </summary>
 /// <remarks>
 /// Named for V1 because V1 is the surface whose contract has to hold still, but it is registered
-/// app-wide on purpose: a controller calling <see cref="ControllerBase.Problem" />, the shared
+/// app-wide on purpose: a controller calling <see cref="ControllerBase.Problem(string?, string?, int?, string?, string?)" />, the shared
 /// <see cref="Extensions.HttpResultExtensions" /> helper, and the pipeline writing a response no
 /// controller ever reached must not disagree about what a 404 is called. Most titles are keyed by
 /// status, because status is all the pipeline knows. A caller that knows more than the status, such as

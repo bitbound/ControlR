@@ -189,7 +189,7 @@ public static class ServiceCollectionExtensions
   /// </summary>
   /// <remarks>
   /// This registration is server-only. Do not use it from Blazor WebAssembly. Use
-  /// <see cref="AddControlrApiClient(IServiceCollection, Action{ControlrApiClientOptions})"/> there instead.
+  /// <see cref="AddControlrApiClient(IServiceCollection, Action{ControlrApiClientOptions}, Action{IHttpClientBuilder})"/> there instead.
   /// </remarks>
   /// <param name="services">
   ///   The <see cref="IServiceCollection"/> to which the services are added.
