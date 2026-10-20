@@ -17,7 +17,6 @@
       EnforceCodeStyleInBuild makes the IDE-prefixed style rules in .editorconfig report during a
       command-line build instead of only in the editor.  IDE0005 additionally requires
       GenerateDocumentationFile or the compiler fails the project outright.
-      https://github.com/dotnet/roslyn/issues/41640
     -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -45,7 +44,7 @@
     BB0001: Custom Bitbound analyzer.  Only warn about member ordering.
     NU1901-NU1904: NuGet warnings should not completely break the build.
     CS1591: Missing XML comment for publicly visible type or member.  GenerateDocumentationFile is on
-    only so that IDE0005 runs during a build; documenting every public member is not the goal.
+    only so that IDE0005 runs during a build.  Documenting every public member is not a goal yet.
    -->
   <PropertyGroup>
     <NoWarn>$(NoWarn);S125;AV0029;CS1591;</NoWarn>
