@@ -11,12 +11,10 @@
         "tags": [
           "AuthorizationChangeLogs"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -25,7 +23,6 @@
           {
             "name": "ActionType",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string"
             }
@@ -33,7 +30,6 @@
           {
             "name": "ActorType",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string"
             }
@@ -41,7 +37,6 @@
           {
             "name": "From",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -50,7 +45,6 @@
           {
             "name": "Page",
             "in": "query",
-            "description": "",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
@@ -60,7 +54,6 @@
           {
             "name": "PageSize",
             "in": "query",
-            "description": "",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
@@ -70,7 +63,6 @@
           {
             "name": "SearchText",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string"
             }
@@ -78,7 +70,6 @@
           {
             "name": "TargetType",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string"
             }
@@ -86,7 +77,6 @@
           {
             "name": "To",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -348,12 +338,10 @@
         "tags": [
           "Customers"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "customerId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -363,7 +351,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -474,12 +461,10 @@
         "tags": [
           "Customers"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -605,12 +590,10 @@
         "tags": [
           "Customers"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -708,12 +691,10 @@
         "tags": [
           "Customers"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "customerId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -723,7 +704,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -812,12 +792,10 @@
         "tags": [
           "Customers"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "customerId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -827,7 +805,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -933,12 +910,10 @@
         "tags": [
           "Customers"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "customerId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -948,7 +923,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1086,12 +1060,10 @@
         "tags": [
           "DeploymentOptions"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3447,12 +3419,10 @@
         "tags": [
           "DeviceGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3462,7 +3432,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3571,12 +3540,10 @@
         "tags": [
           "DeviceGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3586,7 +3553,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3697,12 +3663,10 @@
         "tags": [
           "DeviceGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3818,12 +3782,10 @@
         "tags": [
           "DeviceGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -3921,12 +3883,10 @@
         "tags": [
           "DeviceGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -3936,7 +3896,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -4025,12 +3984,10 @@
         "tags": [
           "DeviceGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4040,7 +3997,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -4146,12 +4102,10 @@
         "tags": [
           "DeviceGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4161,7 +4115,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -4289,12 +4242,10 @@
         "tags": [
           "Devices"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4354,12 +4305,10 @@
         "tags": [
           "Devices"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4438,7 +4387,6 @@
         "tags": [
           "Devices"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -4522,7 +4470,6 @@
         "tags": [
           "Devices"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -4595,12 +4542,10 @@
         "tags": [
           "Devices"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4709,7 +4654,6 @@
         "tags": [
           "Devices"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -4782,7 +4726,6 @@
         "tags": [
           "Devices"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -4866,12 +4809,10 @@
         "tags": [
           "Devices"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -4980,12 +4921,10 @@
         "tags": [
           "DeviceTags"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5096,12 +5035,10 @@
         "tags": [
           "DeviceTags"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "deviceId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5111,7 +5048,6 @@
           {
             "name": "tagId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5121,7 +5057,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5212,12 +5147,10 @@
         "tags": [
           "EffectivePermissions"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "principalId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5227,7 +5160,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5236,7 +5168,6 @@
           {
             "name": "principalKind",
             "in": "query",
-            "description": "",
             "schema": {
               "$ref": "#/components/schemas/PermissionPrincipalKind"
             }
@@ -5244,7 +5175,6 @@
           {
             "name": "permissionName",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string"
             }
@@ -5252,7 +5182,6 @@
           {
             "name": "scopeKind",
             "in": "query",
-            "description": "",
             "schema": {
               "$ref": "#/components/schemas/PermissionScopeKind"
             }
@@ -5260,7 +5189,6 @@
           {
             "name": "scopeId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5368,12 +5296,10 @@
         "tags": [
           "EffectiveUserPreferences"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5471,7 +5397,6 @@
         "tags": [
           "InstallerKeys"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -5553,12 +5478,10 @@
         "tags": [
           "InstallerKeys"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5656,12 +5579,10 @@
         "tags": [
           "InstallerKeys"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "keyId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5671,7 +5592,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5760,12 +5680,10 @@
         "tags": [
           "InstallerKeys"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "keyId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5775,7 +5693,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -5886,12 +5803,10 @@
         "tags": [
           "InstallerKeys"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "keyId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -5901,7 +5816,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6009,12 +5923,10 @@
         "tags": [
           "Invites"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6150,12 +6062,10 @@
         "tags": [
           "Invites"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6263,12 +6173,10 @@
         "tags": [
           "Invites"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "inviteId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -6278,7 +6186,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6369,7 +6276,6 @@
         "tags": [
           "LogonTokens"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -6473,7 +6379,6 @@
         "tags": [
           "LogonTokens"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -6577,12 +6482,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6716,12 +6619,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6847,12 +6748,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6861,7 +6760,6 @@
           {
             "name": "principalKind",
             "in": "query",
-            "description": "",
             "schema": {
               "$ref": "#/components/schemas/PermissionPrincipalKind"
             }
@@ -6869,7 +6767,6 @@
           {
             "name": "principalId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6967,12 +6864,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7083,12 +6978,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "assignmentId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -7098,7 +6991,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7187,12 +7079,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "assignmentId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -7202,7 +7092,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7330,12 +7219,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7463,12 +7350,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7566,12 +7451,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7669,12 +7552,10 @@
         "tags": [
           "PermissionAssignments"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7785,12 +7666,10 @@
         "tags": [
           "PersonalAccessTokens"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -7906,12 +7785,10 @@
         "tags": [
           "PersonalAccessTokens"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -8009,12 +7886,10 @@
         "tags": [
           "PersonalAccessTokens"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -8024,7 +7899,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -8103,12 +7977,10 @@
         "tags": [
           "PersonalAccessTokens"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -8118,7 +7990,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -8236,12 +8107,10 @@
         "tags": [
           "PersonalAccessTokens"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -8251,7 +8120,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -8349,7 +8217,6 @@
         "tags": [
           "PublicServerSettings"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8402,7 +8269,6 @@
         "tags": [
           "ServerAlert"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8484,7 +8350,6 @@
         "tags": [
           "ServerAlert"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8588,7 +8453,6 @@
         "tags": [
           "ServerLogs"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8672,12 +8536,10 @@
         "tags": [
           "ServerServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -8806,7 +8668,6 @@
         "tags": [
           "ServerServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8928,7 +8789,6 @@
         "tags": [
           "ServerServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -8992,12 +8852,10 @@
         "tags": [
           "ServerServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9077,12 +8935,10 @@
         "tags": [
           "ServerServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9159,12 +9015,10 @@
         "tags": [
           "ServerServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9283,12 +9137,10 @@
         "tags": [
           "ServerServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9298,7 +9150,6 @@
           {
             "name": "credentialId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9380,12 +9231,10 @@
         "tags": [
           "ServerServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9395,7 +9244,6 @@
           {
             "name": "credentialId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9467,7 +9315,6 @@
         "tags": [
           "ServerStats"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -9551,12 +9398,10 @@
         "tags": [
           "Tags"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -9672,12 +9517,10 @@
         "tags": [
           "Tags"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -9686,7 +9529,6 @@
           {
             "name": "includeLinkedIds",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "boolean",
               "default": false
@@ -9784,12 +9626,10 @@
         "tags": [
           "Tags"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tagId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9799,7 +9639,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -9888,12 +9727,10 @@
         "tags": [
           "Tags"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tagId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -9903,7 +9740,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -10009,12 +9845,10 @@
         "tags": [
           "Tags"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tagId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10024,7 +9858,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -10313,7 +10146,6 @@
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10388,7 +10220,6 @@
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10480,7 +10311,6 @@
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10589,12 +10419,10 @@
         "tags": [
           "TenantServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10604,7 +10432,6 @@
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10733,12 +10560,10 @@
         "tags": [
           "TenantServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10865,12 +10690,10 @@
         "tags": [
           "TenantServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10959,12 +10782,10 @@
         "tags": [
           "TenantServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -10974,7 +10795,6 @@
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11064,12 +10884,10 @@
         "tags": [
           "TenantServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11079,7 +10897,6 @@
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11176,12 +10993,10 @@
         "tags": [
           "TenantServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11191,7 +11006,6 @@
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11320,12 +11134,10 @@
         "tags": [
           "TenantServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11335,7 +11147,6 @@
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11345,7 +11156,6 @@
           {
             "name": "credentialId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11437,12 +11247,10 @@
         "tags": [
           "TenantServiceAccounts"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11452,7 +11260,6 @@
           {
             "name": "serviceAccountId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11462,7 +11269,6 @@
           {
             "name": "credentialId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -11554,12 +11360,10 @@
         "tags": [
           "TenantSettings"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "settingName",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -11568,7 +11372,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11657,12 +11460,10 @@
         "tags": [
           "TenantSettings"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "settingName",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -11671,7 +11472,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11782,12 +11582,10 @@
         "tags": [
           "TenantSettings"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11883,12 +11681,10 @@
         "tags": [
           "TenantSettings"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12034,12 +11830,10 @@
         "tags": [
           "TenantSettings"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12167,7 +11961,6 @@
         "tags": [
           "TestEmail"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -12264,12 +12057,10 @@
         "tags": [
           "UserGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12279,7 +12070,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12388,12 +12178,10 @@
         "tags": [
           "UserGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12403,7 +12191,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12514,12 +12301,10 @@
         "tags": [
           "UserGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12635,12 +12420,10 @@
         "tags": [
           "UserGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12738,12 +12521,10 @@
         "tags": [
           "UserGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12753,7 +12534,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12842,12 +12622,10 @@
         "tags": [
           "UserGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12857,7 +12635,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -12963,12 +12740,10 @@
         "tags": [
           "UserGroups"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userGroupId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -12978,7 +12753,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13106,12 +12880,10 @@
         "tags": [
           "UserPreferences"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13207,12 +12979,10 @@
         "tags": [
           "UserPreferences"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13348,12 +13118,10 @@
         "tags": [
           "UserPreferences"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13471,12 +13239,10 @@
         "tags": [
           "UserPreferences"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "name",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -13485,7 +13251,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13596,12 +13361,10 @@
         "tags": [
           "Users"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -13611,7 +13374,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13719,12 +13481,10 @@
         "tags": [
           "Users"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13840,12 +13600,10 @@
         "tags": [
           "Users"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -13943,12 +13701,10 @@
         "tags": [
           "Users"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -13958,7 +13714,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14084,12 +13839,10 @@
         "tags": [
           "Users"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14099,7 +13852,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14207,12 +13959,10 @@
         "tags": [
           "Users"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14222,7 +13972,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14313,12 +14062,10 @@
         "tags": [
           "Users"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14328,7 +14075,6 @@
           {
             "name": "tokenId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14338,7 +14084,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14427,12 +14172,10 @@
         "tags": [
           "Users"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "userId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14442,7 +14185,6 @@
           {
             "name": "tokenId",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string",
@@ -14452,7 +14194,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14580,7 +14321,6 @@
         "tags": [
           "UserServerSettings"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -14654,7 +14394,6 @@
         "tags": [
           "UserServerSettings"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -14728,12 +14467,10 @@
         "tags": [
           "UserStorage"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "key",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -14742,7 +14479,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14831,12 +14567,10 @@
         "tags": [
           "UserStorage"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "key",
             "in": "path",
-            "description": "",
             "required": true,
             "schema": {
               "type": "string"
@@ -14845,7 +14579,6 @@
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -14946,12 +14679,10 @@
         "tags": [
           "UserStorage"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "tenantId",
             "in": "query",
-            "description": "",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -15069,7 +14800,6 @@
         "tags": [
           "Version"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -15125,7 +14855,6 @@
         "tags": [
           "Version"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
@@ -15178,7 +14907,6 @@
         "tags": [
           "Version"
         ],
-        "summary": "",
         "parameters": [
           {
             "name": "api-version",
