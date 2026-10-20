@@ -310,7 +310,7 @@ internal class DesktopEnvironmentDetectorAgent(
   private string? GetWaylandRuntimeDir(GreeterSession greeterSession)
   {
     var runtimeDir = $"/run/user/{greeterSession.Uid}";
-    if (_fileSystem.FileExists(Path.Combine(runtimeDir, "wayland-0")))
+    if (_fileSystem.FileExists($"{runtimeDir}/wayland-0"))
     {
       return runtimeDir;
     }
