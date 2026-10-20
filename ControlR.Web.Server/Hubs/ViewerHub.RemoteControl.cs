@@ -2,18 +2,14 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Shared.Helpers;
 using ControlR.Web.Server.Authz.Permissions;
-using ControlR.Web.Server.Services.Authorization.Capabilities;
-using ControlR.Web.Server.Services.Settings;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
 
 public partial class ViewerHub
 {
-  private static readonly string[] RemoteControlPermissionNames =
+  private static readonly string[] _remoteControlPermissionNames =
   [
     PermissionNames.DeviceClipboardRead,
     PermissionNames.DeviceClipboardWrite,
@@ -314,7 +310,7 @@ public partial class ViewerHub
     var resource = await _resourceFactory.CreateDevice(device, cancellationToken);
     var decisions = await _permissionEvaluator.EvaluateMany(
       principal,
-      RemoteControlPermissionNames,
+      _remoteControlPermissionNames,
       resource,
       cancellationToken);
 
