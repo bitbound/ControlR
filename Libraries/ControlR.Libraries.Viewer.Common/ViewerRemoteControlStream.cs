@@ -305,10 +305,13 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       throw new InvalidOperationException("Remote control session has not been initialized.");
     }
 
+    // The typed proxy awaits a completion message for any Task-returning method, so the
+    // fire-and-forget path has to go through Send() instead of the Server property.
     var request = CreateRequest(session, wrapper);
-    await _viewerHub.Server
-      .SendRemoteControlDtoToAgent(request)
-      .WaitAsync(cancellationToken);
+    await _viewerHub.Send(
+      nameof(IViewerHub.SendRemoteControlDtoToAgent),
+      [request],
+      cancellationToken);
   }
 
   private async Task<HubResult> TryInvoke(Func<Task<HubResult>> func, [CallerMemberName] string callerName = "")

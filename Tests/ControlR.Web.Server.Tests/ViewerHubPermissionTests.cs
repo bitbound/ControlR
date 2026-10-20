@@ -115,7 +115,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
         new ClipboardTextDto("secret", Guid.NewGuid()),
         RemoteControlDtoType.ClipboardText));
 
-    var result = await hub.InvokeRemoteControlDtoOnAgent(request, TestContext.Current.CancellationToken);
+    var result = await hub.InvokeRemoteControlDtoOnAgent(request);
 
     Assert.False(result.IsSuccess);
     Assert.Equal("Unauthorized.", result.Reason);
@@ -140,7 +140,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       SessionId: Guid.NewGuid(),
       Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText));
 
-    var result = await hub.InvokeRemoteControlDtoOnAgent(request, TestContext.Current.CancellationToken);
+    var result = await hub.InvokeRemoteControlDtoOnAgent(request);
 
     Assert.False(result.IsSuccess);
     Assert.Equal("Unauthorized.", result.Reason);
