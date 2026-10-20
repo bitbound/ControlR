@@ -25,27 +25,35 @@ internal class DesktopEnvironmentDetectorAgent(
 
     try
     {
-      info.DisplayManager = await DetectDisplayManager();
-      info.IsLoginScreen = !await HasActiveUserSessions();
-
-      if (!info.IsLoginScreen)
+      if (await HasActiveUserSessions())
       {
+        info.IsLoginScreen = false;
         return info;
       }
 
-      // Try to detect Wayland display first
-      var (waylandDisplay, runtimeDir) = await DetectCurrentWaylandDisplay();
-      info.WaylandDisplay = waylandDisplay;
-      info.WaylandRuntimeDir = runtimeDir;
-      info.IsWayland = !string.IsNullOrWhiteSpace(info.WaylandDisplay);
-
-      if (info.IsWayland)
+      if (await GetGreeterSession() is not { } greeterSession)
       {
+        // A display server that no logind session owns (a container's virtual X server,
+        // for example) is not a login screen. See #154.
+        info.IsLoginScreen = false;
+        return info;
+      }
+
+      info.IsLoginScreen = true;
+
+      // Try to detect Wayland display first
+      if (greeterSession.SessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase))
+      {
+        info.WaylandDisplay = "wayland-0";
+        info.WaylandRuntimeDir = GetWaylandRuntimeDir(greeterSession);
+        info.IsWayland = true;
+
         _logger.LogInformationDeduped("Detected Wayland session at login screen");
         return info;
       }
 
       // Fall back to X11 detection
+      info.DisplayManager = await DetectDisplayManager();
       info.XAuthPath = await DetectCurrentXAuthPath(info.DisplayManager);
       info.Display = await DetectCurrentDisplay();
 
@@ -107,96 +115,6 @@ internal class DesktopEnvironmentDetectorAgent(
     {
       _logger.LogErrorDeduped("Error detecting current display", exception: ex);
       return Task.FromResult(":0");
-    }
-  }
-
-  private async Task<(string? WaylandDisplay, string? RuntimeDir)> DetectCurrentWaylandDisplay()
-  {
-    try
-    {
-      // Use loginctl to find greeter sessions and check if they're Wayland
-      var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
-      if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
-      {
-        return (null, null);
-      }
-
-      var sessionLines = sessionsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-      foreach (var line in sessionLines)
-      {
-        var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0)
-        {
-          continue;
-        }
-
-        var sessionId = parts[0];
-
-        // Get detailed session info
-        var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
-        if (!sessionInfoResult.IsSuccess || string.IsNullOrWhiteSpace(sessionInfoResult.Value))
-        {
-          continue;
-        }
-
-        var sessionInfo = ParseSessionInfo(sessionInfoResult.Value);
-
-        // Check if this is a greeter session with Wayland type
-        if (!sessionInfo.TryGetValue("Class", out var sessionClass) ||
-            !sessionInfo.TryGetValue("Type", out var sessionType) ||
-            !sessionClass.Equals("greeter", StringComparison.OrdinalIgnoreCase) ||
-            !sessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase))
-        {
-          continue;
-        }
-
-        // Get the UID for this session
-        if (!sessionInfo.TryGetValue("User", out var uidString) || !int.TryParse(uidString, out var uid))
-        {
-          continue;
-        }
-
-        var runtimeDir = $"/run/user/{uid}";
-        var waylandSocketPath = Path.Combine(runtimeDir, "wayland-0");
-
-        if (!_fileSystem.FileExists(waylandSocketPath))
-        {
-          continue;
-        }
-
-        _logger.LogInformationDeduped(
-          "Found Wayland greeter session: SessionId={SessionId}, UID={Uid}, RuntimeDir={RuntimeDir}",
-          args: [sessionId, uid, runtimeDir]);
-
-        return ("wayland-0", runtimeDir);
-      }
-
-      // Fallback: Check common root-owned Wayland socket locations
-      var rootWaylandPaths = new[]
-      {
-        "/run/user/0/wayland-0",
-        "/run/wayland-0"
-      };
-
-      foreach (var socketPath in rootWaylandPaths)
-      {
-        if (!_fileSystem.FileExists(socketPath))
-        {
-          continue;
-        }
-
-        var runtimeDir = Path.GetDirectoryName(socketPath);
-        _logger.LogInformationDeduped("Found root Wayland socket at {SocketPath}, RuntimeDir={RuntimeDir}",
-          args: [socketPath, runtimeDir]);
-        return ("wayland-0", runtimeDir);
-      }
-
-      return (null, null);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogErrorDeduped("Error detecting Wayland display", exception: ex);
-      return (null, null);
     }
   }
 
@@ -314,6 +232,81 @@ internal class DesktopEnvironmentDetectorAgent(
     return null;
   }
 
+  private async Task<GreeterSession?> GetGreeterSession()
+  {
+    var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
+    if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
+    {
+      return null;
+    }
+
+    var sessionLines = sessionsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    foreach (var line in sessionLines)
+    {
+      var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+      if (parts.Length == 0)
+      {
+        continue;
+      }
+
+      var sessionId = parts[0];
+
+      // Get detailed session info
+      var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
+      if (!sessionInfoResult.IsSuccess || string.IsNullOrWhiteSpace(sessionInfoResult.Value))
+      {
+        continue;
+      }
+
+      var sessionInfo = ParseSessionInfo(sessionInfoResult.Value);
+
+      if (!sessionInfo.TryGetValue("Class", out var sessionClass) ||
+          !sessionClass.Equals("greeter", StringComparison.OrdinalIgnoreCase) ||
+          !sessionInfo.TryGetValue("Type", out var sessionType) ||
+          (!sessionType.Equals("x11", StringComparison.OrdinalIgnoreCase) &&
+           !sessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase)) ||
+          !sessionInfo.TryGetValue("User", out var uidString) ||
+          !int.TryParse(uidString, out var uid))
+      {
+        continue;
+      }
+
+      return new GreeterSession(sessionId, sessionType, uid);
+    }
+
+    return null;
+  }
+
+  private string GetWaylandRuntimeDir(GreeterSession greeterSession)
+  {
+    var runtimeDir = $"/run/user/{greeterSession.Uid}";
+    if (_fileSystem.FileExists(Path.Combine(runtimeDir, "wayland-0")))
+    {
+      return runtimeDir;
+    }
+
+    // Fallback: Check common root-owned Wayland socket locations
+    string[] rootWaylandPaths = ["/run/user/0/wayland-0", "/run/wayland-0"];
+    foreach (var socketPath in rootWaylandPaths)
+    {
+      if (!_fileSystem.FileExists(socketPath))
+      {
+        continue;
+      }
+
+      runtimeDir = Path.GetDirectoryName(socketPath) ?? runtimeDir;
+      _logger.LogInformationDeduped("Found root Wayland socket at {SocketPath}, RuntimeDir={RuntimeDir}",
+        args: [socketPath, runtimeDir]);
+      return runtimeDir;
+    }
+
+    _logger.LogWarningDeduped(
+      "Wayland greeter session {SessionId} has no wayland-0 socket. RuntimeDir={RuntimeDir}",
+      args: [greeterSession.SessionId, runtimeDir]);
+
+    return runtimeDir;
+  }
+
   private async Task<bool> HasActiveUserSessions()
   {
     try
@@ -373,6 +366,8 @@ internal class DesktopEnvironmentDetectorAgent(
       return false;
     }
   }
+
+  private readonly record struct GreeterSession(string SessionId, string SessionType, int Uid);
 }
 
 internal class DisplayEnvironmentInfo

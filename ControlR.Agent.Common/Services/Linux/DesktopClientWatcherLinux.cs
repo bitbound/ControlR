@@ -24,6 +24,8 @@ internal class DesktopClientWatcherLinux(
 {
   private const int ProcessCommandTimeoutMs = 5_000;
 
+  private static readonly TimeSpan _maxLoginScreenLaunchBackoff = TimeSpan.FromMinutes(5);
+
   private readonly IDesktopClientFileVerifier _desktopClientFileVerifier = desktopClientFileVerifier;
   private readonly IDesktopClientRepairCoordinator _desktopClientRepairCoordinator = desktopClientRepairCoordinator;
   private readonly IDesktopEnvironmentDetectorAgent _desktopEnvironmentDetector = desktopEnvironmentDetector;
@@ -37,6 +39,8 @@ internal class DesktopClientWatcherLinux(
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly TimeProvider _timeProvider = timeProvider;
 
+  private int _loginScreenLaunchFailures;
+  private DateTimeOffset _loginScreenLaunchNotBefore = DateTimeOffset.MinValue;
   private IProcess? _loginScreenProcess;
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -170,6 +174,7 @@ internal class DesktopClientWatcherLinux(
     if (!displayInfo.IsLoginScreen)
     {
       // If not at the login screen, ensure the login screen client is stopped
+      ResetLoginScreenLaunchBackoff();
       await StopLoginScreenDesktopClient();
       _desktopClientRepairCoordinator.ReportHealthy("linux-login-screen");
       return;
@@ -192,6 +197,24 @@ internal class DesktopClientWatcherLinux(
     // Launch the desktop client for the login screen if needed
     if (!isLoginScreenRunning)
     {
+      var now = _timeProvider.GetUtcNow();
+      if (now < _loginScreenLaunchNotBefore)
+      {
+        _logger.LogDebugDeduped(
+          "Login screen desktop client launch is delayed until {NotBefore}.",
+          args: [_loginScreenLaunchNotBefore]);
+        return;
+      }
+
+      if (string.IsNullOrWhiteSpace(displayInfo.XAuthPath))
+      {
+        // Without the greeter's auth cookie the X11 client starts and exits immediately.
+        _logger.LogWarningDeduped(
+          "X11 login screen detected without an XAUTHORITY file. Skipping desktop client launch. Display: {Display}, DM: {DisplayManager}",
+          args: [displayInfo.Display, displayInfo.DisplayManager ?? "unknown"]);
+        return;
+      }
+
       _ = LaunchLoginScreenDesktopClient(displayInfo, cancellationToken);
       return;
     }
@@ -240,6 +263,15 @@ internal class DesktopClientWatcherLinux(
   private string GetInstallDirectory()
   {
     return _fileSystemPathProvider.GetAgentInstallDirectory();
+  }
+
+  private TimeSpan GetLoginScreenLaunchBackoff()
+  {
+    var seconds = Math.Min(
+      _maxLoginScreenLaunchBackoff.TotalSeconds,
+      5 * Math.Pow(2, _loginScreenLaunchFailures));
+
+    return TimeSpan.FromSeconds(seconds);
   }
 
   private async Task<bool> HasDeletedDesktopClientExecutable(string uid, string serviceName)
@@ -349,7 +381,7 @@ internal class DesktopClientWatcherLinux(
 
       if (displayInfo.IsWayland)
       {
-        _logger.LogInformation("Skipping login screen desktop client launch for Wayland greeter session.");
+        _logger.LogInformationDeduped("Skipping login screen desktop client launch for Wayland greeter session.");
         return;
       }
 
@@ -366,8 +398,9 @@ internal class DesktopClientWatcherLinux(
         envVars["XAUTHORITY"] = displayInfo.XAuthPath;
       }
 
-      _logger.LogInformation("Starting login screen desktop client. Type: X11, Display: {Display}, XAUTH: {XAuth}",
-        displayInfo.Display, displayInfo.XAuthPath ?? "none");
+      _logger.LogInformationDeduped(
+        "Starting login screen desktop client. Type: X11, Display: {Display}, XAUTH: {XAuth}",
+        args: [displayInfo.Display, displayInfo.XAuthPath ?? "none"]);
 
       // Start the process with the proper environment
       var startInfo = new ProcessStartInfo
@@ -385,20 +418,23 @@ internal class DesktopClientWatcherLinux(
         startInfo.Environment[kvp.Key] = kvp.Value;
       }
 
-      _loginScreenProcess = _processManager.Start(startInfo);
+      var launchStartedAt = _timeProvider.GetUtcNow();
+      var process = _processManager.Start(startInfo);
 
-      if (_loginScreenProcess is null)
+      if (process is null)
       {
         _desktopClientRepairCoordinator.ReportFailure("linux-login-screen", "Failed to start the login screen desktop client process.");
         _logger.LogError("Failed to start login screen desktop client process");
         return;
       }
 
+      _loginScreenProcess = process;
+
       try
       {
-        _logger.LogInformation("Login screen desktop client started with PID {PID}", _loginScreenProcess.Id);
-        await _loginScreenProcess.WaitForExitAsync(cancellationToken);
-        _logger.LogInformation("Login screen desktop client (PID {PID}) has exited", _loginScreenProcess.Id);
+        _logger.LogInformationDeduped("Login screen desktop client started.");
+        await process.WaitForExitAsync(cancellationToken);
+        _logger.LogInformationDeduped("Login screen desktop client exited.");
       }
       catch (Exception ex)
       {
@@ -406,8 +442,13 @@ internal class DesktopClientWatcherLinux(
       }
       finally
       {
-        _loginScreenProcess.KillAndDispose();
-        _loginScreenProcess = null;
+        if (ReferenceEquals(_loginScreenProcess, process))
+        {
+          _loginScreenProcess = null;
+        }
+
+        process.KillAndDispose();
+        RecordLoginScreenLaunchExit(launchStartedAt);
       }
     }
     catch (Exception ex)
@@ -415,6 +456,24 @@ internal class DesktopClientWatcherLinux(
       _logger.LogError(ex, "Error launching login screen desktop client");
       _desktopClientRepairCoordinator.ReportFailure("linux-login-screen", $"Error launching the login screen desktop client: {ex.Message}");
     }
+  }
+
+  private void RecordLoginScreenLaunchExit(DateTimeOffset launchStartedAt)
+  {
+    if (_timeProvider.GetUtcNow() - launchStartedAt >= TimeSpan.FromMinutes(1))
+    {
+      _loginScreenLaunchFailures = 0;
+      return;
+    }
+
+    _loginScreenLaunchFailures++;
+    _loginScreenLaunchNotBefore = _timeProvider.GetUtcNow() + GetLoginScreenLaunchBackoff();
+  }
+
+  private void ResetLoginScreenLaunchBackoff()
+  {
+    _loginScreenLaunchFailures = 0;
+    _loginScreenLaunchNotBefore = DateTimeOffset.MinValue;
   }
 
   private async Task RestartDesktopClientServiceForUser(string uid, string serviceName, CancellationToken cancellationToken)
