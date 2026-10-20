@@ -370,6 +370,7 @@ FodyWeavers.xsd
 .plans/*
 .kilo/*
 .qwen/*
+.zvec-grep/
 /ControlR.Web.Server/wwwroot/downloads/**
 /ControlR.Web.Server/wwwroot/lib/**
 .DS_Store
