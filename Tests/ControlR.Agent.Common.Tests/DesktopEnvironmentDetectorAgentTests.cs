@@ -8,13 +8,29 @@ using Moq;
 namespace ControlR.Agent.Common.Tests;
 
 /// <summary>
-/// Pins the #154 rule: a display server counts as a login screen only when logind reports a
-/// graphical greeter session for it. A container's virtual X server has no such session.
+/// Pins Linux login-screen detection: a display server counts as a login screen only when
+/// logind reports a greeter session for it. See #154.
 /// </summary>
 public class DesktopEnvironmentDetectorAgentTests
 {
   private readonly Mock<IFileSystem> _fileSystem = new();
   private readonly Mock<IProcessManager> _processManager = new();
+
+  [Fact]
+  public async Task DetectDisplayEnvironment_WhenActiveUserAndGreeterExist_ReturnsNotLoginScreen()
+  {
+    SetupSessions("2", "3");
+    SetupSession("2", Session("120", "x11", "greeter"));
+    SetupSession("3", Session("1000", "x11", "user"));
+    var sut = CreateSut();
+
+    var result = await sut.DetectDisplayEnvironment();
+
+    Assert.False(result.IsLoginScreen);
+    _processManager.Verify(
+      x => x.GetProcessOutput("systemctl", It.IsAny<string>(), It.IsAny<int>()),
+      Times.Never);
+  }
 
   [Fact]
   public async Task DetectDisplayEnvironment_WhenActiveUserSessionExists_ReturnsNotLoginScreen()
@@ -32,6 +48,39 @@ public class DesktopEnvironmentDetectorAgentTests
   }
 
   [Fact]
+  public async Task DetectDisplayEnvironment_WhenGreeterSessionHasNoType_FallsBackToX11()
+  {
+    SetupSessions("2");
+    SetupSession("2", Session("120", null, "greeter"));
+    _processManager
+      .Setup(x => x.GetProcessOutput("systemctl", "status display-manager --no-pager -l", It.IsAny<int>()))
+      .ReturnsAsync(Result.Ok("lightdm.service"));
+    _fileSystem.Setup(x => x.FileExists("/run/lightdm/root/:0")).Returns(true);
+    var sut = CreateSut();
+
+    var result = await sut.DetectDisplayEnvironment();
+
+    Assert.True(result.IsLoginScreen);
+    Assert.False(result.IsWayland);
+    Assert.Equal("lightdm", result.DisplayManager);
+  }
+
+  [Fact]
+  public async Task DetectDisplayEnvironment_WhenLoginctlFails_ReturnsInconclusive()
+  {
+    SetupSessionsFailure();
+    var sut = CreateSut();
+
+    var result = await sut.DetectDisplayEnvironment();
+
+    Assert.False(result.IsConclusive);
+    Assert.False(result.IsLoginScreen);
+    _processManager.Verify(
+      x => x.GetProcessOutput("systemctl", It.IsAny<string>(), It.IsAny<int>()),
+      Times.Never);
+  }
+
+  [Fact]
   public async Task DetectDisplayEnvironment_WhenNoGreeterSession_ReturnsNotLoginScreen()
   {
     SetupSessions();
@@ -39,11 +88,47 @@ public class DesktopEnvironmentDetectorAgentTests
 
     var result = await sut.DetectDisplayEnvironment();
 
+    Assert.True(result.IsConclusive);
     Assert.False(result.IsLoginScreen);
     Assert.False(result.IsWayland);
     _processManager.Verify(
       x => x.GetProcessOutput("systemctl", It.IsAny<string>(), It.IsAny<int>()),
       Times.Never);
+  }
+
+  [Fact]
+  public async Task DetectDisplayEnvironment_WhenSessionIsNotGreeter_ReturnsNotLoginScreen()
+  {
+    SetupSessions("2");
+    SetupSession("2", Session("120", "x11", "user"));
+    var sut = CreateSut();
+
+    var result = await sut.DetectDisplayEnvironment();
+
+    Assert.True(result.IsConclusive);
+    Assert.False(result.IsLoginScreen);
+    _processManager.Verify(
+      x => x.GetProcessOutput("systemctl", It.IsAny<string>(), It.IsAny<int>()),
+      Times.Never);
+  }
+
+  [Fact]
+  public async Task DetectDisplayEnvironment_WhenWaylandGreeterHasNoSocket_FallsBackToX11()
+  {
+    SetupSessions("2");
+    SetupSession("2", Session("120", "wayland", "greeter"));
+    _processManager
+      .Setup(x => x.GetProcessOutput("systemctl", "status display-manager --no-pager -l", It.IsAny<int>()))
+      .ReturnsAsync(Result.Ok("lightdm.service"));
+    _fileSystem.Setup(x => x.FileExists("/run/lightdm/root/:0")).Returns(true);
+    var sut = CreateSut();
+
+    var result = await sut.DetectDisplayEnvironment();
+
+    Assert.True(result.IsLoginScreen);
+    Assert.False(result.IsWayland);
+    Assert.Equal("lightdm", result.DisplayManager);
+    Assert.Equal("/run/lightdm/root/:0", result.XAuthPath);
   }
 
   [Fact]
@@ -106,15 +191,24 @@ public class DesktopEnvironmentDetectorAgentTests
     Assert.Equal(":0", result.Display);
   }
 
-  private static string Session(string user, string sessionType, string sessionClass)
+  private static string Session(string user, string? sessionType, string sessionClass)
   {
-    return string.Join('\n',
+    var lines = new List<string>
+    {
       "Id=2",
-      $"Class={sessionClass}",
-      $"Type={sessionType}",
-      $"User={user}",
-      "State=active",
-      "Active=yes");
+      $"Class={sessionClass}"
+    };
+
+    if (sessionType is not null)
+    {
+      lines.Add($"Type={sessionType}");
+    }
+
+    lines.Add($"User={user}");
+    lines.Add("State=active");
+    lines.Add("Active=yes");
+
+    return string.Join('\n', lines);
   }
 
   private DesktopEnvironmentDetectorAgent CreateSut()
@@ -137,5 +231,12 @@ public class DesktopEnvironmentDetectorAgentTests
     _processManager
       .Setup(x => x.GetProcessOutput("loginctl", "list-sessions --no-legend", It.IsAny<int>()))
       .ReturnsAsync(Result.Ok(string.Join('\n', sessionIds)));
+  }
+
+  private void SetupSessionsFailure()
+  {
+    _processManager
+      .Setup(x => x.GetProcessOutput("loginctl", "list-sessions --no-legend", It.IsAny<int>()))
+      .ReturnsAsync(Result.Fail<string>("logind unavailable"));
   }
 }

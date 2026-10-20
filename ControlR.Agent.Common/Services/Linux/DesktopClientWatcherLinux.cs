@@ -162,6 +162,14 @@ internal class DesktopClientWatcherLinux(
   {
     var displayInfo = await _desktopEnvironmentDetector.DetectDisplayEnvironment();
 
+    if (!displayInfo.IsConclusive)
+    {
+      // logind could not be queried, so we cannot tell whether this host is at a login
+      // screen. Leave any running client alone rather than tearing down a healthy session.
+      _logger.LogWarningDeduped("Login screen detection was inconclusive. Leaving the desktop client state unchanged.");
+      return;
+    }
+
     if (displayInfo.IsWayland)
     {
       _logger.LogInformationDeduped(

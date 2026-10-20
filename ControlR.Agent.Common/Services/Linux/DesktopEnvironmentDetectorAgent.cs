@@ -31,7 +31,16 @@ internal class DesktopEnvironmentDetectorAgent(
         return info;
       }
 
-      if (await GetGreeterSession() is not { } greeterSession)
+      var greeterLookup = await GetGreeterSession();
+      if (!greeterLookup.IsConclusive)
+      {
+        // logind could not be queried, so we cannot tell whether this host is at a login
+        // screen. Leave a running greeter client alone rather than stopping a healthy one.
+        info.IsConclusive = false;
+        return info;
+      }
+
+      if (greeterLookup.Session is not { } greeterSession)
       {
         // A display server that no logind session owns (a container's virtual X server,
         // for example) is not a login screen. See #154.
@@ -41,11 +50,13 @@ internal class DesktopEnvironmentDetectorAgent(
 
       info.IsLoginScreen = true;
 
-      // Try to detect Wayland display first
-      if (greeterSession.SessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase))
+      // A Wayland greeter is only usable when its socket exists. Otherwise fall through to
+      // X11 detection, which the same display server hosts.
+      if (greeterSession.SessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase) &&
+          GetWaylandRuntimeDir(greeterSession) is { } waylandRuntimeDir)
       {
         info.WaylandDisplay = "wayland-0";
-        info.WaylandRuntimeDir = GetWaylandRuntimeDir(greeterSession);
+        info.WaylandRuntimeDir = waylandRuntimeDir;
         info.IsWayland = true;
 
         _logger.LogInformationDeduped("Detected Wayland session at login screen");
@@ -232,12 +243,17 @@ internal class DesktopEnvironmentDetectorAgent(
     return null;
   }
 
-  private async Task<GreeterSession?> GetGreeterSession()
+  private async Task<GreeterLookup> GetGreeterSession()
   {
     var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
-    if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
+    if (!sessionsResult.IsSuccess)
     {
-      return null;
+      return GreeterLookup.Inconclusive;
+    }
+
+    if (string.IsNullOrWhiteSpace(sessionsResult.Value))
+    {
+      return GreeterLookup.NotFound;
     }
 
     var sessionLines = sessionsResult.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -253,7 +269,13 @@ internal class DesktopEnvironmentDetectorAgent(
 
       // Get detailed session info
       var sessionInfoResult = await _processManager.GetProcessOutput("loginctl", $"show-session {sessionId}", 3000);
-      if (!sessionInfoResult.IsSuccess || string.IsNullOrWhiteSpace(sessionInfoResult.Value))
+      if (!sessionInfoResult.IsSuccess)
+      {
+        // This session may be the greeter, so "no greeter" would be a guess.
+        return GreeterLookup.Inconclusive;
+      }
+
+      if (string.IsNullOrWhiteSpace(sessionInfoResult.Value))
       {
         continue;
       }
@@ -262,22 +284,23 @@ internal class DesktopEnvironmentDetectorAgent(
 
       if (!sessionInfo.TryGetValue("Class", out var sessionClass) ||
           !sessionClass.Equals("greeter", StringComparison.OrdinalIgnoreCase) ||
-          !sessionInfo.TryGetValue("Type", out var sessionType) ||
-          (!sessionType.Equals("x11", StringComparison.OrdinalIgnoreCase) &&
-           !sessionType.Equals("wayland", StringComparison.OrdinalIgnoreCase)) ||
           !sessionInfo.TryGetValue("User", out var uidString) ||
           !int.TryParse(uidString, out var uid))
       {
         continue;
       }
 
-      return new GreeterSession(sessionId, sessionType, uid);
+      // Type is only used to choose Wayland over X11; a greeter that does not report one
+      // is still a login screen.
+      sessionInfo.TryGetValue("Type", out var sessionType);
+
+      return GreeterLookup.Found(new GreeterSession(sessionId, sessionType ?? string.Empty, uid));
     }
 
-    return null;
+    return GreeterLookup.NotFound;
   }
 
-  private string GetWaylandRuntimeDir(GreeterSession greeterSession)
+  private string? GetWaylandRuntimeDir(GreeterSession greeterSession)
   {
     var runtimeDir = $"/run/user/{greeterSession.Uid}";
     if (_fileSystem.FileExists(Path.Combine(runtimeDir, "wayland-0")))
@@ -294,17 +317,17 @@ internal class DesktopEnvironmentDetectorAgent(
         continue;
       }
 
-      runtimeDir = Path.GetDirectoryName(socketPath) ?? runtimeDir;
+      var rootRuntimeDir = Path.GetDirectoryName(socketPath) ?? runtimeDir;
       _logger.LogInformationDeduped("Found root Wayland socket at {SocketPath}, RuntimeDir={RuntimeDir}",
-        args: [socketPath, runtimeDir]);
-      return runtimeDir;
+        args: [socketPath, rootRuntimeDir]);
+      return rootRuntimeDir;
     }
 
     _logger.LogWarningDeduped(
-      "Wayland greeter session {SessionId} has no wayland-0 socket. RuntimeDir={RuntimeDir}",
-      args: [greeterSession.SessionId, runtimeDir]);
+      "Wayland greeter session {SessionId} has no wayland-0 socket. Falling back to X11 detection.",
+      args: [greeterSession.SessionId]);
 
-    return runtimeDir;
+    return null;
   }
 
   private async Task<bool> HasActiveUserSessions()
@@ -367,6 +390,15 @@ internal class DesktopEnvironmentDetectorAgent(
     }
   }
 
+  private readonly record struct GreeterLookup(bool IsConclusive, GreeterSession? Session)
+  {
+    public static GreeterLookup Inconclusive => new(false, null);
+
+    public static GreeterLookup NotFound => new(true, null);
+
+    public static GreeterLookup Found(GreeterSession session) => new(true, session);
+  }
+
   private readonly record struct GreeterSession(string SessionId, string SessionType, int Uid);
 }
 
@@ -374,6 +406,12 @@ internal class DisplayEnvironmentInfo
 {
   public string Display { get; set; } = ":0";
   public string? DisplayManager { get; set; }
+
+  /// <summary>
+  /// False when logind could not be queried, so the login-screen determination is unknown.
+  /// </summary>
+  public bool IsConclusive { get; set; } = true;
+
   public bool IsLoginScreen { get; set; }
   public bool IsWayland { get; set; }
   public string? WaylandDisplay { get; set; }
