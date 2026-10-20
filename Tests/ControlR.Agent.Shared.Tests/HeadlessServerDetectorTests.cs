@@ -10,7 +10,8 @@ using Moq;
 namespace ControlR.Agent.Shared.Tests;
 
 /// <summary>
-/// Pins the DISPLAY probe in headless detection. The old <c>ps -eo env</c> scrape was
+/// Pins the DISPLAY probe in headless detection. It also pins the boot-default short-circuit,
+/// where multi-user.target is conclusive and graphical.target is not. The old <c>ps -eo env</c> scrape was
 /// rejected by procps ("env" is not a format specifier), and because GetProcessOutput leaves the
 /// child's stderr inherited, the usage text landed in the agent log untagged. The replacement
 /// greps DISPLAY from /proc/[0-9]*/environ and prints a self-reporting marker, so a probe that
@@ -82,6 +83,38 @@ public class HeadlessServerDetectorTests
     Assert.Contains(
       stdout,
       new[] { "cr-display-found", "cr-display-none", "cr-display-error" });
+  }
+
+  [Fact]
+  public async Task IsHeadlessServer_WhenDefaultTargetIsGraphical_ConsultsDisplayProbe()
+  {
+    // graphical.target is kept on hosts with no display manager installed, so it decides
+    // nothing on its own and the probe still has to run.
+    var (detector, processManager) = CreateDetectorWithProbeResult(Result.Ok("cr-display-found"));
+    SetupDefaultTarget(processManager, "graphical.target");
+
+    var isHeadless = await detector.IsHeadlessServer();
+
+    Assert.False(isHeadless);
+    processManager.Verify(
+      x => x.GetProcessOutput("bash", It.IsAny<string>(), It.IsAny<int>()),
+      Times.Once);
+  }
+
+  [Fact]
+  public async Task IsHeadlessServer_WhenDefaultTargetIsMultiUser_ReturnsHeadlessWithoutProbe()
+  {
+    // display-manager.service is only pulled in by graphical.target, so a multi-user boot
+    // cannot start a greeter and the probe has nothing left to add.
+    var (detector, processManager) = CreateDetectorWithProbeResult(Result.Ok("cr-display-found"));
+    SetupDefaultTarget(processManager, "multi-user.target");
+
+    var isHeadless = await detector.IsHeadlessServer();
+
+    Assert.True(isHeadless);
+    processManager.Verify(
+      x => x.GetProcessOutput("bash", It.IsAny<string>(), It.IsAny<int>()),
+      Times.Never);
   }
 
   [Fact]
@@ -286,5 +319,15 @@ public class HeadlessServerDetectorTests
     {
       Directory.Delete(stubDirectory, recursive: true);
     }
+  }
+
+  /// <summary>
+  /// Answers the boot-default query. Must run after the catch-all setup, which it overrides.
+  /// </summary>
+  private static void SetupDefaultTarget(Mock<IProcessManager> processManager, string defaultTarget)
+  {
+    processManager
+      .Setup(x => x.GetProcessOutput("systemctl", "get-default", It.IsAny<int>()))
+      .ReturnsAsync(Result.Ok(defaultTarget));
   }
 }
