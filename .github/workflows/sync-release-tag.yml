@@ -1,0 +1,61 @@
+name: Sync Release Tag
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to sync, for replaying a missed publish"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sync-tag:
+    name: Copy the release tag to the target repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Full history so the released tag and its archive commit are present.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the target secret
+        env:
+          REPO: ${{ secrets.RELEASE_SYNC_REPO }}
+        run: |
+          set -euo pipefail
+          if [ -z "${REPO}" ]; then
+            echo "::error::RELEASE_SYNC_REPO is not set in this repository."
+            exit 1
+          fi
+
+      - name: Mint a token for the target repository
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.BBB_CLIENT_ID }}
+          private-key: ${{ secrets.BBB_PRIVATE_KEY }}
+          owner: bitbound
+          repositories: ${{ secrets.RELEASE_SYNC_REPO }}
+
+      - name: Push the tag and its commit
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ secrets.RELEASE_SYNC_REPO }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          if ! git rev-parse --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag ${TAG} is not present in the checkout."
+            exit 1
+          fi
+
+          git push "https://x-access-token:${TOKEN}@github.com/bitbound/${REPO}.git" \
+            "refs/tags/${TAG}"
