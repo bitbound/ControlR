@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Security.Claims;
-using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Web.Server.Authz.Permissions;
 using Microsoft.AspNetCore.SignalR;
@@ -38,15 +37,6 @@ public partial class ViewerHub
     }
   }
 
-  [Obsolete("Use GetActiveDesktopSessions2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId)
-  {
-    var result = await GetActiveDesktopSessions2(new(deviceId));
-    return result.IsSuccess
-      ? result.Value?.Sessions.ToArray() ?? []
-      : [];
-  }
-
   public async Task<HubResult<ActiveDesktopSessionsResponseDto>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request)
   {
     try
@@ -75,12 +65,6 @@ public partial class ViewerHub
       _logger.LogError(ex, "Error while getting Windows sessions from agent.");
       return HubResult.Fail<ActiveDesktopSessionsResponseDto>("An error occurred.");
     }
-  }
-
-  [Obsolete("Use InvokeCtrlAltDel2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType)
-  {
-    return await InvokeCtrlAltDel2(new(deviceId, targetDesktopProcessId, desktopSessionType));
   }
 
   public async Task<HubResult> InvokeCtrlAltDel2(InvokeCtrlAltDelViewerRequestDto request)
@@ -150,12 +134,6 @@ public partial class ViewerHub
     }
   }
 
-  [Obsolete("Use RequestRemoteControlPermission2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> RequestRemoteControlPermission(Guid deviceId, int targetProcessId)
-  {
-    return await RequestRemoteControlPermission2(new(deviceId, targetProcessId));
-  }
-
   public async Task<HubResult> RequestRemoteControlPermission2(RequestRemoteControlPermissionRequestDto request)
   {
     try
@@ -174,22 +152,6 @@ public partial class ViewerHub
       _logger.LogError(ex, "Error while requesting remote control permission.");
       return HubResult.Fail("An error occurred while requesting remote control permission.");
     }
-  }
-
-  [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-09-03, v0.28.x)")]
-  public Task<HubResult> RequestRemoteControlSession(
-    Guid deviceId,
-    RemoteControlSessionRequestDto sessionRequestDto)
-  {
-    return RequestRemoteControlSessionCore(
-      sessionRequestDto with { DeviceId = deviceId },
-      false);
-  }
-
-  [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-10-20, v0.30.x)")]
-  public Task<HubResult> RequestRemoteControlSession2(RemoteControlSessionRequestDto sessionRequestDto)
-  {
-    return RequestRemoteControlSessionCore(sessionRequestDto, false);
   }
 
   public Task<HubResult> RequestRemoteControlSession3(RemoteControlSessionRequestDto sessionRequestDto)

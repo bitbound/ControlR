@@ -54,23 +54,11 @@ public partial class ViewerHub(
     set => SetItem(value);
   }
 
-  [Obsolete("Use AddViewerActivity2. (deprecated 2026-09-03, v0.28.x)")]
-  public Task<HubResult> AddViewerActivity(string activityName)
-  {
-    return AddViewerActivity2(new(activityName));
-  }
-
   public Task<HubResult> AddViewerActivity2(AddViewerActivityRequestDto request)
   {
     using var activity = SessionActivity?.StartChildActivity(request.ActivityName);
     _logger.LogInformation("Viewer Activity: {EventName}", request.ActivityName);
     return Task.FromResult(HubResult.Ok());
-  }
-
-  [Obsolete("Use CloseChatSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
-  {
-    return await CloseChatSession2(new(deviceId, sessionId, targetProcessId));
   }
 
   public async Task<HubResult> CloseChatSession2(CloseChatSessionRequestDto request)
@@ -101,16 +89,6 @@ public partial class ViewerHub(
     }
   }
 
-  [Obsolete("Use CloseTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task CloseTerminalSession(Guid deviceId, Guid terminalSessionId)
-  {
-    var result = await CloseTerminalSession2(new(deviceId, terminalSessionId));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("CloseTerminalSession failed: {Reason}", result.Reason);
-    }
-  }
-
   public async Task<HubResult> CloseTerminalSession2(CloseTerminalSessionRequestDto request)
   {
     try
@@ -131,14 +109,6 @@ public partial class ViewerHub(
       _logger.LogError(ex, "Error while closing terminal session.");
       return HubResult.Fail("An error occurred.");
     }
-  }
-
-  [Obsolete("Use CreateTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> CreateTerminalSession(
-    Guid deviceId,
-    Guid terminalSessionId)
-  {
-    return await CreateTerminalSession2(new(deviceId, terminalSessionId));
   }
 
   public async Task<HubResult> CreateTerminalSession2(CreateTerminalSessionRequestDto request)
@@ -170,12 +140,6 @@ public partial class ViewerHub(
     SessionActivity?.Dispose();
     SessionActivity = null;
     return Task.FromResult(HubResult.Ok());
-  }
-
-  [Obsolete("Use GetDeviceAccessPermissions2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions(Guid deviceId)
-  {
-    return await GetDeviceAccessPermissions2(new(deviceId));
   }
 
   public async Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions2(GetDeviceAccessPermissionsRequestDto request)
@@ -332,16 +296,6 @@ public partial class ViewerHub(
     }
   }
 
-  [Obsolete("Use RefreshDeviceInfo2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task RefreshDeviceInfo(Guid deviceId)
-  {
-    var result = await RefreshDeviceInfo2(new(deviceId));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("RefreshDeviceInfo failed: {Reason}", result.Reason);
-    }
-  }
-
   public async Task<HubResult> RefreshDeviceInfo2(RefreshDeviceInfoRequestDto request)
   {
     try
@@ -362,15 +316,6 @@ public partial class ViewerHub(
       _logger.LogError(ex, "Error while refreshing device info.");
       return HubResult.Fail("An error occurred while refreshing device info.");
     }
-  }
-
-  [Obsolete("Use RequestVncSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> RequestVncSession(
-    Guid deviceId,
-    VncSessionRequestDto sessionRequestDto)
-  {
-    return await RequestVncSession2(
-      sessionRequestDto with { DeviceId = deviceId });
   }
 
   public async Task<HubResult> RequestVncSession2(VncSessionRequestDto sessionRequestDto)
@@ -450,16 +395,6 @@ public partial class ViewerHub(
     }
   }
 
-  [Obsolete("Use SendAgentUpdateTrigger2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task SendAgentUpdateTrigger(Guid deviceId)
-  {
-    var result = await SendAgentUpdateTrigger2(new(deviceId));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("SendAgentUpdateTrigger failed: {Reason}", result.Reason);
-    }
-  }
-
   public async Task<HubResult> SendAgentUpdateTrigger2(SendAgentUpdateTriggerRequestDto request)
   {
     try
@@ -480,12 +415,6 @@ public partial class ViewerHub(
       _logger.LogError(ex, "Error while sending agent update trigger.");
       return HubResult.Fail("An error occurred while sending the agent update trigger.");
     }
-  }
-
-  [Obsolete("Use SendChatMessage2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
-  {
-    return await SendChatMessage2(dto with { DeviceId = deviceId });
   }
 
   public async Task<HubResult> SendChatMessage2(ChatMessageHubDto dto)
@@ -533,16 +462,6 @@ public partial class ViewerHub(
     }
   }
 
-  [Obsolete("Use SendPowerStateChange2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task SendPowerStateChange(Guid deviceId, PowerStateChangeType changeType)
-  {
-    var result = await SendPowerStateChange2(new(deviceId, changeType));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("SendPowerStateChange failed: {Reason}", result.Reason);
-    }
-  }
-
   public async Task<HubResult> SendPowerStateChange2(SendPowerStateChangeRequestDto request)
   {
     try
@@ -570,12 +489,6 @@ public partial class ViewerHub(
     }
   }
 
-  [Obsolete("Use SendTerminalInput2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
-  {
-    return await SendTerminalInput2(new(deviceId, dto));
-  }
-
   public async Task<HubResult> SendTerminalInput2(SendTerminalInputRequestDto request)
   {
     try
@@ -601,12 +514,6 @@ public partial class ViewerHub(
       _logger.LogError(ex, "Error while sending terminal input.");
       return HubResult.Fail("Agent could not be reached.");
     }
-  }
-
-  [Obsolete("Use SendWakeDevice2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult<string>> SendWakeDevice(Guid deviceId, string[] macAddresses)
-  {
-    return await SendWakeDevice2(new(deviceId, macAddresses));
   }
 
   public async Task<HubResult<string>> SendWakeDevice2(SendWakeDeviceRequestDto request)
@@ -654,12 +561,6 @@ public partial class ViewerHub(
     }
   }
 
-  [Obsolete("Use StartDeviceAccessActivity2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> StartDeviceAccessActivity(Guid deviceId)
-  {
-    return await StartDeviceAccessActivity2(new(deviceId));
-  }
-
   public async Task<HubResult> StartDeviceAccessActivity2(StartDeviceAccessActivityRequestDto request)
   {
     if (Context.User is null)
@@ -693,12 +594,6 @@ public partial class ViewerHub(
     }
 
     return HubResult.Ok();
-  }
-
-  [Obsolete("Use SubscribeToDeviceHeartbeats2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> SubscribeToDeviceHeartbeats(Guid[] deviceIds)
-  {
-    return await SubscribeToDeviceHeartbeats2(new(deviceIds));
   }
 
   public async Task<HubResult> SubscribeToDeviceHeartbeats2(SubscribeToDeviceHeartbeatsRequestDto request)
@@ -758,12 +653,6 @@ public partial class ViewerHub(
     return HubResult.Ok();
   }
 
-  [Obsolete("Use TestVncConnection2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> TestVncConnection(Guid guid, int port)
-  {
-    return await TestVncConnection2(new(guid, port));
-  }
-
   public async Task<HubResult> TestVncConnection2(TestVncConnectionRequestDto request)
   {
     try
@@ -781,16 +670,6 @@ public partial class ViewerHub(
     {
       _logger.LogError(ex, "Error while testing VNC connection.");
       return HubResult.Fail("An error occurred while testing the VNC connection.");
-    }
-  }
-
-  [Obsolete("Use UninstallAgent2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task UninstallAgent(Guid deviceId, string reason)
-  {
-    var result = await UninstallAgent2(new(deviceId, reason));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("UninstallAgent failed: {Reason}", result.Reason);
     }
   }
 
@@ -818,16 +697,6 @@ public partial class ViewerHub(
     {
       _logger.LogError(ex, "Error while uninstalling agent.");
       return HubResult.Fail("An error occurred while uninstalling the agent.");
-    }
-  }
-
-  [Obsolete("Use UnsubscribeFromDeviceHeartbeats2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task UnsubscribeFromDeviceHeartbeats(Guid[] deviceIds)
-  {
-    var result = await UnsubscribeFromDeviceHeartbeats2(new(deviceIds));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("UnsubscribeFromDeviceHeartbeats failed: {Reason}", result.Reason);
     }
   }
 
