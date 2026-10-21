@@ -102,7 +102,13 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<SendToastToViewerMessage>(this, HandleSendToastToViewerMessage);
       OnClosed(HandleConnectionClosed);
 
-      _relayDtoRegistration = RegisterMessageHandler(this, HandleRelayDto);
+      // A viewer that can receive commands over the hub gets them there, where the server authorizes
+      // each one.  Leaving this handler registered for such a session would let anything the relay
+      // delivers run unauthenticated, since the relay carries no permission check.
+      if (!_startupOptions.Value.ViewerSupportsRemoteControlDtoHub)
+      {
+        _relayDtoRegistration = RegisterMessageHandler(this, HandleRelayDto);
+      }
 
       await _displayManager.ReloadDisplays();
 
@@ -185,7 +191,8 @@ internal sealed class DesktopRemoteControlStream(
 
   private async Task HandleRelayDto(RemoteControlDtoWrapper wrapper)
   {
-    // The relay has no return channel, so a viewer that sends commands over it never learns whether they landed.
+    // Only reached for a viewer that predates the hub command path.  The relay has no return channel,
+    // so such a viewer never learns whether its commands landed.
     await _dtoHandler.Handle(wrapper);
   }
 
