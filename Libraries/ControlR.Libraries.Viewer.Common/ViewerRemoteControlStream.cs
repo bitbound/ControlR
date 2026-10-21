@@ -24,7 +24,7 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
   Task<HubResult> SendCaptureSettings(UpdateCaptureSettingsDto settings, CancellationToken cancellationToken);
   Task<HubResult> SendChangeDisplaysRequest(string displayId, CancellationToken cancellationToken);
   Task<HubResult> SendClipboardText(string text, Guid sessionId, CancellationToken cancellationToken);
-  Task<HubResult> SendCloseStreamingSession(CancellationToken cancellationToken);
+  Task SendCloseStreamingSession(CancellationToken cancellationToken);
   Task SendKeyboardStateReset(CancellationToken cancellationToken);
   Task SendKeyEvent(
     string key,
@@ -146,14 +146,14 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       });
   }
 
-  public async Task<HubResult> SendCloseStreamingSession(CancellationToken cancellationToken)
+  public async Task SendCloseStreamingSession(CancellationToken cancellationToken)
   {
-    return await TryInvoke(
+    await TrySend(
       async () =>
       {
         var dto = new CloseStreamingSessionRequestDto();
         var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.CloseRemoteControlSession);
-        return await InvokeDto(wrapper, cancellationToken);
+        await SendDto(wrapper, cancellationToken);
       });
   }
 
