@@ -7,4 +7,4 @@ public record SendRemoteControlDtoToAgentRequestDto(
   Guid DeviceId,
   int TargetProcessId,
   Guid SessionId,
-  RemoteControlDtoWrapper Wrapper);
+  RemoteControlCommandWrapper Wrapper);

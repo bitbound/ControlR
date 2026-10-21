@@ -12,7 +12,7 @@ public interface IAgentHub
   Task SendDesktopPreviewStream(Guid streamId, ChannelReader<byte[]> jpegChunks);
   Task SendDirectoryContentsStream(Guid streamId, bool directoryExists, ChannelReader<FileSystemEntryDto[]> entryChunks);
   Task<HubResult> SendFileContentStream(Guid streamId, ChannelReader<byte[]> fileChunks);
-  Task SendRemoteControlDtoToViewer(string viewerConnectionId, RemoteControlDtoWrapper dto);
+  Task SendRemoteControlDtoToViewer(string viewerConnectionId, RemoteControlEventWrapper dto);
   Task SendSubdirectoriesStream(Guid streamId, ChannelReader<FileSystemEntryDto[]> subdirectoryChunks);
   Task SendTerminalOutputToViewer(string viewerConnectionId, TerminalOutputDto outputDto);
   Task<HubResult<DeviceResponseDto>> UpdateDeviceSigned(SignedDto<DeviceUpdateRequestDto> signedDto);

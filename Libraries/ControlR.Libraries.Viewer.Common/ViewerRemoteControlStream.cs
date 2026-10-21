@@ -49,6 +49,8 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
 {
   private readonly ILogger<ViewerRemoteControlStream> _logger;
   private readonly IHubConnection<IViewerHub> _viewerHub;
+  private MovePointerDto? _pendingPointerMove;
+  private int _pointerMovePumpRunning;
   private RemoteControlSession? _session;
 
   public ViewerRemoteControlStream(
@@ -64,7 +66,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
     _logger = logger;
     _viewerHub = viewerHub;
 
-    messenger.Register<DtoReceivedMessage<RemoteControlDtoWrapper>>(this, HandleRemoteControlDtoReceived);
+    messenger.Register<DtoReceivedMessage<RemoteControlEventWrapper>>(this, HandleRemoteControlDtoReceived);
   }
 
   public Task Connect(
@@ -98,7 +100,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new RequestClipboardTextDto();
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.RequestClipboardText);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.RequestClipboardText);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -109,7 +111,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new RequestKeyFrameDto();
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.RequestKeyFrame);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.RequestKeyFrame);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -119,7 +121,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
     return await TryInvoke(
       async () =>
       {
-        var wrapper = RemoteControlDtoWrapper.Create(settings, RemoteControlDtoType.UpdateCaptureSettings);
+        var wrapper = RemoteControlCommandWrapper.Create(settings, RemoteControlCommandDtoType.UpdateCaptureSettings);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -130,7 +132,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new ChangeDisplaysDto(displayId);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ChangeDisplays);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.ChangeDisplays);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -141,7 +143,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new ClipboardTextDto(text, sessionId);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ClipboardText);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.ClipboardText);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -152,7 +154,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new CloseStreamingSessionRequestDto();
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.CloseRemoteControlSession);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.CloseRemoteControlSession);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -163,7 +165,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new ResetKeyboardStateDto();
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ResetKeyboardState);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.ResetKeyboardState);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -180,7 +182,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new KeyEventDto(key, code ?? string.Empty, isPressed, inputMode, modifiers);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.KeyEvent);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.KeyEvent);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -196,7 +198,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new MouseButtonEventDto(button, isPressed, normalizedX, normalizedY);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.MouseButtonEvent);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.MouseButtonEvent);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -208,20 +210,25 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new MouseClickDto(button, isDoubleClick, normalizedX, normalizedY);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.MouseClick);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.MouseClick);
         await SendDto(wrapper, cancellationToken);
       });
   }
 
-  public async Task SendPointerMove(double normalizedX, double normalizedY, CancellationToken cancellationToken)
+  public Task SendPointerMove(double normalizedX, double normalizedY, CancellationToken cancellationToken)
   {
-    await TrySend(
-      async () =>
-      {
-        var dto = new MovePointerDto(normalizedX, normalizedY);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.MovePointer);
-        await SendDto(wrapper, cancellationToken);
-      });
+    // Pointer moves arrive at input rate and each one is superseded by the next, so a backlog of
+    // them only delays the commands queued behind it.  Keep only the newest position and let a
+    // single sender drain it.  Discrete events carry their own coordinates, so they reposition
+    // the pointer themselves and do not depend on an earlier move having landed.
+    Volatile.Write(ref _pendingPointerMove, new MovePointerDto(normalizedX, normalizedY));
+
+    if (Interlocked.Exchange(ref _pointerMovePumpRunning, 1) == 1)
+    {
+      return Task.CompletedTask;
+    }
+
+    return PumpPointerMovesAsync(cancellationToken);
   }
 
   public async Task<HubResult> SendToggleBlockInput(bool isEnabled, CancellationToken cancellationToken)
@@ -230,7 +237,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new ToggleBlockInputDto(isEnabled);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ToggleBlockInput);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.ToggleBlockInput);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -241,7 +248,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new TogglePrivacyScreenDto(isEnabled);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.TogglePrivacyScreen);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.TogglePrivacyScreen);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -252,7 +259,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new TypeTextDto(text);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.TypeText);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.TypeText);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -264,26 +271,26 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new WheelScrollDto(normalizedX, normalizedY, scrollY, scrollX);
-        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.WheelScroll);
+        var wrapper = RemoteControlCommandWrapper.Create(dto, RemoteControlCommandDtoType.WheelScroll);
         await SendDto(wrapper, cancellationToken);
       });
   }
 
   private static SendRemoteControlDtoToAgentRequestDto CreateRequest(
     RemoteControlSession session,
-    RemoteControlDtoWrapper wrapper) =>
+    RemoteControlCommandWrapper wrapper) =>
     new(
       session.Device.Id,
       session.TargetProcessId,
       session.SessionId,
       wrapper);
 
-  private Task HandleRemoteControlDtoReceived(object subscriber, DtoReceivedMessage<RemoteControlDtoWrapper> message)
+  private Task HandleRemoteControlDtoReceived(object subscriber, DtoReceivedMessage<RemoteControlEventWrapper> message)
   {
     return InvokeMessageHandlers(message.Dto);
   }
 
-  private async Task<HubResult> InvokeDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
+  private async Task<HubResult> InvokeDto(RemoteControlCommandWrapper wrapper, CancellationToken cancellationToken)
   {
     if (_session is not { } session)
     {
@@ -298,7 +305,35 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       .WaitAsync(cancellationToken);
   }
 
-  private async Task SendDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
+  private async Task PumpPointerMovesAsync(CancellationToken cancellationToken)
+  {
+    try
+    {
+      while (Interlocked.Exchange(ref _pendingPointerMove, null) is { } move)
+      {
+        await TrySend(
+          async () =>
+          {
+            var wrapper = RemoteControlCommandWrapper.Create(move, RemoteControlCommandDtoType.MovePointer);
+            await SendDto(wrapper, cancellationToken);
+          });
+      }
+    }
+    finally
+    {
+      Volatile.Write(ref _pointerMovePumpRunning, 0);
+
+      // A position that landed between the last drain and clearing the flag would otherwise be
+      // stranded, so hand the pump to whoever claims the flag next.
+      if (Volatile.Read(ref _pendingPointerMove) is not null &&
+        Interlocked.Exchange(ref _pointerMovePumpRunning, 1) == 0)
+      {
+        _ = PumpPointerMovesAsync(cancellationToken);
+      }
+    }
+  }
+
+  private async Task SendDto(RemoteControlCommandWrapper wrapper, CancellationToken cancellationToken)
   {
     if (_session is not { } session)
     {

@@ -73,9 +73,9 @@ Console.WriteLine($"Latency: {relayStream.CurrentLatency}");
 
 ```csharp
 // Create a DTO wrapper
-var dtoWrapper = RemoteControlDtoWrapper.Create(
+var dtoWrapper = RemoteControlEventWrapper.Create(
     myFrameDto,
-    RemoteControlDtoType.VideoStreamPacket);
+    RemoteControlEventDtoType.VideoStreamPacket);
 
 // Send with cancellation support
 await relayStream.Send(dtoWrapper, cancellationToken);
@@ -89,14 +89,14 @@ var subscription = relayStream.RegisterMessageHandler(this, async wrapper =>
 {
     switch (wrapper.DtoType)
     {
-        case RemoteControlDtoType.VideoStreamPacket:
+        case RemoteControlEventDtoType.VideoStreamPacket:
             var frame = wrapper.GetPayload<VideoStreamPacketDto>();
             await HandleFrame(frame);
             break;
 
-        case RemoteControlDtoType.KeyEvent:
-            var input = wrapper.GetPayload<KeyEventDto>();
-            await HandleInput(input);
+        case RemoteControlEventDtoType.CursorChanged:
+            var cursor = wrapper.GetPayload<CursorChangedDto>();
+            await HandleCursor(cursor);
             break;
     }
 });

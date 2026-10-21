@@ -204,7 +204,7 @@ public class AgentHub(
     }
   }
 
-  public async Task SendRemoteControlDtoToViewer(string viewerConnectionId, RemoteControlDtoWrapper dto)
+  public async Task SendRemoteControlDtoToViewer(string viewerConnectionId, RemoteControlEventWrapper dto)
   {
     try
     {

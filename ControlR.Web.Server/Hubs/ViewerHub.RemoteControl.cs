@@ -189,14 +189,14 @@ public partial class ViewerHub
     }
   }
 
-  private static string GetRemoteControlPermission(RemoteControlDtoType dtoType) => dtoType switch
+  private static string GetRemoteControlPermission(RemoteControlCommandDtoType dtoType) => dtoType switch
   {
-    RemoteControlDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
-    RemoteControlDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
-    RemoteControlDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
-    RemoteControlDtoType.RequestKeyFrame
-      or RemoteControlDtoType.UpdateCaptureSettings
-      or RemoteControlDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
+    RemoteControlCommandDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
+    RemoteControlCommandDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
+    RemoteControlCommandDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
+    RemoteControlCommandDtoType.RequestKeyFrame
+      or RemoteControlCommandDtoType.UpdateCaptureSettings
+      or RemoteControlCommandDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
     _ => PermissionNames.DeviceRemoteControlInteract
   };
 

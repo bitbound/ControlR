@@ -113,9 +113,9 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlDtoWrapper.Create(
+      Wrapper: RemoteControlCommandWrapper.Create(
         new ClipboardTextDto("secret", Guid.NewGuid()),
-        RemoteControlDtoType.ClipboardText));
+        RemoteControlCommandDtoType.ClipboardText));
 
     var result = await hub.InvokeRemoteControlDtoOnAgent(request);
 
@@ -140,7 +140,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText));
+      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
 
     var result = await hub.InvokeRemoteControlDtoOnAgent(request);
 
@@ -410,7 +410,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: sessionId,
-      Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText));
+      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
 
     await hub.SendRemoteControlDtoToAgent(request);
 
@@ -418,7 +418,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       forwarded =>
         forwarded.DeviceId == device.Id &&
         forwarded.SessionId == sessionId &&
-        forwarded.Wrapper.DtoType == RemoteControlDtoType.TypeText)), Times.Once);
+        forwarded.Wrapper.DtoType == RemoteControlCommandDtoType.TypeText)), Times.Once);
   }
 
   [Fact]
@@ -436,7 +436,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: sessionId,
-      Wrapper: RemoteControlDtoWrapper.Create(new TypeTextDto("hello"), RemoteControlDtoType.TypeText));
+      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
 
     await hub.SendRemoteControlDtoToAgent(request);
 
