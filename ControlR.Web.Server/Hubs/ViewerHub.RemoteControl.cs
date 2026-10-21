@@ -18,19 +18,21 @@ public partial class ViewerHub
     PermissionNames.DeviceRemoteControlInteract
   ];
 
-  // Commands arrive at input rate, so the session's permissions are resolved once and reused.
-  private ConcurrentDictionary<(Guid DeviceId, Guid SessionId), IReadOnlySet<string>> RemoteControlAuthorizations
+  // Commands arrive at input rate, so the device's permissions are resolved once and reused.
+  // Keyed by device alone because every input of the evaluation is fixed for the connection,
+  // so a session-supplied discriminator could only add entries holding an identical answer.
+  private ConcurrentDictionary<Guid, IReadOnlySet<string>> RemoteControlAuthorizations
   {
     get
     {
       lock (Context.Items)
       {
-        if (GetItem<ConcurrentDictionary<(Guid DeviceId, Guid SessionId), IReadOnlySet<string>>?>(null) is { } cached)
+        if (GetItem<ConcurrentDictionary<Guid, IReadOnlySet<string>>?>(null) is { } cached)
         {
           return cached;
         }
 
-        var created = new ConcurrentDictionary<(Guid DeviceId, Guid SessionId), IReadOnlySet<string>>();
+        var created = new ConcurrentDictionary<Guid, IReadOnlySet<string>>();
         SetItem(created);
         return created;
       }
@@ -248,7 +250,6 @@ public partial class ViewerHub
 
       var allowedPermissions = await TryGetRemoteControlPermissions(
         device,
-        sessionRequestDto.SessionId,
         user,
         Context.ConnectionAborted);
 
@@ -306,8 +307,7 @@ public partial class ViewerHub
 
     var permission = GetRemoteControlPermission(request.Wrapper.DtoType);
     var cache = RemoteControlAuthorizations;
-    var key = (request.DeviceId, request.SessionId);
-    if (!cache.TryGetValue(key, out var allowedPermissions))
+    if (!cache.TryGetValue(request.DeviceId, out var allowedPermissions))
     {
       var device = await _appDb.Devices
         .AsNoTracking()
@@ -321,7 +321,6 @@ public partial class ViewerHub
 
       allowedPermissions = await TryGetRemoteControlPermissions(
         device,
-        request.SessionId,
         user,
         cancellationToken);
     }
@@ -368,13 +367,11 @@ public partial class ViewerHub
 
   private async Task<IReadOnlySet<string>?> TryGetRemoteControlPermissions(
     Device device,
-    Guid sessionId,
     ClaimsPrincipal user,
     CancellationToken cancellationToken)
   {
     var cache = RemoteControlAuthorizations;
-    var key = (device.Id, sessionId);
-    if (cache.TryGetValue(key, out var cached))
+    if (cache.TryGetValue(device.Id, out var cached))
     {
       return cached;
     }
@@ -401,6 +398,6 @@ public partial class ViewerHub
       _deviceConnectionRegistry.Set(device.Id, device.ConnectionId);
     }
 
-    return cache.GetOrAdd(key, allowedPermissions);
+    return cache.GetOrAdd(device.Id, allowedPermissions);
   }
 }
