@@ -27,6 +27,15 @@ if (!File.Exists(sourcePath))
   return 1;
 }
 
+var mode = args.Length > 4 ? args[4].ToLowerInvariant() : "exact";
+if (mode is not ("exact" or "fit"))
+{
+  Console.WriteLine($"Unknown mode: {mode}");
+  WriteHelp();
+  return 1;
+}
+
+var fit = mode == "fit";
 var outputDirectory = Path.GetDirectoryName(outputPath);
 
 if (!string.IsNullOrEmpty(outputDirectory) && !Directory.Exists(outputDirectory))
@@ -36,18 +45,17 @@ if (!string.IsNullOrEmpty(outputDirectory) && !Directory.Exists(outputDirectory)
 
 if (IsSvg(outputPath))
 {
-  return ResizeToSvg(sourcePath, outputPath, width, height);
+  return ResizeToSvg(sourcePath, outputPath, width, height, fit);
 }
 
-return ResizeToRaster(sourcePath, outputPath, width, height);
+return ResizeToRaster(sourcePath, outputPath, width, height, fit);
 
 // SVG output. SVG has no SKEncodedImageFormat, so the source is drawn onto
 // an SKSvgCanvas instead of encoding a bitmap. An SVG source stays vector.
-static int ResizeToSvg(string sourcePath, string outputPath, int width, int height)
+static int ResizeToSvg(string sourcePath, string outputPath, int width, int height, bool fit)
 {
-  var target = new SKRect(0, 0, width, height);
   using var outputStream = File.Create(outputPath);
-  using var canvas = SKSvgCanvas.Create(target, outputStream);
+  SKRect target;
 
   if (IsSvg(sourcePath))
   {
@@ -58,6 +66,9 @@ static int ResizeToSvg(string sourcePath, string outputPath, int width, int heig
       return Fail($"Failed to decode SVG: {sourcePath}");
     }
 
+    var (svgWidth, svgHeight) = FittedSize(picture.CullRect.Width, picture.CullRect.Height, width, height, fit);
+    target = new SKRect(0, 0, svgWidth, svgHeight);
+    using var canvas = SKSvgCanvas.Create(target, outputStream);
     DrawPictureScaled(canvas, picture, target);
   }
   else
@@ -68,16 +79,19 @@ static int ResizeToSvg(string sourcePath, string outputPath, int width, int heig
       return Fail($"Failed to decode image: {sourcePath}");
     }
 
+    var (rasterWidth, rasterHeight) = FittedSize(original.Width, original.Height, width, height, fit);
+    target = new SKRect(0, 0, rasterWidth, rasterHeight);
+    using var canvas = SKSvgCanvas.Create(target, outputStream);
     canvas.DrawBitmap(original, target, LinearSampling());
   }
 
-  Console.WriteLine($"Resized -> {outputPath} ({width}x{height})");
+  Console.WriteLine($"Resized -> {outputPath} ({(int)target.Width}x{(int)target.Height})");
   return 0;
 }
 
 // Raster output. The format comes from the output extension. An SVG source
 // is rendered straight at the target size, so it scales without resampling.
-static int ResizeToRaster(string sourcePath, string outputPath, int width, int height)
+static int ResizeToRaster(string sourcePath, string outputPath, int width, int height, bool fit)
 {
   var outputExt = Path.GetExtension(outputPath).TrimStart('.').ToLowerInvariant();
   var format = GetEncodedFormatFromExtension(outputExt);
@@ -89,8 +103,8 @@ static int ResizeToRaster(string sourcePath, string outputPath, int width, int h
   }
 
   using var resized = IsSvg(sourcePath)
-    ? RasterizeSvg(sourcePath, width, height)
-    : ResizeRaster(sourcePath, width, height);
+    ? RasterizeSvg(sourcePath, width, height, fit)
+    : ResizeRaster(sourcePath, width, height, fit);
   if (resized == null)
   {
     return Fail($"Failed to resize image: {sourcePath}");
@@ -114,11 +128,11 @@ static int ResizeToRaster(string sourcePath, string outputPath, int width, int h
     }
   }
 
-  Console.WriteLine($"Resized -> {outputPath} ({width}x{height})");
+  Console.WriteLine($"Resized -> {outputPath} ({resized.Width}x{resized.Height})");
   return 0;
 }
 
-static SKBitmap? ResizeRaster(string sourcePath, int width, int height)
+static SKBitmap? ResizeRaster(string sourcePath, int width, int height, bool fit)
 {
   using var original = LoadRasterBitmap(sourcePath);
   if (original == null)
@@ -126,11 +140,12 @@ static SKBitmap? ResizeRaster(string sourcePath, int width, int height)
     return null;
   }
 
-  var imageInfo = new SKImageInfo(width, height);
+  var (targetWidth, targetHeight) = FittedSize(original.Width, original.Height, width, height, fit);
+  var imageInfo = new SKImageInfo(targetWidth, targetHeight);
   return original.Resize(imageInfo, LinearSampling());
 }
 
-static SKBitmap? RasterizeSvg(string path, int width, int height)
+static SKBitmap? RasterizeSvg(string path, int width, int height, bool fit)
 {
   using var svg = new SKSvg();
   var picture = svg.Load(path);
@@ -139,12 +154,26 @@ static SKBitmap? RasterizeSvg(string path, int width, int height)
     return null;
   }
 
-  var bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+  var (targetWidth, targetHeight) = FittedSize(picture.CullRect.Width, picture.CullRect.Height, width, height, fit);
+  var bitmap = new SKBitmap(targetWidth, targetHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
   using var canvas = new SKCanvas(bitmap);
   canvas.Clear(SKColors.Transparent);
-  DrawPictureScaled(canvas, picture, new SKRect(0, 0, width, height));
+  DrawPictureScaled(canvas, picture, new SKRect(0, 0, targetWidth, targetHeight));
   canvas.Flush();
   return bitmap;
+}
+
+// Exact stretches the source into the box, which is what a square icon slot wants. Fit keeps the
+// source aspect ratio and caps both sides at the box, so a wide logo stays wide.
+static (int Width, int Height) FittedSize(double sourceWidth, double sourceHeight, int boxWidth, int boxHeight, bool fit)
+{
+  if (!fit || sourceWidth < 1 || sourceHeight < 1)
+  {
+    return (boxWidth, boxHeight);
+  }
+
+  var scale = Math.Min(boxWidth / sourceWidth, boxHeight / sourceHeight);
+  return (Math.Max(1, (int)Math.Round(sourceWidth * scale)), Math.Max(1, (int)Math.Round(sourceHeight * scale)));
 }
 
 static void DrawPictureScaled(SKCanvas canvas, SKPicture picture, SKRect target)
@@ -219,8 +248,9 @@ static int Fail(string message)
 
 static void WriteHelp()
 {
-  Console.WriteLine("Usage: resize-image <sourcePath> <outputPath> <width> <height>");
+  Console.WriteLine("Usage: resize-image <sourcePath> <outputPath> <width> <height> [exact|fit]");
   Console.WriteLine("Supported input formats include SVG and Skia-supported raster images.");
   Console.WriteLine("Supported output formats: svg, jpg, jpeg, png, webp, bmp, ico, gif");
+  Console.WriteLine("Mode defaults to exact, which stretches to the given size. fit preserves the aspect ratio.");
   Console.WriteLine("Example: dotnet run \"{script_path}\" /path/to/input.svg /path/to/output.png 800 600");
 }

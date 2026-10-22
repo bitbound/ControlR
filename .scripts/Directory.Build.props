@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    File-based utility scripts live in this folder and pin their own package versions with
+    #:package directives so they stay runnable outside the repo. Central package management rejects
+    a Version on PackageReference, so this folder does not inherit the repo-wide props.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

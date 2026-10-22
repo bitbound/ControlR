@@ -48,7 +48,7 @@ param(
   [Parameter(HelpMessage = "Error color hex for light theme")]
   [string] $ErrorColorLight = "#dc3545",
 
-  [Parameter(HelpMessage = "Path or URL to master PNG icon (512px+)")]
+  [Parameter(HelpMessage = "Path or URL to master icon (PNG 512px+, or SVG to rasterize)")]
   [string] $IconPng = "",
 
   [Parameter(HelpMessage = "Path or URL to ICO icon (multi-size)")]
@@ -102,50 +102,27 @@ if (-not $OutputPath) {
   $OutputPath = Join-Path $tempBuildRoot "output"
 }
 
+. (Join-Path $PSScriptRoot "ImageSources.ps1")
+
 #region Helpers
-
-function Get-SourceFile {
-  param([string] $Source, [string] $StagingDir, [string] $FileName)
-
-  if (-not $Source) { return "" }
-
-  $dest = Join-Path $StagingDir $FileName
-
-  if ($Source -match "^https?://") {
-    Write-Host "Downloading $Source -> $dest"
-    Invoke-WebRequest -Uri $Source -OutFile $dest -UseBasicParsing
-    return $dest
-  }
-
-  if ($Source -match "^\\\\") {
-    Write-Host "Copying (UNC) $Source -> $dest"
-    Copy-Item -LiteralPath $Source -Destination $dest -Force
-    return $dest
-  }
-
-  if (Test-Path -LiteralPath $Source) {
-    Write-Host "Copying $Source -> $dest"
-    Copy-Item -LiteralPath $Source -Destination $dest -Force
-    return $dest
-  }
-
-  throw "Source not found: $Source"
-}
 
 function Resize-Image {
   param(
     [string] $SourcePath,
     [string] $OutputPath,
     [int] $Width,
-    [int] $Height
+    [int] $Height,
+    [switch] $Fit
   )
 
   if (-not (Test-Path -LiteralPath $SourcePath)) {
     throw "Source image not found for resize: $SourcePath"
   }
 
+  # Fit keeps the source aspect ratio, so a wide logo never lands in a square box stretched.
+  $mode = if ($Fit) { "fit" } else { "exact" }
   $csScriptPath = Join-Path $PSScriptRoot "resize-image.cs"
-  dotnet run "$csScriptPath" "$SourcePath" "$OutputPath" $Width $Height
+  dotnet run "$csScriptPath" "$SourcePath" "$OutputPath" $Width $Height $mode
   if ($LASTEXITCODE -ne 0) {
     throw "Image resize failed for $SourcePath -> $OutputPath"
   }
@@ -496,10 +473,29 @@ else {
   $masterIco = ""
 
   if ($IconPng) {
-    $masterPng = Get-SourceFile -Source $IconPng -StagingDir $stagingDir -FileName "master.png"
+    $stagedIcon = Get-SourceFile -Source $IconPng -StagingDir $stagingDir -BaseName "master"
+    $iconKind = Get-ImageKind -Path $stagedIcon
+    if ($iconKind -eq "png") {
+      $masterPng = $stagedIcon
+    }
+    elseif ($iconKind -eq "svg") {
+      Write-Host "Rasterizing SVG icon to 1024px PNG"
+      $masterPng = Join-Path $stagingDir "master.png"
+      Resize-Image -SourcePath $stagedIcon -OutputPath $masterPng -Width 1024 -Height 1024
+    }
+    else {
+      throw "Icon source must be PNG or SVG, but '$IconPng' is $iconKind. Put ICO files in the ICO icon parameter."
+    }
   }
   if ($IconIco) {
-    $masterIco = Get-SourceFile -Source $IconIco -StagingDir $stagingDir -FileName "master.ico"
+    # The build only ever copies ICO bytes, so a non-ICO source here would be a file whose name
+    # contradicts its content wherever it lands.
+    $stagedIco = Get-SourceFile -Source $IconIco -StagingDir $stagingDir -BaseName "favicon"
+    $icoKind = Get-ImageKind -Path $stagedIco
+    if ($icoKind -ne "ico") {
+      throw "ICO source must be a real ICO file, but '$IconIco' is $icoKind."
+    }
+    $masterIco = $stagedIco
   }
 
   if ($masterPng) {
@@ -568,7 +564,21 @@ else {
   New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
   if ($CompanyLogoPng) {
-    $masterLogo = Get-SourceFile -Source $CompanyLogoPng -StagingDir $stagingDir -FileName "company-logo.png"
+    $stagedLogo = Get-SourceFile -Source $CompanyLogoPng -StagingDir $stagingDir -BaseName "logo"
+    $logoKind = Get-ImageKind -Path $stagedLogo
+    if ($logoKind -eq "png") {
+      $masterLogo = $stagedLogo
+    }
+    elseif ($logoKind -eq "svg") {
+      # Emails embed this file at wwwroot/images/company-logo.png and MimeKit derives the attachment
+      # content type from that name, so an SVG payload has to become PNG bytes rather than a renamed file.
+      Write-Host "Rasterizing SVG logo to PNG"
+      $masterLogo = Join-Path $stagingDir "logo.png"
+      Resize-Image -SourcePath $stagedLogo -OutputPath $masterLogo -Width 512 -Height 512 -Fit
+    }
+    else {
+      throw "Company logo source must be PNG or SVG, but '$CompanyLogoPng' is $logoKind."
+    }
     $destLogo = Join-Path $repoRoot "ControlR.Web.Server/wwwroot/images/company-logo.png"
     Copy-Item -LiteralPath $masterLogo -Destination $destLogo -Force
     Write-Host "  -> wwwroot/images/company-logo.png"
