@@ -242,11 +242,13 @@ public class DeviceManager(
     {
       await _deviceConnectionRegistry.Set(entity.Id, context.ConnectionId);
     }
-    else if (!context.IsOnline
-      && await _deviceConnectionRegistry.GetConnectionId(entity.Id) is { } trackedConnectionId
-      && trackedConnectionId == context.ConnectionId)
+    else if (!context.IsOnline)
     {
-      await _deviceConnectionRegistry.Remove(entity.Id, trackedConnectionId);
+      var trackedConnectionResult = await _deviceConnectionRegistry.GetConnectionId(entity.Id);
+      if (trackedConnectionResult.IsSuccess && trackedConnectionResult.Value == context.ConnectionId)
+      {
+        await _deviceConnectionRegistry.Remove(entity.Id, trackedConnectionResult.Value);
+      }
     }
 
     if (context.RemoteIpAddress is not null)

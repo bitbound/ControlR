@@ -5,12 +5,14 @@ namespace ControlR.Web.Server.Tests;
 public class DeviceConnectionRegistryTests
 {
   [Fact]
-  public async Task GetConnectionId_UnknownDevice_ReturnsNull()
+  public async Task GetConnectionId_UnknownDevice_ReturnsFailure()
   {
     var cancellationToken = TestContext.Current.CancellationToken;
     var registry = new DeviceConnectionRegistry();
 
-    Assert.Null(await registry.GetConnectionId(Guid.NewGuid(), cancellationToken));
+    var result = await registry.GetConnectionId(Guid.NewGuid(), cancellationToken);
+
+    Assert.False(result.IsSuccess);
   }
 
   [Fact]
@@ -22,7 +24,10 @@ public class DeviceConnectionRegistryTests
     await registry.Set(deviceId, "conn-new", cancellationToken);
     await registry.Remove(deviceId, "conn-old", cancellationToken);
 
-    Assert.Equal("conn-new", await registry.GetConnectionId(deviceId, cancellationToken));
+    var result = await registry.GetConnectionId(deviceId, cancellationToken);
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal("conn-new", result.Value);
   }
 
   [Fact]
@@ -35,7 +40,9 @@ public class DeviceConnectionRegistryTests
 
     await registry.Remove(deviceId, "conn-1", cancellationToken);
 
-    Assert.Null(await registry.GetConnectionId(deviceId, cancellationToken));
+    var result = await registry.GetConnectionId(deviceId, cancellationToken);
+
+    Assert.False(result.IsSuccess);
   }
 
   [Fact]
@@ -47,6 +54,9 @@ public class DeviceConnectionRegistryTests
 
     await registry.Set(deviceId, "conn-1", cancellationToken);
 
-    Assert.Equal("conn-1", await registry.GetConnectionId(deviceId, cancellationToken));
+    var result = await registry.GetConnectionId(deviceId, cancellationToken);
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal("conn-1", result.Value);
   }
 }

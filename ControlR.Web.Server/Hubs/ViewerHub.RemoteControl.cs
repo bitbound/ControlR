@@ -385,9 +385,10 @@ public partial class ViewerHub
     // Steady state reads nothing from the database. AgentHub keeps the registry current on connect,
     // heartbeat, and disconnect; the database read below only covers this server starting up or the
     // agent being connected by another node.
-    if (await _deviceConnectionRegistry.GetConnectionId(request.DeviceId, cancellationToken) is { } agentConnectionId)
+    var connectionIdResult = await _deviceConnectionRegistry.GetConnectionId(request.DeviceId, cancellationToken);
+    if (connectionIdResult.IsSuccess)
     {
-      return HubResult.Ok(agentConnectionId);
+      return HubResult.Ok(connectionIdResult.Value);
     }
 
     var trackedDevice = await _appDb.Devices
