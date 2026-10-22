@@ -161,7 +161,7 @@ public partial class ViewerHub
     return RequestRemoteControlSessionCore(sessionRequestDto, true);
   }
 
-  public async Task SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request)
+  public async Task<HubResult> SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request)
   {
     try
     {
@@ -176,16 +176,19 @@ public partial class ViewerHub
           request.SessionId,
           request.DeviceId,
           authorization.Reason);
-        return;
+        return HubResult.Fail(authorization.Reason, authorization.FailureCode);
       }
 
       await _agentHub.Clients
         .Client(authorization.Value)
         .SendRemoteControlDto(request);
+
+      return HubResult.Ok();
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while sending remote control DTO to agent.");
+      return HubResult.Fail("An error occurred while sending the remote control DTO to the agent.");
     }
   }
 

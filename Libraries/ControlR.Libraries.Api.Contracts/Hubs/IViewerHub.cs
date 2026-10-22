@@ -39,7 +39,7 @@ public partial interface IViewerHub
 
   Task<HubResult> SendPowerStateChange2(SendPowerStateChangeRequestDto request);
 
-  Task SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request);
+  Task<HubResult> SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request);
 
   Task<HubResult> SendTerminalInput2(SendTerminalInputRequestDto request);
 

@@ -396,6 +396,31 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task SendRemoteControlDtoToAgent_InputWithoutInteractPermission_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    var request = new SendRemoteControlDtoToAgentRequestDto(
+      device.Id,
+      TargetProcessId: 100,
+      SessionId: Guid.NewGuid(),
+      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
+
+    var result = await hub.SendRemoteControlDtoToAgent(request);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+    agentClient.Verify(
+      client => client.SendRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()),
+      Times.Never);
+  }
+
+  [Fact]
   public async Task SendRemoteControlDtoToAgent_InteractPermission_ForwardsInput()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
