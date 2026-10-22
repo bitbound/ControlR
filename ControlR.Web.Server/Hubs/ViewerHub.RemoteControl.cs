@@ -43,18 +43,18 @@ public partial class ViewerHub
   // viewer supplies, so without this a viewer holding a device permission could address another
   // viewer's live session on the same device. Lives in Context.Items, which SignalR discards when
   // the connection ends.
-  private ConcurrentDictionary<(Guid DeviceId, Guid SessionId), byte> RemoteControlSessionBindings
+  private ConcurrentDictionary<SessionBindingKey, byte> RemoteControlSessionBindings
   {
     get
     {
       lock (Context.Items)
       {
-        if (GetItem<ConcurrentDictionary<(Guid DeviceId, Guid SessionId), byte>?>(null) is { } cached)
+        if (GetItem<ConcurrentDictionary<SessionBindingKey, byte>?>(null) is { } cached)
         {
           return cached;
         }
 
-        var created = new ConcurrentDictionary<(Guid DeviceId, Guid SessionId), byte>();
+        var created = new ConcurrentDictionary<SessionBindingKey, byte>();
         SetItem(created);
         return created;
       }
@@ -314,7 +314,7 @@ public partial class ViewerHub
       if (result.IsSuccess)
       {
         RemoteControlSessionBindings.TryAdd(
-          (sessionRequestDto.DeviceId, sessionRequestDto.SessionId),
+          new SessionBindingKey(sessionRequestDto.DeviceId, sessionRequestDto.SessionId),
           0);
       }
 
@@ -369,7 +369,8 @@ public partial class ViewerHub
       return HubResult.Fail<string>("Unauthorized.");
     }
 
-    if (!RemoteControlSessionBindings.ContainsKey((request.DeviceId, request.SessionId)))
+    if (!RemoteControlSessionBindings.ContainsKey(
+          new SessionBindingKey(request.DeviceId, request.SessionId)))
     {
       _logger.LogWarning(
         "Remote control DTO {DtoType} was refused for a session this connection did not start.  " +
@@ -444,4 +445,6 @@ public partial class ViewerHub
 
     return cache.GetOrAdd(device.Id, allowedPermissions);
   }
+
+  private readonly record struct SessionBindingKey(Guid DeviceId, Guid SessionId);
 }
