@@ -43,6 +43,7 @@ public class WindowsRemoteControlHostBuilderFactory(
         options.RequireConsent = requestDto.RequireConsent;
         options.ViewerName = requestDto.ViewerName;
         options.ViewerConnectionId = requestDto.ViewerConnectionId;
+        options.ViewerSupportsRemoteControlDtoHub = requestDto.ViewerSupportsRemoteControlDtoHub;
         options.WebSocketUri = requestDto.WebsocketUri;
       },
       options =>

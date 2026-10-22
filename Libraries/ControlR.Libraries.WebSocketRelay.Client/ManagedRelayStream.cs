@@ -23,8 +23,8 @@ public interface IManagedRelayStream : IAsyncDisposable
   double GetMbpsIn();
   double GetMbpsOut();
   IDisposable OnClosed(Func<Task> callback);
-  IDisposable RegisterMessageHandler(object subscriber, Func<DtoWrapper, Task> handler);
-  Task Send(DtoWrapper dto, CancellationToken cancellationToken);
+  IDisposable RegisterMessageHandler(object subscriber, Func<RemoteControlEventWrapper, Task> handler);
+  Task Send(RemoteControlEventWrapper dto, CancellationToken cancellationToken);
   Task WaitForClose(CancellationToken cancellationToken);
 }
 
@@ -44,7 +44,7 @@ public abstract class ManagedRelayStream(
 
   private readonly ILogger<ManagedRelayStream> _logger = logger;
   private readonly IMemoryProvider _memoryProvider = memoryProvider;
-  private readonly HandlerCollection<DtoWrapper> _messageHandlers = new(ex => { logger.LogError(ex, "Error while invoking message handler."); return Task.CompletedTask; });
+  private readonly HandlerCollection<RemoteControlEventWrapper> _messageHandlers = new(ex => { logger.LogError(ex, "Error while invoking message handler."); return Task.CompletedTask; });
   private readonly ConcurrentList<Func<Task>> _onCloseHandlers = [];
   private readonly SemaphoreSlim _sendLock = new(1);
   private readonly IStreamMetrics _streamMetrics = streamMetrics;
@@ -132,14 +132,14 @@ public abstract class ManagedRelayStream(
     return new CallbackDisposable(() => { _onCloseHandlers.Remove(callback); });
   }
 
-  public IDisposable RegisterMessageHandler(object subscriber, Func<DtoWrapper, Task> handler) =>
+  public IDisposable RegisterMessageHandler(object subscriber, Func<RemoteControlEventWrapper, Task> handler) =>
     _messageHandlers.AddHandler(subscriber, handler);
 
-  public async Task Send(DtoWrapper dto, CancellationToken cancellationToken)
+  public async Task Send(RemoteControlEventWrapper dto, CancellationToken cancellationToken)
   {
     var conn = _connection ?? throw new InvalidOperationException("Client has not been initialized.");
 
-    if (dto.DtoType == DtoType.Ack)
+    if (dto.DtoType == RemoteControlEventDtoType.Ack)
     {
       throw new ArgumentException("Cannot send ACK DTOs with this method.  Use SendAck instead.");
     }
@@ -189,6 +189,9 @@ public abstract class ManagedRelayStream(
       _onCloseHandlers.Clear();
     }
   }
+
+  protected Task InvokeMessageHandlers(RemoteControlEventWrapper dto) =>
+    _messageHandlers.InvokeHandlers(dto, CancellationToken.None);
 
   private async Task<Result> CloseSocket(ClientWebSocket client)
   {
@@ -268,13 +271,13 @@ public abstract class ManagedRelayStream(
 
           dtoStream.Seek(0, SeekOrigin.Begin);
 
-          var receivedWrapper = await MessagePackSerializer.DeserializeAsync<DtoWrapper>(
+          var receivedWrapper = await MessagePackSerializer.DeserializeAsync<RemoteControlEventWrapper>(
             dtoStream,
             cancellationToken: conn.ReadCancellation.Token);
 
           switch (receivedWrapper.DtoType)
           {
-            case DtoType.Ack:
+            case RemoteControlEventDtoType.Ack:
               {
                 var ackDto = receivedWrapper.GetPayload<AckDto>();
                 _ = Interlocked.Add(ref _sendBufferLength, -ackDto.ReceivedSize);
@@ -327,7 +330,7 @@ public abstract class ManagedRelayStream(
   private async Task SendAck(ClientWebSocket client, int receivedBytes, long sendTimestamp, CancellationToken cancellationToken)
   {
     var ackDto = new AckDto(receivedBytes, sendTimestamp);
-    var wrapper = DtoWrapper.Create(ackDto, DtoType.Ack);
+    var wrapper = RemoteControlEventWrapper.Create(ackDto, RemoteControlEventDtoType.Ack);
     var wrapperBytes = MessagePackSerializer.Serialize(wrapper, cancellationToken: cancellationToken);
     _streamMetrics.RecordBytesOut(new TransferRecord(wrapperBytes.Length, TimeProvider.GetTimestamp()));
     await client.SendAsync(

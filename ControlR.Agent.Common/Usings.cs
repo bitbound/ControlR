@@ -2,7 +2,6 @@ global using Bitbound.SimpleMessenger;
 global using ControlR.Libraries.Shared.Services;
 global using ControlR.Libraries.Api.Contracts.Dtos;
 global using ControlR.Libraries.Messenger.Extensions;
-global using ControlR.Libraries.Messenger.Extensions.Messages;
 global using Microsoft.Extensions.Logging;
 global using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 global using ControlR.Libraries.Api.Contracts.Enums;

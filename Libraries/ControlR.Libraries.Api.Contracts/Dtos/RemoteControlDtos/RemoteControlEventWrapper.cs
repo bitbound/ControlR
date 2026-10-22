@@ -3,17 +3,17 @@ using System.Text.Json.Serialization;
 namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 
 [MessagePackObject(keyAsPropertyName: true)]
-public class DtoWrapper
+public class RemoteControlEventWrapper
 {
   [JsonConverter(typeof(JsonStringEnumConverter))]
-  public required DtoType DtoType { get; init; }
+  public required RemoteControlEventDtoType DtoType { get; init; }
 
   public required byte[] Payload { get; init; }
   public required long SendTimestamp { get; init; }
 
-  public static DtoWrapper Create<T>(T dto, DtoType dtoType)
+  public static RemoteControlEventWrapper Create<T>(T dto, RemoteControlEventDtoType dtoType)
   {
-    return new DtoWrapper()
+    return new RemoteControlEventWrapper()
     {
       DtoType = dtoType,
       Payload = MessagePackSerializer.Serialize(dto),

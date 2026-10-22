@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 using ControlR.Libraries.Shared.Helpers;
@@ -12,12 +11,12 @@ using ControlR.Web.Server.Services.Authorization;
 using System.Diagnostics;
 using System.Security.Claims;
 using ControlR.Web.Server.Services.Authorization.Capabilities;
-using System.Collections.Immutable;
+using ControlR.Web.Server.Services.DeviceManagement;
 
 namespace ControlR.Web.Server.Hubs;
 
 [Authorize]
-public class ViewerHub(
+public partial class ViewerHub(
   TimeProvider timeProvider,
   UserManager<AppUser> userManager,
   AppDb appDb,
@@ -28,6 +27,7 @@ public class ViewerHub(
   IEffectiveUserPreferencesResolver effectiveUserPreferencesResolver,
   IHubStreamStore hubStreamStore,
   IDesktopSessionAccessAuthorizer desktopSessionAccessAuthorizer,
+  IDeviceConnectionRegistry deviceConnectionRegistry,
   IOptionsMonitor<AppOptions> appOptions,
   ILogger<ViewerHub> logger)
   : HubWithItems<IViewerHubClient>, IViewerHub
@@ -39,6 +39,7 @@ public class ViewerHub(
   private readonly IOptionsMonitor<AppOptions> _appOptions = appOptions;
   private readonly IAuthorizationService _authorizationService = authorizationService;
   private readonly IDesktopSessionAccessAuthorizer _desktopSessionAccessAuthorizer = desktopSessionAccessAuthorizer;
+  private readonly IDeviceConnectionRegistry _deviceConnectionRegistry = deviceConnectionRegistry;
   private readonly IEffectiveUserPreferencesResolver _effectiveUserPreferencesResolver = effectiveUserPreferencesResolver;
   private readonly IHubStreamStore _hubStreamStore = hubStreamStore;
   private readonly ILogger<ViewerHub> _logger = logger;
@@ -53,23 +54,11 @@ public class ViewerHub(
     set => SetItem(value);
   }
 
-  [Obsolete("Use AddViewerActivity2. (deprecated 2026-09-03, v0.28.x)")]
-  public Task<HubResult> AddViewerActivity(string activityName)
-  {
-    return AddViewerActivity2(new(activityName));
-  }
-
   public Task<HubResult> AddViewerActivity2(AddViewerActivityRequestDto request)
   {
     using var activity = SessionActivity?.StartChildActivity(request.ActivityName);
     _logger.LogInformation("Viewer Activity: {EventName}", request.ActivityName);
     return Task.FromResult(HubResult.Ok());
-  }
-
-  [Obsolete("Use CloseChatSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> CloseChatSession(Guid deviceId, Guid sessionId, int targetProcessId)
-  {
-    return await CloseChatSession2(new(deviceId, sessionId, targetProcessId));
   }
 
   public async Task<HubResult> CloseChatSession2(CloseChatSessionRequestDto request)
@@ -100,16 +89,6 @@ public class ViewerHub(
     }
   }
 
-  [Obsolete("Use CloseTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task CloseTerminalSession(Guid deviceId, Guid terminalSessionId)
-  {
-    var result = await CloseTerminalSession2(new(deviceId, terminalSessionId));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("CloseTerminalSession failed: {Reason}", result.Reason);
-    }
-  }
-
   public async Task<HubResult> CloseTerminalSession2(CloseTerminalSessionRequestDto request)
   {
     try
@@ -130,14 +109,6 @@ public class ViewerHub(
       _logger.LogError(ex, "Error while closing terminal session.");
       return HubResult.Fail("An error occurred.");
     }
-  }
-
-  [Obsolete("Use CreateTerminalSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> CreateTerminalSession(
-    Guid deviceId,
-    Guid terminalSessionId)
-  {
-    return await CreateTerminalSession2(new(deviceId, terminalSessionId));
   }
 
   public async Task<HubResult> CreateTerminalSession2(CreateTerminalSessionRequestDto request)
@@ -169,51 +140,6 @@ public class ViewerHub(
     SessionActivity?.Dispose();
     SessionActivity = null;
     return Task.FromResult(HubResult.Ok());
-  }
-
-  [Obsolete("Use GetActiveDesktopSessions2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<DesktopSession[]> GetActiveDesktopSessions(Guid deviceId)
-  {
-    var result = await GetActiveDesktopSessions2(new(deviceId));
-    return result.IsSuccess
-      ? result.Value?.Sessions.ToArray() ?? []
-      : [];
-  }
-
-  public async Task<HubResult<ActiveDesktopSessionsResponseDto>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request)
-  {
-    try
-    {
-      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
-      {
-        return HubResult.Fail<ActiveDesktopSessionsResponseDto>("Unauthorized.");
-      }
-
-      var device = authResult.Value;
-      var principal = Context.User?.ToPrincipalDescriptor();
-      if (principal is null)
-      {
-        return HubResult.Fail<ActiveDesktopSessionsResponseDto>("Unauthorized.");
-      }
-
-      var sessions = await _agentHub.Clients.Client(device.ConnectionId).GetActiveDesktopSessions();
-      var authorizedSessions = sessions.Where(x => _desktopSessionAccessAuthorizer
-        .CanUse(principal, request.DeviceId, x.SystemSessionId))
-        .ToImmutableList();
-
-      return HubResult.Ok(new ActiveDesktopSessionsResponseDto(authorizedSessions));
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while getting Windows sessions from agent.");
-      return HubResult.Fail<ActiveDesktopSessionsResponseDto>("An error occurred.");
-    }
-  }
-
-  [Obsolete("Use GetDeviceAccessPermissions2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions(Guid deviceId)
-  {
-    return await GetDeviceAccessPermissions2(new(deviceId));
   }
 
   public async Task<HubResult<DeviceAccessPermissionsDto>> GetDeviceAccessPermissions2(GetDeviceAccessPermissionsRequestDto request)
@@ -309,55 +235,6 @@ public class ViewerHub(
     }
   }
 
-  [Obsolete("Use InvokeCtrlAltDel2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> InvokeCtrlAltDel(Guid deviceId, int targetDesktopProcessId, DesktopSessionType desktopSessionType)
-  {
-    return await InvokeCtrlAltDel2(new(deviceId, targetDesktopProcessId, desktopSessionType));
-  }
-
-  public async Task<HubResult> InvokeCtrlAltDel2(InvokeCtrlAltDelViewerRequestDto request)
-  {
-    try
-    {
-      _logger.LogInformation(
-        "Invoking CtrlAltDel for device {DeviceId} and process {ProcessId}.  User: {UserId}",
-        request.DeviceId,
-        request.TargetDesktopProcessId,
-        Context.UserIdentifier);
-
-      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.CtrlAltDelSend) is not { IsSuccess: true } authResult)
-      {
-        return HubResult.Fail("Unauthorized.");
-      }
-
-      if (!TryGetUserId(out var userId))
-      {
-        _logger.LogError("Failed to get user ID for CtrlAltDel invocation.");
-        return HubResult.Fail("Failed to get user ID.");
-      }
-
-      var displayNameResult = await GetDisplayName(userId);
-      if (!displayNameResult.IsSuccess)
-      {
-        return HubResult.Fail(displayNameResult.Reason ?? "Failed to resolve display name.");
-      }
-
-      var dto = new InvokeCtrlAltDelRequestDto(
-        request.TargetDesktopProcessId,
-        Context.User?.Identity?.Name ?? "Unknown",
-        request.DesktopSessionType);
-
-      return await _agentHub.Clients
-        .Client(authResult.Value.ConnectionId)
-        .InvokeCtrlAltDel(dto);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "An error occurred while invoking CtrlAltDel.");
-      return HubResult.Fail("An error occurred while invoking CtrlAltDel.");
-    }
-  }
-
   public override async Task OnConnectedAsync()
   {
     try
@@ -419,16 +296,6 @@ public class ViewerHub(
     }
   }
 
-  [Obsolete("Use RefreshDeviceInfo2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task RefreshDeviceInfo(Guid deviceId)
-  {
-    var result = await RefreshDeviceInfo2(new(deviceId));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("RefreshDeviceInfo failed: {Reason}", result.Reason);
-    }
-  }
-
   public async Task<HubResult> RefreshDeviceInfo2(RefreshDeviceInfoRequestDto request)
   {
     try
@@ -449,114 +316,6 @@ public class ViewerHub(
       _logger.LogError(ex, "Error while refreshing device info.");
       return HubResult.Fail("An error occurred while refreshing device info.");
     }
-  }
-
-  [Obsolete("Use RequestRemoteControlPermission2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> RequestRemoteControlPermission(Guid deviceId, int targetProcessId)
-  {
-    return await RequestRemoteControlPermission2(new(deviceId, targetProcessId));
-  }
-
-  public async Task<HubResult> RequestRemoteControlPermission2(RequestRemoteControlPermissionRequestDto request)
-  {
-    try
-    {
-      if (await TryAuthorizeAgainstDevice(request.DeviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
-      {
-        return HubResult.Fail("Unauthorized.");
-      }
-
-      return await _agentHub.Clients
-        .Client(authResult.Value.ConnectionId)
-        .RequestRemoteControlPermission(request.TargetProcessId);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while requesting remote control permission.");
-      return HubResult.Fail("An error occurred while requesting remote control permission.");
-    }
-  }
-
-  [Obsolete("Use RequestRemoteControlSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> RequestRemoteControlSession(
-    Guid deviceId,
-    RemoteControlSessionRequestDto sessionRequestDto)
-  {
-    return await RequestRemoteControlSession2(
-      sessionRequestDto with { DeviceId = deviceId });
-  }
-
-  public async Task<HubResult> RequestRemoteControlSession2(
-    RemoteControlSessionRequestDto sessionRequestDto)
-  {
-    try
-    {
-      if (!TryGetUserId(out var userId))
-      {
-        return HubResult.Fail("Failed to get user ID.");
-      }
-
-      var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
-
-      var displayNameResult = await GetDisplayName(userId);
-      if (!displayNameResult.IsSuccess)
-      {
-        return HubResult.Fail(displayNameResult.Reason ?? "Failed to resolve display name.");
-      }
-
-      var displayName = displayNameResult.Value;
-
-      _logger.LogInformation(
-        "Starting streaming session requested by user {DisplayName} ({UserId}) for device {DeviceId} from IP {RemoteIp}.",
-        displayName,
-        userId,
-        sessionRequestDto.DeviceId,
-        remoteIp);
-
-      if (await TryAuthorizeAgainstDevice(sessionRequestDto.DeviceId, DeviceResourcePolicies.RemoteControlConnect) is not { IsSuccess: true } authResult)
-      {
-        return HubResult.Fail("Unauthorized.");
-      }
-
-      if (!CanUseDesktopSession(sessionRequestDto.DeviceId, sessionRequestDto.TargetSystemSession))
-      {
-        return HubResult.Fail("The requested desktop session is not authorized.");
-      }
-
-      var device = authResult.Value;
-      var notifyUser = await _effectiveUserPreferencesResolver.GetNotifyUserOnSessionStart(
-        device.TenantId,
-        userId,
-        Context.ConnectionAborted);
-
-      sessionRequestDto = sessionRequestDto with
-      {
-        NotifyUserOnSessionStart = notifyUser,
-        ViewerName = displayName,
-        ViewerConnectionId = Context.ConnectionId
-      };
-
-      var result = await _agentHub.Clients
-        .Client(device.ConnectionId)
-        .CreateRemoteControlSession(sessionRequestDto);
-
-      return result;
-    }
-    catch (Exception ex)
-    {
-      const string reason = "An error occurred while requesting the remote control session.";
-      _logger.LogError(ex, reason);
-      return HubResult.Fail(reason);
-    }
-  }
-
-  [Obsolete("Use RequestVncSession2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> RequestVncSession(
-    Guid deviceId,
-    VncSessionRequestDto sessionRequestDto)
-  {
-    return await RequestVncSession2(
-      sessionRequestDto with { DeviceId = deviceId });
   }
 
   public async Task<HubResult> RequestVncSession2(VncSessionRequestDto sessionRequestDto)
@@ -636,16 +395,6 @@ public class ViewerHub(
     }
   }
 
-  [Obsolete("Use SendAgentUpdateTrigger2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task SendAgentUpdateTrigger(Guid deviceId)
-  {
-    var result = await SendAgentUpdateTrigger2(new(deviceId));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("SendAgentUpdateTrigger failed: {Reason}", result.Reason);
-    }
-  }
-
   public async Task<HubResult> SendAgentUpdateTrigger2(SendAgentUpdateTriggerRequestDto request)
   {
     try
@@ -666,12 +415,6 @@ public class ViewerHub(
       _logger.LogError(ex, "Error while sending agent update trigger.");
       return HubResult.Fail("An error occurred while sending the agent update trigger.");
     }
-  }
-
-  [Obsolete("Use SendChatMessage2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> SendChatMessage(Guid deviceId, ChatMessageHubDto dto)
-  {
-    return await SendChatMessage2(dto with { DeviceId = deviceId });
   }
 
   public async Task<HubResult> SendChatMessage2(ChatMessageHubDto dto)
@@ -719,40 +462,6 @@ public class ViewerHub(
     }
   }
 
-  public async Task<HubResult> SendDtoToAgent(SendDtoToAgentRequestDto request)
-  {
-    try
-    {
-      using var scope = _logger.BeginMemberScope();
-
-      if (await TryAuthorizeAgainstDevice(request.DeviceId) is not { IsSuccess: true } authResult)
-      {
-        return HubResult.Fail("Unauthorized.");
-      }
-
-      await _agentHub.Clients
-        .Client(authResult.Value.ConnectionId)
-        .ReceiveDto(request.Wrapper);
-
-      return HubResult.Ok();
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending DTO to agent.");
-      return HubResult.Fail("An error occurred while sending the DTO to the agent.");
-    }
-  }
-
-  [Obsolete("Use SendPowerStateChange2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task SendPowerStateChange(Guid deviceId, PowerStateChangeType changeType)
-  {
-    var result = await SendPowerStateChange2(new(deviceId, changeType));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("SendPowerStateChange failed: {Reason}", result.Reason);
-    }
-  }
-
   public async Task<HubResult> SendPowerStateChange2(SendPowerStateChangeRequestDto request)
   {
     try
@@ -780,12 +489,6 @@ public class ViewerHub(
     }
   }
 
-  [Obsolete("Use SendTerminalInput2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> SendTerminalInput(Guid deviceId, TerminalInputDto dto)
-  {
-    return await SendTerminalInput2(new(deviceId, dto));
-  }
-
   public async Task<HubResult> SendTerminalInput2(SendTerminalInputRequestDto request)
   {
     try
@@ -811,12 +514,6 @@ public class ViewerHub(
       _logger.LogError(ex, "Error while sending terminal input.");
       return HubResult.Fail("Agent could not be reached.");
     }
-  }
-
-  [Obsolete("Use SendWakeDevice2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult<string>> SendWakeDevice(Guid deviceId, string[] macAddresses)
-  {
-    return await SendWakeDevice2(new(deviceId, macAddresses));
   }
 
   public async Task<HubResult<string>> SendWakeDevice2(SendWakeDeviceRequestDto request)
@@ -864,12 +561,6 @@ public class ViewerHub(
     }
   }
 
-  [Obsolete("Use StartDeviceAccessActivity2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> StartDeviceAccessActivity(Guid deviceId)
-  {
-    return await StartDeviceAccessActivity2(new(deviceId));
-  }
-
   public async Task<HubResult> StartDeviceAccessActivity2(StartDeviceAccessActivityRequestDto request)
   {
     if (Context.User is null)
@@ -903,12 +594,6 @@ public class ViewerHub(
     }
 
     return HubResult.Ok();
-  }
-
-  [Obsolete("Use SubscribeToDeviceHeartbeats2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> SubscribeToDeviceHeartbeats(Guid[] deviceIds)
-  {
-    return await SubscribeToDeviceHeartbeats2(new(deviceIds));
   }
 
   public async Task<HubResult> SubscribeToDeviceHeartbeats2(SubscribeToDeviceHeartbeatsRequestDto request)
@@ -968,12 +653,6 @@ public class ViewerHub(
     return HubResult.Ok();
   }
 
-  [Obsolete("Use TestVncConnection2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task<HubResult> TestVncConnection(Guid guid, int port)
-  {
-    return await TestVncConnection2(new(guid, port));
-  }
-
   public async Task<HubResult> TestVncConnection2(TestVncConnectionRequestDto request)
   {
     try
@@ -991,16 +670,6 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while testing VNC connection.");
       return HubResult.Fail("An error occurred while testing the VNC connection.");
-    }
-  }
-
-  [Obsolete("Use UninstallAgent2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task UninstallAgent(Guid deviceId, string reason)
-  {
-    var result = await UninstallAgent2(new(deviceId, reason));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("UninstallAgent failed: {Reason}", result.Reason);
     }
   }
 
@@ -1028,16 +697,6 @@ public class ViewerHub(
     {
       _logger.LogError(ex, "Error while uninstalling agent.");
       return HubResult.Fail("An error occurred while uninstalling the agent.");
-    }
-  }
-
-  [Obsolete("Use UnsubscribeFromDeviceHeartbeats2. (deprecated 2026-09-03, v0.28.x)")]
-  public async Task UnsubscribeFromDeviceHeartbeats(Guid[] deviceIds)
-  {
-    var result = await UnsubscribeFromDeviceHeartbeats2(new(deviceIds));
-    if (!result.IsSuccess)
-    {
-      _logger.LogWarning("UnsubscribeFromDeviceHeartbeats failed: {Reason}", result.Reason);
     }
   }
 

@@ -1,15 +1,11 @@
 using System.Net.WebSockets;
 using Bitbound.SimpleMessenger;
 using ControlR.DesktopClient.Common.Messages;
-using ControlR.DesktopClient.Common.Models;
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
-using ControlR.DesktopClient.Common.State;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
-using ControlR.Libraries.Shared.Constants;
-using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Buffers;
 using ControlR.Libraries.WebSocketRelay.Client;
@@ -22,7 +18,6 @@ namespace ControlR.DesktopClient.Common.Services;
 public interface IDesktopRemoteControlStream : IManagedRelayStream
 {
   Task RequestDisconnect();
-  Task SendCurrentClipboardText();
   Task StreamScreen(CancellationToken cancellationToken);
 }
 
@@ -35,65 +30,46 @@ internal sealed class DesktopRemoteControlStream(
   IToaster toaster,
   ISessionConsentService sessionConsentService,
   IDesktopCapturerFactory desktopCapturerFactory,
-  IClipboardManager clipboardManager,
   IMemoryProvider memoryProvider,
-  IInputSimulator inputSimulator,
   IDisplayManager displayManager,
-  IRemoteControlSessionState sessionState,
+  IIpcClientAccessor ipcClientAccessor,
+  IRemoteControlDtoHandler dtoHandler,
   IWaiter waiter,
-  ISystemEnvironment systemEnvironment,
   IOptions<RemoteControlSessionOptions> startupOptions,
   ILogger<DesktopRemoteControlStream> logger)
   : ManagedRelayStream(timeProvider, messenger, memoryProvider, waiter, streamMetrics, logger), IDesktopRemoteControlStream
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly ICaptureMetrics _captureMetrics = captureMetrics;
-  private readonly IClipboardManager _clipboardManager = clipboardManager;
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly IDisplayManager _displayManager = displayManager;
-  private readonly IInputSimulator _inputSimulator = inputSimulator;
+  private readonly IRemoteControlDtoHandler _dtoHandler = dtoHandler;
+  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<DesktopRemoteControlStream> _logger = logger;
   private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(3);
   private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
-  private readonly IRemoteControlSessionState _sessionState = sessionState;
   private readonly IOptions<RemoteControlSessionOptions> _startupOptions = startupOptions;
-  private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
   private readonly IToaster _toaster = toaster;
 
-  private bool _isInputBlocked;
-  private IDisposable? _messageHandlerRegistration;
+  /// <summary>
+  /// Relay DTO handling, which a viewer older than v0.30.x still relies on for every DTO kind.
+  /// </summary>
+  private IDisposable? _relayDtoRegistration;
 
   public async Task RequestDisconnect()
   {
     try
     {
-      if (!IsConnected)
+      var dto = new SessionDisconnectRequestedDto();
+      var wrapper = RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.SessionDisconnectRequested);
+      if (!await SendDto(wrapper, _appLifetime.ApplicationStopping).ConfigureAwait(false))
       {
         await Close();
-        return;
       }
-      var dto = new SessionDisconnectRequestedDto();
-      var wrapper = DtoWrapper.Create(dto, DtoType.SessionDisconnectRequested);
-      await Send(wrapper, _appLifetime.ApplicationStopping).ConfigureAwait(false);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while requesting disconnect.");
-    }
-  }
-
-  public async Task SendCurrentClipboardText()
-  {
-    try
-    {
-      var clipboardText = await _clipboardManager.GetText();
-      var dto = new ClipboardTextDto(clipboardText, _startupOptions.Value.SessionId);
-      var wrapper = DtoWrapper.Create(dto, DtoType.ClipboardText);
-      await Send(wrapper, _appLifetime.ApplicationStopping);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while sending clipboard text.");
     }
   }
 
@@ -122,9 +98,17 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<WindowsSessionEndingMessage>(this, HandleWindowsSessionEndingMessage);
       Messenger.Register<WindowsSessionSwitchedMessage>(this, HandleWindowsSessionSwitchedMessage);
       Messenger.Register<CursorChangedMessage>(this, HandleCursorChangedMessage);
+      Messenger.Register<SendRemoteControlDtoToViewerMessage>(this, HandleSendDtoToViewerMessage);
       Messenger.Register<SendToastToViewerMessage>(this, HandleSendToastToViewerMessage);
-      _messageHandlerRegistration = RegisterMessageHandler(this, HandleMessageReceived);
       OnClosed(HandleConnectionClosed);
+
+      // A viewer that can receive commands over the hub gets them there, where the server authorizes
+      // each one.  Leaving this handler registered for such a session would let anything the relay
+      // delivers run unauthenticated, since the relay carries no permission check.
+      if (!_startupOptions.Value.ViewerSupportsRemoteControlDtoHub)
+      {
+        _relayDtoRegistration = RegisterMessageHandler(this, HandleRelayDto);
+      }
 
       await _displayManager.ReloadDisplays();
 
@@ -164,32 +148,9 @@ internal sealed class DesktopRemoteControlStream(
     await base.DisposeAsync(disposing);
     if (disposing)
     {
-      _messageHandlerRegistration?.Dispose();
+      _relayDtoRegistration?.Dispose();
       await _desktopCapturer.DisposeAsync();
     }
-  }
-
-  private void ApplyCaptureSettings(UpdateCaptureSettingsDto payload)
-  {
-    _sessionState.CaptureCursor = payload.CaptureCursor;
-    _sessionState.EnableDirectX = payload.EnableDirectX;
-    _sessionState.EncodingFormat = payload.EncodingFormat;
-    _sessionState.IsAutoQualityEnabled = payload.IsAutoQualityEnabled;
-    _sessionState.ImageQuality = payload.ManualQuality;
-
-    var autoQualityMinimum = payload.AutoQualityMinimum >= 1
-      ? payload.AutoQualityMinimum
-      : AppConstants.DefaultRemoteControlAutoQualityMinimum;
-    var autoQualityMaximum = payload.AutoQualityMaximum >= 2
-      ? payload.AutoQualityMaximum
-      : AppConstants.DefaultRemoteControlAutoQualityMaximum;
-
-    _sessionState.AutoQualityLowerThresholdMbps = payload.AutoQualityLowerThresholdMbps;
-    _sessionState.AutoQualityMaximum = autoQualityMaximum;
-    _sessionState.AutoQualityMinimum = autoQualityMinimum;
-    _sessionState.AutoQualityUpperThresholdMbps = payload.AutoQualityUpperThresholdMbps;
-    _sessionState.IsMaxBandwidthEnabled = payload.IsMaxBandwidthEnabled;
-    _sessionState.MaxBandwidthMbps = payload.MaxBandwidthMbps;
   }
 
   private Task HandleConnectionClosed()
@@ -209,8 +170,8 @@ internal sealed class DesktopRemoteControlStream(
         message.YHotspot,
         _startupOptions.Value.SessionId);
 
-      var wrapper = DtoWrapper.Create(dto, DtoType.CursorChanged);
-      await Send(wrapper, _appLifetime.ApplicationStopping);
+      var wrapper = RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.CursorChanged);
+      await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (OperationCanceledException ex)
     {
@@ -228,170 +189,25 @@ internal sealed class DesktopRemoteControlStream(
     await SendDisplayData();
   }
 
-  private async Task HandleMessageReceived(DtoWrapper wrapper)
+  private async Task HandleRelayDto(RemoteControlEventWrapper wrapper)
   {
-    try
+    // Only reached for a viewer that predates the hub command path.  The relay has no return channel,
+    // so such a viewer never learns whether its commands landed.  The relay transport is typed for
+    // event wrappers, so retag the message as the command kind the legacy viewer sent.
+    var commandWrapper = new RemoteControlCommandWrapper
     {
-      using var logScope = _logger.BeginMemberScope();
+      DtoType = (RemoteControlCommandDtoType)(int)wrapper.DtoType,
+      Payload = wrapper.Payload,
+      SendTimestamp = wrapper.SendTimestamp
+    };
+    await _dtoHandler.Handle(commandWrapper);
+  }
 
-      switch (wrapper.DtoType)
-      {
-        case DtoType.CloseRemoteControlSession:
-          {
-            _logger.LogInformation("Received request to close remote control session.");
-            _appLifetime.StopApplication();
-            break;
-          }
-        case DtoType.ChangeDisplays:
-          {
-            var payload = wrapper.GetPayload<ChangeDisplaysDto>();
-            await _desktopCapturer.ChangeDisplays(payload.DisplayId);
-            break;
-          }
-        case DtoType.WheelScroll:
-          {
-            var payload = wrapper.GetPayload<WheelScrollDto>();
-            var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
-            if (coordinates == null)
-            {
-              break;
-            }
-            await _inputSimulator.ScrollWheel(coordinates, (int)payload.ScrollY, (int)payload.ScrollX);
-            break;
-          }
-        case DtoType.KeyEvent:
-          {
-            var payload = wrapper.GetPayload<KeyEventDto>();
-            await _inputSimulator.InvokeKeyEvent(
-              payload.Key,
-              payload.Code,
-              payload.IsPressed,
-              payload.InputMode,
-              payload.Modifiers);
-            break;
-          }
-        case DtoType.ResetKeyboardState:
-          {
-            await _inputSimulator.ResetKeyboardState();
-            break;
-          }
-        case DtoType.ClipboardText:
-          {
-            _logger.LogInformation("Received clipboard text from viewer.");
-            var payload = wrapper.GetPayload<ClipboardTextDto>();
-            await _clipboardManager.SetText(payload.Text);
-            break;
-          }
-        case DtoType.RequestClipboardText:
-          {
-            _logger.LogInformation("Received request for clipboard text.");
-            await SendCurrentClipboardText();
-            break;
-          }
-        case DtoType.TypeText:
-          {
-            var payload = wrapper.GetPayload<TypeTextDto>();
-            await _inputSimulator.TypeText(payload.Text);
-            break;
-          }
-        case DtoType.MovePointer:
-          {
-            var payload = wrapper.GetPayload<MovePointerDto>();
-            var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
-            if (coordinates == null)
-            {
-              break;
-            }
-            await _inputSimulator.MovePointer(coordinates, MovePointerType.Absolute);
-            break;
-          }
-        case DtoType.MouseButtonEvent:
-          {
-            var payload = wrapper.GetPayload<MouseButtonEventDto>();
-            var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
-            if (coordinates == null)
-            {
-              break;
-            }
-            await _inputSimulator.MovePointer(coordinates, MovePointerType.Absolute);
-            await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, payload.IsPressed);
-            break;
-          }
-        case DtoType.MouseClick:
-          {
-            var payload = wrapper.GetPayload<MouseClickDto>();
-            var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
-            if (coordinates == null)
-            {
-              break;
-            }
-            await _inputSimulator.MovePointer(coordinates, MovePointerType.Absolute);
-            await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, true);
-            await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, false);
-
-            if (payload.IsDoubleClick)
-            {
-              await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, true);
-              await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, false);
-            }
-            break;
-          }
-        case DtoType.RequestKeyFrame:
-          {
-            _logger.LogInformation("Received request for key frame.");
-            await _desktopCapturer.RequestKeyFrame();
-            break;
-          }
-        case DtoType.UpdateCaptureSettings:
-          {
-            var payload = wrapper.GetPayload<UpdateCaptureSettingsDto>();
-            ApplyCaptureSettings(payload);
-            await _desktopCapturer.RequestKeyFrame();
-            break;
-          }
-        case DtoType.ToggleBlockInput:
-          {
-            if (!_systemEnvironment.IsWindows())
-            {
-              _logger.LogWarning("ToggleBlockInput is only supported on Windows. Ignoring request.");
-              break;
-            }
-
-            var payload = wrapper.GetPayload<ToggleBlockInputDto>();
-            _logger.LogInformation("Toggling block input to {isEnabled}.", payload.IsEnabled);
-            var success = await _inputSimulator.SetBlockInput(payload.IsEnabled);
-            _isInputBlocked = success ? payload.IsEnabled : _isInputBlocked;
-            var resultDto = new BlockInputResultDto(success, _isInputBlocked);
-            var resultWrapper = DtoWrapper.Create(resultDto, DtoType.BlockInputResult);
-            await Send(resultWrapper, _appLifetime.ApplicationStopping);
-            break;
-          }
-        case DtoType.TogglePrivacyScreen:
-          {
-            if (!_systemEnvironment.IsWindows())
-            {
-              _logger.LogWarning("TogglePrivacyScreen is only supported on Windows. Ignoring request.");
-              break;
-            }
-
-            var payload = wrapper.GetPayload<TogglePrivacyScreenDto>();
-            _logger.LogInformation("Toggling privacy screen to {isEnabled}.", payload.IsEnabled);
-            var result = await _displayManager.SetPrivacyScreen(payload.IsEnabled);
-
-            var resultDto = new PrivacyScreenResultDto(result.IsSuccess, _displayManager.IsPrivacyScreenEnabled);
-            var resultWrapper = DtoWrapper.Create(resultDto, DtoType.PrivacyScreenResult);
-            await Send(resultWrapper, _appLifetime.ApplicationStopping);
-            break;
-          }
-        default:
-          _logger.LogWarning("Unhandled DTO type: {type}", wrapper.DtoType);
-          break;
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Error while handling DTO.");
-    }
+  private async Task HandleSendDtoToViewerMessage(
+    object subscriber,
+    SendRemoteControlDtoToViewerMessage message)
+  {
+    await SendDto(message.Wrapper, _appLifetime.ApplicationStopping);
   }
 
   private async Task HandleSendToastToViewerMessage(object subscriber, SendToastToViewerMessage message)
@@ -400,8 +216,8 @@ internal sealed class DesktopRemoteControlStream(
     {
       var dto = new ToastNotificationDto(message.Message, message.Severity);
 
-      var wrapper = DtoWrapper.Create(dto, DtoType.ToastNotification);
-      await Send(wrapper, _appLifetime.ApplicationStopping);
+      var wrapper = RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.ToastNotification);
+      await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
     {
@@ -414,8 +230,8 @@ internal sealed class DesktopRemoteControlStream(
     try
     {
       var dto = new WindowsSessionEndingDto();
-      var wrapper = DtoWrapper.Create(dto, DtoType.WindowsSessionEnding);
-      await Send(wrapper, _appLifetime.ApplicationStopping);
+      var wrapper = RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.WindowsSessionEnding);
+      await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
     {
@@ -428,8 +244,8 @@ internal sealed class DesktopRemoteControlStream(
     try
     {
       var dto = new WindowsSessionSwitchedDto();
-      var wrapper = DtoWrapper.Create(dto, DtoType.WindowsSessionSwitched);
-      await Send(wrapper, _appLifetime.ApplicationStopping);
+      var wrapper = RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.WindowsSessionSwitched);
+      await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
     {
@@ -471,8 +287,8 @@ internal sealed class DesktopRemoteControlStream(
       });
       var dto = new DisplayDataDto([.. displayDtos]);
 
-      var wrapper = DtoWrapper.Create(dto, DtoType.DisplayData);
-      await Send(wrapper, _appLifetime.ApplicationStopping);
+      var wrapper = RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.DisplayData);
+      await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (OperationCanceledException ex)
     {
@@ -488,6 +304,36 @@ internal sealed class DesktopRemoteControlStream(
     }
   }
 
+  private async Task<bool> SendDto(RemoteControlEventWrapper wrapper, CancellationToken cancellationToken)
+  {
+    if (wrapper.DtoType.IsScreenFrame())
+    {
+      await Send(wrapper, cancellationToken);
+      return true;
+    }
+
+    if (!_startupOptions.Value.ViewerSupportsRemoteControlDtoHub)
+    {
+      await Send(wrapper, cancellationToken);
+      return true;
+    }
+
+    if (!_ipcClientAccessor.TryGetClient(out var client))
+    {
+      _logger.LogWarning("IPC client is not connected.  Dropping {DtoType} DTO.", wrapper.DtoType);
+      return false;
+    }
+
+    if (string.IsNullOrWhiteSpace(_startupOptions.Value.ViewerConnectionId))
+    {
+      _logger.LogWarning("Viewer connection ID is missing.  Dropping {DtoType} DTO.", wrapper.DtoType);
+      return false;
+    }
+
+    await client.Server.SendRemoteControlDto(_startupOptions.Value.ViewerConnectionId, wrapper);
+    return true;
+  }
+
   private Timer StartMetricsTimer(CancellationToken cancellationToken)
   {
     return new Timer(
@@ -501,8 +347,8 @@ internal sealed class DesktopRemoteControlStream(
             CurrentQuality: _desktopCapturer.GetCurrentQuality(),
             ExtraData: _captureMetrics.GetExtraMetricsData());
 
-          var wrapper = DtoWrapper.Create(captureMetrics, DtoType.CaptureMetricsChanged);
-          await Send(wrapper, cancellationToken);
+          var wrapper = RemoteControlEventWrapper.Create(captureMetrics, RemoteControlEventDtoType.CaptureMetricsChanged);
+          await SendDto(wrapper, cancellationToken);
         }
         catch (OperationCanceledException ex)
         {
@@ -527,7 +373,7 @@ internal sealed class DesktopRemoteControlStream(
       {
         await foreach (var wrapper in _desktopCapturer.GetCaptureStream(cancellationToken))
         {
-          await Send(wrapper, _appLifetime.ApplicationStopping);
+          await SendDto(wrapper, _appLifetime.ApplicationStopping);
         }
       }
       catch (OperationCanceledException)
@@ -549,35 +395,10 @@ internal sealed class DesktopRemoteControlStream(
     _appLifetime.StopApplication();
   }
 
-  private async Task<PointerCoordinates?> TryGetPointerCoordinates(double normalizedX, double normalizedY)
-  {
-    var selectResult = await _desktopCapturer.TryGetSelectedDisplay();
-    if (!selectResult.IsSuccess)
-    {
-      _logger.LogWarning("Selected display is invalid. Unable to process viewer request.");
-      return null;
-    }
-
-    var selectedDisplay = selectResult.Value;
-    var findResult = await _displayManager.TryFindDisplay(selectedDisplay.DeviceName);
-    if (!findResult.IsSuccess)
-    {
-      _logger.LogWarning("Selected display {DisplayName} could not be resolved.", selectedDisplay.DeviceName);
-      return null;
-    }
-
-    return new PointerCoordinates(normalizedX, normalizedY, findResult.Value);
-  }
-
   private async Task TrySendSessionError(Exception ex)
   {
     try
     {
-      if (State != WebSocketState.Open)
-      {
-        return;
-      }
-
       var message = ex.GetBaseException().Message;
       if (string.IsNullOrWhiteSpace(message))
       {
@@ -585,10 +406,10 @@ internal sealed class DesktopRemoteControlStream(
       }
 
       var dto = new RemoteControlSessionErrorDto(message, IsFatal: true);
-      var wrapper = DtoWrapper.Create(dto, DtoType.RemoteControlSessionError);
+      var wrapper = RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.RemoteControlSessionError);
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-      await Send(wrapper, cts.Token);
+      await SendDto(wrapper, cts.Token);
     }
     catch (Exception sendEx)
     {

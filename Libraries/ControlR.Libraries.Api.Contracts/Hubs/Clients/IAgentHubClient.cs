@@ -6,7 +6,7 @@ using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 
 namespace ControlR.Libraries.Api.Contracts.Hubs.Clients;
 
-public interface IAgentHubClient : IHubClient
+public interface IAgentHubClient
 {
   Task<HubResult> CloseChatSession(Guid sessionId, int targetProcessId);
   Task CloseTerminalSession(Guid terminalSessionId);
@@ -22,6 +22,7 @@ public interface IAgentHubClient : IHubClient
   Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<HubResult<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
   Task<HubResult> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto requestDto);
+  Task<HubResult> InvokeRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request);
   Task InvokeWakeDevice(WakeDeviceDto dto);
   Task ReceiveAgentUpdateTrigger();
   Task ReceivePowerStateChange(PowerStateChangeType changeType);
@@ -30,6 +31,7 @@ public interface IAgentHubClient : IHubClient
   Task<HubResult> RequestDesktopPreview(DesktopPreviewRequestDto dto);
   Task<HubResult> RequestRemoteControlPermission(int targetProcessId);
   Task<HubResult> SendChatMessage(ChatMessageHubDto dto);
+  Task SendRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request);
   Task<HubResult> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto);
   Task<HubResult> StreamFileContents(StreamFileContentsRequestHubDto dto);
   Task<HubResult> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto);

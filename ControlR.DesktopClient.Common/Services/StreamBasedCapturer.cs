@@ -19,7 +19,7 @@ internal class StreamBasedCapturer(
     IStreamMetrics streamMetrics,
     ILogger<StreamBasedCapturer> logger) : IDesktopCapturer
 {
-  private readonly Channel<DtoWrapper> _channel = Channel.CreateBounded<DtoWrapper>(
+  private readonly Channel<RemoteControlEventWrapper> _channel = Channel.CreateBounded<RemoteControlEventWrapper>(
     new BoundedChannelOptions(capacity: 10)
     {
       SingleReader = true,
@@ -72,7 +72,7 @@ internal class StreamBasedCapturer(
     throw new NotImplementedException();
   }
 
-  public async IAsyncEnumerable<DtoWrapper> GetCaptureStream([EnumeratorCancellation] CancellationToken cancellationToken)
+  public async IAsyncEnumerable<RemoteControlEventWrapper> GetCaptureStream([EnumeratorCancellation] CancellationToken cancellationToken)
   {
     await foreach (var item in _channel.Reader.ReadAllAsync(cancellationToken))
     {
@@ -173,7 +173,7 @@ internal class StreamBasedCapturer(
       if (packet != null)
       {
         var dto = new VideoStreamPacketDto(packet, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-        var wrapper = DtoWrapper.Create(dto, DtoType.VideoStreamPacket);
+        var wrapper = RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.VideoStreamPacket);
         await _channel.Writer.WriteAsync(wrapper, cancellationToken);
       }
       else

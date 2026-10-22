@@ -204,6 +204,20 @@ public class AgentHub(
     }
   }
 
+  public async Task SendRemoteControlDtoToViewer(string viewerConnectionId, RemoteControlEventWrapper dto)
+  {
+    try
+    {
+      await _viewerHub.Clients
+        .Client(viewerConnectionId)
+        .ReceiveRemoteControlDto(dto);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while sending remote control DTO to viewer.");
+    }
+  }
+
   public async Task SendSubdirectoriesStream(Guid streamId, ChannelReader<InternalDtos.FileSystemEntryDto[]> subdirectoryChunks)
   {
     try

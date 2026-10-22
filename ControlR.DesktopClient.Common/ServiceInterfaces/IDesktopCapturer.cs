@@ -26,7 +26,7 @@ public interface IDesktopCapturer : IAsyncDisposable
   /// </summary>
   /// <param name="cancellationToken">A token to terminate the stream.</param>
   /// <returns>An async enumerable of DTOs containing screen regions or frames.</returns>
-  IAsyncEnumerable<DtoWrapper> GetCaptureStream(CancellationToken cancellationToken);
+  IAsyncEnumerable<RemoteControlEventWrapper> GetCaptureStream(CancellationToken cancellationToken);
 
   /// <summary>
   /// Calculates the average frames per second over a specific time interval.

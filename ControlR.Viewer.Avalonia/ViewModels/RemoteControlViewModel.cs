@@ -509,7 +509,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
         NotifyUserOnSessionStart: false,
         RequireConsent: false);
 
-      var remoteControlSessionResult = await _hubConnection.Server.RequestRemoteControlSession2(requestDto);
+      var remoteControlSessionResult = await _hubConnection.Server.RequestRemoteControlSession3(requestDto);
 
       if (!remoteControlSessionResult.IsSuccess)
       {
@@ -530,6 +530,7 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
       var authHeaders = await _connectionAuthProvider.GetWebSocketHeaders(cts.Token);
 
       await _remoteControlStream.Connect(
+        session,
         viewerRelayUri,
         wsOptions =>
         {
