@@ -39,6 +39,28 @@ public partial class ViewerHub
     }
   }
 
+  // Session ids that this connection started. Per-command requests carry a session id that the
+  // viewer supplies, so without this a viewer holding a device permission could address another
+  // viewer's live session on the same device. Lives in Context.Items, which SignalR discards when
+  // the connection ends.
+  private ConcurrentDictionary<(Guid DeviceId, Guid SessionId), byte> RemoteControlSessionBindings
+  {
+    get
+    {
+      lock (Context.Items)
+      {
+        if (GetItem<ConcurrentDictionary<(Guid DeviceId, Guid SessionId), byte>?>(null) is { } cached)
+        {
+          return cached;
+        }
+
+        var created = new ConcurrentDictionary<(Guid DeviceId, Guid SessionId), byte>();
+        SetItem(created);
+        return created;
+      }
+    }
+  }
+
   public async Task<HubResult<ActiveDesktopSessionsResponseDto>> GetActiveDesktopSessions2(GetActiveDesktopSessionsRequestDto request)
   {
     try
@@ -289,6 +311,13 @@ public partial class ViewerHub
         .Client(device.ConnectionId)
         .CreateRemoteControlSession(sessionRequestDto);
 
+      if (result.IsSuccess)
+      {
+        RemoteControlSessionBindings.TryAdd(
+          (sessionRequestDto.DeviceId, sessionRequestDto.SessionId),
+          0);
+      }
+
       return result;
     }
     catch (Exception ex)
@@ -337,6 +366,18 @@ public partial class ViewerHub
         request.DeviceId,
         request.SessionId,
         request.Wrapper.DtoType);
+      return HubResult.Fail<string>("Unauthorized.");
+    }
+
+    if (!RemoteControlSessionBindings.ContainsKey((request.DeviceId, request.SessionId)))
+    {
+      _logger.LogWarning(
+        "Remote control DTO {DtoType} was refused for a session this connection did not start.  " +
+        "User: {UserName}.  Device: {DeviceId}.  Session: {SessionId}.",
+        request.Wrapper.DtoType,
+        Context.UserIdentifier,
+        request.DeviceId,
+        request.SessionId);
       return HubResult.Fail<string>("Unauthorized.");
     }
 

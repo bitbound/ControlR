@@ -428,9 +428,10 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     var user = await testApp.Services.CreateTestUser(tenant.Id);
     var device = await testApp.Services.CreateTestDevice(tenant.Id);
     await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
 
     var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
-    var sessionId = Guid.NewGuid();
+    var sessionId = await StartSessionAsync(hub, agentClient, device.Id);
     var request = new SendRemoteControlDtoToAgentRequestDto(
       device.Id,
       TargetProcessId: 100,
@@ -454,9 +455,10 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     var user = await testApp.Services.CreateTestUser(tenant.Id);
     var device = await testApp.Services.CreateTestDevice(tenant.Id);
     await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
 
     var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
-    var sessionId = Guid.NewGuid();
+    var sessionId = await StartSessionAsync(hub, agentClient, device.Id);
     var request = new SendRemoteControlDtoToAgentRequestDto(
       device.Id,
       TargetProcessId: 100,
@@ -479,6 +481,36 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
 
     agentClient.Verify(client => client.SendRemoteControlDto(It.Is<SendRemoteControlDtoToAgentRequestDto>(
       forwarded => forwarded.DeviceId == device.Id && forwarded.SessionId == sessionId)), Times.Exactly(2));
+  }
+
+  [Fact]
+  public async Task SendRemoteControlDtoToAgent_SessionNotStartedByThisConnection_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
+
+    // A second hub instance is a second viewer connection. It holds the same device permission but
+    // never started this session, so it must not be able to drive the first viewer's session.
+    var (owningHub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    var sessionId = await StartSessionAsync(owningHub, agentClient, device.Id);
+
+    var (intruderHub, _) = CreateHub(testApp, user, tenant.Id);
+    var request = new SendRemoteControlDtoToAgentRequestDto(
+      device.Id,
+      TargetProcessId: 100,
+      SessionId: sessionId,
+      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
+
+    var result = await intruderHub.SendRemoteControlDtoToAgent(request);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+    agentClient.Verify(client => client.SendRemoteControlDto(
+      It.IsAny<SendRemoteControlDtoToAgentRequestDto>()), Times.Never);
   }
 
   [Fact]
@@ -643,6 +675,30 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       new PrincipalDescriptor(PrincipalType.User, userId, tenantId, "test")));
     await db.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
+  private static async Task<Guid> StartSessionAsync(
+    ViewerHub hub,
+    Mock<IAgentHubClient> agentClient,
+    Guid deviceId)
+  {
+    agentClient
+      .Setup(client => client.CreateRemoteControlSession(It.IsAny<RemoteControlSessionRequestDto>()))
+      .ReturnsAsync(HubResult.Ok());
+
+    var sessionRequest = new RemoteControlSessionRequestDto(
+      Guid.NewGuid(),
+      new Uri("wss://localhost/remote-control"),
+      1,
+      100,
+      deviceId,
+      false,
+      false);
+
+    var result = await hub.RequestRemoteControlSession3(sessionRequest);
+    Assert.True(result.IsSuccess);
+
+    return sessionRequest.SessionId;
+  }
+
 
   private sealed class TestHubCallerContext : HubCallerContext
   {
