@@ -26,12 +26,18 @@ public interface IBearerTokenRefresher
   /// <param name="refreshWindow">The lead time used to decide when a token should be refreshed.</param>
   /// <param name="baseUrl">An optional base URL override for the refresh request.</param>
   /// <param name="cancellationToken">Cancels the refresh operation.</param>
+  /// <param name="dedupeAgainstBearerStateVersion">
+  /// The token-generation counter as of the caller's own request. When it no longer matches the
+  /// live state, the token was renewed after that request, and the call rides the renewal instead
+  /// of posting another refresh. Null when no caller request stands behind the refresh.
+  /// </param>
   /// <returns>The outcome of the refresh attempt.</returns>
   Task<BearerTokenRefreshResult> RefreshIfNeeded(
     bool forceRefresh,
     TimeSpan refreshWindow,
     Uri? baseUrl = null,
-    CancellationToken cancellationToken = default);
+    CancellationToken cancellationToken = default,
+    long? dedupeAgainstBearerStateVersion = null);
 }
 
 public sealed class BearerTokenRefresher(
@@ -55,7 +61,8 @@ public sealed class BearerTokenRefresher(
     bool forceRefresh,
     TimeSpan refreshWindow,
     Uri? baseUrl = null,
-    CancellationToken cancellationToken = default)
+    CancellationToken cancellationToken = default,
+    long? dedupeAgainstBearerStateVersion = null)
   {
     var auth = _authState;
     var refreshContext = auth.TryCreateBearerRefreshContext(_timeProvider, refreshWindow, forceRefresh);
@@ -77,6 +84,16 @@ public sealed class BearerTokenRefresher(
       if (refreshContext is null)
       {
         return BearerTokenRefreshResult.NoRefreshNeeded;
+      }
+
+      // A caller whose challenge predates a renewal rides that renewal. The forced path skips the
+      // freshness check, so without this comparison every concurrent 401 in a burst costs its own
+      // round trip to the stateless refresh endpoint. The version bumps on every bearer mutation,
+      // so a moved version proves the token already changed underneath the caller.
+      if (dedupeAgainstBearerStateVersion is { } observedVersion &&
+          refreshContext.ExpectedBearerStateVersion != observedVersion)
+      {
+        return BearerTokenRefreshResult.Refreshed;
       }
 
       var refreshClient = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);

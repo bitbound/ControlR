@@ -77,15 +77,20 @@ public partial class ControlrApi(
       return LogFailure(ApiResult.Fail(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown));
     }
 
+    // The version this call's request goes out with. A 401 whose token was renewed underneath it
+    // rides that renewal instead of paying for another refresh POST.
+    var bearerStateVersionAtSend = _authState.BearerStateVersion;
+
     try
     {
       await PrepareClientForRequest(allowAutoRefresh);
+      bearerStateVersionAtSend = _authState.BearerStateVersion;
       await func.Invoke();
       return ApiResult.Ok();
     }
     catch (HttpRequestException ex)
     {
-      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex))
+      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex, bearerStateVersionAtSend))
       {
         try
         {
@@ -139,9 +144,12 @@ public partial class ControlrApi(
       return LogFailure(ApiResult.Fail<T>(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown));
     }
 
+    var bearerStateVersionAtSend = _authState.BearerStateVersion;
+
     try
     {
       await PrepareClientForRequest(allowAutoRefresh);
+      bearerStateVersionAtSend = _authState.BearerStateVersion;
       var resultValue = await func.Invoke() ??
         throw new HttpRequestException("The server response was empty.");
 
@@ -163,7 +171,7 @@ public partial class ControlrApi(
     }
     catch (HttpRequestException ex)
     {
-      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex))
+      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex, bearerStateVersionAtSend))
       {
         try
         {
@@ -268,11 +276,12 @@ public partial class ControlrApi(
     }
   }
 
-  private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh)
+  private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh, long? dedupeAgainstBearerStateVersion = null)
   {
     var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
       forceRefresh,
-      _options.Value.BearerRefreshLeadTime);
+      _options.Value.BearerRefreshLeadTime,
+      dedupeAgainstBearerStateVersion: dedupeAgainstBearerStateVersion);
 
     if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {
@@ -292,7 +301,7 @@ public partial class ControlrApi(
     return refreshResult == BearerTokenRefreshResult.Refreshed;
   }
 
-  private async Task<bool> TryRefreshAfterUnauthorized(HttpRequestException ex)
+  private async Task<bool> TryRefreshAfterUnauthorized(HttpRequestException ex, long bearerStateVersionAtSend)
   {
     if (ex.StatusCode != HttpStatusCode.Unauthorized)
     {
@@ -301,7 +310,7 @@ public partial class ControlrApi(
 
     try
     {
-      return await RefreshBearerTokenIfNeeded(forceRefresh: true);
+      return await RefreshBearerTokenIfNeeded(forceRefresh: true, dedupeAgainstBearerStateVersion: bearerStateVersionAtSend);
     }
     catch (Exception refreshEx)
     {
