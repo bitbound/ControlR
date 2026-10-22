@@ -826,6 +826,8 @@ public class PermissionAssignmentManager(
       return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(HttpResultErrorCode.BadRequest, credentialScopeError);
     }
 
+    var normalizedScopeId = NormalizeScopeId(request.ScopeKind, request.ScopeId, tenantId);
+
     if (IsSelf(assignment, actor.PrincipalId))
     {
       // The replacement is transient: it only feeds the self-protection check and is never
@@ -835,7 +837,7 @@ public class PermissionAssignmentManager(
         assignment.PrincipalId,
         request.PermissionName,
         request.ScopeKind,
-        NormalizeScopeId(request.ScopeKind, request.ScopeId, tenantId),
+        normalizedScopeId,
         tenantId,
         createdBy: null,
         request.Effect,
@@ -856,13 +858,25 @@ public class PermissionAssignmentManager(
       }
     }
 
+    // An update can collide with a row that already holds the resulting key (typically flipping a
+    // deny to allow when an allow for the same permission and scope exists). The unique index
+    // rejects it, so answer Conflict here rather than letting the save fail. This runs after the
+    // self-protection check so that refusal keeps precedence for edits to the caller's own grants.
+    var targetKey = new AssignmentKey(request.PermissionName, request.Effect, request.ScopeKind, normalizedScopeId);
+    if (await AssignmentExists(
+      assignment.PrincipalKind, assignment.PrincipalId, targetKey, cancellationToken, excludeId: assignmentId))
+    {
+      return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(
+        HttpResultErrorCode.Conflict, "An identical permission assignment already exists.");
+    }
+
     var before = new PermissionAssignmentSnapshot(
       assignment.PermissionName, assignment.Effect, assignment.ScopeKind, assignment.ScopeId);
 
     assignment.PermissionName = request.PermissionName;
     assignment.Effect = request.Effect;
     assignment.ScopeKind = request.ScopeKind;
-    assignment.ScopeId = NormalizeScopeId(request.ScopeKind, request.ScopeId, tenantId);
+    assignment.ScopeId = normalizedScopeId;
     assignment.Notes = request.Notes;
     assignment.IsEnabled = request.IsEnabled;
     assignment.OwningTenantId = request.ScopeKind == PermissionScopeKind.Server ? null : tenantId;
@@ -877,7 +891,22 @@ public class PermissionAssignmentManager(
       after: new PermissionAssignmentSnapshot(
         assignment.PermissionName, assignment.Effect, assignment.ScopeKind, assignment.ScopeId)));
 
-    await _appDb.SaveChangesAsync(cancellationToken);
+    try
+    {
+      await _appDb.SaveChangesAsync(cancellationToken);
+    }
+    catch (DbUpdateException)
+    {
+      // A concurrent update can win the race between the check above and this save.
+      if (await AssignmentExists(
+        assignment.PrincipalKind, assignment.PrincipalId, targetKey, cancellationToken, excludeId: assignmentId))
+      {
+        return HttpResult.Fail<InternalDtos.PermissionAssignmentDto>(
+          HttpResultErrorCode.Conflict, "An identical permission assignment already exists.");
+      }
+
+      throw;
+    }
 
     return HttpResult.Ok(MapToDto(assignment));
   }
@@ -1004,7 +1033,8 @@ public class PermissionAssignmentManager(
     PermissionPrincipalKind principalKind,
     Guid principalId,
     AssignmentKey key,
-    CancellationToken cancellationToken) =>
+    CancellationToken cancellationToken,
+    Guid? excludeId = null) =>
     _appDb.PermissionAssignments
       .IgnoreQueryFilters()
       .AnyAsync(x => x.PrincipalKind == principalKind &&
@@ -1012,7 +1042,8 @@ public class PermissionAssignmentManager(
                      x.PermissionName == key.PermissionName &&
                      x.Effect == key.Effect &&
                      x.ScopeKind == key.ScopeKind &&
-                     x.ScopeId == key.ScopeId,
+                     x.ScopeId == key.ScopeId &&
+                     (excludeId == null || x.Id != excludeId),
         cancellationToken);
 
   private async Task<string?> FindViolatedSelfProtected(
