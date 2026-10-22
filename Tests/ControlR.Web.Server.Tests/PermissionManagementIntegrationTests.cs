@@ -624,6 +624,50 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task PermissionAssignment_Update_EffectOntoExistingTwin_ReturnsConflict()
+  {
+    // The uniqueness that rejects a twin only exists on PostgreSQL: the in-memory provider
+    // ignores the unique index, so the pre-fix failure (an unhandled DbUpdateException, 500)
+    // cannot be reproduced there.
+    var (testServer, client, tenantId, _) = await CreateAuthenticatedServer(useInMemoryDatabase: false);
+    using var _ = testServer;
+
+    var targetUser = await testServer.Services.CreateTestUser(
+      tenantId, $"twin-{Guid.NewGuid():N}@t.local");
+
+    var allowId = await CreateClipboardWriteAssignmentAsync(
+      client, tenantId, targetUser.Id, PermissionEffect.Allow);
+    var denyId = await CreateClipboardWriteAssignmentAsync(
+      client, tenantId, targetUser.Id, PermissionEffect.Deny);
+
+    // Flipping the deny to allow would duplicate the existing allow row.
+    var updateResponse = await client.PutAsJsonAsync(
+      PaUrl(tenantId, $"/{denyId}"),
+      new UpdatePermissionAssignmentRequestDto(
+        PermissionNames.DeviceClipboardWrite,
+        PermissionEffect.Allow,
+        PermissionScopeKind.Tenant,
+        tenantId,
+        null,
+        IsEnabled: true),
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.Conflict, updateResponse.StatusCode);
+
+    // The refused update must not have changed either row.
+    var getResponse = await client.GetAsync(
+      $"{PaUrl(tenantId)}&principalKind=User&principalId={targetUser.Id}",
+      TestContext.Current.CancellationToken);
+    var assignments = await getResponse.Content.ReadFromJsonAsync<PermissionAssignmentsResponseDto>(
+      TestContext.Current.CancellationToken);
+    Assert.NotNull(assignments);
+    Assert.Equal(PermissionEffect.Allow, assignments.Items.Single(x => x.Id == allowId).Effect);
+    Assert.Equal(PermissionEffect.Deny, assignments.Items.Single(x => x.Id == denyId).Effect);
+    Assert.Single(assignments.Items, x =>
+      x.PermissionName == PermissionNames.DeviceClipboardWrite && x.Effect == PermissionEffect.Allow);
+  }
+
+  [Fact]
   public async Task TenantDeletion_CascadesPermissionAssignments()
   {
     using var testServer = await TestWebServerBuilder.CreateTestServer(testOutput, useInMemoryDatabase: false);
@@ -868,6 +912,30 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     Assert.Equal(2, groups.Items.Count);
   }
 
+  private static async Task<Guid> CreateClipboardWriteAssignmentAsync(
+    HttpClient client,
+    Guid tenantId,
+    Guid principalId,
+    PermissionEffect effect)
+  {
+    var response = await client.PostAsJsonAsync(
+      PaUrl(tenantId),
+      new CreatePermissionAssignmentRequestDto(
+        PermissionPrincipalKind.User,
+        principalId,
+        PermissionNames.DeviceClipboardWrite,
+        effect,
+        PermissionScopeKind.Tenant,
+        tenantId,
+        null),
+      TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    var created = await response.Content.ReadFromJsonAsync<PermissionAssignmentDto>(
+      TestContext.Current.CancellationToken);
+    Assert.NotNull(created);
+    return created.Id;
+  }
+
   private static async Task<DeviceGroupDetailDto> CreateDeviceGroup(
     HttpClient client,
     Guid tenantId,
@@ -941,9 +1009,10 @@ public class PermissionManagementIntegrationTests(ITestOutputHelper testOutput)
     await db.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
 
-  private async Task<(TestWebServer server, HttpClient client, Guid tenantId, Guid userId)> CreateAuthenticatedServer()
+  private async Task<(TestWebServer server, HttpClient client, Guid tenantId, Guid userId)> CreateAuthenticatedServer(
+    bool useInMemoryDatabase = true)
   {
-    var testServer = await TestWebServerBuilder.CreateTestServer(testOutput);
+    var testServer = await TestWebServerBuilder.CreateTestServer(testOutput, useInMemoryDatabase: useInMemoryDatabase);
     var httpClient = testServer.Factory.CreateClient();
 
     var tenant = await testServer.Services.CreateTestTenant();
