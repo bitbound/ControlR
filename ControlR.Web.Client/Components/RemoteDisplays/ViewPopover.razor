@@ -6,6 +6,7 @@
 @inject ISnackbar Snackbar
 @inject ILogger<ViewPopover> Logger
 @inject IDeviceState DeviceState
+@inject IDeviceAccessPermissionsState DeviceAccessPermissionsState
 
 <div class="d-flex flex-column gap-4">
   <div>
@@ -87,13 +88,14 @@
 
   </div>
 
-  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows)
+  @if (DeviceState.TryGetCurrentDevice()?.Platform == SystemPlatform.Windows &&
+       DeviceAccessPermissionsState.Permissions?.CanTogglePrivacyScreen == true)
   {
     <div>
       <MudText Typo="Typo.caption" Class="mb-2">Privacy</MudText>
       <div>
         <MudTooltip Text="Black out the physical display while remote control remains visible">
-          <MudSwitch Value="RemoteControlState.IsPrivacyScreenEnabled"
+          <MudSwitch @key="_privacyScreenVersion" Value="RemoteControlState.IsPrivacyScreenEnabled"
             ValueChanged="@((bool v) => HandlePrivacyScreenToggled(v))" Color="Color.Secondary" Label="Privacy Screen"
             ThumbIcon="@(Icons.Material.Filled.VisibilityOff)" />
         </MudTooltip>
@@ -116,14 +118,32 @@
 </div>
 
 @code {
+  // MudSwitch keeps its own value when the bound value is unchanged, so a refused toggle
+  // would leave the switch rendered on. Bumping the key rebuilds it from the bound value.
+  private int _privacyScreenVersion;
+
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     await base.OnAfterRenderAsync(firstRender);
     if (firstRender)
     {
-      Disposables.Add(
-        RemoteControlState.OnStateChanged(() => InvokeAsync(StateHasChanged)));
+      Disposables.AddRange(
+        RemoteControlState.OnStateChanged(() => InvokeAsync(StateHasChanged)),
+        DeviceAccessPermissionsState.OnStateChanged(() => InvokeAsync(StateHasChanged)),
+        RemoteControlStream.RegisterMessageHandler(this, HandleDtoReceived));
     }
+  }
+
+  private Task HandleDtoReceived(RemoteControlEventWrapper wrapper)
+  {
+    if (wrapper.DtoType != RemoteControlEventDtoType.PrivacyScreenResult)
+    {
+      return Task.CompletedTask;
+    }
+
+    // A failed toggle reports the state it already had, which MudSwitch would ignore.
+    _privacyScreenVersion++;
+    return InvokeAsync(StateHasChanged);
   }
 
   private string GetDisplayLayoutStyle(DisplayDto display)
@@ -207,19 +227,29 @@
     {
       if (RemoteControlStream.State != System.Net.WebSockets.WebSocketState.Open)
       {
-        Snackbar.Add("No active remote session", Severity.Error);
+        RejectPrivacyScreenToggle("No active remote session");
         return;
       }
 
       Snackbar.Add("Sending privacy screen toggle", Severity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-      await RemoteControlStream.SendTogglePrivacyScreen(value, cts.Token);
+      var result = await RemoteControlStream.SendTogglePrivacyScreen(value, cts.Token);
+      if (!result.IsSuccess)
+      {
+        RejectPrivacyScreenToggle($"Failed to toggle privacy screen: {result.Reason}");
+      }
     }
     catch (Exception ex)
     {
       Logger.LogError(ex, "Error while toggling privacy screen.");
-      Snackbar.Add("An error occurred while toggling privacy screen", Severity.Error);
+      RejectPrivacyScreenToggle("An error occurred while toggling privacy screen");
     }
+  }
+
+  private void RejectPrivacyScreenToggle(string message)
+  {
+    _privacyScreenVersion++;
+    Snackbar.Add(message, Severity.Error);
   }
 
   private async Task HandleDisplayChanged(DisplayDto display)

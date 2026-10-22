@@ -12,4 +12,5 @@ public sealed record DeviceAccessPermissionsDto(
   bool CanBlockRemoteInput,
   bool CanReadClipboard,
   bool CanWriteClipboard,
-  bool CanSendCtrlAltDel);
+  bool CanSendCtrlAltDel,
+  bool CanTogglePrivacyScreen);

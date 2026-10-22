@@ -118,6 +118,7 @@ public static class PermissionCatalog
     Add(PermissionNames.DeviceRemoteControlInteract, PermissionCategories.Devices, "Interact Remote Control", "Send input during a remote control session.", deviceResources);
     Add(PermissionNames.DeviceRemoteControlBlockInput, PermissionCategories.Devices, "Block Remote Input", "Block the remote user's keyboard and mouse during a remote control session.", deviceResources);
     Add(PermissionNames.DeviceRemoteControlElevatedDesktop, PermissionCategories.Devices, "Elevated Desktop Access", "Access the elevated (system) desktop during remote control.", deviceResources);
+    Add(PermissionNames.DeviceRemoteControlPrivacyScreen, PermissionCategories.Devices, "Toggle Privacy Screen", "Black out the physical display on the remote device during a remote control session. The viewer continues to see the desktop.", deviceResources);
     Add(PermissionNames.DeviceCtrlAltDelSend, PermissionCategories.Devices, "Send Ctrl+Alt+Del", "Send Ctrl+Alt+Del to a remote device.", deviceResources);
     Add(PermissionNames.DeviceClipboardRead, PermissionCategories.Devices, "Read Device Clipboard", "Read the clipboard contents from a remote device.", deviceResources);
     Add(PermissionNames.DeviceClipboardWrite, PermissionCategories.Devices, "Write Device Clipboard", "Write to the clipboard on a remote device.", deviceResources);

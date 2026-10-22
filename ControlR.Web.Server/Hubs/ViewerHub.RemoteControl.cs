@@ -15,7 +15,8 @@ public partial class ViewerHub
     PermissionNames.DeviceClipboardWrite,
     PermissionNames.DeviceRemoteControlBlockInput,
     PermissionNames.DeviceRemoteControlConnect,
-    PermissionNames.DeviceRemoteControlInteract
+    PermissionNames.DeviceRemoteControlInteract,
+    PermissionNames.DeviceRemoteControlPrivacyScreen
   ];
 
   // Commands arrive at input rate, so the device's permissions are resolved once and reused.
@@ -219,6 +220,7 @@ public partial class ViewerHub
     RemoteControlCommandDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
     RemoteControlCommandDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
     RemoteControlCommandDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
+    RemoteControlCommandDtoType.TogglePrivacyScreen => PermissionNames.DeviceRemoteControlPrivacyScreen,
     RemoteControlCommandDtoType.RequestKeyFrame
       or RemoteControlCommandDtoType.UpdateCaptureSettings
       or RemoteControlCommandDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
