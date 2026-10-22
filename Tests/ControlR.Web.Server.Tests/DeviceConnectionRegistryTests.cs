@@ -5,48 +5,48 @@ namespace ControlR.Web.Server.Tests;
 public class DeviceConnectionRegistryTests
 {
   [Fact]
-  public void Remove_DoesNotEvictEntryOfNewerConnection()
+  public async Task GetConnectionId_UnknownDevice_ReturnsNull()
   {
+    var cancellationToken = TestContext.Current.CancellationToken;
     var registry = new DeviceConnectionRegistry();
-    registry.Set(Guid.NewGuid(), "conn-old");
-    var deviceId = Guid.NewGuid();
-    registry.Set(deviceId, "conn-new");
-    registry.Remove(deviceId, "conn-old");
 
-    Assert.True(registry.TryGetConnectionId(deviceId, out var connectionId));
-    Assert.Equal("conn-new", connectionId);
+    Assert.Null(await registry.GetConnectionId(Guid.NewGuid(), cancellationToken));
   }
 
   [Fact]
-  public void Remove_EvictsMatchingConnection()
+  public async Task Remove_DoesNotEvictEntryOfNewerConnection()
   {
+    var cancellationToken = TestContext.Current.CancellationToken;
     var deviceId = Guid.NewGuid();
     var registry = new DeviceConnectionRegistry();
-    registry.Set(deviceId, "conn-1");
+    await registry.Set(deviceId, "conn-new", cancellationToken);
+    await registry.Remove(deviceId, "conn-old", cancellationToken);
 
-    registry.Remove(deviceId, "conn-1");
-
-    Assert.False(registry.TryGetConnectionId(deviceId, out _));
+    Assert.Equal("conn-new", await registry.GetConnectionId(deviceId, cancellationToken));
   }
 
   [Fact]
-  public void Set_MakesConnectionIdResolvable()
+  public async Task Remove_EvictsMatchingConnection()
   {
+    var cancellationToken = TestContext.Current.CancellationToken;
     var deviceId = Guid.NewGuid();
     var registry = new DeviceConnectionRegistry();
+    await registry.Set(deviceId, "conn-1", cancellationToken);
 
-    registry.Set(deviceId, "conn-1");
+    await registry.Remove(deviceId, "conn-1", cancellationToken);
 
-    Assert.True(registry.TryGetConnectionId(deviceId, out var connectionId));
-    Assert.Equal("conn-1", connectionId);
+    Assert.Null(await registry.GetConnectionId(deviceId, cancellationToken));
   }
 
   [Fact]
-  public void TryGetConnectionId_UnknownDevice_ReturnsFalse()
+  public async Task Set_MakesConnectionIdResolvable()
   {
+    var cancellationToken = TestContext.Current.CancellationToken;
+    var deviceId = Guid.NewGuid();
     var registry = new DeviceConnectionRegistry();
 
-    Assert.False(registry.TryGetConnectionId(Guid.NewGuid(), out var connectionId));
-    Assert.Null(connectionId);
+    await registry.Set(deviceId, "conn-1", cancellationToken);
+
+    Assert.Equal("conn-1", await registry.GetConnectionId(deviceId, cancellationToken));
   }
 }

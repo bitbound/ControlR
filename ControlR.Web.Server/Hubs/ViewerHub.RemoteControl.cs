@@ -385,7 +385,7 @@ public partial class ViewerHub
     // Steady state reads nothing from the database. AgentHub keeps the registry current on connect,
     // heartbeat, and disconnect; the database read below only covers this server starting up or the
     // agent being connected by another node.
-    if (_deviceConnectionRegistry.TryGetConnectionId(request.DeviceId, out var agentConnectionId))
+    if (await _deviceConnectionRegistry.GetConnectionId(request.DeviceId, cancellationToken) is { } agentConnectionId)
     {
       return HubResult.Ok(agentConnectionId);
     }
@@ -406,7 +406,7 @@ public partial class ViewerHub
       return HubResult.Fail<string>("Device is not currently online.", OperationFailureCode.DeviceOffline);
     }
 
-    _deviceConnectionRegistry.Set(trackedDevice.Id, trackedDevice.ConnectionId);
+    await _deviceConnectionRegistry.Set(trackedDevice.Id, trackedDevice.ConnectionId, cancellationToken);
     return HubResult.Ok(trackedDevice.ConnectionId);
   }
 
@@ -440,7 +440,7 @@ public partial class ViewerHub
 
     if (device.IsOnline && !string.IsNullOrWhiteSpace(device.ConnectionId))
     {
-      _deviceConnectionRegistry.Set(device.Id, device.ConnectionId);
+      await _deviceConnectionRegistry.Set(device.Id, device.ConnectionId, cancellationToken);
     }
 
     return cache.GetOrAdd(device.Id, allowedPermissions);

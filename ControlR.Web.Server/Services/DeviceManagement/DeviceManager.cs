@@ -92,7 +92,7 @@ public class DeviceManager(
 
     entity.IsOnline = false;
     entity.LastSeen = lastSeen;
-    _deviceConnectionRegistry.Remove(deviceId, entity.ConnectionId);
+    await _deviceConnectionRegistry.Remove(deviceId, entity.ConnectionId);
     entity.ConnectionId = string.Empty; // Clear connection ID when offline
 
     await _appDb.SaveChangesAsync();
@@ -240,13 +240,13 @@ public class DeviceManager(
 
     if (context.IsOnline && !string.IsNullOrWhiteSpace(context.ConnectionId))
     {
-      _deviceConnectionRegistry.Set(entity.Id, context.ConnectionId);
+      await _deviceConnectionRegistry.Set(entity.Id, context.ConnectionId);
     }
     else if (!context.IsOnline
-      && _deviceConnectionRegistry.TryGetConnectionId(entity.Id, out var trackedConnectionId)
+      && await _deviceConnectionRegistry.GetConnectionId(entity.Id) is { } trackedConnectionId
       && trackedConnectionId == context.ConnectionId)
     {
-      _deviceConnectionRegistry.Remove(entity.Id, trackedConnectionId);
+      await _deviceConnectionRegistry.Remove(entity.Id, trackedConnectionId);
     }
 
     if (context.RemoteIpAddress is not null)
