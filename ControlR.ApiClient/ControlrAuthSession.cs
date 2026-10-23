@@ -565,9 +565,7 @@ public sealed class ControlrAuthSession(
           return;
         }
 
-        var snapshot = _authState.GetSnapshot();
-        var expiresAt = snapshot.BearerTokenExpiresAt;
-        if (expiresAt is null)
+        if (_authState.BearerTokenExpiresAt is null)
         {
           // The tokens can be cleared from under this loop. ControlrApi clears the shared auth state
           // when the server rejects a refresh during an ordinary call, and it has no way to reach
@@ -580,20 +578,31 @@ public sealed class ControlrAuthSession(
           return;
         }
 
-        var delay = expiresAt.Value - _timeProvider.GetUtcNow() - ControlrApiClientAuthState.GetBearerRefreshWindow(
-          snapshot.BearerTokenLifetime,
+        var wait = _authState.GetTimeUntilRefresh(
+          _timeProvider,
           _optionsMonitor.CurrentValue.BearerRefreshLeadTime);
-        if (delay < TimeSpan.Zero)
+        if (wait > TimeSpan.Zero)
         {
-          delay = TimeSpan.Zero;
+          // The wait has to run on the injected clock. A wall-clock Task.Delay against a fake clock
+          // wakes the loop while the staleness check still reads an unmoved "now", so the loop
+          // concludes the token is fresh and sleeps the identical interval again, forever.
+          await Task.Delay(wait, _timeProvider, cancellationToken);
+          continue;
         }
 
-        await Task.Delay(delay, cancellationToken);
+        var versionBefore = _authState.BearerStateVersion;
 
         try
         {
           await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken, loopGeneration: generation);
           _consecutiveRefreshFailures = 0;
+
+          if (_authState.BearerStateVersion == versionBefore)
+          {
+            // The token is inside its refresh window yet nothing was renewed, so another pass would
+            // recompute the same zero wait. Sleeping a fixed interval keeps that from spinning.
+            await Task.Delay(_minRefreshRetryBackoff, _timeProvider, cancellationToken);
+          }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -646,7 +655,7 @@ public sealed class ControlrAuthSession(
             backoff = _maxRefreshRetryBackoff;
           }
 
-          await Task.Delay(backoff, cancellationToken);
+          await Task.Delay(backoff, _timeProvider, cancellationToken);
         }
       }
     }

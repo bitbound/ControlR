@@ -267,9 +267,12 @@ public sealed class ControlrAuthSessionTests
 
     await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
 
-    var waitResult = await Waiter.Default.WaitFor(
+    // The retry backoff runs on the session's clock, so the fake clock drives the failure budget.
+    var waitResult = await AdvanceUntilAsync(
+      timeProvider,
       () => session.State == ControlrAuthSessionState.Expired,
-      cancellationToken: cts.Token);
+      TimeSpan.FromSeconds(1),
+      cts.Token);
     Assert.True(waitResult);
 
     Assert.Equal(ControlrAuthSessionState.Expired, session.State);
@@ -307,9 +310,13 @@ public sealed class ControlrAuthSessionTests
     await session.RestoreAuthSnapshot(ExpiredSnapshot("access-old", "refresh-old"));
 
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-    var waitResult = await Waiter.Default.WaitFor(
+
+    // The retry backoff runs on the session's clock, so the fake clock is what releases the retry.
+    var waitResult = await AdvanceUntilAsync(
+      timeProvider,
       () => Equal(session.GetAuthSnapshot().BearerToken, "access-renewed"),
-      cancellationToken: cts.Token);
+      TimeSpan.FromSeconds(1),
+      cts.Token);
     Assert.True(waitResult);
 
     // The regression under test: a transient error must never expire the session or wipe the
@@ -500,6 +507,27 @@ public sealed class ControlrAuthSessionTests
     Assert.Equal(ControlrApiClientAuthState.AuthorizationHeader, headerName);
     Assert.Equal("Bearer access-1", headerValue);
     session.Dispose();
+  }
+
+  private static async Task<bool> AdvanceUntilAsync(
+    FakeTimeProvider timeProvider,
+    Func<bool> condition,
+    TimeSpan step,
+    CancellationToken cancellationToken)
+  {
+    for (var attempt = 0; attempt < 100; attempt++)
+    {
+      if (condition.Invoke())
+      {
+        return true;
+      }
+
+      // The yield lets the loop arm its timer before the clock moves past it.
+      await Task.Delay(10, cancellationToken);
+      timeProvider.Advance(step);
+    }
+
+    return condition.Invoke();
   }
 
   private static ControlrAuthSession CreateSession(

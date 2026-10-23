@@ -138,19 +138,17 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null, stri
     var state = Volatile.Read(ref _state);
     var snapshot = state.Snapshot;
     var refreshToken = snapshot.RefreshToken;
-    var bearerTokenExpiresAt = snapshot.BearerTokenExpiresAt;
 
     // Restates CanRefresh because nullable flow analysis cannot narrow record members through a
     // bool-returning helper, and BearerRefreshContext requires a non-null refresh token.
     if (string.IsNullOrWhiteSpace(snapshot.BearerToken) ||
         string.IsNullOrWhiteSpace(refreshToken) ||
-        bearerTokenExpiresAt is null)
+        snapshot.BearerTokenExpiresAt is null)
     {
       return null;
     }
 
-    if (!forceRefresh &&
-        bearerTokenExpiresAt > timeProvider.GetUtcNow() + GetBearerRefreshWindow(snapshot.BearerTokenLifetime, refreshWindow))
+    if (!forceRefresh && GetTimeUntilRefresh(timeProvider, refreshWindow) > TimeSpan.Zero)
     {
       return null;
     }
@@ -208,6 +206,25 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null, stri
 
     var halfLifetime = lifetime / 2;
     return halfLifetime > TimeSpan.Zero && halfLifetime < refreshWindow ? halfLifetime : refreshWindow;
+  }
+
+  /// <summary>
+  /// Gets how long to wait before the next proactive refresh. Zero means refresh now.
+  /// </summary>
+  /// <remarks>
+  /// The background loop sleeps on this value and <see cref="TryCreateBearerRefreshContext"/> makes
+  /// the same comparison, so a wake-up is never answered with "not stale yet" and then slept again.
+  /// </remarks>
+  internal TimeSpan GetTimeUntilRefresh(TimeProvider timeProvider, TimeSpan refreshLeadTime)
+  {
+    var snapshot = GetSnapshot();
+    if (snapshot.BearerTokenExpiresAt is not { } expiresAt)
+    {
+      return TimeSpan.Zero;
+    }
+
+    var wait = expiresAt - timeProvider.GetUtcNow() - GetBearerRefreshWindow(snapshot.BearerTokenLifetime, refreshLeadTime);
+    return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
   }
 
   internal bool TryGetAuthHeader(

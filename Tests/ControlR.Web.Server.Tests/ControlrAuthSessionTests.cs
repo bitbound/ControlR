@@ -140,6 +140,8 @@ public class ControlrAuthSessionTests
 
     Assert.Equal(InteractiveLoginStatus.Authenticated, firstResult.Status);
 
+    // The one-second token parks the loop half a lifetime out, on the session's own clock.
+    timeProvider.Advance(TimeSpan.FromSeconds(1));
     await handler.RefreshStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
     var secondResult = await session.SignIn(
@@ -201,6 +203,8 @@ public class ControlrAuthSessionTests
 
     Assert.Equal(InteractiveLoginStatus.Authenticated, signInResult.Status);
 
+    // The loop sleeps on the session's own clock, so the fake clock is what releases it.
+    timeProvider.Advance(TimeSpan.FromSeconds(1));
     var message = await expiredState.Task.WaitAsync(TestContext.Current.CancellationToken);
 
     Assert.Equal(ControlrAuthSessionState.Expired, session.State);
@@ -656,6 +660,8 @@ public class ControlrAuthSessionTests
 
     Assert.Equal(InteractiveLoginStatus.Authenticated, signInResult.Status);
 
+    // The loop sleeps on the session's own clock, so the fake clock is what releases it.
+    timeProvider.Advance(TimeSpan.FromSeconds(1));
     await handler.RefreshStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
 
     await session.SignOut();

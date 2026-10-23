@@ -174,12 +174,12 @@
         "tags": [
           "AuthorizationChangeLogs"
         ],
-        "summary": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+        "summary": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
         "parameters": [
           {
             "name": "ActionType",
             "in": "query",
-            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+            "description": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
             "schema": {
               "type": "string"
             }
@@ -187,7 +187,7 @@
           {
             "name": "ActorType",
             "in": "query",
-            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+            "description": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
             "schema": {
               "type": "string"
             }
@@ -195,7 +195,7 @@
           {
             "name": "From",
             "in": "query",
-            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+            "description": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -204,7 +204,7 @@
           {
             "name": "Page",
             "in": "query",
-            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+            "description": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
@@ -214,7 +214,7 @@
           {
             "name": "PageSize",
             "in": "query",
-            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+            "description": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
@@ -224,7 +224,7 @@
           {
             "name": "SearchText",
             "in": "query",
-            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+            "description": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
             "schema": {
               "type": "string"
             }
@@ -232,7 +232,7 @@
           {
             "name": "TargetType",
             "in": "query",
-            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+            "description": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
             "schema": {
               "type": "string"
             }
@@ -240,7 +240,7 @@
           {
             "name": "To",
             "in": "query",
-            "description": "Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,\nserver administrator grants, and other changes that belong to no tenant. The route takes no\ntenantId, because the rows it serves have no tenant. It requires\nserver.authorization-logs.read, the Server-scope grant the catalog describes as covering all\ntenants including server-scoped entries, so both server service accounts and Server\nAdministrator users reach it.",
+            "description": "Search the server-scoped authorization change-log entries, those owned by no tenant.",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -1161,7 +1161,7 @@
         "tags": [
           "DeploymentOptions"
         ],
-        "summary": "Returns whether the current principal may assign tags to a prospective deployment target.\nThe UI uses this to decide whether to offer tag selection. The agent registration endpoint\nremains the final enforcement boundary.",
+        "summary": "Returns whether the current principal may assign tags to a prospective deployment target.\r\nThe UI uses this to decide whether to offer tag selection. The agent registration endpoint\r\nremains the final enforcement boundary.",
         "parameters": [
           {
             "name": "tenantId",
@@ -1284,7 +1284,7 @@
         "tags": [
           "DesktopPreview"
         ],
-        "summary": "Captures one frame of a process's desktop on the device named by the route. The answer is a\nsingle image, so there is no length to state up front.",
+        "summary": "Captures one frame of a process's desktop on the device named by the route. The answer is a\r\nsingle image, so there is no length to state up front.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1434,7 +1434,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Creates a directory under deviceId's `ParentPath`. Answers 204 once the\nagent has accepted the request.",
+        "summary": "Creates a directory under deviceId's `ParentPath`. Answers 204 once the\r\nagent has accepted the request.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1763,7 +1763,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Packs the requested paths into one archive and streams it. The response is the archive itself,\nwith the agent's own display name in the `Content-Disposition` header.",
+        "summary": "Packs the requested paths into one archive and streams it. The response is the archive itself,\r\nwith the agent's own display name in the `Content-Disposition` header.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1932,7 +1932,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Streams one file from the device named by the route. The response is the file itself, with the\nagent's own display name in the `Content-Disposition` header.",
+        "summary": "Streams one file from the device named by the route. The response is the file itself, with the\r\nagent's own display name in the `Content-Disposition` header.",
         "parameters": [
           {
             "name": "deviceId",
@@ -2568,7 +2568,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Asks the device named in the body how it would split a path. A device that does not exist is a\n404 here as on every other action, unlike the deprecated endpoint that answered 400.",
+        "summary": "Asks the device named in the body how it would split a path. A device that does not exist is a\r\n404 here as on every other action, unlike the deprecated endpoint that answered 400.",
         "parameters": [
           {
             "name": "tenantId",
@@ -3058,7 +3058,7 @@
           "DeviceFileSystem"
         ],
         "summary": "Streams one uploaded file to the device, which writes it into the requested directory.",
-        "description": "Note: [FromForm] parameters are intentionally omitted, so large files aren't buffered into memory\nby model binding before the authorization and size checks run. [MultipartRequestBody] tells the\nOpenAPI document the form fields instead.",
+        "description": "Note: [FromForm] parameters are intentionally omitted, so large files aren't buffered into memory\r\nby model binding before the authorization and size checks run. [MultipartRequestBody] tells the\r\nOpenAPI document the form fields instead.",
         "parameters": [
           {
             "name": "deviceId",
@@ -3246,7 +3246,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Asks the device whether a directory and a file name combine into a usable path. An answer that\nthe path is invalid is a 200, because the question was answered.",
+        "summary": "Asks the device whether a directory and a file name combine into a usable path. An answer that\r\nthe path is invalid is a 200, because the question was answered.",
         "parameters": [
           {
             "name": "deviceId",
@@ -15243,7 +15243,7 @@
             "type": "string"
           }
         },
-        "description": "Creates a directory inside the device's string CreateDeviceDirectoryRequestDto.ParentPath. The target device comes from the\nroute, so the body carries no device id."
+        "description": "Creates a directory inside the device's string CreateDeviceDirectoryRequestDto.ParentPath. The target device comes from the\r\nroute, so the body carries no device id."
       },
       "CreateDeviceGroupRequestDto": {
         "required": [
@@ -15650,7 +15650,7 @@
             "$ref": "#/components/schemas/ServiceAccountAccessMode"
           }
         },
-        "description": "Request to create a server-scoped service account. The access mode is required explicitly;\nit is never inferred from assignment rows."
+        "description": "Request to create a server-scoped service account. The access mode is required explicitly;\r\nit is never inferred from assignment rows."
       },
       "CreateServiceAccountCredentialRequestDto": {
         "required": [
@@ -15894,7 +15894,7 @@
             "type": "string"
           }
         },
-        "description": "Deletes one path on the device named by the route. There is deliberately no \"is a directory\" flag:\nthe delete sent to the agent carries only the path, so the flag would describe nothing."
+        "description": "Deletes one path on the device named by the route. There is deliberately no \"is a directory\" flag:\r\nthe delete sent to the agent carries only the path, so the flag would describe nothing."
       },
       "DeleteDevicesRequestDto": {
         "required": [
@@ -16014,7 +16014,7 @@
             "format": "uuid"
           }
         },
-        "description": "Requests whether the current principal may assign tags to a prospective deployment target.\nThe target is either a predetermined existing device (by id) or a new device, optionally\nbound to the selected customer. The server evaluates the same device-scoped\n`DeviceTagsWrite` decision used at agent registration so the UI only offers tag\nselection when the eventual install could succeed."
+        "description": "Requests whether the current principal may assign tags to a prospective deployment target.\r\nThe target is either a predetermined existing device (by id) or a new device, optionally\r\nbound to the selected customer. The server evaluates the same device-scoped\r\n`DeviceTagsWrite` decision used at agent registration so the UI only offers tag\r\nselection when the eventual install could succeed."
       },
       "DeploymentTagCapabilityResponseDto": {
         "required": [
@@ -16082,7 +16082,7 @@
           "Console",
           "Rdp"
         ],
-        "description": "REST-facing desktop session type. Kept separate from the hub's\nDesktopSessionType so the REST API can serialize it as\na string while the SignalR hub stays numeric for backwards compatibility."
+        "description": "REST-facing desktop session type. Kept separate from the hub's\r\nDesktopSessionType so the REST API can serialize it as\r\na string while the SignalR hub stays numeric for backwards compatibility."
       },
       "DeviceColumnFilter": {
         "type": "object",
@@ -16141,7 +16141,7 @@
             "type": "string"
           }
         },
-        "description": "Selects the directory whose entries to list. The route carries no device id for this operation,\nso the body names the device."
+        "description": "Selects the directory whose entries to list. The route carries no device id for this operation,\r\nso the body names the device."
       },
       "DeviceDirectoryContentsResponseDto": {
         "required": [
@@ -16160,7 +16160,7 @@
             "type": "boolean"
           }
         },
-        "description": "A directory listing. bool DeviceDirectoryContentsResponseDto.DirectoryExists is the agent's own signal, which distinguishes\nan empty directory from a missing one."
+        "description": "A directory listing. bool DeviceDirectoryContentsResponseDto.DirectoryExists is the agent's own signal, which distinguishes\r\nan empty directory from a missing one."
       },
       "DeviceFilePathValidationResponseDto": {
         "required": [
@@ -16176,7 +16176,7 @@
             "default": ""
           }
         },
-        "description": "The device's answer to a path-validation probe. An answer that the path is invalid is still a\nsuccessful response, so bool DeviceFilePathValidationResponseDto.IsValid being false is not an error."
+        "description": "The device's answer to a path-validation probe. An answer that the path is invalid is still a\r\nsuccessful response, so bool DeviceFilePathValidationResponseDto.IsValid being false is not an error."
       },
       "DeviceFileSystemEntryDto": {
         "required": [
@@ -16223,7 +16223,7 @@
             "type": "boolean"
           }
         },
-        "description": "One file system entry as the remote agent reported it. Shared by the directory-contents,\nroot-drives, and subdirectories responses."
+        "description": "One file system entry as the remote agent reported it. Shared by the directory-contents,\r\nroot-drives, and subdirectories responses."
       },
       "DeviceFileUploadResponseDto": {
         "required": [
@@ -16454,7 +16454,7 @@
             "type": "string"
           }
         },
-        "description": "Asks the agent how it would split string DevicePathSegmentsRequestDto.TargetPath on its own platform. The route carries\nno device id for this operation, so the body names the device."
+        "description": "Asks the agent how it would split string DevicePathSegmentsRequestDto.TargetPath on its own platform. The route carries\r\nno device id for this operation, so the body names the device."
       },
       "DevicePathSegmentsResponseDto": {
         "required": [
@@ -16488,7 +16488,7 @@
             "type": "boolean"
           }
         },
-        "description": "How the device's agent split the requested path. bool DevicePathSegmentsResponseDto.Success is the agent's verdict and\nstring? DevicePathSegmentsResponseDto.ErrorMessage explains a false one. string DevicePathSegmentsResponseDto.PathSeparator is the device's own\nseparator, which need not match the one the caller sent."
+        "description": "How the device's agent split the requested path. bool DevicePathSegmentsResponseDto.Success is the agent's verdict and\r\nstring? DevicePathSegmentsResponseDto.ErrorMessage explains a false one. string DevicePathSegmentsResponseDto.PathSeparator is the device's own\r\nseparator, which need not match the one the caller sent."
       },
       "DeviceResponseDto": {
         "required": [
@@ -16665,7 +16665,7 @@
             "format": "uuid"
           }
         },
-        "description": "Asks for the file system entries at the device's roots. The route carries no device id for this\noperation, so the body names the device."
+        "description": "Asks for the file system entries at the device's roots. The route carries no device id for this\r\noperation, so the body names the device."
       },
       "DeviceRootDrivesResponseDto": {
         "required": [
@@ -16680,7 +16680,7 @@
             }
           }
         },
-        "description": "The file system entries at the device's roots: drive letters on Windows, a single root on Unix-like\nplatforms."
+        "description": "The file system entries at the device's roots: drive letters on Windows, a single root on Unix-like\r\nplatforms."
       },
       "DeviceSearchFilterCountsDto": {
         "type": "object",
@@ -16835,7 +16835,7 @@
             "type": "string"
           }
         },
-        "description": "Selects the directory whose immediate subdirectories to list. The route carries no device id for\nthis operation, so the body names the device."
+        "description": "Selects the directory whose immediate subdirectories to list. The route carries no device id for\r\nthis operation, so the body names the device."
       },
       "DeviceSubdirectoriesResponseDto": {
         "required": [
@@ -16850,7 +16850,7 @@
             }
           }
         },
-        "description": "The immediate subdirectories of one directory. Unlike the directory-contents response, the agent's\ndirectory-exists signal is discarded here."
+        "description": "The immediate subdirectories of one directory. Unlike the directory-contents response, the agent's\r\ndirectory-exists signal is discarded here."
       },
       "DeviceSummaryDto": {
         "required": [
@@ -17418,7 +17418,7 @@
           "Restricted",
           "InheritOwner"
         ],
-        "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
+        "description": "Determines how a personal access token is evaluated during permission checks.\r\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
       },
       "PersonalAccessTokenResponseDto": {
         "required": [
@@ -17543,7 +17543,7 @@
             ]
           }
         },
-        "description": "Server-side settings exposed to any caller, including unauthenticated clients, so a client\ncan adapt to server configuration before authenticating. Never put sensitive or per-tenant\ndata here."
+        "description": "Server-side settings exposed to any caller, including unauthenticated clients, so a client\r\ncan adapt to server configuration before authenticating. Never put sensitive or per-tenant\r\ndata here."
       },
       "RemoveDeviceGroupMembersRequestDto": {
         "required": [
@@ -17722,7 +17722,7 @@
             }
           }
         },
-        "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred."
+        "description": "V1 response for a server-scoped service account. Always carries a non-null\r\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred."
       },
       "ServerServiceAccountsResponseDto": {
         "type": "object",
@@ -17777,7 +17777,7 @@
           "Restricted",
           "Unrestricted"
         ],
-        "description": "Determines how a server service account is evaluated during permission checks.\nPersisted on the account so the mode is never inferred from the presence or absence of assignment rows.\nTenant service accounts are not governed by this mode and never bypass."
+        "description": "Determines how a server service account is evaluated during permission checks.\r\nPersisted on the account so the mode is never inferred from the presence or absence of assignment rows.\r\nTenant service accounts are not governed by this mode and never bypass."
       },
       "ServiceAccountCredentialDto": {
         "required": [
@@ -17925,7 +17925,7 @@
             }
           }
         },
-        "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode."
+        "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\r\nnot governed by an access mode and never bypass permission evaluation,\r\nso this DTO intentionally omits ServiceAccountAccessMode."
       },
       "TenantServiceAccountsResponseDto": {
         "type": "object",
@@ -18007,7 +18007,7 @@
             ]
           }
         },
-        "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default."
+        "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\r\nis distinct from a set value that happens to be the definition's default."
       },
       "TenantsResponseDto": {
         "type": "object",
@@ -18035,7 +18035,7 @@
             "type": "string"
           }
         },
-        "description": "Minimal tenant projection for the collection listing. The full tenant object is\nreturned by `GET /api/v1/tenants/{tenantId}`."
+        "description": "Minimal tenant projection for the collection listing. The full tenant object is\r\nreturned by `GET /api/v1/tenants/{tenantId}`."
       },
       "ThemeMode": {
         "enum": [
@@ -18601,7 +18601,7 @@
             "type": "string"
           }
         },
-        "description": "Asks whether string ValidateDeviceFilePathRequestDto.DirectoryPath and string ValidateDeviceFilePathRequestDto.FileName combine into a usable path. The\ndevice comes from the route."
+        "description": "Asks whether string ValidateDeviceFilePathRequestDto.DirectoryPath and string ValidateDeviceFilePathRequestDto.FileName combine into a usable path. The\r\ndevice comes from the route."
       },
       "ViewMode": {
         "enum": [

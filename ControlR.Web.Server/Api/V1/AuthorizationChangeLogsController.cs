@@ -98,12 +98,7 @@ public class AuthorizationChangeLogsController(
   }
 
   /// <summary>
-  /// Lists server-scoped audit entries (OwningTenantId is null): server service-account edits,
-  /// server administrator grants, and other changes that belong to no tenant. The route takes no
-  /// tenantId, because the rows it serves have no tenant. It requires
-  /// server.authorization-logs.read, the Server-scope grant the catalog describes as covering all
-  /// tenants including server-scoped entries, so both server service accounts and Server
-  /// Administrator users reach it.
+  /// Search the server-scoped authorization change-log entries, those owned by no tenant.
   /// </summary>
   [HttpGet("server")]
   [ProducesResponseType<AuthorizationChangeLogsResponseDto>(StatusCodes.Status200OK)]

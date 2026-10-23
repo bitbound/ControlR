@@ -6645,7 +6645,7 @@
             ]
           }
         },
-        "description": "Deployment values the server wants this device's install to use. A null member means the server\nhas no opinion, so the agent keeps what it has."
+        "description": "Deployment values the server wants this device's install to use. A null member means the server has no opinion, so the agent keeps what it has."
       },
       "AgentInstallerKeyDto": {
         "required": [
@@ -8153,7 +8153,7 @@
           "Restricted",
           "InheritOwner"
         ],
-        "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
+        "description": "Determines how a personal access token is evaluated during permission checks.\r\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
       },
       "PersonalAccessTokenResponseDto": {
         "required": [
@@ -8267,7 +8267,7 @@
             ]
           }
         },
-        "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\nso the UI can adapt to server configuration without requiring a login."
+        "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\r\nso the UI can adapt to server configuration without requiring a login."
       },
       "RefreshRequest": {
         "required": [
