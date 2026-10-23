@@ -77,20 +77,15 @@ public partial class ControlrApi(
       return LogFailure(ApiResult.Fail(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown));
     }
 
-    // The version this call's request goes out with. A 401 whose token was renewed underneath it
-    // rides that renewal instead of paying for another refresh POST.
-    var bearerStateVersionAtSend = _authState.BearerStateVersion;
-
     try
     {
       await PrepareClientForRequest(allowAutoRefresh);
-      bearerStateVersionAtSend = _authState.BearerStateVersion;
       await func.Invoke();
       return ApiResult.Ok();
     }
     catch (HttpRequestException ex)
     {
-      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex, bearerStateVersionAtSend))
+      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex))
       {
         try
         {
@@ -144,12 +139,9 @@ public partial class ControlrApi(
       return LogFailure(ApiResult.Fail<T>(DisposedTargetReason, httpRequestError: HttpRequestError.Unknown));
     }
 
-    var bearerStateVersionAtSend = _authState.BearerStateVersion;
-
     try
     {
       await PrepareClientForRequest(allowAutoRefresh);
-      bearerStateVersionAtSend = _authState.BearerStateVersion;
       var resultValue = await func.Invoke() ??
         throw new HttpRequestException("The server response was empty.");
 
@@ -171,7 +163,7 @@ public partial class ControlrApi(
     }
     catch (HttpRequestException ex)
     {
-      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex, bearerStateVersionAtSend))
+      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex))
       {
         try
         {
@@ -303,19 +295,21 @@ public partial class ControlrApi(
     return refreshResult == BearerTokenRefreshResult.Refreshed;
   }
 
-  private async Task<bool> TryRefreshAfterUnauthorized(HttpRequestException ex, long bearerStateVersionAtSend)
+  private async Task<bool> TryRefreshAfterUnauthorized(HttpRequestException ex)
   {
     if (ex.StatusCode != HttpStatusCode.Unauthorized)
     {
       return false;
     }
 
-    // Dedupe against the generation the header handler stamped on the failed request when it has
-    // one. The pre-send sample understates the state when a renewal lands before the request
-    // leaves, and riding that stale pairing re-sends the token the server just rejected.
-    var observedVersion = ex is BearerChallengeException challenge
+    // Only a stamped 401 may ride a renewal. The stamp records the generation the auth header
+    // actually applied, so a moved version proves the token changed underneath the caller. A 401
+    // without a stamp, such as the BCL's own from GetFromJsonAsync, proves nothing about what went
+    // out, and deduping it against an earlier sample re-sends the token the server just rejected.
+    // Unstamped challenges always pay the forced refresh, as they did before dedupe existed.
+    long? observedVersion = ex is BearerChallengeException challenge
       ? challenge.BearerStateVersionAtSend
-      : bearerStateVersionAtSend;
+      : null;
 
     try
     {

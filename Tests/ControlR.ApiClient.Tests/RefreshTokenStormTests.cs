@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using ControlR.ApiClient.Auth;
 using ControlR.ApiClient.Internal;
@@ -135,6 +136,40 @@ public sealed class RefreshTokenStormTests
   }
 
   [Fact]
+  public async Task ExecuteApiCall_WhenUnstamped401FollowsARenewal_PostsAForcedRefresh()
+  {
+    // The GetFromJsonAsync-shaped calls throw the BCL's own 401 exception, which carries no stamp.
+    // A dedupe that cannot trust the version it measures must not ride a renewal on such a
+    // challenge, so the forced refresh always pays the POST.
+    var authState = new ControlrApiClientAuthState();
+    authState.SetBearerTokens("token-1", "refresh-1", DateTimeOffset.UtcNow.AddHours(1), TimeSpan.FromHours(1));
+
+    var responder = new RenewalRejectingResponder("token-2");
+    var authHandler = new ControlrApiAuthHeaderHandler(authState) { InnerHandler = responder };
+    using var client = new HttpClient(new SingleRenewalHandler(authState, "token-2") { InnerHandler = authHandler })
+    {
+      BaseAddress = _server
+    };
+
+    var refresher = new BearerTokenRefresher(authState, new SingleClientHttpClientFactory(client), TimeProvider.System);
+    var api = new ControlrApi(
+      client,
+      authState,
+      refresher,
+      NullLogger<ControlrApi>.Instance,
+      Options.Create(new ControlrApiClientOptions { BaseUrl = _server }));
+
+    var result = await api.ExecuteApiCall(async () =>
+    {
+      var version = await client.GetFromJsonAsync<Version>("api/version/server", TestContext.Current.CancellationToken);
+      Assert.NotNull(version);
+    });
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal(1, responder.RefreshCount);
+  }
+
+  [Fact]
   public async Task RunRefreshLoop_WhenServerTokenLifetimeIsShorterThanLeadTime_PacesRefreshesByTokenLifetime()
   {
     // The Aspire trace pattern: back-to-back successful refresh POSTs at request-round-trip
@@ -212,9 +247,10 @@ public sealed class RefreshTokenStormTests
 
   /// <summary>
   /// Answers 401 to the renewed token (a server-side rejection of the just-issued pair), issues a
-  /// third token on the single allowed refresh POST, and authorizes everything else. Sets
-  /// RequestMessage the way the real terminal handler does, so the 401 enrichment can read the
-  /// generation the auth header handler stamped on the challenged request.
+  /// third token on the single allowed refresh POST, answers the version endpoint with a parseable
+  /// payload, and authorizes everything else. Sets RequestMessage the way the real terminal handler
+  /// does, so the 401 enrichment can read the generation the auth header handler stamped on the
+  /// challenged request.
   /// </summary>
   private sealed class RenewalRejectingResponder(string rejectedToken) : HttpMessageHandler
   {
@@ -233,10 +269,19 @@ public sealed class RefreshTokenStormTests
         return Task.FromResult(refreshResponse);
       }
 
-      var statusCode = request.Headers.Authorization?.Parameter == rejectedToken
-        ? HttpStatusCode.Unauthorized
-        : HttpStatusCode.OK;
-      return Task.FromResult(new HttpResponseMessage(statusCode) { RequestMessage = request });
+      if (request.Headers.Authorization?.Parameter == rejectedToken)
+      {
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized) { RequestMessage = request });
+      }
+
+      if (request.RequestUri!.AbsolutePath.EndsWith("/version/server", StringComparison.Ordinal))
+      {
+        var versionResponse = RecordingHttpMessageHandler.Json("\"1.2.3\"");
+        versionResponse.RequestMessage = request;
+        return Task.FromResult(versionResponse);
+      }
+
+      return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request });
     }
   }
 
@@ -269,6 +314,8 @@ public sealed class RefreshTokenStormTests
   /// are provably queued on the refresh semaphore against the same token version before the first
   /// renewal applies. Each refresh rotates the token pair, and non-refresh calls are authorized only
   /// by a renewed bearer. Past the cap the refresh answers 401 as the loop-starving kill switch.
+  /// Sets RequestMessage the way the real terminal handler does, so the challenged calls carry the
+  /// stamped generation the dedupe measures against.
   /// </summary>
   private sealed class StormHandler(int expectedStaleCalls) : HttpMessageHandler
   {
@@ -288,7 +335,7 @@ public sealed class RefreshTokenStormTests
         var n = Interlocked.Increment(ref _refreshCount);
         if (n > expectedStaleCalls + 5)
         {
-          return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+          return new HttpResponseMessage(HttpStatusCode.Unauthorized) { RequestMessage = request };
         }
 
         if (n == 1)
@@ -308,10 +355,10 @@ public sealed class RefreshTokenStormTests
           _releaseFirstRefresh.TrySetResult();
         }
 
-        return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+        return new HttpResponseMessage(HttpStatusCode.Unauthorized) { RequestMessage = request };
       }
 
-      return new HttpResponseMessage(HttpStatusCode.OK);
+      return new HttpResponseMessage(HttpStatusCode.OK) { RequestMessage = request };
     }
   }
 }
