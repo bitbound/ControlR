@@ -3155,16 +3155,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\nso the UI can adapt to server configuration without requiring a login.",
                   "$ref": "#/components/schemas/PublicServerSettings"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\nso the UI can adapt to server configuration without requiring a login.",
                   "$ref": "#/components/schemas/PublicServerSettings"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\nso the UI can adapt to server configuration without requiring a login.",
                   "$ref": "#/components/schemas/PublicServerSettings"
                 }
               }
@@ -5626,16 +5629,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "Deployment values the server wants this device's install to use. A null member means the server has no opinion, so the agent keeps what it has.",
                   "$ref": "#/components/schemas/AgentDeploymentOptionsDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "Deployment values the server wants this device's install to use. A null member means the server has no opinion, so the agent keeps what it has.",
                   "$ref": "#/components/schemas/AgentDeploymentOptionsDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "Deployment values the server wants this device's install to use. A null member means the server has no opinion, so the agent keeps what it has.",
                   "$ref": "#/components/schemas/AgentDeploymentOptionsDto"
                 }
               }
@@ -6952,6 +6958,7 @@
             "type": "string"
           },
           "permissionMode": {
+            "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows.",
             "$ref": "#/components/schemas/PersonalAccessTokenPermissionMode"
           },
           "scopes": {
@@ -6960,6 +6967,7 @@
               "array"
             ],
             "items": {
+              "description": "A single permission scope granted to a credential (PAT or logon token).",
               "$ref": "#/components/schemas/CredentialScopeDto"
             }
           },
@@ -7063,6 +7071,7 @@
             "type": "string"
           },
           "scopeKind": {
+            "description": "The kind of resource a permission assignment is scoped to.",
             "$ref": "#/components/schemas/PermissionScopeKind"
           },
           "scopeId": {
@@ -8095,6 +8104,7 @@
               "array"
             ],
             "items": {
+              "description": "A single permission scope granted to a credential (PAT or logon token).",
               "$ref": "#/components/schemas/CredentialScopeDto"
             }
           },
@@ -8153,7 +8163,7 @@
           "Restricted",
           "InheritOwner"
         ],
-        "description": "Determines how a personal access token is evaluated during permission checks.\r\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
+        "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
       },
       "PersonalAccessTokenResponseDto": {
         "required": [
@@ -8192,6 +8202,7 @@
             "format": "int32"
           },
           "permissionMode": {
+            "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows.",
             "$ref": "#/components/schemas/PersonalAccessTokenPermissionMode"
           },
           "expiresAt": {
@@ -8267,7 +8278,7 @@
             ]
           }
         },
-        "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\r\nso the UI can adapt to server configuration without requiring a login."
+        "description": "Server-side settings that are exposed to any caller (including unauthenticated clients)\nso the UI can adapt to server configuration without requiring a login."
       },
       "RefreshRequest": {
         "required": [

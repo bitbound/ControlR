@@ -1161,7 +1161,7 @@
         "tags": [
           "DeploymentOptions"
         ],
-        "summary": "Returns whether the current principal may assign tags to a prospective deployment target.\r\nThe UI uses this to decide whether to offer tag selection. The agent registration endpoint\r\nremains the final enforcement boundary.",
+        "summary": "Returns whether the current principal may assign tags to a prospective deployment target.\nThe UI uses this to decide whether to offer tag selection. The agent registration endpoint\nremains the final enforcement boundary.",
         "parameters": [
           {
             "name": "tenantId",
@@ -1188,16 +1188,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Requests whether the current principal may assign tags to a prospective deployment target.\nThe target is either a predetermined existing device (by id) or a new device, optionally\nbound to the selected customer. The server evaluates the same device-scoped\n`DeviceTagsWrite` decision used at agent registration so the UI only offers tag\nselection when the eventual install could succeed.",
                 "$ref": "#/components/schemas/DeploymentTagCapabilityRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Requests whether the current principal may assign tags to a prospective deployment target.\nThe target is either a predetermined existing device (by id) or a new device, optionally\nbound to the selected customer. The server evaluates the same device-scoped\n`DeviceTagsWrite` decision used at agent registration so the UI only offers tag\nselection when the eventual install could succeed.",
                 "$ref": "#/components/schemas/DeploymentTagCapabilityRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Requests whether the current principal may assign tags to a prospective deployment target.\nThe target is either a predetermined existing device (by id) or a new device, optionally\nbound to the selected customer. The server evaluates the same device-scoped\n`DeviceTagsWrite` decision used at agent registration so the UI only offers tag\nselection when the eventual install could succeed.",
                 "$ref": "#/components/schemas/DeploymentTagCapabilityRequestDto"
               }
             }
@@ -1284,7 +1287,7 @@
         "tags": [
           "DesktopPreview"
         ],
-        "summary": "Captures one frame of a process's desktop on the device named by the route. The answer is a\r\nsingle image, so there is no length to state up front.",
+        "summary": "Captures one frame of a process's desktop on the device named by the route. The answer is a\nsingle image, so there is no length to state up front.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1434,7 +1437,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Creates a directory under deviceId's `ParentPath`. Answers 204 once the\r\nagent has accepted the request.",
+        "summary": "Creates a directory under deviceId's `ParentPath`. Answers 204 once the\nagent has accepted the request.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1471,16 +1474,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Creates a directory inside the device's string CreateDeviceDirectoryRequestDto.ParentPath. The target device comes from the\nroute, so the body carries no device id.",
                 "$ref": "#/components/schemas/CreateDeviceDirectoryRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Creates a directory inside the device's string CreateDeviceDirectoryRequestDto.ParentPath. The target device comes from the\nroute, so the body carries no device id.",
                 "$ref": "#/components/schemas/CreateDeviceDirectoryRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Creates a directory inside the device's string CreateDeviceDirectoryRequestDto.ParentPath. The target device comes from the\nroute, so the body carries no device id.",
                 "$ref": "#/components/schemas/CreateDeviceDirectoryRequestDto"
               }
             }
@@ -1627,16 +1633,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Deletes one path on the device named by the route. There is deliberately no \"is a directory\" flag:\nthe delete sent to the agent carries only the path, so the flag would describe nothing.",
                 "$ref": "#/components/schemas/DeleteDevicePathRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Deletes one path on the device named by the route. There is deliberately no \"is a directory\" flag:\nthe delete sent to the agent carries only the path, so the flag would describe nothing.",
                 "$ref": "#/components/schemas/DeleteDevicePathRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Deletes one path on the device named by the route. There is deliberately no \"is a directory\" flag:\nthe delete sent to the agent carries only the path, so the flag would describe nothing.",
                 "$ref": "#/components/schemas/DeleteDevicePathRequestDto"
               }
             }
@@ -1649,16 +1658,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "The deletion the device accepted. A named envelope so consumers have a type to depend on.",
                   "$ref": "#/components/schemas/DevicePathDeletionResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "The deletion the device accepted. A named envelope so consumers have a type to depend on.",
                   "$ref": "#/components/schemas/DevicePathDeletionResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "The deletion the device accepted. A named envelope so consumers have a type to depend on.",
                   "$ref": "#/components/schemas/DevicePathDeletionResponseDto"
                 }
               }
@@ -1763,7 +1775,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Packs the requested paths into one archive and streams it. The response is the archive itself,\r\nwith the agent's own display name in the `Content-Disposition` header.",
+        "summary": "Packs the requested paths into one archive and streams it. The response is the archive itself,\nwith the agent's own display name in the `Content-Disposition` header.",
         "parameters": [
           {
             "name": "deviceId",
@@ -1800,16 +1812,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "The paths to pack into one archive. The route names the device, so the body does not.",
                 "$ref": "#/components/schemas/DownloadDeviceArchiveRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "The paths to pack into one archive. The route names the device, so the body does not.",
                 "$ref": "#/components/schemas/DownloadDeviceArchiveRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "The paths to pack into one archive. The route names the device, so the body does not.",
                 "$ref": "#/components/schemas/DownloadDeviceArchiveRequestDto"
               }
             }
@@ -1932,7 +1947,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Streams one file from the device named by the route. The response is the file itself, with the\r\nagent's own display name in the `Content-Disposition` header.",
+        "summary": "Streams one file from the device named by the route. The response is the file itself, with the\nagent's own display name in the `Content-Disposition` header.",
         "parameters": [
           {
             "name": "deviceId",
@@ -2116,16 +2131,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Selects the directory whose entries to list. The route carries no device id for this operation,\nso the body names the device.",
                 "$ref": "#/components/schemas/DeviceDirectoryContentsRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Selects the directory whose entries to list. The route carries no device id for this operation,\nso the body names the device.",
                 "$ref": "#/components/schemas/DeviceDirectoryContentsRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Selects the directory whose entries to list. The route carries no device id for this operation,\nso the body names the device.",
                 "$ref": "#/components/schemas/DeviceDirectoryContentsRequestDto"
               }
             }
@@ -2138,16 +2156,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "A directory listing. bool DeviceDirectoryContentsResponseDto.DirectoryExists is the agent's own signal, which distinguishes\nan empty directory from a missing one.",
                   "$ref": "#/components/schemas/DeviceDirectoryContentsResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "A directory listing. bool DeviceDirectoryContentsResponseDto.DirectoryExists is the agent's own signal, which distinguishes\nan empty directory from a missing one.",
                   "$ref": "#/components/schemas/DeviceDirectoryContentsResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "A directory listing. bool DeviceDirectoryContentsResponseDto.DirectoryExists is the agent's own signal, which distinguishes\nan empty directory from a missing one.",
                   "$ref": "#/components/schemas/DeviceDirectoryContentsResponseDto"
                 }
               }
@@ -2454,16 +2475,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "The log files the agent has on disk, grouped by the source that wrote them.",
                   "$ref": "#/components/schemas/DeviceLogFileListResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "The log files the agent has on disk, grouped by the source that wrote them.",
                   "$ref": "#/components/schemas/DeviceLogFileListResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "The log files the agent has on disk, grouped by the source that wrote them.",
                   "$ref": "#/components/schemas/DeviceLogFileListResponseDto"
                 }
               }
@@ -2568,7 +2592,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Asks the device named in the body how it would split a path. A device that does not exist is a\r\n404 here as on every other action, unlike the deprecated endpoint that answered 400.",
+        "summary": "Asks the device named in the body how it would split a path. A device that does not exist is a\n404 here as on every other action, unlike the deprecated endpoint that answered 400.",
         "parameters": [
           {
             "name": "tenantId",
@@ -2595,16 +2619,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Asks the agent how it would split string DevicePathSegmentsRequestDto.TargetPath on its own platform. The route carries\nno device id for this operation, so the body names the device.",
                 "$ref": "#/components/schemas/DevicePathSegmentsRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Asks the agent how it would split string DevicePathSegmentsRequestDto.TargetPath on its own platform. The route carries\nno device id for this operation, so the body names the device.",
                 "$ref": "#/components/schemas/DevicePathSegmentsRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Asks the agent how it would split string DevicePathSegmentsRequestDto.TargetPath on its own platform. The route carries\nno device id for this operation, so the body names the device.",
                 "$ref": "#/components/schemas/DevicePathSegmentsRequestDto"
               }
             }
@@ -2617,16 +2644,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "How the device's agent split the requested path. bool DevicePathSegmentsResponseDto.Success is the agent's verdict and\nstring? DevicePathSegmentsResponseDto.ErrorMessage explains a false one. string DevicePathSegmentsResponseDto.PathSeparator is the device's own\nseparator, which need not match the one the caller sent.",
                   "$ref": "#/components/schemas/DevicePathSegmentsResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "How the device's agent split the requested path. bool DevicePathSegmentsResponseDto.Success is the agent's verdict and\nstring? DevicePathSegmentsResponseDto.ErrorMessage explains a false one. string DevicePathSegmentsResponseDto.PathSeparator is the device's own\nseparator, which need not match the one the caller sent.",
                   "$ref": "#/components/schemas/DevicePathSegmentsResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "How the device's agent split the requested path. bool DevicePathSegmentsResponseDto.Success is the agent's verdict and\nstring? DevicePathSegmentsResponseDto.ErrorMessage explains a false one. string DevicePathSegmentsResponseDto.PathSeparator is the device's own\nseparator, which need not match the one the caller sent.",
                   "$ref": "#/components/schemas/DevicePathSegmentsResponseDto"
                 }
               }
@@ -2758,16 +2788,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Asks for the file system entries at the device's roots. The route carries no device id for this\noperation, so the body names the device.",
                 "$ref": "#/components/schemas/DeviceRootDrivesRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Asks for the file system entries at the device's roots. The route carries no device id for this\noperation, so the body names the device.",
                 "$ref": "#/components/schemas/DeviceRootDrivesRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Asks for the file system entries at the device's roots. The route carries no device id for this\noperation, so the body names the device.",
                 "$ref": "#/components/schemas/DeviceRootDrivesRequestDto"
               }
             }
@@ -2780,16 +2813,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "The file system entries at the device's roots: drive letters on Windows, a single root on Unix-like\nplatforms.",
                   "$ref": "#/components/schemas/DeviceRootDrivesResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "The file system entries at the device's roots: drive letters on Windows, a single root on Unix-like\nplatforms.",
                   "$ref": "#/components/schemas/DeviceRootDrivesResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "The file system entries at the device's roots: drive letters on Windows, a single root on Unix-like\nplatforms.",
                   "$ref": "#/components/schemas/DeviceRootDrivesResponseDto"
                 }
               }
@@ -2921,16 +2957,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Selects the directory whose immediate subdirectories to list. The route carries no device id for\nthis operation, so the body names the device.",
                 "$ref": "#/components/schemas/DeviceSubdirectoriesRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Selects the directory whose immediate subdirectories to list. The route carries no device id for\nthis operation, so the body names the device.",
                 "$ref": "#/components/schemas/DeviceSubdirectoriesRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Selects the directory whose immediate subdirectories to list. The route carries no device id for\nthis operation, so the body names the device.",
                 "$ref": "#/components/schemas/DeviceSubdirectoriesRequestDto"
               }
             }
@@ -2943,16 +2982,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "The immediate subdirectories of one directory. Unlike the directory-contents response, the agent's\ndirectory-exists signal is discarded here.",
                   "$ref": "#/components/schemas/DeviceSubdirectoriesResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "The immediate subdirectories of one directory. Unlike the directory-contents response, the agent's\ndirectory-exists signal is discarded here.",
                   "$ref": "#/components/schemas/DeviceSubdirectoriesResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "The immediate subdirectories of one directory. Unlike the directory-contents response, the agent's\ndirectory-exists signal is discarded here.",
                   "$ref": "#/components/schemas/DeviceSubdirectoriesResponseDto"
                 }
               }
@@ -3058,7 +3100,7 @@
           "DeviceFileSystem"
         ],
         "summary": "Streams one uploaded file to the device, which writes it into the requested directory.",
-        "description": "Note: [FromForm] parameters are intentionally omitted, so large files aren't buffered into memory\r\nby model binding before the authorization and size checks run. [MultipartRequestBody] tells the\r\nOpenAPI document the form fields instead.",
+        "description": "Note: [FromForm] parameters are intentionally omitted, so large files aren't buffered into memory\nby model binding before the authorization and size checks run. [MultipartRequestBody] tells the\nOpenAPI document the form fields instead.",
         "parameters": [
           {
             "name": "deviceId",
@@ -3122,16 +3164,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "The upload the device accepted. A named envelope so consumers have a type to depend on.",
                   "$ref": "#/components/schemas/DeviceFileUploadResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "The upload the device accepted. A named envelope so consumers have a type to depend on.",
                   "$ref": "#/components/schemas/DeviceFileUploadResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "The upload the device accepted. A named envelope so consumers have a type to depend on.",
                   "$ref": "#/components/schemas/DeviceFileUploadResponseDto"
                 }
               }
@@ -3246,7 +3291,7 @@
         "tags": [
           "DeviceFileSystem"
         ],
-        "summary": "Asks the device whether a directory and a file name combine into a usable path. An answer that\r\nthe path is invalid is a 200, because the question was answered.",
+        "summary": "Asks the device whether a directory and a file name combine into a usable path. An answer that\nthe path is invalid is a 200, because the question was answered.",
         "parameters": [
           {
             "name": "deviceId",
@@ -3283,16 +3328,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Asks whether string ValidateDeviceFilePathRequestDto.DirectoryPath and string ValidateDeviceFilePathRequestDto.FileName combine into a usable path. The\ndevice comes from the route.",
                 "$ref": "#/components/schemas/ValidateDeviceFilePathRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Asks whether string ValidateDeviceFilePathRequestDto.DirectoryPath and string ValidateDeviceFilePathRequestDto.FileName combine into a usable path. The\ndevice comes from the route.",
                 "$ref": "#/components/schemas/ValidateDeviceFilePathRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Asks whether string ValidateDeviceFilePathRequestDto.DirectoryPath and string ValidateDeviceFilePathRequestDto.FileName combine into a usable path. The\ndevice comes from the route.",
                 "$ref": "#/components/schemas/ValidateDeviceFilePathRequestDto"
               }
             }
@@ -3305,16 +3353,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "The device's answer to a path-validation probe. An answer that the path is invalid is still a\nsuccessful response, so bool DeviceFilePathValidationResponseDto.IsValid being false is not an error.",
                   "$ref": "#/components/schemas/DeviceFilePathValidationResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "The device's answer to a path-validation probe. An answer that the path is invalid is still a\nsuccessful response, so bool DeviceFilePathValidationResponseDto.IsValid being false is not an error.",
                   "$ref": "#/components/schemas/DeviceFilePathValidationResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "The device's answer to a path-validation probe. An answer that the path is invalid is still a\nsuccessful response, so bool DeviceFilePathValidationResponseDto.IsValid being false is not an error.",
                   "$ref": "#/components/schemas/DeviceFilePathValidationResponseDto"
                 }
               }
@@ -5169,6 +5220,7 @@
             "name": "principalKind",
             "in": "query",
             "schema": {
+              "description": "The kind of principal a permission assignment targets.",
               "$ref": "#/components/schemas/PermissionPrincipalKind"
             }
           },
@@ -5183,6 +5235,7 @@
             "name": "scopeKind",
             "in": "query",
             "schema": {
+              "description": "The kind of resource a permission assignment is scoped to.",
               "$ref": "#/components/schemas/PermissionScopeKind"
             }
           },
@@ -5212,16 +5265,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "Result of evaluating a single permission for a user.",
                   "$ref": "#/components/schemas/EffectivePermissionQueryResponseDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "Result of evaluating a single permission for a user.",
                   "$ref": "#/components/schemas/EffectivePermissionQueryResponseDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "Result of evaluating a single permission for a user.",
                   "$ref": "#/components/schemas/EffectivePermissionQueryResponseDto"
                 }
               }
@@ -5714,16 +5770,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Body for `PUT /api/v1/installer-keys/{keyId}`. The key id travels in the route.",
                 "$ref": "#/components/schemas/RenameInstallerKeyRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Body for `PUT /api/v1/installer-keys/{keyId}`. The key id travels in the route.",
                 "$ref": "#/components/schemas/RenameInstallerKeyRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Body for `PUT /api/v1/installer-keys/{keyId}`. The key id travels in the route.",
                 "$ref": "#/components/schemas/RenameInstallerKeyRequestDto"
               }
             }
@@ -6781,6 +6840,7 @@
             "name": "principalKind",
             "in": "query",
             "schema": {
+              "description": "The kind of principal a permission assignment targets.",
               "$ref": "#/components/schemas/PermissionPrincipalKind"
             }
           },
@@ -8286,16 +8346,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "Server-side settings exposed to any caller, including unauthenticated clients, so a client\ncan adapt to server configuration before authenticating. Never put sensitive or per-tenant\ndata here.",
                   "$ref": "#/components/schemas/PublicServerSettingsDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "Server-side settings exposed to any caller, including unauthenticated clients, so a client\ncan adapt to server configuration before authenticating. Never put sensitive or per-tenant\ndata here.",
                   "$ref": "#/components/schemas/PublicServerSettingsDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "Server-side settings exposed to any caller, including unauthenticated clients, so a client\ncan adapt to server configuration before authenticating. Never put sensitive or per-tenant\ndata here.",
                   "$ref": "#/components/schemas/PublicServerSettingsDto"
                 }
               }
@@ -8735,16 +8798,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Request to create a server-scoped service account. The access mode is required explicitly;\nit is never inferred from assignment rows.",
                 "$ref": "#/components/schemas/CreateServerServiceAccountRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "Request to create a server-scoped service account. The access mode is required explicitly;\nit is never inferred from assignment rows.",
                 "$ref": "#/components/schemas/CreateServerServiceAccountRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "Request to create a server-scoped service account. The access mode is required explicitly;\nit is never inferred from assignment rows.",
                 "$ref": "#/components/schemas/CreateServerServiceAccountRequestDto"
               }
             }
@@ -8757,16 +8823,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               }
@@ -9013,16 +9082,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               }
@@ -9113,16 +9185,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
                   "$ref": "#/components/schemas/ServerServiceAccountDto"
                 }
               }
@@ -10658,16 +10733,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               }
@@ -10971,16 +11049,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               }
@@ -11100,16 +11181,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
                   "$ref": "#/components/schemas/TenantServiceAccountDto"
                 }
               }
@@ -11659,16 +11743,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                   "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                   "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                   "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               }
@@ -11756,16 +11843,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "A single setting write. A null or whitespace `Value` clears the setting.",
                 "$ref": "#/components/schemas/TenantSettingRequestDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "A single setting write. A null or whitespace `Value` clears the setting.",
                 "$ref": "#/components/schemas/TenantSettingRequestDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "A single setting write. A null or whitespace `Value` clears the setting.",
                 "$ref": "#/components/schemas/TenantSettingRequestDto"
               }
             }
@@ -11905,16 +11995,19 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                 "$ref": "#/components/schemas/TenantSettingsDto"
               }
             },
             "text/json": {
               "schema": {
+                "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                 "$ref": "#/components/schemas/TenantSettingsDto"
               }
             },
             "application/*+json": {
               "schema": {
+                "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                 "$ref": "#/components/schemas/TenantSettingsDto"
               }
             }
@@ -11927,16 +12020,19 @@
             "content": {
               "text/plain": {
                 "schema": {
+                  "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                   "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               },
               "application/json": {
                 "schema": {
+                  "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                   "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               },
               "text/json": {
                 "schema": {
+                  "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default.",
                   "$ref": "#/components/schemas/TenantSettingsDto"
                 }
               }
@@ -15062,6 +15158,7 @@
         "type": "object",
         "properties": {
           "principalKind": {
+            "description": "The kind of principal a permission assignment targets.",
             "$ref": "#/components/schemas/PermissionPrincipalKind"
           },
           "principalId": {
@@ -15243,7 +15340,7 @@
             "type": "string"
           }
         },
-        "description": "Creates a directory inside the device's string CreateDeviceDirectoryRequestDto.ParentPath. The target device comes from the\r\nroute, so the body carries no device id."
+        "description": "Creates a directory inside the device's string CreateDeviceDirectoryRequestDto.ParentPath. The target device comes from the\nroute, so the body carries no device id."
       },
       "CreateDeviceGroupRequestDto": {
         "required": [
@@ -15540,6 +15637,7 @@
         "type": "object",
         "properties": {
           "principalKind": {
+            "description": "The kind of principal a permission assignment targets.",
             "$ref": "#/components/schemas/PermissionPrincipalKind"
           },
           "principalId": {
@@ -15552,9 +15650,11 @@
             "type": "string"
           },
           "effect": {
+            "description": "The effect of a permission assignment. Explicit deny overrides allow at any matching scope.",
             "$ref": "#/components/schemas/PermissionEffect"
           },
           "scopeKind": {
+            "description": "The kind of resource a permission assignment is scoped to.",
             "$ref": "#/components/schemas/PermissionScopeKind"
           },
           "scopeId": {
@@ -15590,6 +15690,7 @@
             "type": "string"
           },
           "permissionMode": {
+            "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows.",
             "$ref": "#/components/schemas/PersonalAccessTokenPermissionMode"
           },
           "scopes": {
@@ -15598,6 +15699,7 @@
               "array"
             ],
             "items": {
+              "description": "A single permission scope granted to a credential (PAT or logon token).",
               "$ref": "#/components/schemas/CredentialScopeDto"
             }
           },
@@ -15647,10 +15749,11 @@
             ]
           },
           "accessMode": {
+            "description": "Determines how a server service account is evaluated during permission checks.\nPersisted on the account so the mode is never inferred from the presence or absence of assignment rows.\nTenant service accounts are not governed by this mode and never bypass.",
             "$ref": "#/components/schemas/ServiceAccountAccessMode"
           }
         },
-        "description": "Request to create a server-scoped service account. The access mode is required explicitly;\r\nit is never inferred from assignment rows."
+        "description": "Request to create a server-scoped service account. The access mode is required explicitly;\nit is never inferred from assignment rows."
       },
       "CreateServiceAccountCredentialRequestDto": {
         "required": [
@@ -15809,6 +15912,7 @@
             "type": "string"
           },
           "scopeKind": {
+            "description": "The kind of resource a permission assignment is scoped to.",
             "$ref": "#/components/schemas/PermissionScopeKind"
           },
           "scopeId": {
@@ -15894,7 +15998,7 @@
             "type": "string"
           }
         },
-        "description": "Deletes one path on the device named by the route. There is deliberately no \"is a directory\" flag:\r\nthe delete sent to the agent carries only the path, so the flag would describe nothing."
+        "description": "Deletes one path on the device named by the route. There is deliberately no \"is a directory\" flag:\nthe delete sent to the agent carries only the path, so the flag would describe nothing."
       },
       "DeleteDevicesRequestDto": {
         "required": [
@@ -16014,7 +16118,7 @@
             "format": "uuid"
           }
         },
-        "description": "Requests whether the current principal may assign tags to a prospective deployment target.\r\nThe target is either a predetermined existing device (by id) or a new device, optionally\r\nbound to the selected customer. The server evaluates the same device-scoped\r\n`DeviceTagsWrite` decision used at agent registration so the UI only offers tag\r\nselection when the eventual install could succeed."
+        "description": "Requests whether the current principal may assign tags to a prospective deployment target.\nThe target is either a predetermined existing device (by id) or a new device, optionally\nbound to the selected customer. The server evaluates the same device-scoped\n`DeviceTagsWrite` decision used at agent registration so the UI only offers tag\nselection when the eventual install could succeed."
       },
       "DeploymentTagCapabilityResponseDto": {
         "required": [
@@ -16059,6 +16163,7 @@
             "format": "int32"
           },
           "type": {
+            "description": "REST-facing desktop session type. Kept separate from the hub's\nDesktopSessionType so the REST API can serialize it as\na string while the SignalR hub stays numeric for backwards compatibility.",
             "$ref": "#/components/schemas/DesktopSessionTypeDto"
           },
           "username": {
@@ -16082,7 +16187,7 @@
           "Console",
           "Rdp"
         ],
-        "description": "REST-facing desktop session type. Kept separate from the hub's\r\nDesktopSessionType so the REST API can serialize it as\r\na string while the SignalR hub stays numeric for backwards compatibility."
+        "description": "REST-facing desktop session type. Kept separate from the hub's\nDesktopSessionType so the REST API can serialize it as\na string while the SignalR hub stays numeric for backwards compatibility."
       },
       "DeviceColumnFilter": {
         "type": "object",
@@ -16141,7 +16246,7 @@
             "type": "string"
           }
         },
-        "description": "Selects the directory whose entries to list. The route carries no device id for this operation,\r\nso the body names the device."
+        "description": "Selects the directory whose entries to list. The route carries no device id for this operation,\nso the body names the device."
       },
       "DeviceDirectoryContentsResponseDto": {
         "required": [
@@ -16153,6 +16258,7 @@
           "items": {
             "type": "array",
             "items": {
+              "description": "One file system entry as the remote agent reported it. Shared by the directory-contents,\nroot-drives, and subdirectories responses.",
               "$ref": "#/components/schemas/DeviceFileSystemEntryDto"
             }
           },
@@ -16160,7 +16266,7 @@
             "type": "boolean"
           }
         },
-        "description": "A directory listing. bool DeviceDirectoryContentsResponseDto.DirectoryExists is the agent's own signal, which distinguishes\r\nan empty directory from a missing one."
+        "description": "A directory listing. bool DeviceDirectoryContentsResponseDto.DirectoryExists is the agent's own signal, which distinguishes\nan empty directory from a missing one."
       },
       "DeviceFilePathValidationResponseDto": {
         "required": [
@@ -16176,7 +16282,7 @@
             "default": ""
           }
         },
-        "description": "The device's answer to a path-validation probe. An answer that the path is invalid is still a\r\nsuccessful response, so bool DeviceFilePathValidationResponseDto.IsValid being false is not an error."
+        "description": "The device's answer to a path-validation probe. An answer that the path is invalid is still a\nsuccessful response, so bool DeviceFilePathValidationResponseDto.IsValid being false is not an error."
       },
       "DeviceFileSystemEntryDto": {
         "required": [
@@ -16223,7 +16329,7 @@
             "type": "boolean"
           }
         },
-        "description": "One file system entry as the remote agent reported it. Shared by the directory-contents,\r\nroot-drives, and subdirectories responses."
+        "description": "One file system entry as the remote agent reported it. Shared by the directory-contents,\nroot-drives, and subdirectories responses."
       },
       "DeviceFileUploadResponseDto": {
         "required": [
@@ -16402,6 +16508,7 @@
           "logFiles": {
             "type": "array",
             "items": {
+              "description": "A single log file the agent found on disk.",
               "$ref": "#/components/schemas/DeviceLogFileEntryDto"
             }
           }
@@ -16417,6 +16524,7 @@
           "logFileGroups": {
             "type": "array",
             "items": {
+              "description": "The agent's log files under one group name, which is the log source that produced them.",
               "$ref": "#/components/schemas/DeviceLogFileGroupDto"
             }
           }
@@ -16454,7 +16562,7 @@
             "type": "string"
           }
         },
-        "description": "Asks the agent how it would split string DevicePathSegmentsRequestDto.TargetPath on its own platform. The route carries\r\nno device id for this operation, so the body names the device."
+        "description": "Asks the agent how it would split string DevicePathSegmentsRequestDto.TargetPath on its own platform. The route carries\nno device id for this operation, so the body names the device."
       },
       "DevicePathSegmentsResponseDto": {
         "required": [
@@ -16488,7 +16596,7 @@
             "type": "boolean"
           }
         },
-        "description": "How the device's agent split the requested path. bool DevicePathSegmentsResponseDto.Success is the agent's verdict and\r\nstring? DevicePathSegmentsResponseDto.ErrorMessage explains a false one. string DevicePathSegmentsResponseDto.PathSeparator is the device's own\r\nseparator, which need not match the one the caller sent."
+        "description": "How the device's agent split the requested path. bool DevicePathSegmentsResponseDto.Success is the agent's verdict and\nstring? DevicePathSegmentsResponseDto.ErrorMessage explains a false one. string DevicePathSegmentsResponseDto.PathSeparator is the device's own\nseparator, which need not match the one the caller sent."
       },
       "DeviceResponseDto": {
         "required": [
@@ -16665,7 +16773,7 @@
             "format": "uuid"
           }
         },
-        "description": "Asks for the file system entries at the device's roots. The route carries no device id for this\r\noperation, so the body names the device."
+        "description": "Asks for the file system entries at the device's roots. The route carries no device id for this\noperation, so the body names the device."
       },
       "DeviceRootDrivesResponseDto": {
         "required": [
@@ -16676,11 +16784,12 @@
           "drives": {
             "type": "array",
             "items": {
+              "description": "One file system entry as the remote agent reported it. Shared by the directory-contents,\nroot-drives, and subdirectories responses.",
               "$ref": "#/components/schemas/DeviceFileSystemEntryDto"
             }
           }
         },
-        "description": "The file system entries at the device's roots: drive letters on Windows, a single root on Unix-like\r\nplatforms."
+        "description": "The file system entries at the device's roots: drive letters on Windows, a single root on Unix-like\nplatforms."
       },
       "DeviceSearchFilterCountsDto": {
         "type": "object",
@@ -16835,7 +16944,7 @@
             "type": "string"
           }
         },
-        "description": "Selects the directory whose immediate subdirectories to list. The route carries no device id for\r\nthis operation, so the body names the device."
+        "description": "Selects the directory whose immediate subdirectories to list. The route carries no device id for\nthis operation, so the body names the device."
       },
       "DeviceSubdirectoriesResponseDto": {
         "required": [
@@ -16846,11 +16955,12 @@
           "subdirectories": {
             "type": "array",
             "items": {
+              "description": "One file system entry as the remote agent reported it. Shared by the directory-contents,\nroot-drives, and subdirectories responses.",
               "$ref": "#/components/schemas/DeviceFileSystemEntryDto"
             }
           }
         },
-        "description": "The immediate subdirectories of one directory. Unlike the directory-contents response, the agent's\r\ndirectory-exists signal is discarded here."
+        "description": "The immediate subdirectories of one directory. Unlike the directory-contents response, the agent's\ndirectory-exists signal is discarded here."
       },
       "DeviceSummaryDto": {
         "required": [
@@ -17262,6 +17372,7 @@
             "format": "uuid"
           },
           "principalKind": {
+            "description": "The kind of principal a permission assignment targets.",
             "$ref": "#/components/schemas/PermissionPrincipalKind"
           },
           "principalId": {
@@ -17272,9 +17383,11 @@
             "type": "string"
           },
           "effect": {
+            "description": "The effect of a permission assignment. Explicit deny overrides allow at any matching scope.",
             "$ref": "#/components/schemas/PermissionEffect"
           },
           "scopeKind": {
+            "description": "The kind of resource a permission assignment is scoped to.",
             "$ref": "#/components/schemas/PermissionScopeKind"
           },
           "scopeId": {
@@ -17336,6 +17449,7 @@
           "allowedScopeKinds": {
             "type": "array",
             "items": {
+              "description": "The kind of resource a permission assignment is scoped to.",
               "$ref": "#/components/schemas/PermissionScopeKind"
             }
           },
@@ -17418,7 +17532,7 @@
           "Restricted",
           "InheritOwner"
         ],
-        "description": "Determines how a personal access token is evaluated during permission checks.\r\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
+        "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows."
       },
       "PersonalAccessTokenResponseDto": {
         "required": [
@@ -17457,6 +17571,7 @@
             "format": "int32"
           },
           "permissionMode": {
+            "description": "Determines how a personal access token is evaluated during permission checks.\nPersisted on the token so the mode is never inferred from the presence or absence of scope rows.",
             "$ref": "#/components/schemas/PersonalAccessTokenPermissionMode"
           },
           "expiresAt": {
@@ -17543,7 +17658,7 @@
             ]
           }
         },
-        "description": "Server-side settings exposed to any caller, including unauthenticated clients, so a client\r\ncan adapt to server configuration before authenticating. Never put sensitive or per-tenant\r\ndata here."
+        "description": "Server-side settings exposed to any caller, including unauthenticated clients, so a client\ncan adapt to server configuration before authenticating. Never put sensitive or per-tenant\ndata here."
       },
       "RemoveDeviceGroupMembersRequestDto": {
         "required": [
@@ -17599,6 +17714,7 @@
         "type": "object",
         "properties": {
           "principalKind": {
+            "description": "The kind of principal a permission assignment targets.",
             "$ref": "#/components/schemas/PermissionPrincipalKind"
           },
           "principalId": {
@@ -17709,6 +17825,7 @@
             "type": "boolean"
           },
           "accessMode": {
+            "description": "Determines how a server service account is evaluated during permission checks.\nPersisted on the account so the mode is never inferred from the presence or absence of assignment rows.\nTenant service accounts are not governed by this mode and never bypass.",
             "$ref": "#/components/schemas/ServiceAccountAccessMode"
           },
           "createdAt": {
@@ -17722,7 +17839,7 @@
             }
           }
         },
-        "description": "V1 response for a server-scoped service account. Always carries a non-null\r\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred."
+        "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred."
       },
       "ServerServiceAccountsResponseDto": {
         "type": "object",
@@ -17730,6 +17847,7 @@
           "items": {
             "type": "array",
             "items": {
+              "description": "V1 response for a server-scoped service account. Always carries a non-null\nServiceAccountAccessMode ServerServiceAccountDto.AccessMode, which is set explicitly at creation and never inferred.",
               "$ref": "#/components/schemas/ServerServiceAccountDto"
             }
           }
@@ -17777,7 +17895,7 @@
           "Restricted",
           "Unrestricted"
         ],
-        "description": "Determines how a server service account is evaluated during permission checks.\r\nPersisted on the account so the mode is never inferred from the presence or absence of assignment rows.\r\nTenant service accounts are not governed by this mode and never bypass."
+        "description": "Determines how a server service account is evaluated during permission checks.\nPersisted on the account so the mode is never inferred from the presence or absence of assignment rows.\nTenant service accounts are not governed by this mode and never bypass."
       },
       "ServiceAccountCredentialDto": {
         "required": [
@@ -17925,7 +18043,7 @@
             }
           }
         },
-        "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\r\nnot governed by an access mode and never bypass permission evaluation,\r\nso this DTO intentionally omits ServiceAccountAccessMode."
+        "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode."
       },
       "TenantServiceAccountsResponseDto": {
         "type": "object",
@@ -17933,6 +18051,7 @@
           "items": {
             "type": "array",
             "items": {
+              "description": "V1 response for a tenant-scoped service account. Tenant-scoped accounts are\nnot governed by an access mode and never bypass permission evaluation,\nso this DTO intentionally omits ServiceAccountAccessMode.",
               "$ref": "#/components/schemas/TenantServiceAccountDto"
             }
           }
@@ -18007,7 +18126,7 @@
             ]
           }
         },
-        "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\r\nis distinct from a set value that happens to be the definition's default."
+        "description": "The tenant's settings as a typed aggregate. A null member means the setting is unset, which\nis distinct from a set value that happens to be the definition's default."
       },
       "TenantsResponseDto": {
         "type": "object",
@@ -18015,6 +18134,7 @@
           "items": {
             "type": "array",
             "items": {
+              "description": "Minimal tenant projection for the collection listing. The full tenant object is\nreturned by `GET /api/v1/tenants/{tenantId}`.",
               "$ref": "#/components/schemas/TenantSummaryDto"
             }
           }
@@ -18035,7 +18155,7 @@
             "type": "string"
           }
         },
-        "description": "Minimal tenant projection for the collection listing. The full tenant object is\r\nreturned by `GET /api/v1/tenants/{tenantId}`."
+        "description": "Minimal tenant projection for the collection listing. The full tenant object is\nreturned by `GET /api/v1/tenants/{tenantId}`."
       },
       "ThemeMode": {
         "enum": [
@@ -18133,9 +18253,11 @@
             "type": "string"
           },
           "effect": {
+            "description": "The effect of a permission assignment. Explicit deny overrides allow at any matching scope.",
             "$ref": "#/components/schemas/PermissionEffect"
           },
           "scopeKind": {
+            "description": "The kind of resource a permission assignment is scoped to.",
             "$ref": "#/components/schemas/PermissionScopeKind"
           },
           "scopeId": {
@@ -18601,7 +18723,7 @@
             "type": "string"
           }
         },
-        "description": "Asks whether string ValidateDeviceFilePathRequestDto.DirectoryPath and string ValidateDeviceFilePathRequestDto.FileName combine into a usable path. The\r\ndevice comes from the route."
+        "description": "Asks whether string ValidateDeviceFilePathRequestDto.DirectoryPath and string ValidateDeviceFilePathRequestDto.FileName combine into a usable path. The\ndevice comes from the route."
       },
       "ViewMode": {
         "enum": [
