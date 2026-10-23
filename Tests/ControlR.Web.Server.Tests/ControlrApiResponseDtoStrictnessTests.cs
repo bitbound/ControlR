@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using ControlR.ApiClient;
-using ControlR.Libraries.TestingUtilities;
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -185,13 +184,9 @@ public class ControlrApiResponseDtoStrictnessTests(ITestOutputHelper testOutputH
       DisableStreamingResponseDtoStrictness = disableStreamingResponseDtoStrictness
     });
 
-    var authState = new ControlrApiClientAuthState();
-    var httpClientFactory = new StaticHttpClientFactory(httpClient);
-
     var controlrApi = new ControlrApi(
       httpClient,
-      authState,
-      new BearerTokenRefresher(authState, httpClientFactory, TimeProvider.System),
+      new ControlrApiClientAuthState(),
       NullLogger<ControlrApi>.Instance,
       options);
 

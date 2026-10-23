@@ -100,7 +100,7 @@ internal partial class InternalApi
       using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.AuthEndpoint}/login?useCookies=false", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(cancellationToken);
-    }, allowAutoRefresh: false);
+    });
   }
 
   async Task<ApiResult<InteractiveLoginResponseDto>> IAuthApi.LogInInteractive(LoginRequestDto request, CancellationToken cancellationToken)
@@ -110,7 +110,7 @@ internal partial class InternalApi
       using var response = await _client.HttpClient.PostAsJsonAsync(InteractiveLoginEndpoint, request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<InteractiveLoginResponseDto>(cancellationToken);
-    }, allowAutoRefresh: false);
+    });
   }
 
   async Task<ApiResult> IAuthApi.LogOut(CancellationToken cancellationToken)
@@ -139,7 +139,7 @@ internal partial class InternalApi
       using var response = await _client.HttpClient.PostAsJsonAsync($"{HttpConstants.Internal.AuthEndpoint}/refresh", request, cancellationToken);
       await response.EnsureSuccessStatusCodeWithDetails();
       return await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(cancellationToken);
-    }, allowAutoRefresh: false);
+    });
   }
 
   async Task<ApiResult> IAuthApi.Register(RegisterRequestDto request, CancellationToken cancellationToken)

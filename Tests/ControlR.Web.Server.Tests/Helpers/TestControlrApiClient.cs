@@ -1,5 +1,4 @@
 using ControlR.ApiClient;
-using ControlR.Libraries.Shared.Helpers;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -25,13 +24,19 @@ internal sealed class TestControlrApiClient : IDisposable
       BaseAddress = baseUrl
     };
 
-    var httpClientFactory = new StaticHttpClientFactory(_unauthenticatedHttpClient);
     var options = new ControlrApiClientOptions
     {
       BaseUrl = baseUrl
     };
 
-    var authHeaderHandler = new ControlrApiAuthHeaderHandler(AuthState)
+    AuthSession = new ControlrAuthSession(
+      new StaticHttpClientFactory(_unauthenticatedHttpClient),
+      AuthState,
+      options,
+      testServer.TimeProvider,
+      NullLogger<ControlrAuthSession>.Instance);
+
+    var authHeaderHandler = new ControlrApiAuthHeaderHandler(AuthState, AuthSession)
     {
       InnerHandler = testServer.TestServer.CreateHandler()
     };
@@ -41,20 +46,9 @@ internal sealed class TestControlrApiClient : IDisposable
       BaseAddress = baseUrl
     };
 
-    var bearerTokenRefresher = new BearerTokenRefresher(AuthState, httpClientFactory, testServer.TimeProvider);
-
-    AuthSession = new ControlrAuthSession(
-      httpClientFactory,
-      AuthState,
-      bearerTokenRefresher,
-      NullLogger<ControlrAuthSession>.Instance,
-      new OptionsMonitorWrapper<ControlrApiClientOptions>(options),
-      testServer.TimeProvider);
-
     Api = new ControlrApi(
       _apiHttpClient,
       AuthState,
-      bearerTokenRefresher,
       NullLogger<ControlrApi>.Instance,
       new OptionsWrapper<ControlrApiClientOptions>(options)).InternalApi;
   }
@@ -80,14 +74,5 @@ internal sealed class TestControlrApiClient : IDisposable
     _apiHttpClient.Dispose();
     _unauthenticatedHttpClient.Dispose();
     GC.SuppressFinalize(this);
-  }
-
-  /// <summary>
-  /// Stops the background token-refresh loop without disposing the underlying HTTP clients.
-  /// Call this in test cleanup when the test does not need to dispose the full <see cref="TestControlrApiClient"/>.
-  /// </summary>
-  public void StopBackgroundRefresh()
-  {
-    AuthSession.Dispose();
   }
 }
