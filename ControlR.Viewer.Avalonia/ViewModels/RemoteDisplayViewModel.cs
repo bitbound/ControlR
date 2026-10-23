@@ -1212,6 +1212,11 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     catch (Exception ex)
     {
       Logger.LogError(ex, "Failed to get device access permissions.");
+      if (_privacyScreenPermissionDeviceId == deviceId)
+      {
+        // Do not cache a transient fetch failure; the next state change retries.
+        _privacyScreenPermissionDeviceId = null;
+      }
     }
   }
 
