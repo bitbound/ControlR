@@ -40,6 +40,27 @@ public static class ControlrApiClientBuilder
   }
 
   /// <summary>
+  ///   Gets the interactive auth session for the process-wide client created by <see cref="Initialize"/>.
+  /// </summary>
+  /// <remarks>
+  ///   Do not dispose the returned session. The builder owns it and releases it in <see cref="Dispose"/>.
+  /// </remarks>
+  /// <exception cref="InvalidOperationException">
+  ///   Thrown when <see cref="Initialize"/> has not been called (or <see cref="Dispose"/> was called since).
+  /// </exception>
+  public static IControlrAuthSession GetAuthSession()
+  {
+    using var lockScope = _servicesLock.EnterScope();
+    if (_factory is null)
+    {
+      throw new InvalidOperationException(
+        $"The API client builder has not been initialized.  Call {nameof(Initialize)} first.");
+    }
+
+    return _factory.GetOrCreateAuthSession(DefaultTargetName);
+  }
+
+  /// <summary>
   ///   Gets the process-wide <see cref="IControlrApi"/> client created by <see cref="Initialize"/>.
   /// </summary>
   /// <remarks>

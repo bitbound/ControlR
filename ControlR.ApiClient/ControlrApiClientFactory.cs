@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using ControlR.ApiClient.Auth;
 using ControlR.ApiClient.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -28,6 +29,19 @@ public interface IControlrApiClientFactory : IDisposable
   IReadOnlyCollection<string> GetClientNames();
 
   /// <summary>
+  /// Gets the interactive auth session for the named target.
+  /// </summary>
+  /// <remarks>
+  /// The session is owned by the factory and disposed with its target. Do not dispose it directly.
+  /// A target whose session holds a live login is not taken by idle eviction.
+  /// </remarks>
+  /// <param name="name">The target name previously passed to <see cref="GetOrCreateClient"/>.</param>
+  /// <returns>The session for the named target.</returns>
+  /// <exception cref="InvalidOperationException">No client has been created for <paramref name="name"/> yet.</exception>
+  /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
+  IControlrAuthSession GetOrCreateAuthSession(string name);
+
+  /// <summary>
   /// Gets the client for the named target, creating it on first call.
   /// </summary>
   /// <remarks>
@@ -49,6 +63,16 @@ public interface IControlrApiClientFactory : IDisposable
   /// <exception cref="OptionsValidationException">The configured options are invalid (e.g. <see cref="ControlrApiClientOptions.BaseUrl"/> is missing).</exception>
   /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
   IControlrApi GetOrCreateClient(string name, Action<ControlrApiClientOptions> configureOptions);
+
+  /// <summary>
+  /// Gets the target's interactive auth session without refreshing the target's last-used stamp, so
+  /// polling it cannot hold a target open.
+  /// </summary>
+  /// <param name="name">The target name to look up.</param>
+  /// <param name="session">The target's session when this returns <see langword="true"/>.</param>
+  /// <returns><see langword="true"/> when the named target exists.</returns>
+  /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
+  bool TryGetAuthSession(string name, [NotNullWhen(true)] out IControlrAuthSession? session);
 
   /// <summary>
   /// Removes and disposes the client registered under <paramref name="name"/>.
@@ -183,6 +207,22 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
   }
 
   /// <inheritdoc />
+  public IControlrAuthSession GetOrCreateAuthSession(string name)
+  {
+    ArgumentException.ThrowIfNullOrWhiteSpace(name);
+    ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
+
+    if (!_clients.TryGetValue(name, out var entry))
+    {
+      throw new InvalidOperationException(
+        $"No client has been created for target '{name}'. Call {nameof(GetOrCreateClient)} first.");
+    }
+
+    Touch(entry);
+    return entry.AuthSession;
+  }
+
+  /// <inheritdoc />
   public IControlrApi GetOrCreateClient(string name, Action<ControlrApiClientOptions> configureOptions)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -224,6 +264,16 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
   }
 
   /// <inheritdoc />
+  public bool TryGetAuthSession(string name, [NotNullWhen(true)] out IControlrAuthSession? session)
+  {
+    ArgumentException.ThrowIfNullOrWhiteSpace(name);
+    ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
+
+    session = _clients.TryGetValue(name, out var entry) ? entry.AuthSession : null;
+    return session is not null;
+  }
+
+  /// <inheritdoc />
   public bool TryRemoveClient(string name)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -241,6 +291,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
   /// <summary>
   /// Evicts entries that have been idle longer than <see cref="ControlrApiClientFactoryOptions.MaxIdleClientLifetime"/>.
+  /// An entry whose session holds a live login is kept, because the target cannot rebuild it.
   /// </summary>
   internal void SweepIdleClients()
   {
@@ -253,7 +304,12 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     ClientEntry[] idleClients;
     using (_createLock.EnterScope())
     {
-      idleClients = [.. _clients.Values.Where(entry => Volatile.Read(ref entry.LastUsedTicks) < cutoff)];
+      idleClients = [.. _clients.Values.Where(entry =>
+        Volatile.Read(ref entry.LastUsedTicks) < cutoff &&
+        entry.AuthSession.State is not (
+          ControlrAuthSessionState.Authenticated or
+          ControlrAuthSessionState.AwaitingTwoFactor or
+          ControlrAuthSessionState.AwaitingPasswordChange))];
       foreach (var idleClient in idleClients)
       {
         _clients.TryRemove(idleClient.Name, out _);
@@ -305,15 +361,27 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     {
       authInnerHandler = CreateHandler();
       unauthenticatedInnerHandler = CreateHandler();
-      var authState = new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
-      var authHeaderHandler = new ControlrApiAuthHeaderHandler(authState) { InnerHandler = authInnerHandler };
-      httpClient = new HttpClient(authHeaderHandler) { BaseAddress = baseUrl };
-      authInnerHandler = null;
       unauthenticatedHttpClient = new HttpClient(unauthenticatedInnerHandler) { BaseAddress = baseUrl };
       unauthenticatedInnerHandler = null;
 
+      var authState = new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
+      var authSession = new ControlrAuthSession(
+        new SingleClientHttpClientFactory(unauthenticatedHttpClient),
+        authState,
+        options,
+        _timeProvider,
+        _loggerFactory.CreateLogger<ControlrAuthSession>())
+      {
+        Requests = requests
+      };
+
+      var authHeaderHandler = new ControlrApiAuthHeaderHandler(authState, authSession) { InnerHandler = authInnerHandler };
+      httpClient = new HttpClient(authHeaderHandler) { BaseAddress = baseUrl };
+      authInnerHandler = null;
+
       var api = new ControlrApi(
         httpClient,
+        authState,
         _loggerFactory.CreateLogger<ControlrApi>(),
         new OptionsWrapper<ControlrApiClientOptions>(options))
       {
@@ -323,6 +391,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
       var entry = new ClientEntry(
         name,
         api,
+        authSession,
         httpClient,
         unauthenticatedHttpClient,
         requests);
@@ -399,6 +468,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
   private sealed class ClientEntry(
     string name,
     ControlrApi api,
+    ControlrAuthSession authSession,
     HttpClient httpClient,
     HttpClient unauthenticatedHttpClient,
     InFlightTracker requests)
@@ -409,14 +479,15 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     private int _disposeState;
 
     public ControlrApi Api { get; } = api;
+    public ControlrAuthSession AuthSession { get; } = authSession;
     public HttpClient HttpClient { get; } = httpClient;
     public string Name { get; } = name;
     public InFlightTracker Requests { get; } = requests;
     public HttpClient UnauthenticatedHttpClient { get; } = unauthenticatedHttpClient;
 
     /// <summary>
-    /// Disposes the target's HTTP stacks. Safe to call multiple times and concurrently; only the first
-    /// call does work.
+    /// Disposes the target's session and HTTP stacks. Safe to call multiple times and concurrently;
+    /// only the first call does work.
     /// </summary>
     /// <remarks>
     /// When the target still has requests in flight, the HTTP stacks are released by the last of them instead.
@@ -428,6 +499,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
         return;
       }
 
+      AuthSession.Dispose();
       Requests.RequestTeardown();
     }
 

@@ -139,10 +139,11 @@ public sealed class ControlrServiceAccountAuthTests
   }
 
   [Fact]
-  public void TryGetAuthHeader_WhenApiKeyAndBearerTokenSet_ReturnsBearer()
+  public async Task TryGetAuthHeader_WhenApiKeyAndBearerTokenSet_ReturnsBearer()
   {
-    var authState = new ControlrApiClientAuthState(serviceAccountApiKey: ApiKey);
-    authState.SetBearerTokens("access", "refresh", DateTimeOffset.UtcNow.AddMinutes(30));
+    using var session = CreateSession(new FakeTimeProvider(), out var authState);
+    await session.RestoreAuthSnapshot(new AuthSnapshot(null, "access", DateTimeOffset.MaxValue, "refresh"));
+    authState.SetServiceAccountApiKey(ApiKey);
 
     Assert.True(authState.TryGetAuthHeader(out var headerName, out var headerValue));
 
@@ -175,18 +176,20 @@ public sealed class ControlrServiceAccountAuthTests
 
   private static ControlrAuthSession CreateSession(FakeTimeProvider timeProvider)
   {
+    return CreateSession(timeProvider, out _);
+  }
+
+  private static ControlrAuthSession CreateSession(FakeTimeProvider timeProvider, out ControlrApiClientAuthState authState)
+  {
     var options = new ControlrApiClientOptions { BaseUrl = _server };
-    var handler = new RecordingHttpMessageHandler();
-    var client = new HttpClient(handler) { BaseAddress = _server };
-    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
-    var refresher = new BearerTokenRefresher(authState, new SingleClientHttpClientFactory(client), timeProvider);
+    var client = new HttpClient(new RecordingHttpMessageHandler()) { BaseAddress = _server };
+    authState = new ControlrApiClientAuthState();
 
     return new ControlrAuthSession(
       new SingleClientHttpClientFactory(client),
       authState,
-      refresher,
-      NullLogger<ControlrAuthSession>.Instance,
-      new FrozenOptionsMonitor<ControlrApiClientOptions>(options),
-      timeProvider);
+      options,
+      timeProvider,
+      NullLogger<ControlrAuthSession>.Instance);
   }
 }

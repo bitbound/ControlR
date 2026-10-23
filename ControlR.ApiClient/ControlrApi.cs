@@ -19,12 +19,14 @@ public interface IControlrApi
 
 public partial class ControlrApi(
   HttpClient httpClient,
+  ControlrApiClientAuthState authState,
   ILogger<ControlrApi> logger,
   IOptions<ControlrApiClientOptions> options) : IControlrApi
 {
   internal const string DisposedTargetReason =
     "The HTTP client for this target was disposed. Obtain the client again from the factory.";
 
+  private readonly ControlrApiClientAuthState _authState = authState;
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
   private readonly IOptions<ControlrApiClientOptions> _options = options;
@@ -75,7 +77,11 @@ public partial class ControlrApi(
 
     try
     {
-      await func.Invoke();
+      await InvokeWithBearerRetry(async () =>
+      {
+        await func.Invoke();
+        return true;
+      });
       return ApiResult.Ok();
     }
     catch (HttpRequestException ex)
@@ -121,7 +127,7 @@ public partial class ControlrApi(
 
     try
     {
-      var resultValue = await func.Invoke() ??
+      var resultValue = await InvokeWithBearerRetry(func) ??
         throw new HttpRequestException("The server response was empty.");
 
       var validationErrors = DtoValidatorFactory.Validate(resultValue);
@@ -169,6 +175,28 @@ public partial class ControlrApi(
       const string message = "The request to the server failed.";
       var apiResult = ApiResult.Fail<T>(message, httpRequestError: HttpRequestError.Unknown);
       return LogFailure(apiResult, ex);
+    }
+  }
+
+  /// <summary>
+  /// Reissues the call once when it was rejected with 401 and the bearer token was renewed meanwhile.
+  /// The auth header handler performs the renewal. A sent request cannot be resent, so the retry
+  /// happens here.
+  /// </summary>
+  private async Task<T?> InvokeWithBearerRetry<T>(Func<Task<T?>> func)
+  {
+    var bearerBefore = _authState.Bearer;
+
+    try
+    {
+      return await func.Invoke();
+    }
+    catch (HttpRequestException ex) when (
+      ex.StatusCode == HttpStatusCode.Unauthorized &&
+      _authState.Bearer is { } bearerAfter &&
+      !ReferenceEquals(bearerAfter, bearerBefore))
+    {
+      return await func.Invoke();
     }
   }
 

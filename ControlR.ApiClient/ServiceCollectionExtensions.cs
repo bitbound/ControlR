@@ -55,7 +55,7 @@ public static class ServiceCollectionExtensions
       return new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
     });
 
-    services.TryAddTransient<ControlrApiAuthHeaderHandler>();
+    services.AddControlrAuthSession();
 
     // Register the typed HttpClient for ControlrApi.
     services.AddHttpClient(
@@ -125,7 +125,7 @@ public static class ServiceCollectionExtensions
       return new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
     });
 
-    services.TryAddTransient<ControlrApiAuthHeaderHandler>();
+    services.AddControlrAuthSession();
 
     // Register the typed HttpClient for ControlrApi.
     services.AddHttpClient(
@@ -297,5 +297,21 @@ public static class ServiceCollectionExtensions
   {
     builder.Services.AddControlrApiClientFactory(builder.Configuration, configurationSectionName);
     return builder;
+  }
+
+  private static void AddControlrAuthSession(this IServiceCollection services)
+  {
+    services.TryAddSingleton(sp => new ControlrAuthSession(
+      sp.GetRequiredService<IHttpClientFactory>(),
+      sp.GetRequiredService<ControlrApiClientAuthState>(),
+      sp.GetRequiredService<IOptionsMonitor<ControlrApiClientOptions>>().CurrentValue,
+      sp.GetRequiredService<TimeProvider>(),
+      sp.GetService<ILogger<ControlrAuthSession>>() ?? NullLogger<ControlrAuthSession>.Instance));
+
+    services.TryAddSingleton<IControlrAuthSession>(sp => sp.GetRequiredService<ControlrAuthSession>());
+
+    services.TryAddTransient(sp => new ControlrApiAuthHeaderHandler(
+      sp.GetRequiredService<ControlrApiClientAuthState>(),
+      sp.GetRequiredService<ControlrAuthSession>()));
   }
 }
