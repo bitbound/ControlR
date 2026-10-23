@@ -1,5 +1,4 @@
 ﻿using ControlR.Libraries.Api.Contracts.Dtos;
-using System.Net;
 using System.Text.Json;
 
 namespace ControlR.ApiClient;
@@ -81,14 +80,6 @@ internal static class HttpExtensions
       }
 
       var enrichedMessage = EnrichErrorMessage(rawContent, problemDetails);
-      if (response.StatusCode == HttpStatusCode.Unauthorized &&
-          response.RequestMessage is { } challengedRequest &&
-          challengedRequest.Options.TryGetValue(
-            ControlrApiAuthHeaderHandler.BearerStateVersionOption, out var bearerStateVersionAtSend))
-      {
-        return new BearerChallengeException(enrichedMessage, response.StatusCode, bearerStateVersionAtSend);
-      }
-
       return new HttpRequestException(enrichedMessage, null, response.StatusCode);
     }
     catch
@@ -96,18 +87,4 @@ internal static class HttpExtensions
       return null;
     }
   }
-}
-
-/// <summary>
-/// A 401 carrying the bearer-token generation the auth header handler stamped on the request when
-/// it applied the header, so the refresh dedupe compares against the token that actually went out
-/// rather than a version sampled before the send.
-/// </summary>
-internal sealed class BearerChallengeException(
-  string message,
-  HttpStatusCode? statusCode,
-  long bearerStateVersionAtSend)
-  : HttpRequestException(message, null, statusCode)
-{
-  public long BearerStateVersionAtSend { get; } = bearerStateVersionAtSend;
 }

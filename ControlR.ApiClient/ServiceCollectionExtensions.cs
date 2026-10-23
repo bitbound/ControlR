@@ -55,7 +55,6 @@ public static class ServiceCollectionExtensions
       return new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
     });
 
-    services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
     services.TryAddTransient<ControlrApiAuthHeaderHandler>();
 
     // Register the typed HttpClient for ControlrApi.
@@ -82,7 +81,6 @@ public static class ServiceCollectionExtensions
     services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().Internal);
     services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().V1);
 
-    services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
     return services;
   }
 
@@ -127,7 +125,6 @@ public static class ServiceCollectionExtensions
       return new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
     });
 
-    services.TryAddSingleton<IBearerTokenRefresher, BearerTokenRefresher>();
     services.TryAddTransient<ControlrApiAuthHeaderHandler>();
 
     // Register the typed HttpClient for ControlrApi.
@@ -150,8 +147,6 @@ public static class ServiceCollectionExtensions
     services.TryAddTransient<IControlrApi>(sp => sp.GetRequiredService<ControlrApi>());
     services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().Internal);
     services.TryAddTransient(sp => sp.GetRequiredService<IControlrApi>().V1);
-
-    services.TryAddSingleton<IControlrAuthSession, ControlrAuthSession>();
 
     return services;
   }

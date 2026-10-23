@@ -19,16 +19,12 @@ public interface IControlrApi
 
 public partial class ControlrApi(
   HttpClient httpClient,
-  ControlrApiClientAuthState authState,
-  IBearerTokenRefresher bearerTokenRefresher,
   ILogger<ControlrApi> logger,
   IOptions<ControlrApiClientOptions> options) : IControlrApi
 {
   internal const string DisposedTargetReason =
     "The HTTP client for this target was disposed. Obtain the client again from the factory.";
 
-  private readonly ControlrApiClientAuthState _authState = authState;
-  private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
   private readonly HttpClient _client = httpClient;
   private readonly ILogger<ControlrApi> _logger = logger;
   private readonly IOptions<ControlrApiClientOptions> _options = options;
@@ -55,7 +51,7 @@ public partial class ControlrApi(
   IControlrV1Api IControlrApi.V1 => V1;
 
   /// <summary>
-  /// Announces a call that <see cref="ExecuteApiCall(Func{Task}, bool)"/> does not wrap, so a streamed response stays counted while its body is read.
+  /// Announces a call that <see cref="ExecuteApiCall(Func{Task})"/> does not wrap, so a streamed response stays counted while its body is read.
   /// </summary>
   /// <remarks>
   /// Dispose the returned lease when the caller is done with the response. The JSON read from a streaming
@@ -68,7 +64,7 @@ public partial class ControlrApi(
   /// </remarks>
   internal InFlightTracker.Lease BeginTrackedRequest() => Requests.AcquireOrThrow(nameof(ControlrApi));
 
-  internal async Task<ApiResult> ExecuteApiCall(Func<Task> func, bool allowAutoRefresh = true)
+  internal async Task<ApiResult> ExecuteApiCall(Func<Task> func)
   {
     using var lease = Requests.Acquire();
 
@@ -79,27 +75,11 @@ public partial class ControlrApi(
 
     try
     {
-      await PrepareClientForRequest(allowAutoRefresh);
       await func.Invoke();
       return ApiResult.Ok();
     }
     catch (HttpRequestException ex)
     {
-      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex))
-      {
-        try
-        {
-          await PrepareClientForRequest(allowAutoRefresh: false);
-          await func.Invoke();
-          return ApiResult.Ok();
-        }
-        catch (HttpRequestException retryEx)
-        {
-          var retryResult = ApiResult.Fail(retryEx.Message, retryEx.StatusCode, retryEx.HttpRequestError);
-          return LogFailure(retryResult, retryEx);
-        }
-      }
-
       var apiResult = ApiResult.Fail(ex.Message, ex.StatusCode, ex.HttpRequestError);
       return LogFailure(apiResult, ex);
     }
@@ -130,7 +110,7 @@ public partial class ControlrApi(
     }
   }
 
-  internal async Task<ApiResult<T>> ExecuteApiCall<T>(Func<Task<T?>> func, bool allowAutoRefresh = true)
+  internal async Task<ApiResult<T>> ExecuteApiCall<T>(Func<Task<T?>> func)
   {
     using var lease = Requests.Acquire();
 
@@ -141,7 +121,6 @@ public partial class ControlrApi(
 
     try
     {
-      await PrepareClientForRequest(allowAutoRefresh);
       var resultValue = await func.Invoke() ??
         throw new HttpRequestException("The server response was empty.");
 
@@ -163,37 +142,6 @@ public partial class ControlrApi(
     }
     catch (HttpRequestException ex)
     {
-      if (allowAutoRefresh && await TryRefreshAfterUnauthorized(ex))
-      {
-        try
-        {
-          await PrepareClientForRequest(allowAutoRefresh: false);
-          var retriedValue = await func.Invoke() ??
-            throw new HttpRequestException("The server response was empty.");
-
-          var validationErrors = DtoValidatorFactory.Validate(retriedValue);
-          if (validationErrors is not null)
-          {
-            if (_options.Value.DisableResponseDtoStrictness)
-            {
-              _logger.LogWarning("Response DTO validation failed but strictness is disabled: {Reason}", validationErrors);
-              return ApiResult.Ok(retriedValue);
-            }
-
-            var retryReason = $"DTO validation failed: {validationErrors}";
-            var retryResult = ApiResult.Fail<T>(retryReason, HttpStatusCode.InternalServerError);
-            return LogFailure(retryResult);
-          }
-
-          return ApiResult.Ok(retriedValue);
-        }
-        catch (HttpRequestException retryEx)
-        {
-          var retryResult = ApiResult.Fail<T>(retryEx.Message, retryEx.StatusCode, retryEx.HttpRequestError);
-          return LogFailure(retryResult, retryEx);
-        }
-      }
-
       var apiResult = ApiResult.Fail<T>(ex.Message, ex.StatusCode, ex.HttpRequestError);
       return LogFailure(apiResult, ex);
     }
@@ -246,79 +194,5 @@ public partial class ControlrApi(
 
     _logger.LogError(ex, "API request failed: {Reason}", result.Reason);
     return result;
-  }
-
-  private async Task PrepareClientForRequest(bool allowAutoRefresh)
-  {
-    if (!allowAutoRefresh)
-    {
-      return;
-    }
-
-    try
-    {
-      await RefreshBearerTokenIfNeeded(forceRefresh: false);
-    }
-    catch (ObjectDisposedException)
-    {
-      // The target began being removed after this call announced itself, so the refresher was
-      // refused. This call still holds the target, which means its stack is alive and stays alive
-      // until the call returns. Sending with the token in hand is what the in-flight guarantee
-      // promises. A resulting 401 takes the normal refresh-and-retry path.
-    }
-  }
-
-  private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh, long? dedupeAgainstBearerStateVersion = null)
-  {
-    var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
-      forceRefresh,
-      _options.Value.BearerRefreshLeadTime,
-      baseUrl: null,
-      cancellationToken: default,
-      dedupeAgainstBearerStateVersion: dedupeAgainstBearerStateVersion);
-
-    if (refreshResult == BearerTokenRefreshResult.Unauthorized)
-    {
-      _authState.ClearBearerTokens();
-      throw new HttpRequestException(
-        "The refresh token is no longer valid.",
-        null,
-        HttpStatusCode.Unauthorized);
-    }
-
-    if (refreshResult == BearerTokenRefreshResult.EndpointUnavailable)
-    {
-      _logger.LogWarning("Bearer token refresh endpoint is not available.");
-      return false;
-    }
-
-    return refreshResult == BearerTokenRefreshResult.Refreshed;
-  }
-
-  private async Task<bool> TryRefreshAfterUnauthorized(HttpRequestException ex)
-  {
-    if (ex.StatusCode != HttpStatusCode.Unauthorized)
-    {
-      return false;
-    }
-
-    // Only a stamped 401 may ride a renewal. The stamp records the generation the auth header
-    // actually applied, so a moved version proves the token changed underneath the caller. A 401
-    // without a stamp, such as the BCL's own from GetFromJsonAsync, proves nothing about what went
-    // out, and deduping it against an earlier sample re-sends the token the server just rejected.
-    // Unstamped challenges always pay the forced refresh, as they did before dedupe existed.
-    long? observedVersion = ex is BearerChallengeException challenge
-      ? challenge.BearerStateVersionAtSend
-      : null;
-
-    try
-    {
-      return await RefreshBearerTokenIfNeeded(forceRefresh: true, dedupeAgainstBearerStateVersion: observedVersion);
-    }
-    catch (Exception refreshEx)
-    {
-      _logger.LogWarning(refreshEx, "Bearer token refresh failed after unauthorized response.");
-      return false;
-    }
   }
 }
