@@ -324,7 +324,11 @@ public sealed class ControlrAuthSession(
     }
 
     ResetSession(clearConfiguredCredentials: true);
-    _authState.SetBearerTokens(snapshot.BearerToken, snapshot.RefreshToken, snapshot.BearerTokenExpiresAt);
+    _authState.SetBearerTokens(
+      snapshot.BearerToken,
+      snapshot.RefreshToken,
+      snapshot.BearerTokenExpiresAt,
+      snapshot.BearerTokenLifetime);
     UpdateState(ControlrAuthSessionState.Authenticated);
     StartRefreshLoop();
     return Task.CompletedTask;
@@ -561,7 +565,8 @@ public sealed class ControlrAuthSession(
           return;
         }
 
-        var expiresAt = _authState.GetSnapshot().BearerTokenExpiresAt;
+        var snapshot = _authState.GetSnapshot();
+        var expiresAt = snapshot.BearerTokenExpiresAt;
         if (expiresAt is null)
         {
           // The tokens can be cleared from under this loop. ControlrApi clears the shared auth state
@@ -575,7 +580,9 @@ public sealed class ControlrAuthSession(
           return;
         }
 
-        var delay = expiresAt.Value - _timeProvider.GetUtcNow() - _optionsMonitor.CurrentValue.BearerRefreshLeadTime;
+        var delay = expiresAt.Value - _timeProvider.GetUtcNow() - ControlrApiClientAuthState.GetBearerRefreshWindow(
+          snapshot.BearerTokenLifetime,
+          _optionsMonitor.CurrentValue.BearerRefreshLeadTime);
         if (delay < TimeSpan.Zero)
         {
           delay = TimeSpan.Zero;

@@ -180,6 +180,29 @@ public sealed class ControlrAuthSessionTests
   }
 
   [Fact]
+  public async Task RestoreAuthSnapshot_PreservesBearerTokenLifetime()
+  {
+    var handler = new RecordingHttpMessageHandler(TokenIssuingResponder());
+    var timeProvider = new FakeTimeProvider();
+    using var session = CreateSession(handler, timeProvider);
+
+    var snapshot = new AuthSnapshot(
+      null,
+      "access-restore",
+      timeProvider.GetUtcNow().AddHours(1),
+      "refresh-restore",
+      null,
+      TimeSpan.FromSeconds(60));
+
+    await session.RestoreAuthSnapshot(snapshot);
+
+    // Restore dropped the lifetime, so the new session's loop ran on the uncapped lead time until
+    // its first successful refresh re-stored the value. A host that restarts often re-entered the
+    // uncapped path on every restart.
+    Assert.Equal(TimeSpan.FromSeconds(60), session.GetAuthSnapshot().BearerTokenLifetime);
+  }
+
+  [Fact]
   public async Task RestoreAuthSnapshot_WhenBearerExpired_RefreshesInBackgroundWithoutLogin()
   {
     var timeProvider = new FakeTimeProvider();

@@ -268,11 +268,14 @@ public partial class ControlrApi(
     }
   }
 
-  private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh)
+  private async Task<bool> RefreshBearerTokenIfNeeded(bool forceRefresh, long? dedupeAgainstBearerStateVersion = null)
   {
     var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
       forceRefresh,
-      _options.Value.BearerRefreshLeadTime);
+      _options.Value.BearerRefreshLeadTime,
+      baseUrl: null,
+      cancellationToken: default,
+      dedupeAgainstBearerStateVersion: dedupeAgainstBearerStateVersion);
 
     if (refreshResult == BearerTokenRefreshResult.Unauthorized)
     {
@@ -299,9 +302,18 @@ public partial class ControlrApi(
       return false;
     }
 
+    // Only a stamped 401 may ride a renewal. The stamp records the generation the auth header
+    // actually applied, so a moved version proves the token changed underneath the caller. A 401
+    // without a stamp, such as the BCL's own from GetFromJsonAsync, proves nothing about what went
+    // out, and deduping it against an earlier sample re-sends the token the server just rejected.
+    // Unstamped challenges always pay the forced refresh, as they did before dedupe existed.
+    long? observedVersion = ex is BearerChallengeException challenge
+      ? challenge.BearerStateVersionAtSend
+      : null;
+
     try
     {
-      return await RefreshBearerTokenIfNeeded(forceRefresh: true);
+      return await RefreshBearerTokenIfNeeded(forceRefresh: true, dedupeAgainstBearerStateVersion: observedVersion);
     }
     catch (Exception refreshEx)
     {

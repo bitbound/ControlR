@@ -32,6 +32,37 @@ public interface IBearerTokenRefresher
     TimeSpan refreshWindow,
     Uri? baseUrl = null,
     CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Refreshes like the four-argument overload, but a forced call may dedupe against
+  /// <paramref name="dedupeAgainstBearerStateVersion"/>: when the generation no longer matches the
+  /// live state, the token was renewed after the caller's request went out, and the call rides the
+  /// renewal instead of posting another refresh.
+  /// </summary>
+  /// <param name="forceRefresh">Indicates whether to refresh even when the token is not yet near expiration.</param>
+  /// <param name="refreshWindow">The lead time used to decide when a token should be refreshed.</param>
+  /// <param name="baseUrl">An optional base URL override for the refresh request.</param>
+  /// <param name="cancellationToken">Cancels the refresh operation.</param>
+  /// <param name="dedupeAgainstBearerStateVersion">
+  /// The token-generation counter the failed request carried. Null when nothing trustworthy can be
+  /// deduped against: either no caller request stands behind the refresh, or the challenge carries
+  /// no applied-generation stamp.
+  /// </param>
+  /// <returns>The outcome of the refresh attempt.</returns>
+  /// <remarks>
+  /// The default implementation ignores the deduplication and calls the four-argument overload, so
+  /// implementations written before this overload existed keep working. They just pay one refresh
+  /// POST per concurrent 401 waiter.
+  /// </remarks>
+  Task<BearerTokenRefreshResult> RefreshIfNeeded(
+    bool forceRefresh,
+    TimeSpan refreshWindow,
+    Uri? baseUrl,
+    CancellationToken cancellationToken,
+    long? dedupeAgainstBearerStateVersion)
+  {
+    return RefreshIfNeeded(forceRefresh, refreshWindow, baseUrl, cancellationToken);
+  }
 }
 
 public sealed class BearerTokenRefresher(
@@ -51,11 +82,19 @@ public sealed class BearerTokenRefresher(
   /// </summary>
   internal InFlightTracker Requests { get; set; } = new();
 
-  public async Task<BearerTokenRefreshResult> RefreshIfNeeded(
+  public Task<BearerTokenRefreshResult> RefreshIfNeeded(
     bool forceRefresh,
     TimeSpan refreshWindow,
     Uri? baseUrl = null,
     CancellationToken cancellationToken = default)
+    => RefreshIfNeeded(forceRefresh, refreshWindow, baseUrl, cancellationToken, dedupeAgainstBearerStateVersion: null);
+
+  public async Task<BearerTokenRefreshResult> RefreshIfNeeded(
+    bool forceRefresh,
+    TimeSpan refreshWindow,
+    Uri? baseUrl,
+    CancellationToken cancellationToken,
+    long? dedupeAgainstBearerStateVersion)
   {
     var auth = _authState;
     var refreshContext = auth.TryCreateBearerRefreshContext(_timeProvider, refreshWindow, forceRefresh);
@@ -77,6 +116,16 @@ public sealed class BearerTokenRefresher(
       if (refreshContext is null)
       {
         return BearerTokenRefreshResult.NoRefreshNeeded;
+      }
+
+      // A caller whose challenge predates a renewal rides that renewal. The forced path skips the
+      // freshness check, so without this comparison every concurrent 401 in a burst costs its own
+      // round trip to the stateless refresh endpoint. The version bumps on every bearer mutation,
+      // so a moved version proves the token already changed underneath the caller.
+      if (dedupeAgainstBearerStateVersion is { } observedVersion &&
+          refreshContext.ExpectedBearerStateVersion != observedVersion)
+      {
+        return BearerTokenRefreshResult.Refreshed;
       }
 
       var refreshClient = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
