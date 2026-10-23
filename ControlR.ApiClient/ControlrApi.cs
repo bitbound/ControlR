@@ -179,13 +179,21 @@ public partial class ControlrApi(
   }
 
   /// <summary>
-  /// Reissues the call once when it was rejected with 401 and the bearer token was renewed meanwhile.
-  /// The auth header handler performs the renewal. A sent request cannot be resent, so the retry
-  /// happens here.
+  /// Reissues the call once when it was rejected with 401 and the bearer token it carried has since
+  /// been renewed. The auth header handler performs the renewal. A sent request cannot be resent, so
+  /// the retry happens here.
   /// </summary>
+  /// <remarks>
+  /// The retry is keyed on the credential the failed request applied, recorded by the handler in
+  /// <see cref="BearerAttempt"/>, not on a token sampled before the send. A call that carried no bearer
+  /// cannot retry, so a sign-in or a restore that lands while the call is in flight cannot make a
+  /// non-idempotent request run a second time under a different identity.
+  /// </remarks>
   private async Task<T?> InvokeWithBearerRetry<T>(Func<Task<T?>> func)
   {
-    var bearerBefore = _authState.Bearer;
+    var outerAttempt = BearerAttempt.Current;
+    var attempt = new BearerAttempt();
+    BearerAttempt.Current = attempt;
 
     try
     {
@@ -193,10 +201,13 @@ public partial class ControlrApi(
     }
     catch (HttpRequestException ex) when (
       ex.StatusCode == HttpStatusCode.Unauthorized &&
-      _authState.Bearer is { } bearerAfter &&
-      !ReferenceEquals(bearerAfter, bearerBefore))
+      attempt.CanRetryWith(_authState.Bearer))
     {
       return await func.Invoke();
+    }
+    finally
+    {
+      BearerAttempt.Current = outerAttempt;
     }
   }
 

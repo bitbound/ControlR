@@ -280,7 +280,7 @@ public sealed class ControlrAuthSession : IControlrAuthSession
         nameof(snapshot));
     }
 
-    var bearer = new BearerCredential(snapshot.BearerToken, snapshot.RefreshToken, expiresAt, lifetime: null);
+    var bearer = new BearerCredential(snapshot.BearerToken, snapshot.RefreshToken, expiresAt, snapshot.BearerTokenLifetime);
     _authState.Replace(new ApiCredentials(null, null, bearer));
     UpdateState(ControlrAuthSessionState.Authenticated);
     return Task.CompletedTask;
@@ -368,12 +368,21 @@ public sealed class ControlrAuthSession : IControlrAuthSession
         "Two-factor authentication is enabled. Enter your authenticator code to continue.");
     }
 
-    if (payload.RequiresPasswordChange || payload.Tokens is null)
+    if (payload.RequiresPasswordChange)
     {
       UpdateState(ControlrAuthSessionState.AwaitingPasswordChange);
       return new InteractiveLoginResult(
         InteractiveLoginStatus.RequiresPasswordChange,
         "A password change is required. Enter your current and a new password to continue.");
+    }
+
+    if (payload.Tokens is null)
+    {
+      // A success response that carries neither a password-change flag nor tokens is a broken
+      // response, not a flow the caller can complete. Reporting a failed sign-in keeps the session
+      // usable; a password-change state would wait on a form that never arrives.
+      _logger.LogWarning("Interactive login succeeded without returning tokens.");
+      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "Interactive login failed.");
     }
 
     // A leftover personal access token would otherwise keep winning header precedence, so requests

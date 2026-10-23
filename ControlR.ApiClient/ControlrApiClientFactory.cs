@@ -33,7 +33,8 @@ public interface IControlrApiClientFactory : IDisposable
   /// </summary>
   /// <remarks>
   /// The session is owned by the factory and disposed with its target. Do not dispose it directly.
-  /// A target whose session holds a live login is not taken by idle eviction.
+  /// A target whose session holds a live login is not taken by idle eviction. See
+  /// <see cref="ControlrApiClientFactoryOptions.MaxIdleClientLifetime"/> for what that pins.
   /// </remarks>
   /// <param name="name">The target name previously passed to <see cref="GetOrCreateClient"/>.</param>
   /// <returns>The session for the named target.</returns>

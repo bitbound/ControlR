@@ -42,7 +42,8 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null, stri
       credentials.Bearer?.AccessToken,
       credentials.Bearer?.ExpiresAt,
       credentials.Bearer?.RefreshToken,
-      credentials.ServiceAccountApiKey);
+      credentials.ServiceAccountApiKey,
+      credentials.Bearer?.Lifetime);
   }
 
   public void SetPersonalAccessToken(string? personalAccessToken)

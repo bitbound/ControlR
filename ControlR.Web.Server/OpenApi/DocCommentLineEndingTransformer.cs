@@ -9,6 +9,12 @@ namespace ControlR.Web.Server.OpenApi;
 /// built on Windows differs from one built on Linux. That fails the CI freshness gate, and it dirties
 /// both committed documents after an ordinary build that changed no API surface.
 /// </summary>
+/// <remarks>
+/// Objects that hold a reference are left alone. Their documentation getters fall back to the resolved
+/// target, so assigning the value back stores a local copy even when the text did not change, and the
+/// writer then emits the target's text at every reference site. Those sites carry no documentation of
+/// their own, so there is no line ending here for this transformer to fix.
+/// </remarks>
 public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransformer
 {
   public Task TransformAsync(
@@ -83,6 +89,11 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
   {
     foreach (var pathItem in pathItems ?? [])
     {
+      if (pathItem is IOpenApiReferenceHolder)
+      {
+        continue;
+      }
+
       // A path item carries documentation about the path itself, separate from its operations.
       pathItem.Summary = Normalize(pathItem.Summary);
       pathItem.Description = Normalize(pathItem.Description);
@@ -110,6 +121,11 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
   {
     foreach (var parameter in parameters ?? [])
     {
+      if (parameter is IOpenApiReferenceHolder)
+      {
+        continue;
+      }
+
       parameter.Description = Normalize(parameter.Description);
       Normalize(parameter.Content?.Values);
       Normalize(parameter.Schema);
@@ -120,6 +136,11 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
   {
     foreach (var response in responses ?? [])
     {
+      if (response is IOpenApiReferenceHolder)
+      {
+        continue;
+      }
+
       response.Description = Normalize(response.Description);
       Normalize(response.Content?.Values);
       Normalize(response.Headers?.Values);
@@ -137,7 +158,7 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
 
   private static void Normalize(IOpenApiRequestBody? requestBody)
   {
-    if (requestBody is null)
+    if (requestBody is null or IOpenApiReferenceHolder)
     {
       return;
     }
@@ -150,6 +171,11 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
   {
     foreach (var header in headers ?? [])
     {
+      if (header is IOpenApiReferenceHolder)
+      {
+        continue;
+      }
+
       header.Description = Normalize(header.Description);
       Normalize(header.Schema);
     }
@@ -173,7 +199,7 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
 
   private static void Normalize(IOpenApiSchema? schema)
   {
-    if (schema is null)
+    if (schema is null or IOpenApiReferenceHolder)
     {
       return;
     }
@@ -200,6 +226,11 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
   {
     foreach (var example in examples ?? [])
     {
+      if (example is IOpenApiReferenceHolder)
+      {
+        continue;
+      }
+
       example.Summary = Normalize(example.Summary);
       example.Description = Normalize(example.Description);
     }
@@ -209,6 +240,11 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
   {
     foreach (var link in links ?? [])
     {
+      if (link is IOpenApiReferenceHolder)
+      {
+        continue;
+      }
+
       link.Description = Normalize(link.Description);
     }
   }
@@ -217,6 +253,11 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
   {
     foreach (var securityScheme in securitySchemes ?? [])
     {
+      if (securityScheme is IOpenApiReferenceHolder)
+      {
+        continue;
+      }
+
       securityScheme.Description = Normalize(securityScheme.Description);
     }
   }
@@ -225,6 +266,11 @@ public sealed class DocCommentLineEndingTransformer : IOpenApiDocumentTransforme
   {
     foreach (var callback in callbacks ?? [])
     {
+      if (callback is IOpenApiReferenceHolder)
+      {
+        continue;
+      }
+
       Normalize(callback.PathItems?.Values);
     }
   }

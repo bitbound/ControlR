@@ -87,6 +87,26 @@ public sealed class ControlrAuthSessionTests
   }
 
   [Fact]
+  public async Task ApiCall_WhenSignInLandsWhileRequestIsInFlight_DoesNotReplayTheRequest()
+  {
+    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var server = new FakeAuthServer { ApiGate = gate.Task };
+    using var fixture = CreateTarget(server, new FakeTimeProvider());
+
+    var pending = fixture.Api.Internal.Devices.DeleteDevice(Guid.NewGuid(), TestContext.Current.CancellationToken);
+    await server.ApiCallEntered.WaitAsync(_testTimeout, TestContext.Current.CancellationToken);
+    await SignIn(fixture.Session);
+    gate.SetResult();
+
+    var result = await pending.WaitAsync(_testTimeout, TestContext.Current.CancellationToken);
+
+    // The request went out with no bearer, so its 401 cannot buy a retry. Replaying it would run the
+    // delete a second time under the identity that arrived after it.
+    Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
+    Assert.Equal(1, server.ApiCallCount);
+  }
+
+  [Fact]
   public async Task ApiCall_WhenTokenIsNearExpiry_RenewsBeforeSending()
   {
     var server = new FakeAuthServer();
@@ -126,6 +146,69 @@ public sealed class ControlrAuthSessionTests
     Assert.Equal(1, server.RefreshCount);
     Assert.NotEqual("access-old", token);
     Assert.Equal(token, fixture.Session.GetAuthSnapshot().BearerToken);
+  }
+
+  [Fact]
+  public async Task LogInInteractive_WhenPasswordIsRejected_PostsOnceAndKeepsTheSession()
+  {
+    var server = new FakeAuthServer { RejectLogin = true };
+    using var fixture = CreateTarget(server, new FakeTimeProvider());
+    await fixture.Session.RestoreAuthSnapshot(Snapshot("access-live", fixture.Time, TimeSpan.FromHours(1)));
+
+    var result = await fixture.Api.Internal.Auth.LogInInteractive(
+      new LoginRequestDto("user@test.test", "wrong-password"),
+      TestContext.Current.CancellationToken);
+
+    // A 401 on the login endpoint says the posted password was wrong, not that the held bearer token is
+    // stale. Renewing would replay the login, spending a second anonymous rate-limit permit, and a
+    // rejected refresh token would sign the user out of a live session for typing a bad password.
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
+    Assert.Equal(1, server.InteractiveLoginCount);
+    Assert.Equal(0, server.RefreshCount);
+    Assert.True(fixture.Session.IsAuthenticated);
+  }
+
+  [Fact]
+  public async Task RestoredSnapshot_WithShorterLifetimeThanLeadTime_DoesNotRefreshOnEveryCall()
+  {
+    var server = new FakeAuthServer { IssuedLifetime = TimeSpan.FromSeconds(30) };
+    var time = new FakeTimeProvider();
+    using var fixture = CreateTarget(server, time);
+    await fixture.Session.RestoreAuthSnapshot(new AuthSnapshot(
+      null,
+      "access-restored",
+      time.GetUtcNow() + TimeSpan.FromSeconds(30),
+      "refresh-restored",
+      null,
+      TimeSpan.FromSeconds(30)));
+
+    for (var i = 0; i < 10; i++)
+    {
+      await fixture.Api.Internal.Devices.DeleteDevice(Guid.NewGuid(), TestContext.Current.CancellationToken);
+    }
+
+    // The snapshot carries the lifetime the server granted, so a restored token is paced like a signed
+    // in one. Without it the default minute lead time would exceed the 30 second token and renew it
+    // before every call.
+    Assert.Equal(0, server.RefreshCount);
+    Assert.Equal(TimeSpan.FromSeconds(30), fixture.Session.GetAuthSnapshot().BearerTokenLifetime);
+  }
+
+  [Fact]
+  public async Task SignIn_WhenSuccessResponseCarriesNoTokens_ReportsFailedSignIn()
+  {
+    var server = new FakeAuthServer { OmitLoginTokens = true };
+    using var fixture = CreateTarget(server, new FakeTimeProvider());
+
+    var result = await fixture.Session.SignIn(
+      new InteractiveSignInRequest { Email = "user@test.test", Password = "password" },
+      TestContext.Current.CancellationToken);
+
+    // A success response with neither tokens nor a password-change flag is a broken response. Parking
+    // the session in AwaitingPasswordChange would hold the caller on a form that never arrives.
+    Assert.Equal(InteractiveLoginStatus.Failed, result.Status);
+    Assert.Equal(ControlrAuthSessionState.SignedOut, fixture.Session.State);
   }
 
   [Fact]
@@ -209,14 +292,23 @@ public sealed class ControlrAuthSessionTests
   /// </summary>
   private sealed class FakeAuthServer
   {
+    private readonly TaskCompletionSource _apiCallEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _apiCallCount;
+    private int _interactiveLoginCount;
     private int _issued;
     private int _refreshCount;
 
+    public int ApiCallCount => Volatile.Read(ref _apiCallCount);
+    public Task ApiCallEntered => _apiCallEntered.Task;
+    public Task? ApiGate { get; init; }
+    public int InteractiveLoginCount => Volatile.Read(ref _interactiveLoginCount);
     public TimeSpan IssuedLifetime { get; init; } = TimeSpan.FromHours(1);
     public string? LastApiAccessToken { get; private set; }
+    public bool OmitLoginTokens { get; init; }
     public int RefreshCount => Volatile.Read(ref _refreshCount);
     public Task? RefreshGate { get; init; }
     public string? RejectedAccessToken { get; init; }
+    public bool RejectLogin { get; init; }
     public bool RejectRefresh { get; init; }
     public bool RequireTwoFactor { get; init; }
 
@@ -226,10 +318,21 @@ public sealed class ControlrAuthSessionTests
 
       if (path.EndsWith("/interactive-login", StringComparison.Ordinal))
       {
+        Interlocked.Increment(ref _interactiveLoginCount);
+        if (RejectLogin)
+        {
+          return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+        }
+
         var login = await request.Content!.ReadFromJsonAsync<LoginRequestDto>(cancellationToken);
         if (RequireTwoFactor && login?.TwoFactorCode is null)
         {
           return Json(new InteractiveLoginResponseDto(RequiresTwoFactor: true));
+        }
+
+        if (OmitLoginTokens)
+        {
+          return Json(new InteractiveLoginResponseDto(RequiresTwoFactor: false));
         }
 
         return Json(new InteractiveLoginResponseDto(RequiresTwoFactor: false, Tokens: IssueTokens()));
@@ -246,6 +349,13 @@ public sealed class ControlrAuthSessionTests
         return RejectRefresh
           ? new HttpResponseMessage(HttpStatusCode.Unauthorized)
           : Json(IssueTokens());
+      }
+
+      Interlocked.Increment(ref _apiCallCount);
+      _apiCallEntered.TrySetResult();
+      if (ApiGate is not null)
+      {
+        await ApiGate.WaitAsync(cancellationToken);
       }
 
       var accessToken = request.Headers.Authorization?.Parameter;

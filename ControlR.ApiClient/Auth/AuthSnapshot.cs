@@ -11,9 +11,16 @@ namespace ControlR.ApiClient.Auth;
 /// The service account credential, sent as <c>x-api-key</c>. Trailing and optional so that existing
 /// four-argument constructions keep compiling.
 /// </param>
+/// <param name="BearerTokenLifetime">
+/// The lifetime the server granted <paramref name="BearerToken"/>, from its own expiry figure. Used to
+/// cap the refresh lead time below the lifetime so a short-lived token cannot make every request
+/// renew. Null when no lifetime was ever observed, such as a snapshot persisted before the field
+/// existed.
+/// </param>
 public sealed record AuthSnapshot(
   string? PersonalAccessToken,
   string? BearerToken,
   DateTimeOffset? BearerTokenExpiresAt,
   string? RefreshToken,
-  string? ServiceAccountApiKey = null);
+  string? ServiceAccountApiKey = null,
+  TimeSpan? BearerTokenLifetime = null);

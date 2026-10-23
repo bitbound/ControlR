@@ -256,9 +256,13 @@ A quiet signed-in target would otherwise be swept, destroying a login it cannot 
 sweeper skips it. A target whose session is `Authenticated`, or is mid-flow awaiting a two-factor code
 or a password change, is never taken by idle eviction.
 
-The cost is that a live login pins its target. What frees the target is the login ending. A sign-out
-or a rejected refresh token puts the session in `SignedOut` or `Expired`, and the next sweep takes it.
-`TryRemoveClient` is immediate in every case.
+The cost is that a live login pins its target. Renewal happens on demand, so a target that receives no
+requests never discovers that its login was revoked, and the exemption never lifts by itself. What frees
+the target is the login ending. A sign-out, a revoked security stamp, or a rejected refresh token puts
+the session in `Expired`, and the next sweep takes it, but only a request can observe that. So idle
+eviction still does its job for credential-only targets, which hold nothing worth keeping, and for
+interactive targets whose login has ended. `TryRemoveClient` is immediate in every case, and it is what
+a consumer reconciling a server registry has to call when a server goes away.
 
 Two consequences worth knowing:
 
