@@ -243,28 +243,26 @@ public class FleetService
 }
 ```
 
-To rotate a target's credentials, call `TryRemoveClient(name)` and then `GetOrCreateClient(name, newOptions)`. Interactive auth sessions come from `GetOrCreateAuthSession(name)`, created lazily so service-account-only consumers never pay for one. Use `TryGetAuthSession(name, out session)` to ask whether a target already has one without creating it.
+To rotate a target's credentials, call `TryRemoveClient(name)` and then `GetOrCreateClient(name, newOptions)`. Interactive auth sessions come from `GetOrCreateAuthSession(name)`. Use `TryGetAuthSession(name, out session)` to read a target's session without refreshing its last-used stamp.
 
 See `IControlrApiClientFactory` and `ControlrApiClientFactoryOptions` for the full surface.
 
 #### Idle eviction and interactive sessions
 
 Idle eviction is driven by calls into the factory, not by traffic the target generates on its own. A
-target's last-used stamp is refreshed by `GetOrCreateClient` and `GetOrCreateAuthSession`. An
-interactive session's background token refresh does **not** refresh it. The session and its refresher
-hold the `HttpClient` they were built with, so a refresh never routes back through
-`GetOrCreateClient`.
+target's last-used stamp is refreshed by `GetOrCreateClient` and `GetOrCreateAuthSession`.
 
-Left alone, that would sweep a signed-in target that merely happens to be quiet. It is the one
-eviction that destroys state the target cannot rebuild, so the sweeper skips it. A target whose
-session is `Authenticated`, or is mid-flow awaiting a two-factor code or a password change, is never
-taken by idle eviction.
+A quiet signed-in target would otherwise be swept, destroying a login it cannot rebuild, so the
+sweeper skips it. A target whose session is `Authenticated`, or is mid-flow awaiting a two-factor code
+or a password change, is never taken by idle eviction.
 
-The cost is that a live login pins its target. The session keeps renewing, so the idle clock never
-catches up to it. What frees the target is the login dying. A sign-out, a revoked security stamp, or
-a rejected refresh token puts the session in `Expired`, and the next sweep takes it. So idle eviction
-still does its job for credential-only targets, which hold nothing worth keeping, and for interactive
-targets whose login is over. `TryRemoveClient` is immediate in every case.
+The cost is that a live login pins its target. Renewal happens on demand, so a target that receives no
+requests never discovers that its login was revoked, and the exemption never lifts by itself. What frees
+the target is the login ending. A sign-out, a revoked security stamp, or a rejected refresh token puts
+the session in `Expired`, and the next sweep takes it, but only a request can observe that. So idle
+eviction still does its job for credential-only targets, which hold nothing worth keeping, and for
+interactive targets whose login has ended. `TryRemoveClient` is immediate in every case, and it is what
+a consumer reconciling a server registry has to call when a server goes away.
 
 Two consequences worth knowing:
 
@@ -279,7 +277,7 @@ Two consequences worth knowing:
   session throws `ObjectDisposedException` instead of being accepted quietly, so re-obtain a session
   before restoring after a removal.
 
-`TryGetAuthSession` creates nothing and does not refresh the last-used stamp, so a status page that
+`TryGetAuthSession` does not refresh the last-used stamp, so a status page that
 polls it across every target cannot accidentally hold them open.
 
 For a consumer that authenticates only with a personal access token or a service account key, none of
@@ -373,7 +371,7 @@ var result = await authSession.SignIn(
 
 if (result.Status == InteractiveLoginStatus.Authenticated)
 {
-  // Session is ready. Tokens refresh automatically in the background.
+  // Session is ready. A token close to expiry, or one the server rejects, is renewed on the next request.
 }
 ```
 
@@ -387,7 +385,7 @@ var snapshot = authSession.GetAuthSnapshot();
 
 // Restore on next launch
 await authSession.RestoreAuthSnapshot(snapshot);
-// Session resumes with the background refresh loop.
+// Session resumes and renews its token on demand.
 ```
 
 For two-factor or password-change flows, check `RequiresTwoFactor` and `RequiresPasswordChange` on `IControlrAuthSession` and re-call `SignIn` with the additional fields.

@@ -176,6 +176,35 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
   }
 
   [Fact]
+  public async Task InvokeRemoteControlDtoOnAgent_PrivacyScreenWithoutPermission_ReturnsFailure()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    var sessionId = await StartSessionAsync(hub, agentClient, device.Id);
+    var request = new SendRemoteControlDtoToAgentRequestDto(
+      device.Id,
+      TargetProcessId: 100,
+      SessionId: sessionId,
+      Wrapper: RemoteControlCommandWrapper.Create(
+        new TogglePrivacyScreenDto(true),
+        RemoteControlCommandDtoType.TogglePrivacyScreen));
+
+    var result = await hub.InvokeRemoteControlDtoOnAgent(request);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal("Unauthorized.", result.Reason);
+    agentClient.Verify(
+      client => client.InvokeRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()),
+      Times.Never);
+  }
+
+  [Fact]
   public async Task RequestRemoteControlSession2_LegacyViewer_ForwardsRelayTransport()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
@@ -527,35 +556,6 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     Assert.Equal("Unauthorized.", result.Reason);
     agentClient.Verify(
       client => client.SendRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()),
-      Times.Never);
-  }
-
-  [Fact]
-  public async Task InvokeRemoteControlDtoOnAgent_PrivacyScreenWithoutPermission_ReturnsFailure()
-  {
-    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
-    var tenant = await testApp.Services.CreateTestTenant();
-    var user = await testApp.Services.CreateTestUser(tenant.Id);
-    var device = await testApp.Services.CreateTestDevice(tenant.Id);
-    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
-    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
-
-    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
-    var sessionId = await StartSessionAsync(hub, agentClient, device.Id);
-    var request = new SendRemoteControlDtoToAgentRequestDto(
-      device.Id,
-      TargetProcessId: 100,
-      SessionId: sessionId,
-      Wrapper: RemoteControlCommandWrapper.Create(
-        new TogglePrivacyScreenDto(true),
-        RemoteControlCommandDtoType.TogglePrivacyScreen));
-
-    var result = await hub.InvokeRemoteControlDtoOnAgent(request);
-
-    Assert.False(result.IsSuccess);
-    Assert.Equal("Unauthorized.", result.Reason);
-    agentClient.Verify(
-      client => client.InvokeRemoteControlDto(It.IsAny<SendRemoteControlDtoToAgentRequestDto>()),
       Times.Never);
   }
 

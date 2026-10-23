@@ -30,8 +30,8 @@ public class ControlrApiClientOptions
 
 
   /// <summary>
-  /// The lead time before token expiration at which the client initiates a token refresh.
-  /// Defaults to 1 minute.
+  /// How long before an interactive bearer token expires the client renews it. Capped at half the
+  /// lifetime the server granted. Defaults to 1 minute.
   /// </summary>
   public TimeSpan BearerRefreshLeadTime { get; set; } = TimeSpan.FromMinutes(1);
 

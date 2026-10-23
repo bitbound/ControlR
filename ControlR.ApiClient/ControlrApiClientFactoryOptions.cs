@@ -1,5 +1,3 @@
-using ControlR.ApiClient.Auth;
-
 namespace ControlR.ApiClient;
 
 /// <summary>
@@ -41,19 +39,20 @@ public class ControlrApiClientFactoryOptions
   /// </summary>
   /// <remarks>
   /// <para>
-  /// "Unused" means no call into the factory. A target's background bearer-token refresh does not
-  /// count as use, but a target holding a live interactive session is never swept. A session is live
-  /// while it is <see cref="ControlrAuthSessionState.Authenticated"/> or is mid-flow awaiting a
-  /// two-factor code or a password change. Sweeping one would destroy a login that the target cannot
-  /// rebuild, so the login is left in place.
+  /// "Unused" means no call into the factory. A target holding a live interactive session is never
+  /// swept. A session is live while it is <see cref="Auth.ControlrAuthSessionState.Authenticated"/> or is
+  /// mid-flow awaiting a two-factor code or a password change. Sweeping one would destroy a login that
+  /// the target cannot rebuild, so the login is left in place.
   /// </para>
   /// <para>
-  /// That means a live login pins its target indefinitely, since the session keeps renewing and the
-  /// idle clock never catches it. The bound is the login dying. A sign-out, a revoked security stamp,
-  /// or a rejected refresh token moves it to <see cref="ControlrAuthSessionState.Expired"/> and the
-  /// next sweep takes it. Set <see cref="MaxTrackedClients"/> when the target count needs a hard bound
-  /// regardless, or call <see cref="IControlrApiClientFactory.TryRemoveClient"/> to drop a target on
-  /// purpose.
+  /// That means a live login pins its target indefinitely. Renewal happens on demand, so a target that
+  /// receives no requests never discovers that its login was revoked, and the exemption never lifts by
+  /// itself. What frees the target is the login ending. A sign-out, a revoked security stamp, or a
+  /// rejected refresh token moves the session to
+  /// <see cref="Auth.ControlrAuthSessionState.Expired"/>, which makes it sweepable again, but only a
+  /// request can observe that. Set <see cref="MaxTrackedClients"/> when the target count needs a hard
+  /// bound regardless, or call <see cref="IControlrApiClientFactory.TryRemoveClient"/> to drop a target
+  /// on purpose.
   /// </para>
   /// <para>
   /// Keep this non-null as the backstop for servers that were deregistered without a matching
