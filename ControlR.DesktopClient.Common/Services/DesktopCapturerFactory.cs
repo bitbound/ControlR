@@ -1,6 +1,5 @@
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
-using ControlR.DesktopClient.Common.Services.Encoders;
 using ControlR.Libraries.Api.Contracts.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -57,15 +56,11 @@ public class DesktopCapturerFactory(IServiceProvider serviceProvider, IOptions<R
     _capturer = _options.Value.EncoderType switch
     {
       CaptureEncoderType.Image => ActivatorUtilities.CreateInstance<FrameBasedCapturer>(_serviceProvider),
-      CaptureEncoderType.Vpx => CreateStreamBasedCapturer(),
+      // Vpx frames have no viewer-side decoder, so selecting Vpx would only produce unsupported-DTO warnings in the viewer.
+      CaptureEncoderType.Vpx => throw new NotSupportedException(
+        "Encoder type Vpx is not supported. No viewer decodes VideoStreamPacket frames."),
       _ => throw new NotSupportedException($"Encoder type {_options.Value.EncoderType} is not supported.")
     };
     return _capturer;
-  }
-
-  private StreamBasedCapturer CreateStreamBasedCapturer()
-  {
-    var encoder = ActivatorUtilities.CreateInstance<Vp9Encoder>(_serviceProvider);
-    return ActivatorUtilities.CreateInstance<StreamBasedCapturer>(_serviceProvider, encoder);
   }
 }
