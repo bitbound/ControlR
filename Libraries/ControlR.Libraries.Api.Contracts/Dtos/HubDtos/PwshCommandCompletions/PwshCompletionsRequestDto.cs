@@ -1,5 +1,6 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 
+[MessagePackObject(keyAsPropertyName: true)]
 public record PwshCompletionsRequestDto(
   Guid DeviceId,
   Guid TerminalId,
