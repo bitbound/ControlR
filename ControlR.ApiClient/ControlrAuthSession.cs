@@ -324,7 +324,11 @@ public sealed class ControlrAuthSession(
     }
 
     ResetSession(clearConfiguredCredentials: true);
-    _authState.SetBearerTokens(snapshot.BearerToken, snapshot.RefreshToken, snapshot.BearerTokenExpiresAt);
+    _authState.SetBearerTokens(
+      snapshot.BearerToken,
+      snapshot.RefreshToken,
+      snapshot.BearerTokenExpiresAt,
+      snapshot.BearerTokenLifetime);
     UpdateState(ControlrAuthSessionState.Authenticated);
     StartRefreshLoop();
     return Task.CompletedTask;

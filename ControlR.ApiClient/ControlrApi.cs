@@ -281,6 +281,8 @@ public partial class ControlrApi(
     var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
       forceRefresh,
       _options.Value.BearerRefreshLeadTime,
+      baseUrl: null,
+      cancellationToken: default,
       dedupeAgainstBearerStateVersion: dedupeAgainstBearerStateVersion);
 
     if (refreshResult == BearerTokenRefreshResult.Unauthorized)
@@ -308,9 +310,16 @@ public partial class ControlrApi(
       return false;
     }
 
+    // Dedupe against the generation the header handler stamped on the failed request when it has
+    // one. The pre-send sample understates the state when a renewal lands before the request
+    // leaves, and riding that stale pairing re-sends the token the server just rejected.
+    var observedVersion = ex is BearerChallengeException challenge
+      ? challenge.BearerStateVersionAtSend
+      : bearerStateVersionAtSend;
+
     try
     {
-      return await RefreshBearerTokenIfNeeded(forceRefresh: true, dedupeAgainstBearerStateVersion: bearerStateVersionAtSend);
+      return await RefreshBearerTokenIfNeeded(forceRefresh: true, dedupeAgainstBearerStateVersion: observedVersion);
     }
     catch (Exception refreshEx)
     {

@@ -69,6 +69,37 @@ public sealed class RefreshTokenStormTests
   }
 
   [Fact]
+  public async Task ExecuteApiCall_WhenRenewalLandsBeforeTheHeaderIsApplied_PostsAForcedRefresh()
+  {
+    // Deduping against the version sampled before the send understates it when a renewal lands in
+    // that gap: the request goes out with the renewed token, and riding the renewal re-sends the
+    // token the server just rejected. The dedupe has to measure against the generation the auth
+    // header actually applied.
+    var authState = new ControlrApiClientAuthState();
+    authState.SetBearerTokens("token-1", "refresh-1", DateTimeOffset.UtcNow.AddHours(1), TimeSpan.FromHours(1));
+
+    var responder = new RenewalRejectingResponder("token-2");
+    var authHandler = new ControlrApiAuthHeaderHandler(authState) { InnerHandler = responder };
+    using var client = new HttpClient(new SingleRenewalHandler(authState, "token-2") { InnerHandler = authHandler })
+    {
+      BaseAddress = _server
+    };
+
+    var refresher = new BearerTokenRefresher(authState, new SingleClientHttpClientFactory(client), TimeProvider.System);
+    var api = (IControlrApi)new ControlrApi(
+      client,
+      authState,
+      refresher,
+      NullLogger<ControlrApi>.Instance,
+      Options.Create(new ControlrApiClientOptions { BaseUrl = _server }));
+
+    var result = await api.Internal.Devices.DeleteDevice(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal(1, responder.RefreshCount);
+  }
+
+  [Fact]
   public async Task ExecuteApiCall_WhenServerTokenLifetimeIsShorterThanLeadTime_DoesNotRefreshOnEveryCall()
   {
     // The proactive check runs before every API call. Against a server issuing 60-second tokens,
@@ -176,6 +207,60 @@ public sealed class RefreshTokenStormTests
       }
 
       return new HttpResponseMessage(HttpStatusCode.OK);
+    }
+  }
+
+  /// <summary>
+  /// Answers 401 to the renewed token (a server-side rejection of the just-issued pair), issues a
+  /// third token on the single allowed refresh POST, and authorizes everything else. Sets
+  /// RequestMessage the way the real terminal handler does, so the 401 enrichment can read the
+  /// generation the auth header handler stamped on the challenged request.
+  /// </summary>
+  private sealed class RenewalRejectingResponder(string rejectedToken) : HttpMessageHandler
+  {
+    private int _refreshCount;
+
+    public int RefreshCount => Volatile.Read(ref _refreshCount);
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+      if (request.RequestUri!.AbsolutePath.EndsWith("/refresh", StringComparison.Ordinal))
+      {
+        Interlocked.Increment(ref _refreshCount);
+        var refreshResponse = RecordingHttpMessageHandler.Json(JsonSerializer.Serialize(
+          new AccessTokenResponseDto("Bearer", "token-3", 3600, "refresh-3")));
+        refreshResponse.RequestMessage = request;
+        return Task.FromResult(refreshResponse);
+      }
+
+      var statusCode = request.Headers.Authorization?.Parameter == rejectedToken
+        ? HttpStatusCode.Unauthorized
+        : HttpStatusCode.OK;
+      return Task.FromResult(new HttpResponseMessage(statusCode) { RequestMessage = request });
+    }
+  }
+
+  /// <summary>
+  /// Lands one bearer renewal (a background-loop refresh completing) right before the auth header
+  /// handler reads the state, then lets every request through untouched.
+  /// </summary>
+  private sealed class SingleRenewalHandler(ControlrApiClientAuthState authState, string renewedToken) : DelegatingHandler
+  {
+    private int _done;
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+      if (!request.RequestUri!.AbsolutePath.EndsWith("/refresh", StringComparison.Ordinal) &&
+        Interlocked.Exchange(ref _done, 1) == 0)
+      {
+        authState.SetBearerTokens(
+          renewedToken,
+          "refresh-2",
+          DateTimeOffset.UtcNow.AddHours(1),
+          TimeSpan.FromHours(1));
+      }
+
+      return base.SendAsync(request, cancellationToken);
     }
   }
 

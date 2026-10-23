@@ -161,36 +161,7 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null, stri
   public bool TryGetAuthHeader(
     [NotNullWhen(true)] out string? headerName,
     [NotNullWhen(true)] out string? headerValue)
-  {
-    var snapshot = GetSnapshot();
-    if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
-    {
-      headerName = ControlrApiClientOptions.PersonalAccessTokenHeader;
-      headerValue = snapshot.PersonalAccessToken;
-      return true;
-    }
-
-    if (!string.IsNullOrWhiteSpace(snapshot.BearerToken))
-    {
-      headerName = AuthorizationHeader;
-      headerValue = $"Bearer {snapshot.BearerToken}";
-      return true;
-    }
-
-    // Last, so a service account key never silently displaces an already-configured credential.
-    // The server's dynamic scheme selector likewise tests x-api-key after Authorization and
-    // x-personal-token.
-    if (!string.IsNullOrWhiteSpace(snapshot.ServiceAccountApiKey))
-    {
-      headerName = ControlrApiClientOptions.ServiceAccountApiKeyHeader;
-      headerValue = snapshot.ServiceAccountApiKey;
-      return true;
-    }
-
-    headerName = null;
-    headerValue = null;
-    return false;
-  }
+    => TryGetAuthHeaderFrom(GetSnapshot(), out headerName, out headerValue);
 
   public bool TrySetBearerTokenResponse(
     AccessTokenResponseDto response,
@@ -239,9 +210,53 @@ public class ControlrApiClientAuthState(string? personalAccessToken = null, stri
     return halfLifetime > TimeSpan.Zero && halfLifetime < refreshWindow ? halfLifetime : refreshWindow;
   }
 
+  internal bool TryGetAuthHeader(
+    [NotNullWhen(true)] out string? headerName,
+    [NotNullWhen(true)] out string? headerValue,
+    out long bearerStateVersion)
+  {
+    var state = Volatile.Read(ref _state);
+    bearerStateVersion = state.BearerStateVersion;
+    return TryGetAuthHeaderFrom(state.Snapshot, out headerName, out headerValue);
+  }
+
   private static bool CanRefresh(AuthSnapshot snapshot) =>
     !string.IsNullOrWhiteSpace(snapshot.BearerToken) &&
     !string.IsNullOrWhiteSpace(snapshot.RefreshToken) &&
     snapshot.BearerTokenExpiresAt is not null;
+
+  private static bool TryGetAuthHeaderFrom(
+    AuthSnapshot snapshot,
+    [NotNullWhen(true)] out string? headerName,
+    [NotNullWhen(true)] out string? headerValue)
+  {
+    if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
+    {
+      headerName = ControlrApiClientOptions.PersonalAccessTokenHeader;
+      headerValue = snapshot.PersonalAccessToken;
+      return true;
+    }
+
+    if (!string.IsNullOrWhiteSpace(snapshot.BearerToken))
+    {
+      headerName = AuthorizationHeader;
+      headerValue = $"Bearer {snapshot.BearerToken}";
+      return true;
+    }
+
+    // Last, so a service account key never silently displaces an already-configured credential.
+    // The server's dynamic scheme selector likewise tests x-api-key after Authorization and
+    // x-personal-token.
+    if (!string.IsNullOrWhiteSpace(snapshot.ServiceAccountApiKey))
+    {
+      headerName = ControlrApiClientOptions.ServiceAccountApiKeyHeader;
+      headerValue = snapshot.ServiceAccountApiKey;
+      return true;
+    }
+
+    headerName = null;
+    headerValue = null;
+    return false;
+  }
 
 }

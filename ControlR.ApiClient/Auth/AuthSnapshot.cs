@@ -14,7 +14,8 @@ namespace ControlR.ApiClient.Auth;
 /// <param name="BearerTokenLifetime">
 /// The lifetime the server granted <paramref name="BearerToken"/>, from its own expiry figure. Used
 /// to cap the refresh lead time below the lifetime so a short-lived token cannot make the refresh
-/// loop spin. Null when the lifetime was never observed, such as a restored snapshot.
+/// loop spin. Null when no lifetime was ever observed, such as a snapshot persisted before the
+/// field existed.
 /// </param>
 public sealed record AuthSnapshot(
   string? PersonalAccessToken,
