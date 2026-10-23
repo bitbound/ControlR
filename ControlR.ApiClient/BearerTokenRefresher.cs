@@ -44,8 +44,9 @@ public interface IBearerTokenRefresher
   /// <param name="baseUrl">An optional base URL override for the refresh request.</param>
   /// <param name="cancellationToken">Cancels the refresh operation.</param>
   /// <param name="dedupeAgainstBearerStateVersion">
-  /// The token-generation counter the failed request carried. Null when no caller request stands
-  /// behind the refresh.
+  /// The token-generation counter the failed request carried. Null when nothing trustworthy can be
+  /// deduped against: either no caller request stands behind the refresh, or the challenge carries
+  /// no applied-generation stamp.
   /// </param>
   /// <returns>The outcome of the refresh attempt.</returns>
   /// <remarks>
