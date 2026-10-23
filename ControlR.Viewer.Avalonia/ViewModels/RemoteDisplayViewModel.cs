@@ -100,9 +100,13 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
   [ObservableProperty]
   private CursorChangedDto? _activeCursor;
 
+  private bool _canTogglePrivacyScreen;
+
   [ObservableProperty]
   [NotifyPropertyChangedFor(nameof(IsBlockInputToggleEnabled))]
   private bool _isBlockInputBusy;
+
+  private Guid? _privacyScreenPermissionDeviceId;
 
   [ObservableProperty]
   private double _selectedDisplayHeight;
@@ -583,7 +587,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     }
   }
   public bool ShowPrivacyScreenToggle =>
-    _remoteControlState.CurrentSession?.Device.Platform == SystemPlatform.Windows;
+    _remoteControlState.CurrentSession?.Device.Platform == SystemPlatform.Windows && _canTogglePrivacyScreen;
   public bool ShowWindowsInputControls =>
     _remoteControlState.CurrentSession?.Device.Platform == SystemPlatform.Windows;
   public ViewMode ViewMode => _remoteControlState.ViewMode;
@@ -1135,6 +1139,18 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
   private Task HandleRemoteControlStateChanged()
   {
+    if (_remoteControlState.CurrentSession?.Device is not { } device)
+    {
+      _privacyScreenPermissionDeviceId = null;
+      _canTogglePrivacyScreen = false;
+    }
+    else if (device.Id != _privacyScreenPermissionDeviceId)
+    {
+      _privacyScreenPermissionDeviceId = device.Id;
+      _canTogglePrivacyScreen = false;
+      RefreshPrivacyScreenPermission(device.Id).Forget();
+    }
+
     SyncDisplayItems();
     OnPropertyChanged(nameof(RendererScale));
     OnPropertyChanged(nameof(AutoQualityLowerThresholdMbps));
@@ -1166,6 +1182,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     OnPropertyChanged(nameof(RendererHeight));
     OnPropertyChanged(nameof(ShowWindowsInputControls));
     OnPropertyChanged(nameof(ShowPrivacyScreenToggle));
+
     return Task.CompletedTask;
   }
 
@@ -1177,6 +1194,30 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
   partial void OnSelectedDisplayWidthChanged(double value)
   {
     OnPropertyChanged(nameof(RendererWidth));
+  }
+
+  private async Task RefreshPrivacyScreenPermission(Guid deviceId)
+  {
+    try
+    {
+      var result = await _viewerHub.Server.GetDeviceAccessPermissions2(new(deviceId));
+      if (_privacyScreenPermissionDeviceId != deviceId)
+      {
+        return;
+      }
+
+      _canTogglePrivacyScreen = result.IsSuccess && result.Value.CanTogglePrivacyScreen;
+      OnPropertyChanged(nameof(ShowPrivacyScreenToggle));
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Failed to get device access permissions.");
+      if (_privacyScreenPermissionDeviceId == deviceId)
+      {
+        // Do not cache a transient fetch failure; the next state change retries.
+        _privacyScreenPermissionDeviceId = null;
+      }
+    }
   }
 
   [RelayCommand]
@@ -1289,7 +1330,16 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     {
       _remoteControlState.IsPrivacyScreenEnabled = isEnabled;
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-      await _viewerStream.SendTogglePrivacyScreen(isEnabled, cts.Token);
+      var result = await _viewerStream.SendTogglePrivacyScreen(isEnabled, cts.Token);
+      if (!result.IsSuccess)
+      {
+        // The hub refused the command, so no result event will arrive to correct the state.
+        _remoteControlState.IsPrivacyScreenEnabled = !isEnabled;
+        await _remoteControlState.NotifyStateChanged();
+        _snackbar.Add(
+          isEnabled ? Resources.RemoteControl_FailedToEnablePrivacyScreen : Resources.RemoteControl_FailedToDisablePrivacyScreen,
+          SnackbarSeverity.Error);
+      }
     }
     catch (Exception ex)
     {

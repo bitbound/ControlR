@@ -174,6 +174,7 @@ public partial class ViewerHub(
         PermissionNames.DeviceVncRelayConnect,
         PermissionNames.DeviceRemoteControlInteract,
         PermissionNames.DeviceRemoteControlBlockInput,
+        PermissionNames.DeviceRemoteControlPrivacyScreen,
         PermissionNames.DeviceClipboardRead,
         PermissionNames.DeviceClipboardWrite,
         PermissionNames.DeviceCtrlAltDelSend
@@ -201,7 +202,8 @@ public partial class ViewerHub(
         decisions[PermissionNames.DeviceRemoteControlBlockInput].Allowed,
         decisions[PermissionNames.DeviceClipboardRead].Allowed,
         decisions[PermissionNames.DeviceClipboardWrite].Allowed,
-        decisions[PermissionNames.DeviceCtrlAltDelSend].Allowed);
+        decisions[PermissionNames.DeviceCtrlAltDelSend].Allowed,
+        decisions[PermissionNames.DeviceRemoteControlPrivacyScreen].Allowed);
 
       return HubResult.Ok(permissions);
     }

@@ -26,6 +26,7 @@ public static class PermissionNames
   public const string DeviceRemoteControlConnect = "device.remote-control.connect";
   public const string DeviceRemoteControlElevatedDesktop = "device.remote-control.elevated-desktop";
   public const string DeviceRemoteControlInteract = "device.remote-control.interact";
+  public const string DeviceRemoteControlPrivacyScreen = "device.remote-control.privacy-screen";
   public const string DeviceTagsWrite = "device.tags.write";
   public const string DeviceTerminalUse = "device.terminal.use";
   public const string DeviceVncRelayConnect = "device.vnc-relay.connect";
