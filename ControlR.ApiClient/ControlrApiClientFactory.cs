@@ -14,7 +14,7 @@ namespace ControlR.ApiClient;
 /// <remarks>
 /// Intended for backend integrations that talk to multiple, runtime-discovered ControlR servers. Register
 /// via <c>AddControlrApiClientFactory</c> and reconcile the tracked targets against the server registry
-/// using <see cref="GetOrCreateClient"/>, <see cref="GetOrCreateAuthSession"/>, and <see cref="TryRemoveClient"/>.
+/// using <see cref="GetOrCreateClient"/> and <see cref="TryRemoveClient"/>.
 /// This type is server-only. Do not use from Blazor WebAssembly, where <c>AddControlrApiClient</c> routes
 /// through the platform's browser HTTP handler.
 /// </remarks>
@@ -29,28 +29,17 @@ public interface IControlrApiClientFactory : IDisposable
   IReadOnlyCollection<string> GetClientNames();
 
   /// <summary>
-  /// Gets the interactive auth session for the named target, creating it on first call.
+  /// Gets the interactive auth session for the named target.
   /// </summary>
   /// <remarks>
-  /// <para>
-  ///   The session is created lazily so service-account-only consumers never pay for it. The target
-  ///   must already have been created via <see cref="GetOrCreateClient"/>. Do not dispose the returned
-  ///   session directly. The factory owns it and disposes it with the target.
-  /// </para>
-  /// <para>
-  ///   The only way this fails on a live factory is a name that was never passed to
-  ///   <see cref="GetOrCreateClient"/>, which is a caller bug rather than a state to handle. Once the
-  ///   target exists the session is created and cached, and idle eviction will not take that target
-  ///   while the session holds a live login. See
-  ///   <see cref="ControlrApiClientFactoryOptions.MaxIdleClientLifetime"/>.
-  /// </para>
+  /// The session is owned by the factory and disposed with its target. Do not dispose it directly.
+  /// A target whose session holds a live login is not taken by idle eviction. See
+  /// <see cref="ControlrApiClientFactoryOptions.MaxIdleClientLifetime"/> for what that pins.
   /// </remarks>
   /// <param name="name">The target name previously passed to <see cref="GetOrCreateClient"/>.</param>
   /// <returns>The session for the named target.</returns>
   /// <exception cref="InvalidOperationException">No client has been created for <paramref name="name"/> yet.</exception>
-  /// <exception cref="ObjectDisposedException">
-  /// The factory has been disposed, or the target was removed while its session was being created.
-  /// </exception>
+  /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
   IControlrAuthSession GetOrCreateAuthSession(string name);
 
   /// <summary>
@@ -77,29 +66,12 @@ public interface IControlrApiClientFactory : IDisposable
   IControlrApi GetOrCreateClient(string name, Action<ControlrApiClientOptions> configureOptions);
 
   /// <summary>
-  /// Gets the target's interactive auth session when one has already been created.
+  /// Gets the target's interactive auth session without refreshing the target's last-used stamp, so
+  /// polling it cannot hold a target open.
   /// </summary>
-  /// <remarks>
-  /// <para>
-  ///   This creates nothing. It is the non-throwing probe for whether
-  ///   <see cref="GetOrCreateAuthSession"/> has been called for <paramref name="name"/> before. Use it
-  ///   to report or reconcile sign-in state across targets without materializing a session on each.
-  /// </para>
-  /// <para>
-  ///   Unlike the other members, this does not refresh the target's last-used stamp. A consumer that
-  ///   polls it cannot hold a target open, which is what lets idle eviction still reclaim a target
-  ///   whose login has expired.
-  /// </para>
-  /// <para>
-  ///   The returned session is owned by the factory. Do not dispose it, and expect that a later
-  ///   removal of the target disposes it, leaving this reference disposed.
-  /// </para>
-  /// </remarks>
   /// <param name="name">The target name to look up.</param>
-  /// <param name="session">
-  /// The target's session when this returns <see langword="true"/>; <see langword="null"/> otherwise.
-  /// </param>
-  /// <returns><see langword="true"/> when a session already exists for the named target.</returns>
+  /// <param name="session">The target's session when this returns <see langword="true"/>.</param>
+  /// <returns><see langword="true"/> when the named target exists.</returns>
   /// <exception cref="ObjectDisposedException">The factory has been disposed.</exception>
   bool TryGetAuthSession(string name, [NotNullWhen(true)] out IControlrAuthSession? session);
 
@@ -135,8 +107,7 @@ public interface IControlrApiClientFactory : IDisposable
 
 /// <summary>
 /// The default <see cref="IControlrApiClientFactory"/> implementation. Builds a plain, self-contained
-/// object graph per target (auth state, typed <see cref="HttpClient"/>, refresher, and lazily the
-/// interactive auth session) without any runtime DI container.
+/// object graph per target (auth state and typed <see cref="HttpClient"/>) without any runtime DI container.
 /// </summary>
 public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 {
@@ -248,27 +219,8 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
         $"No client has been created for target '{name}'. Call {nameof(GetOrCreateClient)} first.");
     }
 
-    // Reading the entry's disposal state only after the session is published is what closes the
-    // leak. DisposeOnce publishes disposal before it tests IsValueCreated, so whichever side starts
-    // second sees the other. Without this, a session that finished constructing during teardown was
-    // handed out alive, unreachable, and with a refresh loop aimed at disposed clients.
-    var session = entry.AuthSession.Value;
-
-    // The publish above happens inside Lazy, which is a release rather than a seq_cst store, so it
-    // does not by itself order the read below. Without the fence this is the same store-buffering
-    // outcome InFlightTracker guards against, and both sides can miss each other.
-    Thread.MemoryBarrier();
-
-    if (entry.IsDisposed)
-    {
-      session.Dispose();
-      throw new ObjectDisposedException(
-        nameof(ControlrApiClientFactory),
-        $"The target '{name}' was removed while its auth session was being created.");
-    }
-
     Touch(entry);
-    return session;
+    return entry.AuthSession;
   }
 
   /// <inheritdoc />
@@ -318,18 +270,8 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     ArgumentException.ThrowIfNullOrWhiteSpace(name);
     ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
 
-    session = null;
-
-    // Deliberately no Touch. A status page that polls this must not reset the idle clock, or it
-    // would pin every target it inspects forever. Reading Value is safe because IsValueCreated was
-    // checked first. Evaluating Value on an uncreated Lazy would build the session.
-    if (_clients.TryGetValue(name, out var entry) && entry.AuthSession.IsValueCreated)
-    {
-      session = entry.AuthSession.Value;
-      return true;
-    }
-
-    return false;
+    session = _clients.TryGetValue(name, out var entry) ? entry.AuthSession : null;
+    return session is not null;
   }
 
   /// <inheritdoc />
@@ -350,7 +292,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
 
   /// <summary>
   /// Evicts entries that have been idle longer than <see cref="ControlrApiClientFactoryOptions.MaxIdleClientLifetime"/>.
-  /// Entries holding a live interactive session are never selected.
+  /// An entry whose session holds a live login is kept, because the target cannot rebuild it.
   /// </summary>
   internal void SweepIdleClients()
   {
@@ -364,7 +306,11 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     using (_createLock.EnterScope())
     {
       idleClients = [.. _clients.Values.Where(entry =>
-        Volatile.Read(ref entry.LastUsedTicks) < cutoff && !HasLiveSession(entry))];
+        Volatile.Read(ref entry.LastUsedTicks) < cutoff &&
+        entry.AuthSession.State is not (
+          ControlrAuthSessionState.Authenticated or
+          ControlrAuthSessionState.AwaitingTwoFactor or
+          ControlrAuthSessionState.AwaitingPasswordChange))];
       foreach (var idleClient in idleClients)
       {
         _clients.TryRemove(idleClient.Name, out _);
@@ -382,38 +328,6 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     {
       PooledConnectionLifetime = ControlrApiClientFactoryOptions.DefaultPooledConnectionLifetime
     };
-
-  /// <summary>
-  /// Whether the target holds an interactive session that a caller is still signed in to or still
-  /// has to finish. Idle eviction leaves these alone because sweeping them would destroy a live
-  /// login, which is state the target cannot rebuild on its own.
-  /// </summary>
-  /// <remarks>
-  /// <para>
-  /// A live login pins its target. The session keeps renewing on its own, so the idle clock never
-  /// catches up to it. Reclamation comes from the login dying instead. A sign-out, a revoked security
-  /// stamp, or a rejected refresh token moves the session to
-  /// <see cref="ControlrAuthSessionState.Expired"/>, which makes it sweepable again. Use
-  /// <see cref="ControlrApiClientFactoryOptions.MaxTrackedClients"/> when the target count must have a
-  /// bound, or <see cref="IControlrApiClientFactory.TryRemoveClient"/> to drop one on purpose.
-  /// </para>
-  /// <para>
-  /// Reading <c>Value</c> is guarded by <see cref="Lazy{T}.IsValueCreated"/>. Evaluating it on an
-  /// uncreated <see cref="Lazy{T}"/> would construct a session that nobody asked for, so the guard
-  /// cannot be folded into a property pattern.
-  /// </para>
-  /// </remarks>
-  private static bool HasLiveSession(ClientEntry entry)
-  {
-    if (!entry.AuthSession.IsValueCreated)
-    {
-      return false;
-    }
-
-    return entry.AuthSession.Value.State is ControlrAuthSessionState.Authenticated
-      or ControlrAuthSessionState.AwaitingPasswordChange
-      or ControlrAuthSessionState.AwaitingTwoFactor;
-  }
 
   private static bool IsConfiguredBaseUrl([NotNullWhen(true)] Uri? baseUrl) =>
     baseUrl is not null &&
@@ -448,22 +362,27 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     {
       authInnerHandler = CreateHandler();
       unauthenticatedInnerHandler = CreateHandler();
-      var authState = new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
-      var authHeaderHandler = new ControlrApiAuthHeaderHandler(authState) { InnerHandler = authInnerHandler };
-      httpClient = new HttpClient(authHeaderHandler) { BaseAddress = baseUrl };
-      authInnerHandler = null;
       unauthenticatedHttpClient = new HttpClient(unauthenticatedInnerHandler) { BaseAddress = baseUrl };
       unauthenticatedInnerHandler = null;
 
-      var unauthenticatedClientFactory = new SingleClientHttpClientFactory(unauthenticatedHttpClient);
-      var refresher = new BearerTokenRefresher(authState, unauthenticatedClientFactory, _timeProvider)
+      var authState = new ControlrApiClientAuthState(options.PersonalAccessToken, options.ServiceAccountApiKey);
+      var authSession = new ControlrAuthSession(
+        new SingleClientHttpClientFactory(unauthenticatedHttpClient),
+        authState,
+        options,
+        _timeProvider,
+        _loggerFactory.CreateLogger<ControlrAuthSession>())
       {
         Requests = requests
       };
+
+      var authHeaderHandler = new ControlrApiAuthHeaderHandler(authState, authSession) { InnerHandler = authInnerHandler };
+      httpClient = new HttpClient(authHeaderHandler) { BaseAddress = baseUrl };
+      authInnerHandler = null;
+
       var api = new ControlrApi(
         httpClient,
         authState,
-        refresher,
         _loggerFactory.CreateLogger<ControlrApi>(),
         new OptionsWrapper<ControlrApiClientOptions>(options))
       {
@@ -473,22 +392,10 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
       var entry = new ClientEntry(
         name,
         api,
+        authSession,
         httpClient,
         unauthenticatedHttpClient,
-        authState,
-        requests,
-        new Lazy<IControlrAuthSession>(
-          () => new ControlrAuthSession(
-            unauthenticatedClientFactory,
-            authState,
-            refresher,
-            _loggerFactory.CreateLogger<ControlrAuthSession>(),
-            new FrozenOptionsMonitor<ControlrApiClientOptions>(options),
-            _timeProvider)
-          {
-            Requests = requests
-          },
-          LazyThreadSafetyMode.ExecutionAndPublication));
+        requests);
 
       // Wiring the release last is safe. Nothing outside BuildEntry can reach this entry, and
       // therefore no request can be counted, until the caller of GetOrCreateClient has it.
@@ -562,11 +469,10 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
   private sealed class ClientEntry(
     string name,
     ControlrApi api,
+    ControlrAuthSession authSession,
     HttpClient httpClient,
     HttpClient unauthenticatedHttpClient,
-    ControlrApiClientAuthState authState,
-    InFlightTracker requests,
-    Lazy<IControlrAuthSession> authSession)
+    InFlightTracker requests)
   {
     public long LastUsedOrdinal;
     public long LastUsedTicks;
@@ -574,17 +480,15 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     private int _disposeState;
 
     public ControlrApi Api { get; } = api;
-    public Lazy<IControlrAuthSession> AuthSession { get; } = authSession;
-    public ControlrApiClientAuthState AuthState { get; } = authState;
+    public ControlrAuthSession AuthSession { get; } = authSession;
     public HttpClient HttpClient { get; } = httpClient;
-    public bool IsDisposed => Volatile.Read(ref _disposeState) == 1;
     public string Name { get; } = name;
     public InFlightTracker Requests { get; } = requests;
     public HttpClient UnauthenticatedHttpClient { get; } = unauthenticatedHttpClient;
 
     /// <summary>
-    /// Disposes the target's HTTP stacks, interactive session (if created), and bearer-refresh lock.
-    /// Safe to call multiple times and concurrently; only the first call does work.
+    /// Disposes the target's session and HTTP stacks. Safe to call multiple times and concurrently;
+    /// only the first call does work.
     /// </summary>
     /// <remarks>
     /// When the target still has requests in flight, the HTTP stacks are released by the last of them instead.
@@ -596,11 +500,7 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
         return;
       }
 
-      if (AuthSession.IsValueCreated)
-      {
-        AuthSession.Value.Dispose();
-      }
-
+      AuthSession.Dispose();
       Requests.RequestTeardown();
     }
 
@@ -608,7 +508,6 @@ public sealed class ControlrApiClientFactory : IControlrApiClientFactory
     {
       HttpClient.Dispose();
       UnauthenticatedHttpClient.Dispose();
-      AuthState.BearerRefreshLock.Dispose();
     }
   }
 }

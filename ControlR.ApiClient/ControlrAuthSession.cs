@@ -6,7 +6,6 @@ using ControlR.Libraries.Api.Contracts.Constants;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.ApiClient;
 
@@ -61,9 +60,7 @@ public interface IControlrAuthSession : IDisposable
   /// <param name="newPassword">The new password to set for the account.</param>
   /// <param name="twoFactorCode">An optional two-factor code required by the server for this flow.</param>
   /// <param name="cancellationToken">Cancels the password-change request.</param>
-  /// <returns>
-  /// A result indicating whether the password was changed successfully.
-  /// </returns>
+  /// <returns>A result indicating whether the password was changed successfully.</returns>
   Task<ApiResult> ChangePasswordWithCredentials(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default);
   /// <summary>
   /// Gets a snapshot of the current authentication state, including bearer and refresh tokens.
@@ -72,9 +69,9 @@ public interface IControlrAuthSession : IDisposable
   /// <returns>The current auth snapshot.</returns>
   AuthSnapshot GetAuthSnapshot();
   /// <summary>
-  /// Gets a usable bearer access token, refreshing it first when needed.
+  /// Gets a usable bearer access token, renewing it first when it is close to expiring.
   /// </summary>
-  /// <param name="cancellationToken">Cancels the token retrieval operation.</param>
+  /// <param name="cancellationToken">Cancels the wait for a renewal. The renewal itself still completes.</param>
   /// <returns>
   /// The current bearer access token, or <see langword="null"/> when the session authenticates with a
   /// configured credential (a personal access token or a service account key) instead of a bearer token.
@@ -83,15 +80,9 @@ public interface IControlrAuthSession : IDisposable
   /// <summary>
   /// Restores a previously captured <see cref="AuthSnapshot"/>, re-establishing the session kind it held.
   /// </summary>
-  /// <remarks>
-  /// A snapshot carrying a personal access token restores a PAT session, one carrying a service account
-  /// credential restores a service-account session, and otherwise bearer tokens are restored and the
-  /// background token-refresh loop is started.
-  /// </remarks>
   /// <param name="snapshot">The previously captured auth snapshot.</param>
-  /// <exception cref="ObjectDisposedException">
-  /// This session was disposed. Obtain a new session and restore it there.
-  /// </exception>
+  /// <exception cref="ArgumentException">The snapshot holds no usable credential.</exception>
+  /// <exception cref="ObjectDisposedException">This session was disposed.</exception>
   Task RestoreAuthSnapshot(AuthSnapshot snapshot);
   /// <summary>
   /// Updates the server base URL used by the session.
@@ -99,14 +90,13 @@ public interface IControlrAuthSession : IDisposable
   /// <param name="baseUrl">The ControlR server base URL.</param>
   void SetBaseUrl(Uri baseUrl);
   /// <summary>
-  /// Configures a personal access token for the session and clears any interactive bearer state.
+  /// Configures a personal access token for the session and clears any other credential.
   /// </summary>
   /// <param name="personalAccessToken">The personal access token to use, or <see langword="null"/> to clear it.</param>
   void SetPersonalAccessToken(string? personalAccessToken);
   /// <summary>
   /// Configures a service account credential for the session, sent as the <c>x-api-key</c> header, and
-  /// clears any interactive bearer state. A personal access token takes precedence over this credential
-  /// when both are present.
+  /// clears any other credential.
   /// </summary>
   /// <param name="serviceAccountApiKey">
   /// The composite credential (<c>{credentialIdHex}:{secret}</c>) to use, or <see langword="null"/> to clear it.
@@ -125,40 +115,45 @@ public interface IControlrAuthSession : IDisposable
   Task SignOut();
 }
 
-public sealed class ControlrAuthSession(
-  IHttpClientFactory httpClientFactory,
-  ControlrApiClientAuthState authState,
-  IBearerTokenRefresher bearerTokenRefresher,
-  ILogger<ControlrAuthSession> logger,
-  IOptionsMonitor<ControlrApiClientOptions> optionsMonitor,
-  TimeProvider timeProvider) : IControlrAuthSession
+/// <summary>
+/// The sole owner of a client's bearer token. Renewal happens on demand, before a request whose token
+/// is close to expiring and after a request whose token was rejected. There is no background loop.
+/// </summary>
+public sealed class ControlrAuthSession : IControlrAuthSession
 {
+  private const string ChangePasswordEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/change-password-with-credentials";
   private const string InteractiveLoginEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/interactive-login";
+  private const string RefreshEndpoint = $"{HttpConstants.Internal.AuthEndpoint}/refresh";
 
-  /// <summary>
-  /// Consecutive background refresh failures tolerated before the session is expired.
-  /// </summary>
-  private const int MaxConsecutiveRefreshFailures = 10;
+  private readonly ControlrApiClientAuthState _authState;
+  private readonly CancellationTokenSource _disposeCts = new();
+  private readonly IHttpClientFactory _httpClientFactory;
+  private readonly ILogger<ControlrAuthSession> _logger;
+  private readonly TimeSpan _refreshLeadTime;
+  private readonly Lock _renewalLock = new();
+  private readonly Lock _stateLock = new();
+  private readonly TimeProvider _timeProvider;
 
-  private static readonly TimeSpan _maxRefreshRetryBackoff = TimeSpan.FromSeconds(60);
-  private static readonly TimeSpan _minRefreshRetryBackoff = TimeSpan.FromMilliseconds(250);
+  private Uri _baseUrl;
+  private Task<BearerCredential?>? _renewal;
+  private BearerCredential? _renewalTarget;
+  private volatile ControlrAuthSessionState _state;
 
-  private readonly ControlrApiClientAuthState _authState = authState;
-  private readonly IBearerTokenRefresher _bearerTokenRefresher = bearerTokenRefresher;
-  private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
-  private readonly ILogger<ControlrAuthSession> _logger = logger;
-  private readonly IOptionsMonitor<ControlrApiClientOptions> _optionsMonitor = optionsMonitor;
-  private readonly TimeProvider _timeProvider = timeProvider;
-
-  private Uri _baseUrl = optionsMonitor.CurrentValue.BaseUrl;
-  private int _consecutiveRefreshFailures;
-  private int _isDisposed;
-  private CancellationTokenSource? _refreshLoopCts;
-  private long _refreshLoopGeneration;
-  // Volatile because the factory's sweeper reads State from its own thread to decide whether a
-  // target holds a live login. A plain store can sit in the writer's store buffer on a weak memory
-  // model, and a stale read there evicts a session that is in fact still authenticated.
-  private volatile ControlrAuthSessionState _state = ControlrAuthSessionState.SignedOut;
+  internal ControlrAuthSession(
+    IHttpClientFactory httpClientFactory,
+    ControlrApiClientAuthState authState,
+    ControlrApiClientOptions options,
+    TimeProvider timeProvider,
+    ILogger<ControlrAuthSession> logger)
+  {
+    _httpClientFactory = httpClientFactory;
+    _authState = authState;
+    _baseUrl = options.BaseUrl;
+    _refreshLeadTime = options.BearerRefreshLeadTime;
+    _timeProvider = timeProvider;
+    _logger = logger;
+    _state = GetConfiguredState(authState.GetCredentials());
+  }
 
   public event EventHandler<ControlrAuthSessionStateChangedEventArgs>? StateChanged;
 
@@ -171,22 +166,23 @@ public sealed class ControlrAuthSession(
   public ControlrAuthSessionState State => _state;
 
   /// <summary>
-  /// Counts this session's calls so that a tracked target is not released while a sign-in or password
-  /// change is still on the wire. The factory assigns the target's tracker here.
+  /// Counts this session's calls so a tracked target is not released while one is on the wire.
+  /// The factory assigns the target's tracker.
   /// </summary>
   internal InFlightTracker Requests { get; set; } = new();
 
   public async Task<ApiResult> ChangePasswordWithCredentials(string email, string currentPassword, string newPassword, string? twoFactorCode, CancellationToken cancellationToken = default)
   {
-    using var tracked = BeginSessionRequest();
+    using var lease = Requests.Acquire();
+    if (!lease.Acquired)
+    {
+      return ApiResult.Fail(ControlrApi.DisposedTargetReason, httpRequestError: HttpRequestError.Unknown);
+    }
 
     try
     {
-      var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
-      using var response = await client.PostAsJsonAsync(
-        new Uri(BaseUrl, $"{HttpConstants.Internal.AuthEndpoint}/change-password-with-credentials"),
-        new CredentialPasswordChangeRequestDto(email, currentPassword, newPassword, twoFactorCode),
-        cancellationToken);
+      var request = new CredentialPasswordChangeRequestDto(email, currentPassword, newPassword, twoFactorCode);
+      using var response = await CreateClient().PostAsJsonAsync(new Uri(BaseUrl, ChangePasswordEndpoint), request, cancellationToken);
 
       if (response.StatusCode is >= HttpStatusCode.BadRequest and < HttpStatusCode.InternalServerError)
       {
@@ -199,19 +195,12 @@ public sealed class ControlrAuthSession(
     }
     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
-      _logger.LogWarning("Password change canceled by the user.");
       return ApiResult.Fail("The operation was canceled.", HttpStatusCode.RequestTimeout);
-    }
-    catch (TimeoutException ex)
-    {
-      _logger.LogWarning(ex, "Password change request timed out.");
-      return ApiResult.Fail("The request timed out.", HttpStatusCode.RequestTimeout);
     }
     catch (HttpRequestException ex)
     {
       _logger.LogWarning(ex, "Password change request failed.");
-      var statusCode = ex.StatusCode ?? HttpStatusCode.InternalServerError;
-      return ApiResult.Fail(ex.Message, statusCode);
+      return ApiResult.Fail(ex.Message, ex.StatusCode ?? HttpStatusCode.InternalServerError);
     }
     catch (Exception ex)
     {
@@ -221,38 +210,26 @@ public sealed class ControlrAuthSession(
   }
 
   /// <summary>
-  /// Stops the background refresh loop and moves the session to
-  /// <see cref="ControlrAuthSessionState.Disposed"/>.
+  /// Moves the session to the terminal <see cref="ControlrAuthSessionState.Disposed"/> state and
+  /// cancels a renewal that is still on the wire. This is not a sign-out.
   /// </summary>
-  /// <remarks>
-  /// <para>
-  ///   Disposal is terminal and is not a sign-out. The server-side session is untouched and the
-  ///   credential may still be perfectly valid, but this object has lost the transport it needs and
-  ///   can never authenticate again. <see cref="StateChanged"/> is raised so an observer still
-  ///   holding this reference stops reporting a usable session. It is deliberately not raised when
-  ///   the session was still <see cref="ControlrAuthSessionState.SignedOut"/>, which already tells an
-  ///   observer it cannot authenticate, and which is the state a never-used session is disposed in
-  ///   during host shutdown.
-  /// </para>
-  /// <para>
-  ///   Subsequent state changes are ignored. A sign-in that was still on the wire when disposal
-  ///   landed completes and would otherwise report <see cref="ControlrAuthSessionState.Authenticated"/>
-  ///   for an object that can no longer act.
-  /// </para>
-  /// </remarks>
   public void Dispose()
   {
-    if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+    ControlrAuthSessionState previous;
+    using (_stateLock.EnterScope())
     {
-      return;
+      previous = _state;
+      if (previous == ControlrAuthSessionState.Disposed)
+      {
+        return;
+      }
+
+      _state = ControlrAuthSessionState.Disposed;
     }
 
-    StopRefreshLoop();
+    _disposeCts.Cancel();
 
-    var previousState = _state;
-    _state = ControlrAuthSessionState.Disposed;
-
-    if (previousState == ControlrAuthSessionState.SignedOut)
+    if (previous == ControlrAuthSessionState.SignedOut)
     {
       return;
     }
@@ -264,20 +241,8 @@ public sealed class ControlrAuthSession(
         "The session was disposed. Obtain a new session to authenticate again."));
   }
 
-  public AuthSnapshot GetAuthSnapshot()
-  {
-    return _authState.GetSnapshot();
-  }
+  public AuthSnapshot GetAuthSnapshot() => _authState.GetSnapshot();
 
-  /// <summary>
-  /// Gets the current bearer token, refreshing it first when it is near expiration.
-  /// </summary>
-  /// <param name="cancellationToken">Cancels the refresh request.</param>
-  /// <returns>The bearer token, or <see langword="null"/> when this session authenticates with a personal access token.</returns>
-  /// <exception cref="ObjectDisposedException">
-  /// The session's target was removed, so the token cannot be renewed. A token that is already dead
-  /// is not handed out as if it were usable.
-  /// </exception>
   public async Task<string?> GetBearerToken(CancellationToken cancellationToken = default)
   {
     if (!string.IsNullOrWhiteSpace(_authState.PersonalAccessToken))
@@ -285,22 +250,14 @@ public sealed class ControlrAuthSession(
       return null;
     }
 
-    await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken);
-    return _authState.BearerToken;
+    var bearer = await GetFreshBearer(cancellationToken);
+    return bearer?.AccessToken;
   }
 
-  /// <summary>
-  /// Restores a previously saved auth snapshot into this session.
-  /// </summary>
-  /// <param name="snapshot">The snapshot to apply.</param>
-  /// <exception cref="ArgumentException">The snapshot contains no personal access token, service account credential, or complete set of bearer tokens.</exception>
-  /// <exception cref="ObjectDisposedException">
-  /// The session was disposed. A restore would store the credential while the terminal state
-  /// suppressed the state change, leaving a session that reports a credential it can never use.
-  /// </exception>
   public Task RestoreAuthSnapshot(AuthSnapshot snapshot)
   {
-    ObjectDisposedException.ThrowIf(Volatile.Read(ref _isDisposed) == 1, this);
+    ArgumentNullException.ThrowIfNull(snapshot);
+    ObjectDisposedException.ThrowIf(_state == ControlrAuthSessionState.Disposed, this);
 
     if (!string.IsNullOrWhiteSpace(snapshot.PersonalAccessToken))
     {
@@ -316,387 +273,272 @@ public sealed class ControlrAuthSession(
 
     if (string.IsNullOrWhiteSpace(snapshot.BearerToken) ||
         string.IsNullOrWhiteSpace(snapshot.RefreshToken) ||
-        snapshot.BearerTokenExpiresAt is null)
+        snapshot.BearerTokenExpiresAt is not { } expiresAt)
     {
       throw new ArgumentException(
         "Snapshot must contain a personal access token, a service account credential, or valid bearer and refresh tokens with an expiration.",
         nameof(snapshot));
     }
 
-    ResetSession(clearConfiguredCredentials: true);
-    _authState.SetBearerTokens(snapshot.BearerToken, snapshot.RefreshToken, snapshot.BearerTokenExpiresAt);
+    var bearer = new BearerCredential(snapshot.BearerToken, snapshot.RefreshToken, expiresAt, snapshot.BearerTokenLifetime);
+    _authState.Replace(new ApiCredentials(null, null, bearer));
     UpdateState(ControlrAuthSessionState.Authenticated);
-    StartRefreshLoop();
     return Task.CompletedTask;
   }
 
   public void SetBaseUrl(Uri baseUrl)
   {
+    ArgumentNullException.ThrowIfNull(baseUrl);
     Volatile.Write(ref _baseUrl, baseUrl);
   }
 
   public void SetPersonalAccessToken(string? personalAccessToken)
   {
-    ResetSession(clearConfiguredCredentials: true);
-
-    if (!string.IsNullOrWhiteSpace(personalAccessToken))
-    {
-      _authState.SetPersonalAccessToken(personalAccessToken);
-      UpdateState(ControlrAuthSessionState.PatConfigured);
-    }
-    else
-    {
-      UpdateState(ControlrAuthSessionState.SignedOut);
-    }
+    var credentials = new ApiCredentials(NullIfBlank(personalAccessToken), null, null);
+    _authState.Replace(credentials);
+    UpdateState(GetConfiguredState(credentials));
   }
 
   public void SetServiceAccountApiKey(string? serviceAccountApiKey)
   {
-    ResetSession(clearConfiguredCredentials: true);
-
-    if (!string.IsNullOrWhiteSpace(serviceAccountApiKey))
-    {
-      _authState.SetServiceAccountApiKey(serviceAccountApiKey);
-      UpdateState(ControlrAuthSessionState.ServiceAccountConfigured);
-    }
-    else
-    {
-      UpdateState(ControlrAuthSessionState.SignedOut);
-    }
+    var credentials = new ApiCredentials(null, NullIfBlank(serviceAccountApiKey), null);
+    _authState.Replace(credentials);
+    UpdateState(GetConfiguredState(credentials));
   }
 
   public async Task<InteractiveLoginResult> SignIn(InteractiveSignInRequest request, CancellationToken cancellationToken = default)
   {
-    var result = await ExecuteInteractiveLogin(
-      new LoginRequestDto(
-        request.Email,
-        request.Password,
-        string.IsNullOrWhiteSpace(request.TwoFactorCode) ? null : request.TwoFactorCode,
-        string.IsNullOrWhiteSpace(request.RecoveryCode) ? null : request.RecoveryCode),
-      cancellationToken);
+    ArgumentNullException.ThrowIfNull(request);
 
-    if (result.Status == InteractiveLoginStatus.RequiresPasswordChange)
+    var loginRequest = new LoginRequestDto(
+      request.Email,
+      request.Password,
+      NullIfBlank(request.TwoFactorCode),
+      NullIfBlank(request.RecoveryCode));
+
+    using var lease = Requests.Acquire();
+    if (!lease.Acquired)
     {
-      UpdateState(ControlrAuthSessionState.AwaitingPasswordChange);
-      return result with { Message = "A password change is required. Enter your current and a new password to continue." };
+      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, ControlrApi.DisposedTargetReason);
     }
 
-    if (result.Status == InteractiveLoginStatus.RequiresTwoFactor)
-    {
-      UpdateState(ControlrAuthSessionState.AwaitingTwoFactor);
-      return result with { Message = "Two-factor authentication is enabled. Enter your authenticator code to continue." };
-    }
-
-    if (result.Status == InteractiveLoginStatus.LockedOut)
-    {
-      return result;
-    }
-
-    if (result.Status == InteractiveLoginStatus.Authenticated)
-    {
-      return result with { Message = "Connected." };
-    }
-
-    return result.Message is null
-      ? result with { Message = "Email or password was not accepted." }
-      : result;
-  }
-
-  public Task SignOut()
-  {
-    ResetSession(clearConfiguredCredentials: true);
-    UpdateState(ControlrAuthSessionState.SignedOut);
-    return Task.CompletedTask;
-  }
-
-  private static void CancelRefreshLoop(CancellationTokenSource? cts)
-  {
-    cts?.Cancel();
-    cts?.Dispose();
-  }
-
-  // Session calls go to the target's unauthenticated client rather than through ControlrApi, so
-  // nothing else counts them. A removal mid-call would otherwise be reported as bad credentials.
-  private InFlightTracker.Lease BeginSessionRequest() => Requests.AcquireOrThrow(nameof(ControlrAuthSession));
-
-  private async Task<InteractiveLoginResult> ExecuteInteractiveLogin(LoginRequestDto request, CancellationToken cancellationToken)
-  {
-    using var tracked = BeginSessionRequest();
-
+    InteractiveLoginResponseDto? payload;
     try
     {
-      var client = _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
-      using var response = await client.PostAsJsonAsync(
-        new Uri(BaseUrl, InteractiveLoginEndpoint),
-        request,
-        cancellationToken);
+      using var response = await CreateClient().PostAsJsonAsync(new Uri(BaseUrl, InteractiveLoginEndpoint), loginRequest, cancellationToken);
 
       if (response.StatusCode == HttpStatusCode.Unauthorized)
       {
-        return new InteractiveLoginResult(InteractiveLoginStatus.Failed);
+        return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "Email or password was not accepted.");
+      }
+
+      if (response.StatusCode == HttpStatusCode.NotFound)
+      {
+        return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "Interactive login is not available on this server.");
       }
 
       await response.EnsureSuccessStatusCodeWithDetails();
-
-      var payload = await response.Content.ReadFromJsonAsync<InteractiveLoginResponseDto>(cancellationToken) ??
-        throw new HttpRequestException("The interactive login response was empty.");
-
-      if (payload.RequiresTwoFactor)
-      {
-        return new InteractiveLoginResult(InteractiveLoginStatus.RequiresTwoFactor);
-      }
-
-      if (payload.IsLockedOut)
-      {
-        return new InteractiveLoginResult(InteractiveLoginStatus.LockedOut, "This account has been locked out. Please try again later.");
-      }
-
-      if (payload.RequiresPasswordChange)
-      {
-        return new InteractiveLoginResult(InteractiveLoginStatus.RequiresPasswordChange, "A password change is required.");
-      }
-
-      if (payload.Tokens is null)
-      {
-        throw new HttpRequestException("The interactive login response did not include tokens.");
-      }
-
-      // Clear any configured credential first. A leftover personal access token otherwise keeps
-      // winning header precedence, so requests would authenticate as the old principal after sign-in.
-      ResetSession(clearConfiguredCredentials: true);
-      _authState.SetBearerTokenResponse(payload.Tokens, _timeProvider);
-      UpdateState(ControlrAuthSessionState.Authenticated);
-      StartRefreshLoop();
-      return new InteractiveLoginResult(InteractiveLoginStatus.Authenticated);
+      payload = await response.Content.ReadFromJsonAsync<InteractiveLoginResponseDto>(cancellationToken);
     }
-    catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
     {
-      _logger.LogWarning(ex, "Interactive login endpoint is not available.");
-      return new InteractiveLoginResult(
-        InteractiveLoginStatus.Failed,
-        "Interactive login is not available on this server.");
+      throw;
     }
     catch (Exception ex)
     {
       _logger.LogWarning(ex, "Interactive login failed.");
       return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "Interactive login failed.");
     }
-  }
 
-  private void ExpireSession(string message)
-  {
-    // An expired bearer session must not discard a configured credential. The client falls back to
-    // it, which is what a caller who configured both a key and interactive sign-in expects.
-    ResetSession(clearConfiguredCredentials: false);
-    UpdateState(ControlrAuthSessionState.Expired, message);
-  }
-
-  private Task HandleRefreshLoopFault(long generation, string message)
-  {
-    if (generation != Volatile.Read(ref _refreshLoopGeneration))
+    if (payload is null)
     {
-      return Task.CompletedTask;
+      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "Interactive login failed.");
     }
 
-    ExpireSession(message);
+    if (payload.IsLockedOut)
+    {
+      return new InteractiveLoginResult(InteractiveLoginStatus.LockedOut, "This account has been locked out. Please try again later.");
+    }
+
+    if (payload.RequiresTwoFactor)
+    {
+      UpdateState(ControlrAuthSessionState.AwaitingTwoFactor);
+      return new InteractiveLoginResult(
+        InteractiveLoginStatus.RequiresTwoFactor,
+        "Two-factor authentication is enabled. Enter your authenticator code to continue.");
+    }
+
+    if (payload.RequiresPasswordChange)
+    {
+      UpdateState(ControlrAuthSessionState.AwaitingPasswordChange);
+      return new InteractiveLoginResult(
+        InteractiveLoginStatus.RequiresPasswordChange,
+        "A password change is required. Enter your current and a new password to continue.");
+    }
+
+    if (payload.Tokens is null)
+    {
+      // A success response that carries neither a password-change flag nor tokens is a broken
+      // response, not a flow the caller can complete. Reporting a failed sign-in keeps the session
+      // usable; a password-change state would wait on a form that never arrives.
+      _logger.LogWarning("Interactive login succeeded without returning tokens.");
+      return new InteractiveLoginResult(InteractiveLoginStatus.Failed, "Interactive login failed.");
+    }
+
+    // A leftover personal access token would otherwise keep winning header precedence, so requests
+    // would still authenticate as the old principal after sign-in.
+    _authState.Replace(new ApiCredentials(null, null, CreateBearer(payload.Tokens)));
+    UpdateState(ControlrAuthSessionState.Authenticated);
+    return new InteractiveLoginResult(InteractiveLoginStatus.Authenticated, "Connected.");
+  }
+
+  public Task SignOut()
+  {
+    _authState.Replace(new ApiCredentials(null, null, null));
+    UpdateState(ControlrAuthSessionState.SignedOut);
     return Task.CompletedTask;
   }
 
-  private async Task RefreshBearerTokenIfNeeded(
-    bool forceRefresh,
-    CancellationToken cancellationToken,
-    long? loopGeneration = null)
+  /// <summary>
+  /// Returns the current bearer credential, renewing it first when it is inside its refresh window.
+  /// </summary>
+  internal async Task<BearerCredential?> GetFreshBearer(CancellationToken cancellationToken)
   {
-    var refreshResult = await _bearerTokenRefresher.RefreshIfNeeded(
-      forceRefresh,
-      _optionsMonitor.CurrentValue.BearerRefreshLeadTime,
-      BaseUrl,
-      cancellationToken);
-
-    if (refreshResult == BearerTokenRefreshResult.Unauthorized)
+    var bearer = _authState.Bearer;
+    if (bearer is null || !IsInRefreshWindow(bearer))
     {
-      // A superseded background loop must not expire a session that the current loop (or an
-      // interactive foreground call) now owns. The response was computed with the previous
-      // session's refresh token, so its rejection says nothing about the current one.
-      if (loopGeneration is null || loopGeneration == Volatile.Read(ref _refreshLoopGeneration))
+      return bearer;
+    }
+
+    return await RenewIfCurrent(bearer, cancellationToken);
+  }
+
+  /// <summary>
+  /// Renews <paramref name="sent"/> unless it was already replaced, and returns the bearer credential
+  /// that is current afterward.
+  /// </summary>
+  /// <remarks>
+  /// Every caller holding the same credential shares one refresh request. The refresh runs on the
+  /// session's own token, so a caller that cancels stops waiting without cancelling it for the rest.
+  /// </remarks>
+  internal Task<BearerCredential?> RenewIfCurrent(BearerCredential sent, CancellationToken cancellationToken)
+  {
+    Task<BearerCredential?> renewal;
+    using (_renewalLock.EnterScope())
+    {
+      var current = _authState.Bearer;
+      if (!ReferenceEquals(current, sent))
       {
-        ExpireSession("The session expired. Sign in again.");
+        return Task.FromResult(current);
       }
 
-      throw new InvalidOperationException("The refresh token is no longer valid.");
+      if (_renewal is null || _renewal.IsCompleted || !ReferenceEquals(_renewalTarget, sent))
+      {
+        _renewalTarget = sent;
+        // Task.Run keeps the refresh and the StateChanged it may raise out from under this lock.
+        _renewal = Task.Run(() => Renew(sent));
+      }
+
+      renewal = _renewal;
     }
 
-    if (refreshResult == BearerTokenRefreshResult.EndpointUnavailable)
-    {
-      throw new InvalidOperationException("The bearer token refresh endpoint is not available.");
-    }
-
-    if (refreshResult == BearerTokenRefreshResult.Refreshed &&
-        State != ControlrAuthSessionState.Authenticated)
-    {
-      UpdateState(ControlrAuthSessionState.Authenticated);
-    }
+    return renewal.WaitAsync(cancellationToken);
   }
 
-  private void ResetSession(bool clearConfiguredCredentials)
+  private static ControlrAuthSessionState GetConfiguredState(ApiCredentials credentials)
   {
-    StopRefreshLoop();
-    _authState.ClearBearerTokens();
-
-    if (clearConfiguredCredentials)
+    if (!string.IsNullOrWhiteSpace(credentials.PersonalAccessToken))
     {
-      _authState.ClearPersonalAccessToken();
-      _authState.ClearServiceAccountApiKey();
+      return ControlrAuthSessionState.PatConfigured;
     }
+
+    if (!string.IsNullOrWhiteSpace(credentials.ServiceAccountApiKey))
+    {
+      return ControlrAuthSessionState.ServiceAccountConfigured;
+    }
+
+    return ControlrAuthSessionState.SignedOut;
   }
 
-  private async Task RunRefreshLoop(long generation, CancellationToken cancellationToken)
+  private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+  private BearerCredential CreateBearer(AccessTokenResponseDto tokens)
   {
+    var lifetime = TimeSpan.FromSeconds(Math.Max(tokens.ExpiresInSeconds, 1));
+    return new BearerCredential(tokens.AccessToken, tokens.RefreshToken, _timeProvider.GetUtcNow() + lifetime, lifetime);
+  }
+
+  private HttpClient CreateClient() => _httpClientFactory.CreateClient(ControlrApiClientNames.UnauthenticatedClient);
+
+  /// <summary>
+  /// The window is capped at half the granted lifetime. A server lifetime at or below the lead time
+  /// would otherwise leave every fresh token already due for renewal.
+  /// </summary>
+  private bool IsInRefreshWindow(BearerCredential bearer)
+  {
+    var window = _refreshLeadTime;
+    if (bearer.Lifetime is { } lifetime && lifetime / 2 < window)
+    {
+      window = lifetime / 2;
+    }
+
+    return _timeProvider.GetUtcNow() >= bearer.ExpiresAt - window;
+  }
+
+  private async Task<BearerCredential?> Renew(BearerCredential sent)
+  {
+    using var lease = Requests.Acquire();
+    if (!lease.Acquired)
+    {
+      return _authState.Bearer;
+    }
+
     try
     {
-      while (!cancellationToken.IsCancellationRequested)
+      using var response = await CreateClient().PostAsJsonAsync(
+        new Uri(BaseUrl, RefreshEndpoint),
+        new RefreshTokenRequestDto(sent.RefreshToken),
+        _disposeCts.Token);
+
+      if (response.StatusCode == HttpStatusCode.Unauthorized)
       {
-        if (generation != Volatile.Read(ref _refreshLoopGeneration))
+        if (_authState.TryReplaceBearer(sent, null))
         {
-          return;
+          UpdateState(ControlrAuthSessionState.Expired, "The session expired. Sign in again.");
         }
 
-        var expiresAt = _authState.GetSnapshot().BearerTokenExpiresAt;
-        if (expiresAt is null)
-        {
-          // The tokens can be cleared from under this loop. ControlrApi clears the shared auth state
-          // when the server rejects a refresh during an ordinary call, and it has no way to reach
-          // this session's state machine. Returning silently used to leave the session reporting
-          // Authenticated with no tokens, no loop, and no event, which also pinned its factory target
-          // forever because a live-looking session is exempt from idle eviction.
-          _logger.LogWarning(
-            "The bearer tokens were cleared outside the refresh loop. Expiring the session.");
-          await HandleRefreshLoopFault(generation, "The session expired. Sign in again.");
-          return;
-        }
-
-        var delay = expiresAt.Value - _timeProvider.GetUtcNow() - _optionsMonitor.CurrentValue.BearerRefreshLeadTime;
-        if (delay < TimeSpan.Zero)
-        {
-          delay = TimeSpan.Zero;
-        }
-
-        await Task.Delay(delay, cancellationToken);
-
-        try
-        {
-          await RefreshBearerTokenIfNeeded(forceRefresh: false, cancellationToken, loopGeneration: generation);
-          _consecutiveRefreshFailures = 0;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-          // A cancelled or superseded loop must not touch shared failure state, retry, or
-          // expire anything. The loop owning the current generation owns the counter.
-          if (generation != Volatile.Read(ref _refreshLoopGeneration))
-          {
-            return;
-          }
-
-          if (ex is ObjectDisposedException)
-          {
-            // The target this session belongs to was removed, so there is no transport left to
-            // renew it with. Counting this against the transient-failure budget would spend the
-            // backoff schedule reporting a fault on a target that is simply gone.
-            return;
-          }
-
-          if (State == ControlrAuthSessionState.Expired)
-          {
-            // The server rejected the refresh token itself. RefreshBearerTokenIfNeeded has
-            // already transitioned the session to Expired; nothing left to retry.
-            return;
-          }
-
-          // A transient failure (network hiccup, timeout, 5xx, 404) must not discard a refresh
-          // token that is often valid for days. Retry with a clamped backoff, but cap the
-          // attempt count so a permanently broken server cannot produce an endless retry loop.
-          _consecutiveRefreshFailures++;
-          if (_consecutiveRefreshFailures >= MaxConsecutiveRefreshFailures)
-          {
-            _logger.LogWarning(
-              ex,
-              "Bearer token refresh failed {FailureCount} consecutive times. Expiring the session.",
-              _consecutiveRefreshFailures);
-            await HandleRefreshLoopFault(
-              generation,
-              "Unable to renew the session. Sign in again.");
-            return;
-          }
-
-          _logger.LogWarning(ex, "Bearer token refresh failed in the background. Retrying.");
-          var backoff = _optionsMonitor.CurrentValue.BearerRefreshLeadTime * 2;
-          if (backoff < _minRefreshRetryBackoff)
-          {
-            backoff = _minRefreshRetryBackoff;
-          }
-          else if (backoff > _maxRefreshRetryBackoff)
-          {
-            backoff = _maxRefreshRetryBackoff;
-          }
-
-          await Task.Delay(backoff, cancellationToken);
-        }
+        return _authState.Bearer;
       }
-    }
-    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-    {
+
+      await response.EnsureSuccessStatusCodeWithDetails();
+
+      var tokens = await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>(_disposeCts.Token) ??
+        throw new HttpRequestException("The refresh response was empty.");
+
+      _authState.TryReplaceBearer(sent, CreateBearer(tokens));
     }
     catch (Exception ex)
     {
-      _logger.LogWarning(ex, "Bearer token refresh failed in the background.");
-      await HandleRefreshLoopFault(generation, "The session expired. Sign in again.");
-    }
-  }
-
-  private void StartRefreshLoop()
-  {
-    if (Volatile.Read(ref _isDisposed) == 1)
-    {
-      // A sign-in that was still on the wire when the target was removed lands here after the
-      // factory already disposed this session. A loop started now has nobody left to stop it.
-      return;
+      // A transient failure keeps the current token. The next request inside the window tries again.
+      _logger.LogWarning(ex, "Bearer token refresh failed.");
     }
 
-    if (!_authState.CanRefreshBearerToken)
-    {
-      StopRefreshLoop();
-      return;
-    }
-
-    // Fresh loop, fresh failure budget. Otherwise a previous session's failures would expire
-    // a newly authenticated session after fewer failures than the configured cap.
-    _consecutiveRefreshFailures = 0;
-
-    var cts = new CancellationTokenSource();
-    var generation = Interlocked.Increment(ref _refreshLoopGeneration);
-    var previousCts = Interlocked.Exchange(ref _refreshLoopCts, cts);
-    CancelRefreshLoop(previousCts);
-    _ = RunRefreshLoop(generation, cts.Token);
-  }
-
-  private void StopRefreshLoop()
-  {
-    Interlocked.Increment(ref _refreshLoopGeneration);
-    var cts = Interlocked.Exchange(ref _refreshLoopCts, null);
-    CancelRefreshLoop(cts);
+    return _authState.Bearer;
   }
 
   private void UpdateState(ControlrAuthSessionState state, string? message = null)
   {
-    if (_state == ControlrAuthSessionState.Disposed)
+    using (_stateLock.EnterScope())
     {
-      // Terminal. A sign-in or password change that was still on the wire when the session was
-      // disposed lands here after the fact, and reporting Authenticated for an object that can no
-      // longer act is exactly the lie Disposed exists to prevent.
-      return;
+      // Terminal. A sign-in that finishes after disposal must not report a usable session.
+      if (_state == ControlrAuthSessionState.Disposed)
+      {
+        return;
+      }
+
+      _state = state;
     }
 
-    _state = state;
     StateChanged?.Invoke(this, new ControlrAuthSessionStateChangedEventArgs(state, message));
   }
 }

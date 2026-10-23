@@ -70,5 +70,9 @@ public static class OpenApiRegistrationExtensions
     options.AddOperationTransformer<ApiDeprecatedOperationTransformer>();
     options.AddDocumentTransformer<EmptyDocumentationTextTransformer>();
     options.AddSchemaTransformer<OpenApiSchemaTypeTransformer>();
+
+    // Last, so it sees documentation text that the earlier transformers and the XML comment generator
+    // have already written into the document.
+    options.AddDocumentTransformer<DocCommentLineEndingTransformer>();
   }
 }

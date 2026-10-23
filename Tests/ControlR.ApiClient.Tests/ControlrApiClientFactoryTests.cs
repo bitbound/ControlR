@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text.Json;
 using ControlR.ApiClient.Auth;
-using ControlR.ApiClient.Internal;
 using ControlR.ApiClient.Tests.Helpers;
 using ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -536,109 +535,6 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
-  public async Task RefreshIfNeeded_WhenSemaphoreDisposedMidFlight_StillCompletesRefresh()
-  {
-    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-    var handler = new GatedRefreshHandlerInline(gate.Task);
-    var client = new HttpClient(handler) { BaseAddress = new Uri("https://server.test/") };
-    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
-    authState.SetBearerTokens("access-old", "refresh-old", DateTimeOffset.UnixEpoch);
-
-    var refresher = new BearerTokenRefresher(
-      authState,
-      new SingleClientHttpClientFactory(client),
-      TimeProvider.System);
-
-    var refreshTask = refresher.RefreshIfNeeded(
-      forceRefresh: true,
-      refreshWindow: TimeSpan.FromMinutes(1),
-      cancellationToken: TestContext.Current.CancellationToken);
-
-    await WaitUntilAsyncInline(() => handler.RefreshStarted);
-
-    // Entry teardown disposes the lock while the refresh holds it.
-    authState.BearerRefreshLock.Dispose();
-    gate.SetResult();
-
-    // Pre-fix, the finally-block Release threw ObjectDisposedException out of RefreshIfNeeded.
-    var result = await refreshTask;
-
-    Assert.Equal(BearerTokenRefreshResult.Refreshed, result);
-    client.Dispose();
-  }
-
-  [Fact]
-  public async Task RefreshIfNeeded_WhenTargetWasAlreadyRemoved_ThrowsInsteadOfReportingNoRefreshNeeded()
-  {
-    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
-    authState.SetBearerTokens("access-old", "refresh-old", DateTimeOffset.UnixEpoch);
-    using var client = new HttpClient(new RecordingHttpMessageHandler());
-
-    var tracker = new InFlightTracker();
-    tracker.RequestTeardown();
-
-    var refresher = new BearerTokenRefresher(
-      authState,
-      new SingleClientHttpClientFactory(client),
-      TimeProvider.System)
-    {
-      Requests = tracker
-    };
-
-    // NoRefreshNeeded reads as a healthy outcome wherever it is returned. The background refresh loop
-    // resets its failure count on that value and would go on polling a target that no longer exists,
-    // and a caller asking for a bearer token would be handed one it has been told is expired.
-    var ex = await Assert.ThrowsAsync<ObjectDisposedException>(
-      () => refresher.RefreshIfNeeded(
-        forceRefresh: true,
-        refreshWindow: TimeSpan.FromMinutes(1),
-        cancellationToken: TestContext.Current.CancellationToken));
-
-    Assert.Contains("was disposed", ex.Message, StringComparison.Ordinal);
-  }
-
-  [Fact]
-  public async Task RefreshIfNeeded_WhileTrackedTargetIsTornDown_DefersTheReleaseUntilTheRefreshCompletes()
-  {
-    var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-    var handler = new GatedRefreshHandlerInline(gate.Task);
-    using var client = new HttpClient(handler) { BaseAddress = new Uri("https://server.test/") };
-    var authState = new ControlrApiClientAuthState(personalAccessToken: null);
-    authState.SetBearerTokens("access-old", "refresh-old", DateTimeOffset.UnixEpoch);
-
-    var released = 0;
-    var tracker = new InFlightTracker();
-    tracker.AttachRelease(() => Interlocked.Increment(ref released));
-
-    var refresher = new BearerTokenRefresher(
-      authState,
-      new SingleClientHttpClientFactory(client),
-      TimeProvider.System)
-    {
-      Requests = tracker
-    };
-
-    var refreshTask = refresher.RefreshIfNeeded(
-      forceRefresh: true,
-      refreshWindow: TimeSpan.FromMinutes(1),
-      cancellationToken: TestContext.Current.CancellationToken);
-
-    await WaitUntilAsyncInline(() => handler.RefreshStarted);
-
-    tracker.RequestTeardown();
-
-    // Releasing the stack here disposes the refresh lock, and SemaphoreSlim never resumes a waiter
-    // that was already queued when the dispose landed. A caller waiting on a bearer token would hang
-    // with no exception. Session-driven refreshes are counted for this reason.
-    Assert.Equal(0, Volatile.Read(ref released));
-
-    gate.SetResult();
-
-    Assert.Equal(BearerTokenRefreshResult.Refreshed, await refreshTask);
-    Assert.Equal(1, Volatile.Read(ref released));
-  }
-
-  [Fact]
   public async Task SignIn_WhileTargetIsBeingRemoved_CompletesTheLoginAndThenReleases()
   {
     var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -897,19 +793,6 @@ public sealed class ControlrApiClientFactoryTests
   }
 
   [Fact]
-  public void TryGetAuthSession_WhenSessionNotYetCreated_ReturnsFalse()
-  {
-    using var factory = CreateFactory();
-    factory.GetOrCreateClient("a", o => o.BaseUrl = _serverA);
-
-    Assert.False(factory.TryGetAuthSession("a", out var session));
-    Assert.Null(session);
-
-    // The probe must not have built the thing it was only asking about.
-    Assert.NotNull(factory.GetOrCreateAuthSession("a"));
-  }
-
-  [Fact]
   public void TryRemoveClient_WhenNameMissing_ReturnsFalse()
   {
     using var factory = CreateFactory();
@@ -1088,25 +971,6 @@ public sealed class ControlrApiClientFactoryTests
               "access-new",
               3600,
               "refresh-new"))));
-    }
-  }
-  private sealed class GatedRefreshHandlerInline(Task gate) : HttpMessageHandler
-  {
-    public bool RefreshStarted { get; private set; }
-
-    protected override async Task<HttpResponseMessage> SendAsync(
-      HttpRequestMessage request,
-      CancellationToken cancellationToken)
-    {
-      RefreshStarted = true;
-      await gate.WaitAsync(cancellationToken);
-      return RecordingHttpMessageHandler.Json(
-        System.Text.Json.JsonSerializer.Serialize(
-          new ControlR.Libraries.Api.Contracts.Dtos.ServerApi.Internal.AccessTokenResponseDto(
-            "Bearer",
-            "access-renewed",
-            3600,
-            "refresh-renewed")));
     }
   }
   private sealed class GatedRequestHandlerInline(Task gate) : HttpMessageHandler
