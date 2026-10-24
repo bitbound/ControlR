@@ -2,6 +2,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ControlR.Libraries.Avalonia.Controls.Snackbar;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Messenger.Extensions;
 using System.ComponentModel;
 using Avalonia.Input.Platform;
@@ -88,6 +89,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
 
   private readonly IClipboard _clipboard;
   private readonly LockedValue<SKBitmap?> _compositedFrame = new(null);
+  private readonly IUiDispatcher _dispatcher;
   private readonly IDisposable _messageHandlerRegistration;
   private readonly IMessenger _messenger;
   private readonly IMetricsState _metricsState;
@@ -122,6 +124,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     IMessenger messenger,
     IClipboard clipboard,
     ISnackbar snackbar,
+    IUiDispatcher dispatcher,
     ILogger<RemoteDisplayViewModel> logger)
   {
     _viewerStream = viewerStream;
@@ -131,6 +134,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     _messenger = messenger;
     _clipboard = clipboard;
     _snackbar = snackbar;
+    _dispatcher = dispatcher;
     Logger = logger;
     _messageHandlerRegistration = _viewerStream.RegisterMessageHandler(this, HandleRemoteControlDtoReceived);
     _remoteControlStateRegistration = _remoteControlState.OnStateChanged(HandleRemoteControlStateChanged);
@@ -1006,7 +1010,7 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     SyncDisplayItems();
   }
 
-  private async Task HandleRemoteControlDtoReceived(RemoteControlEventWrapper message)
+  private async Task HandleRemoteControlDto(RemoteControlEventWrapper message)
   {
     try
     {
@@ -1125,6 +1129,21 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
     }
   }
 
+  private async Task HandleRemoteControlDtoReceived(RemoteControlEventWrapper message)
+  {
+    // Screen regions are high-frequency and their bitmap decode must stay off the UI thread, so
+    // handle them on the relay thread; DrawRegion/DrawRegions marshal only the paint themselves.
+    if (message.DtoType is RemoteControlEventDtoType.ScreenRegion or RemoteControlEventDtoType.ScreenRegions)
+    {
+      await HandleRemoteControlDto(message);
+      return;
+    }
+
+    // Every other DTO is low-frequency control/event traffic that mutates UI-bound state. Run it
+    // entirely on the UI thread so ObservableProperty setters raise PropertyChanged on that thread.
+    await _dispatcher.InvokeAsync(() => HandleRemoteControlDto(message), DispatcherPriority.Normal);
+  }
+
   private Task HandleRemoteControlSessionError(RemoteControlSessionErrorDto dto)
   {
     _snackbar.Add(dto.Message, SnackbarSeverity.Error);
@@ -1138,6 +1157,13 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
   }
 
   private Task HandleRemoteControlStateChanged()
+  {
+    // ObservableState raises this from whichever thread mutated the state, so the bound
+    // collection mutation and PropertyChanged fan-out must be marshalled onto the UI thread.
+    return _dispatcher.InvokeAsync(HandleRemoteControlStateChangedCore, DispatcherPriority.Normal);
+  }
+
+  private Task HandleRemoteControlStateChangedCore()
   {
     if (_remoteControlState.CurrentSession?.Device is not { } device)
     {
