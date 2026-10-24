@@ -44,7 +44,7 @@ public class CustomizeScriptTests
   }
 
   [Fact]
-  public async Task CompanyLogoPng_NotProvided_DefaultMessage()
+  public async Task CompanyLogoUri_NotProvided_DefaultMessage()
   {
     var result = await RunScript("-BrandName", "NoLogoTest", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
@@ -52,9 +52,9 @@ public class CustomizeScriptTests
   }
 
   [Fact]
-  public async Task CompanyLogoPng_Provided_Succeeds()
+  public async Task CompanyLogoUri_Provided_Succeeds()
   {
-    var result = await RunScript("-BrandName", "LogoTest", "-CompanyLogoPng", "./my-logo.png", "-WhatIf");
+    var result = await RunScript("-BrandName", "LogoTest", "-CompanyLogoUri", "./my-logo.png", "-WhatIf");
     Assert.Equal(0, result.ExitCode);
     Assert.Contains("Would download/copy company logo from: ./my-logo.png", result.StandardOutput);
   }

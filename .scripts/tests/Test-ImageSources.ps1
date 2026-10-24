@@ -124,9 +124,9 @@ $rejectRepo = New-FakeRepo -Name "reject"
 $icoBytesPath = New-ImageFile -Dir (New-ScratchDir -Name "reject-source") -FileName "icon.png" -Bytes $icoBytes
 $pngBytesPath = New-ImageFile -Dir $rejectRepo -FileName "logo.png" -Bytes $pngBytes
 
-Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ IconPng = $icoBytesPath } } -ExpectedMessage "Icon source must be PNG or SVG" -TestName "customize.ps1 rejects an ICO passed as the PNG icon"
-Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ IconIco = $pngBytesPath } } -ExpectedMessage "ICO source must be a real ICO file" -TestName "customize.ps1 rejects a PNG passed as the ICO icon"
-Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ CompanyLogoPng = $icoBytesPath } } -ExpectedMessage "Company logo source must be PNG or SVG" -TestName "customize.ps1 rejects an ICO passed as the company logo"
+Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ AppIconUri = $icoBytesPath } } -ExpectedMessage "Icon source must be PNG or SVG" -TestName "customize.ps1 rejects an ICO passed as the app icon"
+Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ ShellIconUri = $pngBytesPath } } -ExpectedMessage "ICO source must be a real ICO file" -TestName "customize.ps1 rejects a PNG passed as the shell icon"
+Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ CompanyLogoUri = $icoBytesPath } } -ExpectedMessage "Company logo source must be PNG or SVG" -TestName "customize.ps1 rejects an ICO passed as the company logo"
 
 if ($failures.Count -gt 0) {
   $failures | ForEach-Object { Write-Host "FAIL: $_" -ForegroundColor Red }

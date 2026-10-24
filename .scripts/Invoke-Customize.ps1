@@ -89,9 +89,9 @@ if ($ConfigPath -or $ConfigUrl) {
   }
 
   if ($config.images) {
-    if ($config.images.appIconUri) { $customizeParams.IconPng = $config.images.appIconUri }
-    if ($config.images.shellIconUri) { $customizeParams.IconIco = $config.images.shellIconUri }
-    if ($config.images.companyLogoUri) { $customizeParams.CompanyLogoPng = $config.images.companyLogoUri }
+    if ($config.images.appIconUri) { $customizeParams.AppIconUri = $config.images.appIconUri }
+    if ($config.images.shellIconUri) { $customizeParams.ShellIconUri = $config.images.shellIconUri }
+    if ($config.images.companyLogoUri) { $customizeParams.CompanyLogoUri = $config.images.companyLogoUri }
   }
 
   # PSObject property check so payloads produced before customCss existed do not

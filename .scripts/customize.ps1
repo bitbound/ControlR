@@ -48,14 +48,14 @@ param(
   [Parameter(HelpMessage = "Error color hex for light theme")]
   [string] $ErrorColorLight = "#dc3545",
 
-  [Parameter(HelpMessage = "Path or URL to master icon (PNG 512px+, or SVG to rasterize)")]
-  [string] $IconPng = "",
+  [Parameter(HelpMessage = "Path or URL to the app icon (PNG 512px+, or SVG to rasterize)")]
+  [string] $AppIconUri = "",
 
-  [Parameter(HelpMessage = "Path or URL to ICO icon (multi-size)")]
-  [string] $IconIco = "",
+  [Parameter(HelpMessage = "Path or URL to the shell icon (multi-size ICO)")]
+  [string] $ShellIconUri = "",
 
-  [Parameter(HelpMessage = "Path or URL to company logo PNG (for email templates, etc.)")]
-  [string] $CompanyLogoPng = "",
+  [Parameter(HelpMessage = "Path or URL to the company logo (PNG or SVG, for email templates, etc.)")]
+  [string] $CompanyLogoUri = "",
 
   [Parameter(HelpMessage = "Raw CSS text that fully replaces wwwroot/static/custom.css in the built server")]
   [string] $CustomCss = "",
@@ -459,9 +459,9 @@ if ($content -ne $original) {
 Write-Host "Processing icons" -ForegroundColor Yellow
 
 if ($WhatIf) {
-  if ($IconPng) { Write-Host "[What-If] Would download/copy icon from: $IconPng and distribute to all icon locations" -ForegroundColor Gray }
-  if ($IconIco) { Write-Host "[What-If] Would download/copy ICO from: $IconIco and distribute to all icon locations" -ForegroundColor Gray }
-  if (-not $IconPng -and -not $IconIco) { Write-Host "[What-If] No icons provided (using defaults)" -ForegroundColor Gray }
+  if ($AppIconUri) { Write-Host "[What-If] Would download/copy icon from: $AppIconUri and distribute to all icon locations" -ForegroundColor Gray }
+  if ($ShellIconUri) { Write-Host "[What-If] Would download/copy ICO from: $ShellIconUri and distribute to all icon locations" -ForegroundColor Gray }
+  if (-not $AppIconUri -and -not $ShellIconUri) { Write-Host "[What-If] No icons provided (using defaults)" -ForegroundColor Gray }
   Write-Host ""
 }
 else {
@@ -472,8 +472,8 @@ else {
   $masterPng = ""
   $masterIco = ""
 
-  if ($IconPng) {
-    $stagedIcon = Get-SourceFile -Source $IconPng -StagingDir $stagingDir -BaseName "master"
+  if ($AppIconUri) {
+    $stagedIcon = Get-SourceFile -Source $AppIconUri -StagingDir $stagingDir -BaseName "master"
     $iconKind = Get-ImageKind -Path $stagedIcon
     if ($iconKind -eq "png") {
       $masterPng = $stagedIcon
@@ -484,16 +484,16 @@ else {
       Resize-Image -SourcePath $stagedIcon -OutputPath $masterPng -Width 1024 -Height 1024
     }
     else {
-      throw "Icon source must be PNG or SVG, but '$IconPng' is $iconKind. Put ICO files in the ICO icon parameter."
+      throw "Icon source must be PNG or SVG, but '$AppIconUri' is $iconKind. Put ICO files in the shell icon parameter."
     }
   }
-  if ($IconIco) {
+  if ($ShellIconUri) {
     # The build only ever copies ICO bytes, so a non-ICO source here would be a file whose name
     # contradicts its content wherever it lands.
-    $stagedIco = Get-SourceFile -Source $IconIco -StagingDir $stagingDir -BaseName "favicon"
+    $stagedIco = Get-SourceFile -Source $ShellIconUri -StagingDir $stagingDir -BaseName "favicon"
     $icoKind = Get-ImageKind -Path $stagedIco
     if ($icoKind -ne "ico") {
-      throw "ICO source must be a real ICO file, but '$IconIco' is $icoKind."
+      throw "ICO source must be a real ICO file, but '$ShellIconUri' is $icoKind."
     }
     $masterIco = $stagedIco
   }
@@ -554,7 +554,7 @@ else {
 Write-Host "Processing company logo" -ForegroundColor Yellow
 
 if ($WhatIf) {
-  if ($CompanyLogoPng) { Write-Host "[What-If] Would download/copy company logo from: $CompanyLogoPng to wwwroot/images/company-logo.png" -ForegroundColor Gray }
+  if ($CompanyLogoUri) { Write-Host "[What-If] Would download/copy company logo from: $CompanyLogoUri to wwwroot/images/company-logo.png" -ForegroundColor Gray }
   else { Write-Host "[What-If] No company logo provided (using default)" -ForegroundColor Gray }
   Write-Host ""
 }
@@ -563,8 +563,8 @@ else {
   if (Test-Path -LiteralPath $stagingDir) { Remove-Item -LiteralPath $stagingDir -Recurse -Force }
   New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
 
-  if ($CompanyLogoPng) {
-    $stagedLogo = Get-SourceFile -Source $CompanyLogoPng -StagingDir $stagingDir -BaseName "logo"
+  if ($CompanyLogoUri) {
+    $stagedLogo = Get-SourceFile -Source $CompanyLogoUri -StagingDir $stagingDir -BaseName "logo"
     $logoKind = Get-ImageKind -Path $stagedLogo
     if ($logoKind -eq "png") {
       $masterLogo = $stagedLogo
@@ -577,7 +577,7 @@ else {
       Resize-Image -SourcePath $stagedLogo -OutputPath $masterLogo -Width 512 -Height 512 -Fit
     }
     else {
-      throw "Company logo source must be PNG or SVG, but '$CompanyLogoPng' is $logoKind."
+      throw "Company logo source must be PNG or SVG, but '$CompanyLogoUri' is $logoKind."
     }
     $destLogo = Join-Path $repoRoot "ControlR.Web.Server/wwwroot/images/company-logo.png"
     Copy-Item -LiteralPath $masterLogo -Destination $destLogo -Force
