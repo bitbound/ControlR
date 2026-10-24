@@ -35,16 +35,16 @@ jobs:
             exit 1
           fi
 
-      - name: Mint a token for the target repository
+      - name: Mint a token for the target repositories
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
           client-id: ${{ secrets.BBB_CLIENT_ID }}
           private-key: ${{ secrets.BBB_PRIVATE_KEY }}
           owner: bitbound
-          repositories: ${{ secrets.RELEASE_SYNC_REPO }}
+          repositories: ${{ secrets.RELEASE_SYNC_REPO }}, controlr-portal-builds
 
-      - name: Push the tag and its commit
+      - name: Push the tag and its commit synced repo
         env:
           TOKEN: ${{ steps.app-token.outputs.token }}
           REPO: ${{ secrets.RELEASE_SYNC_REPO }}
@@ -59,3 +59,22 @@ jobs:
 
           git push "https://x-access-token:${TOKEN}@github.com/bitbound/${REPO}.git" \
             "refs/tags/${TAG}"
+
+      - name: Mirror the release into controlr-portal-builds
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          if ! git rev-parse --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag ${TAG} is not present in the checkout."
+            exit 1
+          fi
+
+          git push "https://x-access-token:${TOKEN}@github.com/bitbound/controlr-portal-builds.git" \
+            "refs/tags/${TAG}"
+
+          # Keep the default branch pointing at the latest release commit.
+          git push "https://x-access-token:${TOKEN}@github.com/bitbound/controlr-portal-builds.git" \
+            "HEAD:refs/heads/main" --force
