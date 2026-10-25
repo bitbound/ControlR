@@ -145,7 +145,7 @@ public class DesktopClientRpcService(
     }
   }
 
-  public async Task<Result> ReceiveRemoteControlDto(Guid sessionId, RemoteControlCommandWrapper dto)
+  public async Task<Result> ReceiveRemoteControlDto(Guid sessionId, RemoteControlViewerWrapper dto)
   {
     if (!_remoteControlHostManager.TryGetSession(sessionId, out var session))
     {

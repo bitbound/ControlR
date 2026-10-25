@@ -68,7 +68,7 @@ public class AgentHubClientPermissionPreflightTests
     var targetProcessId = 4246;
     var desktopClientRpc = new Mock<IDesktopClientRpcService>();
     desktopClientRpc
-      .Setup(x => x.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlCommandWrapper>()))
+      .Setup(x => x.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlViewerWrapper>()))
       .ReturnsAsync(Result.Fail("No remote control session found."));
     var ipcServer = new Mock<IIpcServer>();
     ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
@@ -79,7 +79,7 @@ public class AgentHubClientPermissionPreflightTests
       Guid.NewGuid(),
       targetProcessId,
       Guid.NewGuid(),
-      RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText)));
+      RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText)));
 
     Assert.False(result.IsSuccess);
     Assert.Equal("No remote control session found.", result.Reason);
@@ -92,14 +92,14 @@ public class AgentHubClientPermissionPreflightTests
     var sessionId = Guid.NewGuid();
     var desktopClientRpc = new Mock<IDesktopClientRpcService>();
     desktopClientRpc
-      .Setup(x => x.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlCommandWrapper>()))
+      .Setup(x => x.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlViewerWrapper>()))
       .ReturnsAsync(Result.Ok());
     var ipcServer = new Mock<IIpcServer>();
     ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
 
     var serverStore = CreateIpcServerStore(targetProcessId, ipcServer.Object);
     var sut = CreateSut(serverStore.Object);
-    var wrapper = RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText);
+    var wrapper = RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText);
 
     var result = await sut.InvokeRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
       Guid.NewGuid(),
@@ -127,7 +127,7 @@ public class AgentHubClientPermissionPreflightTests
       Guid.NewGuid(),
       TargetProcessId: 4245,
       SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText)));
+      Wrapper: RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText)));
 
     Assert.False(result.IsSuccess);
   }

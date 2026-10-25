@@ -3,11 +3,11 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 /// <summary>
 /// DTO kinds the viewer issues and the desktop client consumes.
 /// </summary>
-public enum RemoteControlCommandDtoType
+public enum RemoteControlViewerDtoType
 {
   None = 0,
   ChangeDisplays = 17,
-  // Also a RemoteControlEventDtoType at the same value.  Both directions carry clipboard text.
+  // Also a RemoteControlDesktopDtoType at the same value.  Both directions carry clipboard text.
   ClipboardText = 21,
   CloseRemoteControlSession = 19,
   KeyEvent = 28,

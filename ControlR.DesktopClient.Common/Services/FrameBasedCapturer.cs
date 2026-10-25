@@ -138,13 +138,13 @@ internal class FrameBasedCapturer : IDesktopCapturer
   /// </summary>
   /// <param name="cancellationToken">Cancellation token to stop the stream.</param>
   /// <returns>An async sequence of DTO wrappers containing screen region data.</returns>
-  public async IAsyncEnumerable<RemoteControlEventWrapper> GetCaptureStream(
+  public async IAsyncEnumerable<RemoteControlDesktopWrapper> GetCaptureStream(
     [EnumeratorCancellation] CancellationToken cancellationToken)
   {
     ObjectDisposedException.ThrowIf(_disposedValue, this);
     await foreach (var regions in _captureChannel.Reader.ReadAllAsync(cancellationToken))
     {
-      yield return RemoteControlEventWrapper.Create(regions, RemoteControlEventDtoType.ScreenRegions);
+      yield return RemoteControlDesktopWrapper.Create(regions, RemoteControlDesktopDtoType.ScreenRegions);
     }
   }
 

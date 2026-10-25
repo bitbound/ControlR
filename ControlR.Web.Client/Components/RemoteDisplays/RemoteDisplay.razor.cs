@@ -436,65 +436,65 @@ public partial class RemoteDisplay : JsInteropableComponent
     }
   }
 
-  private async Task HandleRemoteControlDtoReceived(RemoteControlEventWrapper wrapper)
+  private async Task HandleRemoteControlDtoReceived(RemoteControlDesktopWrapper wrapper)
   {
     try
     {
       switch (wrapper.DtoType)
       {
-        case RemoteControlEventDtoType.DisplayData:
+        case RemoteControlDesktopDtoType.DisplayData:
           {
             var dto = wrapper.GetPayload<DisplayDataDto>();
             await HandleDisplayDataReceived(dto);
             break;
           }
-        case RemoteControlEventDtoType.ScreenRegion:
+        case RemoteControlDesktopDtoType.ScreenRegion:
           {
             var dto = wrapper.GetPayload<ScreenRegionDto>();
             await DrawRegion(dto);
             break;
           }
-        case RemoteControlEventDtoType.ScreenRegions:
+        case RemoteControlDesktopDtoType.ScreenRegions:
           {
             var dto = wrapper.GetPayload<ScreenRegionsDto>();
             await DrawRegions(dto);
             break;
           }
-        case RemoteControlEventDtoType.ClipboardText:
+        case RemoteControlDesktopDtoType.ClipboardText:
           {
             var dto = wrapper.GetPayload<ClipboardTextDto>();
             await HandleClipboardTextReceived(dto);
             break;
           }
-        case RemoteControlEventDtoType.CursorChanged:
+        case RemoteControlDesktopDtoType.CursorChanged:
           {
             var dto = wrapper.GetPayload<CursorChangedDto>();
             await HandleCursorChanged(dto);
             break;
           }
-        case RemoteControlEventDtoType.WindowsSessionEnding:
+        case RemoteControlDesktopDtoType.WindowsSessionEnding:
           {
             Snackbar.Add("Remote Windows session ending", Severity.Warning);
             await OnDisconnectRequested.InvokeAsync();
             break;
           }
-        case RemoteControlEventDtoType.WindowsSessionSwitched:
+        case RemoteControlDesktopDtoType.WindowsSessionSwitched:
           {
             Snackbar.Add("Remote Windows session switched", Severity.Info);
             break;
           }
-        case RemoteControlEventDtoType.CaptureMetricsChanged:
+        case RemoteControlDesktopDtoType.CaptureMetricsChanged:
           {
             // Metrics frame handles this one internally.
             break;
           }
-        case RemoteControlEventDtoType.ToastNotification:
+        case RemoteControlDesktopDtoType.ToastNotification:
           {
             var dto = wrapper.GetPayload<ToastNotificationDto>();
             Snackbar.Add(dto.Message, dto.Severity.ToMudSeverity());
             break;
           }
-        case RemoteControlEventDtoType.RemoteControlSessionError:
+        case RemoteControlDesktopDtoType.RemoteControlSessionError:
           {
             var dto = wrapper.GetPayload<RemoteControlSessionErrorDto>();
             Snackbar.Add(dto.Message, Severity.Error);
@@ -504,12 +504,12 @@ public partial class RemoteDisplay : JsInteropableComponent
             }
             break;
           }
-        case RemoteControlEventDtoType.BlockInputResult:
+        case RemoteControlDesktopDtoType.BlockInputResult:
           {
             // Handled in InputPopover.
             break;
           }
-        case RemoteControlEventDtoType.PrivacyScreenResult:
+        case RemoteControlDesktopDtoType.PrivacyScreenResult:
           {
             var dto = wrapper.GetPayload<PrivacyScreenResultDto>();
             RemoteControlState.IsPrivacyScreenEnabled = dto.FinalState;
@@ -525,21 +525,21 @@ public partial class RemoteDisplay : JsInteropableComponent
             }
             break;
           }
-        case RemoteControlEventDtoType.SessionDisconnectRequested:
+        case RemoteControlDesktopDtoType.SessionDisconnectRequested:
           {
             Snackbar.Add("Remote user requested disconnection", Severity.Info);
             await OnDisconnectRequested.InvokeAsync();
             break;
           }
         default:
-          Logger.LogWarning("Received unsupported DTO type: {RemoteControlEventDtoType}", Enum.GetName(wrapper.DtoType));
+          Logger.LogWarning("Received unsupported DTO type: {RemoteControlDesktopDtoType}", Enum.GetName(wrapper.DtoType));
           Snackbar.Add($"Unsupported DTO type: {Enum.GetName(wrapper.DtoType)}", Severity.Warning);
           break;
       }
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while handling remote control DTO. Type: {RemoteControlEventDtoType}", Enum.GetName(wrapper.DtoType));
+      Logger.LogError(ex, "Error while handling remote control DTO. Type: {RemoteControlDesktopDtoType}", Enum.GetName(wrapper.DtoType));
     }
   }
 

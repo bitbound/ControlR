@@ -170,11 +170,11 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
   [Fact]
   public async Task ServerCanSendRemoteControlDtoToClient()
   {
-    var tcs = new TaskCompletionSource<RemoteControlCommandWrapper>();
+    var tcs = new TaskCompletionSource<RemoteControlViewerWrapper>();
     var mockClientService = new Mock<IDesktopClientRpcService>();
     mockClientService
-      .Setup(m => m.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlCommandWrapper>()))
-      .Returns<Guid, RemoteControlCommandWrapper>((_, dto) =>
+      .Setup(m => m.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlViewerWrapper>()))
+      .Returns<Guid, RemoteControlViewerWrapper>((_, dto) =>
       {
         tcs.SetResult(dto);
         return Task.FromResult(Result.Ok());
@@ -204,11 +204,11 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     server.Start();
     client.Start();
 
-    var wrapper = RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText);
+    var wrapper = RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText);
     await server.Client.ReceiveRemoteControlDto(Guid.NewGuid(), wrapper);
 
     var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-    Assert.Equal(RemoteControlCommandDtoType.TypeText, received.DtoType);
+    Assert.Equal(RemoteControlViewerDtoType.TypeText, received.DtoType);
     Assert.Equal("hello", received.GetPayload<TypeTextDto>().Text);
 
     cts?.Cancel();

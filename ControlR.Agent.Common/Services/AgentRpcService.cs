@@ -35,7 +35,7 @@ public class AgentRpcService(IHubConnection<IAgentHub> hubConnection, ILogger<Ag
         }
     }
 
-    public async Task SendRemoteControlDto(string viewerConnectionId, RemoteControlEventWrapper dto)
+    public async Task SendRemoteControlDto(string viewerConnectionId, RemoteControlDesktopWrapper dto)
     {
         try
         {

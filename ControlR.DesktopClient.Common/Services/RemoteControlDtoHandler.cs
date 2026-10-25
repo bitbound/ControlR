@@ -22,7 +22,7 @@ namespace ControlR.DesktopClient.Common.Services;
 /// </summary>
 public interface IRemoteControlDtoHandler
 {
-  Task<Result> Handle(RemoteControlCommandWrapper wrapper);
+  Task<Result> Handle(RemoteControlViewerWrapper wrapper);
 }
 
 internal sealed class RemoteControlDtoHandler(
@@ -50,7 +50,7 @@ internal sealed class RemoteControlDtoHandler(
 
   private bool _isInputBlocked;
 
-  public async Task<Result> Handle(RemoteControlCommandWrapper wrapper)
+  public async Task<Result> Handle(RemoteControlViewerWrapper wrapper)
   {
     try
     {
@@ -58,19 +58,19 @@ internal sealed class RemoteControlDtoHandler(
 
       switch (wrapper.DtoType)
       {
-        case RemoteControlCommandDtoType.CloseRemoteControlSession:
+        case RemoteControlViewerDtoType.CloseRemoteControlSession:
           {
             _logger.LogInformation("Received request to close remote control session.");
             _appLifetime.StopApplication();
             break;
           }
-        case RemoteControlCommandDtoType.ChangeDisplays:
+        case RemoteControlViewerDtoType.ChangeDisplays:
           {
             var payload = wrapper.GetPayload<ChangeDisplaysDto>();
             await _desktopCapturer.ChangeDisplays(payload.DisplayId);
             break;
           }
-        case RemoteControlCommandDtoType.WheelScroll:
+        case RemoteControlViewerDtoType.WheelScroll:
           {
             var payload = wrapper.GetPayload<WheelScrollDto>();
             var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
@@ -81,7 +81,7 @@ internal sealed class RemoteControlDtoHandler(
             await _inputSimulator.ScrollWheel(coordinates, (int)payload.ScrollY, (int)payload.ScrollX);
             break;
           }
-        case RemoteControlCommandDtoType.KeyEvent:
+        case RemoteControlViewerDtoType.KeyEvent:
           {
             var payload = wrapper.GetPayload<KeyEventDto>();
             await _inputSimulator.InvokeKeyEvent(
@@ -92,31 +92,31 @@ internal sealed class RemoteControlDtoHandler(
               payload.Modifiers);
             break;
           }
-        case RemoteControlCommandDtoType.ResetKeyboardState:
+        case RemoteControlViewerDtoType.ResetKeyboardState:
           {
             await _inputSimulator.ResetKeyboardState();
             break;
           }
-        case RemoteControlCommandDtoType.ClipboardText:
+        case RemoteControlViewerDtoType.ClipboardText:
           {
             _logger.LogInformation("Received clipboard text from viewer.");
             var payload = wrapper.GetPayload<ClipboardTextDto>();
             await _clipboardManager.SetText(payload.Text);
             break;
           }
-        case RemoteControlCommandDtoType.RequestClipboardText:
+        case RemoteControlViewerDtoType.RequestClipboardText:
           {
             _logger.LogInformation("Received request for clipboard text.");
             await SendCurrentClipboardText();
             break;
           }
-        case RemoteControlCommandDtoType.TypeText:
+        case RemoteControlViewerDtoType.TypeText:
           {
             var payload = wrapper.GetPayload<TypeTextDto>();
             await _inputSimulator.TypeText(payload.Text);
             break;
           }
-        case RemoteControlCommandDtoType.MovePointer:
+        case RemoteControlViewerDtoType.MovePointer:
           {
             var payload = wrapper.GetPayload<MovePointerDto>();
             var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
@@ -127,7 +127,7 @@ internal sealed class RemoteControlDtoHandler(
             await _inputSimulator.MovePointer(coordinates, MovePointerType.Absolute);
             break;
           }
-        case RemoteControlCommandDtoType.MouseButtonEvent:
+        case RemoteControlViewerDtoType.MouseButtonEvent:
           {
             var payload = wrapper.GetPayload<MouseButtonEventDto>();
             var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
@@ -139,7 +139,7 @@ internal sealed class RemoteControlDtoHandler(
             await _inputSimulator.InvokeMouseButtonEvent(coordinates, payload.Button, payload.IsPressed);
             break;
           }
-        case RemoteControlCommandDtoType.MouseClick:
+        case RemoteControlViewerDtoType.MouseClick:
           {
             var payload = wrapper.GetPayload<MouseClickDto>();
             var coordinates = await TryGetPointerCoordinates(payload.NormalizedX, payload.NormalizedY);
@@ -158,20 +158,20 @@ internal sealed class RemoteControlDtoHandler(
             }
             break;
           }
-        case RemoteControlCommandDtoType.RequestKeyFrame:
+        case RemoteControlViewerDtoType.RequestKeyFrame:
           {
             _logger.LogInformation("Received request for key frame.");
             await _desktopCapturer.RequestKeyFrame();
             break;
           }
-        case RemoteControlCommandDtoType.UpdateCaptureSettings:
+        case RemoteControlViewerDtoType.UpdateCaptureSettings:
           {
             var payload = wrapper.GetPayload<UpdateCaptureSettingsDto>();
             ApplyCaptureSettings(payload);
             await _desktopCapturer.RequestKeyFrame();
             break;
           }
-        case RemoteControlCommandDtoType.ToggleBlockInput:
+        case RemoteControlViewerDtoType.ToggleBlockInput:
           {
             if (!_systemEnvironment.IsWindows())
             {
@@ -184,10 +184,10 @@ internal sealed class RemoteControlDtoHandler(
             var success = await _inputSimulator.SetBlockInput(payload.IsEnabled);
             _isInputBlocked = success ? payload.IsEnabled : _isInputBlocked;
             var resultDto = new BlockInputResultDto(success, _isInputBlocked);
-            await SendDtoToViewer(RemoteControlEventWrapper.Create(resultDto, RemoteControlEventDtoType.BlockInputResult));
+            await SendDtoToViewer(RemoteControlDesktopWrapper.Create(resultDto, RemoteControlDesktopDtoType.BlockInputResult));
             break;
           }
-        case RemoteControlCommandDtoType.TogglePrivacyScreen:
+        case RemoteControlViewerDtoType.TogglePrivacyScreen:
           {
             if (!_systemEnvironment.IsWindows())
             {
@@ -200,7 +200,7 @@ internal sealed class RemoteControlDtoHandler(
             var result = await _displayManager.SetPrivacyScreen(payload.IsEnabled);
             var resultDto = new PrivacyScreenResultDto(result.IsSuccess, _displayManager.IsPrivacyScreenEnabled);
             await SendDtoToViewer(
-              RemoteControlEventWrapper.Create(resultDto, RemoteControlEventDtoType.PrivacyScreenResult));
+              RemoteControlDesktopWrapper.Create(resultDto, RemoteControlDesktopDtoType.PrivacyScreenResult));
             break;
           }
         default:
@@ -244,10 +244,10 @@ internal sealed class RemoteControlDtoHandler(
   {
     var clipboardText = await _clipboardManager.GetText();
     var dto = new ClipboardTextDto(clipboardText, _startupOptions.SessionId);
-    await SendDtoToViewer(RemoteControlEventWrapper.Create(dto, RemoteControlEventDtoType.ClipboardText));
+    await SendDtoToViewer(RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.ClipboardText));
   }
 
-  private Task SendDtoToViewer(RemoteControlEventWrapper wrapper)
+  private Task SendDtoToViewer(RemoteControlDesktopWrapper wrapper)
   {
     _messenger.Send(new SendRemoteControlDtoToViewerMessage(wrapper));
     return Task.CompletedTask;

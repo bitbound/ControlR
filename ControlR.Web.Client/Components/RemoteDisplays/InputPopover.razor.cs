@@ -66,13 +66,13 @@ public partial class InputPopover : DisposableComponent
     }
   }
 
-  private async Task HandleDtoReceived(RemoteControlEventWrapper wrapper)
+  private async Task HandleDtoReceived(RemoteControlDesktopWrapper wrapper)
   {
     try
     {
       switch (wrapper.DtoType)
       {
-        case RemoteControlEventDtoType.BlockInputResult:
+        case RemoteControlDesktopDtoType.BlockInputResult:
           var dto = wrapper.GetPayload<BlockInputResultDto>();
           RemoteControlState.IsBlockUserInputEnabled = dto.FinalState;
           _isBlockInputDisabled = false;
@@ -93,7 +93,7 @@ public partial class InputPopover : DisposableComponent
     }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Error while handling received DTO of type {RemoteControlEventDtoType}.", wrapper.DtoType);
+      Logger.LogError(ex, "Error while handling received DTO of type {RemoteControlDesktopDtoType}.", wrapper.DtoType);
       Snackbar.Add($"An error occurred while handling DTO type {wrapper.DtoType}", Severity.Error);
     }
   }

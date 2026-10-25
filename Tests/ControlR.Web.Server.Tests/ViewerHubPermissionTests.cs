@@ -137,9 +137,9 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlCommandWrapper.Create(
+      Wrapper: RemoteControlViewerWrapper.Create(
         new ClipboardTextDto("secret", Guid.NewGuid()),
-        RemoteControlCommandDtoType.ClipboardText));
+        RemoteControlViewerDtoType.ClipboardText));
 
     var result = await hub.InvokeRemoteControlDtoOnAgent(request);
 
@@ -164,7 +164,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
+      Wrapper: RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText));
 
     var result = await hub.InvokeRemoteControlDtoOnAgent(request);
 
@@ -191,9 +191,9 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: sessionId,
-      Wrapper: RemoteControlCommandWrapper.Create(
+      Wrapper: RemoteControlViewerWrapper.Create(
         new TogglePrivacyScreenDto(true),
-        RemoteControlCommandDtoType.TogglePrivacyScreen));
+        RemoteControlViewerDtoType.TogglePrivacyScreen));
 
     var result = await hub.InvokeRemoteControlDtoOnAgent(request);
 
@@ -462,7 +462,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
+      Wrapper: RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText));
 
     var result = await hub.SendRemoteControlDtoToAgent(request);
 
@@ -489,7 +489,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: sessionId,
-      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
+      Wrapper: RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText));
 
     await hub.SendRemoteControlDtoToAgent(request);
 
@@ -497,7 +497,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       forwarded =>
         forwarded.DeviceId == device.Id &&
         forwarded.SessionId == sessionId &&
-        forwarded.Wrapper.DtoType == RemoteControlCommandDtoType.TypeText)), Times.Once);
+        forwarded.Wrapper.DtoType == RemoteControlViewerDtoType.TypeText)), Times.Once);
   }
 
   [Fact]
@@ -516,9 +516,9 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: sessionId,
-      Wrapper: RemoteControlCommandWrapper.Create(
+      Wrapper: RemoteControlViewerWrapper.Create(
         new TogglePrivacyScreenDto(true),
-        RemoteControlCommandDtoType.TogglePrivacyScreen));
+        RemoteControlViewerDtoType.TogglePrivacyScreen));
 
     var result = await hub.SendRemoteControlDtoToAgent(request);
 
@@ -527,7 +527,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       forwarded =>
         forwarded.DeviceId == device.Id &&
         forwarded.SessionId == sessionId &&
-        forwarded.Wrapper.DtoType == RemoteControlCommandDtoType.TogglePrivacyScreen)), Times.Once);
+        forwarded.Wrapper.DtoType == RemoteControlViewerDtoType.TogglePrivacyScreen)), Times.Once);
   }
 
   [Fact]
@@ -546,9 +546,9 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: sessionId,
-      Wrapper: RemoteControlCommandWrapper.Create(
+      Wrapper: RemoteControlViewerWrapper.Create(
         new TogglePrivacyScreenDto(true),
-        RemoteControlCommandDtoType.TogglePrivacyScreen));
+        RemoteControlViewerDtoType.TogglePrivacyScreen));
 
     var result = await hub.SendRemoteControlDtoToAgent(request);
 
@@ -575,7 +575,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: sessionId,
-      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
+      Wrapper: RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText));
 
     await hub.SendRemoteControlDtoToAgent(request);
 
@@ -615,7 +615,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       device.Id,
       TargetProcessId: 100,
       SessionId: sessionId,
-      Wrapper: RemoteControlCommandWrapper.Create(new TypeTextDto("hello"), RemoteControlCommandDtoType.TypeText));
+      Wrapper: RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText));
 
     var result = await intruderHub.SendRemoteControlDtoToAgent(request);
 

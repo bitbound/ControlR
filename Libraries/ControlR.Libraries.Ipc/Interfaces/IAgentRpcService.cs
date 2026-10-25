@@ -10,5 +10,5 @@ namespace ControlR.Libraries.Ipc.Interfaces;
 public partial interface IAgentRpcService
 {
     Task<bool> SendChatResponse(ChatResponseIpcDto dto);
-    Task SendRemoteControlDto(string viewerConnectionId, RemoteControlEventWrapper dto);
+    Task SendRemoteControlDto(string viewerConnectionId, RemoteControlDesktopWrapper dto);
 }
