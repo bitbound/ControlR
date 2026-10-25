@@ -16,16 +16,16 @@ using Microsoft.Extensions.Options;
 namespace ControlR.DesktopClient.Common.Services;
 
 /// <summary>
-/// Executes inbound remote control commands, independent of the transport that carried them.
+/// Executes remote control commands issued by the viewer, independent of the transport that carried them.
 /// Results that the viewer needs beyond success or failure are published over the messenger for the
 /// session's stream to deliver.
 /// </summary>
-public interface IRemoteControlDtoHandler
+public interface IRemoteControlViewerCommandHandler
 {
   Task<Result> Handle(RemoteControlViewerWrapper wrapper);
 }
 
-internal sealed class RemoteControlDtoHandler(
+internal sealed class RemoteControlViewerCommandHandler(
   IHostApplicationLifetime appLifetime,
   IClipboardManager clipboardManager,
   IDesktopCapturerFactory desktopCapturerFactory,
@@ -35,14 +35,14 @@ internal sealed class RemoteControlDtoHandler(
   IRemoteControlSessionState sessionState,
   ISystemEnvironment systemEnvironment,
   IOptions<RemoteControlSessionOptions> startupOptions,
-  ILogger<RemoteControlDtoHandler> logger) : IRemoteControlDtoHandler
+  ILogger<RemoteControlViewerCommandHandler> logger) : IRemoteControlViewerCommandHandler
 {
   private readonly IHostApplicationLifetime _appLifetime = appLifetime;
   private readonly IClipboardManager _clipboardManager = clipboardManager;
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly IInputSimulator _inputSimulator = inputSimulator;
-  private readonly ILogger<RemoteControlDtoHandler> _logger = logger;
+  private readonly ILogger<RemoteControlViewerCommandHandler> _logger = logger;
   private readonly IMessenger _messenger = messenger;
   private readonly IRemoteControlSessionState _sessionState = sessionState;
   private readonly RemoteControlSessionOptions _startupOptions = startupOptions.Value;

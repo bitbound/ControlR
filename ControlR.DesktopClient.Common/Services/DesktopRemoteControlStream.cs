@@ -33,7 +33,7 @@ internal sealed class DesktopRemoteControlStream(
   IMemoryProvider memoryProvider,
   IDisplayManager displayManager,
   IIpcClientAccessor ipcClientAccessor,
-  IRemoteControlDtoHandler dtoHandler,
+  IRemoteControlViewerCommandHandler viewerCommandHandler,
   IWaiter waiter,
   IOptions<RemoteControlSessionOptions> startupOptions,
   ILogger<DesktopRemoteControlStream> logger)
@@ -43,13 +43,13 @@ internal sealed class DesktopRemoteControlStream(
   private readonly ICaptureMetrics _captureMetrics = captureMetrics;
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly IDisplayManager _displayManager = displayManager;
-  private readonly IRemoteControlDtoHandler _dtoHandler = dtoHandler;
   private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<DesktopRemoteControlStream> _logger = logger;
   private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(3);
   private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
   private readonly IOptions<RemoteControlSessionOptions> _startupOptions = startupOptions;
   private readonly IToaster _toaster = toaster;
+  private readonly IRemoteControlViewerCommandHandler _viewerCommandHandler = viewerCommandHandler;
 
   /// <summary>
   /// Relay DTO handling, which a viewer older than v0.30.x still relies on for every DTO kind.
@@ -200,7 +200,7 @@ internal sealed class DesktopRemoteControlStream(
       Payload = wrapper.Payload,
       SendTimestamp = wrapper.SendTimestamp
     };
-    await _dtoHandler.Handle(commandWrapper);
+    await _viewerCommandHandler.Handle(commandWrapper);
   }
 
   private async Task HandleSendDtoToViewerMessage(

@@ -153,7 +153,7 @@ public class DesktopClientRpcService(
       return Result.Fail($"No remote control session found for session ID {sessionId}.");
     }
 
-    if (session.Host.Services.GetService<IRemoteControlDtoHandler>() is not { } handler)
+    if (session.Host.Services.GetService<IRemoteControlViewerCommandHandler>() is not { } handler)
     {
       _logger.LogWarning("Remote control DTO handler not found for session ID {SessionId}.", sessionId);
       return Result.Fail($"Remote control DTO handler not found for session ID {sessionId}.");
