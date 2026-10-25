@@ -94,10 +94,10 @@ jobs:
   publish:
     name: Publish to ACR
     runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
-    environment: ${{ inputs.environment == 'prod' && 'acr-publish-prod' || 'acr-publish-dev' }}
+    environment: ${{ inputs.environment == 'prod' && 'portal-publish-prod' || 'portal-publish-dev' }}
 
     env:
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
       SPONSOR_LOGIN: ${{ inputs.sponsor_login }}
 
     steps:
@@ -284,7 +284,7 @@ jobs:
       - name: Azure Login (OIDC)
         uses: azure/login@v3
         with:
-          client-id: ${{ secrets.AZURE_ACR_CLIENT_ID }}
+          client-id: ${{ secrets.PORTAL_PUBLISH_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 

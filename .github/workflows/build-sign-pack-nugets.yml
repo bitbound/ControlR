@@ -62,7 +62,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v3
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
@@ -82,9 +82,9 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
           PRERELEASE: ${{ inputs.prerelease }}
-          SIGNING_DESCRIPTION_URL: ${{ vars.SIGNING_DESCRIPTION_URL }}
-          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
-          AZURE_KEY_VAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
+          CODESIGN_DESCRIPTION_URL: ${{ vars.CODESIGN_DESCRIPTION_URL }}
+          CODESIGN_KEYVAULT_URI: ${{ secrets.CODESIGN_KEYVAULT_URI }}
+          CODESIGN_KEYVAULT_CERT_NAME: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
         run: |
           $packagesFilter = Get-Content -Raw 'Build/ControlR.Packages.slnf' | ConvertFrom-Json
           $projectPaths = @($packagesFilter.solution.projects)
@@ -115,10 +115,10 @@ jobs:
             # Sign the DLL
             $signPattern = Join-Path (Join-Path (Join-Path (Join-Path $projectDir 'bin') 'Release') '**') "$projectName.dll"
             dnx azuresigntool --yes sign `
-              --du="$env:SIGNING_DESCRIPTION_URL" `
+              --du="$env:CODESIGN_DESCRIPTION_URL" `
               --fd=sha256 `
-              --kvu="$env:AZURE_KEY_VAULT_URI" `
-              --kvc="$env:AZURE_KEY_VAULT_CERTIFICATE_NAME" `
+              --kvu="$env:CODESIGN_KEYVAULT_URI" `
+              --kvc="$env:CODESIGN_KEYVAULT_CERT_NAME" `
               --kvm `
               --tr=http://timestamp.digicert.com `
               --td=sha256 `
