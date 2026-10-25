@@ -124,9 +124,44 @@ $rejectRepo = New-FakeRepo -Name "reject"
 $icoBytesPath = New-ImageFile -Dir (New-ScratchDir -Name "reject-source") -FileName "icon.png" -Bytes $icoBytes
 $pngBytesPath = New-ImageFile -Dir $rejectRepo -FileName "logo.png" -Bytes $pngBytes
 
-Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ IconPng = $icoBytesPath } } -ExpectedMessage "Icon source must be PNG or SVG" -TestName "customize.ps1 rejects an ICO passed as the PNG icon"
-Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ IconIco = $pngBytesPath } } -ExpectedMessage "ICO source must be a real ICO file" -TestName "customize.ps1 rejects a PNG passed as the ICO icon"
-Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ CompanyLogoPng = $icoBytesPath } } -ExpectedMessage "Company logo source must be PNG or SVG" -TestName "customize.ps1 rejects an ICO passed as the company logo"
+Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ AppIconUri = $icoBytesPath } } -ExpectedMessage "Icon source must be PNG or SVG" -TestName "customize.ps1 rejects an ICO passed as the app icon"
+Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ ShellIconUri = $pngBytesPath } } -ExpectedMessage "ICO source must be a real ICO file" -TestName "customize.ps1 rejects a PNG passed as the shell icon"
+Assert-Throws -Block { Invoke-FakeRepoCustomize -Root $rejectRepo -ExtraParams @{ CompanyLogoUri = $icoBytesPath } } -ExpectedMessage "Company logo source must be PNG or SVG" -TestName "customize.ps1 rejects an ICO passed as the company logo"
+
+# Invoke-Customize.ps1 maps the portal payload keys onto customize.ps1 parameter names. A stale
+# splat target there passes every direct-invoke test above while silently dropping the branded
+# asset, so each images value has to be proven to cross that boundary from a payload. The two
+# icon cases ride the byte-validation rejects: a value that never reaches its parameter produces
+# no throw and fails the test.
+function Invoke-CustomizePayload {
+  param([string] $Root, [hashtable] $Images)
+  # All three keys present, like the portal sends, because the mapping reads them unguarded.
+  $imageFields = [ordered]@{ appIconUri = ""; shellIconUri = ""; companyLogoUri = "" }
+  foreach ($key in $Images.Keys) { $imageFields[$key] = $Images[$key] }
+  $payload = [ordered]@{ brandName = "Acme"; publisher = "Acme Inc."; version = "1.2.3.4"; colors = $null; images = $imageFields } | ConvertTo-Json -Depth 5
+  Set-Content -Path (Join-Path $Root "config.json") -Value $payload -Encoding UTF8
+  $prevEnvFile = $env:GITHUB_ENV
+  try {
+    $env:GITHUB_ENV = Join-Path $Root "github-env.txt"
+    & (Join-Path $Root ".scripts/Invoke-Customize.ps1") -ConfigPath (Join-Path $Root "config.json") -Version "1.2.3.4"
+  }
+  finally {
+    $env:GITHUB_ENV = $prevEnvFile
+  }
+}
+
+$payloadIconRepo = New-FakeRepo -Name "payload-appicon"
+Assert-Throws -Block { Invoke-CustomizePayload -Root $payloadIconRepo -Images @{ appIconUri = $icoBytesPath } } -ExpectedMessage "Icon source must be PNG or SVG" -TestName "Invoke-Customize.ps1 passes appIconUri from the payload"
+
+$payloadShellRepo = New-FakeRepo -Name "payload-shellicon"
+Assert-Throws -Block { Invoke-CustomizePayload -Root $payloadShellRepo -Images @{ shellIconUri = $pngBytesPath } } -ExpectedMessage "ICO source must be a real ICO file" -TestName "Invoke-Customize.ps1 passes shellIconUri from the payload"
+
+$payloadLogoRepo = New-FakeRepo -Name "payload-logo"
+New-Item -ItemType Directory -Path (Join-Path $payloadLogoRepo "ControlR.Web.Server/wwwroot/images") -Force | Out-Null
+$logoSourcePath = New-ImageFile -Dir $payloadLogoRepo -FileName "source-logo.png" -Bytes $pngBytes
+Invoke-CustomizePayload -Root $payloadLogoRepo -Images @{ companyLogoUri = $logoSourcePath }
+$destLogo = Join-Path $payloadLogoRepo "ControlR.Web.Server/wwwroot/images/company-logo.png"
+Assert-Equal -Expected ($pngBytes -join ",") -Actual (([IO.File]::ReadAllBytes($destLogo)) -join ",") -TestName "Invoke-Customize.ps1 passes companyLogoUri through to company-logo.png"
 
 if ($failures.Count -gt 0) {
   $failures | ForEach-Object { Write-Host "FAIL: $_" -ForegroundColor Red }
