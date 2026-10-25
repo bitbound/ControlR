@@ -1,0 +1,48 @@
+name: Apply Branding
+description: Applies a customization config or default branding, then validates the brand keys
+
+inputs:
+  source-dir:
+    description: 'Path to the ControlR repo checkout, relative to the workspace (e.g. "." or a submodule path)'
+    required: false
+    default: '.'
+  customization-config-path:
+    description: 'Absolute path to a customization.json. Empty selects default branding.'
+    required: false
+    default: ''
+  version:
+    description: 'Build version passed to Invoke-Customize.ps1'
+    required: true
+
+outputs:
+  brand-key:
+    description: 'Sanitized brand key (e.g. ControlR). Also exported as BRAND_KEY to the job environment.'
+    value: ${{ steps.validate.outputs.brand-key }}
+  unix-brand-key:
+    description: 'Lowercased brand key for unix paths (e.g. controlr). Also exported as UNIX_BRAND_KEY to the job environment.'
+    value: ${{ steps.validate.outputs.unix-brand-key }}
+
+runs:
+  using: composite
+  steps:
+    - name: Apply Customization
+      if: inputs.customization-config-path != ''
+      shell: pwsh
+      run: ${{ inputs.source-dir }}/.scripts/Invoke-Customize.ps1 -ConfigPath '${{ inputs.customization-config-path }}' -Version '${{ inputs.version }}'
+
+    - name: Set Default Branding
+      if: inputs.customization-config-path == ''
+      shell: pwsh
+      run: |
+        echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
+        echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
+
+    - name: Validate Brand Keys
+      id: validate
+      shell: pwsh
+      run: |
+        if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
+        if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
+        Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
+        "brand-key=$env:BRAND_KEY" >> $env:GITHUB_OUTPUT
+        "unix-brand-key=$env:UNIX_BRAND_KEY" >> $env:GITHUB_OUTPUT
