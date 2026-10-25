@@ -25,29 +25,18 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Check the target secret
-        env:
-          REPO: ${{ secrets.RELEASE_SYNC_REPO }}
-        run: |
-          set -euo pipefail
-          if [ -z "${REPO}" ]; then
-            echo "::error::RELEASE_SYNC_REPO is not set in this repository."
-            exit 1
-          fi
-
       - name: Mint a token for the target repositories
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ secrets.BBB_CLIENT_ID }}
-          private-key: ${{ secrets.BBB_PRIVATE_KEY }}
+          client-id: ${{ secrets.GITHUB_APP_ID }}
+          private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
           owner: bitbound
-          repositories: ${{ secrets.RELEASE_SYNC_REPO }}, controlr-portal-builds
+          repositories: ControlR-dev, controlr-portal-builds
 
-      - name: Push the tag and its commit synced repo
+      - name: Push the tag and its commit to ControlR-dev
         env:
           TOKEN: ${{ steps.app-token.outputs.token }}
-          REPO: ${{ secrets.RELEASE_SYNC_REPO }}
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
@@ -57,7 +46,7 @@ jobs:
             exit 1
           fi
 
-          git push "https://x-access-token:${TOKEN}@github.com/bitbound/${REPO}.git" \
+          git push "https://x-access-token:${TOKEN}@github.com/bitbound/ControlR-dev.git" \
             "refs/tags/${TAG}"
 
       - name: Mirror the release into controlr-portal-builds

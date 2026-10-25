@@ -94,14 +94,27 @@ These are also called by the two orchestrators:
 | `bitbound-bot.yml`        | Bot replies to review comments and pull requests               |
 | `auto-close-external-prs.yml` | Closes pull requests from external forks                   |
 
-## Required Secrets
+## Required Secrets and Variables
 
-For these workflows to function properly, you need to set up the following repository secrets:
+The full inventory lives in the Bitwarden secure note `controlr-github-secrets`, and
+`Set-ControlrGitHubSecrets.ps1` (in the personal scripts folder) applies it to any repo with
+`gh`. Naming scheme: `<PURPOSE>_<PROVIDER>_<DETAIL>`.
 
-- `DOCKER_USERNAME`: Your Docker Hub username
-- `DOCKER_PAT`: Your Docker Hub access token
-- `CERTIFICATE_THUMBPRINT`: Thumbprint of the code signing certificate (optional)
-- `SIGNTOOL_BINARY`: Base64-encoded SignTool executable (optional)
+| Scope | Items |
+| ----- | ----- |
+| Repo secrets | `GH_VARIABLES_PAT`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `MACOS_SIGN_*`, `APPLE_NOTARIZE_*`, `DOCKER_USERNAME`, `DOCKER_PAT` |
+| Repo variables | `CURRENT_VERSION`, `ARTIFACT_HOST`, `ARTIFACT_BASE_PATH`, `ALLOWED_PR_AUTHORS` |
+| `production` / `development` envs | `CODESIGN_*` secrets, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `NUGET_USER`, `CODESIGN_DESCRIPTION_URL` variable |
+| `portal-publish-dev` / `portal-publish-prod` envs | `PORTAL_PUBLISH_AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` secrets; `ACR_LOGIN_SERVER`, `SLOT_ZIP_STORAGE_ACCOUNT` variables |
+
+`GH_VARIABLES_PAT` exists because `GITHUB_TOKEN` cannot write repository variables. The variables
+REST endpoints require the "Variables" GitHub App permission, which the workflow `permissions:`
+key cannot grant.
+
+Azure-side, each Entra app used by these workflows carries one federated credential per OIDC
+subject it must accept. Environment-scoped jobs authenticate as
+`repo:<owner>/<repo>:environment:<env-name>`, so renaming a GitHub environment requires updating
+the matching federated credential in Entra.
 
 ## GitHub Release Assets
 

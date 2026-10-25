@@ -163,6 +163,9 @@ jobs:
       version: ${{ steps.setver.outputs.version }}
       prerelease: ${{ steps.setver.outputs.prerelease }}
     env:
+      # GITHUB_TOKEN cannot write repository variables. The variables REST endpoints require
+      # the "Variables" GitHub App permission, and the workflow `permissions:` key exposes no
+      # such grant, so actions: write does not cover `gh variable set`.
       GH_TOKEN: ${{ secrets.GH_VARIABLES_PAT }}
     steps:
       - name: Checkout
@@ -340,9 +343,9 @@ jobs:
 
       - name: Setup Code Signing Keychain
         env:
-          APPLE_P12_BASE64: ${{ secrets.APPLE_P12_BASE64 }}
-          APPLE_P12_PASSWORD: ${{ secrets.APPLE_P12_PASSWORD }}
-          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+          MACOS_SIGN_CERT_P12: ${{ secrets.MACOS_SIGN_CERT_P12 }}
+          MACOS_SIGN_CERT_PASSWORD: ${{ secrets.MACOS_SIGN_CERT_PASSWORD }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
         shell: bash
         run: |
           # Create temporary keychain
@@ -363,11 +366,11 @@ jobs:
           
           echo "Decoding and importing certificate..."
           P12_PATH="$RUNNER_TEMP/certificate.p12"
-          echo "$APPLE_P12_BASE64" | base64 --decode > "$P12_PATH"
+          echo "$MACOS_SIGN_CERT_P12" | base64 --decode > "$P12_PATH"
           
           security import "$P12_PATH" \
             -k "$KEYCHAIN_PATH" \
-            -P "$APPLE_P12_PASSWORD" \
+            -P "$MACOS_SIGN_CERT_PASSWORD" \
             -T /usr/bin/codesign \
             -T /usr/bin/productsign
           
@@ -378,9 +381,9 @@ jobs:
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
           # Extract the unique SHA-1 hash for the identity in the temporary keychain
-          IDENTITY_HASH=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "$APPLE_DEVELOPER_ID" | head -n 1 | awk '{print $2}')
+          IDENTITY_HASH=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "$MACOS_SIGN_IDENTITY" | head -n 1 | awk '{print $2}')
           if [ -z "$IDENTITY_HASH" ]; then
-            echo "ERROR: No signing identity found for APPLE_DEVELOPER_ID in temporary keychain."
+            echo "ERROR: No signing identity found for MACOS_SIGN_IDENTITY in temporary keychain."
             exit 1
           fi
           echo "IDENTITY_HASH=$IDENTITY_HASH" >> "$GITHUB_ENV"
@@ -511,9 +514,9 @@ jobs:
 
       - name: Package Bundle (${{ matrix.arch }})
         env:
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_KEY_ISSUER_ID: ${{ secrets.APPLE_API_KEY_ISSUER_ID }}
-          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_NOTARIZE_KEY_ID: ${{ secrets.APPLE_NOTARIZE_KEY_ID }}
+          APPLE_NOTARIZE_ISSUER_ID: ${{ secrets.APPLE_NOTARIZE_ISSUER_ID }}
+          APPLE_NOTARIZE_KEY_P8: ${{ secrets.APPLE_NOTARIZE_KEY_P8 }}
         run: |
           PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
           DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
@@ -523,7 +526,7 @@ jobs:
             API_KEY_PATH="$RUNNER_TEMP/apple_api_key.p8"
             SUBMISSION_ZIP="$RUNNER_TEMP/${BRAND_KEY}.Agent.bundle.${{ matrix.arch }}.zip"
 
-            echo "$APPLE_API_KEY_P8" | base64 --decode > "$API_KEY_PATH"
+            echo "$APPLE_NOTARIZE_KEY_P8" | base64 --decode > "$API_KEY_PATH"
 
             rm -f "$SUBMISSION_ZIP"
             ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/${BRAND_KEY}.app" "$SUBMISSION_ZIP"
@@ -531,8 +534,8 @@ jobs:
             echo "Submitting bundle for notarization (${{ matrix.arch }})..."
             xcrun notarytool submit "$SUBMISSION_ZIP" \
               --key "$API_KEY_PATH" \
-              --key-id "$APPLE_API_KEY_ID" \
-              --issuer "$APPLE_API_KEY_ISSUER_ID" \
+              --key-id "$APPLE_NOTARIZE_KEY_ID" \
+              --issuer "$APPLE_NOTARIZE_ISSUER_ID" \
               --wait
 
             echo "Stapling notarization ticket to app bundle..."
@@ -676,12 +679,12 @@ jobs:
           file-patterns: |
             ${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.exe
             ${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.dll
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          azure-key-vault-uri: ${{ secrets.AZURE_KEY_VAULT_URI }}
-          azure-key-vault-certificate-name: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
-          signing-description-url: ${{ vars.SIGNING_DESCRIPTION_URL }}
+          azure-key-vault-uri: ${{ secrets.CODESIGN_KEYVAULT_URI }}
+          azure-key-vault-certificate-name: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
+          signing-description-url: ${{ vars.CODESIGN_DESCRIPTION_URL }}
 
       - name: Package and Prepare DesktopClient (${{ matrix.arch }})
         shell: pwsh
@@ -696,7 +699,7 @@ jobs:
       - name: Azure Login For Agent Publish (${{ matrix.arch }})
         uses: azure/login@v3
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
@@ -714,9 +717,9 @@ jobs:
       - name: Build Agent (${{ matrix.arch }})
         shell: pwsh
         env:
-          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
-          AZURE_KEY_VAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
-          SIGNING_DESCRIPTION_URL: ${{ vars.SIGNING_DESCRIPTION_URL }}
+          CODESIGN_KEYVAULT_URI: ${{ secrets.CODESIGN_KEYVAULT_URI }}
+          CODESIGN_KEYVAULT_CERT_NAME: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
+          CODESIGN_DESCRIPTION_URL: ${{ vars.CODESIGN_DESCRIPTION_URL }}
           TIMESTAMP_URL: http://timestamp.digicert.com
         run: |
           $agentPublishDir = "ControlR.Agent\bin\publish\${{ matrix.arch }}\"
@@ -730,19 +733,19 @@ jobs:
           BRAND_KEY: ${{ env.BRAND_KEY }}
         with:
           file-patterns: ${{ github.workspace }}\ControlR.Agent\bin\publish\${{ matrix.arch }}\${{ env.BRAND_KEY }}.Agent.exe
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          azure-key-vault-uri: ${{ secrets.AZURE_KEY_VAULT_URI }}
-          azure-key-vault-certificate-name: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
-          signing-description-url: ${{ vars.SIGNING_DESCRIPTION_URL }}
+          azure-key-vault-uri: ${{ secrets.CODESIGN_KEYVAULT_URI }}
+          azure-key-vault-certificate-name: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
+          signing-description-url: ${{ vars.CODESIGN_DESCRIPTION_URL }}
 
       - name: Build Installer (${{ matrix.arch }})
         shell: pwsh
         env:
-          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
-          AZURE_KEY_VAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
-          SIGNING_DESCRIPTION_URL: ${{ vars.SIGNING_DESCRIPTION_URL }}
+          CODESIGN_KEYVAULT_URI: ${{ secrets.CODESIGN_KEYVAULT_URI }}
+          CODESIGN_KEYVAULT_CERT_NAME: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
+          CODESIGN_DESCRIPTION_URL: ${{ vars.CODESIGN_DESCRIPTION_URL }}
           TIMESTAMP_URL: http://timestamp.digicert.com
         run: |
           dotnet publish ControlR.Agent.Installer\ -c Release -r ${{ matrix.arch }} --self-contained -o ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:DebugType=none
@@ -753,12 +756,12 @@ jobs:
           BRAND_KEY: ${{ env.BRAND_KEY }}
         with:
           file-patterns: ${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\${{ env.BRAND_KEY }}.Agent.Installer.exe
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          azure-key-vault-uri: ${{ secrets.AZURE_KEY_VAULT_URI }}
-          azure-key-vault-certificate-name: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE_NAME }}
-          signing-description-url: ${{ vars.SIGNING_DESCRIPTION_URL }}
+          azure-key-vault-uri: ${{ secrets.CODESIGN_KEYVAULT_URI }}
+          azure-key-vault-certificate-name: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
+          signing-description-url: ${{ vars.CODESIGN_DESCRIPTION_URL }}
 
       - name: Create Bundle ZIP (${{ matrix.arch }})
         shell: pwsh
