@@ -102,7 +102,7 @@ The full inventory lives in the Bitwarden secure note `controlr-github-secrets`,
 
 | Scope | Items |
 | ----- | ----- |
-| Repo secrets | `GH_VARIABLES_PAT`, `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `MACOS_SIGN_*`, `APPLE_NOTARIZE_*`, `DOCKER_USERNAME`, `DOCKER_PAT` |
+| Repo secrets | `GH_VARIABLES_PAT`, `BBB_CLIENT_ID`, `BBB_PRIVATE_KEY`, `MACOS_SIGN_*`, `APPLE_NOTARIZE_*`, `DOCKER_USERNAME`, `DOCKER_PAT` |
 | Repo variables | `CURRENT_VERSION`, `ARTIFACT_HOST`, `ARTIFACT_BASE_PATH`, `ALLOWED_PR_AUTHORS` |
 | `production` / `development` envs | `CODESIGN_*` secrets, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `NUGET_USER`, `CODESIGN_DESCRIPTION_URL` variable |
 | `portal-publish-dev` / `portal-publish-prod` envs | `PORTAL_PUBLISH_AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` secrets; `ACR_LOGIN_SERVER`, `SLOT_ZIP_STORAGE_ACCOUNT` variables |

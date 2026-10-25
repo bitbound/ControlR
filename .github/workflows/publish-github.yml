@@ -65,8 +65,8 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ secrets.GITHUB_APP_ID }}
-          private-key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.BBB_CLIENT_ID }}
+          private-key: ${{ secrets.BBB_PRIVATE_KEY }}
 
       # build-prod.yml pins use_local_storage to false in its call into build.yml, so a
       # production build's artifacts exist only in GitHub Actions. Local storage stays off
