@@ -48,30 +48,10 @@ runs:
         $src = (Resolve-Path $src).Path
         "SRC_DIR=$src" >> $env:GITHUB_ENV
 
-    - name: Publish DesktopClient (${{ inputs.arch }})
-      shell: pwsh
-      env:
-        VERSION: ${{ inputs.version }}
-      run: |
-        dotnet publish "$env:SRC_DIR\ControlR.DesktopClient" -c Release -f net10.0-windows8.0 -r ${{ inputs.arch }} --self-contained -o "$env:SRC_DIR\ControlR.DesktopClient\bin\publish\${{ inputs.arch }}" -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
-
-    - name: Publish Agent (${{ inputs.arch }})
-      shell: pwsh
-      env:
-        VERSION: ${{ inputs.version }}
-      run: |
-        $agentPublishDir = "$env:SRC_DIR\ControlR.Agent\bin\publish\${{ inputs.arch }}"
-        New-Item -Path $agentPublishDir -ItemType Directory -Force | Out-Null
-        New-Item -Path "$env:SRC_DIR\ControlR.Web.Server\wwwroot\downloads\${{ inputs.arch }}" -ItemType Directory -Force | Out-Null
-        dotnet publish "$env:SRC_DIR\ControlR.Agent" -c Release -r ${{ inputs.arch }} -o $agentPublishDir -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
-
-    - name: Publish Installer (${{ inputs.arch }})
-      shell: pwsh
-      env:
-        VERSION: ${{ inputs.version }}
-      run: |
-        dotnet publish "$env:SRC_DIR\ControlR.Agent.Installer" -c Release -r ${{ inputs.arch }} --self-contained -o "$env:SRC_DIR\ControlR.Web.Server\wwwroot\downloads\${{ inputs.arch }}" -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:DebugType=none
-
+    # Login and tool install run before the publishes. The Agent and Installer
+    # embed their DLLs via single-file bundling, and WindowsBundleSign.Build.targets
+    # signs those files during GenerateSingleFileBundle, which needs Azure
+    # credentials and AzureSignTool available at publish time.
     - name: Azure Login
       uses: azure/login@v3
       with:
@@ -89,6 +69,38 @@ runs:
             exit $LASTEXITCODE
           }
         }
+
+    - name: Publish DesktopClient (${{ inputs.arch }})
+      shell: pwsh
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        dotnet publish "$env:SRC_DIR\ControlR.DesktopClient" -c Release -f net10.0-windows8.0 -r ${{ inputs.arch }} --self-contained -o "$env:SRC_DIR\ControlR.DesktopClient\bin\publish\${{ inputs.arch }}" -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
+
+    - name: Publish Agent (${{ inputs.arch }})
+      shell: pwsh
+      env:
+        VERSION: ${{ inputs.version }}
+        SIGNING_DESCRIPTION_URL: ${{ inputs.signing-description-url }}
+        AZURE_KEY_VAULT_URI: ${{ inputs.azure-key-vault-uri }}
+        AZURE_KEY_VAULT_CERTIFICATE_NAME: ${{ inputs.azure-key-vault-certificate-name }}
+        TIMESTAMP_URL: ${{ inputs.timestamp-url }}
+      run: |
+        $agentPublishDir = "$env:SRC_DIR\ControlR.Agent\bin\publish\${{ inputs.arch }}"
+        New-Item -Path $agentPublishDir -ItemType Directory -Force | Out-Null
+        New-Item -Path "$env:SRC_DIR\ControlR.Web.Server\wwwroot\downloads\${{ inputs.arch }}" -ItemType Directory -Force | Out-Null
+        dotnet publish "$env:SRC_DIR\ControlR.Agent" -c Release -r ${{ inputs.arch }} -o $agentPublishDir -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
+
+    - name: Publish Installer (${{ inputs.arch }})
+      shell: pwsh
+      env:
+        VERSION: ${{ inputs.version }}
+        SIGNING_DESCRIPTION_URL: ${{ inputs.signing-description-url }}
+        AZURE_KEY_VAULT_URI: ${{ inputs.azure-key-vault-uri }}
+        AZURE_KEY_VAULT_CERTIFICATE_NAME: ${{ inputs.azure-key-vault-certificate-name }}
+        TIMESTAMP_URL: ${{ inputs.timestamp-url }}
+      run: |
+        dotnet publish "$env:SRC_DIR\ControlR.Agent.Installer" -c Release -r ${{ inputs.arch }} --self-contained -o "$env:SRC_DIR\ControlR.Web.Server\wwwroot\downloads\${{ inputs.arch }}" -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:DebugType=none
 
     - name: Sign Artifacts (${{ inputs.arch }})
       shell: pwsh
