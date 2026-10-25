@@ -28,7 +28,14 @@ runs:
     - name: Apply Customization
       if: inputs.customization-config-path != ''
       shell: pwsh
-      run: ${{ inputs.source-dir }}/.scripts/Invoke-Customize.ps1 -ConfigPath '${{ inputs.customization-config-path }}' -Version '${{ inputs.version }}'
+      env:
+        SOURCE_DIR: ${{ inputs.source-dir }}
+        CONFIG_PATH: ${{ inputs.customization-config-path }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        $src = Join-Path $env:GITHUB_WORKSPACE $env:SOURCE_DIR
+        $src = (Resolve-Path $src).Path
+        & "$src/.scripts/Invoke-Customize.ps1" -ConfigPath $env:CONFIG_PATH -Version $env:VERSION
 
     - name: Set Default Branding
       if: inputs.customization-config-path == ''
