@@ -9,6 +9,7 @@ KillMode=process
 StartLimitIntervalSec=0
 Environment=DOTNET_ENVIRONMENT=Production
 Environment=DOTNET_BUNDLE_EXTRACT_BASE_DIR={{BUNDLE_EXTRACT_DIR}}
+Environment=TMPDIR=/var/tmp
 RestartSec=10
 
 [Install]
