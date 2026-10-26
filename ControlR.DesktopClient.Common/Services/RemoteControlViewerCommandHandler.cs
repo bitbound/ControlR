@@ -101,8 +101,7 @@ internal sealed class RemoteControlViewerCommandHandler(
           {
             _logger.LogInformation("Received clipboard text from viewer.");
             var payload = wrapper.GetPayload<ClipboardTextDto>();
-            await _clipboardManager.SetText(payload.Text);
-            break;
+            return await _clipboardManager.SetText(payload.Text);
           }
         case RemoteControlViewerDtoType.RequestClipboardText:
           {

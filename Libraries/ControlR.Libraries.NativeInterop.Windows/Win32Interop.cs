@@ -66,7 +66,7 @@ public interface IWin32Interop
   bool OpenUrlInActiveSession(string targetUrl);
   void ResetKeyboardState();
   bool SetBlockInput(bool isBlocked);
-  void SetClipboardText(string? text);
+  bool SetClipboardText(string? text);
   nint SetParentWindow(nint windowHandle, nint parentWindowHandle);
   bool SetWindowDisplayAffinity(nint windowHandle, WindowDisplayAffinity affinity);
   bool SetWindowPos(nint mainWindowHandle, nint insertAfter, int x, int y, int width, int height);
@@ -1181,27 +1181,28 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
     return false;
   }
 
-  public void SetClipboardText(string? text)
+  public bool SetClipboardText(string? text)
   {
     if (string.IsNullOrWhiteSpace(text))
     {
-      return;
+      return true;
     }
 
     if (!PInvoke.OpenClipboard(HWND.Null))
     {
       _logger.LogError("Failed to open clipboard.");
       LogWin32Error();
-      return;
+      return false;
     }
 
+    var isSet = false;
     try
     {
       if (!PInvoke.EmptyClipboard())
       {
         _logger.LogError("Empty clipboard failed when trying to set text.");
         LogWin32Error();
-        return;
+        return false;
       }
 
       var pointer = Marshal.StringToHGlobalUni(text);
@@ -1213,11 +1214,15 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         _logger.LogError("Failed to set clipboard text.  Last Win32 Error: {Win32Error}",
           Marshal.GetLastPInvokeError());
         Marshal.FreeHGlobal(pointer);
+        return false;
       }
+
+      isSet = true;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while setting clipboard text.");
+      return false;
     }
     finally
     {
@@ -1227,6 +1232,8 @@ public unsafe partial class Win32Interop(ILogger<Win32Interop> logger) : IWin32I
         LogWin32Error();
       }
     }
+
+    return isSet;
   }
 
   public nint SetParentWindow(nint windowHandle, nint parentWindowHandle)
