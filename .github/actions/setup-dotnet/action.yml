@@ -7,7 +7,4 @@ runs:
     - name: Setup .NET SDKs
       uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: |
-          9.x
-          10.x
         global-json-file: global.json
