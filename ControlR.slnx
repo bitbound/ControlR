@@ -49,7 +49,6 @@
     <Project Path="Tests/ControlR.Libraries.Configuration.InMemory.Tests/ControlR.Libraries.Configuration.InMemory.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.SecureStorage.Tests/ControlR.Libraries.SecureStorage.Tests.csproj" />
-    <Project Path="Tests/ControlR.Libraries.Serilog.Tests/ControlR.Libraries.Serilog.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.WebSocketRelay.Tests/ControlR.Libraries.WebSocketRelay.Tests.csproj" />
     <Project Path="Tests/ControlR.Viewer.Avalonia.Tests/ControlR.Viewer.Avalonia.Tests.csproj" />
