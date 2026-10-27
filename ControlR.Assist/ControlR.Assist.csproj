@@ -1,0 +1,94 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(XplatTarget)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <PackageIcon>appicon.png</PackageIcon>
+    <ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
+    <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
+    <!--
+      Assist is handed to unmanaged devices one download at a time, so the published artifact is a
+      self-contained single file with the linker running. Trimming is a requirement rather than a
+      size optimization, which is why the analyzers stay on: they report the reflection and
+      dynamic-code usage that would break at runtime instead of at build time.
+    -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != '' AND '$(IsMacOS)' != 'true'">true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsWindows)' == 'true'">
+    <OutputType Condition="'$(Configuration)' == 'Debug'">Exe</OutputType>
+    <OutputType Condition="'$(Configuration)' != 'Debug'">WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <Import Project="..\Mac.Build.props" />
+
+  <PropertyGroup Condition="'$(IsMacOS)' == 'true'">
+    <ApplicationId>app.controlr.assist.dev</ApplicationId>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+    <!--
+      Mac.Build.props disables the linker for DesktopClient, which ships a full runtime on Mac.
+      Assist has to be trimmed on every platform, so the override goes after that import.
+    -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsMacOS)' == 'true' and '$(Configuration)' == 'Debug'">
+    <_CanOutputAppBundle>false</_CanOutputAppBundle>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Strings\en-US.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Update="Bitbound.Analyzers.MemberOrder">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsLinux)' == 'true'">
+    <PackageReference Include="Avalonia.Wayland" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\appicon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+</Project>

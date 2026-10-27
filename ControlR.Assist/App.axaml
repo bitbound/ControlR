@@ -1,0 +1,37 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:ControlR.Assist"
+             xmlns:vm="using:ControlR.Assist.ViewModels"
+             xmlns:brand="using:ControlR.Libraries.Branding"
+             x:Class="ControlR.Assist.App"
+             x:DataType="vm:MainWindowViewModel"
+             Name="{x:Static brand:BrandingConstants.BrandName}">
+
+  <Application.DataTemplates>
+    <local:ViewLocator />
+  </Application.DataTemplates>
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://ControlR.Libraries.Avalonia/Resources/Theme.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark"
+                               Accent="#2196F3"
+                               RegionColor="#121212" />
+        <ColorPaletteResources x:Key="Light"
+                               Accent="#2196F3"
+                               RegionColor="#FAFAFA" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+
+    <StyleInclude Source="avares://ControlR.Libraries.Avalonia/Resources/Styles.axaml" />
+  </Application.Styles>
+
+</Application>

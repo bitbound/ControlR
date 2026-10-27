@@ -65,6 +65,7 @@
   <Project Path="ControlR.Agent.Shared/ControlR.Agent.Shared.csproj" />
   <Project Path="ControlR.Agent/ControlR.Agent.csproj" />
   <Project Path="ControlR.ApiClient/ControlR.ApiClient.csproj" />
+  <Project Path="ControlR.Assist/ControlR.Assist.csproj" />
   <Project Path="ControlR.DesktopClient.Common/ControlR.DesktopClient.Common.csproj" />
   <Project Path="ControlR.DesktopClient.Linux/ControlR.DesktopClient.Linux.csproj" />
   <Project Path="ControlR.DesktopClient.Mac/ControlR.DesktopClient.Mac.csproj" />

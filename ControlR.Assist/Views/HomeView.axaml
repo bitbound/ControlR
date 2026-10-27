@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Assist.ViewModels"
+             xmlns:local="using:ControlR.Assist"
+             xmlns:brand="using:ControlR.Libraries.Branding"
+             mc:Ignorable="d"
+             d:DesignWidth="420"
+             d:DesignHeight="300"
+             x:Class="ControlR.Assist.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+
+  <StackPanel Spacing="12"
+              Margin="24"
+              VerticalAlignment="Center"
+              HorizontalAlignment="Center">
+    <TextBlock Classes="h1"
+               HorizontalAlignment="Center"
+               Text="{x:Static brand:BrandingConstants.BrandName}" />
+    <TextBlock HorizontalAlignment="Center"
+               TextAlignment="Center"
+               Text="{x:Static local:Localization.HomeTagline}" />
+  </StackPanel>
+
+</UserControl>
