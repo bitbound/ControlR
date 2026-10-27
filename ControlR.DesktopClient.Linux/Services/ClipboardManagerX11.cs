@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Linux;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;
@@ -79,7 +80,7 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
     }
   }
 
-  public Task SetText(string? text)
+  public Task<Result> SetText(string? text)
   {
     lock (_lock)
     {
@@ -98,17 +99,19 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
           LibX11.XSetSelectionOwner(_display, _clipboardAtom, nint.Zero, LibX11.CurrentTime);
           _currentClipboardText = null;
           LibX11.XFlush(_display);
-          return Task.CompletedTask;
+          return Task.FromResult(Result.Ok());
         }
 
         _logger.LogInformation("Setting clipboard text.");
-        SetClipboardText(text);
+        return Task.FromResult(SetClipboardText(text)
+          ? Result.Ok()
+          : Result.Fail("Could not take ownership of the X11 clipboard."));
       }
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error while setting clipboard text.");
+        return Task.FromResult(Result.Fail(ex));
       }
-      return Task.CompletedTask;
     }
   }
 
@@ -349,13 +352,13 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
     }
   }
 
-  private void SetClipboardText(string text)
+  private bool SetClipboardText(string text)
   {
     try
     {
       // Store the text so we can provide it when requested
       _currentClipboardText = text;
-      
+
       // Set property on our window with the text data
       var textBytes = Encoding.UTF8.GetBytes(text);
       var textPtr = Marshal.AllocHGlobal(textBytes.Length);
@@ -372,7 +375,7 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
         if (owner != _window)
         {
           _logger.LogWarning("Failed to acquire clipboard ownership");
-          return;
+          return false;
         }
 
         StartEventPump();
@@ -390,7 +393,10 @@ public sealed class ClipboardManagerX11 : IClipboardManager, IDisposable
     catch (Exception ex)
     {
       _logger.LogError(ex, "Failed to set clipboard text");
+      return false;
     }
+
+    return true;
   }
 
   private void StartEventPump()

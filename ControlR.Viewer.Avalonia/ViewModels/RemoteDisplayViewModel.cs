@@ -700,9 +700,16 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         return;
       }
 
-      _snackbar.Add(Resources.RemoteControl_SendingClipboard, SnackbarSeverity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-      await _viewerStream.SendClipboardText(text, currentSession.SessionId, cts.Token);
+      var sendResult = await _viewerStream.SendClipboardText(text, currentSession.SessionId, cts.Token);
+
+      if (!sendResult.IsSuccess)
+      {
+        _snackbar.Add(string.Format(Resources.RemoteControl_FailedToSendClipboard, sendResult.Reason), SnackbarSeverity.Error);
+        return;
+      }
+
+      _snackbar.Add(Resources.RemoteControl_ClipboardSent, SnackbarSeverity.Success);
     }
     catch (Exception ex)
     {

@@ -1,5 +1,6 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Mac;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Mac.Services;
@@ -46,39 +47,50 @@ public class ClipboardManagerMac(ILogger<ClipboardManagerMac> logger) : IClipboa
         }
     }
 
-    public async Task SetText(string? text)
+    public async Task<Result> SetText(string? text)
     {
-        if (text == null)
+      if (text is null)
+      {
+        return Result.Ok();
+      }
+
+      await _clipboardLock.WaitAsync();
+      try
+      {
+        var pasteboard = AppKitInterop.objc_msgSend(_nsPasteboardClass, _generalPasteboardSelector);
+        if (pasteboard == nint.Zero)
         {
-            return;
+          return Result.Fail("Could not open the macOS pasteboard.");
         }
 
-        await _clipboardLock.WaitAsync();
-        try
+        // A change count of -1 means another process still owns the pasteboard, so the write below
+        // would land nowhere.  The clipboard being busy is the failure the viewer needs to hear about.
+        if (AppKitInterop.objc_msgSend(pasteboard, _clearContentsSelector) == -1)
         {
-            // Get the general pasteboard
-            var pasteboard = AppKitInterop.objc_msgSend(_nsPasteboardClass, _generalPasteboardSelector);
-            if (pasteboard == nint.Zero)
-                return;
-
-            // Clear existing contents
-            AppKitInterop.objc_msgSend(pasteboard, _clearContentsSelector);
-
-            // Create NSString from C# string
-            var nsString = AppKitInterop.CreateNSString(text);
-            if (nsString == nint.Zero)
-                return;
-
-            // Set string in pasteboard
-            AppKitInterop.objc_msgSend_IntPtr_IntPtr(pasteboard, _setStringForTypeSelector, nsString, _nsStringPboardType);
+          return Result.Fail("The macOS pasteboard is in use by another application.");
         }
-        catch (Exception ex)
+
+        var nsString = AppKitInterop.CreateNSString(text);
+        if (nsString == nint.Zero)
         {
-            _logger.LogError(ex, "Error while setting clipboard text.");
+          return Result.Fail("Could not convert the clipboard text for the macOS pasteboard.");
         }
-        finally
-        {
-            _clipboardLock.Release();
-        }
+
+        var didSet = AppKitInterop.objc_msgSend_Bool_IntPtr_IntPtr(
+          pasteboard, _setStringForTypeSelector, nsString, _nsStringPboardType);
+
+        return didSet
+          ? Result.Ok()
+          : Result.Fail("The macOS pasteboard refused the text.");
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error while setting clipboard text.");
+        return Result.Fail(ex);
+      }
+      finally
+      {
+        _clipboardLock.Release();
+      }
     }
 }

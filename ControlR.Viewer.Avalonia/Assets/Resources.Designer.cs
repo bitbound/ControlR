@@ -1176,6 +1176,15 @@ namespace ControlR.Viewer.Avalonia.Assets {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Clipboard sent.
+        /// </summary>
+        public static string RemoteControl_ClipboardSent {
+            get {
+                return ResourceManager.GetString("RemoteControl_ClipboardSent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Clipboard text received from remote device.
         /// </summary>
         public static string RemoteControl_ClipboardTextReceived {
@@ -1361,6 +1370,15 @@ namespace ControlR.Viewer.Avalonia.Assets {
         public static string RemoteControl_FailedToRetrieveSessions {
             get {
                 return ResourceManager.GetString("RemoteControl_FailedToRetrieveSessions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to send clipboard: {0}.
+        /// </summary>
+        public static string RemoteControl_FailedToSendClipboard {
+            get {
+                return ResourceManager.GetString("RemoteControl_FailedToSendClipboard", resourceCulture);
             }
         }
         
@@ -1766,15 +1784,6 @@ namespace ControlR.Viewer.Avalonia.Assets {
         public static string RemoteControl_RemoteUserRequestedDisconnection {
             get {
                 return ResourceManager.GetString("RemoteControl_RemoteUserRequestedDisconnection", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Sending clipboard.
-        /// </summary>
-        public static string RemoteControl_SendingClipboard {
-            get {
-                return ResourceManager.GetString("RemoteControl_SendingClipboard", resourceCulture);
             }
         }
         

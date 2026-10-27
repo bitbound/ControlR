@@ -84,6 +84,12 @@ public static class AppKitInterop
     [DllImport(ObjectiveCRuntime, EntryPoint = "objc_msgSend")]
     public static extern nint objc_msgSend(nint receiver, nint selector);
 
+    // ObjC BOOL is a 1-byte signed char, so the callee defines only the low byte of the return
+    // register. The default bool marshaling is the 4-byte Win32 BOOL and would read undefined bytes.
+    [DllImport(ObjectiveCRuntime, EntryPoint = "objc_msgSend")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    public static extern bool objc_msgSend_Bool_IntPtr_IntPtr(nint receiver, nint selector, nint arg1, nint arg2);
+
     [DllImport(ObjectiveCRuntime, EntryPoint = "objc_msgSend")]
     public static extern CoreGraphicsInterop.CGPoint objc_msgSend_CGPoint(nint receiver, nint selector);
 
