@@ -75,9 +75,7 @@ public static class SerilogHostExtensions
 
   // Daemon contexts (launchd, systemd, sudo) start with no TMPDIR. The shared file sink creates a
   // cross-process named mutex at sink open, and named-mutex creation on Unix throws IOException when
-  // TMPDIR is unset (regression in .NET 10 servicing releases around 10.0.12). Serilog labels any
-  // IOException as a locked file and then drops every event silently, so the agent's log file never
-  // appears. Seed a world-writable fallback before any sink is built.
+  // TMPDIR is unset.
   private static void EnsureUnixTempDirForSharedSinks()
   {
     if (!OperatingSystem.IsWindows() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TMPDIR")))
