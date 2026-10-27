@@ -13,13 +13,13 @@ namespace ControlR.DesktopClient.Windows.Services;
 public class WindowsRemoteControlHostBuilderFactory(
   IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
   IUserInteractionService userInteractionService,
-  IIpcClientAccessor ipcClientAccessor,
+  IRemoteControlDtoSender remoteControlDtoSender,
   IToaster toaster,
   IUiDispatcher dispatcher) : IRemoteControlHostBuilderFactory
 {
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IUiDispatcher _dispatcher = dispatcher;
-  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
+  private readonly IRemoteControlDtoSender _remoteControlDtoSender = remoteControlDtoSender;
   private readonly IToaster _toaster = toaster;
   private readonly IUserInteractionService _userInteractionService = userInteractionService;
 
@@ -34,7 +34,7 @@ public class WindowsRemoteControlHostBuilderFactory(
           .AddSingleton(_toaster)
           .AddSingleton(_dispatcher)
           .AddSingleton(_userInteractionService)
-          .AddSingleton(_ipcClientAccessor);
+          .AddSingleton(_remoteControlDtoSender);
       },
       options =>
       {

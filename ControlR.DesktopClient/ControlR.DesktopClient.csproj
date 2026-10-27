@@ -54,6 +54,7 @@
       Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
     <ProjectReference
       Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
+    <ProjectReference Include="..\Libraries\ControlR.Libraries.Ipc\ControlR.Libraries.Ipc.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(IsWindows)' == 'true'">

@@ -15,7 +15,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Libraries/ControlR.Libraries.Ipc/ControlR.Libraries.Ipc.csproj" />
     <ProjectReference
       Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
     <ProjectReference

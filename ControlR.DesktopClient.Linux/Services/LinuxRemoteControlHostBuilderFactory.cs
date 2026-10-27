@@ -14,7 +14,7 @@ namespace ControlR.DesktopClient.Linux.Services;
 public class LinuxRemoteControlHostBuilderFactory(
   IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
   IUserInteractionService userInteractionService,
-  IIpcClientAccessor ipcClientAccessor,
+  IRemoteControlDtoSender remoteControlDtoSender,
   IAsyncLock asyncLock,
   IToaster toaster,
   IUiDispatcher dispatcher) : IRemoteControlHostBuilderFactory
@@ -22,7 +22,7 @@ public class LinuxRemoteControlHostBuilderFactory(
   private readonly IAsyncLock _asyncLock = asyncLock;
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IUiDispatcher _dispatcher = dispatcher;
-  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
+  private readonly IRemoteControlDtoSender _remoteControlDtoSender = remoteControlDtoSender;
   private readonly IToaster _toaster = toaster;
   private readonly IUserInteractionService _userInteractionService = userInteractionService;
 
@@ -37,7 +37,7 @@ public class LinuxRemoteControlHostBuilderFactory(
           .AddSingleton(_toaster)
           .AddSingleton(_dispatcher)
           .AddSingleton(_userInteractionService)
-          .AddSingleton(_ipcClientAccessor)
+          .AddSingleton(_remoteControlDtoSender)
           .AddSingleton(_asyncLock);
       },
       options =>
