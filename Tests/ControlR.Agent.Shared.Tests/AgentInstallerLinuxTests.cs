@@ -20,6 +20,76 @@ namespace ControlR.Agent.Shared.Tests;
 public class AgentInstallerLinuxTests
 {
   [Fact]
+  public void GetPreviousBrandDesktopClientPath_UsesThePreviousBrandAndInstance()
+  {
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectoryFor("Acme Remote", "exp"))
+      .Returns("/usr/local/bin/Acme_Remote/exp");
+
+    var sut = CreateSut(
+      Mock.Of<IFileSystem>(),
+      Mock.Of<IProcessManager>(),
+      Mock.Of<ISystemEnvironment>(),
+      pathProvider.Object,
+      Mock.Of<IElevationChecker>());
+
+    var path = sut.GetPreviousBrandDesktopClientPath("Acme Remote", "exp");
+
+    // The replaced install's client lives under its own brand key and instance id, and is named for
+    // that brand, so a migration that changes either one still finds it.
+    Assert.Equal(
+      Path.Combine("/usr/local/bin/Acme_Remote/exp", "DesktopClient", "Acme_Remote.DesktopClient"),
+      path);
+  }
+
+  [Fact]
+  public async Task Install_KillsRunningDesktopClientBeforeReplacingTheDirectory()
+  {
+    var installDir = "/usr/local/bin/ControlR/default";
+    var fileSystem = new Mock<IFileSystem>();
+    var processManager = new Mock<IProcessManager>();
+    var systemEnvironment = new Mock<ISystemEnvironment>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var elevationChecker = new Mock<IElevationChecker>();
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    pathProvider.Setup(x => x.GetAgentInstallDirectory()).Returns(installDir);
+    fileSystem.Setup(x => x.DirectoryExists(installDir)).Returns(true);
+
+    var stopProcess = new Mock<IProcess>();
+    stopProcess.Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+    processManager.Setup(x => x.Start("sudo", It.IsAny<string>())).Returns(stopProcess.Object);
+
+    // A login screen client this install left running, which would be orphaned once the directory is
+    // replaced. The agent that spawned it is already stopped by the time the installer gets here.
+    var client = new Mock<IProcess>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(4242, 0, "/usr/local/bin/ControlR/default/DesktopClient/ControlR.DesktopClient (deleted)")]);
+    processLocator
+      .Setup(x => x.IsRunningExecutable(4242, It.IsAny<string>()))
+      .Returns(true);
+    processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
+
+    // Cut the run short once the directory would be recreated, after the kill has happened.
+    fileSystem.Setup(x => x.CreateDirectory(installDir)).Throws(new IOException("not part of this test"));
+
+    var sut = CreateSut(
+      fileSystem.Object,
+      processManager.Object,
+      systemEnvironment.Object,
+      pathProvider.Object,
+      elevationChecker.Object,
+      processLocator.Object);
+
+    await sut.Install(CreateRequest());
+
+    client.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
   public async Task Install_LeavesTheInstallDirectoryBeforeDeletingIt()
   {
     var installDir = "/usr/local/bin/ControlR/default";
@@ -120,8 +190,18 @@ public class AgentInstallerLinuxTests
     IProcessManager processManager,
     ISystemEnvironment systemEnvironment,
     IFileSystemPathProvider pathProvider,
-    IElevationChecker elevationChecker)
+    IElevationChecker elevationChecker,
+    ILinuxDesktopClientProcessLocator? processLocator = null)
   {
+    if (processLocator is null)
+    {
+      var defaultLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+      defaultLocator
+        .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+        .Returns([]);
+      processLocator = defaultLocator.Object;
+    }
+
     return new AgentInstallerLinux(
       Mock.Of<IHostApplicationLifetime>(),
       fileSystem,
@@ -138,6 +218,7 @@ public class AgentInstallerLinuxTests
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions()),
       Mock.Of<IEd25519KeyProvider>(),
+      processLocator,
       NullLogger<AgentInstallerLinux>.Instance);
   }
 }

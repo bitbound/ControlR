@@ -9,6 +9,7 @@ using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.TestingUtilities.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -71,6 +72,28 @@ public class IpcClientManagerTests : IAsyncLifetime
     _ipcServer = await _ipcConnectionFactory.CreateServer(_pipeName);
   }
   [Fact]
+  public async Task IpcClientManager_KeepsRunningOnceAConnectionProvesUsable()
+  {
+    // A connection held longer than the established-connection threshold is a good one, so ordinary
+    // reconnects across an agent restart must not accumulate toward exiting.
+    var (manager, appLifetime, fakeTime) = CreateMockedManager(TimeSpan.FromSeconds(30));
+    var shutdownCalled = false;
+    appLifetime.Setup(x => x.Shutdown(It.IsAny<int>())).Callback(() => shutdownCalled = true);
+
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    await manager.StartAsync(cts.Token);
+
+    for (var i = 0; i < 40 && !shutdownCalled; i++)
+    {
+      await Task.Delay(20, TestContext.Current.CancellationToken);
+      fakeTime.Advance(TimeSpan.FromSeconds(10));
+    }
+
+    Assert.False(shutdownCalled, "A client with usable connections should not exit.");
+    appLifetime.Verify(x => x.Shutdown(It.IsAny<int>()), Times.Never);
+  }
+
+  [Fact]
   public async Task IpcClientManager_ReconnectsSuccessfully()
   {
     // Start the IPC server and client manager
@@ -119,6 +142,30 @@ public class IpcClientManagerTests : IAsyncLifetime
     Assert.True(chatResult);
   }
 
+  [Fact]
+  public async Task IpcClientManager_ShutsDownWhenEveryConnectionIsDroppedBeforeItIsUsable()
+  {
+    // This is the shape of a client left behind by a previous build. The agent accepts the pipe before
+    // it authenticates, so the connect succeeds, then the path check fails and the connection is closed
+    // almost immediately. Every such cycle used to be recorded as a success, which reset the failure
+    // tracker, so the 60 second timeout never accumulated and the client retried forever.
+    var (manager, appLifetime, fakeTime) = CreateMockedManager(TimeSpan.Zero);
+    var shutdownCalled = false;
+    appLifetime.Setup(x => x.Shutdown(It.IsAny<int>())).Callback(() => shutdownCalled = true);
+
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    await manager.StartAsync(cts.Token);
+
+    for (var i = 0; i < 40 && !shutdownCalled; i++)
+    {
+      await Task.Delay(20, TestContext.Current.CancellationToken);
+      fakeTime.Advance(TimeSpan.FromSeconds(6));
+    }
+
+    Assert.True(shutdownCalled, "Expected the client to give up on a server that never keeps it connected.");
+    appLifetime.Verify(x => x.Shutdown(1), Times.Once);
+  }
+
   private static Mock<IAgentRpcService> CreateMockAgentRpcService()
   {
     var mock = new Mock<IAgentRpcService>();
@@ -139,6 +186,35 @@ public class IpcClientManagerTests : IAsyncLifetime
       .ReturnsAsync(new DesktopPreviewResponseIpcDto(GetJpegData(), true));
     return mock;
   }
+  private static (IpcClientManager Manager, Mock<IControlledApplicationLifetime> AppLifetime, FakeTimeProvider Time)
+    CreateMockedManager(TimeSpan disconnectAfter)
+  {
+    var fakeTime = new FakeTimeProvider(DateTimeOffset.UtcNow);
+    var appLifetime = new Mock<IControlledApplicationLifetime>();
+    var client = new Mock<IIpcClient>();
+    var factory = new Mock<IIpcConnectionFactory>();
+
+    client.SetupGet(x => x.IsConnected).Returns(true);
+    client.Setup(x => x.Connect(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+    client.Setup(x => x.Start());
+    client
+      .Setup(x => x.WaitForDisconnect(It.IsAny<CancellationToken>()))
+      .Returns((CancellationToken ct) => Task.Delay(disconnectAfter, fakeTime, ct));
+    factory
+      .Setup(x => x.CreateClient(It.IsAny<string>(), It.IsAny<string>()))
+      .ReturnsAsync(client.Object);
+
+    var manager = new IpcClientManager(
+      fakeTime,
+      factory.Object,
+      appLifetime.Object,
+      new WeakReferenceMessenger(),
+      Options.Create(new DesktopClientOptions { InstanceId = Guid.NewGuid().ToString() }),
+      NullLogger<IpcClientManager>.Instance);
+
+    return (manager, appLifetime, fakeTime);
+  }
+
   private static byte[] GetJpegData()
   {
     return Enumerable

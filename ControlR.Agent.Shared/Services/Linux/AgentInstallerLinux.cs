@@ -28,6 +28,7 @@ internal class AgentInstallerLinux(
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   IEd25519KeyProvider keyProvider,
+  ILinuxDesktopClientProcessLocator processLocator,
   ILogger<AgentInstallerLinux> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAcccessor, processManager, systemEnvironment, appOptions, logger, keyProvider), IAgentInstaller
 {
@@ -40,6 +41,7 @@ internal class AgentInstallerLinux(
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
+  private readonly ILinuxDesktopClientProcessLocator _processLocator = processLocator;
   private readonly IServiceControl _serviceControl = serviceControl;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
 
@@ -78,6 +80,11 @@ internal class AgentInstallerLinux(
         await ProcessManager
           .Start("sudo", $"systemctl stop {serviceName}")
           .WaitForExitAsync(_lifetime.ApplicationStopping);
+
+        // The stopped agent takes its own login screen client down with it, but a build from before
+        // that cleanup did not, and a client still running here is orphaned the moment this directory
+        // is replaced. Kill it by path so the new install does not start beside a stale client.
+        StopDesktopClientProcesses(GetDesktopClientPath(installDir));
 
         _fileSystem.DeleteDirectory(installDir, true);
       }
@@ -136,6 +143,17 @@ internal class AgentInstallerLinux(
       if (!stopPreviousBrandResult.IsSuccess)
       {
         return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
+      }
+
+      // Stopping the replaced install's agent lets it kill its own login screen client, but only a
+      // build that has this cleanup, and only if it shut down rather than crashed. This build cannot
+      // assume the one it replaces cooperates, so kill the replaced install's clients directly. They
+      // are found by the path that install used, which is keyed on its own brand and instance id, so
+      // a migration that changes either one still finds them and never touches another install's.
+      if (!string.IsNullOrWhiteSpace(request.PreviousBrandName))
+      {
+        StopDesktopClientProcesses(
+          GetPreviousBrandDesktopClientPath(request.PreviousBrandName, request.PreviousInstanceId));
       }
 
       _logger.LogInformation("Starting agent service.");
@@ -256,6 +274,9 @@ internal class AgentInstallerLinux(
         .Start("sudo", $"systemctl stop {serviceName}")
         .WaitForExitAsync(_lifetime.ApplicationStopping);
 
+      // Uninstall leaves no agent behind to reconcile, so take the login screen client down here.
+      StopDesktopClientProcesses(GetDesktopClientPath(GetInstallDirectory()));
+
       await ProcessManager
         .Start("sudo", $"systemctl disable {serviceName}")
         .WaitForExitAsync(_lifetime.ApplicationStopping);
@@ -312,6 +333,17 @@ internal class AgentInstallerLinux(
     return template;
   }
 
+  internal string GetPreviousBrandDesktopClientPath(string previousBrandName, string? previousInstanceId)
+  {
+    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, previousInstanceId);
+
+    // The replaced install names its own client for its own brand, which is not this build's name
+    // when the migration changed the brand.
+    var desktopClientFileName = new BrandNames(previousBrandName).DesktopClientBaseName;
+
+    return Path.Combine(installDirectory, DesktopClientDirectoryName, desktopClientFileName);
+  }
+
   private async Task<string> GetAgentServiceFile()
   {
     var template = await _embeddedResourceAccessor.GetResourceAsString(
@@ -332,6 +364,11 @@ internal class AgentInstallerLinux(
       .Replace("ControlR.Agent", BrandingConstants.AgentBaseName);
 
     return template;
+  }
+
+  private string GetDesktopClientPath(string installDirectory)
+  {
+    return Path.Combine(installDirectory, DesktopClientDirectoryName, AppConstants.DesktopClientFileName);
   }
 
   private string GetDesktopServiceFilePath()
@@ -467,6 +504,31 @@ internal class AgentInstallerLinux(
 
       _fileSystem.SetUnixFileMode(executablePath, executableFileMode);
       _logger.LogDebug("Set executable permissions on {FilePath}", executablePath);
+    }
+  }
+
+  private void StopDesktopClientProcesses(string desktopExecutablePath)
+  {
+    foreach (var process in _processLocator.FindByExecutablePath(desktopExecutablePath))
+    {
+      // Re-check before killing, so a pid recycled since it was found is not killed by mistake.
+      if (!_processLocator.IsRunningExecutable(process.ProcessId, desktopExecutablePath))
+      {
+        continue;
+      }
+
+      try
+      {
+        ProcessManager.GetProcessById(process.ProcessId).KillAndDispose();
+        _logger.LogInformation(
+          "Killed desktop client process for {ExecutablePath}. PID: {ProcessId}",
+          desktopExecutablePath,
+          process.ProcessId);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogWarning(ex, "Failed to kill desktop client process. PID: {ProcessId}", process.ProcessId);
+      }
     }
   }
 

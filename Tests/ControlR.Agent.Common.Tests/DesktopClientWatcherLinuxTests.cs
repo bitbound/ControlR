@@ -20,8 +20,36 @@ public class DesktopClientWatcherLinuxTests
   private readonly Mock<IDesktopEnvironmentDetectorAgent> _detector = new();
   private readonly Mock<IFileSystem> _fileSystem = new();
   private readonly Mock<IFileSystemPathProvider> _fileSystemPathProvider = new();
+  private readonly Mock<ILinuxDesktopClientProcessLocator> _processLocator = new();
   private readonly Mock<IProcessManager> _processManager = new();
   private readonly FakeTimeProvider _timeProvider = new(DateTimeOffset.UtcNow);
+
+  [Fact]
+  public async Task CheckLoginScreenDesktopClient_KillsStaleOrphanBeforeSpawning()
+  {
+    var running = CreateRunningProcess();
+    SetupLaunch(running);
+    var sut = CreateSut();
+
+    var stale = new Mock<IProcess>();
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient (deleted)")]);
+    _processLocator
+      .Setup(x => x.IsRunningExecutable(999, It.IsAny<string>()))
+      .Returns(true);
+    _processManager
+      .Setup(x => x.GetProcessById(999))
+      .Returns(stale.Object);
+
+    _detector
+      .Setup(x => x.DetectDisplayEnvironment())
+      .ReturnsAsync(LoginScreen());
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    stale.Verify(x => x.Kill(), Times.Once);
+    _processManager.Verify(x => x.Start(It.IsAny<ProcessStartInfo>()), Times.Once);
+  }
 
   [Fact]
   public async Task CheckLoginScreenDesktopClient_WhenDetectionIsInconclusive_LeavesRunningClientAlone()
@@ -144,6 +172,85 @@ public class DesktopClientWatcherLinuxTests
     _processManager.Verify(x => x.Start(It.IsAny<ProcessStartInfo>()), Times.Never);
   }
 
+  [Fact]
+  public void ReconcileGreeterDesktopClients_KillsStaleRootOwnedClient()
+  {
+    var sut = CreateSut();
+
+    var stale = new Mock<IProcess>();
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient (deleted)")]);
+    _processLocator
+      .Setup(x => x.IsRunningExecutable(999, It.IsAny<string>()))
+      .Returns(true);
+    _processManager
+      .Setup(x => x.GetProcessById(999))
+      .Returns(stale.Object);
+
+    sut.ReconcileGreeterDesktopClients();
+
+    stale.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
+  public async Task ReconcileGreeterDesktopClients_SparesTrackedClient()
+  {
+    var running = CreateRunningProcess();
+    SetupLaunch(running);
+    var sut = CreateSut();
+
+    _detector
+      .Setup(x => x.DetectDisplayEnvironment())
+      .ReturnsAsync(LoginScreen());
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(101, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+
+    sut.ReconcileGreeterDesktopClients();
+
+    running.Verify(x => x.Kill(), Times.Never);
+    _processManager.Verify(x => x.GetProcessById(101), Times.Never);
+  }
+
+  [Fact]
+  public void ReconcileGreeterDesktopClients_SparesUserSessionClient()
+  {
+    var sut = CreateSut();
+
+    // A user session client runs the same binary but under the user's uid, and belongs to the user's
+    // systemd unit, so the greeter reconcile must leave it alone.
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(555, 1000, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+
+    sut.ReconcileGreeterDesktopClients();
+
+    _processManager.Verify(x => x.GetProcessById(It.IsAny<int>()), Times.Never);
+  }
+
+  [Fact]
+  public async Task StopClientsForShutdownAsync_KillsTrackedLoginScreenClient()
+  {
+    var running = CreateRunningProcess();
+    SetupLaunch(running);
+    var sut = CreateSut();
+
+    _detector
+      .Setup(x => x.DetectDisplayEnvironment())
+      .ReturnsAsync(LoginScreen());
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    await sut.StopClientsForShutdownAsync();
+
+    // AtLeastOnce, not Once: stopping the client also completes the launch task, whose finally block
+    // disposes the same process again. The fix is that shutdown kills it at all; before it, the
+    // tracked client survived and Kill was never called.
+    running.Verify(x => x.Kill(), Times.AtLeastOnce);
+  }
+
   private static Mock<IProcess> CreateExitedProcess()
   {
     var process = new Mock<IProcess>();
@@ -187,6 +294,9 @@ public class DesktopClientWatcherLinuxTests
     _processManager
       .Setup(x => x.GetProcessOutput("readlink", It.IsAny<string>(), It.IsAny<int>()))
       .ReturnsAsync(Result.Ok("/opt/controlr/DesktopClient/ControlR.DesktopClient"));
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([]);
 
     return new DesktopClientWatcherLinux(
       _timeProvider,
@@ -200,6 +310,7 @@ public class DesktopClientWatcherLinuxTests
       Mock.Of<ILoggedInUserProvider>(),
       _processManager.Object,
       _fileSystemPathProvider.Object,
+      _processLocator.Object,
       NullLogger<DesktopClientWatcherLinux>.Instance);
   }
 
