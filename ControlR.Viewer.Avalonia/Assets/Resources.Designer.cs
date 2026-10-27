@@ -1788,15 +1788,6 @@ namespace ControlR.Viewer.Avalonia.Assets {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Sending clipboard.
-        /// </summary>
-        public static string RemoteControl_SendingClipboard {
-            get {
-                return ResourceManager.GetString("RemoteControl_SendingClipboard", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Sending clipboard to type.
         /// </summary>
         public static string RemoteControl_SendingClipboardToType {

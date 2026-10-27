@@ -180,7 +180,6 @@ public partial class InputPopover : DisposableComponent
         return;
       }
 
-      Snackbar.Add("Sending clipboard", Severity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       var sendResult = await RemoteControlStream.SendClipboardText(
         text, RemoteControlState.CurrentSession.SessionId, cts.Token);

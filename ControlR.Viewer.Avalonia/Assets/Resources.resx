@@ -528,9 +528,6 @@ Details: {0}</value>
   <data name="RemoteControl_ClipboardEmpty" xml:space="preserve">
     <value>Clipboard is empty</value>
   </data>
-  <data name="RemoteControl_SendingClipboard" xml:space="preserve">
-    <value>Sending clipboard</value>
-  </data>
   <data name="RemoteControl_ErrorSendingClipboard" xml:space="preserve">
     <value>An error occurred while sending clipboard</value>
   </data>

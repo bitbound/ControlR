@@ -700,7 +700,6 @@ public sealed partial class RemoteDisplayViewModel : ViewModelBase<RemoteDisplay
         return;
       }
 
-      _snackbar.Add(Resources.RemoteControl_SendingClipboard, SnackbarSeverity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
       var sendResult = await _viewerStream.SendClipboardText(text, currentSession.SessionId, cts.Token);
 
