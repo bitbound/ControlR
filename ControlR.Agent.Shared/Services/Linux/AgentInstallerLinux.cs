@@ -211,6 +211,12 @@ internal class AgentInstallerLinux(
       var stageDirectory = await PrepareRepairStage(request.BundleZipPath, installDir);
 
       await _serviceControl.StopDesktopClientService(throwOnFailure: false);
+
+      // Stopping the user service only reaches the clients systemd owns. The greeter client is a raw
+      // child of the agent, and moving the directory out from under it orphans it the same way
+      // replacing the whole install does.
+      StopDesktopClientProcesses(GetDesktopClientPath(installDir));
+
       ReplaceDesktopClientDirectory(stageDirectory, installDir);
 
       var desktopServiceFile = (await GetDesktopServiceFile()).Trim();

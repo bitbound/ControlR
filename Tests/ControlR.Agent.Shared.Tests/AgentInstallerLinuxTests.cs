@@ -143,6 +143,44 @@ public class AgentInstallerLinuxTests
   }
 
   [Fact]
+  public async Task RepairDesktopClient_KillsRunningDesktopClientBeforeReplacingThePayload()
+  {
+    var installDir = "/usr/local/bin/ControlR/default";
+    var fileSystem = new Mock<IFileSystem>();
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var elevationChecker = new Mock<IElevationChecker>();
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    pathProvider.Setup(x => x.GetAgentInstallDirectory()).Returns(installDir);
+    fileSystem.Setup(x => x.FileExists(It.IsAny<string>())).Returns(true);
+
+    // Repair moves the live DesktopClient directory aside rather than stopping the agent first, so a
+    // greeter client still running from it is orphaned unless something kills it here.
+    var client = new Mock<IProcess>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(4242, 0, "/usr/local/bin/ControlR/default/DesktopClient/ControlR.DesktopClient")]);
+    processLocator
+      .Setup(x => x.GetRunningExecutableOwnerUid(4242, It.IsAny<string>()))
+      .Returns(0);
+    processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
+
+    var sut = CreateSut(
+      fileSystem.Object,
+      processManager.Object,
+      Mock.Of<ISystemEnvironment>(),
+      pathProvider.Object,
+      elevationChecker.Object,
+      processLocator.Object);
+
+    await sut.RepairDesktopClient(CreateRequest());
+
+    client.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
   public async Task Uninstall_KillsRunningDesktopClient()
   {
     var installDir = "/usr/local/bin/ControlR/default";
