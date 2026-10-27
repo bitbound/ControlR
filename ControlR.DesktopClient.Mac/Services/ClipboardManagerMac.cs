@@ -76,8 +76,12 @@ public class ClipboardManagerMac(ILogger<ClipboardManagerMac> logger) : IClipboa
           return Result.Fail("Could not convert the clipboard text for the macOS pasteboard.");
         }
 
-        AppKitInterop.objc_msgSend_IntPtr_IntPtr(pasteboard, _setStringForTypeSelector, nsString, _nsStringPboardType);
-        return Result.Ok();
+        var didSet = AppKitInterop.objc_msgSend_Bool_IntPtr_IntPtr(
+          pasteboard, _setStringForTypeSelector, nsString, _nsStringPboardType);
+
+        return didSet
+          ? Result.Ok()
+          : Result.Fail("The macOS pasteboard refused the text.");
       }
       catch (Exception ex)
       {
