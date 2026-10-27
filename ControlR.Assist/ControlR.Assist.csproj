@@ -95,6 +95,19 @@
     <PackageReference Include="Avalonia.Wayland" />
   </ItemGroup>
 
+  <!--
+    Nothing in Assist's DI graph constructs the remote-control types yet, so the linker trims them and
+    never analyzes them. Pass -p:AssistRootDesktopClient=true to root them and get their trim warnings,
+    which is how the capture, encode, and platform interop paths get validated before Assist wires up a
+    real session. The default publish stays unrooted so those warnings cannot be quietly accepted.
+  -->
+  <ItemGroup Condition="'$(AssistRootDesktopClient)' == 'true'">
+    <TrimmerRootAssembly Include="ControlR.DesktopClient.Common" />
+    <TrimmerRootAssembly Include="ControlR.DesktopClient.Windows" />
+    <TrimmerRootAssembly Include="ControlR.Libraries.NativeInterop.Windows" />
+    <TrimmerRootAssembly Include="ControlR.Libraries.Avalonia" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Update="Assets\appicon.png">
       <Pack>True</Pack>
