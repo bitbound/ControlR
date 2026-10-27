@@ -5,6 +5,7 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace ControlR.Agent.Common.Services.Linux;
 
@@ -498,7 +499,10 @@ internal class DesktopClientWatcherLinux(
       {
         ["DOTNET_ENVIRONMENT"] = "Production",
         ["DISPLAY"] = displayInfo.Display,
-        ["XDG_SESSION_TYPE"] = "x11"
+        ["XDG_SESSION_TYPE"] = "x11",
+        // Names this agent to the client. On Linux a child outlives its parent, so without this a
+        // client left behind by an agent that updated or died keeps the greeter display to itself.
+        [AppConstants.AgentPidEnvironmentVariable] = Environment.ProcessId.ToString(CultureInfo.InvariantCulture)
       };
 
       if (!string.IsNullOrEmpty(displayInfo.XAuthPath))

@@ -83,11 +83,11 @@ public class IpcClientManager(
         _client.Dispose();
         _client = null;
 
-        // The agent accepts the pipe connection before it authenticates the client, so a client whose
-        // binary no longer matches what the agent expects connects successfully and is dropped within
-        // milliseconds. Treat that as a failed attempt. A connection that only gets this far would
-        // otherwise reset the tracker on every try, so the timeout in CheckIfShouldShutdown never
-        // accumulates and a stale client retries forever.
+        // The agent accepts the pipe connection before it authenticates, and on Linux a client whose
+        // binary has been replaced on disk fails that check because /proc/{pid}/exe no longer resolves.
+        // Such a client connects successfully and is then dropped within milliseconds. Treat that as a
+        // failed attempt. Counting it as a success would reset the tracker on every try, so the timeout
+        // in CheckIfShouldShutdown never accumulates and a stale client retries forever.
         if (_timeProvider.GetUtcNow() - connectionStartedAt >= _establishedConnectionDelay)
         {
           _firstFailedAttempt = null;
