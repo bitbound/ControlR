@@ -69,8 +69,8 @@ public class AgentInstallerLinuxTests
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
       .Returns([new LinuxDesktopClientProcess(4242, 0, "/usr/local/bin/ControlR/default/DesktopClient/ControlR.DesktopClient (deleted)")]);
     processLocator
-      .Setup(x => x.IsRunningExecutable(4242, It.IsAny<string>()))
-      .Returns(true);
+      .Setup(x => x.GetRunningExecutableOwnerUid(4242, It.IsAny<string>()))
+      .Returns(0);
     processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
 
     // Cut the run short once the directory would be recreated, after the kill has happened.
@@ -140,6 +140,47 @@ public class AgentInstallerLinuxTests
 
     Assert.NotNull(leftDirectory);
     Assert.False(leftDirectory.StartsWith(installDir, StringComparison.Ordinal));
+  }
+
+  [Fact]
+  public async Task Uninstall_KillsRunningDesktopClient()
+  {
+    var installDir = "/usr/local/bin/ControlR/default";
+    var fileSystem = new Mock<IFileSystem>();
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var elevationChecker = new Mock<IElevationChecker>();
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    pathProvider.Setup(x => x.GetAgentInstallDirectory()).Returns(installDir);
+
+    var stopProcess = new Mock<IProcess>();
+    stopProcess.Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+    processManager.Setup(x => x.Start(It.IsAny<string>(), It.IsAny<string>())).Returns(stopProcess.Object);
+
+    // Uninstall leaves no agent behind to reconcile the greeter session, so the client this install
+    // spawned has to be taken down as part of removing the install.
+    var client = new Mock<IProcess>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(4242, 0, "/usr/local/bin/ControlR/default/DesktopClient/ControlR.DesktopClient")]);
+    processLocator
+      .Setup(x => x.GetRunningExecutableOwnerUid(4242, It.IsAny<string>()))
+      .Returns(0);
+    processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
+
+    var sut = CreateSut(
+      fileSystem.Object,
+      processManager.Object,
+      Mock.Of<ISystemEnvironment>(),
+      pathProvider.Object,
+      elevationChecker.Object,
+      processLocator.Object);
+
+    await sut.Uninstall();
+
+    client.Verify(x => x.Kill(), Times.Once);
   }
 
   [Fact]

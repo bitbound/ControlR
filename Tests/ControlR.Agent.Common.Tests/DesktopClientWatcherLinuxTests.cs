@@ -36,8 +36,8 @@ public class DesktopClientWatcherLinuxTests
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
       .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient (deleted)")]);
     _processLocator
-      .Setup(x => x.IsRunningExecutable(999, It.IsAny<string>()))
-      .Returns(true);
+      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
+      .Returns(0);
     _processManager
       .Setup(x => x.GetProcessById(999))
       .Returns(stale.Object);
@@ -48,6 +48,42 @@ public class DesktopClientWatcherLinuxTests
     await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
 
     stale.Verify(x => x.Kill(), Times.Once);
+    _processManager.Verify(x => x.Start(It.IsAny<ProcessStartInfo>()), Times.Once);
+  }
+
+  [Fact]
+  public async Task CheckLoginScreenDesktopClient_ReconcilesWhileTrackedClientIsHealthy()
+  {
+    // A launch attempt that loses the race to record itself leaves a greeter client this agent never
+    // tracked. The launch path is not reached while the recorded client still looks healthy, so the
+    // reconcile has to run on those passes too or the duplicate sits beside it indefinitely.
+    var running = CreateRunningProcess();
+    SetupLaunch(running);
+    var sut = CreateSut();
+
+    _detector
+      .Setup(x => x.DetectDisplayEnvironment())
+      .ReturnsAsync(LoginScreen());
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    var duplicate = new Mock<IProcess>();
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([
+        new LinuxDesktopClientProcess(101, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient"),
+        new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+    _processLocator
+      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
+      .Returns(0);
+    _processManager
+      .Setup(x => x.GetProcessById(999))
+      .Returns(duplicate.Object);
+
+    _timeProvider.Advance(TimeSpan.FromSeconds(5));
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    duplicate.Verify(x => x.Kill(), Times.Once);
+    running.Verify(x => x.Kill(), Times.Never);
     _processManager.Verify(x => x.Start(It.IsAny<ProcessStartInfo>()), Times.Once);
   }
 
@@ -182,8 +218,8 @@ public class DesktopClientWatcherLinuxTests
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
       .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient (deleted)")]);
     _processLocator
-      .Setup(x => x.IsRunningExecutable(999, It.IsAny<string>()))
-      .Returns(true);
+      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
+      .Returns(0);
     _processManager
       .Setup(x => x.GetProcessById(999))
       .Returns(stale.Object);
@@ -225,6 +261,28 @@ public class DesktopClientWatcherLinuxTests
     _processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
       .Returns([new LinuxDesktopClientProcess(555, 1000, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+
+    sut.ReconcileGreeterDesktopClients();
+
+    _processManager.Verify(x => x.GetProcessById(It.IsAny<int>()), Times.Never);
+  }
+
+  [Theory]
+  [InlineData(1000)]
+  [InlineData(-1)]
+  public void ReconcileGreeterDesktopClients_WhenRecheckDoesNotReportRoot_SparesProcess(int recheckedOwnerUid)
+  {
+    var sut = CreateSut();
+
+    // The owner is read when the process is found and read again before the kill. A pid recycled in
+    // that window to a user session client of the same binary must not be killed on the strength of
+    // the earlier root ownership, and an owner that cannot be read fails closed too.
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+    _processLocator
+      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
+      .Returns(recheckedOwnerUid);
 
     sut.ReconcileGreeterDesktopClients();
 

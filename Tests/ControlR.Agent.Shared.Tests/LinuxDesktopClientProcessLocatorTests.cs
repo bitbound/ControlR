@@ -84,14 +84,28 @@ public class LinuxDesktopClientProcessLocatorTests
   }
 
   [Fact]
-  public void IsRunningExecutable_RechecksASingleProcess()
+  public void GetRunningExecutableOwnerUid_ReportsTheCurrentOwner()
   {
     var sut = CreateSut();
     SetupExecutable(100, TargetPath);
     SetupExecutable(200, "/usr/bin/bash");
+    SetupStatusUid(100, 1000);
 
-    Assert.True(sut.IsRunningExecutable(100, TargetPath));
-    Assert.False(sut.IsRunningExecutable(200, TargetPath));
+    // A pid found earlier can be recycled before the kill, so the re-check reports who owns the
+    // process now instead of only whether it still runs the expected binary.
+    Assert.Equal(1000, sut.GetRunningExecutableOwnerUid(100, TargetPath));
+    Assert.Null(sut.GetRunningExecutableOwnerUid(200, TargetPath));
+  }
+
+  [Fact]
+  public void GetRunningExecutableOwnerUid_WhenNothingMatches_ReturnsNothing()
+  {
+    var sut = CreateSut();
+    SetupExecutable(100, TargetPath);
+
+    Assert.Null(sut.GetRunningExecutableOwnerUid(100, $"{TargetPath}x"));
+    Assert.Null(sut.GetRunningExecutableOwnerUid(100, string.Empty));
+    _fileSystem.Verify(x => x.ReadAllText(It.IsAny<string>()), Times.Never);
   }
 
   private LinuxDesktopClientProcessLocator CreateSut()

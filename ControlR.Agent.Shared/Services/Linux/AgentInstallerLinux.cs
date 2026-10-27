@@ -511,8 +511,10 @@ internal class AgentInstallerLinux(
   {
     foreach (var process in _processLocator.FindByExecutablePath(desktopExecutablePath))
     {
-      // Re-check before killing, so a pid recycled since it was found is not killed by mistake.
-      if (!_processLocator.IsRunningExecutable(process.ProcessId, desktopExecutablePath))
+      // Re-check the executable before killing, so a pid recycled since it was found is not killed by
+      // mistake. Unlike the greeter reconcile, the owner uid is not a filter here. An install being
+      // replaced or removed owns every client under its directory, user sessions included.
+      if (_processLocator.GetRunningExecutableOwnerUid(process.ProcessId, desktopExecutablePath) is null)
       {
         continue;
       }

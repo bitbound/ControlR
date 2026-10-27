@@ -80,6 +80,11 @@ internal class DesktopClientWatcherLinux(
       "Login screen detected. Type: X11, Display: {Display}, XAuth: {XAuth}, DM: {DisplayManager}",
       args: [displayInfo.Display, displayInfo.XAuthPath ?? "none", displayInfo.DisplayManager ?? "unknown"]);
 
+    // Reconcile on every pass, not just the ones that end in a launch. A client this agent did not
+    // record can appear beside the one it did, and the launch path is not reached while the recorded
+    // client still looks healthy or while a failing launch is backing off.
+    ReconcileGreeterDesktopClients();
+
     var isLoginScreenRunning = await IsLoginScreenDesktopClientRunning();
     if (isLoginScreenRunning && await HasDeletedLoginScreenDesktopClientExecutable())
     {
@@ -111,10 +116,6 @@ internal class DesktopClientWatcherLinux(
         return;
       }
 
-      // Clear any client this agent is not tracking before adding another, so the greeter session
-      // never ends up with two of them.
-      ReconcileGreeterDesktopClients();
-
       _ = LaunchLoginScreenDesktopClient(displayInfo, cancellationToken);
       return;
     }
@@ -124,8 +125,9 @@ internal class DesktopClientWatcherLinux(
 
   /// <summary>
   /// Kills login screen desktop clients this agent is not tracking, so the greeter session holds at
-  /// most one. A client left behind by a previous agent instance is not in _loginScreenProcess, so it
-  /// is found by the executable it runs rather than by this agent's own record of it.
+  /// most one. A client left behind by a previous agent instance, or by a launch attempt that lost the
+  /// race to record itself, is not in _loginScreenProcess, so it is found by the executable it runs
+  /// rather than by this agent's own record of it.
   /// </summary>
   internal void ReconcileGreeterDesktopClients()
   {
@@ -439,9 +441,10 @@ internal class DesktopClientWatcherLinux(
 
   private void KillStaleGreeterClient(int processId, string expectedPath)
   {
-    // Re-check the executable immediately before killing, so a pid recycled to an unrelated process
-    // in the window since it was found is not killed by mistake.
-    if (!_processLocator.IsRunningExecutable(processId, expectedPath))
+    // Re-check the executable and its owner immediately before killing. A pid found earlier can have
+    // been recycled to an unrelated process, or to a user session client of the same binary, and
+    // neither is ours to kill. An unreadable owner also lands here, so the kill stays fail closed.
+    if (_processLocator.GetRunningExecutableOwnerUid(processId, expectedPath) != 0)
     {
       return;
     }

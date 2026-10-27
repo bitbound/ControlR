@@ -29,10 +29,11 @@ public interface ILinuxDesktopClientProcessLocator
   IReadOnlyList<LinuxDesktopClientProcess> FindByExecutablePath(string executablePath);
 
   /// <summary>
-  /// Re-checks that <paramref name="processId"/> is still running <paramref name="executablePath"/>.
-  /// Call this immediately before killing, so a pid recycled to an unrelated process is not killed.
+  /// Re-checks that <paramref name="processId"/> is still running <paramref name="executablePath"/>,
+  /// and reports the uid that owns it now. Returns null when it no longer runs that executable. Call
+  /// this immediately before killing, so a pid recycled since it was found is not killed by mistake.
   /// </summary>
-  bool IsRunningExecutable(int processId, string executablePath);
+  int? GetRunningExecutableOwnerUid(int processId, string executablePath);
 }
 
 /// <remarks>
@@ -73,15 +74,20 @@ internal sealed class LinuxDesktopClientProcessLocator(
     return matches;
   }
 
-  public bool IsRunningExecutable(int processId, string executablePath)
+  public int? GetRunningExecutableOwnerUid(int processId, string executablePath)
   {
     if (string.IsNullOrWhiteSpace(executablePath))
     {
-      return false;
+      return null;
     }
 
     var resolvedPath = ResolveExecutablePath(processId);
-    return resolvedPath is not null && IsSameExecutable(resolvedPath, executablePath);
+    if (resolvedPath is null || !IsSameExecutable(resolvedPath, executablePath))
+    {
+      return null;
+    }
+
+    return ReadOwnerUid(processId);
   }
 
   private static bool IsSameExecutable(string resolvedPath, string executablePath)
