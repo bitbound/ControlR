@@ -356,8 +356,7 @@ public class DesktopClientWatcherLinuxTests
     await sut.StopClientsForShutdownAsync();
 
     // AtLeastOnce, not Once: stopping the client also completes the launch task, whose finally block
-    // disposes the same process again. The fix is that shutdown kills it at all; before it, the
-    // tracked client survived and Kill was never called.
+    // disposes the same process again.
     running.Verify(x => x.Kill(), Times.AtLeastOnce);
   }
 

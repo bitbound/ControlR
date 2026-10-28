@@ -179,10 +179,10 @@ internal class DesktopClientWatcherLinux(
       return;
     }
 
-    // A previous agent instance can leave a login screen client running, because an update replaces
-    // the binary out from under it and, before this reconcile existed, nothing killed it on the way
-    // down. This agent did not spawn that process, so it is not in _loginScreenProcess. Reap any such
-    // orphan once at startup, before this agent spawns a client of its own beside it.
+    // A previous agent instance can leave a login screen client running. An update replaces the
+    // binary out from under it, and an agent that died never takes it down. This agent did not spawn
+    // that process, so it is not in _loginScreenProcess. Reap any such orphan once at startup,
+    // before this agent spawns a client of its own beside it.
     try
     {
       ReconcileGreeterDesktopClients();

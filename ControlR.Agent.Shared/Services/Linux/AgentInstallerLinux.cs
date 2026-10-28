@@ -81,9 +81,9 @@ internal class AgentInstallerLinux(
           .Start("sudo", $"systemctl stop {serviceName}")
           .WaitForExitAsync(_lifetime.ApplicationStopping);
 
-        // The stopped agent takes its own login screen client down with it, but a build from before
-        // that cleanup did not, and a client still running here is orphaned the moment this directory
-        // is replaced. Kill it by path so the new install does not start beside a stale client.
+        // The replaced agent may not take its own login screen client down when it stops, because
+        // older builds never did. A client left running here is orphaned the moment this directory
+        // is replaced. Kill by path so the new install does not start beside a stale client.
         StopDesktopClientProcesses(GetDesktopClientPath(installDir));
 
         _fileSystem.DeleteDirectory(installDir, true);
@@ -145,11 +145,11 @@ internal class AgentInstallerLinux(
         return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
       }
 
-      // Stopping the replaced install's agent lets it kill its own login screen client, but only a
-      // build that has this cleanup, and only if it shut down rather than crashed. This build cannot
-      // assume the one it replaces cooperates, so kill the replaced install's clients directly. They
-      // are found by the path that install used, which is keyed on its own brand and instance id, so
-      // a migration that changes either one still finds them and never touches another install's.
+      // The replaced install's agent cannot be trusted to kill its own login screen client. Older
+      // builds never did, and a crashed agent could not. Kill the replaced install's clients
+      // directly. They are found by the path that install used, which is keyed on its own brand and
+      // instance id, so a migration that changes either one still finds them and never touches
+      // another install's.
       if (!string.IsNullOrWhiteSpace(request.PreviousBrandName))
       {
         // The unit that supervises the replaced install's user-session clients is named for that
