@@ -1,0 +1,73 @@
+@inherits ComponentBase
+@attribute [Route(ClientRoutes.QuickSupport)]
+@attribute [Authorize]
+<div class="@(CurrentState == AssistPageState.Connected ? "h-100" : "h-100 pa-4")">
+
+  @switch (CurrentState)
+  {
+    case AssistPageState.Connected:
+      break;
+    case AssistPageState.Connecting:
+      {
+        <LoadingIndicator IsVisible Message="Connecting" />
+        break;
+      }
+    case AssistPageState.WaitingForConsent:
+      {
+        <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Spacing="4" Class="mt-8">
+          <MudProgressCircular Indeterminate Size="Size.Large" />
+          <MudText Typo="Typo.h6">
+            Waiting for @_remoteDisplayName to accept the connection
+          </MudText>
+          <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="HandleCancelClicked">
+            Cancel
+          </MudButton>
+        </MudStack>
+        break;
+      }
+    case AssistPageState.CodeEntry:
+    default:
+      {
+        <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Spacing="4" Class="mt-8">
+          <MudText Typo="Typo.h5" Align="Align.Center">Quick Support</MudText>
+          <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+            Enter the access code from the ControlR Assist app.
+          </MudText>
+
+          @if (!string.IsNullOrWhiteSpace(_statusMessage))
+          {
+            <MudAlert Severity="_statusSeverity" Class="mt-2">
+              @(_statusMessage)
+            </MudAlert>
+          }
+
+          <MudTextField @bind-Value="_accessCode"
+                        Label="Access Code"
+                        Placeholder="9-digit code"
+                        Adornment="Adornment.Start"
+                        AdornmentIcon="@Icons.Material.Filled.Pin"
+                        Immediate="true"
+                        MaxLength="9"
+                        Class="mt-2"
+                        Style="max-width: 300px;"
+                        OnKeyDown="HandleCodeKeyDown" />
+
+          <MudButton Variant="Variant.Filled"
+                     Color="Color.Primary"
+                     Disabled="_isJoining || _accessCode?.Length != 9"
+                     OnClick="HandleConnectClicked">
+            @if (_isJoining)
+            {
+              <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+            }
+            Connect
+          </MudButton>
+        </MudStack>
+        break;
+      }
+  }
+
+  <RemoteDisplay OnDisconnectRequested="HandleDisconnectRequested"
+                 OnFatalError="HandleFatalStreamingError"
+                 IsVisible="@(CurrentState == AssistPageState.Connected)" />
+</div>

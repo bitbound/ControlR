@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
     });
 
     services.AddStronglyTypedSignalrClient<IViewerHub, IViewerHubClient, ViewerHubClient>(ServiceLifetime.Scoped);
+    services.AddStronglyTypedSignalrClient<IAssistHub, IAssistHubClient, AssistHubClient>(ServiceLifetime.Scoped);
     services.AddControlrApiClient(options => options.BaseUrl = baseUrl);
     services.AddScoped(_ => new HttpClient { BaseAddress = baseUrl });
     services.AddHttpClient<IDownloadsApi, DownloadsApi>();
