@@ -152,6 +152,15 @@ internal class AgentInstallerLinux(
       // a migration that changes either one still finds them and never touches another install's.
       if (!string.IsNullOrWhiteSpace(request.PreviousBrandName))
       {
+        // The unit that supervises the replaced install's user-session clients is named for that
+        // install's brand, so the current-brand stop at the top of the install never reaches it. The
+        // unit restarts on failure and a SIGKILL is a failure, so the unit has to be stopped first
+        // or systemd just relaunches what this kills.
+        await _serviceControl.StopPreviousBrandDesktopClientService(
+          request.PreviousBrandName,
+          request.PreviousInstanceId,
+          throwOnFailure: false);
+
         StopDesktopClientProcesses(
           GetPreviousBrandDesktopClientPath(request.PreviousBrandName, request.PreviousInstanceId));
       }

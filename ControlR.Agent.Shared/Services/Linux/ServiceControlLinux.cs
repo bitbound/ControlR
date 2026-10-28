@@ -142,7 +142,19 @@ internal class ServiceControlLinux(
             }
         }
     }
-    public async Task StopDesktopClientService(bool throwOnFailure)
+    public Task StopDesktopClientService(bool throwOnFailure)
+    {
+        return StopDesktopClientServiceByName(GetDesktopClientServiceName(), throwOnFailure);
+    }
+
+    public Task StopPreviousBrandDesktopClientService(string previousBrandName, string? previousInstanceId, bool throwOnFailure)
+    {
+        return StopDesktopClientServiceByName(
+            GetPreviousBrandDesktopClientServiceName(previousBrandName, previousInstanceId),
+            throwOnFailure);
+    }
+
+    private async Task StopDesktopClientServiceByName(string serviceName, bool throwOnFailure)
     {
         // Check if running on headless server
         var isHeadless = await _headlessServerDetector.IsHeadlessServer();
@@ -154,7 +166,6 @@ internal class ServiceControlLinux(
 
         try
         {
-            var serviceName = GetDesktopClientServiceName();
             _logger.LogInformation("Stopping desktop client service for all logged-in users: {ServiceName}", serviceName);
 
             // Stop every logged-in user, active or not. A user who launched a client and then
@@ -240,6 +251,18 @@ internal class ServiceControlLinux(
         }
 
         return $"{BrandingConstants.LinuxDesktopServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
+    }
+
+    private static string GetPreviousBrandDesktopClientServiceName(string previousBrandName, string? previousInstanceId)
+    {
+        // The replaced install's unit is named for its own brand and the instance id it was created
+        // with, the same way that install's own installer named it. The current brand's unit name
+        // would stop the wrong unit.
+        var baseName = new BrandNames(previousBrandName).LinuxDesktopServiceName;
+
+        return string.IsNullOrWhiteSpace(previousInstanceId)
+            ? baseName
+            : $"{baseName.Replace(".service", "")}-{previousInstanceId}.service";
     }
     private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
     {
