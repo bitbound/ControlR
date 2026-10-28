@@ -49,7 +49,8 @@
                  Text="{Binding Code}" />
       <StackPanel Orientation="Horizontal"
                   HorizontalAlignment="Center"
-                  Spacing="8">
+                  Spacing="8"
+                  IsVisible="{Binding !IsSessionActive}">
         <Button Content="{x:Static local:Localization.NewCodeButtonText}"
                 Command="{Binding GenerateNewCodeCommand}" />
         <Button Content="{x:Static local:Localization.DisconnectButtonText}"
@@ -90,10 +91,16 @@
       <TextBlock HorizontalAlignment="Center"
                  TextAlignment="Center"
                  Text="{x:Static local:Localization.SessionActiveCaption}" />
-      <ToggleButton HorizontalAlignment="Center"
-                    Content="{x:Static local:Localization.BlockInputButtonText}"
-                    IsChecked="{Binding IsInputBlocked}"
-                    Command="{Binding ToggleBlockInputCommand}" />
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Center"
+                  Spacing="8">
+        <ToggleButton Content="{x:Static local:Localization.ViewOnlyButtonText}"
+                      IsChecked="{Binding IsViewOnly}"
+                      Command="{Binding SetViewOnlyCommand}" />
+        <Button Classes="primary"
+                Content="{x:Static local:Localization.EndSessionButtonText}"
+                Command="{Binding EndSessionCommand}" />
+      </StackPanel>
     </StackPanel>
 
     <TextBlock HorizontalAlignment="Center"

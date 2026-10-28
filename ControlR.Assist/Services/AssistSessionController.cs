@@ -1,4 +1,3 @@
-using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -37,7 +36,7 @@ public sealed class AssistSessionController(
   public event Action? StateChanged;
 
   public string? Code { get; private set; }
-  public bool IsInputBlocked { get; private set; }
+  public bool IsViewOnly => _sessionHost?.Services.GetService<AssistInputGate>()?.IsViewOnly ?? false;
   public string? PendingConsentEmail { get; private set; }
   public string? PendingConsentViewerName { get; private set; }
   public Guid? PendingSessionId { get; private set; }
@@ -106,6 +105,29 @@ public sealed class AssistSessionController(
     await StopSessionHostAsync();
     await _hubClient.DisposeAsync();
     _stateLock.Dispose();
+  }
+
+  public async Task EndSessionAsync()
+  {
+    await _stateLock.WaitAsync();
+
+    try
+    {
+      if (State != AssistSessionState.Active)
+      {
+        return;
+      }
+
+      await StopSessionHostAsync();
+      SetConsentPending(null, null, null);
+      StatusMessage = Localization.StatusSessionEnded;
+      await CreateSessionCoreAsync(CancellationToken.None);
+    }
+    finally
+    {
+      _stateLock.Release();
+      RaiseStateChanged();
+    }
   }
 
   public async Task GenerateNewCodeAsync()
@@ -250,23 +272,15 @@ public sealed class AssistSessionController(
     }
   }
 
-  public async Task ToggleBlockInputAsync()
+  public void SetViewOnly(bool enabled)
   {
-    if (_sessionHost is not { } host)
+    if (_sessionHost?.Services.GetService<AssistInputGate>() is not { } gate)
     {
       return;
     }
 
-    try
-    {
-      var inputSimulator = host.Services.GetRequiredService<IInputSimulator>();
-      IsInputBlocked = await inputSimulator.SetBlockInput(!IsInputBlocked);
-    }
-    catch (Exception ex)
-    {
-      _logger.LogError(ex, "Failed to toggle local input blocking.");
-    }
-
+    gate.IsViewOnly = enabled;
+    _logger.LogInformation("Customer {State} view-only mode.", enabled ? "enabled" : "disabled");
     RaiseStateChanged();
   }
 

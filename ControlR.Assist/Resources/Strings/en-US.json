@@ -1,11 +1,11 @@
 {
   "AcceptButtonText": "Accept",
   "AccessCodeCaption": "Share this code with your technician.",
-  "BlockInputButtonText": "Block my input",
   "ConsentPromptFormat": "{0} wants to control this device.",
   "ConnectButtonText": "Connect",
   "DeclineButtonText": "Decline",
   "DisconnectButtonText": "Disconnect",
+  "EndSessionButtonText": "End session",
   "HomeTagline": "Let {brand_name} support connect to this device.",
   "LanguageDisplayName": "English (United States)",
   "NewCodeButtonText": "New code",
@@ -21,5 +21,6 @@
   "StatusSessionStartFailed": "Failed to start the remote control session.",
   "StatusUnreachable": "Could not reach the server. Check the URL and try again.",
   "UnknownViewerLabel": "A technician",
-  "ViewNotFoundMessage": "Unable to find a view for {0}."
+  "ViewNotFoundMessage": "Unable to find a view for {0}.",
+  "ViewOnlyButtonText": "View only"
 }

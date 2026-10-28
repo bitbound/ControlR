@@ -66,6 +66,7 @@ public sealed class AssistSessionHostFactory : IAssistSessionHostFactory
       });
 
     builder.AddRemoteControlPlatformServices();
+    WrapViewerCommandHandler(builder.Services);
 
     return builder.Build();
   }
@@ -78,6 +79,29 @@ public sealed class AssistSessionHostFactory : IAssistSessionHostFactory
       request.AccessToken,
       RelayRole.Responder,
       RelayTimeoutSeconds);
+
+  // The customer keeps authority over the machine: the real command handler is wrapped so view-only
+  // drops input, and block-input/privacy-screen requests never reach it.
+  private static void WrapViewerCommandHandler(IServiceCollection services)
+  {
+    var descriptor = services.Last(x => x.ServiceType == typeof(IRemoteControlViewerCommandHandler));
+    var implementationType = descriptor.ImplementationType
+                             ?? throw new InvalidOperationException("Expected a concrete viewer command handler.");
+
+    services.Remove(descriptor);
+    services.AddSingleton<AssistInputGate>();
+    services.AddSingleton<IRemoteControlViewerCommandHandler>(provider =>
+    {
+      var inner = (IRemoteControlViewerCommandHandler)ActivatorUtilities.CreateInstance(
+        provider,
+        implementationType);
+
+      return new ViewerCommandGate(
+        inner,
+        provider.GetRequiredService<AssistInputGate>(),
+        provider.GetRequiredService<ILogger<ViewerCommandGate>>());
+    });
+  }
 
   private sealed class AutoApproveConsentService : ISessionConsentService
   {

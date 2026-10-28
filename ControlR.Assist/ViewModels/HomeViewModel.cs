@@ -18,7 +18,7 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   private string? _consentViewerName;
 
   [ObservableProperty]
-  private bool _isInputBlocked;
+  private bool _isViewOnly;
 
   [ObservableProperty]
   private string? _serverUrl;
@@ -69,6 +69,9 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   private Task DisconnectAsync() => _controller.DisconnectAsync();
 
   [RelayCommand]
+  private Task EndSessionAsync() => _controller.EndSessionAsync();
+
+  [RelayCommand]
   private Task GenerateNewCodeAsync() => _controller.GenerateNewCodeAsync();
 
   private void HandleStateChanged() =>
@@ -81,7 +84,7 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     StatusMessage = _controller.StatusMessage;
     ConsentViewerName = _controller.PendingConsentViewerName;
     ConsentEmail = _controller.PendingConsentEmail;
-    IsInputBlocked = _controller.IsInputBlocked;
+    IsViewOnly = _controller.IsViewOnly;
 
     OnPropertyChanged(nameof(IsBusy));
     OnPropertyChanged(nameof(IsConsentPending));
@@ -93,5 +96,5 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   }
 
   [RelayCommand]
-  private Task ToggleBlockInputAsync() => _controller.ToggleBlockInputAsync();
+  private void SetViewOnly() => _controller.SetViewOnly(IsViewOnly);
 }
