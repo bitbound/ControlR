@@ -67,10 +67,10 @@ public class AgentInstallerLinuxTests
     var client = new Mock<IProcess>();
     processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(4242, 0, "/usr/local/bin/ControlR/default/DesktopClient/ControlR.DesktopClient (deleted)")]);
+      .Returns([new LinuxDesktopClientProcess(4242, 0, false)]);
     processLocator
-      .Setup(x => x.GetRunningExecutableOwnerUid(4242, It.IsAny<string>()))
-      .Returns(0);
+      .Setup(x => x.GetRunningExecutable(4242, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(4242, 0, false));
     processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
 
     // Cut the run short once the directory would be recreated, after the kill has happened.
@@ -161,10 +161,10 @@ public class AgentInstallerLinuxTests
     var client = new Mock<IProcess>();
     processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(4242, 0, "/usr/local/bin/ControlR/default/DesktopClient/ControlR.DesktopClient")]);
+      .Returns([new LinuxDesktopClientProcess(4242, 0, false)]);
     processLocator
-      .Setup(x => x.GetRunningExecutableOwnerUid(4242, It.IsAny<string>()))
-      .Returns(0);
+      .Setup(x => x.GetRunningExecutable(4242, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(4242, 0, false));
     processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
 
     var sut = CreateSut(
@@ -178,6 +178,69 @@ public class AgentInstallerLinuxTests
     await sut.RepairDesktopClient(CreateRequest());
 
     client.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
+  public async Task StopPreviousBrandDesktopClients_StopsTheUnitBeforeKilling()
+  {
+    var steps = new List<string>();
+    var serviceControl = new Mock<IServiceControl>();
+    serviceControl
+      .Setup(x => x.StopPreviousBrandDesktopClientService("Acme Remote", "exp", true))
+      .Callback(() => steps.Add("unit-stop"))
+      .Returns(Task.CompletedTask);
+
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Callback(() => steps.Add("kill"))
+      .Returns([]);
+
+    var sut = CreateSut(
+      Mock.Of<IFileSystem>(),
+      Mock.Of<IProcessManager>(),
+      Mock.Of<ISystemEnvironment>(),
+      CreatePathProvider().Object,
+      CreateElevatedChecker().Object,
+      processLocator.Object,
+      serviceControl.Object);
+
+    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal(["unit-stop", "kill"], steps);
+  }
+
+  [Fact]
+  public async Task StopPreviousBrandDesktopClients_WhenTheUnitStopFails_DoesNotKillAnything()
+  {
+    var steps = new List<string>();
+    var serviceControl = new Mock<IServiceControl>();
+    serviceControl
+      .Setup(x => x.StopPreviousBrandDesktopClientService("Acme Remote", "exp", true))
+      .ThrowsAsync(new InvalidOperationException("systemctl --user stop exited with code 1."));
+
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Callback(() => steps.Add("kill"))
+      .Returns([]);
+
+    var sut = CreateSut(
+      Mock.Of<IFileSystem>(),
+      Mock.Of<IProcessManager>(),
+      Mock.Of<ISystemEnvironment>(),
+      CreatePathProvider().Object,
+      CreateElevatedChecker().Object,
+      processLocator.Object,
+      serviceControl.Object);
+
+    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
+
+    // Killing while the unit is still active hands systemd a Restart=on-failure, so an unconfirmed
+    // stop has to stop the whole step, not just be logged.
+    Assert.False(result.IsSuccess);
+    Assert.DoesNotContain("kill", steps);
   }
 
   [Fact]
@@ -202,10 +265,10 @@ public class AgentInstallerLinuxTests
     var client = new Mock<IProcess>();
     processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(4242, 0, "/usr/local/bin/ControlR/default/DesktopClient/ControlR.DesktopClient")]);
+      .Returns([new LinuxDesktopClientProcess(4242, 0, false)]);
     processLocator
-      .Setup(x => x.GetRunningExecutableOwnerUid(4242, It.IsAny<string>()))
-      .Returns(0);
+      .Setup(x => x.GetRunningExecutable(4242, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(4242, 0, false));
     processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
 
     var sut = CreateSut(
@@ -252,79 +315,11 @@ public class AgentInstallerLinuxTests
     fileSystem.Verify(x => x.DeleteDirectory(installDir, true), Times.Never);
   }
 
-  private static AgentInstallRequest CreateRequest()
+  private static Mock<IElevationChecker> CreateElevatedChecker()
   {
-    return new AgentInstallRequest
-    {
-      BundleZipPath = "/tmp/controlr-install-abcdef/ControlR.Agent.bundle.zip",
-      BundleSha256 = "hash",
-      DeviceId = Guid.NewGuid(),
-      ServerUri = new Uri("https://example.test"),
-      TenantId = Guid.NewGuid()
-    };
-  }
-
-  [Fact]
-  public async Task StopPreviousBrandDesktopClients_WhenTheUnitStopFails_DoesNotKillAnything()
-  {
-    var steps = new List<string>();
-    var serviceControl = new Mock<IServiceControl>();
-    serviceControl
-      .Setup(x => x.StopPreviousBrandDesktopClientService("Acme Remote", "exp", true))
-      .ThrowsAsync(new InvalidOperationException("systemctl --user stop exited with code 1."));
-
-    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
-    processLocator
-      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Callback(() => steps.Add("kill"))
-      .Returns([]);
-
-    var sut = CreateSut(
-      Mock.Of<IFileSystem>(),
-      Mock.Of<IProcessManager>(),
-      Mock.Of<ISystemEnvironment>(),
-      CreatePathProvider().Object,
-      CreateElevatedChecker().Object,
-      processLocator.Object,
-      serviceControl.Object);
-
-    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
-
-    // Killing while the unit is still active hands systemd a Restart=on-failure, so an unconfirmed
-    // stop has to stop the whole step, not just be logged.
-    Assert.False(result.IsSuccess);
-    Assert.DoesNotContain("kill", steps);
-  }
-
-  [Fact]
-  public async Task StopPreviousBrandDesktopClients_StopsTheUnitBeforeKilling()
-  {
-    var steps = new List<string>();
-    var serviceControl = new Mock<IServiceControl>();
-    serviceControl
-      .Setup(x => x.StopPreviousBrandDesktopClientService("Acme Remote", "exp", true))
-      .Callback(() => steps.Add("unit-stop"))
-      .Returns(Task.CompletedTask);
-
-    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
-    processLocator
-      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Callback(() => steps.Add("kill"))
-      .Returns([]);
-
-    var sut = CreateSut(
-      Mock.Of<IFileSystem>(),
-      Mock.Of<IProcessManager>(),
-      Mock.Of<ISystemEnvironment>(),
-      CreatePathProvider().Object,
-      CreateElevatedChecker().Object,
-      processLocator.Object,
-      serviceControl.Object);
-
-    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
-
-    Assert.True(result.IsSuccess);
-    Assert.Equal(["unit-stop", "kill"], steps);
+    var elevationChecker = new Mock<IElevationChecker>();
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    return elevationChecker;
   }
 
   private static Mock<IFileSystemPathProvider> CreatePathProvider()
@@ -336,11 +331,16 @@ public class AgentInstallerLinuxTests
     return pathProvider;
   }
 
-  private static Mock<IElevationChecker> CreateElevatedChecker()
+  private static AgentInstallRequest CreateRequest()
   {
-    var elevationChecker = new Mock<IElevationChecker>();
-    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
-    return elevationChecker;
+    return new AgentInstallRequest
+    {
+      BundleZipPath = "/tmp/controlr-install-abcdef/ControlR.Agent.bundle.zip",
+      BundleSha256 = "hash",
+      DeviceId = Guid.NewGuid(),
+      ServerUri = new Uri("https://example.test"),
+      TenantId = Guid.NewGuid()
+    };
   }
 
   private static AgentInstallerLinux CreateSut(

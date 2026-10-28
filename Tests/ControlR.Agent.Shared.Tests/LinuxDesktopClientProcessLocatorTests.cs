@@ -61,6 +61,24 @@ public class LinuxDesktopClientProcessLocatorTests
     Assert.Equal(100, Assert.Single(result).ProcessId);
   }
 
+  [Theory]
+  [InlineData("0::/system.slice/controlr-agent.service", false)]
+  [InlineData("0::/user.slice/user-0.slice/user@0.service/app.slice/app-controlr.service", true)]
+  [InlineData("12:cpu,cpuacct:/system.slice/controlr-agent.service\n0::/system.slice/controlr-agent.service", false)]
+  public void FindByExecutablePath_ReportsTheCgroupSlice(string cgroup, bool expectedInUserSlice)
+  {
+    // cgroup v2 yields one line; v1 yields one line per controller. A user session's systemd path
+    // lives under user.slice in either.
+    var sut = CreateSut();
+    SetupProcDirectories("/proc/100");
+    SetupExecutable(100, TargetPath);
+    SetupStatusUid(100, 0);
+    SetupCgroup(100, cgroup);
+
+    var match = Assert.Single(sut.FindByExecutablePath(TargetPath));
+    Assert.Equal(expectedInUserSlice, match.InUserSlice);
+  }
+
   [Fact]
   public void FindByExecutablePath_ReportsTheOwnerUid()
   {
@@ -75,6 +93,23 @@ public class LinuxDesktopClientProcessLocatorTests
   }
 
   [Fact]
+  public void FindByExecutablePath_WhenCgroupUnreadable_ReportsUserSlice()
+  {
+    // Only a proven system-slice process may be killed as a greeter orphan, so an unreadable
+    // cgroup claims the safer user-slice side.
+    var sut = CreateSut();
+    SetupProcDirectories("/proc/100");
+    SetupExecutable(100, TargetPath);
+    SetupStatusUid(100, 0);
+    _fileSystem
+      .Setup(x => x.ReadAllText("/proc/100/cgroup"))
+      .Throws(new UnauthorizedAccessException());
+
+    var match = Assert.Single(sut.FindByExecutablePath(TargetPath));
+    Assert.True(match.InUserSlice);
+  }
+
+  [Fact]
   public void FindByExecutablePath_WhenPathIsEmpty_ReturnsNothing()
   {
     var sut = CreateSut();
@@ -84,27 +119,31 @@ public class LinuxDesktopClientProcessLocatorTests
   }
 
   [Fact]
-  public void GetRunningExecutableOwnerUid_ReportsTheCurrentOwner()
+  public void GetRunningExecutable_ReportsTheCurrentOwner()
   {
     var sut = CreateSut();
     SetupExecutable(100, TargetPath);
     SetupExecutable(200, "/usr/bin/bash");
     SetupStatusUid(100, 1000);
+    SetupCgroup(100, "0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-controlr.service");
 
     // A pid found earlier can be recycled before the kill, so the re-check reports who owns the
     // process now instead of only whether it still runs the expected binary.
-    Assert.Equal(1000, sut.GetRunningExecutableOwnerUid(100, TargetPath));
-    Assert.Null(sut.GetRunningExecutableOwnerUid(200, TargetPath));
+    var match = sut.GetRunningExecutable(100, TargetPath);
+    Assert.NotNull(match);
+    Assert.Equal(1000, match.Value.OwnerUid);
+    Assert.True(match.Value.InUserSlice);
+    Assert.Null(sut.GetRunningExecutable(200, TargetPath));
   }
 
   [Fact]
-  public void GetRunningExecutableOwnerUid_WhenNothingMatches_ReturnsNothing()
+  public void GetRunningExecutable_WhenNothingMatches_ReturnsNothing()
   {
     var sut = CreateSut();
     SetupExecutable(100, TargetPath);
 
-    Assert.Null(sut.GetRunningExecutableOwnerUid(100, $"{TargetPath}x"));
-    Assert.Null(sut.GetRunningExecutableOwnerUid(100, string.Empty));
+    Assert.Null(sut.GetRunningExecutable(100, $"{TargetPath}x"));
+    Assert.Null(sut.GetRunningExecutable(100, string.Empty));
     _fileSystem.Verify(x => x.ReadAllText(It.IsAny<string>()), Times.Never);
   }
 
@@ -113,6 +152,13 @@ public class LinuxDesktopClientProcessLocatorTests
     return new LinuxDesktopClientProcessLocator(
       _fileSystem.Object,
       NullLogger<LinuxDesktopClientProcessLocator>.Instance);
+  }
+
+  private void SetupCgroup(int processId, string cgroup)
+  {
+    _fileSystem
+      .Setup(x => x.ReadAllText($"/proc/{processId}/cgroup"))
+      .Returns(cgroup);
   }
 
   private void SetupExecutable(int processId, string resolvedPath)

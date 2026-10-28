@@ -34,10 +34,10 @@ public class DesktopClientWatcherLinuxTests
     var stale = new Mock<IProcess>();
     _processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient (deleted)")]);
+      .Returns([new LinuxDesktopClientProcess(999, 0, false)]);
     _processLocator
-      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
-      .Returns(0);
+      .Setup(x => x.GetRunningExecutable(999, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(999, 0, false));
     _processManager
       .Setup(x => x.GetProcessById(999))
       .Returns(stale.Object);
@@ -70,11 +70,11 @@ public class DesktopClientWatcherLinuxTests
     _processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
       .Returns([
-        new LinuxDesktopClientProcess(101, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient"),
-        new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+        new LinuxDesktopClientProcess(101, 0, false),
+        new LinuxDesktopClientProcess(999, 0, false)]);
     _processLocator
-      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
-      .Returns(0);
+      .Setup(x => x.GetRunningExecutable(999, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(999, 0, false));
     _processManager
       .Setup(x => x.GetProcessById(999))
       .Returns(duplicate.Object);
@@ -173,10 +173,10 @@ public class DesktopClientWatcherLinuxTests
     var orphan = new Mock<IProcess>();
     _processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+      .Returns([new LinuxDesktopClientProcess(999, 0, false)]);
     _processLocator
-      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
-      .Returns(0);
+      .Setup(x => x.GetRunningExecutable(999, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(999, 0, false));
     _processManager
       .Setup(x => x.GetProcessById(999))
       .Returns(orphan.Object);
@@ -242,10 +242,10 @@ public class DesktopClientWatcherLinuxTests
     var stale = new Mock<IProcess>();
     _processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient (deleted)")]);
+      .Returns([new LinuxDesktopClientProcess(999, 0, false)]);
     _processLocator
-      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
-      .Returns(0);
+      .Setup(x => x.GetRunningExecutable(999, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(999, 0, false));
     _processManager
       .Setup(x => x.GetProcessById(999))
       .Returns(stale.Object);
@@ -253,6 +253,24 @@ public class DesktopClientWatcherLinuxTests
     sut.ReconcileGreeterDesktopClients();
 
     stale.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
+  public void ReconcileGreeterDesktopClients_SparesRootUserSessionClient()
+  {
+    var sut = CreateSut();
+
+    // The desktop user unit is enabled globally, so a root graphical session runs the same binary
+    // as root. It sits in root's user slice, not the agent service's slice, and is not the agent's
+    // greeter child.
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(555, 0, true)]);
+
+    sut.ReconcileGreeterDesktopClients();
+
+    _processLocator.Verify(x => x.GetRunningExecutable(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    _processManager.Verify(x => x.GetProcessById(It.IsAny<int>()), Times.Never);
   }
 
   [Fact]
@@ -269,7 +287,7 @@ public class DesktopClientWatcherLinuxTests
 
     _processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(101, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+      .Returns([new LinuxDesktopClientProcess(101, 0, false)]);
 
     sut.ReconcileGreeterDesktopClients();
 
@@ -286,7 +304,24 @@ public class DesktopClientWatcherLinuxTests
     // systemd unit, so the greeter reconcile must leave it alone.
     _processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(555, 1000, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+      .Returns([new LinuxDesktopClientProcess(555, 1000, false)]);
+
+    sut.ReconcileGreeterDesktopClients();
+
+    _processManager.Verify(x => x.GetProcessById(It.IsAny<int>()), Times.Never);
+  }
+
+  [Fact]
+  public void ReconcileGreeterDesktopClients_WhenRecheckFindsOtherExecutable_SparesProcess()
+  {
+    var sut = CreateSut();
+
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(999, 0, false)]);
+    _processLocator
+      .Setup(x => x.GetRunningExecutable(999, It.IsAny<string>()))
+      .Returns((LinuxDesktopClientProcess?)null);
 
     sut.ReconcileGreeterDesktopClients();
 
@@ -294,21 +329,22 @@ public class DesktopClientWatcherLinuxTests
   }
 
   [Theory]
-  [InlineData(1000)]
-  [InlineData(-1)]
-  public void ReconcileGreeterDesktopClients_WhenRecheckDoesNotReportRoot_SparesProcess(int recheckedOwnerUid)
+  [InlineData(1000, false)]
+  [InlineData(-1, false)]
+  [InlineData(0, true)]
+  public void ReconcileGreeterDesktopClients_WhenRecheckIsNotAnAgentChild_SparesProcess(int ownerUid, bool inUserSlice)
   {
     var sut = CreateSut();
 
-    // The owner is read when the process is found and read again before the kill. A pid recycled in
-    // that window to a user session client of the same binary must not be killed on the strength of
-    // the earlier root ownership, and an owner that cannot be read fails closed too.
+    // The owner and slice are read when the process is found and read again before the kill. A pid
+    // recycled in that window to a user session client of the same binary must not be killed on the
+    // strength of the earlier root ownership, and an unreadable owner or cgroup fails closed too.
     _processLocator
       .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
-      .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+      .Returns([new LinuxDesktopClientProcess(999, 0, false)]);
     _processLocator
-      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
-      .Returns(recheckedOwnerUid);
+      .Setup(x => x.GetRunningExecutable(999, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(999, ownerUid, inUserSlice));
 
     sut.ReconcileGreeterDesktopClients();
 

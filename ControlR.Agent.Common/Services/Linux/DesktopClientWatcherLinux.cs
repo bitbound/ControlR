@@ -148,9 +148,10 @@ internal class DesktopClientWatcherLinux(
 
     foreach (var process in _processLocator.FindByExecutablePath(expectedPath))
     {
-      // The agent spawns the login screen client as root. A user session client runs under its own
-      // uid and belongs to the user's systemd unit, so it is never touched here.
-      if (process.OwnerUid != 0)
+      // The agent spawns the login screen client as root from its system service. A user session
+      // client is owned by that user's uid, except root's own session, which runs the globally
+      // enabled desktop unit as root. The slice tells the agent's child apart from that one.
+      if (process.OwnerUid != 0 || process.InUserSlice)
       {
         continue;
       }
@@ -444,10 +445,11 @@ internal class DesktopClientWatcherLinux(
 
   private void KillStaleGreeterClient(int processId, string expectedPath)
   {
-    // Re-check the executable and its owner immediately before killing. A pid found earlier can have
-    // been recycled to an unrelated process, or to a user session client of the same binary, and
-    // neither is ours to kill. An unreadable owner also lands here, so the kill stays fail closed.
-    if (_processLocator.GetRunningExecutableOwnerUid(processId, expectedPath) != 0)
+    // Re-check the executable, owner, and slice immediately before killing. A pid found earlier can
+    // have been recycled to an unrelated process, or to a user session client of the same binary,
+    // and neither is ours to kill. An unreadable owner or cgroup also lands here, so the kill stays
+    // fail closed.
+    if (_processLocator.GetRunningExecutable(processId, expectedPath) is not { OwnerUid: 0, InUserSlice: false })
     {
       return;
     }

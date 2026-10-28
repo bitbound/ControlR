@@ -12,11 +12,13 @@ namespace ControlR.Agent.Shared.Services.Linux;
 /// screen client as root, while a user session client runs under its own uid, so this tells the two
 /// apart without asking systemd.
 /// </param>
-/// <param name="ExecutablePath">
-/// The raw target of /proc/{pid}/exe, which keeps the kernel's " (deleted)" suffix when the binary
-/// has been replaced on disk.
+/// <param name="InUserSlice">
+/// Whether the process sits in a systemd user slice. The agent spawns the greeter client under its
+/// own system service, so that client stays in the service's system slice, while a client started by
+/// any user manager (root's included, since the desktop unit is enabled globally) sits in that
+/// user's slice. An unreadable cgroup reports true, so the system-slice claim stays fail closed.
 /// </param>
-public readonly record struct LinuxDesktopClientProcess(int ProcessId, int OwnerUid, string ExecutablePath);
+public readonly record struct LinuxDesktopClientProcess(int ProcessId, int OwnerUid, bool InUserSlice);
 
 /// <summary>
 /// Finds running DesktopClient processes by the executable they run, reading /proc directly.
@@ -29,11 +31,11 @@ public interface ILinuxDesktopClientProcessLocator
   IReadOnlyList<LinuxDesktopClientProcess> FindByExecutablePath(string executablePath);
 
   /// <summary>
-  /// Re-checks that <paramref name="processId"/> is still running <paramref name="executablePath"/>,
-  /// and reports the uid that owns it now. Returns null when it no longer runs that executable. Call
+  /// Re-checks that <paramref name="processId"/> is still running <paramref name="executablePath"/>
+  /// and reports its owner and slice now. Returns null when it no longer runs that executable. Call
   /// this immediately before killing, so a pid recycled since it was found is not killed by mistake.
   /// </summary>
-  int? GetRunningExecutableOwnerUid(int processId, string executablePath);
+  LinuxDesktopClientProcess? GetRunningExecutable(int processId, string executablePath);
 }
 
 /// <remarks>
@@ -68,13 +70,13 @@ internal sealed class LinuxDesktopClientProcessLocator(
         continue;
       }
 
-      matches.Add(new LinuxDesktopClientProcess(processId, ReadOwnerUid(processId), resolvedPath));
+      matches.Add(new LinuxDesktopClientProcess(processId, ReadOwnerUid(processId), ReadInUserSlice(processId)));
     }
 
     return matches;
   }
 
-  public int? GetRunningExecutableOwnerUid(int processId, string executablePath)
+  public LinuxDesktopClientProcess? GetRunningExecutable(int processId, string executablePath)
   {
     if (string.IsNullOrWhiteSpace(executablePath))
     {
@@ -87,7 +89,7 @@ internal sealed class LinuxDesktopClientProcessLocator(
       return null;
     }
 
-    return ReadOwnerUid(processId);
+    return new LinuxDesktopClientProcess(processId, ReadOwnerUid(processId), ReadInUserSlice(processId));
   }
 
   private static bool IsSameExecutable(string resolvedPath, string executablePath)
@@ -123,6 +125,25 @@ internal sealed class LinuxDesktopClientProcessLocator(
     }
 
     return processIds;
+  }
+
+  private bool ReadInUserSlice(int processId)
+  {
+    try
+    {
+      // cgroup v2 gives one "0::/path" line; v1 gives one line per controller. Either way the
+      // systemd path for a user session lives under user.slice.
+      return fileSystem
+        .ReadAllText($"{ProcDirectory}/{processId}/cgroup")
+        .Contains("user.slice", StringComparison.Ordinal);
+    }
+    catch (Exception ex)
+    {
+      // Treat an unreadable cgroup as a user slice. Claiming the system slice is what authorizes a
+      // kill, so the claim needs proof.
+      logger.LogDebug(ex, "Failed to read the cgroup for PID {ProcessId}.", processId);
+      return true;
+    }
   }
 
   private int ReadOwnerUid(int processId)
