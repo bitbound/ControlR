@@ -366,6 +366,8 @@ internal sealed class HubConnection<THub, TClient>(
       builder.WithUrl(hubEndpoint);
     }
 
+    builder.AddMessagePackProtocol();
+
     var connection = builder.Build();
 
     connection.Closed += HandleClosed;

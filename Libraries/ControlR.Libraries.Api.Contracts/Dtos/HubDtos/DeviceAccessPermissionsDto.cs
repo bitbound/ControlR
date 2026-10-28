@@ -1,5 +1,6 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 
+[MessagePackObject(keyAsPropertyName: true)]
 public sealed record DeviceAccessPermissionsDto(
   bool CanViewOverview,
   bool CanUseRemoteControl,
