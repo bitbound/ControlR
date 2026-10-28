@@ -70,8 +70,11 @@ internal class DesktopClientWatcherLinux(
 
     if (!displayInfo.IsLoginScreen)
     {
-      // If not at the login screen, ensure the login screen client is stopped
+      // If not at the login screen, ensure the login screen client is stopped. Reconcile first, so an
+      // untracked root-owned client does not survive the greeter into the user's session, where no
+      // later greeter pass would run to reap it.
       ResetLoginScreenLaunchBackoff();
+      ReconcileGreeterDesktopClients();
       await StopLoginScreenDesktopClient();
       _desktopClientRepairCoordinator.ReportHealthy("linux-login-screen");
       return;
@@ -454,7 +457,7 @@ internal class DesktopClientWatcherLinux(
     {
       _processManager.GetProcessById(processId).KillAndDispose();
       _logger.LogInformation(
-        "Killed a stale login screen desktop client left by a previous agent instance. PID: {ProcessId}",
+        "Killed a stale login screen desktop client this agent is not tracking. PID: {ProcessId}",
         processId);
     }
     catch (Exception ex)

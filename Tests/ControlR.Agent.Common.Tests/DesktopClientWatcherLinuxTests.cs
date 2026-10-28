@@ -216,6 +216,32 @@ public class DesktopClientWatcherLinuxTests
   }
 
   [Fact]
+  public async Task CheckLoginScreenDesktopClient_WhenNotAtLoginScreen_ReconcilesUntrackedClient()
+  {
+    // An untracked root-owned greeter client must not survive the greeter into the user's session.
+    // Once the greeter is gone no later pass reconciles, so the non-login-screen path has to reap it.
+    var sut = CreateSut();
+
+    var orphan = new Mock<IProcess>();
+    _processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(999, 0, "/opt/controlr/DesktopClient/ControlR.DesktopClient")]);
+    _processLocator
+      .Setup(x => x.GetRunningExecutableOwnerUid(999, It.IsAny<string>()))
+      .Returns(0);
+    _processManager
+      .Setup(x => x.GetProcessById(999))
+      .Returns(orphan.Object);
+
+    _detector
+      .Setup(x => x.DetectDisplayEnvironment())
+      .ReturnsAsync(new DisplayEnvironmentInfo { IsConclusive = true, IsLoginScreen = false });
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    orphan.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
   public async Task CheckLoginScreenDesktopClient_WhenXAuthPathIsMissing_DoesNotLaunch()
   {
     var sut = CreateSut();
