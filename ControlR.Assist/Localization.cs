@@ -20,8 +20,28 @@ public static class Localization
   private static string _currentCulture = CultureInfo.CurrentCulture.Name;
   private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings(_currentCulture);
 
+  public static string AcceptButtonText => GetString();
+  public static string AccessCodeCaption => GetString();
+  public static string BlockInputButtonText => GetString();
+  public static string ConnectButtonText => GetString();
+  public static string ConsentPromptFormat => GetString();
+  public static string DeclineButtonText => GetString();
+  public static string DisconnectButtonText => GetString();
   public static string HomeTagline => GetString();
   public static string LanguageDisplayName => GetString();
+  public static string NewCodeButtonText => GetString();
+  public static string ServerUrlWatermark => GetString();
+  public static string SessionActiveCaption => GetString();
+  public static string StatusConnectedToViewer => GetString();
+  public static string StatusConnecting => GetString();
+  public static string StatusConsentResponseFailed => GetString();
+  public static string StatusInvalidUrl => GetString();
+  public static string StatusReconnected => GetString();
+  public static string StatusSessionCreateFailed => GetString();
+  public static string StatusSessionEnded => GetString();
+  public static string StatusSessionStartFailed => GetString();
+  public static string StatusUnreachable => GetString();
+  public static string UnknownViewerLabel => GetString();
   public static string ViewNotFoundMessage => GetString();
 
   /// <summary>

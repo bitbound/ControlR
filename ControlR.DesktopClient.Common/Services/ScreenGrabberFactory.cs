@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,7 +10,9 @@ public interface IScreenGrabberFactory
   IScreenGrabber GetOrCreateDefault();
 }
 
-public class ScreenGrabberFactory<TImplementation>(IServiceProvider serviceProvider) : IScreenGrabberFactory
+public class ScreenGrabberFactory<
+  [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
+    IServiceProvider serviceProvider) : IScreenGrabberFactory
   where TImplementation : class, IScreenGrabber
 {
   private readonly Lock _defaultInstanceLock = new();

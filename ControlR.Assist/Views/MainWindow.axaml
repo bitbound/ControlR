@@ -12,7 +12,7 @@
        Icon="/Assets/appicon.ico"
        Title="{x:Static brand:BrandingConstants.BrandName}"
        Width="420"
-       Height="300">
+       Height="520">
 
   <ContentControl Content="{Binding CurrentViewModel}" />
 

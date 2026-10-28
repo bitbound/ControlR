@@ -1,6 +1,7 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ControlR.Libraries.Branding;
 
 namespace ControlR.DesktopClient.Common;
@@ -12,13 +13,6 @@ public static class Localization
   private const string LanguageDisplayNameKey = nameof(LanguageDisplayName);
   private const string StringsResourceMarker = ".Resources.Strings.";
   private const string StringsSuffix = ".json";
-
-  private static readonly JsonSerializerOptions _jsonOptions = new()
-  {
-    AllowTrailingCommas = true,
-    PropertyNameCaseInsensitive = true,
-    ReadCommentHandling = JsonCommentHandling.Skip
-  };
 
   private static string _currentCulture = CultureInfo.CurrentCulture.Name;
   private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings(_currentCulture);
@@ -186,7 +180,7 @@ public static class Localization
 
     using var reader = new StreamReader(resourceStream);
     var content = reader.ReadToEnd();
-    var strings = JsonSerializer.Deserialize<Dictionary<string, string>>(content, _jsonOptions)
+    var strings = JsonSerializer.Deserialize(content, StringsJsonContext.Default.DictionaryStringString)
                   ?? throw new InvalidOperationException("Unable to deserialize localization file.");
 
     return strings.ToDictionary(x => x.Key, x => x.Value.Replace(BrandNameToken, BrandingConstants.BrandName));
@@ -204,3 +198,14 @@ public static class Localization
 }
 
 public record LocalizationLanguage(string Culture, string DisplayName);
+
+/// <summary>
+/// Assist runs the linker, so the strings file deserialization has to go through generated code
+/// rather than the reflection-based serializer.
+/// </summary>
+[JsonSourceGenerationOptions(
+  AllowTrailingCommas = true,
+  PropertyNameCaseInsensitive = true,
+  ReadCommentHandling = JsonCommentHandling.Skip)]
+[JsonSerializable(typeof(Dictionary<string, string>))]
+internal partial class StringsJsonContext : JsonSerializerContext;

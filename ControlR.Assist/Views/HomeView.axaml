@@ -7,20 +7,101 @@
              xmlns:brand="using:ControlR.Libraries.Branding"
              mc:Ignorable="d"
              d:DesignWidth="420"
-             d:DesignHeight="300"
+             d:DesignHeight="520"
              x:Class="ControlR.Assist.Views.HomeView"
              x:DataType="vm:HomeViewModel">
 
-  <StackPanel Spacing="12"
+  <StackPanel Spacing="20"
               Margin="24"
-              VerticalAlignment="Center"
-              HorizontalAlignment="Center">
-    <TextBlock Classes="h1"
-               HorizontalAlignment="Center"
-               Text="{x:Static brand:BrandingConstants.BrandName}" />
+              VerticalAlignment="Center">
+    <StackPanel Spacing="4">
+      <TextBlock Classes="h1"
+                 HorizontalAlignment="Center"
+                 Text="{x:Static brand:BrandingConstants.BrandName}" />
+      <TextBlock HorizontalAlignment="Center"
+                 TextAlignment="Center"
+                 Text="{x:Static local:Localization.HomeTagline}" />
+    </StackPanel>
+
+    <!-- Server URL entry -->
+    <StackPanel Spacing="8"
+                IsVisible="{Binding ShowUrlEntry}">
+      <TextBox Watermark="{x:Static local:Localization.ServerUrlWatermark}"
+               Text="{Binding ServerUrl}" />
+      <Button HorizontalAlignment="Center"
+              MinWidth="140"
+              Content="{x:Static local:Localization.ConnectButtonText}"
+              Command="{Binding ConnectCommand}"
+              IsEnabled="{Binding !IsBusy}" />
+      <ProgressBar IsIndeterminate="{Binding IsBusy}"
+                   IsVisible="{Binding IsBusy}" />
+    </StackPanel>
+
+    <!-- One-time access code -->
+    <StackPanel Spacing="8"
+                IsVisible="{Binding ShowCode}">
+      <TextBlock HorizontalAlignment="Center"
+                 TextAlignment="Center"
+                 Text="{x:Static local:Localization.AccessCodeCaption}" />
+      <TextBlock FontSize="40"
+                 FontWeight="Bold"
+                 HorizontalAlignment="Center"
+                 Text="{Binding Code}" />
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Center"
+                  Spacing="8">
+        <Button Content="{x:Static local:Localization.NewCodeButtonText}"
+                Command="{Binding GenerateNewCodeCommand}" />
+        <Button Content="{x:Static local:Localization.DisconnectButtonText}"
+                Command="{Binding DisconnectCommand}" />
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Consent prompt -->
+    <Border IsVisible="{Binding IsConsentPending}"
+            Padding="16"
+            CornerRadius="8"
+            Background="#22FFB74D">
+      <StackPanel Spacing="10">
+        <TextBlock FontSize="16"
+                   TextAlignment="Center"
+                   Text="{Binding ConsentPromptText}" />
+        <TextBlock HorizontalAlignment="Center"
+                   Opacity="0.7"
+                   IsVisible="{Binding ConsentEmail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Text="{Binding ConsentEmail}" />
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="8">
+          <Button Classes="primary"
+                  MinWidth="100"
+                  Content="{x:Static local:Localization.AcceptButtonText}"
+                  Command="{Binding AcceptConsentCommand}" />
+          <Button MinWidth="100"
+                  Content="{x:Static local:Localization.DeclineButtonText}"
+                  Command="{Binding DeclineConsentCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- Active session -->
+    <StackPanel Spacing="8"
+                IsVisible="{Binding IsSessionActive}">
+      <TextBlock HorizontalAlignment="Center"
+                 TextAlignment="Center"
+                 Text="{x:Static local:Localization.SessionActiveCaption}" />
+      <ToggleButton HorizontalAlignment="Center"
+                    Content="{x:Static local:Localization.BlockInputButtonText}"
+                    IsChecked="{Binding IsInputBlocked}"
+                    Command="{Binding ToggleBlockInputCommand}" />
+    </StackPanel>
+
     <TextBlock HorizontalAlignment="Center"
                TextAlignment="Center"
-               Text="{x:Static local:Localization.HomeTagline}" />
+               TextWrapping="Wrap"
+               Opacity="0.8"
+               IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+               Text="{Binding StatusMessage}" />
   </StackPanel>
 
 </UserControl>
