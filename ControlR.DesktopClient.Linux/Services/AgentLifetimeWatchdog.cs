@@ -9,10 +9,10 @@ using Microsoft.Extensions.Logging;
 namespace ControlR.DesktopClient.Linux.Services;
 
 /// <summary>
-/// Shuts this client down once the agent that spawned it is gone. On Linux a child outlives its
-/// parent, so a greeter client whose agent updated, crashed, or was killed keeps holding the greeter
-/// display while nothing can control it. The agent names itself in the environment when it spawns this
-/// client, and a client whose agent no longer exists has no purpose left.
+/// Backstop that shuts this client down once the agent that spawned it is gone. A client whose agent
+/// died normally would also exit through <c>IpcClientManager</c>, whose connection-failure timeout
+/// ends the process once the agent's pipe server is unreachable. This watchdog makes that exit
+/// near-immediate instead of waiting out that timeout, and it does not depend on the IPC layer.
 /// </summary>
 /// <remarks>
 /// Only the agent's greeter launch sets the variable. A user session client is started by the user's

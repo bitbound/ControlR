@@ -503,8 +503,9 @@ internal class DesktopClientWatcherLinux(
         ["DOTNET_ENVIRONMENT"] = "Production",
         ["DISPLAY"] = displayInfo.Display,
         ["XDG_SESSION_TYPE"] = "x11",
-        // Names this agent to the client. On Linux a child outlives its parent, so without this a
-        // client left behind by an agent that updated or died keeps the greeter display to itself.
+        // Names this agent to the client so its lifetime watchdog knows which pid to watch. On Linux
+        // a child outlives its parent, and the watchdog cuts short the window before the client
+        // would otherwise give up on the dead agent's IPC server.
         [AppConstants.AgentPidEnvironmentVariable] = Environment.ProcessId.ToString(CultureInfo.InvariantCulture)
       };
 
