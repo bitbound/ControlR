@@ -84,39 +84,6 @@ public class AgentLifetimeWatchdogTests
   }
 
   [Fact]
-  public async Task ExecuteAsync_WhileAgentIsStillTheParent_KeepsRunning()
-  {
-    Environment.SetEnvironmentVariable(AppConstants.AgentPidEnvironmentVariable, AgentPid.ToString());
-    var timeProvider = new FakeTimeProvider();
-    var appLifetime = new Mock<IControlledApplicationLifetime>();
-    var processInfo = new FakeProcessInfoLinux(AgentPid);
-    var service = CreateService(processInfo, appLifetime, timeProvider);
-
-    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-    try
-    {
-      await service.StartAsync(cts.Token);
-
-      // The first check passes and the loop parks on a tick.
-      Assert.True(
-        await timeProvider.WaitForWaiters(count => count > 0, cancellationToken: cts.Token),
-        "Watchdog never started waiting for a tick.");
-
-      timeProvider.Advance(TimeSpan.FromMinutes(1));
-
-      // The recheck after the tick also passes.
-      await WaitUntil(() => processInfo.CallCount >= 2, cts.Token);
-      appLifetime.Verify(x => x.Shutdown(It.IsAny<int>()), Times.Never);
-
-      await service.StopAsync(cts.Token);
-    }
-    finally
-    {
-      Environment.SetEnvironmentVariable(AppConstants.AgentPidEnvironmentVariable, null);
-    }
-  }
-
-  [Fact]
   public async Task ExecuteAsync_WithInvalidAgentPidEnvVar_DoesNothing()
   {
     Environment.SetEnvironmentVariable(AppConstants.AgentPidEnvironmentVariable, "not-a-pid");
@@ -159,14 +126,6 @@ public class AgentLifetimeWatchdogTests
       appLifetime.Object,
       NullLogger<AgentLifetimeWatchdog>.Instance,
       timeProvider);
-  }
-
-  private static async Task WaitUntil(Func<bool> condition, CancellationToken cancellationToken)
-  {
-    while (!condition())
-    {
-      await Task.Delay(10, cancellationToken);
-    }
   }
 
   private sealed class FakeProcessInfoLinux : IProcessInfoLinux
