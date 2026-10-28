@@ -58,6 +58,7 @@ internal class ServiceControlLinux(
             }
         }
     }
+
     public async Task StartDesktopClientService(bool throwOnFailure)
     {
         // Check if running on headless server
@@ -107,6 +108,7 @@ internal class ServiceControlLinux(
             }
         }
     }
+
     public async Task StopAgentService(bool throwOnFailure)
     {
         try
@@ -142,6 +144,7 @@ internal class ServiceControlLinux(
             }
         }
     }
+
     public Task StopDesktopClientService(bool throwOnFailure)
     {
         return StopDesktopClientServiceByName(GetDesktopClientServiceName(), throwOnFailure);
@@ -152,6 +155,123 @@ internal class ServiceControlLinux(
         return StopDesktopClientServiceByName(
             GetPreviousBrandDesktopClientServiceName(previousBrandName, previousInstanceId),
             throwOnFailure);
+    }
+
+    private static string GetPreviousBrandDesktopClientServiceName(string previousBrandName, string? previousInstanceId)
+    {
+        // The replaced install's unit is named for its own brand and the instance id it was created
+        // with, the same way that install's own installer named it. The current brand's unit name
+        // would stop the wrong unit.
+        var baseName = new BrandNames(previousBrandName).LinuxDesktopServiceName;
+
+        return string.IsNullOrWhiteSpace(previousInstanceId)
+            ? baseName
+            : $"{baseName.Replace(".service", "")}-{previousInstanceId}.service";
+    }
+
+    private async Task ConfirmAgentServiceActive(string serviceName)
+    {
+        // A zero exit from "systemctl start" only means systemd accepted the start job, and these
+        // units are Type=simple, so the process can exit right after the fork and the job still
+        // reports success. The caller removes the install being replaced once this returns, so
+        // confirm the unit reports active first. A Type=simple unit is active as soon as it is
+        // forked, so this retries rather than trusting a single reading.
+        const int maxAttempts = 3;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var exitCode = await _processManager.StartAndWaitForExit(
+                "sudo",
+                $"systemctl is-active --quiet {serviceName}",
+                false,
+                _serviceStatusTimeout);
+
+            if (exitCode == 0)
+            {
+                return;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+        }
+
+        throw new InvalidOperationException($"{serviceName} did not report active after starting.");
+    }
+
+    private string GetAgentServiceName()
+    {
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return BrandingConstants.LinuxAgentServiceName;
+        }
+
+        return $"{BrandingConstants.LinuxAgentServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
+    }
+
+    private string GetDesktopClientServiceName()
+    {
+        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+        {
+            return BrandingConstants.LinuxDesktopServiceName;
+        }
+
+        return $"{BrandingConstants.LinuxDesktopServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
+    }
+
+    private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
+    {
+        try
+        {
+            _logger.LogInformation("Starting desktop client service for user {UID}: {ServiceName}", uid, serviceName);
+
+            // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
+            await _processManager.StartAndWaitForExit("sudo",
+                $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user start {serviceName}",
+                false, _serviceStatusTimeout);
+
+            _logger.LogInformation("Desktop client service started for user {UID}.", uid);
+        }
+        catch (Exception ex)
+        {
+            if (throwOnFailure)
+            {
+                _logger.LogError(ex, "Failed to start desktop client service for user {UID}.", uid);
+                throw;
+            }
+            else
+            {
+                _logger.LogWarning(ex, "Failed to start desktop client service for user {UID}.", uid);
+            }
+        }
+    }
+
+    private async Task StopDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
+    {
+        try
+        {
+            _logger.LogInformation("Stopping desktop client service for user {UID}: {ServiceName}", uid, serviceName);
+
+            // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
+            await _processManager.StartAndWaitForExit("sudo",
+                $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user stop {serviceName}",
+                false, _serviceStatusTimeout);
+
+            _logger.LogInformation("Desktop client service stopped for user {UID}.", uid);
+        }
+        catch (Exception ex)
+        {
+            if (throwOnFailure)
+            {
+                _logger.LogError(ex, "Failed to stop desktop client service for user {UID}.", uid);
+                throw;
+            }
+            else
+            {
+                _logger.LogWarning(ex, "Failed to stop desktop client service for user {UID}.", uid);
+            }
+        }
     }
 
     private async Task StopDesktopClientServiceByName(string serviceName, bool throwOnFailure)
@@ -199,120 +319,6 @@ internal class ServiceControlLinux(
             else
             {
                 _logger.LogInformation(ex, "Failed to stop desktop client service.");
-            }
-        }
-    }
-
-    private async Task ConfirmAgentServiceActive(string serviceName)
-    {
-        // A zero exit from "systemctl start" only means systemd accepted the start job, and these
-        // units are Type=simple, so the process can exit right after the fork and the job still
-        // reports success. The caller removes the install being replaced once this returns, so
-        // confirm the unit reports active first. A Type=simple unit is active as soon as it is
-        // forked, so this retries rather than trusting a single reading.
-        const int maxAttempts = 3;
-
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            var exitCode = await _processManager.StartAndWaitForExit(
-                "sudo",
-                $"systemctl is-active --quiet {serviceName}",
-                false,
-                _serviceStatusTimeout);
-
-            if (exitCode == 0)
-            {
-                return;
-            }
-
-            if (attempt < maxAttempts)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(2));
-            }
-        }
-
-        throw new InvalidOperationException($"{serviceName} did not report active after starting.");
-    }
-
-    private string GetAgentServiceName()
-    {
-        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-        {
-            return BrandingConstants.LinuxAgentServiceName;
-        }
-
-        return $"{BrandingConstants.LinuxAgentServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
-    }
-    private string GetDesktopClientServiceName()
-    {
-        if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-        {
-            return BrandingConstants.LinuxDesktopServiceName;
-        }
-
-        return $"{BrandingConstants.LinuxDesktopServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
-    }
-
-    private static string GetPreviousBrandDesktopClientServiceName(string previousBrandName, string? previousInstanceId)
-    {
-        // The replaced install's unit is named for its own brand and the instance id it was created
-        // with, the same way that install's own installer named it. The current brand's unit name
-        // would stop the wrong unit.
-        var baseName = new BrandNames(previousBrandName).LinuxDesktopServiceName;
-
-        return string.IsNullOrWhiteSpace(previousInstanceId)
-            ? baseName
-            : $"{baseName.Replace(".service", "")}-{previousInstanceId}.service";
-    }
-    private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
-    {
-        try
-        {
-            _logger.LogInformation("Starting desktop client service for user {UID}: {ServiceName}", uid, serviceName);
-
-            // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
-            await _processManager.StartAndWaitForExit("sudo",
-                $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user start {serviceName}",
-                false, _serviceStatusTimeout);
-
-            _logger.LogInformation("Desktop client service started for user {UID}.", uid);
-        }
-        catch (Exception ex)
-        {
-            if (throwOnFailure)
-            {
-                _logger.LogError(ex, "Failed to start desktop client service for user {UID}.", uid);
-                throw;
-            }
-            else
-            {
-                _logger.LogWarning(ex, "Failed to start desktop client service for user {UID}.", uid);
-            }
-        }
-    }
-    private async Task StopDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
-    {
-        try
-        {
-            _logger.LogInformation("Stopping desktop client service for user {UID}: {ServiceName}", uid, serviceName);
-
-            // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
-            await _processManager.StartAndWaitForExit("sudo",
-                $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user stop {serviceName}",
-                false, _serviceStatusTimeout);
-
-            _logger.LogInformation("Desktop client service stopped for user {UID}.", uid);
-        }
-        catch (Exception ex)
-        {
-            if (throwOnFailure)
-            {
-                _logger.LogError(ex, "Failed to stop desktop client service for user {UID}.", uid);
-                throw;
-            }
-            else
-            {
-                _logger.LogWarning(ex, "Failed to stop desktop client service for user {UID}.", uid);
             }
         }
     }

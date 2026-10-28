@@ -190,32 +190,6 @@ public class DesktopClientWatcherLinuxTests
   }
 
   [Fact]
-  public async Task CheckLoginScreenDesktopClient_WhenStoppedForLogout_DoesNotApplyLaunchBackoff()
-  {
-    SetupLaunch(CreateRunningProcess());
-    var sut = CreateSut();
-
-    _detector
-      .Setup(x => x.DetectDisplayEnvironment())
-      .ReturnsAsync(LoginScreen());
-    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
-
-    _detector
-      .Setup(x => x.DetectDisplayEnvironment())
-      .ReturnsAsync(new DisplayEnvironmentInfo { IsConclusive = true, IsLoginScreen = false });
-    _timeProvider.Advance(TimeSpan.FromSeconds(5));
-    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
-
-    _detector
-      .Setup(x => x.DetectDisplayEnvironment())
-      .ReturnsAsync(LoginScreen());
-    _timeProvider.Advance(TimeSpan.FromSeconds(5));
-    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
-
-    _processManager.Verify(x => x.Start(It.IsAny<ProcessStartInfo>()), Times.Exactly(2));
-  }
-
-  [Fact]
   public async Task CheckLoginScreenDesktopClient_WhenNotAtLoginScreen_ReconcilesUntrackedClient()
   {
     // An untracked root-owned greeter client must not survive the greeter into the user's session.
@@ -239,6 +213,32 @@ public class DesktopClientWatcherLinuxTests
     await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
 
     orphan.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
+  public async Task CheckLoginScreenDesktopClient_WhenStoppedForLogout_DoesNotApplyLaunchBackoff()
+  {
+    SetupLaunch(CreateRunningProcess());
+    var sut = CreateSut();
+
+    _detector
+      .Setup(x => x.DetectDisplayEnvironment())
+      .ReturnsAsync(LoginScreen());
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    _detector
+      .Setup(x => x.DetectDisplayEnvironment())
+      .ReturnsAsync(new DisplayEnvironmentInfo { IsConclusive = true, IsLoginScreen = false });
+    _timeProvider.Advance(TimeSpan.FromSeconds(5));
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    _detector
+      .Setup(x => x.DetectDisplayEnvironment())
+      .ReturnsAsync(LoginScreen());
+    _timeProvider.Advance(TimeSpan.FromSeconds(5));
+    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
+
+    _processManager.Verify(x => x.Start(It.IsAny<ProcessStartInfo>()), Times.Exactly(2));
   }
 
   [Fact]
