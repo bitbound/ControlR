@@ -40,6 +40,7 @@ public static class AgentSharedBuilderExtensions
       services.AddSingleton<ILoggedInUserProvider, LoggedInUserProviderLinux>();
       services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
       services.AddSingleton<IServiceControl, ServiceControlLinux>();
+      services.AddSingleton<ILinuxDesktopClientProcessLocator, LinuxDesktopClientProcessLocator>();
     }
     else if (OperatingSystem.IsMacOS())
     {

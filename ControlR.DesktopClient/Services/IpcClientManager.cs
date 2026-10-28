@@ -20,6 +20,7 @@ public class IpcClientManager(
   private readonly IControlledApplicationLifetime _appLifetime = appLifetime;
   private readonly TimeSpan _connectionTimeout = TimeSpan.FromSeconds(60);
   private readonly IOptions<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
+  private readonly TimeSpan _establishedConnectionDelay = TimeSpan.FromSeconds(10);
   private readonly IIpcConnectionFactory _ipcConnectionFactory = ipcConnectionFactory;
   private readonly ILogger<IpcClientManager> _logger = logger;
   private readonly IMessenger _messenger = messenger;
@@ -74,14 +75,27 @@ public class IpcClientManager(
         _logger.LogInformation("Connected to IPC server.");
         await _messenger.Send(new IpcConnectionChangedMessage(IsConnected: true));
 
-        // Reset the connection attempt tracker on successful connection
-        _firstFailedAttempt = null;
+        var connectionStartedAt = _timeProvider.GetUtcNow();
 
         _client.Start();
         _logger.LogInformation("Read started. Waiting for connection end.");
         await _client.WaitForDisconnect(stoppingToken);
         _client.Dispose();
         _client = null;
+
+        // The agent accepts the pipe connection before it authenticates, and on Linux a client whose
+        // binary has been replaced on disk fails that check because /proc/{pid}/exe no longer resolves.
+        // Such a client connects successfully and is then dropped within milliseconds. Treat that as a
+        // failed attempt. Counting it as a success would reset the tracker on every try, so the timeout
+        // in CheckIfShouldShutdown never accumulates and a stale client retries forever.
+        if (_timeProvider.GetUtcNow() - connectionStartedAt >= _establishedConnectionDelay)
+        {
+          _firstFailedAttempt = null;
+        }
+        else
+        {
+          _firstFailedAttempt ??= connectionStartedAt;
+        }
       }
       catch (OperationCanceledException ex)
       {

@@ -20,6 +20,76 @@ namespace ControlR.Agent.Shared.Tests;
 public class AgentInstallerLinuxTests
 {
   [Fact]
+  public void GetPreviousBrandDesktopClientPath_UsesThePreviousBrandAndInstance()
+  {
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectoryFor("Acme Remote", "exp"))
+      .Returns("/usr/local/bin/Acme_Remote/exp");
+
+    var sut = CreateSut(
+      Mock.Of<IFileSystem>(),
+      Mock.Of<IProcessManager>(),
+      Mock.Of<ISystemEnvironment>(),
+      pathProvider.Object,
+      Mock.Of<IElevationChecker>());
+
+    var path = sut.GetPreviousBrandDesktopClientPath("Acme Remote", "exp");
+
+    // The replaced install's client lives under its own brand key and instance id, and is named for
+    // that brand, so a migration that changes either one still finds it.
+    Assert.Equal(
+      Path.Combine("/usr/local/bin/Acme_Remote/exp", "DesktopClient", "Acme_Remote.DesktopClient"),
+      path);
+  }
+
+  [Fact]
+  public async Task Install_KillsRunningDesktopClientBeforeReplacingTheDirectory()
+  {
+    var installDir = "/usr/local/bin/ControlR/default";
+    var fileSystem = new Mock<IFileSystem>();
+    var processManager = new Mock<IProcessManager>();
+    var systemEnvironment = new Mock<ISystemEnvironment>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var elevationChecker = new Mock<IElevationChecker>();
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    pathProvider.Setup(x => x.GetAgentInstallDirectory()).Returns(installDir);
+    fileSystem.Setup(x => x.DirectoryExists(installDir)).Returns(true);
+
+    var stopProcess = new Mock<IProcess>();
+    stopProcess.Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+    processManager.Setup(x => x.Start("sudo", It.IsAny<string>())).Returns(stopProcess.Object);
+
+    // A login screen client this install left running, which would be orphaned once the directory is
+    // replaced. The agent that spawned it is already stopped by the time the installer gets here.
+    var client = new Mock<IProcess>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(4242, 0, false)]);
+    processLocator
+      .Setup(x => x.GetRunningExecutable(4242, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(4242, 0, false));
+    processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
+
+    // Cut the run short once the directory would be recreated, after the kill has happened.
+    fileSystem.Setup(x => x.CreateDirectory(installDir)).Throws(new IOException("not part of this test"));
+
+    var sut = CreateSut(
+      fileSystem.Object,
+      processManager.Object,
+      systemEnvironment.Object,
+      pathProvider.Object,
+      elevationChecker.Object,
+      processLocator.Object);
+
+    await sut.Install(CreateRequest());
+
+    client.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
   public async Task Install_LeavesTheInstallDirectoryBeforeDeletingIt()
   {
     var installDir = "/usr/local/bin/ControlR/default";
@@ -73,6 +143,148 @@ public class AgentInstallerLinuxTests
   }
 
   [Fact]
+  public async Task RepairDesktopClient_KillsRunningDesktopClientBeforeReplacingThePayload()
+  {
+    var installDir = "/usr/local/bin/ControlR/default";
+    var fileSystem = new Mock<IFileSystem>();
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var elevationChecker = new Mock<IElevationChecker>();
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    pathProvider.Setup(x => x.GetAgentInstallDirectory()).Returns(installDir);
+    fileSystem.Setup(x => x.FileExists(It.IsAny<string>())).Returns(true);
+
+    // Repair moves the live DesktopClient directory aside rather than stopping the agent first, so a
+    // greeter client still running from it is orphaned unless something kills it here.
+    var client = new Mock<IProcess>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(4242, 0, false)]);
+    processLocator
+      .Setup(x => x.GetRunningExecutable(4242, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(4242, 0, false));
+    processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
+
+    var sut = CreateSut(
+      fileSystem.Object,
+      processManager.Object,
+      Mock.Of<ISystemEnvironment>(),
+      pathProvider.Object,
+      elevationChecker.Object,
+      processLocator.Object);
+
+    await sut.RepairDesktopClient(CreateRequest());
+
+    client.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
+  public async Task StopPreviousBrandDesktopClients_StopsTheUnitBeforeKilling()
+  {
+    var steps = new List<string>();
+    var serviceControl = new Mock<IServiceControl>();
+    serviceControl
+      .Setup(x => x.StopPreviousBrandDesktopClientService("Acme Remote", "exp", true))
+      .Callback(() => steps.Add("unit-stop"))
+      .Returns(Task.CompletedTask);
+
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Callback(() => steps.Add("kill"))
+      .Returns([]);
+
+    var sut = CreateSut(
+      Mock.Of<IFileSystem>(),
+      Mock.Of<IProcessManager>(),
+      Mock.Of<ISystemEnvironment>(),
+      CreatePathProvider().Object,
+      CreateElevatedChecker().Object,
+      processLocator.Object,
+      serviceControl.Object);
+
+    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal(["unit-stop", "kill"], steps);
+  }
+
+  [Fact]
+  public async Task StopPreviousBrandDesktopClients_WhenTheUnitStopFails_DoesNotKillAnything()
+  {
+    var steps = new List<string>();
+    var serviceControl = new Mock<IServiceControl>();
+    serviceControl
+      .Setup(x => x.StopPreviousBrandDesktopClientService("Acme Remote", "exp", true))
+      .ThrowsAsync(new InvalidOperationException("systemctl --user stop exited with code 1."));
+
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Callback(() => steps.Add("kill"))
+      .Returns([]);
+
+    var sut = CreateSut(
+      Mock.Of<IFileSystem>(),
+      Mock.Of<IProcessManager>(),
+      Mock.Of<ISystemEnvironment>(),
+      CreatePathProvider().Object,
+      CreateElevatedChecker().Object,
+      processLocator.Object,
+      serviceControl.Object);
+
+    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
+
+    // Killing while the unit is still active hands systemd a Restart=on-failure, so an unconfirmed
+    // stop has to stop the whole step, not just be logged.
+    Assert.False(result.IsSuccess);
+    Assert.DoesNotContain("kill", steps);
+  }
+
+  [Fact]
+  public async Task Uninstall_KillsRunningDesktopClient()
+  {
+    var installDir = "/usr/local/bin/ControlR/default";
+    var fileSystem = new Mock<IFileSystem>();
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    var elevationChecker = new Mock<IElevationChecker>();
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    pathProvider.Setup(x => x.GetAgentInstallDirectory()).Returns(installDir);
+
+    var stopProcess = new Mock<IProcess>();
+    stopProcess.Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+    processManager.Setup(x => x.Start(It.IsAny<string>(), It.IsAny<string>())).Returns(stopProcess.Object);
+
+    // Uninstall leaves no agent behind to reconcile the greeter session, so the client this install
+    // spawned has to be taken down as part of removing the install.
+    var client = new Mock<IProcess>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Returns([new LinuxDesktopClientProcess(4242, 0, false)]);
+    processLocator
+      .Setup(x => x.GetRunningExecutable(4242, It.IsAny<string>()))
+      .Returns(new LinuxDesktopClientProcess(4242, 0, false));
+    processManager.Setup(x => x.GetProcessById(4242)).Returns(client.Object);
+
+    var sut = CreateSut(
+      fileSystem.Object,
+      processManager.Object,
+      Mock.Of<ISystemEnvironment>(),
+      pathProvider.Object,
+      elevationChecker.Object,
+      processLocator.Object);
+
+    await sut.Uninstall();
+
+    client.Verify(x => x.Kill(), Times.Once);
+  }
+
+  [Fact]
   public async Task Uninstall_WhenNotRoot_ChangesNothing()
   {
     var installDir = "/usr/local/bin/ControlR/default";
@@ -103,6 +315,22 @@ public class AgentInstallerLinuxTests
     fileSystem.Verify(x => x.DeleteDirectory(installDir, true), Times.Never);
   }
 
+  private static Mock<IElevationChecker> CreateElevatedChecker()
+  {
+    var elevationChecker = new Mock<IElevationChecker>();
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    return elevationChecker;
+  }
+
+  private static Mock<IFileSystemPathProvider> CreatePathProvider()
+  {
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectoryFor("Acme Remote", "exp"))
+      .Returns("/usr/local/bin/Acme_Remote/exp");
+    return pathProvider;
+  }
+
   private static AgentInstallRequest CreateRequest()
   {
     return new AgentInstallRequest
@@ -120,8 +348,19 @@ public class AgentInstallerLinuxTests
     IProcessManager processManager,
     ISystemEnvironment systemEnvironment,
     IFileSystemPathProvider pathProvider,
-    IElevationChecker elevationChecker)
+    IElevationChecker elevationChecker,
+    ILinuxDesktopClientProcessLocator? processLocator = null,
+    IServiceControl? serviceControl = null)
   {
+    if (processLocator is null)
+    {
+      var defaultLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+      defaultLocator
+        .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+        .Returns([]);
+      processLocator = defaultLocator.Object;
+    }
+
     return new AgentInstallerLinux(
       Mock.Of<IHostApplicationLifetime>(),
       fileSystem,
@@ -133,11 +372,12 @@ public class AgentInstallerLinuxTests
       Mock.Of<IRetryer>(),
       Mock.Of<IOptionsAccessor>(),
       elevationChecker,
-      Mock.Of<IServiceControl>(),
+      serviceControl ?? Mock.Of<IServiceControl>(),
       Mock.Of<IEmbeddedResourceAccessor>(),
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions()),
       Mock.Of<IEd25519KeyProvider>(),
+      processLocator,
       NullLogger<AgentInstallerLinux>.Instance);
   }
 }

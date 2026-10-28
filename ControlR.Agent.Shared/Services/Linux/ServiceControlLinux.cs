@@ -58,6 +58,7 @@ internal class ServiceControlLinux(
             }
         }
     }
+
     public async Task StartDesktopClientService(bool throwOnFailure)
     {
         // Check if running on headless server
@@ -107,6 +108,7 @@ internal class ServiceControlLinux(
             }
         }
     }
+
     public async Task StopAgentService(bool throwOnFailure)
     {
         try
@@ -142,54 +144,29 @@ internal class ServiceControlLinux(
             }
         }
     }
-    public async Task StopDesktopClientService(bool throwOnFailure)
+
+    public Task StopDesktopClientService(bool throwOnFailure)
     {
-        // Check if running on headless server
-        var isHeadless = await _headlessServerDetector.IsHeadlessServer();
-        if (isHeadless)
-        {
-            _logger.LogInformation("Running on headless Ubuntu server. Desktop client service is not applicable.");
-            return;
-        }
+        return StopDesktopClientServiceByName(GetDesktopClientServiceName(), throwOnFailure);
+    }
 
-        try
-        {
-            var serviceName = GetDesktopClientServiceName();
-            _logger.LogInformation("Stopping desktop client service for all logged-in users: {ServiceName}", serviceName);
+    public Task StopPreviousBrandDesktopClientService(string previousBrandName, string? previousInstanceId, bool throwOnFailure)
+    {
+        return StopDesktopClientServiceByName(
+            GetPreviousBrandDesktopClientServiceName(previousBrandName, previousInstanceId),
+            throwOnFailure);
+    }
 
-            // Stop every logged-in user, active or not. A user who launched a client and then
-            // switched VT still has the client running in their user session; restricting the
-            // stop list to active sessions would orphan it after the agent stops. See #157.
-            var uids = (await _loggedInUserProvider.GetLoggedInUsers())
-                .Select(user => user.Uid)
-                .ToList();
-            if (uids.Count == 0)
-            {
-                _logger.LogInformation("No logged-in users found. Nothing to stop.");
-                return;
-            }
+    private static string GetPreviousBrandDesktopClientServiceName(string previousBrandName, string? previousInstanceId)
+    {
+        // The replaced install's unit is named for its own brand and the instance id it was created
+        // with, the same way that install's own installer named it. The current brand's unit name
+        // would stop the wrong unit.
+        var baseName = new BrandNames(previousBrandName).LinuxDesktopServiceName;
 
-            var tasks = new List<Task>();
-            foreach (var uid in uids)
-            {
-                tasks.Add(StopDesktopClientForUser(uid, serviceName, throwOnFailure));
-            }
-
-            await Task.WhenAll(tasks);
-            _logger.LogInformation("Desktop client service stopped for all logged-in users.");
-        }
-        catch (Exception ex)
-        {
-            if (throwOnFailure)
-            {
-                _logger.LogError(ex, "Failed to stop desktop client service.");
-                throw;
-            }
-            else
-            {
-                _logger.LogInformation(ex, "Failed to stop desktop client service.");
-            }
-        }
+        return string.IsNullOrWhiteSpace(previousInstanceId)
+            ? baseName
+            : $"{baseName.Replace(".service", "")}-{previousInstanceId}.service";
     }
 
     private async Task ConfirmAgentServiceActive(string serviceName)
@@ -232,6 +209,7 @@ internal class ServiceControlLinux(
 
         return $"{BrandingConstants.LinuxAgentServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
     }
+
     private string GetDesktopClientServiceName()
     {
         if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
@@ -241,6 +219,7 @@ internal class ServiceControlLinux(
 
         return $"{BrandingConstants.LinuxDesktopServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
     }
+
     private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
     {
         try
@@ -267,6 +246,7 @@ internal class ServiceControlLinux(
             }
         }
     }
+
     private async Task StopDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
     {
         try
@@ -274,9 +254,17 @@ internal class ServiceControlLinux(
             _logger.LogInformation("Stopping desktop client service for user {UID}: {ServiceName}", uid, serviceName);
 
             // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
-            await _processManager.StartAndWaitForExit("sudo",
+            var exitCode = await _processManager.StartAndWaitForExit("sudo",
                 $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user stop {serviceName}",
                 false, _serviceStatusTimeout);
+
+            // The overload returns the exit code rather than throwing on it. Check it, because a
+            // caller that goes on to kill the client's processes treats a stopped unit as a
+            // precondition: with the unit still active, a SIGKILL is just a Restart=on-failure.
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException($"systemctl --user stop {serviceName} for user {uid} exited with code {exitCode}.");
+            }
 
             _logger.LogInformation("Desktop client service stopped for user {UID}.", uid);
         }
@@ -290,6 +278,55 @@ internal class ServiceControlLinux(
             else
             {
                 _logger.LogWarning(ex, "Failed to stop desktop client service for user {UID}.", uid);
+            }
+        }
+    }
+
+    private async Task StopDesktopClientServiceByName(string serviceName, bool throwOnFailure)
+    {
+        // Check if running on headless server
+        var isHeadless = await _headlessServerDetector.IsHeadlessServer();
+        if (isHeadless)
+        {
+            _logger.LogInformation("Running on headless Ubuntu server. Desktop client service is not applicable.");
+            return;
+        }
+
+        try
+        {
+            _logger.LogInformation("Stopping desktop client service for all logged-in users: {ServiceName}", serviceName);
+
+            // Stop every logged-in user, active or not. A user who launched a client and then
+            // switched VT still has the client running in their user session; restricting the
+            // stop list to active sessions would orphan it after the agent stops. See #157.
+            var uids = (await _loggedInUserProvider.GetLoggedInUsers())
+                .Select(user => user.Uid)
+                .ToList();
+            if (uids.Count == 0)
+            {
+                _logger.LogInformation("No logged-in users found. Nothing to stop.");
+                return;
+            }
+
+            var tasks = new List<Task>();
+            foreach (var uid in uids)
+            {
+                tasks.Add(StopDesktopClientForUser(uid, serviceName, throwOnFailure));
+            }
+
+            await Task.WhenAll(tasks);
+            _logger.LogInformation("Desktop client service stopped for all logged-in users.");
+        }
+        catch (Exception ex)
+        {
+            if (throwOnFailure)
+            {
+                _logger.LogError(ex, "Failed to stop desktop client service.");
+                throw;
+            }
+            else
+            {
+                _logger.LogInformation(ex, "Failed to stop desktop client service.");
             }
         }
     }

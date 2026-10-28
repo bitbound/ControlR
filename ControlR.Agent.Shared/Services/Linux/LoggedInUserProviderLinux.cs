@@ -31,9 +31,17 @@ internal class LoggedInUserProviderLinux(
       // when any of that user's graphical sessions is the active one at its seat.
       var sessionsByUid = new Dictionary<string, (string SessionType, bool IsActive)>();
 
-      // Use loginctl to get active user sessions
-      var sessionsResult = await _processManager.GetProcessOutput("loginctl", "list-sessions --no-legend", 3000);
-      if (!sessionsResult.IsSuccess || string.IsNullOrWhiteSpace(sessionsResult.Value))
+      // Use loginctl to get active user sessions. Strict, so a nonzero loginctl exit reads as a
+      // failure instead of an empty session list.
+      var sessionsResult = await _processManager.GetProcessOutputStrict("loginctl", "list-sessions --no-legend", 3000);
+      if (!sessionsResult.IsSuccess)
+      {
+        // Callers stop client units before killing their processes and rely on an empty list
+        // meaning "no sessions exist", not "enumeration failed". Keep the two apart.
+        throw new InvalidOperationException($"loginctl list-sessions failed: {sessionsResult.Reason}");
+      }
+
+      if (string.IsNullOrWhiteSpace(sessionsResult.Value))
       {
         return [];
       }
@@ -112,8 +120,8 @@ internal class LoggedInUserProviderLinux(
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Failed to get logged-in users. Falling back to empty list.");
-      return [];
+      _logger.LogError(ex, "Failed to get logged-in users.");
+      throw;
     }
   }
 

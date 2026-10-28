@@ -20,6 +20,7 @@ internal class DesktopClientWatcherLinux(
   ILoggedInUserProvider loggedInUserProvider,
   IProcessManager processManager,
   IFileSystemPathProvider fileSystemPathProvider,
+  ILinuxDesktopClientProcessLocator processLocator,
   ILogger<DesktopClientWatcherLinux> logger) : BackgroundService
 {
   private const int ProcessCommandTimeoutMs = 5_000;
@@ -34,6 +35,7 @@ internal class DesktopClientWatcherLinux(
   private readonly IHeadlessServerDetector _headlessServerDetector = headlessServerDetector;
   private readonly ILoggedInUserProvider _loggedInUserProvider = loggedInUserProvider;
   private readonly ILogger<DesktopClientWatcherLinux> _logger = logger;
+  private readonly ILinuxDesktopClientProcessLocator _processLocator = processLocator;
   private readonly IProcessManager _processManager = processManager;
   private readonly IServiceControl _serviceControl = serviceControl;
   private readonly ISystemEnvironment _systemEnvironment = systemEnvironment;
@@ -67,8 +69,11 @@ internal class DesktopClientWatcherLinux(
 
     if (!displayInfo.IsLoginScreen)
     {
-      // If not at the login screen, ensure the login screen client is stopped
+      // If not at the login screen, ensure the login screen client is stopped. Reconcile first, so an
+      // untracked root-owned client does not survive the greeter into the user's session, where no
+      // later greeter pass would run to reap it.
       ResetLoginScreenLaunchBackoff();
+      ReconcileGreeterDesktopClients();
       await StopLoginScreenDesktopClient();
       _desktopClientRepairCoordinator.ReportHealthy("linux-login-screen");
       return;
@@ -77,6 +82,11 @@ internal class DesktopClientWatcherLinux(
     _logger.LogInformationDeduped(
       "Login screen detected. Type: X11, Display: {Display}, XAuth: {XAuth}, DM: {DisplayManager}",
       args: [displayInfo.Display, displayInfo.XAuthPath ?? "none", displayInfo.DisplayManager ?? "unknown"]);
+
+    // Reconcile on every pass, not just the ones that end in a launch. A client this agent did not
+    // record can appear beside the one it did, and the launch path is not reached while the recorded
+    // client still looks healthy or while a failing launch is backing off.
+    ReconcileGreeterDesktopClients();
 
     var isLoginScreenRunning = await IsLoginScreenDesktopClientRunning();
     if (isLoginScreenRunning && await HasDeletedLoginScreenDesktopClientExecutable())
@@ -116,12 +126,70 @@ internal class DesktopClientWatcherLinux(
     _desktopClientRepairCoordinator.ReportHealthy("linux-login-screen");
   }
 
+  /// <summary>
+  /// Kills login screen desktop clients this agent is not tracking, so the greeter session holds at
+  /// most one. A client left behind by a previous agent instance, or by a launch attempt that lost the
+  /// race to record itself, is not in _loginScreenProcess, so it is found by the executable it runs
+  /// rather than by this agent's own record of it.
+  /// </summary>
+  internal void ReconcileGreeterDesktopClients()
+  {
+    var expectedPath = GetLoginScreenDesktopClientPath();
+
+    int? trackedProcessId = null;
+    try
+    {
+      trackedProcessId = _loginScreenProcess?.Id;
+    }
+    catch (Exception)
+    {
+      // The launch task disposes the process concurrently. Treat it as untracked.
+    }
+
+    foreach (var process in _processLocator.FindByExecutablePath(expectedPath))
+    {
+      // The agent spawns the login screen client as root from its system service. A user session
+      // client is owned by that user's uid, except root's own session, which runs the globally
+      // enabled desktop unit as root. The slice tells the agent's child apart from that one.
+      if (process.OwnerUid != 0 || process.InUserSlice)
+      {
+        continue;
+      }
+
+      if (process.ProcessId == trackedProcessId)
+      {
+        continue;
+      }
+
+      KillStaleGreeterClient(process.ProcessId, expectedPath);
+    }
+  }
+
+  internal async Task StopClientsForShutdownAsync()
+  {
+    await StopLoginScreenDesktopClient();
+    await _serviceControl.StopDesktopClientService(throwOnFailure: false);
+  }
+
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     if (_systemEnvironment.IsDebug)
     {
       _logger.LogInformation("Desktop process watcher is running in debug mode. Skipping watch.");
       return;
+    }
+
+    // A previous agent instance can leave a login screen client running. An update replaces the
+    // binary out from under it, and an agent that died never takes it down. This agent did not spawn
+    // that process, so it is not in _loginScreenProcess. Reap any such orphan once at startup,
+    // before this agent spawns a client of its own beside it.
+    try
+    {
+      ReconcileGreeterDesktopClients();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error reconciling stale login screen desktop clients at startup.");
     }
 
     using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5), _timeProvider);
@@ -145,8 +213,9 @@ internal class DesktopClientWatcherLinux(
       }
     }
 
-    
-    await _serviceControl.StopDesktopClientService(throwOnFailure: false);
+    // This agent owns the login screen client it spawned, so it takes it down on the way out. Leaving
+    // it running orphans a process whose binary the next update is about to replace.
+    await StopClientsForShutdownAsync();
   }
 
   private static string GetRepairKey(string uid)
@@ -274,6 +343,14 @@ internal class DesktopClientWatcherLinux(
     return _fileSystemPathProvider.GetAgentInstallDirectory();
   }
 
+  private string GetLoginScreenDesktopClientPath()
+  {
+    return Path.Combine(
+      GetInstallDirectory(),
+      BrandingConstants.DesktopClientDirectoryName,
+      AppConstants.DesktopClientFileName);
+  }
+
   private TimeSpan GetLoginScreenLaunchBackoff()
   {
     var seconds = Math.Min(
@@ -366,6 +443,30 @@ internal class DesktopClientWatcherLinux(
     }
   }
 
+  private void KillStaleGreeterClient(int processId, string expectedPath)
+  {
+    // Re-check the executable, owner, and slice immediately before killing. A pid found earlier can
+    // have been recycled to an unrelated process, or to a user session client of the same binary,
+    // and neither is ours to kill. An unreadable owner or cgroup also lands here, so the kill stays
+    // fail closed.
+    if (_processLocator.GetRunningExecutable(processId, expectedPath) is not { OwnerUid: 0, InUserSlice: false })
+    {
+      return;
+    }
+
+    try
+    {
+      _processManager.GetProcessById(processId).KillAndDispose();
+      _logger.LogInformation(
+        "Killed a stale login screen desktop client this agent is not tracking. PID: {ProcessId}",
+        processId);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to kill a stale login screen desktop client. PID: {ProcessId}", processId);
+    }
+  }
+
   private async Task LaunchLoginScreenDesktopClient(DisplayEnvironmentInfo displayInfo, CancellationToken cancellationToken)
   {
     var launchStartedAt = _timeProvider.GetUtcNow();
@@ -374,8 +475,7 @@ internal class DesktopClientWatcherLinux(
 
     try
     {
-      var installDir = GetInstallDirectory();
-      var desktopClientPath = Path.Combine(installDir, BrandingConstants.DesktopClientDirectoryName, AppConstants.DesktopClientFileName);
+      var desktopClientPath = GetLoginScreenDesktopClientPath();
 
       if (!_fileSystem.FileExists(desktopClientPath))
       {
