@@ -104,11 +104,14 @@ public class PermissionAssignmentManager(
 
     if (!request.ReplaceExisting)
     {
+      // Match on the principal alone, the same visibility as CreateMany's duplicate check. A
+      // tenant-only filter would miss server-scoped rows (which carry no OwningTenantId), so an
+      // already-held grant would survive filtering and come back from CreateMany as a conflict
+      // instead of being ignored.
       var existingKeys = await _appDb.PermissionAssignments
         .IgnoreQueryFilters()
         .Where(x => x.PrincipalKind == request.PrincipalKind &&
-                    x.PrincipalId == request.PrincipalId &&
-                    x.OwningTenantId == tenantId)
+                    x.PrincipalId == request.PrincipalId)
         .Select(x => new { x.PermissionName, x.ScopeKind })
         .ToListAsync(cancellationToken);
 
