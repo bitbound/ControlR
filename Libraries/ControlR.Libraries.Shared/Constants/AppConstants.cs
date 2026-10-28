@@ -9,13 +9,6 @@ public static class AppConstants
 {
   public const string AgentHubPath = "/hubs/agent";
 
-  /// <summary>
-  /// The environment variable the agent uses to name itself when it spawns a DesktopClient directly.
-  /// On Linux a child outlives its parent, so the client needs to know which process to watch for in
-  /// order to exit once the agent that owns it is gone. Only the agent's greeter launch sets this. A
-  /// user session client is started by systemd and is supervised there instead.
-  /// </summary>
-  public const string AgentPidEnvironmentVariable = "CONTROLR_AGENT_PID";
   public const int DefaultHubDtoChunkSize = 100;
   public const string DefaultInstanceId = "default";
   public const double DefaultRemoteControlAutoQualityLowerThresholdMbps = 5d;

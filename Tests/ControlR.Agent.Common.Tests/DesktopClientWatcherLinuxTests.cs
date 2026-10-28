@@ -4,7 +4,6 @@ using ControlR.Agent.Common.Services.Linux;
 using ControlR.Agent.Shared.Interfaces;
 using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Shared.Services.Linux;
-using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.FileSystem;
@@ -50,31 +49,6 @@ public class DesktopClientWatcherLinuxTests
 
     stale.Verify(x => x.Kill(), Times.Once);
     _processManager.Verify(x => x.Start(It.IsAny<ProcessStartInfo>()), Times.Once);
-  }
-
-  [Fact]
-  public async Task CheckLoginScreenDesktopClient_LaunchPassesAgentPidToClient()
-  {
-    // The greeter client is the only client the agent spawns as a direct child, and on Linux a
-    // child outlives its parent. The watchdog in the client needs to know which pid to watch for.
-    var running = CreateRunningProcess();
-    ProcessStartInfo? launched = null;
-    _processManager
-      .Setup(x => x.Start(It.IsAny<ProcessStartInfo>()))
-      .Callback<ProcessStartInfo>(startInfo => launched = startInfo)
-      .Returns(running.Object);
-    var sut = CreateSut();
-
-    _detector
-      .Setup(x => x.DetectDisplayEnvironment())
-      .ReturnsAsync(LoginScreen());
-    await sut.CheckLoginScreenDesktopClient(CancellationToken.None);
-
-    Assert.NotNull(launched);
-    Assert.True(
-      launched!.Environment.TryGetValue(AppConstants.AgentPidEnvironmentVariable, out var agentPid),
-      "The launch environment is missing the agent pid variable.");
-    Assert.Equal(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture), agentPid);
   }
 
   [Fact]

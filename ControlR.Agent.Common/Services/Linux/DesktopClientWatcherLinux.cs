@@ -5,7 +5,6 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
-using System.Globalization;
 
 namespace ControlR.Agent.Common.Services.Linux;
 
@@ -502,11 +501,7 @@ internal class DesktopClientWatcherLinux(
       {
         ["DOTNET_ENVIRONMENT"] = "Production",
         ["DISPLAY"] = displayInfo.Display,
-        ["XDG_SESSION_TYPE"] = "x11",
-        // Names this agent to the client so its lifetime watchdog knows which pid to watch. On Linux
-        // a child outlives its parent, and the watchdog cuts short the window before the client
-        // would otherwise give up on the dead agent's IPC server.
-        [AppConstants.AgentPidEnvironmentVariable] = Environment.ProcessId.ToString(CultureInfo.InvariantCulture)
+        ["XDG_SESSION_TYPE"] = "x11"
       };
 
       if (!string.IsNullOrEmpty(displayInfo.XAuthPath))

@@ -23,8 +23,7 @@ public static class ServiceRegistrationExtensions
       .AddSharedPlatformServices()
       .AddSingleton<INavigationItemProvider, LinuxNavigationItemProvider>()
       .AddSingleton<IAsyncLock, KeyedLock>()
-      .AddSingleton<IRemoteControlHostBuilderFactory, LinuxRemoteControlHostBuilderFactory>()
-      .AddHostedService<AgentLifetimeWatchdog>();
+      .AddSingleton<IRemoteControlHostBuilderFactory, LinuxRemoteControlHostBuilderFactory>();
 
     return GetDesktopEnvironmentDetector().GetDesktopEnvironment() switch
     {
@@ -84,7 +83,6 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<IFileAccessPermissions, FileAccessPermissions>()
       .AddSingleton<IDesktopEnvironmentDetector, DesktopEnvironmentDetector>()
       .AddSingleton<IFileSystemUnix, FileSystemUnix>()
-      .AddSingleton<IProcessInfoLinux, ProcessInfoLinux>()
       .AddSingleton<ICaptureMetrics, CaptureMetricsLinux>()
       .AddSingleton<IDesktopClientPermissionService, DesktopClientPermissionServiceLinux>()
       .AddSingleton<IPlatformIpcMessageHandler, PlatformIpcMessageHandlerLinux>();
