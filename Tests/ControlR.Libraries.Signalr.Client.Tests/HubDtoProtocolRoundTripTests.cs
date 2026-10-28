@@ -67,8 +67,8 @@ public class HubDtoProtocolRoundTripTests
     typeof(PwshCompletionsResponseDto),
     typeof(GetPathSegmentsHubDto),
     typeof(DeviceAccessPermissionsDto),
-    typeof(RemoteControlEventWrapper),
-    typeof(RemoteControlCommandWrapper),
+    typeof(RemoteControlDesktopWrapper),
+    typeof(RemoteControlViewerWrapper),
     typeof(HubResult),
     typeof(HubResult<DeviceSummaryDto>),
     typeof(ActiveDesktopSessionsResponseDto),
@@ -279,21 +279,21 @@ public class HubDtoProtocolRoundTripTests
         CanTogglePrivacyScreen: false);
     }
 
-    if (dtoType == typeof(RemoteControlEventWrapper))
+    if (dtoType == typeof(RemoteControlDesktopWrapper))
     {
-      return new RemoteControlEventWrapper
+      return new RemoteControlDesktopWrapper
       {
-        DtoType = RemoteControlEventDtoType.ClipboardText,
+        DtoType = RemoteControlDesktopDtoType.ClipboardText,
         Payload = [0x01, 0x02, 0x03, 0xFF],
         SendTimestamp = 1234567890L,
       };
     }
 
-    if (dtoType == typeof(RemoteControlCommandWrapper))
+    if (dtoType == typeof(RemoteControlViewerWrapper))
     {
-      return new RemoteControlCommandWrapper
+      return new RemoteControlViewerWrapper
       {
-        DtoType = RemoteControlCommandDtoType.ChangeDisplays,
+        DtoType = RemoteControlViewerDtoType.ChangeDisplays,
         Payload = [0xFE, 0x00, 0x7F, 0x10],
         SendTimestamp = 9876543210L,
       };
