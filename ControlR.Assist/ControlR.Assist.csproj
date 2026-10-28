@@ -7,13 +7,13 @@
     <ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
     <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
     <!--
-      Assist is handed to unmanaged devices one download at a time, so the published artifact is a
-      self-contained single file with the linker running. Trimming is a requirement rather than a
-      size optimization, which is why the analyzers stay on: they report the reflection and
-      dynamic-code usage that would break at runtime instead of at build time.
+      Assist ships untrimmed for v1. A trimmed single file is roughly half the download size, but
+      the capture and interop paths are not linker-clean yet (COM marshalling in DxOutputDuplicator,
+      CsWin32 DXGI/D3D11, MessagePack reflection). Revisit once download telemetry justifies the
+      work. IsAotCompatible keeps the trim analyzers running so reflection issues stay visible.
     -->
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>full</TrimMode>
+    <PublishTrimmed>false</PublishTrimmed>
+    <TrimMode>none</TrimMode>
     <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
     <PublishSingleFile Condition="'$(RuntimeIdentifier)' != '' AND '$(IsMacOS)' != 'true'">true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
@@ -33,11 +33,11 @@
     <ApplicationId>app.controlr.assist.dev</ApplicationId>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
     <!--
-      Mac.Build.props disables the linker for DesktopClient, which ships a full runtime on Mac.
-      Assist has to be trimmed on every platform, so the override goes after that import.
+      Untrimmed on Mac too (see the main PropertyGroup), and the trim analyzers that Mac.Build.props
+      turns off for DesktopClient are switched back on here.
     -->
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>full</TrimMode>
+    <PublishTrimmed>false</PublishTrimmed>
+    <TrimMode>none</TrimMode>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
   </PropertyGroup>
@@ -50,6 +50,11 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <!-- XML doc comments ship as loose files with no runtime use. Same idea as the .pdb strip. -->
+  <ItemGroup>
+    <ResolvedFileToPublish Remove="@(ResolvedFileToPublish->WithMetadataValue('Extension', '.xml'))" />
   </ItemGroup>
 
   <ItemGroup>
