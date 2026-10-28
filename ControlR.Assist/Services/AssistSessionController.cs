@@ -119,6 +119,7 @@ public sealed class AssistSessionController(
         return;
       }
 
+      SetConsentPending(null, null, null);
       await EndCurrentSessionAsync();
       await CreateSessionAsync(CancellationToken.None);
     }
