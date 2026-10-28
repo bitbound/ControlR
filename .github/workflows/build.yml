@@ -341,53 +341,6 @@ jobs:
       - name: Install macOS workload
         run: dotnet workload install macos
 
-      - name: Setup Code Signing Keychain
-        env:
-          MACOS_SIGN_CERT_P12: ${{ secrets.MACOS_SIGN_CERT_P12 }}
-          MACOS_SIGN_CERT_PASSWORD: ${{ secrets.MACOS_SIGN_CERT_PASSWORD }}
-          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
-        shell: bash
-        run: |
-          # Create temporary keychain
-          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
-          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-          
-          echo "Creating temporary keychain..."
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          echo "Configuring keychain settings..."
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          echo "Unlocking keychain..."
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-
-          ORIGINAL_KEYCHAINS=$(security list-keychains -d user | xargs)
-          echo "ORIGINAL_KEYCHAINS=$ORIGINAL_KEYCHAINS" >> "$GITHUB_ENV"
-          echo "Adding temporary keychain to search list..."
-          security list-keychains -d user -s "$KEYCHAIN_PATH" $ORIGINAL_KEYCHAINS
-          
-          echo "Decoding and importing certificate..."
-          P12_PATH="$RUNNER_TEMP/certificate.p12"
-          echo "$MACOS_SIGN_CERT_P12" | base64 --decode > "$P12_PATH"
-          
-          security import "$P12_PATH" \
-            -k "$KEYCHAIN_PATH" \
-            -P "$MACOS_SIGN_CERT_PASSWORD" \
-            -T /usr/bin/codesign \
-            -T /usr/bin/productsign
-          
-          echo "Setting partition list..."
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          
-          echo "Verifying certificate import..."
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
-
-          # Extract the unique SHA-1 hash for the identity in the temporary keychain
-          IDENTITY_HASH=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "$MACOS_SIGN_IDENTITY" | head -n 1 | awk '{print $2}')
-          if [ -z "$IDENTITY_HASH" ]; then
-            echo "ERROR: No signing identity found for MACOS_SIGN_IDENTITY in temporary keychain."
-            exit 1
-          fi
-          echo "IDENTITY_HASH=$IDENTITY_HASH" >> "$GITHUB_ENV"
-
       - name: Download Customization Config
         if: needs.download-customization.outputs.has_config == 'true'
         uses: ./.github/actions/download-artifact
@@ -397,196 +350,27 @@ jobs:
           artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Apply Customization
-        id: customize
-        if: needs.download-customization.outputs.has_config == 'true'
-        shell: pwsh
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
+      - name: Apply Branding
+        id: branding
+        uses: ./.github/actions/apply-branding
+        with:
+          source-dir: '.'
+          customization-config-path: ${{ needs.download-customization.outputs.has_config == 'true' && format('{0}/customization/customization.json', runner.temp) || '' }}
+          version: ${{ needs.set-version.outputs.version }}
 
-      - name: Set Default Branding
-        if: needs.download-customization.outputs.has_config != 'true'
-        shell: pwsh
-        run: |
-          echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
-          echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
-
-      - name: Validate Brand Keys
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
-          if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
-          Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
-
-      - name: Publish DesktopClient Bundle (${{ matrix.arch }})
-        run: |
-          PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
-          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
-
-          mkdir -p "$DOWNLOADS_DIR"
-          mkdir -p "$PUBLISH_DIR"
-
-          echo "Publishing version $VERSION for macOS ${{ matrix.arch }}..."
-          dotnet publish "./ControlR.DesktopClient/" \
-            -c Release \
-            -r ${{ matrix.arch }} \
-            -f net10.0-macos \
-            --self-contained \
-            -p:CreatePackage=false \
-            -p:EnableCodeSigning=false \
-            -p:AppBundleDir="$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app" \
-            -p:Version="$VERSION" \
-            -p:FileVersion="$VERSION"
-
-          if [ ! -f "$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app/Contents/MacOS/${BRAND_KEY}.DesktopClient" ]; then
-            ls -la "$PUBLISH_DIR/" || true
-            echo "ERROR: DesktopClient publish output missing: $PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app/Contents/MacOS/${BRAND_KEY}.DesktopClient"
-            exit 1
-          fi
-
-          mv "$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app" "$PUBLISH_DIR/${BRAND_KEY}.app"
-
-      - name: Publish Agent (${{ matrix.arch }})
-        run: |
-          AGENT_PUBLISH_DIR="${{ github.workspace }}/ControlR.Agent/bin/publish/${{ matrix.arch }}"
-
-          dotnet publish "./ControlR.Agent/" \
-            -c Release \
-            -r ${{ matrix.arch }} \
-            --self-contained \
-            -p:PublishSingleFile=true \
-            -p:UseAppHost=true \
-            -p:Version=$VERSION \
-            -p:FileVersion=$VERSION \
-            -p:IncludeAllContentForSelfExtract=true \
-            -p:EnableCompressionInSingleFile=true \
-            -p:IncludeAppSettingsInSingleFile=true \
-            -o "$AGENT_PUBLISH_DIR"
-
-          if [ ! -f "$AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent" ]; then
-            ls -la "$AGENT_PUBLISH_DIR/" || true
-            echo "ERROR: Agent publish output missing: $AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent"
-            exit 1
-          fi
-
-      - name: Stage and Sign Bundle (${{ matrix.arch }})
-        run: |
-          PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
-          AGENT_PUBLISH_DIR="${{ github.workspace }}/ControlR.Agent/bin/publish/${{ matrix.arch }}"
-          EMBEDDED_AGENT_PATH="$PUBLISH_DIR/${BRAND_KEY}.app/Contents/Library/LaunchServices/${BRAND_KEY}.Agent"
-
-          echo "Embedding agent helper inside app bundle..."
-          mkdir -p "$PUBLISH_DIR/${BRAND_KEY}.app/Contents/Library/LaunchServices"
-          cp "$AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent" "$EMBEDDED_AGENT_PATH"
-
-          echo "Code signing embedded helper for macOS ${{ matrix.arch }}..."
-          codesign \
-            --force \
-            --options runtime \
-            --timestamp \
-            --entitlements "./ControlR.Agent/Entitlements.plist" \
-            --keychain "$RUNNER_TEMP/build.keychain" \
-            --sign "$IDENTITY_HASH" \
-            "$EMBEDDED_AGENT_PATH"
-
-          shopt -s nullglob
-          for lib in "$PUBLISH_DIR/${BRAND_KEY}.app/Contents/MonoBundle/"*.dylib; do
-            codesign \
-              --force \
-              --options runtime \
-              --timestamp \
-              --keychain "$RUNNER_TEMP/build.keychain" \
-              --sign "$IDENTITY_HASH" \
-              "$lib"
-          done
-
-          echo "Code signing DesktopClient bundle for macOS ${{ matrix.arch }}..."
-          codesign \
-            --force \
-            --options runtime \
-            --timestamp \
-            --entitlements "./ControlR.DesktopClient/Entitlements.plist" \
-            --keychain "$RUNNER_TEMP/build.keychain" \
-            --sign "$IDENTITY_HASH" \
-            "$PUBLISH_DIR/${BRAND_KEY}.app"
-
-          echo "Verifying signed app bundle..."
-          codesign --verify --deep --strict --verbose=2 "$PUBLISH_DIR/${BRAND_KEY}.app"
-
-      - name: Package Bundle (${{ matrix.arch }})
-        env:
-          APPLE_NOTARIZE_KEY_ID: ${{ secrets.APPLE_NOTARIZE_KEY_ID }}
-          APPLE_NOTARIZE_ISSUER_ID: ${{ secrets.APPLE_NOTARIZE_ISSUER_ID }}
-          APPLE_NOTARIZE_KEY_P8: ${{ secrets.APPLE_NOTARIZE_KEY_P8 }}
-        run: |
-          PUBLISH_DIR="${{github.workspace}}/ControlR.DesktopClient/bin/publish/${{ matrix.arch }}"
-          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
-          BUNDLE_ZIP="$DOWNLOADS_DIR/${BRAND_KEY}.Agent.bundle.zip"
-
-          if [ "${{ inputs.notarize_mac_bundle }}" = "true" ]; then
-            API_KEY_PATH="$RUNNER_TEMP/apple_api_key.p8"
-            SUBMISSION_ZIP="$RUNNER_TEMP/${BRAND_KEY}.Agent.bundle.${{ matrix.arch }}.zip"
-
-            echo "$APPLE_NOTARIZE_KEY_P8" | base64 --decode > "$API_KEY_PATH"
-
-            rm -f "$SUBMISSION_ZIP"
-            ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/${BRAND_KEY}.app" "$SUBMISSION_ZIP"
-
-            echo "Submitting bundle for notarization (${{ matrix.arch }})..."
-            xcrun notarytool submit "$SUBMISSION_ZIP" \
-              --key "$API_KEY_PATH" \
-              --key-id "$APPLE_NOTARIZE_KEY_ID" \
-              --issuer "$APPLE_NOTARIZE_ISSUER_ID" \
-              --wait
-
-            echo "Stapling notarization ticket to app bundle..."
-            xcrun stapler staple "$PUBLISH_DIR/${BRAND_KEY}.app"
-
-            rm -f "$SUBMISSION_ZIP"
-            rm -f "$API_KEY_PATH"
-          fi
-
-          echo "Creating final bundle ZIP for macOS ${{ matrix.arch }}..."
-          rm -f "$BUNDLE_ZIP"
-          ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/${BRAND_KEY}.app" "$BUNDLE_ZIP"
-
-      - name: Publish Installer (${{ matrix.arch }})
-        run: |
-          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
-
-          dotnet publish "./ControlR.Agent.Installer/" \
-            -c Release \
-            -r ${{ matrix.arch }} \
-            --self-contained \
-            -p:PublishSingleFile=true \
-            -p:UseAppHost=true \
-            -p:EnableCompressionInSingleFile=true \
-            -p:Version=$VERSION \
-            -p:FileVersion=$VERSION \
-            -p:DebugType=none \
-            -o "$DOWNLOADS_DIR"
-
-          if [ ! -f "$DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer" ]; then
-            ls -la "$DOWNLOADS_DIR" || true
-            echo "ERROR: Installer publish output missing: $DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer"
-            exit 1
-          fi
-
-      - name: Sign Installer (${{ matrix.arch }})
-        run: |
-          DOWNLOADS_DIR="${{github.workspace}}/ControlR.Web.Server/wwwroot/downloads/${{ matrix.arch }}"
-          INSTALLER_PATH="$DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer"
-
-          echo "Code signing Installer for macOS ${{ matrix.arch }}..."
-          codesign \
-            --force \
-            --options runtime \
-            --timestamp \
-            --entitlements "./ControlR.Agent/Entitlements.plist" \
-            --keychain "$RUNNER_TEMP/build.keychain" \
-            --sign "$IDENTITY_HASH" \
-            "$INSTALLER_PATH"
-
-          codesign --verify --strict --verbose=2 "$INSTALLER_PATH"
+      - name: Build macOS Bundle (${{ matrix.arch }})
+        uses: ./.github/actions/build-mac-bundle
+        with:
+          source-dir: '.'
+          arch: ${{ matrix.arch }}
+          version: ${{ needs.set-version.outputs.version }}
+          notarize: ${{ inputs.notarize_mac_bundle }}
+          cert-p12-base64: ${{ secrets.MACOS_SIGN_CERT_P12 }}
+          cert-password: ${{ secrets.MACOS_SIGN_CERT_PASSWORD }}
+          sign-identity: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          notarize-key-id: ${{ secrets.APPLE_NOTARIZE_KEY_ID }}
+          notarize-issuer-id: ${{ secrets.APPLE_NOTARIZE_ISSUER_ID }}
+          notarize-key-p8: ${{ secrets.APPLE_NOTARIZE_KEY_P8 }}
 
       - name: Upload Downloads (${{ matrix.arch }})
         uses: ./.github/actions/upload-artifact
@@ -596,19 +380,6 @@ jobs:
           retention-days: ${{ env.RETENTION_DAYS_ARTIFACTS }}
           artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
-
-      - name: Cleanup Keychain
-        if: always()
-        run: |
-          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
-          if [ -n "$ORIGINAL_KEYCHAINS" ]; then
-            echo "Restoring original keychain search list..."
-            security list-keychains -d user -s $ORIGINAL_KEYCHAINS
-          fi
-          if [ -f "$KEYCHAIN_PATH" ]; then
-            echo "Removing temporary keychain..."
-            security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
-          fi
 
   build-windows-binaries:
     name: Windows Build (${{ matrix.arch }})
@@ -646,136 +417,27 @@ jobs:
           artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Apply Customization
-        id: customize
-        if: needs.download-customization.outputs.has_config == 'true'
-        shell: pwsh
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
-
-      - name: Set Default Branding
-        if: needs.download-customization.outputs.has_config != 'true'
-        shell: pwsh
-        run: |
-          echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
-          echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
-
-      - name: Validate Brand Keys
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
-          if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
-          Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
+      - name: Apply Branding
+        id: branding
+        uses: ./.github/actions/apply-branding
+        with:
+          source-dir: '.'
+          customization-config-path: ${{ needs.download-customization.outputs.has_config == 'true' && format('{0}/customization/customization.json', runner.temp) || '' }}
+          version: ${{ needs.set-version.outputs.version }}
 
       # ===== Build Windows =====
-      - name: Build DesktopClient (${{ matrix.arch }})
-        shell: pwsh
-        run: |
-          # Build DesktopClient
-          dotnet publish ControlR.DesktopClient\ -c Release -f net10.0-windows8.0 -r ${{ matrix.arch }} --self-contained -o ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\ -p:Version=$env:VERSION -p:FileVersion=$env:VERSION
-
-      - name: Sign DesktopClient (${{ matrix.arch }})
-        uses: ./.github/actions/windows-code-sign
+      - name: Build Windows Bundle (${{ matrix.arch }})
+        uses: ./.github/actions/build-windows-bundle
         with:
-          file-patterns: |
-            ${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.exe
-            ${{ github.workspace }}\ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*.dll
+          source-dir: '.'
+          arch: ${{ matrix.arch }}
+          version: ${{ needs.set-version.outputs.version }}
           azure-client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           azure-key-vault-uri: ${{ secrets.CODESIGN_KEYVAULT_URI }}
           azure-key-vault-certificate-name: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
           signing-description-url: ${{ vars.CODESIGN_DESCRIPTION_URL }}
-
-      - name: Package and Prepare DesktopClient (${{ matrix.arch }})
-        shell: pwsh
-        run: |
-          # Create staging directory
-          $stagingDir = Join-Path $env:RUNNER_TEMP "staging-desktop/${{ matrix.arch }}"
-          New-Item -Path $stagingDir -ItemType Directory -Force | Out-Null
-
-          # Create ZIP
-          Compress-Archive -Path "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" -DestinationPath (Join-Path $stagingDir "$env:BRAND_KEY.DesktopClient.zip") -Force
-
-      - name: Azure Login For Agent Publish (${{ matrix.arch }})
-        uses: azure/login@v3
-        with:
-          client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Install AzureSignTool For Agent Publish (${{ matrix.arch }})
-        shell: pwsh
-        run: |
-          dotnet tool update --global AzureSignTool
-          if ($LASTEXITCODE -ne 0) {
-            dotnet tool install --global AzureSignTool
-            if ($LASTEXITCODE -ne 0) {
-              exit $LASTEXITCODE
-            }
-          }
-
-      - name: Build Agent (${{ matrix.arch }})
-        shell: pwsh
-        env:
-          CODESIGN_KEYVAULT_URI: ${{ secrets.CODESIGN_KEYVAULT_URI }}
-          CODESIGN_KEYVAULT_CERT_NAME: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
-          CODESIGN_DESCRIPTION_URL: ${{ vars.CODESIGN_DESCRIPTION_URL }}
-          TIMESTAMP_URL: http://timestamp.digicert.com
-        run: |
-          $agentPublishDir = "ControlR.Agent\bin\publish\${{ matrix.arch }}\"
-          New-Item -Path $agentPublishDir -ItemType Directory -Force | Out-Null
-          New-Item -Path "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}" -ItemType Directory -Force | Out-Null
-          dotnet publish ControlR.Agent\ -c Release -r ${{ matrix.arch }} -o $agentPublishDir -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
-
-      - name: Sign Agent (${{ matrix.arch }})
-        uses: ./.github/actions/windows-code-sign
-        env:
-          BRAND_KEY: ${{ env.BRAND_KEY }}
-        with:
-          file-patterns: ${{ github.workspace }}\ControlR.Agent\bin\publish\${{ matrix.arch }}\${{ env.BRAND_KEY }}.Agent.exe
-          azure-client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          azure-key-vault-uri: ${{ secrets.CODESIGN_KEYVAULT_URI }}
-          azure-key-vault-certificate-name: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
-          signing-description-url: ${{ vars.CODESIGN_DESCRIPTION_URL }}
-
-      - name: Build Installer (${{ matrix.arch }})
-        shell: pwsh
-        env:
-          CODESIGN_KEYVAULT_URI: ${{ secrets.CODESIGN_KEYVAULT_URI }}
-          CODESIGN_KEYVAULT_CERT_NAME: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
-          CODESIGN_DESCRIPTION_URL: ${{ vars.CODESIGN_DESCRIPTION_URL }}
-          TIMESTAMP_URL: http://timestamp.digicert.com
-        run: |
-          dotnet publish ControlR.Agent.Installer\ -c Release -r ${{ matrix.arch }} --self-contained -o ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\ -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$env:VERSION -p:FileVersion=$env:VERSION -p:DebugType=none
-
-      - name: Sign Installer (${{ matrix.arch }})
-        uses: ./.github/actions/windows-code-sign
-        env:
-          BRAND_KEY: ${{ env.BRAND_KEY }}
-        with:
-          file-patterns: ${{ github.workspace }}\ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\${{ env.BRAND_KEY }}.Agent.Installer.exe
-          azure-client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID }}
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          azure-key-vault-uri: ${{ secrets.CODESIGN_KEYVAULT_URI }}
-          azure-key-vault-certificate-name: ${{ secrets.CODESIGN_KEYVAULT_CERT_NAME }}
-          signing-description-url: ${{ vars.CODESIGN_DESCRIPTION_URL }}
-
-      - name: Create Bundle ZIP (${{ matrix.arch }})
-        shell: pwsh
-        run: |
-          $agentPublishDir = "ControlR.Agent\bin\publish\${{ matrix.arch }}\"
-          $bundleDir = Join-Path $env:RUNNER_TEMP "bundle/${{ matrix.arch }}"
-          $desktopDir = Join-Path $bundleDir "DesktopClient"
-          Remove-Item -Path $bundleDir -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -Path $desktopDir -ItemType Directory -Force | Out-Null
-
-          Copy-Item (Join-Path $agentPublishDir "$env:BRAND_KEY.Agent.exe") (Join-Path $bundleDir "$env:BRAND_KEY.Agent.exe") -Force
-          Copy-Item "ControlR.DesktopClient\bin\publish\${{ matrix.arch }}\*" $desktopDir -Recurse -Force
-
-          Compress-Archive -Path "$bundleDir\*" -DestinationPath "ControlR.Web.Server\wwwroot\downloads\${{ matrix.arch }}\$env:BRAND_KEY.Agent.bundle.zip" -Force
 
       - name: Upload Downloads (${{ matrix.arch }})
         uses: ./.github/actions/upload-artifact
@@ -817,59 +479,20 @@ jobs:
           artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Apply Customization
-        id: customize
-        if: needs.download-customization.outputs.has_config == 'true'
-        shell: pwsh
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ needs.set-version.outputs.version }}'
+      - name: Apply Branding
+        id: branding
+        uses: ./.github/actions/apply-branding
+        with:
+          source-dir: '.'
+          customization-config-path: ${{ needs.download-customization.outputs.has_config == 'true' && format('{0}/customization/customization.json', runner.temp) || '' }}
+          version: ${{ needs.set-version.outputs.version }}
 
-      - name: Set Default Branding
-        if: needs.download-customization.outputs.has_config != 'true'
-        shell: pwsh
-        run: |
-          echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
-          echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
-
-      - name: Validate Brand Keys
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
-          if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
-          Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
-
-      - name: Build DesktopClient (linux-x64)
-        run: |
-          # Build DesktopClient
-          dotnet publish ./ControlR.DesktopClient/ -c Release -f net10.0 -r linux-x64 --self-contained -o ./ControlR.DesktopClient/bin/publish/linux-x64/ -p:Version=$VERSION -p:FileVersion=$VERSION
-
-          # Create staging directory
-          mkdir -p "$RUNNER_TEMP/staging-desktop/linux-x64"
-
-          # Create ZIP
-          cd ./ControlR.DesktopClient/bin/publish/linux-x64
-          zip -r "$RUNNER_TEMP/staging-desktop/linux-x64/${BRAND_KEY}.DesktopClient.zip" .
-          cd ${{ github.workspace}}
-
-      - name: Build Agent (linux-x64)
-        run: |
-          mkdir -p "./ControlR.Agent/bin/publish/linux-x64"
-          mkdir -p "./ControlR.Web.Server/wwwroot/downloads/linux-x64"
-          dotnet publish ./ControlR.Agent/ -c Release -r linux-x64 -o ./ControlR.Agent/bin/publish/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
-
-      - name: Build Installer (linux-x64)
-        run: |
-          dotnet publish ./ControlR.Agent.Installer/ -c Release -r linux-x64 --self-contained -o ./ControlR.Web.Server/wwwroot/downloads/linux-x64/ -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:DebugType=none
-
-      - name: Create Bundle ZIP (linux-x64)
-        run: |
-          rm -rf "$RUNNER_TEMP/bundle/linux-x64"
-          mkdir -p "$RUNNER_TEMP/bundle/linux-x64/DesktopClient"
-          cp "./ControlR.Agent/bin/publish/linux-x64/${BRAND_KEY}.Agent" "$RUNNER_TEMP/bundle/linux-x64/${BRAND_KEY}.Agent"
-          cp -R ./ControlR.DesktopClient/bin/publish/linux-x64/. "$RUNNER_TEMP/bundle/linux-x64/DesktopClient/"
-
-          cd "$RUNNER_TEMP/bundle/linux-x64"
-          zip -r "${{ github.workspace }}/ControlR.Web.Server/wwwroot/downloads/linux-x64/${BRAND_KEY}.Agent.bundle.zip" .
-          cd "${{ github.workspace }}"
+      - name: Build Linux Bundle
+        uses: ./.github/actions/build-linux-bundle
+        with:
+          source-dir: '.'
+          arch: linux-x64
+          version: ${{ needs.set-version.outputs.version }}
 
       - name: Upload Downloads (linux-x64)
         uses: ./.github/actions/upload-artifact
@@ -915,25 +538,13 @@ jobs:
           artifact-host: ${{ inputs.use_local_storage && vars.ARTIFACT_HOST || '' }}
           artifact-base-path: ${{ inputs.use_local_storage && vars.ARTIFACT_BASE_PATH || '' }}
 
-      - name: Apply Customization
-        id: customize
-        if: needs.download-customization.outputs.has_config == 'true'
-        shell: pwsh
-        run: ./.scripts/Invoke-Customize.ps1 -ConfigPath '${{ runner.temp }}/customization/customization.json' -Version '${{ env.VERSION }}'
-
-      - name: Set Default Branding
-        if: needs.download-customization.outputs.has_config != 'true'
-        shell: pwsh
-        run: |
-          echo "BRAND_KEY=ControlR" >> $env:GITHUB_ENV
-          echo "UNIX_BRAND_KEY=controlr" >> $env:GITHUB_ENV
-
-      - name: Validate Brand Keys
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrEmpty($env:BRAND_KEY)) { throw "BRAND_KEY is empty" }
-          if ([string]::IsNullOrEmpty($env:UNIX_BRAND_KEY)) { throw "UNIX_BRAND_KEY is empty" }
-          Write-Host "BRAND_KEY=$env:BRAND_KEY  UNIX_BRAND_KEY=$env:UNIX_BRAND_KEY"
+      - name: Apply Branding
+        id: branding
+        uses: ./.github/actions/apply-branding
+        with:
+          source-dir: '.'
+          customization-config-path: ${{ needs.download-customization.outputs.has_config == 'true' && format('{0}/customization/customization.json', runner.temp) || '' }}
+          version: ${{ env.VERSION }}
 
       - name: Download Runtime Artifacts (win-x86)
         uses: ./.github/actions/download-artifact

@@ -1,0 +1,298 @@
+name: Build macOS Bundle
+description: >
+  Builds, signs, notarizes, and packages the macOS DesktopClient/Agent bundle.
+  Sets up a temporary signing keychain, publishes DesktopClient and Agent,
+  embeds and signs the Agent helper, signs dylibs and the app bundle,
+  optionally notarizes and staples, zips the bundle, publishes and signs the
+  Installer, then cleans up the keychain.
+
+inputs:
+  source-dir:
+    description: 'Path to the ControlR repo checkout, relative to the workspace (e.g. "." or a submodule path)'
+    required: false
+    default: '.'
+  arch:
+    description: 'Target RID (osx-arm64 or osx-x64)'
+    required: true
+  version:
+    description: 'Build version used for -p:Version and -p:FileVersion'
+    required: true
+  notarize:
+    description: 'Notarize and staple the app bundle (true/false)'
+    required: false
+    default: 'true'
+  cert-p12-base64:
+    description: 'Base64-encoded Developer ID signing certificate (.p12)'
+    required: true
+  cert-password:
+    description: 'Password for the .p12 certificate'
+    required: true
+  sign-identity:
+    description: 'Developer ID signing identity name to look up in the keychain'
+    required: true
+  notarize-key-id:
+    description: 'Apple notarization API key ID'
+    required: false
+    default: ''
+  notarize-issuer-id:
+    description: 'Apple notarization issuer ID'
+    required: false
+    default: ''
+  notarize-key-p8:
+    description: 'Base64-encoded Apple notarization API key (.p8)'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve source directory
+      shell: pwsh
+      run: |
+        $src = Join-Path $env:GITHUB_WORKSPACE '${{ inputs.source-dir }}'
+        $src = (Resolve-Path $src).Path
+        "SRC_DIR=$src" >> $env:GITHUB_ENV
+
+    - name: Setup Code Signing Keychain
+      env:
+        MACOS_SIGN_CERT_P12: ${{ inputs.cert-p12-base64 }}
+        MACOS_SIGN_CERT_PASSWORD: ${{ inputs.cert-password }}
+        MACOS_SIGN_IDENTITY: ${{ inputs.sign-identity }}
+      shell: bash
+      run: |
+        # Create temporary keychain
+        KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+        KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+        
+        echo "Creating temporary keychain..."
+        security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+        echo "Configuring keychain settings..."
+        security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+        echo "Unlocking keychain..."
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+        ORIGINAL_KEYCHAINS=$(security list-keychains -d user | xargs)
+        echo "ORIGINAL_KEYCHAINS=$ORIGINAL_KEYCHAINS" >> "$GITHUB_ENV"
+        echo "Adding temporary keychain to search list..."
+        security list-keychains -d user -s "$KEYCHAIN_PATH" $ORIGINAL_KEYCHAINS
+        
+        echo "Decoding and importing certificate..."
+        P12_PATH="$RUNNER_TEMP/certificate.p12"
+        echo "$MACOS_SIGN_CERT_P12" | base64 --decode > "$P12_PATH"
+        
+        security import "$P12_PATH" \
+          -k "$KEYCHAIN_PATH" \
+          -P "$MACOS_SIGN_CERT_PASSWORD" \
+          -T /usr/bin/codesign \
+          -T /usr/bin/productsign
+        
+        echo "Setting partition list..."
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+        
+        echo "Verifying certificate import..."
+        security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+        # Extract the unique SHA-1 hash for the identity in the temporary keychain
+        IDENTITY_HASH=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "$MACOS_SIGN_IDENTITY" | head -n 1 | awk '{print $2}')
+        if [ -z "$IDENTITY_HASH" ]; then
+          echo "ERROR: No signing identity found for MACOS_SIGN_IDENTITY in temporary keychain."
+          exit 1
+        fi
+        echo "IDENTITY_HASH=$IDENTITY_HASH" >> "$GITHUB_ENV"
+
+    - name: Publish DesktopClient Bundle (${{ inputs.arch }})
+      env:
+        VERSION: ${{ inputs.version }}
+      shell: bash
+      run: |
+        PUBLISH_DIR="$SRC_DIR/ControlR.DesktopClient/bin/publish/${{ inputs.arch }}"
+        DOWNLOADS_DIR="$SRC_DIR/ControlR.Web.Server/wwwroot/downloads/${{ inputs.arch }}"
+
+        mkdir -p "$DOWNLOADS_DIR"
+        mkdir -p "$PUBLISH_DIR"
+
+        echo "Publishing version $VERSION for macOS ${{ inputs.arch }}..."
+        dotnet publish "$SRC_DIR/ControlR.DesktopClient/" \
+          -c Release \
+          -r ${{ inputs.arch }} \
+          -f net10.0-macos \
+          --self-contained \
+          -p:CreatePackage=false \
+          -p:EnableCodeSigning=false \
+          -p:AppBundleDir="$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app" \
+          -p:Version="$VERSION" \
+          -p:FileVersion="$VERSION"
+
+        if [ ! -f "$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app/Contents/MacOS/${BRAND_KEY}.DesktopClient" ]; then
+          ls -la "$PUBLISH_DIR/" || true
+          echo "ERROR: DesktopClient publish output missing: $PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app/Contents/MacOS/${BRAND_KEY}.DesktopClient"
+          exit 1
+        fi
+
+        mv "$PUBLISH_DIR/${BRAND_KEY}.DesktopClient.app" "$PUBLISH_DIR/${BRAND_KEY}.app"
+
+    - name: Publish Agent (${{ inputs.arch }})
+      env:
+        VERSION: ${{ inputs.version }}
+      shell: bash
+      run: |
+        AGENT_PUBLISH_DIR="$SRC_DIR/ControlR.Agent/bin/publish/${{ inputs.arch }}"
+
+        dotnet publish "$SRC_DIR/ControlR.Agent/" \
+          -c Release \
+          -r ${{ inputs.arch }} \
+          --self-contained \
+          -p:PublishSingleFile=true \
+          -p:UseAppHost=true \
+          -p:Version=$VERSION \
+          -p:FileVersion=$VERSION \
+          -p:IncludeAllContentForSelfExtract=true \
+          -p:EnableCompressionInSingleFile=true \
+          -p:IncludeAppSettingsInSingleFile=true \
+          -o "$AGENT_PUBLISH_DIR"
+
+        if [ ! -f "$AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent" ]; then
+          ls -la "$AGENT_PUBLISH_DIR/" || true
+          echo "ERROR: Agent publish output missing: $AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent"
+          exit 1
+        fi
+
+    - name: Stage and Sign Bundle (${{ inputs.arch }})
+      shell: bash
+      run: |
+        PUBLISH_DIR="$SRC_DIR/ControlR.DesktopClient/bin/publish/${{ inputs.arch }}"
+        AGENT_PUBLISH_DIR="$SRC_DIR/ControlR.Agent/bin/publish/${{ inputs.arch }}"
+        EMBEDDED_AGENT_PATH="$PUBLISH_DIR/${BRAND_KEY}.app/Contents/Library/LaunchServices/${BRAND_KEY}.Agent"
+
+        echo "Embedding agent helper inside app bundle..."
+        mkdir -p "$PUBLISH_DIR/${BRAND_KEY}.app/Contents/Library/LaunchServices"
+        cp "$AGENT_PUBLISH_DIR/${BRAND_KEY}.Agent" "$EMBEDDED_AGENT_PATH"
+
+        echo "Code signing embedded helper for macOS ${{ inputs.arch }}..."
+        codesign \
+          --force \
+          --options runtime \
+          --timestamp \
+          --entitlements "$SRC_DIR/ControlR.Agent/Entitlements.plist" \
+          --keychain "$RUNNER_TEMP/build.keychain" \
+          --sign "$IDENTITY_HASH" \
+          "$EMBEDDED_AGENT_PATH"
+
+        shopt -s nullglob
+        for lib in "$PUBLISH_DIR/${BRAND_KEY}.app/Contents/MonoBundle/"*.dylib; do
+          codesign \
+            --force \
+            --options runtime \
+            --timestamp \
+            --keychain "$RUNNER_TEMP/build.keychain" \
+            --sign "$IDENTITY_HASH" \
+            "$lib"
+        done
+
+        echo "Code signing DesktopClient bundle for macOS ${{ inputs.arch }}..."
+        codesign \
+          --force \
+          --options runtime \
+          --timestamp \
+          --entitlements "$SRC_DIR/ControlR.DesktopClient/Entitlements.plist" \
+          --keychain "$RUNNER_TEMP/build.keychain" \
+          --sign "$IDENTITY_HASH" \
+          "$PUBLISH_DIR/${BRAND_KEY}.app"
+
+        echo "Verifying signed app bundle..."
+        codesign --verify --deep --strict --verbose=2 "$PUBLISH_DIR/${BRAND_KEY}.app"
+
+    - name: Package Bundle (${{ inputs.arch }})
+      env:
+        APPLE_NOTARIZE_KEY_ID: ${{ inputs.notarize-key-id }}
+        APPLE_NOTARIZE_ISSUER_ID: ${{ inputs.notarize-issuer-id }}
+        APPLE_NOTARIZE_KEY_P8: ${{ inputs.notarize-key-p8 }}
+      shell: bash
+      run: |
+        PUBLISH_DIR="$SRC_DIR/ControlR.DesktopClient/bin/publish/${{ inputs.arch }}"
+        DOWNLOADS_DIR="$SRC_DIR/ControlR.Web.Server/wwwroot/downloads/${{ inputs.arch }}"
+        BUNDLE_ZIP="$DOWNLOADS_DIR/${BRAND_KEY}.Agent.bundle.zip"
+
+        if [ "${{ inputs.notarize }}" = "true" ]; then
+          API_KEY_PATH="$RUNNER_TEMP/apple_api_key.p8"
+          SUBMISSION_ZIP="$RUNNER_TEMP/${BRAND_KEY}.Agent.bundle.${{ inputs.arch }}.zip"
+
+          echo "$APPLE_NOTARIZE_KEY_P8" | base64 --decode > "$API_KEY_PATH"
+
+          rm -f "$SUBMISSION_ZIP"
+          ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/${BRAND_KEY}.app" "$SUBMISSION_ZIP"
+
+          echo "Submitting bundle for notarization (${{ inputs.arch }})..."
+          xcrun notarytool submit "$SUBMISSION_ZIP" \
+            --key "$API_KEY_PATH" \
+            --key-id "$APPLE_NOTARIZE_KEY_ID" \
+            --issuer "$APPLE_NOTARIZE_ISSUER_ID" \
+            --wait
+
+          echo "Stapling notarization ticket to app bundle..."
+          xcrun stapler staple "$PUBLISH_DIR/${BRAND_KEY}.app"
+
+          rm -f "$SUBMISSION_ZIP"
+          rm -f "$API_KEY_PATH"
+        fi
+
+        echo "Creating final bundle ZIP for macOS ${{ inputs.arch }}..."
+        rm -f "$BUNDLE_ZIP"
+        ditto -c -k --sequesterRsrc --keepParent "$PUBLISH_DIR/${BRAND_KEY}.app" "$BUNDLE_ZIP"
+
+    - name: Publish Installer (${{ inputs.arch }})
+      env:
+        VERSION: ${{ inputs.version }}
+      shell: bash
+      run: |
+        DOWNLOADS_DIR="$SRC_DIR/ControlR.Web.Server/wwwroot/downloads/${{ inputs.arch }}"
+
+        dotnet publish "$SRC_DIR/ControlR.Agent.Installer/" \
+          -c Release \
+          -r ${{ inputs.arch }} \
+          --self-contained \
+          -p:PublishSingleFile=true \
+          -p:UseAppHost=true \
+          -p:EnableCompressionInSingleFile=true \
+          -p:Version=$VERSION \
+          -p:FileVersion=$VERSION \
+          -p:DebugType=none \
+          -o "$DOWNLOADS_DIR"
+
+        if [ ! -f "$DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer" ]; then
+          ls -la "$DOWNLOADS_DIR" || true
+          echo "ERROR: Installer publish output missing: $DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer"
+          exit 1
+        fi
+
+    - name: Sign Installer (${{ inputs.arch }})
+      shell: bash
+      run: |
+        DOWNLOADS_DIR="$SRC_DIR/ControlR.Web.Server/wwwroot/downloads/${{ inputs.arch }}"
+        INSTALLER_PATH="$DOWNLOADS_DIR/${BRAND_KEY}.Agent.Installer"
+
+        echo "Code signing Installer for macOS ${{ inputs.arch }}..."
+        codesign \
+          --force \
+          --options runtime \
+          --timestamp \
+          --entitlements "$SRC_DIR/ControlR.Agent/Entitlements.plist" \
+          --keychain "$RUNNER_TEMP/build.keychain" \
+          --sign "$IDENTITY_HASH" \
+          "$INSTALLER_PATH"
+
+        codesign --verify --strict --verbose=2 "$INSTALLER_PATH"
+
+    - name: Cleanup Keychain
+      if: always()
+      shell: bash
+      run: |
+        KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+        if [ -n "$ORIGINAL_KEYCHAINS" ]; then
+          echo "Restoring original keychain search list..."
+          security list-keychains -d user -s $ORIGINAL_KEYCHAINS
+        fi
+        if [ -f "$KEYCHAIN_PATH" ]; then
+          echo "Removing temporary keychain..."
+          security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+        fi

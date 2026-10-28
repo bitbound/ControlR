@@ -1,6 +1,7 @@
 ﻿using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Windows;
 using ControlR.Libraries.Shared.Extensions;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Windows.Services;
@@ -29,17 +30,20 @@ internal class ClipboardManagerWindows(
     }
   }
 
-  public async Task SetText(string? text)
+  public async Task<Result> SetText(string? text)
   {
     using var cts = new CancellationTokenSource(_lockTimeout);
     using var acquiredLock = await _clipboardLock.AcquireLockAsync(cts.Token);
     try
     {
-      _win32Interop.SetClipboardText(text);
+      return _win32Interop.SetClipboardText(text)
+        ? Result.Ok()
+        : Result.Fail("Could not write to the Windows clipboard.");
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while setting clipboard text.");
+      return Result.Fail(ex);
     }
   }
 }

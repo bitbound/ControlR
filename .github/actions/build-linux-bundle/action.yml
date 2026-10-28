@@ -1,0 +1,71 @@
+name: Build Linux Bundle
+description: >
+  Publishes the Linux DesktopClient, Agent, and Installer, then stages the
+  bundle ZIP in the downloads directory. No signing on Linux.
+
+inputs:
+  source-dir:
+    description: 'Path to the ControlR repo checkout, relative to the workspace (e.g. "." or a submodule path)'
+    required: false
+    default: '.'
+  arch:
+    description: 'Target RID'
+    required: false
+    default: 'linux-x64'
+  version:
+    description: 'Build version used for -p:Version and -p:FileVersion'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve source directory
+      shell: pwsh
+      run: |
+        $src = Join-Path $env:GITHUB_WORKSPACE '${{ inputs.source-dir }}'
+        $src = (Resolve-Path $src).Path
+        "SRC_DIR=$src" >> $env:GITHUB_ENV
+
+    - name: Build DesktopClient (${{ inputs.arch }})
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        # Build DesktopClient
+        dotnet publish "$SRC_DIR/ControlR.DesktopClient/" -c Release -f net10.0 -r ${{ inputs.arch }} --self-contained -o "$SRC_DIR/ControlR.DesktopClient/bin/publish/${{ inputs.arch }}/" -p:Version=$VERSION -p:FileVersion=$VERSION
+
+        # Create staging directory
+        mkdir -p "$RUNNER_TEMP/staging-desktop/${{ inputs.arch }}"
+
+        # Create ZIP
+        cd "$SRC_DIR/ControlR.DesktopClient/bin/publish/${{ inputs.arch }}"
+        zip -r "$RUNNER_TEMP/staging-desktop/${{ inputs.arch }}/${BRAND_KEY}.DesktopClient.zip" .
+        cd "$SRC_DIR"
+
+    - name: Build Agent (${{ inputs.arch }})
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        mkdir -p "$SRC_DIR/ControlR.Agent/bin/publish/${{ inputs.arch }}"
+        mkdir -p "$SRC_DIR/ControlR.Web.Server/wwwroot/downloads/${{ inputs.arch }}"
+        dotnet publish "$SRC_DIR/ControlR.Agent/" -c Release -r ${{ inputs.arch }} -o "$SRC_DIR/ControlR.Agent/bin/publish/${{ inputs.arch }}/" -p:PublishSingleFile=true -p:UseAppHost=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:IncludeAppSettingsInSingleFile=true -p:DebugType=none
+
+    - name: Build Installer (${{ inputs.arch }})
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        dotnet publish "$SRC_DIR/ControlR.Agent.Installer/" -c Release -r ${{ inputs.arch }} --self-contained -o "$SRC_DIR/ControlR.Web.Server/wwwroot/downloads/${{ inputs.arch }}/" -p:PublishSingleFile=true -p:UseAppHost=true -p:EnableCompressionInSingleFile=true -p:Version=$VERSION -p:FileVersion=$VERSION -p:DebugType=none
+
+    - name: Create Bundle ZIP (${{ inputs.arch }})
+      shell: bash
+      run: |
+        rm -rf "$RUNNER_TEMP/bundle/${{ inputs.arch }}"
+        mkdir -p "$RUNNER_TEMP/bundle/${{ inputs.arch }}/DesktopClient"
+        cp "$SRC_DIR/ControlR.Agent/bin/publish/${{ inputs.arch }}/${BRAND_KEY}.Agent" "$RUNNER_TEMP/bundle/${{ inputs.arch }}/${BRAND_KEY}.Agent"
+        cp -R "$SRC_DIR/ControlR.DesktopClient/bin/publish/${{ inputs.arch }}/." "$RUNNER_TEMP/bundle/${{ inputs.arch }}/DesktopClient/"
+
+        cd "$RUNNER_TEMP/bundle/${{ inputs.arch }}"
+        zip -r "$SRC_DIR/ControlR.Web.Server/wwwroot/downloads/${{ inputs.arch }}/${BRAND_KEY}.Agent.bundle.zip" .
+        cd "$SRC_DIR"

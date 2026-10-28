@@ -20,6 +20,7 @@ public static class SerilogHostExtensions
 
     return hostBuilder;
   }
+
   public static IServiceCollection BootstrapSerilog(
     this IServiceCollection services,
     IConfiguration configuration,
@@ -51,12 +52,25 @@ public static class SerilogHostExtensions
     return services;
   }
 
+  // Daemon contexts (launchd, systemd, sudo) start with no TMPDIR. The shared file sink creates a
+  // cross-process named mutex at sink open, and named-mutex creation on Unix throws IOException when
+  // TMPDIR is unset. Call this before building any shared file sink that bypasses BootstrapSerilog.
+  public static void EnsureUnixTempDirForSharedSinks()
+  {
+    if (!OperatingSystem.IsWindows() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TMPDIR")))
+    {
+      Environment.SetEnvironmentVariable("TMPDIR", "/var/tmp");
+    }
+  }
+
   private static void ApplySharedLoggerConfig(
     LoggerConfiguration loggerConfiguration,
     string logFilePath,
     TimeSpan logRetention,
     Action<LoggerConfiguration>? extraLoggerConfig)
   {
+    EnsureUnixTempDirForSharedSinks();
+
     loggerConfiguration
             .Destructure.ToMaximumDepth(3)
             .Enrich.FromLogContext()

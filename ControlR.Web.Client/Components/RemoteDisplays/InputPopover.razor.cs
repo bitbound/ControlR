@@ -180,9 +180,18 @@ public partial class InputPopover : DisposableComponent
         return;
       }
 
-      Snackbar.Add("Sending clipboard", Severity.Info);
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-      await RemoteControlStream.SendClipboardText(text, RemoteControlState.CurrentSession.SessionId, cts.Token);
+      var sendResult = await RemoteControlStream.SendClipboardText(
+        text, RemoteControlState.CurrentSession.SessionId, cts.Token);
+
+      if (!sendResult.IsSuccess)
+      {
+        Snackbar.Add($"Failed to send clipboard: {sendResult.Reason}", Severity.Error);
+        return;
+      }
+
+      Snackbar.Add("Clipboard sent", Severity.Success);
+
       var activityResult = await ViewerHub.Server.AddViewerActivity2(new(DeviceAccessActivityNames.SendClipboardText));
       if (!activityResult.IsSuccess)
       {

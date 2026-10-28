@@ -5,6 +5,7 @@ using ControlR.Libraries.Api.Contracts.Hubs;
 using ControlR.Agent.LoadTester.Helpers;
 using ControlR.Libraries.Shared.Constants;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Dtos;
@@ -55,6 +56,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         .WithUrl(
           hubUri,
           options => ConnectionHelper.ConfigureHubConnection(i, options))
+        .AddMessagePackProtocol()
         .WithAutomaticReconnect(retryPolicy)
         .Build();
 

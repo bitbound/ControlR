@@ -17,6 +17,8 @@
     <dict>
         <key>DOTNET_BUNDLE_EXTRACT_BASE_DIR</key>
         <string>{{DOTNET_BUNDLE_EXTRACT_BASE_DIR}}</string>
+        <key>TMPDIR</key>
+        <string>/var/tmp</string>
     </dict>
 </dict>
 </plist>

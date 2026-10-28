@@ -1,5 +1,6 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.NativeInterop.Linux;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 
@@ -76,7 +77,7 @@ public class ClipboardManagerGtk : IClipboardManager, IDisposable
     });
   }
 
-  public Task SetText(string? text)
+  public Task<Result> SetText(string? text)
   {
     return Task.Run(() =>
     {
@@ -86,32 +87,34 @@ public class ClipboardManagerGtk : IClipboardManager, IDisposable
         {
           if (string.IsNullOrEmpty(text))
           {
-            return;
+            return Result.Ok();
           }
 
           if (!EnsureGtkInitialized())
           {
-            return;
+            return Result.Fail("Could not initialize GTK for the clipboard write.");
           }
 
           var clipboard = LibGtk.gtk_clipboard_get(LibGtk.GDK_SELECTION_CLIPBOARD);
           if (clipboard == nint.Zero)
           {
             _logger.LogError("Failed to get GTK clipboard");
-            return;
+            return Result.Fail("Could not open the GTK clipboard.");
           }
 
           // Set the text (-1 means null-terminated string)
           LibGtk.gtk_clipboard_set_text(clipboard, text, -1);
-          
+
           // Store the clipboard to make it persistent
           LibGtk.gtk_clipboard_store(clipboard);
-          
+
           _logger.LogDebug("Set clipboard text via GTK: {Length} characters", text.Length);
+          return Result.Ok();
         }
         catch (Exception ex)
         {
           _logger.LogError(ex, "Error setting clipboard text via GTK");
+          return Result.Fail(ex);
         }
       }
     });

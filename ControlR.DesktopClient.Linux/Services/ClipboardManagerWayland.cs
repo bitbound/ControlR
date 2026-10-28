@@ -1,5 +1,6 @@
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Linux.XdgPortal;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.DesktopClient.Linux.Services;
@@ -25,16 +26,17 @@ public class ClipboardManagerWayland(
     }
   }
 
-  public async Task SetText(string? text)
+  public async Task<Result> SetText(string? text)
   {
     try
     {
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-      await _desktopPortal.SetClipboardText(text ?? string.Empty, cts.Token).ConfigureAwait(false);
+      return await _desktopPortal.SetClipboardText(text ?? string.Empty, cts.Token).ConfigureAwait(false);
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error setting clipboard text via XDG portal");
+      return Result.Fail(ex);
     }
   }
 }

@@ -1,4 +1,5 @@
 using ControlR.DesktopClient.Linux.XdgPortal;
+using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Win32.SafeHandles;
 
 namespace ControlR.DesktopClient.Linux.Tests;
@@ -14,6 +15,7 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
   public int RequestRemoteDesktopPermissionCallCount { get; private set; }
   public bool RequestRemoteDesktopPermissionResult { get; set; } = true;
   public string? SessionHandle { get; set; } = "fake-session";
+  public Result SetClipboardTextResult { get; set; } = Result.Ok();
 
   public void DeleteRestoreToken()
   {
@@ -98,8 +100,8 @@ internal sealed class FakeXdgDesktopPortal : IXdgDesktopPortal
     return Task.FromResult(RequestRemoteDesktopPermissionResult);
   }
 
-  public Task SetClipboardText(string text, CancellationToken cancellationToken)
+  public Task<Result> SetClipboardText(string text, CancellationToken cancellationToken)
   {
-    return Task.CompletedTask;
+    return Task.FromResult(SetClipboardTextResult);
   }
 }

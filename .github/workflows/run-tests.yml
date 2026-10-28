@@ -65,6 +65,50 @@ jobs:
           Write-Host "  dotnet libman update <library>"
           exit 1
 
+  # Failing job, green run: same pattern as the libman sweep. Flags a newer .NET SDK on the pinned
+  # feature band so it surfaces on the pull request without blocking it.
+  check-dotnet-sdk-update:
+    name: .NET SDK updates
+    runs-on: ${{ inputs.use_self_hosted_runners && fromJson('["self-hosted","Linux"]') || fromJson('["ubuntu-latest"]') }}
+    continue-on-error: true
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Sweep .NET SDK channel
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pinned = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          $band = ($pinned -split '\.')[0..1] -join '.'
+
+          $idx = Invoke-RestMethod 'https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/releases-index.json'
+          $entry = $idx.'releases-index' | Where-Object { $_.'channel-version' -eq $band }
+          if (-not $entry) {
+            Write-Host "::warning::Channel $band not found in the .NET release index."
+            exit 0
+          }
+
+          $latest = $entry.'latest-sdk'
+          Write-Host "Pinned SDK: $pinned  Latest on $band : $latest"
+
+          if (-not ([System.Version]::Parse($latest) -gt [System.Version]::Parse($pinned))) {
+            Write-Host "Pinned SDK is current."
+            exit 0
+          }
+
+          $channel = Invoke-RestMethod $entry.'releases.json'
+          $notes = @($channel.releases | Where-Object { $_.sdks.version -contains $latest } | Select-Object -First 1).'release-notes'
+
+          Write-Host "A newer .NET SDK is available on the pinned channel: $latest (pinned: $pinned)."
+          if ($notes) { Write-Host "Release notes: $notes" }
+          Write-Host ""
+          Write-Host "Update global.json, then confirm the SDK is installed on the CI images and self-hosted runners."
+          exit 1
+
   # The server suite is the long pole and the only project that builds the server, so it owns the OpenAPI
   # freshness gate and runs on its own runner.
   run-linux-server-tests:

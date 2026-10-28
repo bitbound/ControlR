@@ -50,6 +50,7 @@
     <Project Path="Tests/ControlR.Libraries.Ipc.Tests/ControlR.Libraries.Ipc.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.SecureStorage.Tests/ControlR.Libraries.SecureStorage.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.Shared.Tests/ControlR.Libraries.Shared.Tests.csproj" />
+    <Project Path="Tests/ControlR.Libraries.Signalr.Client.Tests/ControlR.Libraries.Signalr.Client.Tests.csproj" />
     <Project Path="Tests/ControlR.Libraries.WebSocketRelay.Tests/ControlR.Libraries.WebSocketRelay.Tests.csproj" />
     <Project Path="Tests/ControlR.Viewer.Avalonia.Tests/ControlR.Viewer.Avalonia.Tests.csproj" />
     <Project Path="Tests/ControlR.Web.Server.Tests/ControlR.Web.Server.Tests.csproj" />

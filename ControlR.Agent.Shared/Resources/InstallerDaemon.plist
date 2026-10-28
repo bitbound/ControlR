@@ -15,5 +15,10 @@
         <string>--instance-id</string>
         <string>{{INSTANCE_ID}}</string>
     </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>TMPDIR</key>
+        <string>/var/tmp</string>
+    </dict>
 </dict>
 </plist>

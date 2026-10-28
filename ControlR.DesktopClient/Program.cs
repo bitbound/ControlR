@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Startup;
 using ControlR.DesktopClient.Services;
 using ControlR.Libraries.Branding;
+using ControlR.Libraries.Serilog;
 using Serilog;
 
 namespace ControlR.DesktopClient;
@@ -95,6 +96,8 @@ internal sealed class Program
   /// </summary>
   private static void UseBootstrapLogger()
   {
+    SerilogHostExtensions.EnsureUnixTempDirForSharedSinks();
+
     Log.Logger = new LoggerConfiguration()
       .WriteTo.File(
         Path.Combine(Path.GetTempPath(), BrandingConstants.BrandKey, "Bootstrap.log"),

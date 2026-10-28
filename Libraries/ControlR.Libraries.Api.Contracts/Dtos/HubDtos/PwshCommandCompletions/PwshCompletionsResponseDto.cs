@@ -1,5 +1,6 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.HubDtos.PwshCommandCompletions;
 
+[MessagePackObject(keyAsPropertyName: true)]
 public record PwshCompletionsResponseDto(
     int ReplacementIndex,
     int ReplacementLength,

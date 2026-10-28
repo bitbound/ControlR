@@ -28,7 +28,7 @@ public interface IXdgDesktopPortal : IDisposable
   Task NotifyPointerMotionAbsolute(string sessionHandle, uint stream, double x, double y);
   Task<bool> ProbeRestoreToken(CancellationToken cancellationToken = default);
   Task<bool> RequestRemoteDesktopPermission(bool bypassRestoreToken = false, CancellationToken cancellationToken = default);
-  Task SetClipboardText(string text, CancellationToken cancellationToken);
+  Task<Result> SetClipboardText(string text, CancellationToken cancellationToken);
 }
 
 public sealed class XdgDesktopPortal(
@@ -354,7 +354,7 @@ public sealed class XdgDesktopPortal(
     }
   }
 
-  public async Task SetClipboardText(string text, CancellationToken cancellationToken)
+  public async Task<Result> SetClipboardText(string text, CancellationToken cancellationToken)
   {
     var previousClipboardText = _ownedClipboardText;
     var previousSessionOwnsClipboard = _sessionOwnsClipboard;
@@ -370,7 +370,7 @@ public sealed class XdgDesktopPortal(
           _clipboardEnabled,
           _sessionHandle is not null);
 
-        return;
+        return Result.Fail("The compositor did not grant clipboard access to this session.");
       }
 
       _ownedClipboardText = text;
@@ -404,6 +404,7 @@ public sealed class XdgDesktopPortal(
       }
 
       _logger.LogError(ex, "Error setting clipboard text via portal");
+      return Result.Fail(ex);
     }
     catch (Exception ex)
     {
@@ -414,7 +415,10 @@ public sealed class XdgDesktopPortal(
       }
 
       _logger.LogError(ex, "Error setting clipboard text via portal");
+      return Result.Fail(ex);
     }
+
+    return Result.Ok();
   }
 
   private async Task CompleteSelectionTransfer(ObjectPath sessionHandle, uint serial, bool success)
