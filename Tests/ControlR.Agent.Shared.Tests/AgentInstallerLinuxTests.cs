@@ -264,13 +264,93 @@ public class AgentInstallerLinuxTests
     };
   }
 
+  [Fact]
+  public async Task StopPreviousBrandDesktopClients_WhenTheUnitStopFails_DoesNotKillAnything()
+  {
+    var steps = new List<string>();
+    var serviceControl = new Mock<IServiceControl>();
+    serviceControl
+      .Setup(x => x.StopPreviousBrandDesktopClientService("Acme Remote", "exp", true))
+      .ThrowsAsync(new InvalidOperationException("systemctl --user stop exited with code 1."));
+
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Callback(() => steps.Add("kill"))
+      .Returns([]);
+
+    var sut = CreateSut(
+      Mock.Of<IFileSystem>(),
+      Mock.Of<IProcessManager>(),
+      Mock.Of<ISystemEnvironment>(),
+      CreatePathProvider().Object,
+      CreateElevatedChecker().Object,
+      processLocator.Object,
+      serviceControl.Object);
+
+    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
+
+    // Killing while the unit is still active hands systemd a Restart=on-failure, so an unconfirmed
+    // stop has to stop the whole step, not just be logged.
+    Assert.False(result.IsSuccess);
+    Assert.DoesNotContain("kill", steps);
+  }
+
+  [Fact]
+  public async Task StopPreviousBrandDesktopClients_StopsTheUnitBeforeKilling()
+  {
+    var steps = new List<string>();
+    var serviceControl = new Mock<IServiceControl>();
+    serviceControl
+      .Setup(x => x.StopPreviousBrandDesktopClientService("Acme Remote", "exp", true))
+      .Callback(() => steps.Add("unit-stop"))
+      .Returns(Task.CompletedTask);
+
+    var processLocator = new Mock<ILinuxDesktopClientProcessLocator>();
+    processLocator
+      .Setup(x => x.FindByExecutablePath(It.IsAny<string>()))
+      .Callback(() => steps.Add("kill"))
+      .Returns([]);
+
+    var sut = CreateSut(
+      Mock.Of<IFileSystem>(),
+      Mock.Of<IProcessManager>(),
+      Mock.Of<ISystemEnvironment>(),
+      CreatePathProvider().Object,
+      CreateElevatedChecker().Object,
+      processLocator.Object,
+      serviceControl.Object);
+
+    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
+
+    Assert.True(result.IsSuccess);
+    Assert.Equal(["unit-stop", "kill"], steps);
+  }
+
+  private static Mock<IFileSystemPathProvider> CreatePathProvider()
+  {
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectoryFor("Acme Remote", "exp"))
+      .Returns("/usr/local/bin/Acme_Remote/exp");
+    return pathProvider;
+  }
+
+  private static Mock<IElevationChecker> CreateElevatedChecker()
+  {
+    var elevationChecker = new Mock<IElevationChecker>();
+    elevationChecker.Setup(x => x.IsElevated()).Returns(true);
+    return elevationChecker;
+  }
+
   private static AgentInstallerLinux CreateSut(
     IFileSystem fileSystem,
     IProcessManager processManager,
     ISystemEnvironment systemEnvironment,
     IFileSystemPathProvider pathProvider,
     IElevationChecker elevationChecker,
-    ILinuxDesktopClientProcessLocator? processLocator = null)
+    ILinuxDesktopClientProcessLocator? processLocator = null,
+    IServiceControl? serviceControl = null)
   {
     if (processLocator is null)
     {
@@ -292,7 +372,7 @@ public class AgentInstallerLinuxTests
       Mock.Of<IRetryer>(),
       Mock.Of<IOptionsAccessor>(),
       elevationChecker,
-      Mock.Of<IServiceControl>(),
+      serviceControl ?? Mock.Of<IServiceControl>(),
       Mock.Of<IEmbeddedResourceAccessor>(),
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions()),

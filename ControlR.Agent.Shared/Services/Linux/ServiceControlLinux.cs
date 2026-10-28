@@ -254,9 +254,17 @@ internal class ServiceControlLinux(
             _logger.LogInformation("Stopping desktop client service for user {UID}: {ServiceName}", uid, serviceName);
 
             // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
-            await _processManager.StartAndWaitForExit("sudo",
+            var exitCode = await _processManager.StartAndWaitForExit("sudo",
                 $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user stop {serviceName}",
                 false, _serviceStatusTimeout);
+
+            // The overload returns the exit code rather than throwing on it. Check it, because a
+            // caller that goes on to kill the client's processes treats a stopped unit as a
+            // precondition: with the unit still active, a SIGKILL is just a Restart=on-failure.
+            if (exitCode != 0)
+            {
+                throw new InvalidOperationException($"systemctl --user stop {serviceName} for user {uid} exited with code {exitCode}.");
+            }
 
             _logger.LogInformation("Desktop client service stopped for user {UID}.", uid);
         }

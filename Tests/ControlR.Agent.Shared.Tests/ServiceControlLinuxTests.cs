@@ -82,6 +82,41 @@ public class ServiceControlLinuxTests
       Times.Once);
   }
 
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task StopDesktopClientService_WhenAUserUnitStopFails_ReportsItOnlyToCallersThatAsked(bool throwOnFailure)
+  {
+    var processManager = new Mock<IProcessManager>();
+    processManager
+      .Setup(x => x.StartAndWaitForExit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()))
+      .ReturnsAsync(1);
+
+    var loggedInUsers = new Mock<ILoggedInUserProvider>();
+    loggedInUsers
+      .Setup(x => x.GetLoggedInUsers())
+      .ReturnsAsync([new LoggedInUserSession("1000", "x11", IsActive: false)]);
+
+    var sut = new ServiceControlLinux(
+      processManager.Object,
+      Mock.Of<IHeadlessServerDetector>(),
+      loggedInUsers.Object,
+      Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = "exp" }),
+      NullLogger<ServiceControlLinux>.Instance);
+
+    // The installer kills client processes after stopping their unit, and a SIGKILL against a unit
+    // still active is just a Restart=on-failure. The kill's caller has to be able to learn that the
+    // stop never landed, which starts with a nonzero systemctl exit not reading as success.
+    if (throwOnFailure)
+    {
+      await Assert.ThrowsAsync<InvalidOperationException>(() => sut.StopDesktopClientService(throwOnFailure: true));
+    }
+    else
+    {
+      await sut.StopDesktopClientService(throwOnFailure: false);
+    }
+  }
+
   private static ServiceControlLinux CreateSut(int startExitCode, int isActiveExitCode)
   {
     var processManager = new Mock<IProcessManager>();

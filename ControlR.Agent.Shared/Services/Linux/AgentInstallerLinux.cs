@@ -152,17 +152,14 @@ internal class AgentInstallerLinux(
       // another install's.
       if (!string.IsNullOrWhiteSpace(request.PreviousBrandName))
       {
-        // The unit that supervises the replaced install's user-session clients is named for that
-        // install's brand, so the current-brand stop at the top of the install never reaches it. The
-        // unit restarts on failure and a SIGKILL is a failure, so the unit has to be stopped first
-        // or systemd just relaunches what this kills.
-        await _serviceControl.StopPreviousBrandDesktopClientService(
+        var stopPreviousDesktopResult = await StopPreviousBrandDesktopClients(
           request.PreviousBrandName,
-          request.PreviousInstanceId,
-          throwOnFailure: false);
+          request.PreviousInstanceId);
 
-        StopDesktopClientProcesses(
-          GetPreviousBrandDesktopClientPath(request.PreviousBrandName, request.PreviousInstanceId));
+        if (!stopPreviousDesktopResult.IsSuccess)
+        {
+          return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} desktop client service being replaced.");
+        }
       }
 
       _logger.LogInformation("Starting agent service.");
@@ -346,6 +343,32 @@ internal class AgentInstallerLinux(
       .Replace("ControlR.DesktopClient", BrandingConstants.DesktopClientBaseName);
 
     return template;
+  }
+
+  /// <summary>
+  /// Stops the replaced install's desktop client unit, then kills its client processes. The kill has
+  /// to follow a confirmed unit stop: the unit uses Restart=on-failure and a SIGKILL is a failure, so
+  /// a unit left active relaunches exactly what the kill just took down. A failed unit stop therefore
+  /// aborts before any kill, and the caller treats it like the replaced agent failing to stop.
+  /// </summary>
+  internal async Task<Result> StopPreviousBrandDesktopClients(string previousBrandName, string? previousInstanceId)
+  {
+    try
+    {
+      await _serviceControl.StopPreviousBrandDesktopClientService(
+        previousBrandName,
+        previousInstanceId,
+        throwOnFailure: true);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to stop the {BrandName} desktop client service being replaced.", previousBrandName);
+      return Result.Fail($"Failed to stop the {previousBrandName} desktop client service being replaced.");
+    }
+
+    StopDesktopClientProcesses(GetPreviousBrandDesktopClientPath(previousBrandName, previousInstanceId));
+
+    return Result.Ok();
   }
 
   internal string GetPreviousBrandDesktopClientPath(string previousBrandName, string? previousInstanceId)
