@@ -345,6 +345,17 @@ internal class AgentInstallerLinux(
     return template;
   }
 
+  internal string GetPreviousBrandDesktopClientPath(string previousBrandName, string? previousInstanceId)
+  {
+    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, previousInstanceId);
+
+    // The replaced install names its own client for its own brand, which is not this build's name
+    // when the migration changed the brand.
+    var desktopClientFileName = new BrandNames(previousBrandName).DesktopClientBaseName;
+
+    return Path.Combine(installDirectory, DesktopClientDirectoryName, desktopClientFileName);
+  }
+
   /// <summary>
   /// Stops the replaced install's desktop client unit, then kills its client processes. The kill has
   /// to follow a confirmed unit stop: the unit uses Restart=on-failure and a SIGKILL is a failure, so
@@ -369,17 +380,6 @@ internal class AgentInstallerLinux(
     StopDesktopClientProcesses(GetPreviousBrandDesktopClientPath(previousBrandName, previousInstanceId));
 
     return Result.Ok();
-  }
-
-  internal string GetPreviousBrandDesktopClientPath(string previousBrandName, string? previousInstanceId)
-  {
-    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, previousInstanceId);
-
-    // The replaced install names its own client for its own brand, which is not this build's name
-    // when the migration changed the brand.
-    var desktopClientFileName = new BrandNames(previousBrandName).DesktopClientBaseName;
-
-    return Path.Combine(installDirectory, DesktopClientDirectoryName, desktopClientFileName);
   }
 
   private async Task<string> GetAgentServiceFile()
