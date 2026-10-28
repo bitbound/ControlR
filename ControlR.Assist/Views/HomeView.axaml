@@ -26,7 +26,7 @@
     <!-- Server URL entry -->
     <StackPanel Spacing="8"
                 IsVisible="{Binding ShowUrlEntry}">
-      <TextBox Watermark="{x:Static local:Localization.ServerUrlWatermark}"
+      <TextBox PlaceholderText="{x:Static local:Localization.ServerUrlWatermark}"
                Text="{Binding ServerUrl}" />
       <Button HorizontalAlignment="Center"
               MinWidth="140"
