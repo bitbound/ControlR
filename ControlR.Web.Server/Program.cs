@@ -122,6 +122,7 @@ app
   .WithTags("Account");
 
 app.MapHub<ViewerHub>(AppConstants.ViewerHubPath);
+app.MapHub<AssistHub>(AppConstants.AssistHubPath);
 
 if (appOptions.UseInMemoryDatabase)
 {
