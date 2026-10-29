@@ -84,6 +84,10 @@ public class AgentMaintenanceServiceTests
 
     var updater = fixture.CreateMaintenanceService();
 
+    // CheckForUpdate builds the download path from Path.GetTempPath() at its start. Read the expected
+    // value at the same point so a re-read after the run cannot disagree with it.
+    var expectedInstallerPath = Path.Combine(Path.GetTempPath(), "ControlR_Update", "instance-1", "ControlR.Agent.Installer");
+
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
     fixture.ProcessManager.Verify(
@@ -93,7 +97,6 @@ public class AgentMaintenanceServiceTests
     Assert.Equal("sudo", launchctlStartInfos[0].FileName);
     Assert.Equal("launchctl bootout system/app.controlr.agent.installer.instance-1", string.Join(" ", launchctlStartInfos[0].ArgumentList));
     Assert.Equal("sudo", launchctlStartInfos[1].FileName);
-    var expectedInstallerPath = Path.Combine(Path.GetTempPath(), "ControlR_Update", "instance-1", "ControlR.Agent.Installer");
     Assert.Equal(expectedInstallerPath, downloadedInstallerPath);
     var expectedPlistPath = "/Library/LaunchDaemons/app.controlr.agent.installer.instance-1.plist";
     Assert.Equal(
