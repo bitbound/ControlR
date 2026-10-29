@@ -1,3 +1,5 @@
+using ControlR.Libraries.Branding;
+
 namespace ControlR.Assist.ViewModels;
 
 public sealed partial class MainWindowViewModel : ViewModelBase
@@ -9,4 +11,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
   {
     _currentViewModel = homeViewModel;
   }
+
+  public string WindowTitle => $"{BrandingConstants.BrandName}  |  {Localization.AssistWindowTitle}";
 }

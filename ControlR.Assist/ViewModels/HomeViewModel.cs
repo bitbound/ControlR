@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using ControlR.Assist.Services;
+using ControlR.Libraries.Branding;
 using CommunityToolkit.Mvvm.Input;
 
 namespace ControlR.Assist.ViewModels;
@@ -29,13 +30,19 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   [ObservableProperty]
   private string? _statusMessage;
 
+  [ObservableProperty]
+  private bool _urlConfirmed;
+
   public HomeViewModel(AssistSessionController controller, IAssistSettingsService settingsService)
   {
     _controller = controller;
-    _serverUrl = settingsService.GetSettings().ServerUrl;
+    _serverUrl = BrandingConstants.ControlrServerUrl?.ToString() ?? settingsService.GetSettings().ServerUrl;
+    _urlConfirmed = BrandingConstants.ControlrServerUrl is not null;
     _controller.StateChanged += HandleStateChanged;
     RefreshFromController();
   }
+
+  public bool CanEditServerUrl => BrandingConstants.ControlrServerUrl is null;
 
   public string ConsentPromptText =>
     string.Format(Localization.ConsentPromptFormat, ConsentViewerName ?? Localization.UnknownViewerLabel);
@@ -47,7 +54,13 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     State is AssistSessionState.Ready
       or AssistSessionState.PendingConsent
       or AssistSessionState.Active;
-  public bool ShowUrlEntry => State == AssistSessionState.Disconnected;
+  public bool ShowConnectAction => State == AssistSessionState.Disconnected && (UrlConfirmed || !CanEditServerUrl);
+  public bool ShowIdleStatus =>
+    State is not (AssistSessionState.Disconnected or AssistSessionState.Connecting)
+      && !string.IsNullOrWhiteSpace(StatusMessage);
+  public bool ShowStatusAlert => State == AssistSessionState.Disconnected && !string.IsNullOrWhiteSpace(StatusMessage);
+  public bool ShowTrustNotice => State == AssistSessionState.Disconnected;
+  public bool ShowUrlEntry => ShowTrustNotice && CanEditServerUrl && !UrlConfirmed;
 
   public void Dispose() => _controller.StateChanged -= HandleStateChanged;
 
@@ -60,7 +73,16 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   private Task AcceptConsentAsync() => _controller.RespondToConsentAsync(approved: true);
 
   [RelayCommand]
-  private Task ConnectAsync() => _controller.ConnectAsync(ServerUrl ?? string.Empty, CancellationToken.None);
+  private void ChangeServer()
+  {
+    UrlConfirmed = false;
+  }
+
+  [RelayCommand]
+  private Task ConnectAsync() =>
+    _controller.ConnectAsync(
+      BrandingConstants.ControlrServerUrl?.ToString() ?? ServerUrl ?? string.Empty,
+      CancellationToken.None);
 
   [RelayCommand]
   private Task DeclineConsentAsync() => _controller.RespondToConsentAsync(approved: false);
@@ -77,6 +99,27 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   private void HandleStateChanged() =>
     Dispatcher.UIThread.Post(RefreshFromController, DispatcherPriority.Normal);
 
+  [RelayCommand]
+  private void Next()
+  {
+    if (!AssistSessionController.TryNormalizeServerUri(ServerUrl, out _))
+    {
+      StatusMessage = Localization.StatusInvalidUrl;
+      return;
+    }
+
+    StatusMessage = null;
+    UrlConfirmed = true;
+  }
+
+  partial void OnUrlConfirmedChanged(bool value) => RaiseFlowPropertyChanges();
+
+  private void RaiseFlowPropertyChanges()
+  {
+    OnPropertyChanged(nameof(ShowUrlEntry));
+    OnPropertyChanged(nameof(ShowConnectAction));
+  }
+
   private void RefreshFromController()
   {
     State = _controller.State;
@@ -91,7 +134,10 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     OnPropertyChanged(nameof(IsConnectedToServer));
     OnPropertyChanged(nameof(IsSessionActive));
     OnPropertyChanged(nameof(ShowCode));
-    OnPropertyChanged(nameof(ShowUrlEntry));
+    OnPropertyChanged(nameof(ShowIdleStatus));
+    OnPropertyChanged(nameof(ShowStatusAlert));
+    OnPropertyChanged(nameof(ShowTrustNotice));
+    RaiseFlowPropertyChanges();
     OnPropertyChanged(nameof(ConsentPromptText));
   }
 

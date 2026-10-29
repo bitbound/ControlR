@@ -3,6 +3,7 @@
 public static class ClientRoutes
 {
   public const string About = "/about";
+  public const string AssistViewer = "/assist-viewer";
   public const string AuthorizationLogs = "/authorization-logs";
   public const string Customers = "/customers";
   public const string Deploy = "/deploy";
@@ -25,7 +26,6 @@ public static class ClientRoutes
   public const string PasswordChangeRequired = "/password-change-required";
   public const string Permissions = "/permissions";
   public const string PersonalAccessTokens = "/personal-access-tokens";
-  public const string QuickSupport = "/quick-support";
   public const string ServerAuthorizationLogs = "/server-authorization-logs";
   public const string ServerLogs = "/server-logs";
   public const string ServerServiceAccounts = "/server-service-accounts";

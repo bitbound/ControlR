@@ -10,9 +10,9 @@
        x:Class="ControlR.Assist.Views.MainWindow"
        x:DataType="vm:MainWindowViewModel"
        Icon="/Assets/appicon.ico"
-       Title="{x:Static brand:BrandingConstants.BrandName}"
+       Title="{Binding WindowTitle}"
        Width="420"
-       Height="520">
+       Height="560">
 
   <ContentControl Content="{Binding CurrentViewModel}" />
 

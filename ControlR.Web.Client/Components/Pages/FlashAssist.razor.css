@@ -1,0 +1,19 @@
+.assist-viewer-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+}
+
+/* MudMainContent doesn't give children a resolved height, and RemoteDisplay's
+   canvas sizing depends on the container chain having one. */
+.assist-connected-container {
+  height: calc(100vh - 6rem);
+}
+
+.assist-card {
+  max-width: 440px;
+  width: 100%;
+  border-radius: 16px;
+}

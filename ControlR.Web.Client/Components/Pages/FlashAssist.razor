@@ -1,0 +1,84 @@
+@inherits ComponentBase
+@attribute [Route(ClientRoutes.AssistViewer)]
+@attribute [Authorize]
+<PageTitle>Flash Assist</PageTitle>
+
+<div class="@(CurrentState == AssistPageState.Connected ? "assist-connected-container" : "assist-viewer-container")">
+
+  @if (CurrentState != AssistPageState.Connected)
+  {
+    <MudPaper Elevation="2" Class="assist-card pa-8">
+      <MudStack Spacing="5" AlignItems="AlignItems.Center">
+        <MudIcon Icon="@Icons.Material.Filled.SupportAgent" Color="Color.Primary"
+                 Style="font-size: 56px;" Class="mb-2" />
+        <MudText Typo="Typo.h5" Align="Align.Center">Flash Assist</MudText>
+
+        @switch (CurrentState)
+        {
+          case AssistPageState.Connecting:
+            {
+              <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                Connecting&hellip;
+              </MudText>
+              <MudProgressCircular Indeterminate Size="Size.Medium" />
+              break;
+            }
+          case AssistPageState.WaitingForConsent:
+            {
+              <MudProgressCircular Indeterminate Size="Size.Medium" />
+              <MudText Typo="Typo.body1" Align="Align.Center">
+                Waiting for @_remoteDisplayName to accept the connection
+              </MudText>
+              <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="HandleCancelClicked">
+                Cancel
+              </MudButton>
+              break;
+            }
+          case AssistPageState.CodeEntry:
+          default:
+            {
+              <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                Enter the access code shown on the customer's screen to request remote control
+                of their device.
+              </MudText>
+
+              @if (!string.IsNullOrWhiteSpace(_statusMessage))
+              {
+                <MudAlert Severity="_statusSeverity" Class="w-100">
+                  @(_statusMessage)
+                </MudAlert>
+              }
+
+              <MudTextField @bind-Value="_accessCode"
+                            Label="Access Code"
+                            Placeholder="9-digit code"
+                            Adornment="Adornment.Start"
+                            AdornmentIcon="@Icons.Material.Filled.Pin"
+                            Immediate="true"
+                            MaxLength="9"
+                            Class="mt-2 w-100"
+                            OnKeyDown="HandleCodeKeyDown" />
+
+              <MudButton Variant="Variant.Filled"
+                         Color="Color.Primary"
+                         FullWidth="true"
+                         Size="Size.Large"
+                         Disabled="_isJoining || _accessCode?.Length != 9"
+                         OnClick="HandleConnectClicked">
+                @if (_isJoining)
+                {
+                  <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                }
+                Connect
+              </MudButton>
+              break;
+            }
+        }
+      </MudStack>
+    </MudPaper>
+  }
+
+  <RemoteDisplay OnDisconnectRequested="HandleDisconnectRequested"
+                 OnFatalError="HandleFatalStreamingError"
+                 IsVisible="@(CurrentState == AssistPageState.Connected)" />
+</div>

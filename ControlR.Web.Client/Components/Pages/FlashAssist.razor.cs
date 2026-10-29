@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 namespace ControlR.Web.Client.Components.Pages;
 
 // ReSharper disable once ClassNeverInstantiated.Global
-public partial class QuickSupport : ComponentBase, IAsyncDisposable
+public partial class FlashAssist : ComponentBase, IAsyncDisposable
 {
   private readonly uint _commandTimeoutSeconds = 30;
   private readonly CancellationTokenSource _pageCts = new();
@@ -13,6 +13,7 @@ public partial class QuickSupport : ComponentBase, IAsyncDisposable
   private Guid? _linkedSessionId;
   private IDisposable? _messengerRegistration;
   private string? _remoteDisplayName;
+  private bool _sessionEndedHandled;
   private AssistPageState _state = AssistPageState.CodeEntry;
   private string? _statusMessage;
   private Severity _statusSeverity = Severity.Info;
@@ -24,7 +25,7 @@ public partial class QuickSupport : ComponentBase, IAsyncDisposable
   public required IHubConnector HubConnector { get; init; }
 
   [Inject]
-  public required ILogger<QuickSupport> Logger { get; init; }
+  public required ILogger<FlashAssist> Logger { get; init; }
 
   [Inject]
   public required IMessenger Messenger { get; init; }
@@ -97,7 +98,6 @@ public partial class QuickSupport : ComponentBase, IAsyncDisposable
       }
 
       RemoteControlState.CurrentSession = null;
-      _linkedSessionId = null;
     }
 
     await RemoteControlStream.Close();
@@ -137,6 +137,15 @@ public partial class QuickSupport : ComponentBase, IAsyncDisposable
       return;
     }
 
+    // The relay also reports a closed connection when the session is torn down. Whichever
+    // arrives first processes; the hub-provided reason wins over the generic disconnect message.
+    if (_sessionEndedHandled)
+    {
+      return;
+    }
+
+    _sessionEndedHandled = true;
+
     await CleanupSession(sendCloseStreamingSession: false, endHubSession: false);
 
     await InvokeAsync(() =>
@@ -174,12 +183,13 @@ public partial class QuickSupport : ComponentBase, IAsyncDisposable
     var code = new string((_accessCode ?? string.Empty).Where(char.IsDigit).ToArray());
     if (code.Length != 9)
     {
-      _statusMessage = "Enter the 9-digit access code from the assist app.";
+      _statusMessage = "Enter the 9-digit access code shown on the customer's screen.";
       _statusSeverity = Severity.Warning;
       return;
     }
 
     _isJoining = true;
+    _sessionEndedHandled = false;
     _statusMessage = null;
 
     try
@@ -214,6 +224,11 @@ public partial class QuickSupport : ComponentBase, IAsyncDisposable
   private async Task HandleConnectionLost()
   {
     await CleanupSession(sendCloseStreamingSession: false, endHubSession: true);
+
+    if (_sessionEndedHandled)
+    {
+      return;
+    }
 
     await InvokeAsync(() =>
     {
