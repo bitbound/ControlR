@@ -135,6 +135,25 @@
       "console": "internalConsole"
     },
     {
+      "name": "Assist (Debug)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/ControlR.Assist/bin/Debug/net10.0/ControlR.Assist.dll",
+      "args": [],
+      "osx": {
+        "program": "${workspaceFolder}/ControlR.Assist/bin/Debug/net10.0-macos/ControlR.Assist.dll"
+      },
+      "linux": {
+        "program": "${workspaceFolder}/ControlR.Assist/bin/Debug/net10.0/ControlR.Assist.dll"
+      },
+      "windows": {
+        "program": "${workspaceFolder}/ControlR.Assist/bin/Debug/net10.0-windows8.0/ControlR.Assist.dll"
+      },
+      "cwd": "${workspaceFolder}/ControlR.Assist",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
       "name": "DesktopClient (Hot Reload)",
       "type": "coreclr",
       "request": "launch",
@@ -325,6 +344,22 @@
         "hidden": false,
         "group": "Compounds",
         "order": 4
+      }
+    },
+    {
+      "name": "Assist Full Stack (Debug)",
+      "preLaunchTask": "build + compose",
+      "configurations": [
+        "Server (Debug)",
+        "Agent (Debug)",
+        "DesktopClient (Debug)",
+        "Assist (Debug)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "Compounds",
+        "order": 7
       }
     },
     {
