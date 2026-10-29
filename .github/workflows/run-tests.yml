@@ -214,6 +214,10 @@ jobs:
       - name: Build Tests
         run: |
           $excludedProjects = @(
+            # ControlR.Assist has never compiled on Linux (CA1416: shared code calls the
+            # linux-attributed AddRemoteControlPlatformServices). Needs the per-platform
+            # registration split like DesktopClient's IRemoteControlHostBuilderFactory.
+            "ControlR.Assist.Tests.csproj",
             "ControlR.DesktopClient.Tests.csproj",
             "ControlR.DesktopClient.Mac.Tests.csproj",
             "ControlR.DesktopClient.Windows.Tests.csproj",
@@ -240,6 +244,8 @@ jobs:
       - name: Run Tests
         run: |
           $excludedProjects = @(
+            # Excluded for the same reason as in Build Tests above.
+            "ControlR.Assist.Tests.csproj",
             "ControlR.DesktopClient.Tests.csproj",
             "ControlR.DesktopClient.Mac.Tests.csproj",
             "ControlR.DesktopClient.Windows.Tests.csproj",
