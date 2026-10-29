@@ -24,9 +24,11 @@
         <StackPanel Grid.Column="1"
                     Spacing="2"
                     VerticalAlignment="Center">
-          <TextBlock Classes="h1 Primary"
+          <TextBlock Classes="Primary"
+                     FontSize="36"
+                     FontWeight="Bold"
                      Text="{x:Static brand:BrandingConstants.BrandName}" />
-          <TextBlock Classes="Small Secondary"
+          <TextBlock Classes="Secondary"
                      TextWrapping="Wrap"
                      Text="{x:Static local:Localization.HomeTagline}" />
         </StackPanel>
@@ -74,7 +76,11 @@
             <TextBox Text="{Binding ServerUrl}"
                      MinHeight="36"
                      VerticalContentAlignment="Center"
-                     PlaceholderText="{x:Static local:Localization.ServerUrlWatermark}" />
+                     PlaceholderText="{x:Static local:Localization.ServerUrlWatermark}">
+              <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding NextCommand}" />
+              </TextBox.KeyBindings>
+            </TextBox>
             <controls:ThemeButton Content="{x:Static local:Localization.NextButtonText}"
                                   MinHeight="36"
                                   HorizontalAlignment="Stretch"

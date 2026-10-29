@@ -46,6 +46,7 @@ public static class Localization
   public static string ConfirmDisconnectMessage => GetString();
   public static string ConfirmEndSessionMessage => GetString();
   public static string ConnectButtonText => GetString();
+  public static string ConnectionTimedOut => GetString();
   public static string ConnectToLabel => GetString();
   public static string ConsentPromptFormat => GetString();
   public static string CopyCodeTooltip => GetString();
@@ -67,6 +68,7 @@ public static class Localization
   public static string StatusConnectionLost => GetString();
   public static string StatusConsentResponseFailed => GetString();
   public static string StatusConsentTimedOut => GetString();
+  public static string StatusFailedToConnect => GetString();
   public static string StatusInvalidUrl => GetString();
   public static string StatusReconnected => GetString();
   public static string StatusSessionCreateFailed => GetString();

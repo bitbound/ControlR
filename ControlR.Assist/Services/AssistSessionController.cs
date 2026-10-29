@@ -530,6 +530,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     }
 
     State = state;
+    RaiseStateChanged();
   }
 
   private async Task StartSessionHostAsync(AssistSessionRequest request)

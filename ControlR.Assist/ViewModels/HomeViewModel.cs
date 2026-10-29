@@ -2,6 +2,7 @@ using Avalonia.Threading;
 using ControlR.Assist.Services;
 using ControlR.Libraries.Branding;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 
 namespace ControlR.Assist.ViewModels;
 
@@ -10,52 +11,24 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   private const int NewCodeCooldownSeconds = 15;
 
   private readonly AssistSessionController _controller;
+  private readonly ILogger<HomeViewModel> _logger;
   private readonly INavigationService _navigationService;
-
   private string? _activeViewerEmail;
   private string? _activeViewerName;
-
-  [ObservableProperty]
-  private string? _code;
-
-  [ObservableProperty]
-  private string? _consentEmail;
-
-  [ObservableProperty]
-  private string? _consentViewerName;
-
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(NewCodeText))]
-  private int _cooldownSeconds;
-
-  [ObservableProperty]
-  [NotifyPropertyChangedFor(nameof(NewCodeText))]
-  private bool _isNewCodeEnabled = true;
-
-  [ObservableProperty]
-  private bool _isViewOnly;
-
   private string? _pendingViewerEmail;
   private string? _pendingViewerName;
 
-  [ObservableProperty]
-  private string? _serverUrl;
-
-  [ObservableProperty]
-  private AssistSessionState _state = AssistSessionState.Disconnected;
-
-  [ObservableProperty]
-  private string? _statusMessage;
-
-  [ObservableProperty]
-  private bool _urlConfirmed;
-
-  public HomeViewModel(AssistSessionController controller, IAssistSettingsService settingsService, INavigationService navigationService)
+  public HomeViewModel(
+    AssistSessionController controller,
+    IAssistSettingsService settingsService,
+    INavigationService navigationService,
+    ILogger<HomeViewModel> logger)
   {
     _controller = controller;
     _navigationService = navigationService;
-    _serverUrl = BrandingConstants.ControlrServerUrl?.ToString() ?? settingsService.GetSettings().ServerUrl;
-    _urlConfirmed = BrandingConstants.ControlrServerUrl is not null;
+    _logger = logger;
+    ServerUrl = BrandingConstants.ControlrServerUrl?.ToString() ?? settingsService.GetSettings().ServerUrl;
+    UrlConfirmed = BrandingConstants.ControlrServerUrl is not null;
     _controller.StateChanged += HandleStateChanged;
     RefreshFromController();
   }
@@ -64,13 +37,31 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   public string? ActiveViewerName => _activeViewerName;
   public bool CanEditServerUrl => BrandingConstants.ControlrServerUrl is null;
 
+  [ObservableProperty]
+  public partial string? Code { get; set; }
+
+  [ObservableProperty]
+  public partial string? ConsentEmail { get; set; }
   public string ConsentPromptText =>
     string.Format(Localization.ConsentPromptFormat, ConsentViewerName ?? Localization.UnknownViewerLabel);
+
+  [ObservableProperty]
+  public partial string? ConsentViewerName { get; set; }
+
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(NewCodeText))]
+  public partial int CooldownSeconds { get; set; }
   public bool IsBusy => State == AssistSessionState.Connecting;
   public bool IsConnectedToServer => State != AssistSessionState.Disconnected;
   public bool IsConsentPending => State == AssistSessionState.PendingConsent;
+
+  [ObservableProperty]
+  [NotifyPropertyChangedFor(nameof(NewCodeText))]
+  public partial bool IsNewCodeEnabled { get; set; } = true;
   public bool IsSessionActive => State == AssistSessionState.Active;
 
+  [ObservableProperty]
+  public partial bool IsViewOnly { get; set; }
   public string NewCodeText =>
     IsNewCodeEnabled
       ? Localization.NewCodeButtonText
@@ -82,6 +73,8 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   /// </summary>
   public Func<string, Task<bool>>? RequestConfirmationAsync { get; set; }
 
+  [ObservableProperty]
+  public partial string? ServerUrl { get; set; }
   public bool ShowCode =>
     State is AssistSessionState.Ready
       or AssistSessionState.PendingConsent
@@ -99,14 +92,25 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   public bool ShowConsentEmail =>
     !string.IsNullOrWhiteSpace(ConsentEmail)
     && !string.Equals(ConsentEmail, ConsentViewerName, StringComparison.OrdinalIgnoreCase);
+
   public bool ShowIdleStatus =>
     State is not (AssistSessionState.Disconnected or AssistSessionState.Connecting)
       && !string.IsNullOrWhiteSpace(StatusMessage)
       && !ShowConnectedStatus;
+
   public bool ShowStatusAlert => State == AssistSessionState.Disconnected && !string.IsNullOrWhiteSpace(StatusMessage);
   public bool ShowStepCard => ShowUrlEntry || ShowConnectAction || IsBusy;
   public bool ShowTrustNotice => State == AssistSessionState.Disconnected;
   public bool ShowUrlEntry => ShowTrustNotice && CanEditServerUrl && !UrlConfirmed;
+
+  [ObservableProperty]
+  public partial AssistSessionState State { get; set; } = AssistSessionState.Disconnected;
+
+  [ObservableProperty]
+  public partial string? StatusMessage { get; set; }
+
+  [ObservableProperty]
+  public partial bool UrlConfirmed { get; set; }
 
   public void Dispose() => _controller.StateChanged -= HandleStateChanged;
 
@@ -128,10 +132,29 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     RequestConfirmationAsync is null || await RequestConfirmationAsync.Invoke(message);
 
   [RelayCommand]
-  private Task ConnectAsync() =>
-    _controller.ConnectAsync(
-      BrandingConstants.ControlrServerUrl?.ToString() ?? ServerUrl ?? string.Empty,
-      CancellationToken.None);
+  private async Task<bool> ConnectAsync()
+  {
+    try
+    {
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+      return await _controller.ConnectAsync(
+        BrandingConstants.ControlrServerUrl?.ToString() ?? ServerUrl ?? string.Empty,
+        cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+      _logger.LogError("Connection attempt timed out.");
+      StatusMessage = Localization.ConnectionTimedOut;
+      return false;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Failed to connect to server.");
+      StatusMessage = Localization.StatusFailedToConnect;
+      return false;
+    }
+  }
 
   [RelayCommand]
   private Task DeclineConsentAsync() => _controller.RespondToConsentAsync(approved: false);

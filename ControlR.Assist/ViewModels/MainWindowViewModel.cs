@@ -6,13 +6,7 @@ namespace ControlR.Assist.ViewModels;
 
 public sealed partial class MainWindowViewModel : ViewModelBase
 {
-  [ObservableProperty]
-  private string? _confirmMessage;
-
   private TaskCompletionSource<bool>? _confirmTaskCompletionSource;
-
-  [ObservableProperty]
-  private ViewModelBase _currentViewModel;
 
   [ObservableProperty]
   private bool _isConfirmOpen;
@@ -20,13 +14,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
   public MainWindowViewModel(HomeViewModel homeViewModel, INavigationService navigationService)
   {
     Home = homeViewModel;
-    _currentViewModel = homeViewModel;
+    CurrentViewModel = homeViewModel;
     navigationService.NavigateRequested += viewModel => CurrentViewModel = viewModel;
     homeViewModel.RequestConfirmationAsync = ShowConfirmAsync;
   }
 
-  public HomeViewModel Home { get; }
+  [ObservableProperty]
+  public partial string? ConfirmMessage { get; set; }
 
+  [ObservableProperty]
+  public partial ViewModelBase CurrentViewModel { get; set; }
+  public HomeViewModel Home { get; }
   public string WindowTitle => $"{BrandingConstants.BrandName}  |  {Localization.AssistWindowTitle}";
 
   [RelayCommand]
