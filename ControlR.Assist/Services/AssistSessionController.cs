@@ -43,6 +43,31 @@ public sealed class AssistSessionController(
   public AssistSessionState State { get; private set; } = AssistSessionState.Disconnected;
   public string? StatusMessage { get; private set; }
 
+  public static bool TryNormalizeServerUri(string? input, out Uri serverUri)
+  {
+    serverUri = null!;
+
+    var candidate = (input ?? string.Empty).Trim();
+    if (candidate.Length == 0)
+    {
+      return false;
+    }
+
+    if (!candidate.Contains("://"))
+    {
+      candidate = $"https://{candidate}";
+    }
+
+    if (!Uri.TryCreate(candidate, UriKind.Absolute, out var parsed) ||
+        (parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps))
+    {
+      return false;
+    }
+
+    serverUri = parsed;
+    return true;
+  }
+
   public async Task<bool> ConnectAsync(string serverUrl, CancellationToken cancellationToken)
   {
     if (!TryNormalizeServerUri(serverUrl, out var serverUri))
@@ -118,6 +143,9 @@ public sealed class AssistSessionController(
         return;
       }
 
+      // End on the server while the relay is still up so the technician reliably receives the
+      // "ended by remote user" notification before the relay drop arrives.
+      await EndCurrentSessionAsync();
       await StopSessionHostAsync();
       SetConsentPending(null, null, null);
       StatusMessage = Localization.StatusSessionEnded;
@@ -144,6 +172,33 @@ public sealed class AssistSessionController(
       SetConsentPending(null, null, null);
       await EndCurrentSessionAsync();
       await CreateSessionAsync(CancellationToken.None);
+    }
+    finally
+    {
+      _stateLock.Release();
+      RaiseStateChanged();
+    }
+  }
+
+  public async Task HandleConnectionLost()
+  {
+    await _stateLock.WaitAsync();
+
+    try
+    {
+      if (State == AssistSessionState.Disconnected)
+      {
+        return;
+      }
+
+      _logger.LogWarning("Assist hub connection lost. Reconnection was not possible.");
+      await StopSessionHostAsync();
+      _activeSessionId = null;
+      Code = null;
+      _connectedServerUri = null;
+      SetConsentPending(null, null, null);
+      StatusMessage = Localization.StatusConnectionLost;
+      SetState(AssistSessionState.Disconnected);
     }
     finally
     {
@@ -282,31 +337,6 @@ public sealed class AssistSessionController(
     gate.IsViewOnly = enabled;
     _logger.LogInformation("Customer {State} view-only mode.", enabled ? "enabled" : "disabled");
     RaiseStateChanged();
-  }
-
-  private static bool TryNormalizeServerUri(string? input, out Uri serverUri)
-  {
-    serverUri = null!;
-
-    var candidate = (input ?? string.Empty).Trim();
-    if (candidate.Length == 0)
-    {
-      return false;
-    }
-
-    if (!candidate.Contains("://"))
-    {
-      candidate = $"https://{candidate}";
-    }
-
-    if (!Uri.TryCreate(candidate, UriKind.Absolute, out var parsed) ||
-        (parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps))
-    {
-      return false;
-    }
-
-    serverUri = parsed;
-    return true;
   }
 
   private async Task<bool> CreateSessionAsync(CancellationToken cancellationToken)
@@ -449,7 +479,13 @@ public sealed class AssistSessionController(
 
   private async Task TransitionAsync(AssistSessionState state, string? statusMessage = null)
   {
-    StatusMessage = statusMessage;
+    // A null status means "keep the message the caller already set", so failure messages written
+    // before transitioning to Disconnected are not wiped out.
+    if (statusMessage is not null)
+    {
+      StatusMessage = statusMessage;
+    }
+
     SetState(state);
     await Task.CompletedTask;
     RaiseStateChanged();

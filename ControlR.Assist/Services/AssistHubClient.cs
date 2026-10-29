@@ -16,6 +16,7 @@ namespace ControlR.Assist.Services;
 public interface IAssistSignalRClient : IAsyncDisposable
 {
   bool IsConnected { get; }
+  Func<Task>? OnConnectionLost { get; set; }
   Func<AssistConsentRequestedDto, Task>? OnConsentRequested { get; set; }
   Func<Task>? OnReconnected { get; set; }
   Func<AssistSessionEndedDto, Task>? OnSessionEnded { get; set; }
@@ -43,7 +44,12 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
 
   private HubConnection? _connection;
 
+  // Set while we tear the connection down ourselves so the Closed handler does not report a
+  // user-initiated disconnect as a lost connection.
+  private bool _suppressConnectionLost;
+
   public bool IsConnected => _connection?.State == HubConnectionState.Connected;
+  public Func<Task>? OnConnectionLost { get; set; }
   public Func<AssistConsentRequestedDto, Task>? OnConsentRequested { get; set; }
   public Func<Task>? OnReconnected { get; set; }
   public Func<AssistSessionEndedDto, Task>? OnSessionEnded { get; set; }
@@ -52,25 +58,32 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
   public async Task<bool> ConnectAsync(Uri serverBaseUri, CancellationToken cancellationToken)
   {
     await DisconnectAsync();
+    _suppressConnectionLost = false;
 
     var hubEndpoint = new Uri(serverBaseUri, AppConstants.AssistHubPath);
 
     // The control plane also accepts JSON, so this stays on the default protocol to avoid the
-    // MessagePack reflection path, which the linker cannot trace.
+    // MessagePack reflection path, which the linker cannot trace. The .NET SignalR client requires
+    // https endpoints (the AllowInsecureProtocol opt-out was removed in .NET 9).
     var connection = new HubConnectionBuilder()
       .WithUrl(hubEndpoint)
       .WithAutomaticReconnect(_reconnectDelays)
       .Build();
 
     connection.Reconnected += _ => InvokeHandler(OnReconnected);
-    connection.Closed += ex =>
+    connection.Closed += async ex =>
     {
+      if (_suppressConnectionLost)
+      {
+        return;
+      }
+
       if (ex is not null)
       {
         _logger.LogWarning(ex, "Assist hub connection closed.");
       }
 
-      return Task.CompletedTask;
+      await InvokeHandler(OnConnectionLost);
     };
 
     connection.On(
@@ -109,6 +122,7 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
     var connection = Interlocked.Exchange(ref _connection, null);
     if (connection is not null)
     {
+      _suppressConnectionLost = true;
       await DisposeConnection(connection);
     }
   }
@@ -171,7 +185,14 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
 
     try
     {
-      return await connection.InvokeAsync<TResult>(methodName, args, cancellationToken);
+      // Dispatch by arity. .NET 9 added InvokeAsync(string, object?, CancellationToken)
+      // overloads that would otherwise capture an object?[] as a single argument.
+      return args.Length switch
+      {
+        0 => await connection.InvokeAsync<TResult>(methodName, cancellationToken),
+        1 => await connection.InvokeAsync<TResult>(methodName, args[0], cancellationToken),
+        _ => await connection.InvokeAsync<TResult>(methodName, args[0], args[1], cancellationToken),
+      };
     }
     catch (Exception ex)
     {

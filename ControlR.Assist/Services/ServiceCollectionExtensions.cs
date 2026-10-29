@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
 
       var hubClient = provider.GetRequiredService<IAssistSignalRClient>();
       hubClient.OnConsentRequested = controller.HandleConsentRequested;
+      hubClient.OnConnectionLost = controller.HandleConnectionLost;
       hubClient.OnSessionEnded = controller.HandleSessionEnded;
       hubClient.OnSessionStarted = controller.HandleSessionStarted;
       hubClient.OnReconnected = controller.HandleReconnected;
@@ -37,4 +38,46 @@ public static class ServiceCollectionExtensions
 
     return services;
   }
+
+#if DEBUG
+  private sealed class DebugFileLoggerProvider(string path) : ILoggerProvider
+  {
+    private readonly Lock _lock = new();
+
+    public ILogger CreateLogger(string categoryName) => new DebugFileLogger(categoryName, path, _lock);
+
+    public void Dispose()
+    {
+    }
+
+    private sealed class DebugFileLogger(string categoryName, string path, Lock log) : ILogger
+    {
+      public IDisposable? BeginScope<TState>(TState state)
+        where TState : notnull => null;
+
+      public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Information;
+
+      public void Log<TState>(
+        LogLevel logLevel,
+        EventId eventId,
+        TState state,
+        Exception? exception,
+        Func<TState, Exception?, string> formatter)
+      {
+        if (!IsEnabled(logLevel))
+        {
+          return;
+        }
+
+        var line = $"{DateTime.Now:HH:mm:ss.fff} [{logLevel}] {categoryName}: {formatter(state, exception)}" +
+                   (exception is null ? string.Empty : $"\n  {exception}");
+
+        lock (log)
+        {
+          File.AppendAllText(path, line + Environment.NewLine);
+        }
+      }
+    }
+  }
+#endif
 }

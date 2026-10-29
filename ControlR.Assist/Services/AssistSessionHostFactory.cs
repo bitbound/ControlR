@@ -46,7 +46,8 @@ public sealed class AssistSessionHostFactory : IAssistSessionHostFactory
       appBuilder => appBuilder.Services
         .AddSingleton<IToaster, LogToaster>()
         .AddSingleton<IRemoteControlDtoSender, RelayOnlyDtoSender>()
-        .AddSingleton<ISessionConsentService, AutoApproveConsentService>(),
+        .AddSingleton<ISessionConsentService, AutoApproveConsentService>()
+        .AddSingleton<IUserInteractionService, HeadlessUserInteractionService>(),
       options =>
       {
         options.SessionId = request.SessionId;
@@ -107,6 +108,13 @@ public sealed class AssistSessionHostFactory : IAssistSessionHostFactory
   {
     public Task<bool> RequestConsentAsync(string requesterName, CancellationToken cancellationToken) =>
       // Consent is mediated by the assist control plane before the session host starts.
+      Task.FromResult(true);
+  }
+
+  // No UI in the assist session host; the consent prompt lives in the assist app's main window.
+  private sealed class HeadlessUserInteractionService : IUserInteractionService
+  {
+    public Task<bool> ShowConsentDialogAsync(string requesterName, CancellationToken cancellationToken) =>
       Task.FromResult(true);
   }
   private sealed class LogToaster(ILogger<LogToaster> logger) : IToaster
