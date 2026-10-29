@@ -80,6 +80,7 @@ public class DesktopClientLaunchArgumentTests
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = instanceId }),
       Mock.Of<IEd25519KeyProvider>(),
+      Mock.Of<ILinuxDesktopClientProcessLocator>(),
       NullLogger<AgentInstallerLinux>.Instance);
   }
 

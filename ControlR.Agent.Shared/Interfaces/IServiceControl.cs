@@ -36,4 +36,16 @@ public interface IServiceControl
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="NotSupportedException">Thrown on Windows platform.</exception>
     Task StopDesktopClientService(bool throwOnFailure);
+
+    /// <summary>
+    /// Stops the desktop client user service of an install that a brand migration is replacing, for
+    /// all logged-in users. The unit is named for the replaced install's own brand and instance id,
+    /// so stopping the current brand's unit does not reach it. Only the Linux migration path calls
+    /// this, because it is the only one that kills the replaced install's client processes; the units
+    /// restart on failure and would relaunch them.
+    /// On Mac: Throws NotSupportedException; the Mac migration path has no client kill to precede.
+    /// On Windows: Throws NotSupportedException as desktop client is handled differently.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Thrown on Windows and Mac platforms.</exception>
+    Task StopPreviousBrandDesktopClientService(string previousBrandName, string? previousInstanceId, bool throwOnFailure);
 }

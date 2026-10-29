@@ -92,6 +92,11 @@ internal class ServiceControlWindows(
     throw new NotSupportedException("Desktop client service control is not supported on Windows. The desktop client is handled differently on this platform.");
   }
 
+  public Task StopPreviousBrandDesktopClientService(string previousBrandName, string? previousInstanceId, bool throwOnFailure)
+  {
+    throw new NotSupportedException("Desktop client service control is not supported on Windows. The desktop client is handled differently on this platform.");
+  }
+
   private static async Task WaitForStatusAsync(
     ServiceController serviceController,
     ServiceControllerStatus status)

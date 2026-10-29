@@ -73,6 +73,32 @@ public class LoggedInUserProviderLinuxTests
   }
 
   [Fact]
+  public async Task GetLoggedInUsers_WhenListSessionsFails_Throws()
+  {
+    // Callers stop client units before killing their processes. An empty list has to mean "no
+    // sessions", never "enumeration failed", or a failed stop would read as nothing to stop.
+    var processManager = new Mock<IProcessManager>();
+    processManager
+      .Setup(x => x.GetProcessOutputStrict("loginctl", "list-sessions --no-legend", It.IsAny<int>()))
+      .ReturnsAsync(Result.Fail<string>("'loginctl list-sessions --no-legend' exited with code 1."));
+    var provider = new LoggedInUserProviderLinux(
+      processManager.Object,
+      NullLogger<LoggedInUserProviderLinux>.Instance);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetLoggedInUsers());
+  }
+
+  [Fact]
+  public async Task GetLoggedInUsers_WhenNoSessionsExist_ReturnsEmpty()
+  {
+    var provider = CreateProvider();
+
+    var users = await provider.GetLoggedInUsers();
+
+    Assert.Empty(users);
+  }
+
+  [Fact]
   public async Task GetLoggedInUsers_WhenUserHasActiveAndInactiveSessions_ReturnsUserOnceAsActive()
   {
     var provider = CreateProvider(
@@ -91,9 +117,12 @@ public class LoggedInUserProviderLinuxTests
     var processManager = new Mock<IProcessManager>();
     var list = string.Join("\n", sessions.Select(s => $"{s.SessionId} 1000 user seat0")) + "\n";
 
+    processManager
+      .Setup(x => x.GetProcessOutputStrict("loginctl", "list-sessions --no-legend", It.IsAny<int>()))
+      .ReturnsAsync(Result.Ok(list));
+
     var sequence = processManager.SetupSequence(
-      x => x.GetProcessOutput(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()));
-    sequence.ReturnsAsync(Result.Ok(list));
+      x => x.GetProcessOutput("loginctl", It.IsAny<string>(), It.IsAny<int>()));
     foreach (var (_, info) in sessions)
     {
       sequence.ReturnsAsync(Result.Ok(info));

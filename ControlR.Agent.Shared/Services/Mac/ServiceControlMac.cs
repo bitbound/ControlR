@@ -163,6 +163,13 @@ internal class ServiceControlMac(
     }
   }
 
+  public Task StopPreviousBrandDesktopClientService(string previousBrandName, string? previousInstanceId, bool throwOnFailure)
+  {
+    // Only the Linux migration path kills the replaced install's client processes, which is what
+    // makes stopping its unit first necessary. The Mac LaunchAgents do not need preemptive stops.
+    throw new NotSupportedException("Stopping another brand's desktop client service is not used on Mac.");
+  }
+
   private static ProcessStartInfo GetDefaultPsi()
   {
     return new ProcessStartInfo

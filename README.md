@@ -3,10 +3,10 @@
 </p>
 
 <a href="https://github.com/bitbound/ControlR/actions/workflows/test.yml"><img src="https://github.com/bitbound/ControlR/actions/workflows/test.yml/badge.svg" alt="Tests" hspace="4" vspace="4" /></a>
-<a href="https://deepwiki.com/bitbound/ControlR"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" hspace="4" vspace="4" /></a>
 <a href="https://discord.gg/JWJmMPc72H"><img src="https://img.shields.io/discord/1245426111903699087?label=Discord&logo=discord&logoColor=white&color=7289DA" alt="Discord" hspace="4" vspace="4" /></a>
 <a href="https://controlr.app"><img src="https://img.shields.io/badge/Website-controlr.app-2196F3?logo=googlechrome&logoColor=white" alt="Website" hspace="4" vspace="4" /></a>
 <a href="https://docs.controlr.app"><img src="https://img.shields.io/badge/Documentation-docs.controlr.app-2196F3?logo=gitbook&logoColor=white" alt="Documentation" hspace="4" vspace="4" /></a>
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bitbound/ControlR)
 <a href="https://github.com/bitbound/controlr-docs"><img src="https://img.shields.io/badge/Docs_Repo-GitHub-181712?logo=github&logoColor=white" alt="Docs Repo" hspace="4" vspace="4" /></a>
 <a href="https://hub.docker.com/r/bitbound/controlr"><img src="https://img.shields.io/docker/pulls/bitbound/controlr?label=Docker&logo=docker&color=2496ED" alt="Docker Pulls" hspace="4" vspace="4" /></a>
 <a href="https://github.com/bitbound/ControlR/discussions"><img src="https://img.shields.io/badge/Discussions-Join_the_conversation-2196F3?logo=github&logoColor=white" alt="Discussions" hspace="4" vspace="4" /></a>
