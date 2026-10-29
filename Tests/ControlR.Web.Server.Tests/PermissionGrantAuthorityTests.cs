@@ -201,6 +201,62 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     Assert.Equal(1, serverTenantsReadRows);
   }
 
+  [Fact]
+  public async Task ApplyPresets_ReplaceExistingFalse_WithForeignTenantOwnedGrant_SurfacesConflict()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var foreignTenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    // Integrity anomaly: the row is keyed to this tenant but owned by a foreign one. It must
+    // not count as already-held (the merge would silently under-grant); the strict duplicate
+    // check still sees it, so the merge reports a conflict instead.
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      target.Id,
+      PermissionNames.TenantPermissionsRead,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      foreignTenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.ApplyPresets(
+      new InternalDtos.ApplyPermissionPresetsRequestDto(
+        PermissionPrincipalKind.User,
+        target.Id,
+        [PermissionPresets.ServerAdministrator],
+        ReplaceExisting: false),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.Conflict, result.ErrorCode);
+  }
+
     [Fact]
     public async Task ApplyPresets_WithMixedScopesAndRequiredPermissions_Succeeds()
     {
