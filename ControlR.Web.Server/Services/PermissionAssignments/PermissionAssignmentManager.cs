@@ -747,6 +747,14 @@ public class PermissionAssignmentManager(
   /// deliberately excluded here. It must not be treated as already-held; the strict
   /// principal-only check in the <c>AssignmentExists</c> overload that takes an
   /// <c>AssignmentKey</c> turns it into a conflict instead.
+  /// <para>
+  /// Two invariants keep the (PermissionName, ScopeKind) suppression key sound without
+  /// <c>ScopeId</c> or <c>IsEnabled</c>. <c>PermissionAssignment.CreateGrant</c> nulls
+  /// <c>OwningTenantId</c> only for <c>ScopeKind.Server</c>, and server rows always carry a
+  /// null <c>ScopeId</c>, so the null-owner arm admits exactly one scope shape per key.
+  /// Disabled rows count as held: a merge never re-enables a grant an operator disabled
+  /// on purpose, so restoring one is an explicit update, not a preset re-apply.
+  /// </para>
   /// </summary>
   private static Expression<Func<PermissionAssignment, bool>> HeldByPrincipal(
     PermissionPrincipalKind principalKind,
@@ -894,6 +902,8 @@ public class PermissionAssignmentManager(
   /// the <c>AssignmentExists</c> overload that takes an <c>AssignmentKey</c> still runs
   /// over the survivors, so genuine duplicates and
   /// foreign-tenant anomalies surface as conflicts rather than racing the unique index.
+  /// On that index collision a merge re-reads the held set and retries once, keeping
+  /// concurrent applies idempotent; a duplicate CreateMany write still conflicts.
   /// The result value is the number of rows created.
   /// </summary>
   private async Task<HttpResult<int>> CreateAssignments(
@@ -936,16 +946,7 @@ public class PermissionAssignmentManager(
         }
       }
 
-      var heldKeys = await _appDb.PermissionAssignments
-        .IgnoreQueryFilters()
-        .Where(HeldByPrincipal(principalKind, principalId, tenantId))
-        .Select(x => new { x.PermissionName, x.ScopeKind })
-        .ToListAsync(cancellationToken);
-
-      var heldKeySet = heldKeys
-        .Select(x => (x.PermissionName, x.ScopeKind))
-        .ToHashSet();
-
+      var heldKeySet = await QueryHeldKeysAsync(principalKind, principalId, tenantId, cancellationToken);
       requests = requests
         .Where(x => !heldKeySet.Contains((x.PermissionName, x.ScopeKind)))
         .ToList();
@@ -1001,8 +1002,6 @@ public class PermissionAssignmentManager(
       }
     }
 
-    var created = new List<PermissionAssignment>(requests.Count);
-
     // Validate all requests before staging any entities.
     foreach (var request in requests)
     {
@@ -1020,80 +1019,109 @@ public class PermissionAssignmentManager(
       }
     }
 
-    foreach (var request in requests)
+    // A concurrent apply for the same principal races this read-then-insert pre-check and
+    // the loser collides with the unique index. A merge re-reads what is held now and
+    // retries once so re-applying a preset stays idempotent. A direct CreateMany keeps
+    // reporting the conflict.
+    for (var attempt = 0; ; attempt++)
     {
-      var assignment = PermissionAssignment.CreateGrant(
-        request.PrincipalKind,
-        request.PrincipalId,
-        request.PermissionName,
-        request.ScopeKind,
-        NormalizeScopeId(request.ScopeKind, request.ScopeId, tenantId),
-        tenantId,
-        actor,
-        request.Effect,
-        request.Notes,
-        request.IsEnabled);
-
-      created.Add(assignment);
-    }
-
-    if (principalKind == PermissionPrincipalKind.User &&
-        principalId == actor.PrincipalId &&
-        await FindViolatedSelfProtected(
-          actor,
-          tenantId,
-          direct => [.. direct, .. created],
-          cancellationToken) is { } createManyViolation)
-    {
-      return HttpResult.Fail<int>(HttpResultErrorCode.BadRequest, createManyViolation);
-    }
-
-    _appDb.PermissionAssignments.AddRange(created);
-
-    try
-    {
-      await _appDb.ExecuteInTransaction(async () =>
-      {
-        await _appDb.SaveChangesAsync(cancellationToken);
-
-        for (var i = 0; i < requests.Count; i++)
-        {
-          var request = requests[i];
-          var assignment = created[i];
-          _appDb.AuthorizationChangeLogs.Add(_changeLogFactory.Create(
-            AuthorizationChangeLogActions.PermissionAssignmentCreated,
-            actor,
-            AuthorizationChangeLogTargetTypes.PermissionAssignment,
-            assignment.Id,
-            assignment.OwningTenantId,
-            after: new PermissionAssignmentSnapshot(
-              request.PermissionName, request.Effect, request.ScopeKind, request.ScopeId)));
-        }
-
-        await _appDb.SaveChangesAsync(cancellationToken);
-      }, cancellationToken);
-    }
-    catch (DbUpdateException)
-    {
+      var created = new List<PermissionAssignment>(requests.Count);
       foreach (var request in requests)
       {
-        if (await AssignmentExists(
+        var assignment = PermissionAssignment.CreateGrant(
           request.PrincipalKind,
           request.PrincipalId,
           request.PermissionName,
-          request.Effect,
           request.ScopeKind,
           NormalizeScopeId(request.ScopeKind, request.ScopeId, tenantId),
-          cancellationToken))
-        {
-          return HttpResult.Fail<int>(HttpResultErrorCode.Conflict, "An identical permission assignment already exists.");
-        }
+          tenantId,
+          actor,
+          request.Effect,
+          request.Notes,
+          request.IsEnabled);
+
+        created.Add(assignment);
       }
 
-      throw;
-    }
+      if (principalKind == PermissionPrincipalKind.User &&
+          principalId == actor.PrincipalId &&
+          await FindViolatedSelfProtected(
+            actor,
+            tenantId,
+            direct => [.. direct, .. created],
+            cancellationToken) is { } createManyViolation)
+      {
+        return HttpResult.Fail<int>(HttpResultErrorCode.BadRequest, createManyViolation);
+      }
 
-    return HttpResult.Ok(created.Count);
+      var stagedLogs = new List<AuthorizationChangeLog>();
+      _appDb.PermissionAssignments.AddRange(created);
+
+      try
+      {
+        await _appDb.ExecuteInTransaction(async () =>
+        {
+          await _appDb.SaveChangesAsync(cancellationToken);
+
+          for (var i = 0; i < requests.Count; i++)
+          {
+            var request = requests[i];
+            var assignment = created[i];
+            var logEntry = _changeLogFactory.Create(
+              AuthorizationChangeLogActions.PermissionAssignmentCreated,
+              actor,
+              AuthorizationChangeLogTargetTypes.PermissionAssignment,
+              assignment.Id,
+              assignment.OwningTenantId,
+              after: new PermissionAssignmentSnapshot(
+                request.PermissionName, request.Effect, request.ScopeKind, request.ScopeId));
+            stagedLogs.Add(logEntry);
+            _appDb.AuthorizationChangeLogs.Add(logEntry);
+          }
+
+          await _appDb.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
+
+        return HttpResult.Ok(created.Count);
+      }
+      catch (DbUpdateException)
+      {
+        // Database rollback does not unwind the change tracker. Detach the staged rows so a
+        // retry cannot re-insert them.
+        _appDb.PermissionAssignments.RemoveRange(created);
+        _appDb.AuthorizationChangeLogs.RemoveRange(stagedLogs);
+
+        if (!ignoreHeld || attempt > 0)
+        {
+          foreach (var request in requests)
+          {
+            if (await AssignmentExists(
+              request.PrincipalKind,
+              request.PrincipalId,
+              request.PermissionName,
+              request.Effect,
+              request.ScopeKind,
+              NormalizeScopeId(request.ScopeKind, request.ScopeId, tenantId),
+              cancellationToken))
+            {
+              return HttpResult.Fail<int>(HttpResultErrorCode.Conflict, "An identical permission assignment already exists.");
+            }
+          }
+
+          throw;
+        }
+
+        var nowHeld = await QueryHeldKeysAsync(principalKind, principalId, tenantId, cancellationToken);
+        requests = requests
+          .Where(x => !nowHeld.Contains((x.PermissionName, x.ScopeKind)))
+          .ToList();
+
+        if (requests.Count == 0)
+        {
+          return HttpResult.Ok(0);
+        }
+      }
+    }
   }
 
   private async Task<string?> FindViolatedSelfProtected(
@@ -1218,6 +1246,23 @@ public class PermissionAssignmentManager(
     Guid principalId,
     CancellationToken cancellationToken) =>
     (await GetServerServiceAccountPrincipals([(principalKind, principalId)], cancellationToken)).Contains((principalKind, principalId));
+
+  private async Task<HashSet<(string PermissionName, PermissionScopeKind ScopeKind)>> QueryHeldKeysAsync(
+    PermissionPrincipalKind principalKind,
+    Guid principalId,
+    Guid tenantId,
+    CancellationToken cancellationToken)
+  {
+    var heldKeys = await _appDb.PermissionAssignments
+      .IgnoreQueryFilters()
+      .Where(HeldByPrincipal(principalKind, principalId, tenantId))
+      .Select(x => new { x.PermissionName, x.ScopeKind })
+      .ToListAsync(cancellationToken);
+
+    return heldKeys
+      .Select(x => (x.PermissionName, x.ScopeKind))
+      .ToHashSet();
+  }
 
   /// <summary>
   /// Credential principals can't exceed their owning user's rights; validates the row against
