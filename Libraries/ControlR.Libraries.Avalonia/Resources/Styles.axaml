@@ -129,6 +129,33 @@
   <Style Selector="PathIcon.CalloutError">
     <Setter Property="Foreground" Value="{DynamicResource ErrorColor}" />
   </Style>
+  <Style Selector="Border.CalloutPrimary">
+    <Setter Property="Background" Value="{DynamicResource PrimaryBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.CalloutPrimary TextBlock#MessageText">
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}" />
+  </Style>
+  <Style Selector="PathIcon.CalloutPrimary">
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryColor}" />
+  </Style>
+  <Style Selector="Border.CalloutSecondary">
+    <Setter Property="Background" Value="{DynamicResource SecondaryBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.CalloutSecondary TextBlock#MessageText">
+    <Setter Property="Foreground" Value="{DynamicResource SecondaryColor}" />
+  </Style>
+  <Style Selector="PathIcon.CalloutSecondary">
+    <Setter Property="Foreground" Value="{DynamicResource SecondaryColor}" />
+  </Style>
+  <Style Selector="Border.CalloutTertiary">
+    <Setter Property="Background" Value="{DynamicResource TertiaryBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.CalloutTertiary TextBlock#MessageText">
+    <Setter Property="Foreground" Value="{DynamicResource TertiaryColor}" />
+  </Style>
+  <Style Selector="PathIcon.CalloutTertiary">
+    <Setter Property="Foreground" Value="{DynamicResource TertiaryColor}" />
+  </Style>
 
   <Style Selector="Grid.DialogOverlay">
     <Setter Property="Background" Value="{DynamicResource OverlayDarkBrush}" />

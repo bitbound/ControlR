@@ -7,8 +7,10 @@
              d:DesignHeight="64"
              x:Class="ControlR.Libraries.Avalonia.Controls.Callout">
 
-  <Border Classes="Card CalloutBase"
+  <Border x:Name="Root"
+          Classes="Card CalloutBase"
           BorderThickness="0"
+          CornerRadius="8"
           Padding="16">
     <StackPanel Orientation="Horizontal" Spacing="10">
       <PathIcon x:Name="Icon"
