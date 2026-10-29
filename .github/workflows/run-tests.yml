@@ -214,6 +214,7 @@ jobs:
       - name: Build Tests
         run: |
           $excludedProjects = @(
+            "ControlR.Assist.Tests.csproj",
             "ControlR.DesktopClient.Tests.csproj",
             "ControlR.DesktopClient.Mac.Tests.csproj",
             "ControlR.DesktopClient.Windows.Tests.csproj",
@@ -240,6 +241,7 @@ jobs:
       - name: Run Tests
         run: |
           $excludedProjects = @(
+            "ControlR.Assist.Tests.csproj",
             "ControlR.DesktopClient.Tests.csproj",
             "ControlR.DesktopClient.Mac.Tests.csproj",
             "ControlR.DesktopClient.Windows.Tests.csproj",
@@ -280,6 +282,7 @@ jobs:
       - name: Build Tests
         run: |
           $testProjects = @(
+            "Tests/ControlR.Assist.Tests/ControlR.Assist.Tests.csproj",
             "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
             "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj",
             "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
@@ -297,6 +300,7 @@ jobs:
       - name: Run Tests
         run: |
           $testProjects = @(
+            "Tests/ControlR.Assist.Tests/ControlR.Assist.Tests.csproj",
             "Tests/ControlR.DesktopClient.Tests/ControlR.DesktopClient.Tests.csproj",
             "Tests/ControlR.DesktopClient.Windows.Tests/ControlR.DesktopClient.Windows.Tests.csproj",
             "Tests/ControlR.Agent.Common.Tests/ControlR.Agent.Common.Tests.csproj",
