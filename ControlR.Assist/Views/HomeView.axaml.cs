@@ -17,7 +17,8 @@ public partial class HomeView : UserControl
     InitializeComponent();
   }
 
-  private IBrush? SecondaryBrush => this.TryFindResource("SecondaryColor", out var resource) ? resource as IBrush : null;
+  // SecondaryColor lives in the theme dictionaries, so the current theme variant must be passed.
+  private IBrush? SecondaryBrush => this.TryFindResource("SecondaryColor", ActualThemeVariant, out var resource) ? resource as IBrush : null;
 
   protected override void OnDataContextChanged(EventArgs e)
   {

@@ -220,7 +220,7 @@
       <!-- Active viewer line with the email in the secondary color. Runs are built in code-behind. -->
       <TextBlock x:Name="ViewerStatusText"
                  Grid.Row="3"
-                 Classes="Small Secondary"
+                 Classes="Small"
                  TextWrapping="Wrap"
                  IsVisible="{Binding ShowConnectedStatus}" />
     </Grid>
