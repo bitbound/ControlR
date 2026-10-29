@@ -21,7 +21,20 @@ public sealed record AssistSession(
   string? ViewerConnectionId = null,
   string? ViewerUserId = null,
   string? ViewerDisplayName = null,
-  string? ViewerEmail = null);
+  string? ViewerEmail = null,
+  Guid? ConsentNonce = null);
+
+/// <summary>
+/// Thrown by <see cref="IAssistSessionCache.CreateAsync"/> when the global session cap is hit.
+/// Session creation is anonymous, so the cap is the backpressure against memory exhaustion.
+/// </summary>
+public sealed class AssistSessionCapacityExceededException : Exception
+{
+  public AssistSessionCapacityExceededException()
+    : base("The assist session capacity has been reached.")
+  {
+  }
+}
 
 /// <summary>
 /// Store for ad-hoc assist sessions. Sessions are ephemeral by design. A server restart clears
@@ -36,7 +49,10 @@ public interface IAssistSessionCache
     string assistConnectionId,
     CancellationToken cancellationToken = default);
   Task<IReadOnlyList<AssistSession>> SnapshotAsync(CancellationToken cancellationToken = default);
-  Task<AssistSession?> TryActivateAsync(Guid sessionId, CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryActivateAsync(
+    Guid sessionId,
+    Guid consentNonce,
+    CancellationToken cancellationToken = default);
   Task<AssistSession?> TryBeginConsentAsync(
     Guid sessionId,
     string viewerConnectionId,
@@ -52,7 +68,10 @@ public interface IAssistSessionCache
   Task<AssistSession?> TryGetByViewerConnectionIdAsync(
     string viewerConnectionId,
     CancellationToken cancellationToken = default);
-  Task<AssistSession?> TryReturnToWaitingAsync(Guid sessionId, CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryReturnToWaitingAsync(
+    Guid sessionId,
+    Guid consentNonce,
+    CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -65,6 +84,7 @@ public interface IAssistSessionCache
 public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? codeGenerator = null) : IAssistSessionCache
 {
   public const int CodeLength = 9;
+  public const int MaxTrackedSessions = 10_000;
 
   private const string DigitPool = "0123456789";
 
@@ -88,6 +108,11 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
       foreach (var sessionId in stale)
       {
         _sessions.Remove(sessionId);
+      }
+
+      if (_sessions.Count >= MaxTrackedSessions)
+      {
+        throw new AssistSessionCapacityExceededException();
       }
 
       var now = _timeProvider.GetUtcNow();
@@ -139,9 +164,17 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
     }
   }
 
-  public Task<AssistSession?> TryActivateAsync(Guid sessionId, CancellationToken cancellationToken = default)
+  public Task<AssistSession?> TryActivateAsync(
+    Guid sessionId,
+    Guid consentNonce,
+    CancellationToken cancellationToken = default)
   {
-    return TryTransitionAsync(sessionId, AssistSessionStatus.PendingConsent, AssistSessionStatus.Active, cancellationToken);
+    return TryTransitionAsync(
+      sessionId,
+      AssistSessionStatus.PendingConsent,
+      AssistSessionStatus.Active,
+      expectedConsentNonce: consentNonce,
+      cancellationToken);
   }
 
   public Task<AssistSession?> TryBeginConsentAsync(
@@ -170,6 +203,7 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
         ViewerUserId = viewerUserId.ToString(),
         ViewerDisplayName = displayName,
         ViewerEmail = email,
+        ConsentNonce = Guid.NewGuid(),
       };
 
       _sessions[sessionId] = session;
@@ -206,14 +240,18 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
     return TryGetFirstAsync(x => x.ViewerConnectionId == viewerConnectionId, cancellationToken);
   }
 
-  public Task<AssistSession?> TryReturnToWaitingAsync(Guid sessionId, CancellationToken cancellationToken = default)
+  public Task<AssistSession?> TryReturnToWaitingAsync(
+    Guid sessionId,
+    Guid consentNonce,
+    CancellationToken cancellationToken = default)
   {
     cancellationToken.ThrowIfCancellationRequested();
 
     lock (_sync)
     {
       if (!_sessions.TryGetValue(sessionId, out var existing) ||
-          existing.Status != AssistSessionStatus.PendingConsent)
+          existing.Status != AssistSessionStatus.PendingConsent ||
+          existing.ConsentNonce != consentNonce)
       {
         return Task.FromResult<AssistSession?>(null);
       }
@@ -226,6 +264,7 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
         ViewerUserId = null,
         ViewerDisplayName = null,
         ViewerEmail = null,
+        ConsentNonce = null,
       };
 
       _sessions[sessionId] = session;
@@ -276,13 +315,16 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
     Guid sessionId,
     AssistSessionStatus from,
     AssistSessionStatus to,
+    Guid? expectedConsentNonce,
     CancellationToken cancellationToken)
   {
     cancellationToken.ThrowIfCancellationRequested();
 
     lock (_sync)
     {
-      if (!_sessions.TryGetValue(sessionId, out var existing) || existing.Status != from)
+      if (!_sessions.TryGetValue(sessionId, out var existing) ||
+          existing.Status != from ||
+          (expectedConsentNonce is { } nonce && existing.ConsentNonce != nonce))
       {
         return Task.FromResult<AssistSession?>(null);
       }
@@ -291,6 +333,7 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
       {
         Status = to,
         StatusChangedAt = _timeProvider.GetUtcNow(),
+        ConsentNonce = null,
       };
 
       _sessions[sessionId] = session;

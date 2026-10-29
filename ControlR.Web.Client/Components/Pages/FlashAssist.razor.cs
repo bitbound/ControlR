@@ -10,6 +10,7 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
 
   private string? _accessCode;
   private bool _isJoining;
+  private Guid? _linkedConsentNonce;
   private Guid? _linkedSessionId;
   private IDisposable? _messengerRegistration;
   private string? _remoteDisplayName;
@@ -54,7 +55,7 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
   {
     _messengerRegistration?.Dispose();
     _pageCts.Cancel();
-    await CleanupSession(sendCloseStreamingSession: false, endHubSession: false);
+    await CleanupSession(sendCloseStreamingSession: false, endHubSession: true);
     _pageCts.Dispose();
   }
 
@@ -76,29 +77,31 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     RemoteControlState.ConnectionClosedRegistration?.Dispose();
     RemoteControlState.ConnectionClosedRegistration = null;
 
-    if (RemoteControlState.CurrentSession is { } session)
+    if (RemoteControlState.CurrentSession is not null && sendCloseStreamingSession)
     {
-      if (sendCloseStreamingSession)
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      await RemoteControlStream.SendCloseStreamingSession(cts.Token);
+    }
+
+    // Works for both active and consent-wait teardowns: the joined session is tracked by id,
+    // which exists before any local session object does.
+    if (endHubSession && _linkedSessionId is Guid hubSessionId)
+    {
+      try
       {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await RemoteControlStream.SendCloseStreamingSession(cts.Token);
+        _ = await AssistHub.Server.EndAssistSession(new(hubSessionId));
       }
-
-      if (endHubSession)
+      catch (Exception ex)
       {
-        try
-        {
-          using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-          _ = await AssistHub.Server.EndAssistSession(new(session.SessionId));
-        }
-        catch (Exception ex)
-        {
-          Logger.LogWarning(ex, "Failed to end assist session {SessionId} on the server.", session.SessionId);
-        }
+        Logger.LogWarning(ex, "Failed to end assist session {SessionId} on the server.", hubSessionId);
       }
 
-      RemoteControlState.CurrentSession = null;
+      _linkedSessionId = null;
+      _linkedConsentNonce = null;
     }
+
+    RemoteControlState.CurrentSession = null;
 
     await RemoteControlStream.Close();
     await ScreenWake.SetScreenWakeLock(false);
@@ -116,10 +119,15 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
 
     if (!dto.Approved || string.IsNullOrWhiteSpace(dto.AccessToken))
     {
+      var declineMessage = dto.Reason == AssistConsentRespondedReason.TimedOut
+        ? "The remote user did not respond in time."
+        : "The remote user declined the connection.";
+      _linkedSessionId = null;
+      _linkedConsentNonce = null;
       await InvokeAsync(() =>
       {
         _state = AssistPageState.CodeEntry;
-        _statusMessage = "The remote user declined the connection.";
+        _statusMessage = declineMessage;
         _statusSeverity = Severity.Warning;
         StateHasChanged();
       });
@@ -166,7 +174,8 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
       try
       {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        _ = await AssistHub.Server.CancelAssistConsent(new(pendingSessionId));
+        _ = await AssistHub.Server.CancelAssistConsent(
+          new(pendingSessionId, _linkedConsentNonce ?? Guid.Empty));
       }
       catch (Exception ex)
       {
@@ -174,6 +183,7 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
       }
 
       _linkedSessionId = null;
+      _linkedConsentNonce = null;
     }
 
     await CleanupSession(sendCloseStreamingSession: false, endHubSession: true);
@@ -222,6 +232,7 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
       }
 
       _linkedSessionId = result.Value.SessionId;
+      _linkedConsentNonce = result.Value.ConsentNonce;
       _remoteDisplayName = "the remote user";
       _state = AssistPageState.WaitingForConsent;
     }

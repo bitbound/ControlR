@@ -4,4 +4,5 @@ namespace ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 public record AssistConsentRespondedDto(
   Guid SessionId,
   bool Approved,
-  string? AccessToken);
+  string? AccessToken,
+  AssistConsentRespondedReason? Reason = null);

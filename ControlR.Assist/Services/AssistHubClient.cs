@@ -28,7 +28,11 @@ public interface IAssistSignalRClient : IAsyncDisposable
   Task<HubResult<CreateAssistSessionResponseDto>> CreateAssistSession(CancellationToken cancellationToken);
   Task DisconnectAsync();
   Task<HubResult> EndAssistSession(Guid sessionId, CancellationToken cancellationToken);
-  Task<HubResult> RespondToAssistConsent(Guid sessionId, bool approved, CancellationToken cancellationToken);
+  Task<HubResult> RespondToAssistConsent(
+    Guid sessionId,
+    bool approved,
+    Guid consentNonce,
+    CancellationToken cancellationToken);
 }
 
 public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSignalRClient
@@ -158,10 +162,14 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
       () => HubResult.Fail("The assist client is not connected."),
       cancellationToken);
 
-  public Task<HubResult> RespondToAssistConsent(Guid sessionId, bool approved, CancellationToken cancellationToken) =>
+  public Task<HubResult> RespondToAssistConsent(
+    Guid sessionId,
+    bool approved,
+    Guid consentNonce,
+    CancellationToken cancellationToken) =>
     InvokeAsync(
       nameof(IAssistHub.RespondToAssistConsent),
-      [new RespondToAssistConsentRequestDto(sessionId, approved)],
+      [new RespondToAssistConsentRequestDto(sessionId, approved, consentNonce)],
       () => HubResult.Fail("The assist client is not connected."),
       cancellationToken);
 

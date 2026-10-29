@@ -45,8 +45,11 @@ public class AssistHub(
       {
         return HubResult.Fail("Unauthorized.");
       }
-
-      var returned = await _sessionCache.TryReturnToWaitingAsync(request.SessionId, Context.ConnectionAborted);
+ 
+      var returned = await _sessionCache.TryReturnToWaitingAsync(
+        request.SessionId,
+        request.ConsentNonce,
+        Context.ConnectionAborted);
       if (returned is null)
       {
         return HubResult.Ok();
@@ -82,6 +85,12 @@ public class AssistHub(
         Context.ConnectionId);
 
       return HubResult.Ok(new CreateAssistSessionResponseDto(session.Code, session.SessionId));
+    }
+    catch (AssistSessionCapacityExceededException ex)
+    {
+      _logger.LogWarning("Assist session creation rejected: {Reason}", ex.Message);
+      return HubResult.Fail<CreateAssistSessionResponseDto>(
+        "The server is busy with too many assist sessions right now. Try again later.");
     }
     catch (Exception ex)
     {
@@ -188,9 +197,15 @@ public class AssistHub(
 
       await Clients
         .Client(pending.AssistConnectionId)
-        .AssistConsentRequested(new(pending.SessionId, displayName, user.Email));
+        .AssistConsentRequested(new(
+          pending.SessionId,
+          displayName,
+          user.Email,
+          pending.ConsentNonce ?? Guid.Empty));
 
-      return HubResult.Ok(new JoinAssistSessionResponseDto(pending.SessionId));
+      return HubResult.Ok(new JoinAssistSessionResponseDto(
+        pending.SessionId,
+        pending.ConsentNonce ?? Guid.Empty));
     }
     catch (Exception ex)
     {
@@ -201,11 +216,16 @@ public class AssistHub(
 
   public override async Task OnDisconnectedAsync(Exception? exception)
   {
+    // ConnectionAborted is already canceled once disconnect handlers run, so cleanup gets its own
+    // bounded token instead.
+    using var cleanupCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+    var cleanupToken = cleanupCts.Token;
+
     try
     {
       var assistSessions = await _sessionCache.RemoveByAssistConnectionIdAsync(
         Context.ConnectionId,
-        Context.ConnectionAborted);
+        cleanupToken);
 
       foreach (var session in assistSessions)
       {
@@ -217,14 +237,17 @@ public class AssistHub(
 
       // A technician dropping the connection during consent is treated like a cancel. The session
       // returns to waiting so the customer keeps the same code. An active session is torn down.
-      var viewerSessions = (await _sessionCache.SnapshotAsync(Context.ConnectionAborted))
+      var viewerSessions = (await _sessionCache.SnapshotAsync(cleanupToken))
         .Where(x => x.ViewerConnectionId == Context.ConnectionId)
         .ToList();
 
       foreach (var session in viewerSessions)
       {
         var returned = session.Status == AssistSessionStatus.PendingConsent
-          ? await _sessionCache.TryReturnToWaitingAsync(session.SessionId, Context.ConnectionAborted)
+          ? await _sessionCache.TryReturnToWaitingAsync(
+            session.SessionId,
+            session.ConsentNonce ?? Guid.Empty,
+            cleanupToken)
           : null;
 
         if (returned is not null)
@@ -235,7 +258,7 @@ public class AssistHub(
           continue;
         }
 
-        if (await _sessionCache.RemoveAsync(session.SessionId, Context.ConnectionAborted) is not null)
+        if (await _sessionCache.RemoveAsync(session.SessionId, cleanupToken) is not null)
         {
           await NotifyAssist(session, "The technician disconnected.");
         }
@@ -266,15 +289,25 @@ public class AssistHub(
 
       if (!request.Approved)
       {
-        var returned = await _sessionCache.TryReturnToWaitingAsync(request.SessionId, Context.ConnectionAborted);
+        var returned = await _sessionCache.TryReturnToWaitingAsync(
+          request.SessionId,
+          request.ConsentNonce,
+          Context.ConnectionAborted);
         if (returned is not null && session.ViewerConnectionId is { Length: > 0 })
         {
-          await NotifyViewer(session, approved: false, accessToken: null);
+          await NotifyViewer(
+            session,
+            approved: false,
+            accessToken: null,
+            AssistConsentRespondedReason.Declined);
         }
         return HubResult.Ok();
       }
 
-      var activated = await _sessionCache.TryActivateAsync(request.SessionId, Context.ConnectionAborted);
+      var activated = await _sessionCache.TryActivateAsync(
+        request.SessionId,
+        request.ConsentNonce,
+        Context.ConnectionAborted);
       if (activated?.ViewerConnectionId is not { Length: > 0 } viewerConnectionId)
       {
         return HubResult.Fail("The consent request is no longer pending.");
@@ -397,6 +430,15 @@ public class AssistHub(
 
   private async Task NotifyViewer(AssistSession session, bool approved, string? accessToken)
   {
+    await NotifyViewer(session, approved, accessToken, reason: null);
+  }
+
+  private async Task NotifyViewer(
+    AssistSession session,
+    bool approved,
+    string? accessToken,
+    AssistConsentRespondedReason? reason)
+  {
     if (session.ViewerConnectionId is not { Length: > 0 } viewerConnectionId)
     {
       return;
@@ -404,6 +446,6 @@ public class AssistHub(
 
     await Clients
       .Client(viewerConnectionId)
-      .AssistConsentResponded(new(session.SessionId, approved, accessToken));
+      .AssistConsentResponded(new(session.SessionId, approved, accessToken, reason));
   }
 }

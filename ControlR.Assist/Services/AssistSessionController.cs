@@ -56,6 +56,7 @@ public sealed class AssistSessionController : IAsyncDisposable
   public string? Code { get; private set; }
   public bool IsViewOnly => _sessionHost?.Services.GetService<AssistInputGate>()?.IsViewOnly ?? false;
   public string? PendingConsentEmail { get; private set; }
+  public Guid? PendingConsentNonce { get; private set; }
   public string? PendingConsentViewerName { get; private set; }
   public Guid? PendingSessionId { get; private set; }
   public AssistSessionState State { get; private set; } = AssistSessionState.Disconnected;
@@ -277,7 +278,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     await _hubClient.DisconnectAsync().ConfigureAwait(false);
     _connectedServerUri = null;
     Code = null;
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     StatusMessage = null;
     SetState(AssistSessionState.Disconnected);
     RaiseStateChanged();
@@ -305,7 +306,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     // "ended by remote user" notification before the relay drop arrives.
     await EndCurrentSessionAsync().ConfigureAwait(false);
     await StopSessionHostAsync().ConfigureAwait(false);
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     StatusMessage = Localization.StatusSessionEnded;
     await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
     RaiseStateChanged();
@@ -347,7 +348,7 @@ public sealed class AssistSessionController : IAsyncDisposable
       return;
     }
 
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     await EndCurrentSessionAsync().ConfigureAwait(false);
     await CreateSessionAsync(CancellationToken.None).ConfigureAwait(false);
   }
@@ -364,7 +365,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     _activeSessionId = null;
     Code = null;
     _connectedServerUri = null;
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     StatusMessage = Localization.StatusConnectionLost;
     SetState(AssistSessionState.Disconnected);
     RaiseStateChanged();
@@ -378,7 +379,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     }
 
     _logger.LogInformation("The consent request for assist session {SessionId} was cancelled by the technician.", dto.SessionId);
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     StatusMessage = Localization.StatusConsentCancelled;
     SetState(AssistSessionState.Ready);
     RaiseStateChanged();
@@ -392,7 +393,7 @@ public sealed class AssistSessionController : IAsyncDisposable
       return Task.CompletedTask;
     }
 
-    SetConsentPending(dto.SessionId, dto.ViewerDisplayName, dto.ViewerEmail);
+    SetConsentPending(dto.SessionId, dto.ViewerDisplayName, dto.ViewerEmail, dto.ConsentNonce);
     StatusMessage = null;
     SetState(AssistSessionState.PendingConsent);
     RaiseStateChanged();
@@ -407,7 +408,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     }
 
     _logger.LogInformation("The consent request for assist session {SessionId} timed out.", dto.SessionId);
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     StatusMessage = Localization.StatusConsentTimedOut;
     SetState(AssistSessionState.Ready);
     RaiseStateChanged();
@@ -420,7 +421,7 @@ public sealed class AssistSessionController : IAsyncDisposable
 
     await EndCurrentSessionAsync().ConfigureAwait(false);
     await StopSessionHostAsync().ConfigureAwait(false);
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     StatusMessage = Localization.StatusReconnected;
     await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
     RaiseStateChanged();
@@ -434,7 +435,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     }
 
     await StopSessionHostAsync().ConfigureAwait(false);
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     StatusMessage = dto.Reason;
     await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
     RaiseStateChanged();
@@ -450,7 +451,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     _sessionHost = null;
     StatusMessage = Localization.StatusSessionEnded;
     await EndCurrentSessionAsync().ConfigureAwait(false);
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
     RaiseStateChanged();
   }
@@ -467,7 +468,7 @@ public sealed class AssistSessionController : IAsyncDisposable
       return;
     }
 
-    SetConsentPending(null, null, null);
+    SetConsentPending(null, null, null, null);
     StatusMessage = string.Format(Localization.StatusConnectedToViewer, dto.ViewerDisplayName);
     SetState(AssistSessionState.Active);
     RaiseStateChanged();
@@ -520,7 +521,8 @@ public sealed class AssistSessionController : IAsyncDisposable
       return;
     }
 
-    var result = await InvokeHubAsync(ct => _hubClient.RespondToAssistConsent(sessionId, approved, ct));
+    var consentNonce = PendingConsentNonce ?? Guid.Empty;
+    var result = await InvokeHubAsync(ct => _hubClient.RespondToAssistConsent(sessionId, approved, consentNonce, ct));
     if (!result.IsSuccess)
     {
       StatusMessage = result.Reason ?? Localization.StatusConsentResponseFailed;
@@ -534,11 +536,12 @@ public sealed class AssistSessionController : IAsyncDisposable
     }
   }
 
-  private void SetConsentPending(Guid? sessionId, string? viewerName, string? email)
+  private void SetConsentPending(Guid? sessionId, string? viewerName, string? email, Guid? consentNonce)
   {
     PendingSessionId = sessionId;
     PendingConsentViewerName = viewerName;
     PendingConsentEmail = email;
+    PendingConsentNonce = consentNonce;
   }
 
   private void SetState(AssistSessionState state, string? statusMessage = null)
@@ -585,8 +588,10 @@ public sealed class AssistSessionController : IAsyncDisposable
         await EnqueueAsync(() => HandleSessionHostStoppedCoreAsync(request.SessionId)).ConfigureAwait(false);
       });
 
-      await host.StartAsync().ConfigureAwait(false);
+      // Publish the host before starting it. If the host faults during StartAsync, the stopped
+      // watcher still recognizes it and tears the session down instead of stranding it active.
       _sessionHost = host;
+      await host.StartAsync().ConfigureAwait(false);
     }
     catch (Exception ex)
     {

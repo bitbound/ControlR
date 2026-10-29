@@ -38,7 +38,7 @@ public class AssistSessionControllerTests
 
     Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
     var sessionId = hub.LastSessionId;
-    await RunWithinTimeout(controller.HandleConsentRequested(new(sessionId, "Jane", "jane@example.com")));
+    await RunWithinTimeout(controller.HandleConsentRequested(new(sessionId, "Jane", "jane@example.com", Guid.NewGuid())));
     await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
 
     await RunWithinTimeout(controller.HandleConsentCancelled(new(sessionId)));
@@ -55,7 +55,7 @@ public class AssistSessionControllerTests
     var controller = CreateController(hub);
 
     Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
-    await RunWithinTimeout(controller.HandleConsentRequested(new(hub.LastSessionId, "Jane", null)));
+    await RunWithinTimeout(controller.HandleConsentRequested(new(hub.LastSessionId, "Jane", null, Guid.NewGuid())));
     await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
 
     await RunWithinTimeout(controller.HandleConsentCancelled(new(Guid.NewGuid())));
@@ -72,7 +72,7 @@ public class AssistSessionControllerTests
 
     Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
     var sessionId = hub.LastSessionId;
-    await RunWithinTimeout(controller.HandleConsentRequested(new(sessionId, "Jane", "jane@example.com")));
+    await RunWithinTimeout(controller.HandleConsentRequested(new(sessionId, "Jane", "jane@example.com", Guid.NewGuid())));
     await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
 
     await RunWithinTimeout(controller.HandleConsentTimedOut(new(sessionId)));
@@ -89,7 +89,7 @@ public class AssistSessionControllerTests
     var controller = CreateController(hub);
 
     Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
-    await RunWithinTimeout(controller.HandleConsentRequested(new(hub.LastSessionId, "Jane", null)));
+    await RunWithinTimeout(controller.HandleConsentRequested(new(hub.LastSessionId, "Jane", null, Guid.NewGuid())));
     await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
 
     await RunWithinTimeout(controller.HandleConsentTimedOut(new(Guid.NewGuid())));
@@ -111,6 +111,23 @@ public class AssistSessionControllerTests
 
     Assert.False(connected);
     Assert.Equal(AssistSessionState.Disconnected, controller.State);
+    await RunWithinTimeout(controller.DisposeAsync());
+  }
+
+  [Fact]
+  public async Task RespondToConsent_ForwardsThePendingConsentNonce()
+  {
+    var hub = new FakeHubClient();
+    var controller = CreateController(hub);
+
+    Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
+    var nonce = Guid.NewGuid();
+    await RunWithinTimeout(controller.HandleConsentRequested(new(hub.LastSessionId, "Jane", null, nonce)));
+    await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
+
+    await RunWithinTimeout(controller.RespondToConsentAsync(true));
+
+    Assert.Equal(nonce, hub.LastConsentNonce);
     await RunWithinTimeout(controller.DisposeAsync());
   }
 
@@ -160,7 +177,6 @@ public class AssistSessionControllerTests
   {
     public IHost CreateSessionHost(AssistSessionRequest request) => Host.CreateApplicationBuilder().Build();
   }
-
   private sealed class FakeHubClient : IAssistSignalRClient
   {
     private Guid _lastSessionId = Guid.NewGuid();
@@ -169,6 +185,7 @@ public class AssistSessionControllerTests
     public int EndSessionCallCount { get; private set; }
     public bool HangCreateSession { get; init; }
     public bool IsConnected => true;
+    public Guid LastConsentNonce { get; private set; }
     public Guid LastSessionId => _lastSessionId;
 
     public Func<Task>? OnConnectionLost { get; set; }
@@ -218,10 +235,16 @@ public class AssistSessionControllerTests
       return Task.FromResult(HubResult.Ok());
     }
 
-    public Task<HubResult> RespondToAssistConsent(Guid sessionId, bool approved, CancellationToken cancellationToken) =>
-      Task.FromResult(HubResult.Ok());
+    public Task<HubResult> RespondToAssistConsent(
+      Guid sessionId,
+      bool approved,
+      Guid consentNonce,
+      CancellationToken cancellationToken)
+    {
+      LastConsentNonce = consentNonce;
+      return Task.FromResult(HubResult.Ok());
+    }
   }
-
   private sealed class FakeSettingsService : IAssistSettingsService
   {
     public AssistAppSettings GetSettings() => new();

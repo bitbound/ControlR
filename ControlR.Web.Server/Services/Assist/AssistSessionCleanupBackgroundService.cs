@@ -1,3 +1,4 @@
+using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Hosting;
 using Microsoft.AspNetCore.SignalR;
@@ -42,13 +43,16 @@ public class AssistSessionCleanupBackgroundService(
       {
         case AssistSessionStatus.PendingConsent when age > _consentExpiry:
           {
-            var returned = await _sessionCache.TryReturnToWaitingAsync(session.SessionId, stoppingToken);
+            var returned = await _sessionCache.TryReturnToWaitingAsync(
+              session.SessionId,
+              session.ConsentNonce ?? Guid.Empty,
+              stoppingToken);
             if (returned is not null &&
                 session.ViewerConnectionId is { Length: > 0 } viewerConnectionId)
             {
               await _assistHub.Clients
                 .Client(viewerConnectionId)
-                .AssistConsentResponded(new(session.SessionId, false, null));
+                .AssistConsentResponded(new(session.SessionId, false, null, AssistConsentRespondedReason.TimedOut));
               await _assistHub.Clients
                 .Client(session.AssistConnectionId)
                 .AssistConsentTimedOut(new(session.SessionId));
@@ -57,7 +61,14 @@ public class AssistSessionCleanupBackgroundService(
           }
         case AssistSessionStatus.WaitingForViewer when age > _waitingExpiry:
           {
-            _ = await _sessionCache.RemoveAsync(session.SessionId, stoppingToken);
+            if (await _sessionCache.RemoveAsync(session.SessionId, stoppingToken) is null)
+            {
+              break;
+            }
+
+            // Tell the assist app its code expired instead of dropping it silently. The app mints
+            // a fresh session on the notification so the customer is never left on a dead code.
+            await NotifyEnded(session.SessionId, "Your access code expired. Reconnect to get a new one.", session);
             break;
           }
         case AssistSessionStatus.Active when age > _activeExpiry:

@@ -214,7 +214,6 @@ jobs:
       - name: Build Tests
         run: |
           $excludedProjects = @(
-            "ControlR.Assist.Tests.csproj",
             "ControlR.DesktopClient.Tests.csproj",
             "ControlR.DesktopClient.Mac.Tests.csproj",
             "ControlR.DesktopClient.Windows.Tests.csproj",
@@ -241,7 +240,6 @@ jobs:
       - name: Run Tests
         run: |
           $excludedProjects = @(
-            "ControlR.Assist.Tests.csproj",
             "ControlR.DesktopClient.Tests.csproj",
             "ControlR.DesktopClient.Mac.Tests.csproj",
             "ControlR.DesktopClient.Windows.Tests.csproj",

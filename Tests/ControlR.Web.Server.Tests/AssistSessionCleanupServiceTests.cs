@@ -29,8 +29,8 @@ public class AssistSessionCleanupServiceTests
   public async Task HandleElapsed_ActiveSessionExpired_NotifiesAssistEnded()
   {
     var session = await _cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
-    _ = await _cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
-    _ = await _cache.TryActivateAsync(session.SessionId, TestContext.Current.CancellationToken);
+    var pending = await _cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
+    _ = await _cache.TryActivateAsync(session.SessionId, pending!.ConsentNonce!.Value, TestContext.Current.CancellationToken);
     _timeProvider.Advance(TimeSpan.FromHours(13));
 
     await RunCleanup();
@@ -54,10 +54,25 @@ public class AssistSessionCleanupServiceTests
     Assert.Equal(AssistSessionStatus.WaitingForViewer, current?.Status);
     _clientProxy.Verify(
       c => c.AssistConsentResponded(It.Is<AssistConsentRespondedDto>(dto =>
-        dto.SessionId == session.SessionId && !dto.Approved)),
+        dto.SessionId == session.SessionId && !dto.Approved && dto.Reason == AssistConsentRespondedReason.TimedOut)),
       Times.Once);
     _clientProxy.Verify(
       c => c.AssistConsentTimedOut(It.Is<AssistConsentTimedOutDto>(dto => dto.SessionId == session.SessionId)),
+      Times.Once);
+  }
+
+  [Fact]
+  public async Task HandleElapsed_WaitingExpired_NotifiesAssistEnded()
+  {
+    var session = await _cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _timeProvider.Advance(TimeSpan.FromMinutes(31));
+
+    await RunCleanup();
+
+    Assert.Null(await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
+    _clientProxy.Verify(
+      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
+        dto.SessionId == session.SessionId && dto.Reason.Contains("expired"))),
       Times.Once);
   }
 
