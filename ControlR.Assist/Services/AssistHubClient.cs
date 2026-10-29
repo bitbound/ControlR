@@ -18,6 +18,7 @@ public interface IAssistSignalRClient : IAsyncDisposable
   bool IsConnected { get; }
   Func<Task>? OnConnectionLost { get; set; }
   Func<AssistConsentRequestedDto, Task>? OnConsentRequested { get; set; }
+  Func<AssistConsentTimedOutDto, Task>? OnConsentTimedOut { get; set; }
   Func<Task>? OnReconnected { get; set; }
   Func<AssistSessionEndedDto, Task>? OnSessionEnded { get; set; }
   Func<AssistSessionStartedDto, Task>? OnSessionStarted { get; set; }
@@ -51,6 +52,7 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
   public bool IsConnected => _connection?.State == HubConnectionState.Connected;
   public Func<Task>? OnConnectionLost { get; set; }
   public Func<AssistConsentRequestedDto, Task>? OnConsentRequested { get; set; }
+  public Func<AssistConsentTimedOutDto, Task>? OnConsentTimedOut { get; set; }
   public Func<Task>? OnReconnected { get; set; }
   public Func<AssistSessionEndedDto, Task>? OnSessionEnded { get; set; }
   public Func<AssistSessionStartedDto, Task>? OnSessionStarted { get; set; }
@@ -90,6 +92,9 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
       nameof(AssistHubClientContract.AssistConsentRequested),
       (AssistConsentRequestedDto dto) => InvokeHandler(OnConsentRequested, dto));
     connection.On(
+      nameof(AssistHubClientContract.AssistConsentTimedOut),
+      (AssistConsentTimedOutDto dto) => InvokeHandler(OnConsentTimedOut, dto));
+    connection.On(
       nameof(AssistHubClientContract.AssistSessionEnded),
       (AssistSessionEndedDto dto) => InvokeHandler(OnSessionEnded, dto));
     connection.On(
@@ -98,7 +103,19 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
 
     try
     {
-      await connection.StartAsync(cancellationToken);
+      // Started from a background queue thread, but suppress any ambient context anyway so the
+      // client never captures a UI dispatcher for handler dispatch or invoke continuations.
+      var previousContext = SynchronizationContext.Current;
+      try
+      {
+        SynchronizationContext.SetSynchronizationContext(null);
+        await connection.StartAsync(cancellationToken).ConfigureAwait(false);
+      }
+      finally
+      {
+        SynchronizationContext.SetSynchronizationContext(previousContext);
+      }
+
       _connection = connection;
       return true;
     }

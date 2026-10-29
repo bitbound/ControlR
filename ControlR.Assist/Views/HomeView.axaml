@@ -121,7 +121,7 @@
         </StackPanel>
       </Border>
 
-      <!-- Ready / consent / active group -->
+      <!-- Ready / active group. Consent requests appear as a modal in the main window. -->
       <StackPanel Grid.Row="2"
                   Spacing="12"
                   VerticalAlignment="Top"
@@ -134,57 +134,49 @@
             <TextBlock Classes="Small Secondary"
                        TextWrapping="Wrap"
                        Text="{x:Static local:Localization.AccessCodeCaption}" />
-            <TextBlock FontSize="38"
-                       FontWeight="Bold"
-                       FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
-                       LetterSpacing="3"
-                       HorizontalAlignment="Center"
-                       Text="{Binding Code}" />
+            <Grid>
+              <TextBlock FontSize="38"
+                         FontWeight="Bold"
+                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                         LetterSpacing="3"
+                         HorizontalAlignment="Center"
+                         Text="{Binding Code}" />
+              <controls:ThemeButton x:Name="CopyCodeButton"
+                                    Width="34"
+                                    Height="34"
+                                    Padding="0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Variant="Text"
+                                    ToolTip.Tip="{x:Static local:Localization.CopyCodeTooltip}"
+                                    Click="OnCopyCodeClick">
+                <Panel>
+                  <PathIcon x:Name="CopyGlyph"
+                            Width="16"
+                            Height="16"
+                            Data="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                  <PathIcon x:Name="CopiedGlyph"
+                            Width="16"
+                            Height="16"
+                            IsVisible="False"
+                            Data="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                </Panel>
+              </controls:ThemeButton>
+            </Grid>
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Spacing="8"
                         IsVisible="{Binding !IsSessionActive}">
-              <controls:ThemeButton Content="{x:Static local:Localization.NewCodeButtonText}"
+              <controls:ThemeButton Content="{Binding NewCodeText}"
                                     MinHeight="36"
                                     Variant="Outlined"
+                                    IsEnabled="{Binding IsNewCodeEnabled}"
                                     Command="{Binding GenerateNewCodeCommand}" />
               <controls:ThemeButton Content="{x:Static local:Localization.DisconnectButtonText}"
                                     MinHeight="36"
                                     Variant="Outlined"
                                     Command="{Binding DisconnectCommand}" />
             </StackPanel>
-          </StackPanel>
-        </Border>
-
-        <!-- Consent request takes over as the primary action while pending -->
-        <Border Classes="Card"
-                IsVisible="{Binding IsConsentPending}">
-          <StackPanel Spacing="12">
-            <TextBlock FontSize="15"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap"
-                       Text="{Binding ConsentPromptText}" />
-            <TextBlock Classes="Small Secondary"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding ShowConsentEmail}"
-                       Text="{Binding ConsentEmail}" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-              <controls:ThemeButton Grid.Column="0"
-                                    Content="{x:Static local:Localization.DeclineButtonText}"
-                                    MinHeight="36"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Variant="Outlined"
-                                    Command="{Binding DeclineConsentCommand}" />
-              <controls:ThemeButton Grid.Column="1"
-                                    Content="{x:Static local:Localization.AcceptButtonText}"
-                                    MinHeight="36"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center"
-                                    Color="Primary"
-                                    Variant="Filled"
-                                    Command="{Binding AcceptConsentCommand}" />
-            </Grid>
           </StackPanel>
         </Border>
 
@@ -225,6 +217,12 @@
                  TextWrapping="Wrap"
                  IsVisible="{Binding ShowIdleStatus}"
                  Text="{Binding StatusMessage}" />
+      <!-- Active viewer line with the email in the secondary color. Runs are built in code-behind. -->
+      <TextBlock x:Name="ViewerStatusText"
+                 Grid.Row="3"
+                 Classes="Small Secondary"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ShowConnectedStatus}" />
     </Grid>
   </ScrollViewer>
 

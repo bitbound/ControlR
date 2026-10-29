@@ -1,3 +1,5 @@
+using System.Net;
+using System.Threading.Channels;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -15,23 +17,39 @@ public enum AssistSessionState
 
 /// <summary>
 /// Drives the assist lifecycle: hub connection, one-time code, consent, and the per-session
-/// capture host.
+/// capture host. All state mutations run serially on a single background work queue, and hub
+/// event handlers only post to that queue. The SignalR receive loop is never blocked waiting on
+/// a lock that a queue item holds while awaiting a hub response, which is the cycle that used to
+/// wedge the app when a session was ended.
 /// </summary>
-public sealed class AssistSessionController(
-  IAssistSignalRClient hubClient,
-  IAssistSessionHostFactory sessionHostFactory,
-  IAssistSettingsService settingsService,
-  ILogger<AssistSessionController> logger) : IAsyncDisposable
+public sealed class AssistSessionController : IAsyncDisposable
 {
-  private readonly IAssistSignalRClient _hubClient = hubClient;
-  private readonly ILogger<AssistSessionController> _logger = logger;
-  private readonly IAssistSessionHostFactory _sessionHostFactory = sessionHostFactory;
-  private readonly IAssistSettingsService _settingsService = settingsService;
-  private readonly SemaphoreSlim _stateLock = new(1, 1);
+  private static readonly TimeSpan _invokeTimeout = TimeSpan.FromSeconds(15);
+  private static readonly TimeSpan _queueDrainTimeout = TimeSpan.FromSeconds(5);
+
+  private readonly IAssistSignalRClient _hubClient;
+  private readonly ILogger<AssistSessionController> _logger;
+  private readonly Task _queueLoop;
+  private readonly IAssistSessionHostFactory _sessionHostFactory;
+  private readonly IAssistSettingsService _settingsService;
+  private readonly Channel<Func<Task>> _workQueue = Channel.CreateUnbounded<Func<Task>>();
 
   private Guid? _activeSessionId;
   private Uri? _connectedServerUri;
   private IHost? _sessionHost;
+
+  public AssistSessionController(
+    IAssistSignalRClient hubClient,
+    IAssistSessionHostFactory sessionHostFactory,
+    IAssistSettingsService settingsService,
+    ILogger<AssistSessionController> logger)
+  {
+    _hubClient = hubClient;
+    _sessionHostFactory = sessionHostFactory;
+    _settingsService = settingsService;
+    _logger = logger;
+    _queueLoop = Task.Run(ProcessQueueAsync);
+  }
 
   public event Action? StateChanged;
 
@@ -43,12 +61,17 @@ public sealed class AssistSessionController(
   public AssistSessionState State { get; private set; } = AssistSessionState.Disconnected;
   public string? StatusMessage { get; private set; }
 
+  /// <summary>
+  /// Normalizes user-entered server input to scheme://host[:port]. Bare hostnames get an https://
+  /// prefix. The host must be a plausible hostname (dotted), localhost, or an IP address, and any
+  /// path, query, or fragment is dropped.
+  /// </summary>
   public static bool TryNormalizeServerUri(string? input, out Uri serverUri)
   {
     serverUri = null!;
 
     var candidate = (input ?? string.Empty).Trim();
-    if (candidate.Length == 0)
+    if (candidate.Length == 0 || candidate.Any(char.IsWhiteSpace))
     {
       return false;
     }
@@ -64,268 +87,89 @@ public sealed class AssistSessionController(
       return false;
     }
 
-    serverUri = parsed;
-    return true;
-  }
-
-  public async Task<bool> ConnectAsync(string serverUrl, CancellationToken cancellationToken)
-  {
-    if (!TryNormalizeServerUri(serverUrl, out var serverUri))
-    {
-      StatusMessage = Localization.StatusInvalidUrl;
-      RaiseStateChanged();
-      return false;
-    }
-
-    await TransitionAsync(AssistSessionState.Connecting, Localization.StatusConnecting);
-
-    if (!await _hubClient.ConnectAsync(serverUri, cancellationToken))
-    {
-      StatusMessage = Localization.StatusUnreachable;
-      await TransitionAsync(AssistSessionState.Disconnected);
-      return false;
-    }
-
-    var savedSettings = _settingsService.GetSettings();
-    AssistSettingsService.RememberUrl(savedSettings, serverUri.ToString());
-    await _settingsService.SaveAsync(savedSettings, cancellationToken);
-
-    _connectedServerUri = serverUri;
-    var created = await CreateSessionAsync(cancellationToken);
-    if (!created)
-    {
-      await _hubClient.DisconnectAsync();
-      _connectedServerUri = null;
-      await TransitionAsync(AssistSessionState.Disconnected);
-      return false;
-    }
-
-    return true;
-  }
-
-  public async Task DisconnectAsync()
-  {
-    await _stateLock.WaitAsync();
-
+    string host;
     try
     {
-      await EndCurrentSessionAsync();
-      await StopSessionHostAsync();
-      await _hubClient.DisconnectAsync();
-      _connectedServerUri = null;
-      Code = null;
-      SetConsentPending(null, null, null);
-      StatusMessage = null;
-      SetState(AssistSessionState.Disconnected);
+      // Throws for inputs like "http://" that parse but carry an empty host.
+      host = parsed.Host;
     }
-    finally
+    catch (InvalidOperationException)
     {
-      _stateLock.Release();
-      RaiseStateChanged();
+      return false;
     }
+
+    if (!IsPlausibleHost(host))
+    {
+      return false;
+    }
+
+    serverUri = new UriBuilder(parsed.Scheme, host, parsed.Port).Uri;
+    return true;
   }
+
+  public Task<bool> ConnectAsync(string serverUrl, CancellationToken cancellationToken) =>
+    EnqueueAsync(() => ConnectCoreAsync(serverUrl, cancellationToken));
+
+  public Task DisconnectAsync() => EnqueueAsync(DisconnectCoreAsync);
 
   public async ValueTask DisposeAsync()
   {
-    await StopSessionHostAsync();
-    await _hubClient.DisposeAsync();
-    _stateLock.Dispose();
-  }
-
-  public async Task EndSessionAsync()
-  {
-    await _stateLock.WaitAsync();
+    _workQueue.Writer.TryComplete();
 
     try
     {
-      if (State != AssistSessionState.Active)
-      {
-        return;
-      }
-
-      // End on the server while the relay is still up so the technician reliably receives the
-      // "ended by remote user" notification before the relay drop arrives.
-      await EndCurrentSessionAsync();
-      await StopSessionHostAsync();
-      SetConsentPending(null, null, null);
-      StatusMessage = Localization.StatusSessionEnded;
-      await CreateSessionCoreAsync(CancellationToken.None);
+      await _queueLoop.WaitAsync(_queueDrainTimeout).ConfigureAwait(false);
     }
-    finally
+    catch (Exception ex)
     {
-      _stateLock.Release();
-      RaiseStateChanged();
+      _logger.LogWarning(ex, "Assist work queue did not drain before shutdown.");
     }
+
+    await StopSessionHostAsync().ConfigureAwait(false);
+    await _hubClient.DisposeAsync().ConfigureAwait(false);
   }
 
-  public async Task GenerateNewCodeAsync()
+  public Task EndSessionAsync() => EnqueueAsync(EndSessionCoreAsync);
+
+  public Task GenerateNewCodeAsync() => EnqueueAsync(GenerateNewCodeCoreAsync);
+
+  public Task HandleConnectionLost()
   {
-    await _stateLock.WaitAsync();
-
-    try
-    {
-      if (State is not AssistSessionState.Ready and not AssistSessionState.PendingConsent)
-      {
-        return;
-      }
-
-      SetConsentPending(null, null, null);
-      await EndCurrentSessionAsync();
-      await CreateSessionAsync(CancellationToken.None);
-    }
-    finally
-    {
-      _stateLock.Release();
-      RaiseStateChanged();
-    }
+    Post(HandleConnectionLostCoreAsync);
+    return Task.CompletedTask;
   }
 
-  public async Task HandleConnectionLost()
+  public Task HandleConsentRequested(AssistConsentRequestedDto dto)
   {
-    await _stateLock.WaitAsync();
-
-    try
-    {
-      if (State == AssistSessionState.Disconnected)
-      {
-        return;
-      }
-
-      _logger.LogWarning("Assist hub connection lost. Reconnection was not possible.");
-      await StopSessionHostAsync();
-      _activeSessionId = null;
-      Code = null;
-      _connectedServerUri = null;
-      SetConsentPending(null, null, null);
-      StatusMessage = Localization.StatusConnectionLost;
-      SetState(AssistSessionState.Disconnected);
-    }
-    finally
-    {
-      _stateLock.Release();
-      RaiseStateChanged();
-    }
+    Post(() => HandleConsentRequestedCoreAsync(dto));
+    return Task.CompletedTask;
   }
 
-  public async Task HandleConsentRequested(AssistConsentRequestedDto dto)
+  public Task HandleConsentTimedOut(AssistConsentTimedOutDto dto)
   {
-    await _stateLock.WaitAsync();
-
-    try
-    {
-      if (_activeSessionId is not Guid activeSessionId || dto.SessionId != activeSessionId)
-      {
-        return;
-      }
-
-      SetConsentPending(dto.SessionId, dto.ViewerDisplayName, dto.ViewerEmail);
-      StatusMessage = null;
-      SetState(AssistSessionState.PendingConsent);
-    }
-    finally
-    {
-      _stateLock.Release();
-      RaiseStateChanged();
-    }
+    Post(() => HandleConsentTimedOutCoreAsync(dto));
+    return Task.CompletedTask;
   }
 
-  public async Task HandleReconnected()
+  public Task HandleReconnected()
   {
-    _logger.LogInformation("Assist hub reconnected. Generating a fresh code.");
-
-    await _stateLock.WaitAsync();
-
-    try
-    {
-      await EndCurrentSessionAsync();
-      await StopSessionHostAsync();
-      SetConsentPending(null, null, null);
-      StatusMessage = Localization.StatusReconnected;
-      await CreateSessionCoreAsync(CancellationToken.None);
-    }
-    finally
-    {
-      _stateLock.Release();
-      RaiseStateChanged();
-    }
+    Post(HandleReconnectedCoreAsync);
+    return Task.CompletedTask;
   }
 
-  public async Task HandleSessionEnded(AssistSessionEndedDto dto)
+  public Task HandleSessionEnded(AssistSessionEndedDto dto)
   {
-    await _stateLock.WaitAsync();
-
-    try
-    {
-      if (_activeSessionId is not Guid activeSessionId || dto.SessionId != activeSessionId)
-      {
-        return;
-      }
-
-      await StopSessionHostAsync();
-      SetConsentPending(null, null, null);
-      StatusMessage = dto.Reason;
-      await CreateSessionCoreAsync(CancellationToken.None);
-    }
-    finally
-    {
-      _stateLock.Release();
-      RaiseStateChanged();
-    }
+    Post(() => HandleSessionEndedCoreAsync(dto));
+    return Task.CompletedTask;
   }
 
-  public async Task HandleSessionStarted(AssistSessionStartedDto dto)
+  public Task HandleSessionStarted(AssistSessionStartedDto dto)
   {
-    await _stateLock.WaitAsync();
-
-    try
-    {
-      if (_activeSessionId is not Guid activeSessionId || dto.SessionId != activeSessionId)
-      {
-        return;
-      }
-
-      if (_connectedServerUri is not { } serverUri)
-      {
-        return;
-      }
-
-      SetConsentPending(null, null, null);
-      StatusMessage = string.Format(Localization.StatusConnectedToViewer, dto.ViewerDisplayName);
-      SetState(AssistSessionState.Active);
-      RaiseStateChanged();
-
-      await StartSessionHostAsync(new AssistSessionRequest(
-        serverUri,
-        dto.SessionId,
-        dto.AccessToken,
-        dto.ViewerDisplayName));
-    }
-    finally
-    {
-      _stateLock.Release();
-    }
+    Post(() => HandleSessionStartedCoreAsync(dto));
+    return Task.CompletedTask;
   }
 
-  public async Task RespondToConsentAsync(bool approved)
-  {
-    if (PendingSessionId is not Guid sessionId)
-    {
-      return;
-    }
-
-    var result = await _hubClient.RespondToAssistConsent(sessionId, approved, CancellationToken.None);
-    if (!result.IsSuccess)
-    {
-      StatusMessage = result.Reason ?? Localization.StatusConsentResponseFailed;
-      await GenerateNewCodeAsync();
-      return;
-    }
-
-    if (!approved)
-    {
-      await GenerateNewCodeAsync();
-    }
-  }
+  public Task RespondToConsentAsync(bool approved) => EnqueueAsync(() => RespondToConsentCoreAsync(approved));
 
   public void SetViewOnly(bool enabled)
   {
@@ -339,16 +183,71 @@ public sealed class AssistSessionController(
     RaiseStateChanged();
   }
 
+  private static bool IsPlausibleHost(string host)
+  {
+    if (host.Length == 0)
+    {
+      return false;
+    }
+
+    if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+        IPAddress.TryParse(host, out _))
+    {
+      return true;
+    }
+
+    // Reject bare labels such as "sdf" that Uri parses happily but that can never resolve.
+    var dotIndex = host.IndexOf('.');
+    return dotIndex > 0 && dotIndex < host.Length - 1;
+  }
+
+  private async Task<bool> ConnectCoreAsync(string serverUrl, CancellationToken cancellationToken)
+  {
+    if (!TryNormalizeServerUri(serverUrl, out var serverUri))
+    {
+      StatusMessage = Localization.StatusInvalidUrl;
+      RaiseStateChanged();
+      return false;
+    }
+
+    SetState(AssistSessionState.Connecting, Localization.StatusConnecting);
+
+    if (!await _hubClient.ConnectAsync(serverUri, cancellationToken).ConfigureAwait(false))
+    {
+      StatusMessage = Localization.StatusUnreachable;
+      SetState(AssistSessionState.Disconnected);
+      RaiseStateChanged();
+      return false;
+    }
+
+    var savedSettings = _settingsService.GetSettings();
+    AssistSettingsService.RememberUrl(savedSettings, serverUri.ToString());
+    await _settingsService.SaveAsync(savedSettings, cancellationToken).ConfigureAwait(false);
+
+    _connectedServerUri = serverUri;
+    var created = await CreateSessionAsync(cancellationToken).ConfigureAwait(false);
+    if (!created)
+    {
+      await _hubClient.DisconnectAsync().ConfigureAwait(false);
+      _connectedServerUri = null;
+      SetState(AssistSessionState.Disconnected);
+      RaiseStateChanged();
+      return false;
+    }
+
+    return true;
+  }
+
   private async Task<bool> CreateSessionAsync(CancellationToken cancellationToken)
   {
-    var result = await CreateSessionCoreAsync(cancellationToken);
+    var created = await CreateSessionCoreAsync(cancellationToken).ConfigureAwait(false);
     RaiseStateChanged();
-    return result;
+    return created;
   }
 
   private async Task<bool> CreateSessionCoreAsync(CancellationToken cancellationToken)
   {
-    var result = await _hubClient.CreateAssistSession(cancellationToken);
+    var result = await InvokeHubAsync(ct => _hubClient.CreateAssistSession(ct));
     if (!result.IsSuccess || result.Value is null)
     {
       Code = null;
@@ -365,6 +264,19 @@ public sealed class AssistSessionController(
     return true;
   }
 
+  private async Task DisconnectCoreAsync()
+  {
+    await EndCurrentSessionAsync().ConfigureAwait(false);
+    await StopSessionHostAsync().ConfigureAwait(false);
+    await _hubClient.DisconnectAsync().ConfigureAwait(false);
+    _connectedServerUri = null;
+    Code = null;
+    SetConsentPending(null, null, null);
+    StatusMessage = null;
+    SetState(AssistSessionState.Disconnected);
+    RaiseStateChanged();
+  }
+
   private async Task EndCurrentSessionAsync()
   {
     if (_activeSessionId is not Guid sessionId)
@@ -372,35 +284,234 @@ public sealed class AssistSessionController(
       return;
     }
 
-    _ = await _hubClient.EndAssistSession(sessionId, CancellationToken.None);
+    _ = await InvokeHubAsync(ct => _hubClient.EndAssistSession(sessionId, ct));
     _activeSessionId = null;
   }
 
-  private async Task HandleSessionHostStopped(Guid sessionId)
+  private async Task EndSessionCoreAsync()
   {
-    await _stateLock.WaitAsync();
-
-    try
+    if (State != AssistSessionState.Active)
     {
-      if (_activeSessionId != sessionId)
-      {
-        return;
-      }
-
-      _sessionHost = null;
-      StatusMessage = Localization.StatusSessionEnded;
-      await EndCurrentSessionAsync();
-      SetConsentPending(null, null, null);
-      await CreateSessionCoreAsync(CancellationToken.None);
+      return;
     }
-    finally
+
+    // End on the server while the relay is still up so the technician reliably receives the
+    // "ended by remote user" notification before the relay drop arrives.
+    await EndCurrentSessionAsync().ConfigureAwait(false);
+    await StopSessionHostAsync().ConfigureAwait(false);
+    SetConsentPending(null, null, null);
+    StatusMessage = Localization.StatusSessionEnded;
+    await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+    RaiseStateChanged();
+  }
+
+  private Task EnqueueAsync(Func<Task> work) => EnqueueAsync<object?>(async () =>
+  {
+    await work().ConfigureAwait(false);
+    return null;
+  });
+
+  private Task<T> EnqueueAsync<T>(Func<Task<T>> work)
+  {
+    var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    if (!_workQueue.Writer.TryWrite(async () =>
     {
-      _stateLock.Release();
-      RaiseStateChanged();
+      try
+      {
+        tcs.SetResult(await work().ConfigureAwait(false));
+      }
+      catch (Exception ex)
+      {
+        tcs.SetException(ex);
+        throw;
+      }
+    }))
+    {
+      tcs.SetException(new ObjectDisposedException(nameof(AssistSessionController)));
+    }
+
+    return tcs.Task;
+  }
+
+  private async Task GenerateNewCodeCoreAsync()
+  {
+    if (State is not AssistSessionState.Ready and not AssistSessionState.PendingConsent)
+    {
+      return;
+    }
+
+    SetConsentPending(null, null, null);
+    await EndCurrentSessionAsync().ConfigureAwait(false);
+    await CreateSessionAsync(CancellationToken.None).ConfigureAwait(false);
+  }
+
+  private async Task HandleConnectionLostCoreAsync()
+  {
+    if (State == AssistSessionState.Disconnected)
+    {
+      return;
+    }
+
+    _logger.LogWarning("Assist hub connection lost. Reconnection was not possible.");
+    await StopSessionHostAsync().ConfigureAwait(false);
+    _activeSessionId = null;
+    Code = null;
+    _connectedServerUri = null;
+    SetConsentPending(null, null, null);
+    StatusMessage = Localization.StatusConnectionLost;
+    SetState(AssistSessionState.Disconnected);
+    RaiseStateChanged();
+  }
+
+  private Task HandleConsentRequestedCoreAsync(AssistConsentRequestedDto dto)
+  {
+    if (_activeSessionId is not Guid activeSessionId || dto.SessionId != activeSessionId)
+    {
+      return Task.CompletedTask;
+    }
+
+    SetConsentPending(dto.SessionId, dto.ViewerDisplayName, dto.ViewerEmail);
+    StatusMessage = null;
+    SetState(AssistSessionState.PendingConsent);
+    RaiseStateChanged();
+    return Task.CompletedTask;
+  }
+
+  private Task HandleConsentTimedOutCoreAsync(AssistConsentTimedOutDto dto)
+  {
+    if (State != AssistSessionState.PendingConsent || PendingSessionId != dto.SessionId)
+    {
+      return Task.CompletedTask;
+    }
+
+    _logger.LogInformation("The consent request for assist session {SessionId} timed out.", dto.SessionId);
+    SetConsentPending(null, null, null);
+    StatusMessage = Localization.StatusConsentTimedOut;
+    SetState(AssistSessionState.Ready);
+    RaiseStateChanged();
+    return Task.CompletedTask;
+  }
+
+  private async Task HandleReconnectedCoreAsync()
+  {
+    _logger.LogInformation("Assist hub reconnected. Generating a fresh code.");
+
+    await EndCurrentSessionAsync().ConfigureAwait(false);
+    await StopSessionHostAsync().ConfigureAwait(false);
+    SetConsentPending(null, null, null);
+    StatusMessage = Localization.StatusReconnected;
+    await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+    RaiseStateChanged();
+  }
+
+  private async Task HandleSessionEndedCoreAsync(AssistSessionEndedDto dto)
+  {
+    if (_activeSessionId is not Guid activeSessionId || dto.SessionId != activeSessionId)
+    {
+      return;
+    }
+
+    await StopSessionHostAsync().ConfigureAwait(false);
+    SetConsentPending(null, null, null);
+    StatusMessage = dto.Reason;
+    await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+    RaiseStateChanged();
+  }
+
+  private async Task HandleSessionHostStoppedCoreAsync(Guid sessionId)
+  {
+    if (_activeSessionId != sessionId)
+    {
+      return;
+    }
+
+    _sessionHost = null;
+    StatusMessage = Localization.StatusSessionEnded;
+    await EndCurrentSessionAsync().ConfigureAwait(false);
+    SetConsentPending(null, null, null);
+    await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+    RaiseStateChanged();
+  }
+
+  private async Task HandleSessionStartedCoreAsync(AssistSessionStartedDto dto)
+  {
+    if (_activeSessionId is not Guid activeSessionId || dto.SessionId != activeSessionId)
+    {
+      return;
+    }
+
+    if (_connectedServerUri is not { } serverUri)
+    {
+      return;
+    }
+
+    SetConsentPending(null, null, null);
+    StatusMessage = string.Format(Localization.StatusConnectedToViewer, dto.ViewerDisplayName);
+    SetState(AssistSessionState.Active);
+    RaiseStateChanged();
+
+    await StartSessionHostAsync(new AssistSessionRequest(
+      serverUri,
+      dto.SessionId,
+      dto.AccessToken,
+      dto.ViewerDisplayName)).ConfigureAwait(false);
+  }
+
+  private async Task<THubResult> InvokeHubAsync<THubResult>(Func<CancellationToken, Task<THubResult>> invoke)
+  {
+    // Bounded so a wedged server can never stall the work queue behind us.
+    using var cts = new CancellationTokenSource(_invokeTimeout);
+    return await invoke(cts.Token).ConfigureAwait(false);
+  }
+
+  private void Post(Func<Task> work)
+  {
+    if (!_workQueue.Writer.TryWrite(work))
+    {
+      _logger.LogWarning("Dropped an assist work item after the controller was disposed.");
+    }
+  }
+
+  private async Task ProcessQueueAsync()
+  {
+    await foreach (var work in _workQueue.Reader.ReadAllAsync().ConfigureAwait(false))
+    {
+      try
+      {
+        await work().ConfigureAwait(false);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Unexpected error while processing an assist work item.");
+        StatusMessage = Localization.StatusUnexpectedError;
+        RaiseStateChanged();
+      }
     }
   }
 
   private void RaiseStateChanged() => StateChanged?.Invoke();
+
+  private async Task RespondToConsentCoreAsync(bool approved)
+  {
+    if (PendingSessionId is not Guid sessionId)
+    {
+      return;
+    }
+
+    var result = await InvokeHubAsync(ct => _hubClient.RespondToAssistConsent(sessionId, approved, ct));
+    if (!result.IsSuccess)
+    {
+      StatusMessage = result.Reason ?? Localization.StatusConsentResponseFailed;
+      await GenerateNewCodeCoreAsync().ConfigureAwait(false);
+      return;
+    }
+
+    if (!approved)
+    {
+      await GenerateNewCodeCoreAsync().ConfigureAwait(false);
+    }
+  }
 
   private void SetConsentPending(Guid? sessionId, string? viewerName, string? email)
   {
@@ -409,7 +520,17 @@ public sealed class AssistSessionController(
     PendingConsentEmail = email;
   }
 
-  private void SetState(AssistSessionState state) => State = state;
+  private void SetState(AssistSessionState state, string? statusMessage = null)
+  {
+    // A null status means "keep the message the caller already set", so failure messages written
+    // before transitioning to Disconnected are not wiped out.
+    if (statusMessage is not null)
+    {
+      StatusMessage = statusMessage;
+    }
+
+    State = state;
+  }
 
   private async Task StartSessionHostAsync(AssistSessionRequest request)
   {
@@ -425,32 +546,33 @@ public sealed class AssistSessionController(
 
         try
         {
-          await stopped.Task;
+          await stopped.Task.ConfigureAwait(false);
         }
         catch (ObjectDisposedException)
         {
           return;
         }
 
-        // Skip the handoff when this side already tore the host down while holding the lock;
-        // that path finished the session bookkeeping itself.
+        // Skip the handoff when this side already tore the host down; that path finished
+        // the session bookkeeping itself.
         if (!ReferenceEquals(_sessionHost, host) && _sessionHost is null)
         {
           return;
         }
 
-        await HandleSessionHostStopped(request.SessionId);
+        await EnqueueAsync(() => HandleSessionHostStoppedCoreAsync(request.SessionId)).ConfigureAwait(false);
       });
 
-      await host.StartAsync();
+      await host.StartAsync().ConfigureAwait(false);
       _sessionHost = host;
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Failed to start the assist session host.");
       StatusMessage = Localization.StatusSessionStartFailed;
-      await EndCurrentSessionAsync();
-      await CreateSessionCoreAsync(CancellationToken.None);
+      await EndCurrentSessionAsync().ConfigureAwait(false);
+      await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+      RaiseStateChanged();
     }
   }
 
@@ -465,7 +587,7 @@ public sealed class AssistSessionController(
     try
     {
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-      await host.StopAsync(cts.Token);
+      await host.StopAsync(cts.Token).ConfigureAwait(false);
     }
     catch (Exception ex)
     {
@@ -475,19 +597,5 @@ public sealed class AssistSessionController(
     {
       host.Dispose();
     }
-  }
-
-  private async Task TransitionAsync(AssistSessionState state, string? statusMessage = null)
-  {
-    // A null status means "keep the message the caller already set", so failure messages written
-    // before transitioning to Disconnected are not wiped out.
-    if (statusMessage is not null)
-    {
-      StatusMessage = statusMessage;
-    }
-
-    SetState(state);
-    await Task.CompletedTask;
-    RaiseStateChanged();
   }
 }
