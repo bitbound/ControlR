@@ -920,8 +920,22 @@ public class PermissionAssignmentManager(
     var principalKind = requests[0].PrincipalKind;
     var principalId = requests[0].PrincipalId;
 
+    // Capability is judged against the unfiltered request set. Response codes must not
+    // depend on which rows the target already holds, or a merge becomes an oracle for
+    // held-but-invisible (null-owner, server-scoped) grants.
+    IReadOnlySet<string>? effectivePermissions = null;
+
     if (ignoreHeld)
     {
+      effectivePermissions = await GetEffectivePermissions(actor, tenantId, cancellationToken);
+      foreach (var request in requests)
+      {
+        if (ValidateWriteAuthority(request.Effect, request.ScopeKind, effectivePermissions) is { } authorityError)
+        {
+          return HttpResult.Fail<int>(authorityError.Code, authorityError.Reason);
+        }
+      }
+
       var heldKeys = await _appDb.PermissionAssignments
         .IgnoreQueryFilters()
         .Where(HeldByPrincipal(principalKind, principalId, tenantId))
@@ -958,7 +972,7 @@ public class PermissionAssignmentManager(
         HttpResultErrorCode.BadRequest, $"Principal not found: {principalKind}/{principalId}");
     }
 
-    var effectivePermissions = await GetEffectivePermissions(actor, tenantId, cancellationToken);
+    effectivePermissions ??= await GetEffectivePermissions(actor, tenantId, cancellationToken);
     foreach (var request in requests)
     {
       if (ValidateWriteAuthority(request.Effect, request.ScopeKind, effectivePermissions) is { } authorityError)
