@@ -1,0 +1,163 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Assist.ViewModels"
+             xmlns:local="using:ControlR.Assist"
+             xmlns:controls="using:ControlR.Libraries.Avalonia.Controls"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="560"
+             x:Class="ControlR.Assist.Views.AboutView"
+             x:DataType="vm:AboutViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="16">
+
+      <StackPanel Spacing="4">
+        <controls:ThemeButton HorizontalAlignment="Left"
+                              Padding="8,4"
+                              Variant="Text"
+                              Content="{x:Static local:Localization.AboutBackButtonText}"
+                              Command="{Binding BackCommand}" />
+        <TextBlock Classes="h1 Primary"
+                   Text="{x:Static local:Localization.About}" />
+      </StackPanel>
+
+      <StackPanel Spacing="12">
+
+        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12">
+
+          <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold">
+            <Run Text="{x:Static local:Localization.Version}" />
+            <Run Text=":" />
+          </TextBlock>
+          <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppVersion}" />
+
+          <TextBlock Grid.Row="1"
+                     Grid.Column="0"
+                     FontWeight="SemiBold"
+                     IsVisible="{Binding ServerUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <Run Text="{x:Static local:Localization.AboutServerLabel}" />
+            <Run Text=":" />
+          </TextBlock>
+          <TextBlock Grid.Row="1"
+                     Grid.Column="1"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding ServerUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding ServerUrl}" />
+
+        </Grid>
+
+        <!--
+          Hidden entirely on branded builds. The License row is safe to hide there because the
+          Third-Party Licenses section shows the ControlR row, linking the same LICENSE.txt, exactly
+          when this flag is set.
+        -->
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="12"
+              IsVisible="{Binding !HideSponsorshipInfo}">
+
+          <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold">
+            <Run Text="{x:Static local:Localization.AboutLicenseLabel}" />
+            <Run Text=":" />
+          </TextBlock>
+          <HyperlinkButton Grid.Row="0" Grid.Column="1" Margin="0" Padding="0"
+                           Content="{x:Static local:Localization.AboutLicenseLabel}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
+
+          <TextBlock Grid.Row="1" Grid.Column="0" FontWeight="SemiBold">
+            <Run Text="{x:Static local:Localization.AboutProjectLabel}" />
+            <Run Text=":" />
+          </TextBlock>
+          <HyperlinkButton Grid.Row="1" Grid.Column="1" Margin="0" Padding="0"
+                           Content="https://github.com/bitbound/controlr"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/bitbound/controlr" />
+
+          <TextBlock Grid.Row="2" Grid.Column="0" FontWeight="SemiBold">
+            <Run Text="{x:Static local:Localization.AboutWebsiteLabel}" />
+            <Run Text=":" />
+          </TextBlock>
+          <HyperlinkButton Grid.Row="2" Grid.Column="1" Margin="0" Padding="0"
+                           Content="https://controlr.app"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://controlr.app" />
+
+          <TextBlock Grid.Row="3" Grid.Column="0" FontWeight="SemiBold" VerticalAlignment="Top">
+            <Run Text="{x:Static local:Localization.AboutSponsorLabel}" />
+            <Run Text=":" />
+          </TextBlock>
+          <StackPanel Grid.Row="3" Grid.Column="1" Spacing="8">
+            <TextBlock Text="{x:Static local:Localization.AboutSponsorDescription}" TextWrapping="Wrap" />
+            <controls:ThemeButton Content="{x:Static local:Localization.AboutSponsorButton}"
+                                  Color="Error"
+                                  Variant="Outlined"
+                                  Command="{Binding OpenUrlCommand}"
+                                  CommandParameter="https://github.com/sponsors/bitbound" />
+          </StackPanel>
+
+        </Grid>
+      </StackPanel>
+
+      <Rectangle Height="1" Fill="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" />
+
+      <TextBlock FontWeight="SemiBold"
+                 FontSize="16"
+                 Text="{x:Static local:Localization.AboutThirdPartyLicensesLabel}" />
+
+      <TextBlock Text="{x:Static local:Localization.AboutThirdPartyLicensesDescription}" TextWrapping="Wrap" />
+
+      <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="16" RowSpacing="8">
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static local:Localization.AboutLibraryAvaloniaUi}" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <HyperlinkButton Content="{x:Static local:Localization.AboutSourceText}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/AvaloniaUI/Avalonia" />
+          <HyperlinkButton Content="{x:Static local:Localization.LinkLicenseText}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static local:Localization.AboutLibraryCommunityToolkit}" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <HyperlinkButton Content="{x:Static local:Localization.AboutSourceText}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/CommunityToolkit/dotnet" />
+          <HyperlinkButton Content="{x:Static local:Localization.LinkLicenseText}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/CommunityToolkit/dotnet/blob/main/License.md" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static local:Localization.AboutLibrarySerilog}" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <HyperlinkButton Content="{x:Static local:Localization.AboutSourceText}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/serilog/serilog" />
+          <HyperlinkButton Content="{x:Static local:Localization.LinkLicenseText}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/serilog/serilog/blob/dev/LICENSE" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static local:Localization.AboutLibraryMicrosoftLibraries}" VerticalAlignment="Center" />
+        <HyperlinkButton Grid.Row="3" Grid.Column="1"
+                         Content="{x:Static local:Localization.AboutSourceText}"
+                         Command="{Binding OpenUrlCommand}"
+                         CommandParameter="https://github.com/microsoft"
+                         VerticalAlignment="Center" />
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static local:Localization.AboutLibraryControlR}" IsVisible="{Binding HideSponsorshipInfo}" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding HideSponsorshipInfo}" VerticalAlignment="Center">
+          <HyperlinkButton Content="{x:Static local:Localization.AboutSourceText}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/bitbound/ControlR" />
+          <HyperlinkButton Content="{x:Static local:Localization.LinkLicenseText}"
+                           Command="{Binding OpenUrlCommand}"
+                           CommandParameter="https://github.com/bitbound/ControlR/blob/main/LICENSE.txt" />
+        </StackPanel>
+
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

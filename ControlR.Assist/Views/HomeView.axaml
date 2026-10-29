@@ -7,185 +7,225 @@
              xmlns:brand="using:ControlR.Libraries.Branding"
              xmlns:controls="using:ControlR.Libraries.Avalonia.Controls"
              mc:Ignorable="d"
-             d:DesignWidth="420"
+             d:DesignWidth="640"
              d:DesignHeight="560"
              x:Class="ControlR.Assist.Views.HomeView"
              x:DataType="vm:HomeViewModel">
 
   <ScrollViewer>
-    <StackPanel Margin="24"
-                Spacing="16"
-                MaxWidth="340"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16">
 
-      <!-- Hero -->
-      <StackPanel Spacing="6" Margin="0,4,0,4">
+      <!-- Page header. -->
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Image Source="/Assets/appicon.png"
-               Width="64"
-               Height="64"
-               HorizontalAlignment="Center" />
-        <TextBlock Classes="h1 Primary"
-                   HorizontalAlignment="Center"
-                   Text="{x:Static brand:BrandingConstants.BrandName}" />
-        <TextBlock Classes="Small Secondary"
-                   TextWrapping="Wrap"
-                   TextAlignment="Center"
-                   HorizontalAlignment="Center"
-                   Text="{x:Static local:Localization.HomeTagline}" />
-      </StackPanel>
-
-      <controls:Callout Severity="Warning"
-                        Message="{x:Static local:Localization.TrustNoticeText}"
-                        IsVisible="{Binding ShowTrustNotice}" />
-
-      <controls:Callout Severity="Error"
-                        Message="{Binding StatusMessage}"
-                        IsVisible="{Binding ShowStatusAlert}" />
-
-      <!-- Step 1: server URL entry -->
-      <StackPanel Spacing="6"
-                  IsVisible="{Binding ShowUrlEntry}">
-        <TextBlock Text="{x:Static local:Localization.ServerUrlLabel}"
-                   FontWeight="SemiBold" />
-        <TextBlock Classes="Small Secondary"
-                   TextWrapping="Wrap"
-                   Text="{x:Static local:Localization.ServerUrlHelp}" />
-        <TextBox Text="{Binding ServerUrl}"
-                 PlaceholderText="{x:Static local:Localization.ServerUrlWatermark}" />
-        <controls:ThemeButton Content="{x:Static local:Localization.NextButtonText}"
-                              HorizontalAlignment="Stretch"
-                              HorizontalContentAlignment="Center"
-                              Color="Primary"
-                              Variant="Filled"
-                              Command="{Binding NextCommand}" />
-      </StackPanel>
-
-      <!-- Step 2: connect -->
-      <StackPanel Spacing="8"
-                  IsVisible="{Binding ShowConnectAction}">
-        <StackPanel Spacing="2"
-                    IsVisible="{Binding CanEditServerUrl}">
+               Width="36"
+               Height="36"
+               VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1"
+                    Spacing="2"
+                    VerticalAlignment="Center">
+          <TextBlock Classes="h1 Primary"
+                     Text="{x:Static brand:BrandingConstants.BrandName}" />
           <TextBlock Classes="Small Secondary"
-                     HorizontalAlignment="Center"
-                     Text="{x:Static local:Localization.ConnectToLabel}" />
-          <TextBlock TextAlignment="Center"
                      TextWrapping="Wrap"
-                     HorizontalAlignment="Center"
-                     Text="{Binding ServerUrl}" />
+                     Text="{x:Static local:Localization.HomeTagline}" />
         </StackPanel>
-        <controls:ThemeButton Content="{x:Static local:Localization.ConnectButtonText}"
-                              HorizontalAlignment="Stretch"
-                              HorizontalContentAlignment="Center"
-                              Color="Primary"
-                              Variant="Filled"
-                              Command="{Binding ConnectCommand}" />
-        <Button Classes="TransparentButton"
-                HorizontalAlignment="Center"
-                Content="{x:Static local:Localization.ChangeServerButtonText}"
-                Command="{Binding ChangeServerCommand}"
-                IsVisible="{Binding CanEditServerUrl}" />
-      </StackPanel>
-
-      <!-- Connecting -->
-      <StackPanel Spacing="8"
-                  IsVisible="{Binding IsBusy}">
-        <ProgressBar IsIndeterminate="True" />
-        <TextBlock Classes="Small Secondary"
-                   HorizontalAlignment="Center"
-                   Text="{x:Static local:Localization.StatusConnecting}" />
-      </StackPanel>
-
-      <!-- Access code -->
-      <Border Classes="Card"
-              Padding="16"
-              IsVisible="{Binding ShowCode}">
-        <StackPanel Spacing="10">
-          <TextBlock Classes="Small Secondary"
-                     TextWrapping="Wrap"
-                     TextAlignment="Center"
-                     Text="{x:Static local:Localization.AccessCodeCaption}" />
-          <TextBlock FontSize="36"
+        <controls:ThemeButton Grid.Column="2"
+                              Width="36"
+                              Height="36"
+                              Padding="0"
+                              VerticalAlignment="Top"
+                              Variant="Text"
+                              ToolTip.Tip="{x:Static local:Localization.About}"
+                              Command="{Binding ShowAboutCommand}">
+          <TextBlock Text="?"
+                     FontSize="16"
                      FontWeight="Bold"
                      HorizontalAlignment="Center"
-                     Text="{Binding Code}" />
-          <StackPanel Orientation="Horizontal"
-                      HorizontalAlignment="Center"
-                      Spacing="8"
-                      IsVisible="{Binding !IsSessionActive}">
-            <controls:ThemeButton Content="{x:Static local:Localization.NewCodeButtonText}"
-                                  Variant="Outlined"
-                                  Command="{Binding GenerateNewCodeCommand}" />
-            <controls:ThemeButton Content="{x:Static local:Localization.DisconnectButtonText}"
-                                  Variant="Outlined"
-                                  Command="{Binding DisconnectCommand}" />
-          </StackPanel>
-        </StackPanel>
-      </Border>
+                     VerticalAlignment="Center" />
+        </controls:ThemeButton>
+      </Grid>
 
-      <!-- Consent request -->
-      <Border Classes="Card"
-              IsVisible="{Binding IsConsentPending}">
-        <StackPanel Spacing="10">
-          <TextBlock FontSize="16"
-                     TextWrapping="Wrap"
-                     TextAlignment="Center"
-                     Text="{Binding ConsentPromptText}" />
-          <TextBlock Classes="Small Secondary"
-                     HorizontalAlignment="Center"
-                     IsVisible="{Binding ConsentEmail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                     Text="{Binding ConsentEmail}" />
-          <StackPanel Orientation="Horizontal"
-                      HorizontalAlignment="Center"
-                      Spacing="8">
-            <controls:ThemeButton MinWidth="100"
-                                  Content="{x:Static local:Localization.AcceptButtonText}"
+      <!-- Notices -->
+      <StackPanel Grid.Row="1" Spacing="12">
+        <controls:Callout Severity="Warning"
+                          Message="{x:Static local:Localization.TrustNoticeText}"
+                          IsVisible="{Binding ShowTrustNotice}" />
+        <controls:Callout Severity="Error"
+                          Message="{Binding StatusMessage}"
+                          IsVisible="{Binding ShowStatusAlert}" />
+      </StackPanel>
+
+      <!-- Single primary card for the connect flow steps -->
+      <Border Grid.Row="2"
+              Classes="Card"
+              VerticalAlignment="Top"
+              IsVisible="{Binding ShowStepCard}">
+        <StackPanel Spacing="12">
+
+          <!-- Step 1: server URL entry -->
+          <StackPanel Spacing="6"
+                      IsVisible="{Binding ShowUrlEntry}">
+            <TextBlock Text="{x:Static local:Localization.ServerUrlLabel}"
+                       FontWeight="SemiBold" />
+            <TextBlock Classes="Small Secondary"
+                       TextWrapping="Wrap"
+                       Text="{x:Static local:Localization.ServerUrlHelp}" />
+            <TextBox Text="{Binding ServerUrl}"
+                     MinHeight="36"
+                     VerticalContentAlignment="Center"
+                     PlaceholderText="{x:Static local:Localization.ServerUrlWatermark}" />
+            <controls:ThemeButton Content="{x:Static local:Localization.NextButtonText}"
+                                  MinHeight="36"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
                                   Color="Primary"
                                   Variant="Filled"
-                                  Command="{Binding AcceptConsentCommand}" />
-            <controls:ThemeButton MinWidth="100"
-                                  Content="{x:Static local:Localization.DeclineButtonText}"
-                                  Variant="Outlined"
-                                  Command="{Binding DeclineConsentCommand}" />
+                                  Command="{Binding NextCommand}" />
+          </StackPanel>
+
+          <!-- Step 2: confirm the server and connect -->
+          <StackPanel Spacing="4"
+                      IsVisible="{Binding ShowConnectAction}">
+            <StackPanel Spacing="2"
+                        IsVisible="{Binding CanEditServerUrl}">
+              <TextBlock Classes="Small Secondary"
+                         Text="{x:Static local:Localization.ConnectToLabel}" />
+              <TextBlock FontWeight="SemiBold"
+                         TextWrapping="Wrap"
+                         Text="{Binding ServerUrl}" />
+            </StackPanel>
+            <controls:ThemeButton Content="{x:Static local:Localization.ConnectButtonText}"
+                                  MinHeight="36"
+                                  Margin="0,8,0,0"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Color="Primary"
+                                  Variant="Filled"
+                                  Command="{Binding ConnectCommand}" />
+            <controls:ThemeButton Margin="0,4,0,0"
+                                  HorizontalAlignment="Left"
+                                  Variant="Text"
+                                  Content="{x:Static local:Localization.ChangeServerButtonText}"
+                                  Command="{Binding ChangeServerCommand}"
+                                  IsVisible="{Binding CanEditServerUrl}" />
+          </StackPanel>
+
+          <!-- Connecting -->
+          <StackPanel Spacing="10"
+                      IsVisible="{Binding IsBusy}">
+            <ProgressBar IsIndeterminate="True" />
+            <TextBlock Classes="Small Secondary"
+                       Text="{x:Static local:Localization.StatusConnecting}" />
           </StackPanel>
         </StackPanel>
       </Border>
 
-      <!-- Active session -->
-      <Border Classes="Card"
-              IsVisible="{Binding IsSessionActive}">
-        <StackPanel Spacing="10">
+      <!-- Ready / consent / active group -->
+      <StackPanel Grid.Row="2"
+                  Spacing="12"
+                  VerticalAlignment="Top"
+                  IsVisible="{Binding IsConnectedToServer}">
+
+        <!-- Access code: the star of the ready state -->
+        <Border Classes="Card"
+                IsVisible="{Binding ShowCode}">
+          <StackPanel Spacing="14">
+            <TextBlock Classes="Small Secondary"
+                       TextWrapping="Wrap"
+                       Text="{x:Static local:Localization.AccessCodeCaption}" />
+            <TextBlock FontSize="38"
+                       FontWeight="Bold"
+                       FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                       LetterSpacing="3"
+                       HorizontalAlignment="Center"
+                       Text="{Binding Code}" />
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8"
+                        IsVisible="{Binding !IsSessionActive}">
+              <controls:ThemeButton Content="{x:Static local:Localization.NewCodeButtonText}"
+                                    MinHeight="36"
+                                    Variant="Outlined"
+                                    Command="{Binding GenerateNewCodeCommand}" />
+              <controls:ThemeButton Content="{x:Static local:Localization.DisconnectButtonText}"
+                                    MinHeight="36"
+                                    Variant="Outlined"
+                                    Command="{Binding DisconnectCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Consent request takes over as the primary action while pending -->
+        <Border Classes="Card"
+                IsVisible="{Binding IsConsentPending}">
+          <StackPanel Spacing="12">
+            <TextBlock FontSize="15"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       Text="{Binding ConsentPromptText}" />
+            <TextBlock Classes="Small Secondary"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding ShowConsentEmail}"
+                       Text="{Binding ConsentEmail}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+              <controls:ThemeButton Grid.Column="0"
+                                    Content="{x:Static local:Localization.DeclineButtonText}"
+                                    MinHeight="36"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Variant="Outlined"
+                                    Command="{Binding DeclineConsentCommand}" />
+              <controls:ThemeButton Grid.Column="1"
+                                    Content="{x:Static local:Localization.AcceptButtonText}"
+                                    MinHeight="36"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    Color="Primary"
+                                    Variant="Filled"
+                                    Command="{Binding AcceptConsentCommand}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Active session: lighter, borderless treatment under the code card -->
+        <StackPanel Spacing="12"
+                    IsVisible="{Binding IsSessionActive}">
           <StackPanel Orientation="Horizontal"
-                      Spacing="8"
-                      HorizontalAlignment="Center">
+                      Spacing="8">
             <Ellipse Width="10"
                      Height="10"
                      Fill="{DynamicResource SuccessColor}"
                      VerticalAlignment="Center" />
             <TextBlock FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
                        Text="{x:Static local:Localization.SessionActiveCaption}" />
           </StackPanel>
-          <StackPanel Orientation="Horizontal"
-                      HorizontalAlignment="Center"
-                      Spacing="8">
-            <ToggleButton Content="{x:Static local:Localization.ViewOnlyButtonText}"
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <ToggleSwitch HorizontalAlignment="Left"
+                          VerticalAlignment="Center"
+                          OnContent="{x:Static local:Localization.ViewOnlyButtonText}"
+                          OffContent="{x:Static local:Localization.ViewOnlyButtonText}"
                           IsChecked="{Binding IsViewOnly}"
                           Command="{Binding SetViewOnlyCommand}" />
-            <controls:ThemeButton Content="{x:Static local:Localization.EndSessionButtonText}"
+            <controls:ThemeButton Grid.Column="1"
+                                  Content="{x:Static local:Localization.EndSessionButtonText}"
+                                  MinHeight="36"
                                   Color="Error"
                                   Variant="Filled"
                                   Command="{Binding EndSessionCommand}" />
-          </StackPanel>
+          </Grid>
         </StackPanel>
-      </Border>
+      </StackPanel>
 
-      <TextBlock Classes="Small Secondary"
+      <!-- Status line -->
+      <TextBlock Grid.Row="3"
+                 Classes="Small Secondary"
                  TextWrapping="Wrap"
-                 TextAlignment="Center"
-                 HorizontalAlignment="Center"
                  IsVisible="{Binding ShowIdleStatus}"
                  Text="{Binding StatusMessage}" />
-    </StackPanel>
+    </Grid>
   </ScrollViewer>
 
 </UserControl>

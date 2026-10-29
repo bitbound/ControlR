@@ -8,6 +8,7 @@ namespace ControlR.Assist.ViewModels;
 public sealed partial class HomeViewModel : ViewModelBase, IDisposable
 {
   private readonly AssistSessionController _controller;
+  private readonly INavigationService _navigationService;
 
   [ObservableProperty]
   private string? _code;
@@ -33,9 +34,10 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   [ObservableProperty]
   private bool _urlConfirmed;
 
-  public HomeViewModel(AssistSessionController controller, IAssistSettingsService settingsService)
+  public HomeViewModel(AssistSessionController controller, IAssistSettingsService settingsService, INavigationService navigationService)
   {
     _controller = controller;
+    _navigationService = navigationService;
     _serverUrl = BrandingConstants.ControlrServerUrl?.ToString() ?? settingsService.GetSettings().ServerUrl;
     _urlConfirmed = BrandingConstants.ControlrServerUrl is not null;
     _controller.StateChanged += HandleStateChanged;
@@ -55,10 +57,17 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
       or AssistSessionState.PendingConsent
       or AssistSessionState.Active;
   public bool ShowConnectAction => State == AssistSessionState.Disconnected && (UrlConfirmed || !CanEditServerUrl);
+
+  // The server falls back to the email when the technician has no display name.
+  // Showing both lines then duplicates the same text.
+  public bool ShowConsentEmail =>
+    !string.IsNullOrWhiteSpace(ConsentEmail)
+    && !string.Equals(ConsentEmail, ConsentViewerName, StringComparison.OrdinalIgnoreCase);
   public bool ShowIdleStatus =>
     State is not (AssistSessionState.Disconnected or AssistSessionState.Connecting)
       && !string.IsNullOrWhiteSpace(StatusMessage);
   public bool ShowStatusAlert => State == AssistSessionState.Disconnected && !string.IsNullOrWhiteSpace(StatusMessage);
+  public bool ShowStepCard => ShowUrlEntry || ShowConnectAction || IsBusy;
   public bool ShowTrustNotice => State == AssistSessionState.Disconnected;
   public bool ShowUrlEntry => ShowTrustNotice && CanEditServerUrl && !UrlConfirmed;
 
@@ -118,6 +127,7 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   {
     OnPropertyChanged(nameof(ShowUrlEntry));
     OnPropertyChanged(nameof(ShowConnectAction));
+    OnPropertyChanged(nameof(ShowStepCard));
   }
 
   private void RefreshFromController()
@@ -136,11 +146,16 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     OnPropertyChanged(nameof(ShowCode));
     OnPropertyChanged(nameof(ShowIdleStatus));
     OnPropertyChanged(nameof(ShowStatusAlert));
+    OnPropertyChanged(nameof(ShowStepCard));
     OnPropertyChanged(nameof(ShowTrustNotice));
     RaiseFlowPropertyChanges();
     OnPropertyChanged(nameof(ConsentPromptText));
+    OnPropertyChanged(nameof(ShowConsentEmail));
   }
 
   [RelayCommand]
   private void SetViewOnly() => _controller.SetViewOnly(IsViewOnly);
+
+  [RelayCommand]
+  private void ShowAbout() => _navigationService.NavigateTo<AboutViewModel>();
 }

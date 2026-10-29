@@ -20,6 +20,23 @@ public static class Localization
   private static string _currentCulture = CultureInfo.CurrentCulture.Name;
   private static Dictionary<string, string> _localizationStrings = GetLocalizationStrings(_currentCulture);
 
+  public static string About => GetString();
+  public static string AboutBackButtonText => GetString();
+  public static string AboutLibraryAvaloniaUi => GetString();
+  public static string AboutLibraryCommunityToolkit => GetString();
+  public static string AboutLibraryControlR => GetString();
+  public static string AboutLibraryMicrosoftLibraries => GetString();
+  public static string AboutLibrarySerilog => GetString();
+  public static string AboutLicenseLabel => GetString();
+  public static string AboutProjectLabel => GetString();
+  public static string AboutServerLabel => GetString();
+  public static string AboutSourceText => GetString();
+  public static string AboutSponsorButton => GetString();
+  public static string AboutSponsorDescription => GetString();
+  public static string AboutSponsorLabel => GetString();
+  public static string AboutThirdPartyLicensesDescription => GetString();
+  public static string AboutThirdPartyLicensesLabel => GetString();
+  public static string AboutWebsiteLabel => GetString();
   public static string AcceptButtonText => GetString();
   public static string AccessCodeCaption => GetString();
   public static string AssistWindowTitle => GetString();
@@ -32,6 +49,7 @@ public static class Localization
   public static string EndSessionButtonText => GetString();
   public static string HomeTagline => GetString();
   public static string LanguageDisplayName => GetString();
+  public static string LinkLicenseText => GetString();
   public static string NewCodeButtonText => GetString();
   public static string NextButtonText => GetString();
   public static string ServerUrlHelp => GetString();
@@ -50,6 +68,7 @@ public static class Localization
   public static string StatusUnreachable => GetString();
   public static string TrustNoticeText => GetString();
   public static string UnknownViewerLabel => GetString();
+  public static string Version => GetString();
   public static string ViewNotFoundMessage => GetString();
   public static string ViewOnlyButtonText => GetString();
 

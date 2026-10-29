@@ -5,15 +5,17 @@
        xmlns:vm="using:ControlR.Assist.ViewModels"
        xmlns:brand="using:ControlR.Libraries.Branding"
        mc:Ignorable="d"
-       d:DesignWidth="420"
-       d:DesignHeight="300"
+       d:DesignWidth="640"
+       d:DesignHeight="560"
        x:Class="ControlR.Assist.Views.MainWindow"
        x:DataType="vm:MainWindowViewModel"
        Icon="/Assets/appicon.ico"
        Title="{Binding WindowTitle}"
-       Width="420"
-       Height="560">
+       Width="640"
+       Height="560"
+       MinWidth="460"
+       MinHeight="480">
 
-  <ContentControl Content="{Binding CurrentViewModel}" />
+  <ContentControl Content="{Binding CurrentViewModel}" Padding="24" />
 
 </Window>

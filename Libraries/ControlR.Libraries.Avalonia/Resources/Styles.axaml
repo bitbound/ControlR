@@ -94,25 +94,37 @@
   </Style>
 
   <Style Selector="Border.CalloutInfo">
-    <Setter Property="BorderBrush" Value="{DynamicResource InfoColor}" />
+    <Setter Property="Background" Value="{DynamicResource InfoBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.CalloutInfo TextBlock#MessageText">
+    <Setter Property="Foreground" Value="{DynamicResource InfoColor}" />
   </Style>
   <Style Selector="PathIcon.CalloutInfo">
     <Setter Property="Foreground" Value="{DynamicResource InfoColor}" />
   </Style>
   <Style Selector="Border.CalloutSuccess">
-    <Setter Property="BorderBrush" Value="{DynamicResource SuccessColor}" />
+    <Setter Property="Background" Value="{DynamicResource SuccessBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.CalloutSuccess TextBlock#MessageText">
+    <Setter Property="Foreground" Value="{DynamicResource SuccessColor}" />
   </Style>
   <Style Selector="PathIcon.CalloutSuccess">
     <Setter Property="Foreground" Value="{DynamicResource SuccessColor}" />
   </Style>
   <Style Selector="Border.CalloutWarning">
-    <Setter Property="BorderBrush" Value="{DynamicResource WarningColor}" />
+    <Setter Property="Background" Value="{DynamicResource WarningBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.CalloutWarning TextBlock#MessageText">
+    <Setter Property="Foreground" Value="{DynamicResource WarningColor}" />
   </Style>
   <Style Selector="PathIcon.CalloutWarning">
     <Setter Property="Foreground" Value="{DynamicResource WarningColor}" />
   </Style>
   <Style Selector="Border.CalloutError">
-    <Setter Property="BorderBrush" Value="{DynamicResource ErrorColor}" />
+    <Setter Property="Background" Value="{DynamicResource ErrorBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.CalloutError TextBlock#MessageText">
+    <Setter Property="Foreground" Value="{DynamicResource ErrorColor}" />
   </Style>
   <Style Selector="PathIcon.CalloutError">
     <Setter Property="Foreground" Value="{DynamicResource ErrorColor}" />
