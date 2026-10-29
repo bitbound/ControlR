@@ -24,43 +24,59 @@ public sealed record AssistSession(
   string? ViewerEmail = null);
 
 /// <summary>
-/// In-memory store for ad-hoc assist sessions. Sessions are ephemeral by design. A server restart
-/// clears them, which matches how one-time support codes behave on the products this mirrors.
+/// Store for ad-hoc assist sessions. Sessions are ephemeral by design. A server restart clears
+/// them, which matches how one-time support codes behave on the products this mirrors. The async
+/// surface is deliberate so a distributed implementation can swap in without touching callers.
 /// </summary>
 public interface IAssistSessionCache
 {
-  AssistSession Create(string assistConnectionId);
-  AssistSession? Remove(Guid sessionId);
-  IReadOnlyList<AssistSession> RemoveByAssistConnectionId(string assistConnectionId);
-  IReadOnlyList<AssistSession> Snapshot();
-  bool TryActivate(Guid sessionId, out AssistSession? session);
-  bool TryBeginConsent(
+  Task<AssistSession> CreateAsync(string assistConnectionId, CancellationToken cancellationToken = default);
+  Task<AssistSession?> RemoveAsync(Guid sessionId, CancellationToken cancellationToken = default);
+  Task<IReadOnlyList<AssistSession>> RemoveByAssistConnectionIdAsync(
+    string assistConnectionId,
+    CancellationToken cancellationToken = default);
+  Task<IReadOnlyList<AssistSession>> SnapshotAsync(CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryActivateAsync(Guid sessionId, CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryBeginConsentAsync(
     Guid sessionId,
     string viewerConnectionId,
     Guid viewerUserId,
     string displayName,
     string? email,
-    out AssistSession? session);
-  bool TryGet(Guid sessionId, out AssistSession? session);
-  bool TryGetByAssistConnectionId(string assistConnectionId, out AssistSession? session);
-  bool TryGetByCode(string code, out AssistSession? session);
-  bool TryGetByViewerConnectionId(string viewerConnectionId, out AssistSession? session);
-  bool TryReturnToWaiting(Guid sessionId, out AssistSession? session);
+    CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryGetAsync(Guid sessionId, CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryGetByAssistConnectionIdAsync(
+    string assistConnectionId,
+    CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryGetByCodeAsync(string code, CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryGetByViewerConnectionIdAsync(
+    string viewerConnectionId,
+    CancellationToken cancellationToken = default);
+  Task<AssistSession?> TryReturnToWaitingAsync(Guid sessionId, CancellationToken cancellationToken = default);
 }
 
-public class AssistSessionCache(TimeProvider timeProvider) : IAssistSessionCache
+/// <summary>
+/// In-memory <see cref="IAssistSessionCache"/>. The lock serializes state transitions within this
+/// process only.
+/// TODO: HybridCache. Move this state behind HybridCache when Redis and horizontal scalability
+/// land. The lock will not serialize sessions across nodes, and the code-uniqueness lookup in
+/// <see cref="CreateAsync"/> will need to pair with the distributed lock work to be race-free.
+/// </summary>
+public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? codeGenerator = null) : IAssistSessionCache
 {
   public const int CodeLength = 9;
 
   private const string DigitPool = "0123456789";
 
+  private readonly Func<string> _codeGenerator = codeGenerator ?? GenerateCode;
   private readonly Dictionary<Guid, AssistSession> _sessions = [];
   private readonly object _sync = new();
   private readonly TimeProvider _timeProvider = timeProvider;
 
-  public AssistSession Create(string assistConnectionId)
+  public Task<AssistSession> CreateAsync(string assistConnectionId, CancellationToken cancellationToken = default)
   {
     Guard.IsNotNullOrWhiteSpace(assistConnectionId);
+    cancellationToken.ThrowIfCancellationRequested();
 
     lock (_sync)
     {
@@ -75,9 +91,16 @@ public class AssistSessionCache(TimeProvider timeProvider) : IAssistSessionCache
       }
 
       var now = _timeProvider.GetUtcNow();
+      string code;
+      do
+      {
+        code = _codeGenerator();
+      }
+      while (_sessions.Values.Any(x => x.Code == code));
+
       var session = new AssistSession(
         Guid.NewGuid(),
-        GenerateCode(),
+        code,
         RandomGenerator.CreateAccessToken(),
         assistConnectionId,
         AssistSessionStatus.WaitingForViewer,
@@ -85,62 +108,61 @@ public class AssistSessionCache(TimeProvider timeProvider) : IAssistSessionCache
         now);
 
       _sessions.Add(session.SessionId, session);
-      return session;
+      return Task.FromResult(session);
     }
   }
 
-  public AssistSession? Remove(Guid sessionId)
+  public Task<AssistSession?> RemoveAsync(Guid sessionId, CancellationToken cancellationToken = default)
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     lock (_sync)
     {
-      if (_sessions.Remove(sessionId, out var session))
-      {
-        return session;
-      }
-      return null;
+      return Task.FromResult(_sessions.Remove(sessionId, out var session) ? session : null);
     }
   }
 
-  public IReadOnlyList<AssistSession> RemoveByAssistConnectionId(string assistConnectionId)
+  public Task<IReadOnlyList<AssistSession>> RemoveByAssistConnectionIdAsync(
+    string assistConnectionId,
+    CancellationToken cancellationToken = default)
   {
-    return RemoveWhere(x => x.AssistConnectionId == assistConnectionId);
+    return RemoveWhereAsync(x => x.AssistConnectionId == assistConnectionId, cancellationToken);
   }
 
-  public IReadOnlyList<AssistSession> Snapshot()
+  public Task<IReadOnlyList<AssistSession>> SnapshotAsync(CancellationToken cancellationToken = default)
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     lock (_sync)
     {
-      return _sessions.Values.ToList();
+      return Task.FromResult<IReadOnlyList<AssistSession>>(_sessions.Values.ToList());
     }
   }
 
-  public bool TryActivate(Guid sessionId, out AssistSession? session)
+  public Task<AssistSession?> TryActivateAsync(Guid sessionId, CancellationToken cancellationToken = default)
   {
-    return TryTransition(
-      sessionId,
-      AssistSessionStatus.PendingConsent,
-      AssistSessionStatus.Active,
-      out session);
+    return TryTransitionAsync(sessionId, AssistSessionStatus.PendingConsent, AssistSessionStatus.Active, cancellationToken);
   }
 
-  public bool TryBeginConsent(
+  public Task<AssistSession?> TryBeginConsentAsync(
     Guid sessionId,
     string viewerConnectionId,
     Guid viewerUserId,
     string displayName,
     string? email,
-    out AssistSession? session)
+    CancellationToken cancellationToken = default)
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     lock (_sync)
     {
       if (!_sessions.TryGetValue(sessionId, out var existing) ||
           existing.Status != AssistSessionStatus.WaitingForViewer)
       {
-        session = null;
-        return false;
+        return Task.FromResult<AssistSession?>(null);
       }
 
-      session = existing with
+      var session = existing with
       {
         Status = AssistSessionStatus.PendingConsent,
         StatusChangedAt = _timeProvider.GetUtcNow(),
@@ -151,45 +173,52 @@ public class AssistSessionCache(TimeProvider timeProvider) : IAssistSessionCache
       };
 
       _sessions[sessionId] = session;
-      return true;
+      return Task.FromResult<AssistSession?>(session);
     }
   }
 
-  public bool TryGet(Guid sessionId, out AssistSession? session)
+  public Task<AssistSession?> TryGetAsync(Guid sessionId, CancellationToken cancellationToken = default)
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     lock (_sync)
     {
-      return _sessions.TryGetValue(sessionId, out session);
+      return Task.FromResult<AssistSession?>(_sessions.TryGetValue(sessionId, out var session) ? session : null);
     }
   }
 
-  public bool TryGetByAssistConnectionId(string assistConnectionId, out AssistSession? session)
+  public Task<AssistSession?> TryGetByAssistConnectionIdAsync(
+    string assistConnectionId,
+    CancellationToken cancellationToken = default)
   {
-    return TryGetFirst(x => x.AssistConnectionId == assistConnectionId, out session);
+    return TryGetFirstAsync(x => x.AssistConnectionId == assistConnectionId, cancellationToken);
   }
 
-  public bool TryGetByCode(string code, out AssistSession? session)
+  public Task<AssistSession?> TryGetByCodeAsync(string code, CancellationToken cancellationToken = default)
   {
-    return TryGetFirst(x => x.Code == code, out session);
+    return TryGetFirstAsync(x => x.Code == code, cancellationToken);
   }
 
-  public bool TryGetByViewerConnectionId(string viewerConnectionId, out AssistSession? session)
+  public Task<AssistSession?> TryGetByViewerConnectionIdAsync(
+    string viewerConnectionId,
+    CancellationToken cancellationToken = default)
   {
-    return TryGetFirst(x => x.ViewerConnectionId == viewerConnectionId, out session);
+    return TryGetFirstAsync(x => x.ViewerConnectionId == viewerConnectionId, cancellationToken);
   }
 
-  public bool TryReturnToWaiting(Guid sessionId, out AssistSession? session)
+  public Task<AssistSession?> TryReturnToWaitingAsync(Guid sessionId, CancellationToken cancellationToken = default)
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     lock (_sync)
     {
       if (!_sessions.TryGetValue(sessionId, out var existing) ||
           existing.Status != AssistSessionStatus.PendingConsent)
       {
-        session = null;
-        return false;
+        return Task.FromResult<AssistSession?>(null);
       }
 
-      session = existing with
+      var session = existing with
       {
         Status = AssistSessionStatus.WaitingForViewer,
         StatusChangedAt = _timeProvider.GetUtcNow(),
@@ -200,7 +229,7 @@ public class AssistSessionCache(TimeProvider timeProvider) : IAssistSessionCache
       };
 
       _sessions[sessionId] = session;
-      return true;
+      return Task.FromResult<AssistSession?>(session);
     }
   }
 
@@ -215,8 +244,12 @@ public class AssistSessionCache(TimeProvider timeProvider) : IAssistSessionCache
     return new string(chars);
   }
 
-  private IReadOnlyList<AssistSession> RemoveWhere(Func<AssistSession, bool> predicate)
+  private Task<IReadOnlyList<AssistSession>> RemoveWhereAsync(
+    Func<AssistSession, bool> predicate,
+    CancellationToken cancellationToken)
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     lock (_sync)
     {
       var removed = _sessions.Values.Where(predicate).ToList();
@@ -224,37 +257,44 @@ public class AssistSessionCache(TimeProvider timeProvider) : IAssistSessionCache
       {
         _sessions.Remove(session.SessionId);
       }
-      return removed;
+
+      return Task.FromResult<IReadOnlyList<AssistSession>>(removed);
     }
   }
 
-  private bool TryGetFirst(Func<AssistSession, bool> predicate, out AssistSession? session)
+  private Task<AssistSession?> TryGetFirstAsync(Func<AssistSession, bool> predicate, CancellationToken cancellationToken)
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     lock (_sync)
     {
-      session = _sessions.Values.FirstOrDefault(predicate);
-      return session is not null;
+      return Task.FromResult(_sessions.Values.FirstOrDefault(predicate));
     }
   }
 
-  private bool TryTransition(Guid sessionId, AssistSessionStatus from, AssistSessionStatus to, out AssistSession? session)
+  private Task<AssistSession?> TryTransitionAsync(
+    Guid sessionId,
+    AssistSessionStatus from,
+    AssistSessionStatus to,
+    CancellationToken cancellationToken)
   {
+    cancellationToken.ThrowIfCancellationRequested();
+
     lock (_sync)
     {
       if (!_sessions.TryGetValue(sessionId, out var existing) || existing.Status != from)
       {
-        session = null;
-        return false;
+        return Task.FromResult<AssistSession?>(null);
       }
 
-      session = existing with
+      var session = existing with
       {
         Status = to,
         StatusChangedAt = _timeProvider.GetUtcNow(),
       };
 
       _sessions[sessionId] = session;
-      return true;
+      return Task.FromResult<AssistSession?>(session);
     }
   }
 }

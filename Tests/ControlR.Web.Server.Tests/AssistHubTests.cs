@@ -27,14 +27,14 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user: null, connectionId: "viewer-conn-1");
 
     var result = await hub.CancelAssistConsent(new(session.SessionId));
 
     Assert.True(result.IsSuccess);
-    Assert.Equal(AssistSessionStatus.WaitingForViewer, GetSession(cache, session.SessionId).Status);
+    Assert.Equal(AssistSessionStatus.WaitingForViewer, (await GetSessionAsync(cache, session.SessionId)).Status);
     clientProxy.Verify(
       c => c.AssistConsentCancelled(It.Is<AssistConsentCancelledDto>(dto => dto.SessionId == session.SessionId)),
       Times.Once);
@@ -45,15 +45,15 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user: null, connectionId: "someone-else");
 
     var result = await hub.CancelAssistConsent(new(session.SessionId));
 
     Assert.False(result.IsSuccess);
     Assert.Equal("Unauthorized.", result.Reason);
-    Assert.Equal(AssistSessionStatus.PendingConsent, GetSession(cache, session.SessionId).Status);
+    Assert.Equal(AssistSessionStatus.PendingConsent, (await GetSessionAsync(cache, session.SessionId)).Status);
     clientProxy.Verify(
       c => c.AssistConsentCancelled(It.IsAny<AssistConsentCancelledDto>()),
       Times.Never);
@@ -64,15 +64,15 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
-    _ = cache.TryActivate(session.SessionId, out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
+    _ = await cache.TryActivateAsync(session.SessionId, TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user: null, connectionId: "viewer-conn-1");
 
     var result = await hub.CancelAssistConsent(new(session.SessionId));
 
     Assert.True(result.IsSuccess);
-    Assert.Equal(AssistSessionStatus.Active, GetSession(cache, session.SessionId).Status);
+    Assert.Equal(AssistSessionStatus.Active, (await GetSessionAsync(cache, session.SessionId)).Status);
     clientProxy.Verify(
       c => c.AssistConsentCancelled(It.IsAny<AssistConsentCancelledDto>()),
       Times.Never);
@@ -96,15 +96,15 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
-    _ = cache.TryActivate(session.SessionId, out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
+    _ = await cache.TryActivateAsync(session.SessionId, TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user: null, connectionId: "assist-conn-1");
 
     var result = await hub.EndAssistSession(new(session.SessionId));
 
     Assert.True(result.IsSuccess);
-    Assert.False(cache.TryGet(session.SessionId, out _));
+    Assert.Null(await cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
     clientProxy.Verify(
       c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
       Times.Once);
@@ -115,14 +115,14 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
     var (hub, _) = await CreateHubAsync(testApp, user: null, connectionId: "unrelated");
 
     var result = await hub.EndAssistSession(new(session.SessionId));
 
     Assert.False(result.IsSuccess);
     Assert.Equal("Unauthorized.", result.Reason);
-    Assert.True(cache.TryGet(session.SessionId, out _));
+    Assert.NotNull(await cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
   }
 
   [Fact]
@@ -132,7 +132,7 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     var tenant = await testApp.Services.CreateTestTenant();
     var user = await testApp.Services.CreateTestUser(tenant.Id);
     var cache = GetCache(testApp);
-    _ = cache.Create("assist-conn-1");
+    _ = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
     await GrantAssistConnectAsync(testApp, user, tenant.Id);
     var (hub, _) = await CreateHubAsync(testApp, user, tenant.Id);
 
@@ -149,7 +149,7 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     var tenant = await testApp.Services.CreateTestTenant();
     var user = await testApp.Services.CreateTestUser(tenant.Id);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
     await GrantAssistConnectAsync(testApp, user, tenant.Id);
     var (hub, _) = await CreateHubAsync(testApp, user, tenant.Id);
 
@@ -172,9 +172,9 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    _ = cache.Create("assist-conn-1");
+    _ = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
     var (hub, _) = await CreateHubAsync(testApp, user: null);
-    _ = cache.TryGetByAssistConnectionId("assist-conn-1", out var session);
+    var session = await cache.TryGetByAssistConnectionIdAsync("assist-conn-1", TestContext.Current.CancellationToken);
 
     var result = await hub.JoinAssistSession(new(session!.Code));
 
@@ -189,7 +189,7 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     var tenant = await testApp.Services.CreateTestTenant();
     var user = await testApp.Services.CreateTestUser(tenant.Id, email: "tech@example.com");
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
     await GrantAssistConnectAsync(testApp, user, tenant.Id);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user, tenant.Id);
 
@@ -197,7 +197,7 @@ public class AssistHubTests(ITestOutputHelper testOutput)
 
     Assert.True(result.IsSuccess);
     Assert.Equal(session.SessionId, result.Value!.SessionId);
-    Assert.Equal(AssistSessionStatus.PendingConsent, GetSession(cache, session.SessionId).Status);
+    Assert.Equal(AssistSessionStatus.PendingConsent, (await GetSessionAsync(cache, session.SessionId)).Status);
     clientProxy.Verify(
       c => c.AssistConsentRequested(It.Is<AssistConsentRequestedDto>(dto =>
         dto.SessionId == session.SessionId && dto.ViewerEmail == "tech@example.com")),
@@ -211,14 +211,14 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     var tenant = await testApp.Services.CreateTestTenant();
     var user = await testApp.Services.CreateTestUser(tenant.Id, email: "tech@example.com");
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user, tenant.Id);
 
     var result = await hub.JoinAssistSession(new(session.Code));
 
     Assert.False(result.IsSuccess);
     Assert.Contains("permission", result.Reason, StringComparison.OrdinalIgnoreCase);
-    Assert.Equal(AssistSessionStatus.WaitingForViewer, GetSession(cache, session.SessionId).Status);
+    Assert.Equal(AssistSessionStatus.WaitingForViewer, (await GetSessionAsync(cache, session.SessionId)).Status);
     clientProxy.Verify(
       c => c.AssistConsentRequested(It.IsAny<AssistConsentRequestedDto>()),
       Times.Never);
@@ -229,13 +229,13 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user: null, connectionId: "assist-conn-1");
 
     await hub.OnDisconnectedAsync(exception: null);
 
-    Assert.False(cache.TryGet(session.SessionId, out _));
+    Assert.Null(await cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
     clientProxy.Verify(
       c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
       Times.Once);
@@ -246,13 +246,13 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user: null, connectionId: "viewer-conn-1");
 
     await hub.OnDisconnectedAsync(exception: null);
 
-    var updated = GetSession(cache, session.SessionId);
+    var updated = await GetSessionAsync(cache, session.SessionId);
     Assert.Equal(AssistSessionStatus.WaitingForViewer, updated.Status);
     Assert.Null(updated.ViewerConnectionId);
     clientProxy.Verify(
@@ -268,14 +268,14 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", "jane@example.com", out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", "jane@example.com", TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user: null, connectionId: "assist-conn-1");
 
     var result = await hub.RespondToAssistConsent(new(session.SessionId, true));
 
     Assert.True(result.IsSuccess);
-    Assert.Equal(AssistSessionStatus.Active, GetSession(cache, session.SessionId).Status);
+    Assert.Equal(AssistSessionStatus.Active, (await GetSessionAsync(cache, session.SessionId)).Status);
     clientProxy.Verify(
       c => c.AssistConsentResponded(It.Is<AssistConsentRespondedDto>(dto =>
         dto.SessionId == session.SessionId && dto.Approved && dto.AccessToken == session.AccessToken)),
@@ -291,14 +291,14 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user: null, connectionId: "assist-conn-1");
 
     var result = await hub.RespondToAssistConsent(new(session.SessionId, false));
 
     Assert.True(result.IsSuccess);
-    Assert.Equal(AssistSessionStatus.WaitingForViewer, GetSession(cache, session.SessionId).Status);
+    Assert.Equal(AssistSessionStatus.WaitingForViewer, (await GetSessionAsync(cache, session.SessionId)).Status);
     clientProxy.Verify(
       c => c.AssistConsentResponded(It.Is<AssistConsentRespondedDto>(dto => !dto.Approved)),
       Times.Once);
@@ -309,15 +309,15 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var cache = GetCache(testApp);
-    var session = cache.Create("assist-conn-1");
-    _ = cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
+    var session = await cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _ = await cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, TestContext.Current.CancellationToken);
     var (hub, _) = await CreateHubAsync(testApp, user: null, connectionId: "someone-else");
 
     var result = await hub.RespondToAssistConsent(new(session.SessionId, true));
 
     Assert.False(result.IsSuccess);
     Assert.Equal("Unauthorized.", result.Reason);
-    Assert.Equal(AssistSessionStatus.PendingConsent, GetSession(cache, session.SessionId).Status);
+    Assert.Equal(AssistSessionStatus.PendingConsent, (await GetSessionAsync(cache, session.SessionId)).Status);
   }
 
   /// <summary>
@@ -376,10 +376,11 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   private static IAssistSessionCache GetCache(TestApp testApp) =>
     testApp.Services.GetRequiredService<IAssistSessionCache>();
 
-  private static AssistSession GetSession(IAssistSessionCache cache, Guid sessionId)
+  private static async Task<AssistSession> GetSessionAsync(IAssistSessionCache cache, Guid sessionId)
   {
-    Assert.True(cache.TryGet(sessionId, out var session));
-    return session!;
+    var session = await cache.TryGetAsync(sessionId, TestContext.Current.CancellationToken);
+    Assert.NotNull(session);
+    return session;
   }
 
   private static async Task GrantAssistConnectAsync(TestApp testApp, AppUser user, Guid tenantId)

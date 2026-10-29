@@ -31,8 +31,9 @@ public class AssistSessionCleanupBackgroundService(
   protected override async Task HandleElapsed(CancellationToken stoppingToken)
   {
     var now = _timeProvider.GetUtcNow();
+    var sessions = await _sessionCache.SnapshotAsync(stoppingToken);
 
-    foreach (var session in _sessionCache.Snapshot())
+    foreach (var session in sessions)
     {
       stoppingToken.ThrowIfCancellationRequested();
       var age = now - session.StatusChangedAt;
@@ -41,7 +42,8 @@ public class AssistSessionCleanupBackgroundService(
       {
         case AssistSessionStatus.PendingConsent when age > _consentExpiry:
           {
-            if (_sessionCache.TryReturnToWaiting(session.SessionId, out _) &&
+            var returned = await _sessionCache.TryReturnToWaitingAsync(session.SessionId, stoppingToken);
+            if (returned is not null &&
                 session.ViewerConnectionId is { Length: > 0 } viewerConnectionId)
             {
               await _assistHub.Clients
@@ -55,12 +57,12 @@ public class AssistSessionCleanupBackgroundService(
           }
         case AssistSessionStatus.WaitingForViewer when age > _waitingExpiry:
           {
-            _ = _sessionCache.Remove(session.SessionId);
+            _ = await _sessionCache.RemoveAsync(session.SessionId, stoppingToken);
             break;
           }
         case AssistSessionStatus.Active when age > _activeExpiry:
           {
-            _ = _sessionCache.Remove(session.SessionId);
+            _ = await _sessionCache.RemoveAsync(session.SessionId, stoppingToken);
             await NotifyEnded(session.SessionId, "The session expired.", session);
             break;
           }

@@ -35,7 +35,8 @@ public class AssistHub(
   {
     try
     {
-      if (!_sessionCache.TryGet(request.SessionId, out var session) || session is null)
+      var session = await _sessionCache.TryGetAsync(request.SessionId, Context.ConnectionAborted);
+      if (session is null)
       {
         return HubResult.Ok();
       }
@@ -45,7 +46,8 @@ public class AssistHub(
         return HubResult.Fail("Unauthorized.");
       }
 
-      if (!_sessionCache.TryReturnToWaiting(request.SessionId, out _))
+      var returned = await _sessionCache.TryReturnToWaitingAsync(request.SessionId, Context.ConnectionAborted);
+      if (returned is null)
       {
         return HubResult.Ok();
       }
@@ -68,23 +70,23 @@ public class AssistHub(
     }
   }
 
-  public Task<HubResult<CreateAssistSessionResponseDto>> CreateAssistSession()
+  public async Task<HubResult<CreateAssistSessionResponseDto>> CreateAssistSession()
   {
     try
     {
-      var session = _sessionCache.Create(Context.ConnectionId);
+      var session = await _sessionCache.CreateAsync(Context.ConnectionId, Context.ConnectionAborted);
 
       _logger.LogInformation(
         "Assist session {SessionId} created for connection {ConnectionId}.",
         session.SessionId,
         Context.ConnectionId);
 
-      return Task.FromResult(HubResult.Ok(new CreateAssistSessionResponseDto(session.Code, session.SessionId)));
+      return HubResult.Ok(new CreateAssistSessionResponseDto(session.Code, session.SessionId));
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating an assist session.");
-      return Task.FromResult(HubResult.Fail<CreateAssistSessionResponseDto>("An error occurred while creating the session."));
+      return HubResult.Fail<CreateAssistSessionResponseDto>("An error occurred while creating the session.");
     }
   }
 
@@ -92,7 +94,8 @@ public class AssistHub(
   {
     try
     {
-      if (!_sessionCache.TryGet(request.SessionId, out var session) || session is null)
+      var session = await _sessionCache.TryGetAsync(request.SessionId, Context.ConnectionAborted);
+      if (session is null)
       {
         return HubResult.Ok();
       }
@@ -102,7 +105,7 @@ public class AssistHub(
         return HubResult.Fail("Unauthorized.");
       }
 
-      _ = _sessionCache.Remove(request.SessionId);
+      _ = await _sessionCache.RemoveAsync(request.SessionId, Context.ConnectionAborted);
       await NotifyOtherSide(session, "The session was ended by the remote user.");
 
       return HubResult.Ok();
@@ -140,9 +143,11 @@ public class AssistHub(
       }
 
       var code = new string(request.Code.Where(char.IsDigit).ToArray());
-      if (code.Length != AssistSessionCache.CodeLength ||
-          !_sessionCache.TryGetByCode(code, out var session) ||
-          session is null)
+      var session = code.Length == AssistSessionCache.CodeLength
+        ? await _sessionCache.TryGetByCodeAsync(code, Context.ConnectionAborted)
+        : null;
+
+      if (session is null)
       {
         SetItem(attempts + 1, nameof(JoinAssistSession));
         return HubResult.Fail<JoinAssistSessionResponseDto>("The code is invalid or no longer active.");
@@ -161,14 +166,15 @@ public class AssistHub(
 
       var displayName = GetDisplayName(user);
 
-      if (!_sessionCache.TryBeginConsent(
+      var pending = await _sessionCache.TryBeginConsentAsync(
         session.SessionId,
         Context.ConnectionId,
         userId,
         displayName,
         user.Email,
-        out var pending) ||
-          pending is null)
+        Context.ConnectionAborted);
+
+      if (pending is null)
       {
         return HubResult.Fail<JoinAssistSessionResponseDto>("This device isn't accepting a new connection right now.");
       }
@@ -197,7 +203,11 @@ public class AssistHub(
   {
     try
     {
-      foreach (var session in _sessionCache.RemoveByAssistConnectionId(Context.ConnectionId))
+      var assistSessions = await _sessionCache.RemoveByAssistConnectionIdAsync(
+        Context.ConnectionId,
+        Context.ConnectionAborted);
+
+      foreach (var session in assistSessions)
       {
         if (session.ViewerConnectionId is { Length: > 0 })
         {
@@ -207,10 +217,17 @@ public class AssistHub(
 
       // A technician dropping the connection during consent is treated like a cancel. The session
       // returns to waiting so the customer keeps the same code. An active session is torn down.
-      foreach (var session in _sessionCache.Snapshot().Where(x => x.ViewerConnectionId == Context.ConnectionId).ToList())
+      var viewerSessions = (await _sessionCache.SnapshotAsync(Context.ConnectionAborted))
+        .Where(x => x.ViewerConnectionId == Context.ConnectionId)
+        .ToList();
+
+      foreach (var session in viewerSessions)
       {
-        if (session.Status == AssistSessionStatus.PendingConsent &&
-            _sessionCache.TryReturnToWaiting(session.SessionId, out _))
+        var returned = session.Status == AssistSessionStatus.PendingConsent
+          ? await _sessionCache.TryReturnToWaitingAsync(session.SessionId, Context.ConnectionAborted)
+          : null;
+
+        if (returned is not null)
         {
           await Clients
             .Client(session.AssistConnectionId)
@@ -218,7 +235,7 @@ public class AssistHub(
           continue;
         }
 
-        if (_sessionCache.Remove(session.SessionId) is not null)
+        if (await _sessionCache.RemoveAsync(session.SessionId, Context.ConnectionAborted) is not null)
         {
           await NotifyAssist(session, "The technician disconnected.");
         }
@@ -236,7 +253,8 @@ public class AssistHub(
   {
     try
     {
-      if (!_sessionCache.TryGet(request.SessionId, out var session) || session is null)
+      var session = await _sessionCache.TryGetAsync(request.SessionId, Context.ConnectionAborted);
+      if (session is null)
       {
         return HubResult.Fail("The session was not found.");
       }
@@ -248,17 +266,16 @@ public class AssistHub(
 
       if (!request.Approved)
       {
-        if (_sessionCache.TryReturnToWaiting(request.SessionId, out _) &&
-            session.ViewerConnectionId is { Length: > 0 })
+        var returned = await _sessionCache.TryReturnToWaitingAsync(request.SessionId, Context.ConnectionAborted);
+        if (returned is not null && session.ViewerConnectionId is { Length: > 0 })
         {
           await NotifyViewer(session, approved: false, accessToken: null);
         }
         return HubResult.Ok();
       }
 
-      if (!_sessionCache.TryActivate(request.SessionId, out var activated) ||
-          activated is null ||
-          activated.ViewerConnectionId is not { Length: > 0 } viewerConnectionId)
+      var activated = await _sessionCache.TryActivateAsync(request.SessionId, Context.ConnectionAborted);
+      if (activated?.ViewerConnectionId is not { Length: > 0 } viewerConnectionId)
       {
         return HubResult.Fail("The consent request is no longer pending.");
       }
