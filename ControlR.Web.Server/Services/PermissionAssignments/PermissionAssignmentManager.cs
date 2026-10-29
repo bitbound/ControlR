@@ -915,11 +915,16 @@ public class PermissionAssignmentManager(
       return HttpResult.Fail<int>(HttpResultErrorCode.BadRequest, "All assignments must target the same principal.");
     }
 
+    // Captured before filtering so a fully filtered (no-op) merge still validates the
+    // principal rather than returning Ok(0) unchecked.
+    var principalKind = requests[0].PrincipalKind;
+    var principalId = requests[0].PrincipalId;
+
     if (ignoreHeld)
     {
       var heldKeys = await _appDb.PermissionAssignments
         .IgnoreQueryFilters()
-        .Where(HeldByPrincipal(requests[0].PrincipalKind, requests[0].PrincipalId, tenantId))
+        .Where(HeldByPrincipal(principalKind, principalId, tenantId))
         .Select(x => new { x.PermissionName, x.ScopeKind })
         .ToListAsync(cancellationToken);
 
@@ -930,11 +935,6 @@ public class PermissionAssignmentManager(
       requests = requests
         .Where(x => !heldKeySet.Contains((x.PermissionName, x.ScopeKind)))
         .ToList();
-
-      if (requests.Count == 0)
-      {
-        return HttpResult.Ok(0);
-      }
     }
 
     var requestKeys = requests
@@ -951,11 +951,11 @@ public class PermissionAssignmentManager(
     }
 
     var principalExists = await ValidatePrincipalExists(
-      requests[0].PrincipalKind, requests[0].PrincipalId, tenantId, cancellationToken);
+      principalKind, principalId, tenantId, cancellationToken);
     if (!principalExists)
     {
       return HttpResult.Fail<int>(
-        HttpResultErrorCode.BadRequest, $"Principal not found: {requests[0].PrincipalKind}/{requests[0].PrincipalId}");
+        HttpResultErrorCode.BadRequest, $"Principal not found: {principalKind}/{principalId}");
     }
 
     var effectivePermissions = await GetEffectivePermissions(actor, tenantId, cancellationToken);
@@ -967,7 +967,7 @@ public class PermissionAssignmentManager(
       }
     }
 
-    var targetIsServerServiceAccount = await IsServerServiceAccount(requests[0].PrincipalKind, requests[0].PrincipalId, cancellationToken);
+    var targetIsServerServiceAccount = await IsServerServiceAccount(principalKind, principalId, cancellationToken);
 
     if (ValidateServerServiceAccountTarget(targetIsServerServiceAccount, effectivePermissions) is { IsSuccess: false } targetError)
     {
@@ -1023,8 +1023,8 @@ public class PermissionAssignmentManager(
       created.Add(assignment);
     }
 
-    if (requests[0].PrincipalKind == PermissionPrincipalKind.User &&
-        requests[0].PrincipalId == actor.PrincipalId &&
+    if (principalKind == PermissionPrincipalKind.User &&
+        principalId == actor.PrincipalId &&
         await FindViolatedSelfProtected(
           actor,
           tenantId,

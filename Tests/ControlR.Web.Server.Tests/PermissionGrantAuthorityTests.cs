@@ -257,6 +257,65 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
     Assert.Equal(HttpResultErrorCode.Conflict, result.ErrorCode);
   }
 
+  [Fact]
+  public async Task ApplyPresets_ReplaceExistingFalse_AllKeysHeldByUnknownPrincipal_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    // The target has no user row. Every preset key is seeded as held, so a merge must not
+    // short-circuit the no-op path past principal validation.
+    var missingUserId = Guid.NewGuid();
+    foreach (var permissionName in PermissionPresets.GetPermissions(PermissionPresets.ServerAdministrator).Distinct())
+    {
+      var scopeKind = PermissionCatalog.GetBroadestTenantLegalScope(permissionName) ?? PermissionScopeKind.Tenant;
+      var isServerScope = scopeKind == PermissionScopeKind.Server;
+      await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+        PermissionPrincipalKind.User,
+        missingUserId,
+        permissionName,
+        scopeKind,
+        isServerScope ? null : tenant.Id,
+        isServerScope ? null : tenant.Id,
+        new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    }
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.ApplyPresets(
+      new InternalDtos.ApplyPermissionPresetsRequestDto(
+        PermissionPrincipalKind.User,
+        missingUserId,
+        [PermissionPresets.ServerAdministrator],
+        ReplaceExisting: false),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+  }
+
     [Fact]
     public async Task ApplyPresets_WithMixedScopesAndRequiredPermissions_Succeeds()
     {
