@@ -10,6 +10,7 @@ namespace ControlR.Libraries.Api.Contracts.Hubs;
 /// </summary>
 public interface IAssistHub
 {
+  Task<HubResult> CancelAssistConsent(CancelAssistConsentRequestDto request);
   Task<HubResult<CreateAssistSessionResponseDto>> CreateAssistSession();
   Task<HubResult> EndAssistSession(EndAssistSessionRequestDto request);
   Task<HubResult<JoinAssistSessionResponseDto>> JoinAssistSession(JoinAssistSessionRequestDto request);

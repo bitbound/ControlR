@@ -4,6 +4,12 @@ namespace ControlR.Libraries.Api.Contracts.Hubs.Clients;
 
 public interface IAssistHubClient
 {
+  /// <summary>
+  /// Sent to the assist app when the technician cancels a pending consent request, or drops the
+  /// connection while consent is pending. The session returns to waiting so the same code stays
+  /// usable. Viewers never receive this, so it is a no-op default for browser clients.
+  /// </summary>
+  Task AssistConsentCancelled(AssistConsentCancelledDto dto) => Task.CompletedTask;
   Task AssistConsentRequested(AssistConsentRequestedDto dto);
   Task AssistConsentResponded(AssistConsentRespondedDto dto);
 

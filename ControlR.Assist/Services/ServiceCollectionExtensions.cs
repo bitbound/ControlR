@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         provider.GetRequiredService<ILogger<AssistSessionController>>());
 
       var hubClient = provider.GetRequiredService<IAssistSignalRClient>();
+      hubClient.OnConsentCancelled = controller.HandleConsentCancelled;
       hubClient.OnConsentRequested = controller.HandleConsentRequested;
       hubClient.OnConsentTimedOut = controller.HandleConsentTimedOut;
       hubClient.OnConnectionLost = controller.HandleConnectionLost;

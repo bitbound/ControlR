@@ -31,6 +31,43 @@ public class AssistHub(
   private readonly IAssistSessionCache _sessionCache = sessionCache;
   private readonly UserManager<AppUser> _userManager = userManager;
 
+  public async Task<HubResult> CancelAssistConsent(CancelAssistConsentRequestDto request)
+  {
+    try
+    {
+      if (!_sessionCache.TryGet(request.SessionId, out var session) || session is null)
+      {
+        return HubResult.Ok();
+      }
+
+      if (Context.ConnectionId != session.ViewerConnectionId)
+      {
+        return HubResult.Fail("Unauthorized.");
+      }
+
+      if (!_sessionCache.TryReturnToWaiting(request.SessionId, out _))
+      {
+        return HubResult.Ok();
+      }
+
+      _logger.LogInformation(
+        "Viewer connection {ViewerConnectionId} cancelled the consent request for assist session {SessionId}.",
+        Context.ConnectionId,
+        request.SessionId);
+
+      await Clients
+        .Client(session.AssistConnectionId)
+        .AssistConsentCancelled(new(request.SessionId));
+
+      return HubResult.Ok();
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Error while cancelling consent for assist session {SessionId}.", request.SessionId);
+      return HubResult.Fail("An error occurred while cancelling the consent request.");
+    }
+  }
+
   public Task<HubResult<CreateAssistSessionResponseDto>> CreateAssistSession()
   {
     try
@@ -168,9 +205,23 @@ public class AssistHub(
         }
       }
 
-      foreach (var session in _sessionCache.RemoveByViewerConnectionId(Context.ConnectionId))
+      // A technician dropping the connection during consent is treated like a cancel. The session
+      // returns to waiting so the customer keeps the same code. An active session is torn down.
+      foreach (var session in _sessionCache.Snapshot().Where(x => x.ViewerConnectionId == Context.ConnectionId).ToList())
       {
-        await NotifyAssist(session, "The technician disconnected.");
+        if (session.Status == AssistSessionStatus.PendingConsent &&
+            _sessionCache.TryReturnToWaiting(session.SessionId, out _))
+        {
+          await Clients
+            .Client(session.AssistConnectionId)
+            .AssistConsentCancelled(new(session.SessionId));
+          continue;
+        }
+
+        if (_sessionCache.Remove(session.SessionId) is not null)
+        {
+          await NotifyAssist(session, "The technician disconnected.");
+        }
       }
     }
     catch (Exception ex)

@@ -32,7 +32,6 @@ public interface IAssistSessionCache
   AssistSession Create(string assistConnectionId);
   AssistSession? Remove(Guid sessionId);
   IReadOnlyList<AssistSession> RemoveByAssistConnectionId(string assistConnectionId);
-  IReadOnlyList<AssistSession> RemoveByViewerConnectionId(string viewerConnectionId);
   IReadOnlyList<AssistSession> Snapshot();
   bool TryActivate(Guid sessionId, out AssistSession? session);
   bool TryBeginConsent(
@@ -105,11 +104,6 @@ public class AssistSessionCache(TimeProvider timeProvider) : IAssistSessionCache
   public IReadOnlyList<AssistSession> RemoveByAssistConnectionId(string assistConnectionId)
   {
     return RemoveWhere(x => x.AssistConnectionId == assistConnectionId);
-  }
-
-  public IReadOnlyList<AssistSession> RemoveByViewerConnectionId(string viewerConnectionId)
-  {
-    return RemoveWhere(x => x.ViewerConnectionId == viewerConnectionId);
   }
 
   public IReadOnlyList<AssistSession> Snapshot()

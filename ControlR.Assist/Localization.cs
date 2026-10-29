@@ -66,6 +66,7 @@ public static class Localization
   public static string StatusConnectedToViewer => GetString();
   public static string StatusConnecting => GetString();
   public static string StatusConnectionLost => GetString();
+  public static string StatusConsentCancelled => GetString();
   public static string StatusConsentResponseFailed => GetString();
   public static string StatusConsentTimedOut => GetString();
   public static string StatusFailedToConnect => GetString();

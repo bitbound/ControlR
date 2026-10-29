@@ -139,6 +139,12 @@ public sealed class AssistSessionController : IAsyncDisposable
     return Task.CompletedTask;
   }
 
+  public Task HandleConsentCancelled(AssistConsentCancelledDto dto)
+  {
+    Post(() => HandleConsentCancelledCoreAsync(dto));
+    return Task.CompletedTask;
+  }
+
   public Task HandleConsentRequested(AssistConsentRequestedDto dto)
   {
     Post(() => HandleConsentRequestedCoreAsync(dto));
@@ -362,6 +368,21 @@ public sealed class AssistSessionController : IAsyncDisposable
     StatusMessage = Localization.StatusConnectionLost;
     SetState(AssistSessionState.Disconnected);
     RaiseStateChanged();
+  }
+
+  private Task HandleConsentCancelledCoreAsync(AssistConsentCancelledDto dto)
+  {
+    if (State != AssistSessionState.PendingConsent || PendingSessionId != dto.SessionId)
+    {
+      return Task.CompletedTask;
+    }
+
+    _logger.LogInformation("The consent request for assist session {SessionId} was cancelled by the technician.", dto.SessionId);
+    SetConsentPending(null, null, null);
+    StatusMessage = Localization.StatusConsentCancelled;
+    SetState(AssistSessionState.Ready);
+    RaiseStateChanged();
+    return Task.CompletedTask;
   }
 
   private Task HandleConsentRequestedCoreAsync(AssistConsentRequestedDto dto)

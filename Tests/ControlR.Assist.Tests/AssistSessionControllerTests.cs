@@ -31,6 +31,40 @@ public class AssistSessionControllerTests
   }
 
   [Fact]
+  public async Task HandleConsentCancelled_MatchingPendingSession_ClearsConsentAndGoesReady()
+  {
+    var hub = new FakeHubClient();
+    var controller = CreateController(hub);
+
+    Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
+    var sessionId = hub.LastSessionId;
+    await RunWithinTimeout(controller.HandleConsentRequested(new(sessionId, "Jane", "jane@example.com")));
+    await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
+
+    await RunWithinTimeout(controller.HandleConsentCancelled(new(sessionId)));
+    await WaitForStateAsync(controller, AssistSessionState.Ready);
+    Assert.Null(controller.PendingSessionId);
+    Assert.Equal(Localization.StatusConsentCancelled, controller.StatusMessage);
+    await RunWithinTimeout(controller.DisposeAsync());
+  }
+
+  [Fact]
+  public async Task HandleConsentCancelled_StaleSession_IsIgnored()
+  {
+    var hub = new FakeHubClient();
+    var controller = CreateController(hub);
+
+    Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
+    await RunWithinTimeout(controller.HandleConsentRequested(new(hub.LastSessionId, "Jane", null)));
+    await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
+
+    await RunWithinTimeout(controller.HandleConsentCancelled(new(Guid.NewGuid())));
+
+    Assert.Equal(AssistSessionState.PendingConsent, controller.State);
+    await RunWithinTimeout(controller.DisposeAsync());
+  }
+
+  [Fact]
   public async Task HandleConsentTimedOut_MatchingPendingSession_ClearsConsentAndGoesReady()
   {
     var hub = new FakeHubClient();
@@ -138,6 +172,7 @@ public class AssistSessionControllerTests
     public Guid LastSessionId => _lastSessionId;
 
     public Func<Task>? OnConnectionLost { get; set; }
+    public Func<AssistConsentCancelledDto, Task>? OnConsentCancelled { get; set; }
     public Func<AssistConsentRequestedDto, Task>? OnConsentRequested { get; set; }
     public Func<AssistConsentTimedOutDto, Task>? OnConsentTimedOut { get; set; }
     public Action<Guid>? OnEndSession { get; set; }

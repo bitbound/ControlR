@@ -17,6 +17,7 @@ public interface IAssistSignalRClient : IAsyncDisposable
 {
   bool IsConnected { get; }
   Func<Task>? OnConnectionLost { get; set; }
+  Func<AssistConsentCancelledDto, Task>? OnConsentCancelled { get; set; }
   Func<AssistConsentRequestedDto, Task>? OnConsentRequested { get; set; }
   Func<AssistConsentTimedOutDto, Task>? OnConsentTimedOut { get; set; }
   Func<Task>? OnReconnected { get; set; }
@@ -51,6 +52,7 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
 
   public bool IsConnected => _connection?.State == HubConnectionState.Connected;
   public Func<Task>? OnConnectionLost { get; set; }
+  public Func<AssistConsentCancelledDto, Task>? OnConsentCancelled { get; set; }
   public Func<AssistConsentRequestedDto, Task>? OnConsentRequested { get; set; }
   public Func<AssistConsentTimedOutDto, Task>? OnConsentTimedOut { get; set; }
   public Func<Task>? OnReconnected { get; set; }
@@ -88,6 +90,9 @@ public sealed class AssistHubClient(ILogger<AssistHubClient> logger) : IAssistSi
       await InvokeHandler(OnConnectionLost);
     };
 
+    connection.On(
+      nameof(AssistHubClientContract.AssistConsentCancelled),
+      (AssistConsentCancelledDto dto) => InvokeHandler(OnConsentCancelled, dto));
     connection.On(
       nameof(AssistHubClientContract.AssistConsentRequested),
       (AssistConsentRequestedDto dto) => InvokeHandler(OnConsentRequested, dto));

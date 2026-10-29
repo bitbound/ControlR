@@ -52,19 +52,6 @@ public class AssistSessionCacheTests
   }
 
   [Fact]
-  public void RemoveByViewerConnectionId_AfterConsentRequested_RemovesSession()
-  {
-    var session = _cache.Create("assist-conn-1");
-    _ = _cache.TryBeginConsent(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, out _);
-
-    var removed = _cache.RemoveByViewerConnectionId("viewer-conn-1");
-
-    Assert.Single(removed);
-    Assert.Equal(session.SessionId, removed[0].SessionId);
-    Assert.False(_cache.TryGet(session.SessionId, out _));
-  }
-
-  [Fact]
   public void Snapshot_ReturnsAllSessions()
   {
     _ = _cache.Create("assist-conn-1");

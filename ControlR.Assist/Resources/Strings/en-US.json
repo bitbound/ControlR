@@ -45,6 +45,7 @@
   "StatusConnectedToViewer": "Connected to {0}.",
   "StatusConnecting": "Connecting\u2026",
   "StatusConnectionLost": "Lost the connection to the server. Check your internet connection and try connecting again.",
+  "StatusConsentCancelled": "The technician cancelled the connection request. Ask them to try the code again.",
   "StatusConsentResponseFailed": "Failed to respond to the consent request.",
   "StatusConsentTimedOut": "The connection request timed out. Ask the person to try the code again.",
   "StatusFailedToConnect": "The connection failed. Check the URL and try again.",

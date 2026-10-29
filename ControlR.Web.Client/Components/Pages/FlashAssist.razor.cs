@@ -159,6 +159,23 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
 
   private async Task HandleCancelClicked()
   {
+    // During consent-wait there is no remote control session yet, so CleanupSession would not
+    // reach the hub. Tell the server directly so the customer's consent prompt closes.
+    if (RemoteControlState.CurrentSession is null && _linkedSessionId is Guid pendingSessionId)
+    {
+      try
+      {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        _ = await AssistHub.Server.CancelAssistConsent(new(pendingSessionId));
+      }
+      catch (Exception ex)
+      {
+        Logger.LogWarning(ex, "Failed to cancel consent for assist session {SessionId}.", pendingSessionId);
+      }
+
+      _linkedSessionId = null;
+    }
+
     await CleanupSession(sendCloseStreamingSession: false, endHubSession: true);
     _state = AssistPageState.CodeEntry;
     _statusMessage = "Connection request cancelled.";
