@@ -199,6 +199,12 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
 
   partial void OnUrlConfirmedChanged(bool value) => RaiseFlowPropertyChanges();
 
+  partial void OnStatusMessageChanged(string? value)
+  {
+    OnPropertyChanged(nameof(ShowStatusAlert));
+    OnPropertyChanged(nameof(ShowIdleStatus));
+  }
+
   private void RaiseFlowPropertyChanges()
   {
     OnPropertyChanged(nameof(ShowUrlEntry));

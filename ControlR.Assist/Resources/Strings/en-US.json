@@ -45,7 +45,7 @@
   "StatusConnecting": "Connecting\u2026",
   "StatusConnectionLost": "Lost the connection to the server. Check your internet connection and try connecting again.",
   "StatusConsentResponseFailed": "Failed to respond to the consent request.",
-  "StatusConsentTimedOut": "The consent request timed out. Share the new code to try again.",
+  "StatusConsentTimedOut": "The connection request timed out. Ask the person to try the code again.",
   "StatusInvalidUrl": "Enter a valid server URL.",
   "StatusReconnected": "Reconnected. Share the new code with the technician.",
   "StatusSessionCreateFailed": "Failed to create the assist session.",
