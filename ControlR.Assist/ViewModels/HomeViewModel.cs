@@ -187,23 +187,25 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   [RelayCommand]
   private void Next()
   {
-    if (!AssistSessionController.TryNormalizeServerUri(ServerUrl, out _))
+    if (!AssistSessionController.TryNormalizeServerUri(ServerUrl, out var normalized))
     {
       StatusMessage = Localization.StatusInvalidUrl;
       return;
     }
 
+    // Show and persist the scheme://host[:port] form the connect will actually use.
+    ServerUrl = normalized.ToString();
     StatusMessage = null;
     UrlConfirmed = true;
   }
-
-  partial void OnUrlConfirmedChanged(bool value) => RaiseFlowPropertyChanges();
 
   partial void OnStatusMessageChanged(string? value)
   {
     OnPropertyChanged(nameof(ShowStatusAlert));
     OnPropertyChanged(nameof(ShowIdleStatus));
   }
+
+  partial void OnUrlConfirmedChanged(bool value) => RaiseFlowPropertyChanges();
 
   private void RaiseFlowPropertyChanges()
   {
