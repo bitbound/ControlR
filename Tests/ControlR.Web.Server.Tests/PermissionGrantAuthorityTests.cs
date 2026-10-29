@@ -10,6 +10,7 @@ using ControlR.Web.Server.Services.PermissionAssignments;
 using ControlR.Web.Server.Services.ServiceAccounts;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ControlR.Web.Server.Tests;
@@ -23,6 +24,172 @@ namespace ControlR.Web.Server.Tests;
 public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
 {
   private readonly ITestOutputHelper _testOutput = testOutput;
+
+  [Fact]
+  public async Task ApplyPresets_ReplaceExistingFalse_AllKeysHeldByUnknownPrincipal_ReturnsBadRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    // The target has no user row. Every preset key is seeded as held, so a merge must not
+    // short-circuit the no-op path past principal validation.
+    var missingUserId = Guid.NewGuid();
+    foreach (var permissionName in PermissionPresets.GetPermissions(PermissionPresets.ServerAdministrator).Distinct())
+    {
+      var scopeKind = PermissionCatalog.GetBroadestTenantLegalScope(permissionName) ?? PermissionScopeKind.Tenant;
+      var isServerScope = scopeKind == PermissionScopeKind.Server;
+      await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+        PermissionPrincipalKind.User,
+        missingUserId,
+        permissionName,
+        scopeKind,
+        isServerScope ? null : tenant.Id,
+        isServerScope ? null : tenant.Id,
+        new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    }
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.ApplyPresets(
+      new InternalDtos.ApplyPermissionPresetsRequestDto(
+        PermissionPrincipalKind.User,
+        missingUserId,
+        [PermissionPresets.ServerAdministrator],
+        ReplaceExisting: false),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.BadRequest, result.ErrorCode);
+  }
+
+  [Fact]
+  public async Task ApplyPresets_ReplaceExistingFalse_AllKeysHeldWithoutServerWrite_FailsForbidden()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    // The actor can manage tenant-scoped assignments but not server-scoped ones.
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    // The target already holds every Server Administrator key, including the null-owner
+    // server rows that tenant callers cannot see. A merge that would be a no-op must not
+    // return success, or the status code leaks the target's hidden server grants.
+    foreach (var permissionName in PermissionPresets.GetPermissions(PermissionPresets.ServerAdministrator).Distinct())
+    {
+      var scopeKind = PermissionCatalog.GetBroadestTenantLegalScope(permissionName) ?? PermissionScopeKind.Tenant;
+      var isServerScope = scopeKind == PermissionScopeKind.Server;
+      await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+        PermissionPrincipalKind.User,
+        target.Id,
+        permissionName,
+        scopeKind,
+        isServerScope ? null : tenant.Id,
+        isServerScope ? null : tenant.Id,
+        new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    }
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.ApplyPresets(
+      new InternalDtos.ApplyPermissionPresetsRequestDto(
+        PermissionPrincipalKind.User,
+        target.Id,
+        [PermissionPresets.ServerAdministrator],
+        ReplaceExisting: false),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.Forbidden, result.ErrorCode);
+  }
+
+  [Fact]
+  public async Task ApplyPresets_ReplaceExistingFalse_ReapplyingSamePreset_CreatesNothing()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var first = await manager.ApplyPresets(
+      new InternalDtos.ApplyPermissionPresetsRequestDto(
+        PermissionPrincipalKind.User,
+        target.Id,
+        [PermissionPresets.ServerAdministrator],
+        ReplaceExisting: false),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+    Assert.True(first.IsSuccess, $"Expected first preset application to succeed: {first.Reason}");
+
+    var second = await manager.ApplyPresets(
+      new InternalDtos.ApplyPermissionPresetsRequestDto(
+        PermissionPrincipalKind.User,
+        target.Id,
+        [PermissionPresets.ServerAdministrator],
+        ReplaceExisting: false),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.True(second.IsSuccess, $"Expected re-application to be a no-op, not a conflict: {second.Reason}");
+    Assert.Equal(0, second.Value);
+  }
 
   [Fact]
   public async Task ApplyPresets_ReplaceExistingFalse_WithExistingDeny_SkipsAllow()
@@ -76,6 +243,130 @@ public class PermissionGrantAuthorityTests(ITestOutputHelper testOutput)
       .Distinct()
       .Count();
     Assert.Equal(expectedGranted, result.Value);
+  }
+
+  [Fact]
+  public async Task ApplyPresets_ReplaceExistingFalse_WithExistingServerScopeGrant_SkipsIt()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    // Server-scoped rows carry no OwningTenantId. The merge pre-filter must still see them so an
+    // already-held server grant is skipped rather than resurfacing as a conflict.
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      target.Id,
+      PermissionNames.ServerTenantsRead,
+      PermissionScopeKind.Server,
+      null,
+      null,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.ApplyPresets(
+      new InternalDtos.ApplyPermissionPresetsRequestDto(
+        PermissionPrincipalKind.User,
+        target.Id,
+        [PermissionPresets.ServerAdministrator],
+        ReplaceExisting: false),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.True(result.IsSuccess, $"Expected preset application to succeed: {result.Reason}");
+
+    var expectedGranted = PermissionPresets.GetPermissions(PermissionPresets.ServerAdministrator)
+      .Where(name => name != PermissionNames.ServerTenantsRead)
+      .Distinct()
+      .Count();
+    Assert.Equal(expectedGranted, result.Value);
+
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var serverTenantsReadRows = await db.PermissionAssignments
+      .IgnoreQueryFilters()
+      .Where(x => x.PrincipalKind == PermissionPrincipalKind.User &&
+                  x.PrincipalId == target.Id &&
+                  x.PermissionName == PermissionNames.ServerTenantsRead)
+      .CountAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(1, serverTenantsReadRows);
+  }
+
+  [Fact]
+  public async Task ApplyPresets_ReplaceExistingFalse_WithForeignTenantOwnedGrant_SurfacesConflict()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.App.Services.CreateTestTenant();
+    var foreignTenant = await testApp.App.Services.CreateTestTenant();
+    await testApp.App.Services.CreateTestUser(tenant.Id, email: $"seed-{Guid.NewGuid():N}@t.local");
+    var actor = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"actor-{Guid.NewGuid():N}@t.local");
+    var target = await testApp.App.Services.CreateTestUser(tenant.Id, email: $"target-{Guid.NewGuid():N}@t.local");
+
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.ServerPermissionsWrite,
+      PermissionScopeKind.Server,
+      null,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      actor.Id,
+      PermissionNames.TenantPermissionsWrite,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      tenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    // Integrity anomaly: the row is keyed to this tenant but owned by a foreign one. It must
+    // not count as already-held (the merge would silently under-grant); the strict duplicate
+    // check still sees it, so the merge reports a conflict instead.
+    await SeedAssignment(testApp, PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      target.Id,
+      PermissionNames.TenantPermissionsRead,
+      PermissionScopeKind.Tenant,
+      tenant.Id,
+      foreignTenant.Id,
+      new PrincipalDescriptor(PrincipalType.User, actor.Id, tenant.Id, "test")));
+
+    using var scope = testApp.CreateScope();
+    var manager = scope.ServiceProvider.GetRequiredService<IPermissionAssignmentManager>();
+
+    var result = await manager.ApplyPresets(
+      new InternalDtos.ApplyPermissionPresetsRequestDto(
+        PermissionPrincipalKind.User,
+        target.Id,
+        [PermissionPresets.ServerAdministrator],
+        ReplaceExisting: false),
+      tenant.Id,
+      Actor(actor.Id, tenant.Id),
+      TestContext.Current.CancellationToken);
+
+    Assert.False(result.IsSuccess);
+    Assert.Equal(HttpResultErrorCode.Conflict, result.ErrorCode);
   }
 
     [Fact]
