@@ -17,6 +17,16 @@ public interface IPermissionAssignmentSeeder
     CancellationToken cancellationToken = default);
 
   /// <summary>
+  /// Seeds permissions that are intentionally absent from every preset (explicit-grant-only
+  /// capabilities) for principals that must start with them, such as the bootstrap admin.
+  /// </summary>
+  Task SeedPermissions(
+    Guid userId,
+    Guid tenantId,
+    IEnumerable<string> permissionNames,
+    CancellationToken cancellationToken = default);
+
+  /// <summary>
   /// Seeds the default permission baseline every interactive (non-external) user receives.
   /// Call sites must not inline the preset list. Growing the baseline is a change here plus
   /// the unreleased-migration parity update in RoleBackfillMigrationTests.
@@ -34,15 +44,54 @@ public class PermissionAssignmentSeeder(
   private readonly AppDb _appDb = appDb;
   private readonly IAuthorizationChangeLogFactory _changeLogFactory = changeLogFactory;
 
-  /// <summary>
-  /// Seeds a principal's preset permissions at their broadest legal scope (Server or Tenant).
-  /// Writes one summary change-log entry per seed operation.
-  /// </summary>
   public async Task SeedAssignments(
     Guid userId,
     Guid tenantId,
     IEnumerable<string> presetNames,
     CancellationToken cancellationToken = default)
+  {
+    var appliedPresets = new List<string>();
+    var permissions = new List<string>();
+
+    foreach (var presetName in presetNames)
+    {
+      var presetPermissions = PermissionPresets.GetPermissions(presetName);
+      if (presetPermissions.Count == 0)
+      {
+        continue;
+      }
+
+      appliedPresets.Add(presetName);
+      permissions.AddRange(presetPermissions);
+    }
+
+    await SeedPermissionsCoreAsync(userId, tenantId, permissions, appliedPresets, cancellationToken)
+      .ConfigureAwait(false);
+  }
+
+  /// <inheritdoc/>
+  public Task SeedPermissions(
+    Guid userId,
+    Guid tenantId,
+    IEnumerable<string> permissionNames,
+    CancellationToken cancellationToken = default) =>
+    SeedPermissionsCoreAsync(userId, tenantId, permissionNames.ToList(), [], cancellationToken);
+
+  /// <summary>
+  /// Seeds the default permission baseline every interactive (non-external) user receives.
+  /// </summary>
+  public Task SeedUserBaseline(
+    Guid userId,
+    Guid tenantId,
+    CancellationToken cancellationToken = default) =>
+    SeedAssignments(userId, tenantId, [PermissionPresets.SelfService], cancellationToken);
+
+  private async Task SeedPermissionsCoreAsync(
+    Guid userId,
+    Guid tenantId,
+    IReadOnlyList<string> permissions,
+    IReadOnlyList<string> appliedPresets,
+    CancellationToken cancellationToken)
   {
     // Load existing assignments once for in-memory dedup; userId is a primary key, so the
     // scan isn't tenant-filtered and a concurrent seed for the same principal isn't expected.
@@ -53,43 +102,32 @@ public class PermissionAssignmentSeeder(
       .Select(x => new AssignmentKey(x.PermissionName, x.ScopeKind, x.ScopeId, x.Effect))
       .ToHashSetAsync(cancellationToken);
 
-    var appliedPresets = new List<string>();
     var seeded = new HashSet<string>();
     var seededCount = 0;
-    foreach (var presetName in presetNames)
+    foreach (var permission in permissions)
     {
-      var permissions = PermissionPresets.GetPermissions(presetName);
-      if (permissions.Count == 0)
+      if (!seeded.Add(permission))
       {
         continue;
       }
 
-      appliedPresets.Add(presetName);
-      foreach (var permission in permissions)
+      var scopeKind = PermissionCatalog.GetBroadestTenantLegalScope(permission) ?? PermissionScopeKind.Tenant;
+      var scopeId = scopeKind == PermissionScopeKind.Server ? (Guid?)null : tenantId;
+
+      if (existing.Contains(new AssignmentKey(permission, scopeKind, scopeId, PermissionEffect.Allow)))
       {
-        if (!seeded.Add(permission))
-        {
-          continue;
-        }
-
-        var scopeKind = PermissionCatalog.GetBroadestTenantLegalScope(permission) ?? PermissionScopeKind.Tenant;
-        var scopeId = scopeKind == PermissionScopeKind.Server ? (Guid?)null : tenantId;
-
-        if (existing.Contains(new AssignmentKey(permission, scopeKind, scopeId, PermissionEffect.Allow)))
-        {
-          continue;
-        }
-
-        _appDb.PermissionAssignments.Add(PermissionAssignment.CreateGrant(
-          PermissionPrincipalKind.User,
-          userId,
-          permission,
-          scopeKind,
-          scopeId,
-          tenantId,
-          createdBy: null));
-        seededCount++;
+        continue;
       }
+
+      _appDb.PermissionAssignments.Add(PermissionAssignment.CreateGrant(
+        PermissionPrincipalKind.User,
+        userId,
+        permission,
+        scopeKind,
+        scopeId,
+        tenantId,
+        createdBy: null));
+      seededCount++;
     }
 
     if (seededCount > 0)
@@ -105,15 +143,6 @@ public class PermissionAssignmentSeeder(
 
     await _appDb.SaveChangesAsync(cancellationToken);
   }
-
-  /// <summary>
-  /// Seeds the default permission baseline every interactive (non-external) user receives.
-  /// </summary>
-  public Task SeedUserBaseline(
-    Guid userId,
-    Guid tenantId,
-    CancellationToken cancellationToken = default) =>
-    SeedAssignments(userId, tenantId, [PermissionPresets.SelfService], cancellationToken);
 
   private readonly record struct AssignmentKey(
     string PermissionName,

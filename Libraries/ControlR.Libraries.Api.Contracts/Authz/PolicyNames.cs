@@ -6,6 +6,7 @@ namespace ControlR.Libraries.Api.Contracts.Authz;
 public static class PolicyNames
 {
   public const string RequireAgentInstall = "RequireAgentInstall";
+  public const string RequireAssistSessionsConnect = "RequireAssistSessionsConnect";
   public const string RequireAuthorizationLogsRead = "RequireAuthorizationLogsRead";
   public const string RequireCustomersRead = "RequireCustomersRead";
   public const string RequireCustomersWrite = "RequireCustomersWrite";

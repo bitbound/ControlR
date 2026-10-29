@@ -3,9 +3,11 @@ using System.Security.Claims;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Authn;
+using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Data.Entities;
 using ControlR.Web.Server.Hubs;
 using ControlR.Web.Server.Services.Assist;
+using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Tests.Helpers;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
@@ -75,6 +77,7 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     var user = await testApp.Services.CreateTestUser(tenant.Id);
     var cache = GetCache(testApp);
     _ = cache.Create("assist-conn-1");
+    await GrantAssistConnectAsync(testApp, user, tenant.Id);
     var (hub, _) = await CreateHubAsync(testApp, user, tenant.Id);
 
     var result = await hub.JoinAssistSession(new("123456789"));
@@ -91,6 +94,7 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     var user = await testApp.Services.CreateTestUser(tenant.Id);
     var cache = GetCache(testApp);
     var session = cache.Create("assist-conn-1");
+    await GrantAssistConnectAsync(testApp, user, tenant.Id);
     var (hub, _) = await CreateHubAsync(testApp, user, tenant.Id);
 
     HubResult<JoinAssistSessionResponseDto> lastResult = HubResult.Ok<JoinAssistSessionResponseDto>(new(Guid.Empty));
@@ -130,6 +134,7 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     var user = await testApp.Services.CreateTestUser(tenant.Id, email: "tech@example.com");
     var cache = GetCache(testApp);
     var session = cache.Create("assist-conn-1");
+    await GrantAssistConnectAsync(testApp, user, tenant.Id);
     var (hub, clientProxy) = await CreateHubAsync(testApp, user, tenant.Id);
 
     var result = await hub.JoinAssistSession(new(session.Code));
@@ -141,6 +146,26 @@ public class AssistHubTests(ITestOutputHelper testOutput)
       c => c.AssistConsentRequested(It.Is<AssistConsentRequestedDto>(dto =>
         dto.SessionId == session.SessionId && dto.ViewerEmail == "tech@example.com")),
       Times.Once);
+  }
+
+  [Fact]
+  public async Task JoinAssistSession_WithoutAssistConnectPermission_ReturnsFailureAndLeavesSessionWaiting()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id, email: "tech@example.com");
+    var cache = GetCache(testApp);
+    var session = cache.Create("assist-conn-1");
+    var (hub, clientProxy) = await CreateHubAsync(testApp, user, tenant.Id);
+
+    var result = await hub.JoinAssistSession(new(session.Code));
+
+    Assert.False(result.IsSuccess);
+    Assert.Contains("permission", result.Reason, StringComparison.OrdinalIgnoreCase);
+    Assert.Equal(AssistSessionStatus.WaitingForViewer, GetSession(cache, session.SessionId).Status);
+    clientProxy.Verify(
+      c => c.AssistConsentRequested(It.IsAny<AssistConsentRequestedDto>()),
+      Times.Never);
   }
 
   [Fact]
@@ -243,6 +268,8 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     var hub = new AssistHub(
       scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>(),
       testApp.Services.GetRequiredService<IAssistSessionCache>(),
+      scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>(),
+      scope.ServiceProvider.GetRequiredService<IResourceDescriptorFactory>(),
       testApp.Services.GetRequiredService<ILogger<AssistHub>>());
 
     var principal = user is null ? CreateAnonymousPrincipal() : CreatePrincipal(user, tenantId ?? Guid.NewGuid());
@@ -275,6 +302,21 @@ public class AssistHubTests(ITestOutputHelper testOutput)
   {
     Assert.True(cache.TryGet(sessionId, out var session));
     return session!;
+  }
+
+  private static async Task GrantAssistConnectAsync(TestApp testApp, AppUser user, Guid tenantId)
+  {
+    using var scope = testApp.Services.CreateScope();
+    await using var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    db.PermissionAssignments.Add(PermissionAssignment.CreateGrant(
+      PermissionPrincipalKind.User,
+      user.Id,
+      PermissionNames.AssistSessionsConnect,
+      PermissionScopeKind.Tenant,
+      tenantId,
+      tenantId,
+      createdBy: null));
+    await db.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
 
   private sealed class TestHubCallerContext : HubCallerContext

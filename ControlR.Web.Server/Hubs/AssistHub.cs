@@ -1,6 +1,8 @@
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
+using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Assist;
+using ControlR.Web.Server.Services.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
@@ -8,19 +10,24 @@ namespace ControlR.Web.Server.Hubs;
 /// <summary>
 /// Control plane for ad-hoc remote control of unmanaged devices (issue 407). The assist app side
 /// joins anonymously and is authorized by possession of the session id it created. The technician
-/// side must additionally be a signed-in user. Media and input DTOs never pass through this hub.
-/// They ride the WebSocket relay, whose middleware requires an authenticated requester.
+/// side must additionally be a signed-in user holding the Flash Assist connect permission. Media
+/// and input DTOs never pass through this hub. They ride the WebSocket relay, whose middleware
+/// requires an authenticated requester.
 /// </summary>
 [AllowAnonymous]
 public class AssistHub(
   UserManager<AppUser> userManager,
   IAssistSessionCache sessionCache,
+  IPermissionEvaluator permissionEvaluator,
+  IResourceDescriptorFactory resourceFactory,
   ILogger<AssistHub> logger)
   : HubWithItems<IAssistHubClient>, IAssistHub
 {
   private const int MaxInvalidJoinAttempts = 10;
 
   private readonly ILogger<AssistHub> _logger = logger;
+  private readonly IPermissionEvaluator _permissionEvaluator = permissionEvaluator;
+  private readonly IResourceDescriptorFactory _resourceFactory = resourceFactory;
   private readonly IAssistSessionCache _sessionCache = sessionCache;
   private readonly UserManager<AppUser> _userManager = userManager;
 
@@ -77,6 +84,12 @@ public class AssistHub(
       if (Context.User?.TryGetUserId(out var userId) != true)
       {
         return HubResult.Fail<JoinAssistSessionResponseDto>("Unauthorized.");
+      }
+
+      if (!await CanTechnicianConnectAsync())
+      {
+        return HubResult.Fail<JoinAssistSessionResponseDto>(
+          "You don't have permission to connect with Flash Assist. Ask an administrator for the Flash Assist permission.");
       }
 
       var attempts = GetItem(0, nameof(JoinAssistSession));
@@ -234,6 +247,39 @@ public class AssistHub(
     return string.IsNullOrWhiteSpace(displayName)
       ? user.Email ?? user.UserName ?? "a technician"
       : displayName;
+  }
+
+  /// <summary>
+  /// Tenant-scoped capability check for the technician side of an assist session. A server
+  /// principal has no tenant claim, so it is evaluated against the server resource; the
+  /// permission itself only grants at tenant scope.
+  /// </summary>
+  private async Task<bool> CanTechnicianConnectAsync()
+  {
+    if (Context.User?.ToPrincipalDescriptor() is not { } principal)
+    {
+      return false;
+    }
+
+    var resource = principal.TenantId is { } tenantId
+      ? _resourceFactory.CreateTenant(tenantId)
+      : _resourceFactory.CreateServer();
+
+    var decision = await _permissionEvaluator.Evaluate(
+      principal,
+      PermissionNames.AssistSessionsConnect,
+      resource,
+      Context.ConnectionAborted);
+
+    if (!decision.Allowed)
+    {
+      _logger.LogInformation(
+        "User {UserId} denied {Permission} while joining assist session.",
+        principal.PrincipalId,
+        PermissionNames.AssistSessionsConnect);
+    }
+
+    return decision.Allowed;
   }
 
   private bool IsSessionParticipant(AssistSession session)

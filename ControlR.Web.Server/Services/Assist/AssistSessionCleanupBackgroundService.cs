@@ -47,6 +47,9 @@ public class AssistSessionCleanupBackgroundService(
               await _assistHub.Clients
                 .Client(viewerConnectionId)
                 .AssistConsentResponded(new(session.SessionId, false, null));
+              await _assistHub.Clients
+                .Client(session.AssistConnectionId)
+                .AssistConsentTimedOut(new(session.SessionId));
             }
             break;
           }

@@ -150,6 +150,7 @@ public static class PermissionCatalog
     Add(PermissionNames.InstallerKeyOthersRead, PermissionCategories.InstallerKeys, "Read All Installer Keys", "View the agent installer keys created by any user in the tenant, including your own, and their usages.", tenant);
     Add(PermissionNames.InstallerKeyOthersWrite, PermissionCategories.InstallerKeys, "Manage All Installer Keys", "Rename and delete the agent installer keys created by any user in the tenant, including your own. Cannot create keys. A read permission is still needed to view the keys.", tenant);
     Add(PermissionNames.AgentInstall, PermissionCategories.Agents, "Install Agent", "Generate agent installation commands and scripts.", tenant);
+    Add(PermissionNames.AssistSessionsConnect, PermissionCategories.Assist, "Connect Flash Assist", "Use Flash Assist to request remote control of a customer's device with a one-time code.", tenant);
 
     Add(PermissionNames.DeviceGroupAssignDevices, PermissionCategories.DeviceGroups, "Assign Devices to Group", "Add and remove devices from a device group.", deviceGroup);
     Add(PermissionNames.UserGroupAssignUsers, PermissionCategories.UserGroups, "Assign Users to Group", "Add and remove users from a user group.", userGroup);

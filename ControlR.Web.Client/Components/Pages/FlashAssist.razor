@@ -1,6 +1,6 @@
 @inherits ComponentBase
 @attribute [Route(ClientRoutes.AssistViewer)]
-@attribute [Authorize]
+@attribute [Authorize(Policy = PolicyNames.RequireAssistSessionsConnect)]
 <PageTitle>Flash Assist</PageTitle>
 
 <div class="@(CurrentState == AssistPageState.Connected ? "assist-connected-container" : "assist-viewer-container")">
